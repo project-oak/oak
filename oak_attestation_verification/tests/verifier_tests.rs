@@ -66,7 +66,7 @@ fn create_endorsements() -> Endorsements {
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
         endorsement,
-        attachment: b"".to_vec(),
+        subject: vec![],
         endorsement_signature: signature,
         rekor_log_entry: log_entry,
     };
@@ -108,7 +108,7 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        amd_root_public_key: b"".to_vec(),
+        amd_root_public_key: vec![],
         firmware_version: None,
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.

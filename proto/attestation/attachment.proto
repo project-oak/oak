@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// An attachment is a shim between the actual binary and the endorsement.
+// The endorsement mentions the digest of the attachment, and the
+// attachment in turn contains hashes related to the actual binary.
 
 syntax = "proto3";
 
@@ -24,15 +27,21 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
-// The Transparent Release attachment for Oak Stage 0.
+// The Transparent Release attachment for Oak Stage 0. Measurements
+// are produced with
+// https://github.com/project-oak/oak/snp_measurement.
 message FirmwareAttachment {
   // Maps number of vCPUs to measurement of the modified firmware binary.
   map<int32, HexDigest> configs = 1;
 }
 
 // The Transparent Release attachment for Oak Containers Linux kernel.
+// Measurements are produced with
+// https://github.com/project-oak/oak/oak_kernel_measurement.
 message KernelAttachment {
-  HexDigest binary = 1;
-  HexDigest kernel_image = 2;
-  HexDigest setup_data = 3;
+  // Digest of the kernel image part of the bzImage.
+  HexDigest image = 1;
+
+  // Digest of the setup data part of the bzImage.
+  HexDigest setup_data = 2;
 }

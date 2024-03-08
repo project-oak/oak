@@ -30,15 +30,16 @@ message TransparentReleaseEndorsement {
   // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
-  // If non-empty, then the endorsed data is not the actual binary, but this
-  // piece of data, which is usually a serialized proto containing digests.
-  bytes attachment = 2;
+  // The data hashed as endorsement subject can be inlined here when needed.
+  // Can be the binary or the attachment, depending on the usage specified
+  // in the endorsement.
+  bytes subject = 4;
 
   // The signature for the endorsement.
-  bytes endorsement_signature = 3;
+  bytes endorsement_signature = 2;
 
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 4;
+  bytes rekor_log_entry = 3;
 }
 
 message RootLayerEndorsements {

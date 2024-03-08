@@ -53,6 +53,8 @@ message BinaryReferenceValue {
   }
 }
 
+// Similar to the `Digests` message, but allows to specify digests for the
+// split components of the bzImage separately.
 message KernelDigests {
   // Contains admissible digests for the kernel image part of the kernel.
   Digests image = 2;
@@ -61,7 +63,7 @@ message KernelDigests {
   Digests setup_data = 3;
 }
 
-// Follows the lines of BinaryReferenceValue, but provides a custom proto
+// Follows the lines of `BinaryReferenceValue`, but provides a custom proto
 // to facilitate the digest matching.
 message KernelBinaryReferenceValue {
   oneof type {

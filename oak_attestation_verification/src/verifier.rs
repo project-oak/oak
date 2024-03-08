@@ -741,18 +741,17 @@ fn verify_kernel_measurement_digest(
             if parsed_statement.predicate.usage != "kernel" {
                 anyhow::bail!("unexpected entry in usage field");
             }
-            let expected_attachment_digest = get_digest(&parsed_statement)?;
-            let actual_attachment_digest =
-                raw_to_hex_digest(&raw_digest_from_contents(&endorsement.attachment));
-            verify_hex_digests(&actual_attachment_digest, &expected_attachment_digest)?;
+            let expected_digest = get_digest(&parsed_statement)?;
+            let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
+            verify_hex_digests(&actual_digest, &expected_digest)?;
 
             // Parse attachment and verify kernel components.
-            let parsed_attachment = KernelAttachment::decode(&*endorsement.attachment)
+            let kernel_attachment = KernelAttachment::decode(&*endorsement.subject)
                 .map_err(|_error| anyhow::anyhow!("couldn't parse kernel attachment"))?;
-            let expected_image = parsed_attachment
-                .kernel_image
+            let expected_image = kernel_attachment
+                .image
                 .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
-            let expected_setup_data = parsed_attachment
+            let expected_setup_data = kernel_attachment
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
             verify_hex_digests(&actual_image, &expected_image)?;

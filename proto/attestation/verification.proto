@@ -132,11 +132,11 @@ message KernelLayerData {
   RawDigest kernel_image = 1;
 
   // Measured digests of the setup data part of the kernel.
-  RawDigest kernel_setup_data = 2;
+  RawDigest kernel_setup_data = 3;
 
   // Measured digests of the command-line that was passed to the kernel
   // during startup.
-  RawDigest kernel_cmd_line = 3;
+  RawDigest kernel_cmd_line = 2;
 
   // Measured digests of the initial RAM disk.
   RawDigest init_ram_fs = 4;
