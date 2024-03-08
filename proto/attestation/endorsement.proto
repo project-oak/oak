@@ -30,6 +30,11 @@ message TransparentReleaseEndorsement {
   // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
+  // The data hashed as endorsement subject can be inlined here when needed.
+  // Can be the binary or the attachment, depending on the usage specified
+  // in the endorsement.
+  bytes subject = 4;
+
   // The signature for the endorsement.
   bytes endorsement_signature = 2;
 
@@ -52,9 +57,8 @@ message RootLayerEndorsements {
 }
 
 message KernelLayerEndorsements {
-  TransparentReleaseEndorsement kernel_image = 1;
+  TransparentReleaseEndorsement kernel = 1;
   TransparentReleaseEndorsement kernel_cmd_line = 2;
-  TransparentReleaseEndorsement kernel_setup_data = 3;
   TransparentReleaseEndorsement init_ram_fs = 4;
   TransparentReleaseEndorsement memory_map = 5;
   TransparentReleaseEndorsement acpi = 6;

@@ -32,6 +32,9 @@ p384 = { version = "0.13.0", default-features = false, features = [
   "ecdsa",
   "pem",
 ] }
+prost = { workspace = true, default-features = false, features = [
+  "prost-derive",
+] }
 rsa = { version = "0.9.6", default-features = false }
 serde = { version = "*", default-features = false, features = ["derive"] }
 serde_json = { version = "*", default-features = false, features = ["alloc"] }
@@ -42,6 +45,3 @@ time = { version = "0.3.28", default-features = false, features = [
 ] }
 x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 zerocopy = "*"
-
-[dev-dependencies]
-prost = { workspace = true }

@@ -21,12 +21,13 @@ use oak_attestation_verification::{
     verifier::{to_attestation_results, verify},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
-    BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-    EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
-    KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
-    OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues,
-    SkipVerification, StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
+    attestation_results::Status, binary_reference_value, kernel_binary_reference_value,
+    reference_values, AmdSevReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+    ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements, Evidence,
+    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+    KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+    ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
+    StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
     TransparentReleaseEndorsement,
 };
 use prost::Message;
@@ -65,6 +66,7 @@ fn create_endorsements() -> Endorsements {
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
         endorsement,
+        subject: vec![],
         endorsement_signature: signature,
         rekor_log_entry: log_entry,
     };
@@ -74,9 +76,8 @@ fn create_endorsements() -> Endorsements {
         stage0: Some(tre.clone()),
     };
     let kernel_layer = KernelLayerEndorsements {
-        kernel_image: Some(tre.clone()),
+        kernel: Some(tre.clone()),
         kernel_cmd_line: Some(tre.clone()),
-        kernel_setup_data: Some(tre.clone()),
         init_ram_fs: Some(tre.clone()),
         memory_map: Some(tre.clone()),
         acpi: Some(tre.clone()),
@@ -107,7 +108,7 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        amd_root_public_key: b"".to_vec(),
+        amd_root_public_key: vec![],
         firmware_version: None,
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
@@ -119,9 +120,12 @@ fn create_reference_values() -> ReferenceValues {
         ..Default::default()
     };
     let kernel_layer = KernelLayerReferenceValues {
-        kernel_image: Some(skip.clone()),
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(
+                SkipVerification {},
+            )),
+        }),
         kernel_cmd_line: Some(skip.clone()),
-        kernel_setup_data: Some(skip.clone()),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),

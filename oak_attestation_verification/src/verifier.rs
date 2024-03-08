@@ -32,23 +32,24 @@ use oak_dice::cert::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
-        extracted_evidence::EvidenceValues, reference_values, root_layer_data::Report,
-        AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
-        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
-        ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelLayerData,
-        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TransparentReleaseEndorsement,
+        extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
+        root_layer_data::Report, AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys,
+        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        AttestationResults, BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues,
+        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        Endorsements, Evidence, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
+        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
+        RootLayerEvidence, RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use prost::Message;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -60,7 +61,10 @@ use crate::{
     amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
-    util::{hash_sha2_256, is_hex_digest_match, raw_to_hex_digest, MatchResult},
+    util::{
+        hash_sha2_256, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
+        MatchResult,
+    },
 };
 
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
@@ -508,7 +512,7 @@ fn verify_root_layer(
     }
 }
 
-/// Verifies the measurement values of the kernel layer, which is common to both the  Oak Restricted
+/// Verifies the measurement values of the kernel layer, which is common to both the Oak Restricted
 /// Kernel and Oak Containers setups.
 fn verify_kernel_layer(
     now_utc_millis: i64,
@@ -516,19 +520,23 @@ fn verify_kernel_layer(
     endorsements: Option<&KernelLayerEndorsements>,
     reference_values: &KernelLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    verify_measurement_digest(
+    verify_kernel_measurement_digest(
         values
             .kernel_image
             .as_ref()
-            .context("no kernel image evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_image.as_ref()),
-        reference_values
-            .kernel_image
+            .context("no kernel evidence value")?,
+        values
+            .kernel_setup_data
             .as_ref()
-            .context("no kernel image reference value")?,
+            .context("no kernel setup data evidence value")?,
+        now_utc_millis,
+        endorsements.and_then(|value| value.kernel.as_ref()),
+        reference_values
+            .kernel
+            .as_ref()
+            .context("no kernel reference value")?,
     )
-    .context("kernel image failed verification")?;
+    .context("kernel failed verification")?;
 
     verify_measurement_digest(
         values
@@ -543,20 +551,6 @@ fn verify_kernel_layer(
             .context("no kernel command-line reference value")?,
     )
     .context("kernel command-line failed verification")?;
-
-    verify_measurement_digest(
-        values
-            .kernel_setup_data
-            .as_ref()
-            .context("no setup data evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_setup_data.as_ref()),
-        reference_values
-            .kernel_setup_data
-            .as_ref()
-            .context("no kernel setup data reference value")?,
-    )
-    .context("kernel setup data failed verification")?;
 
     verify_measurement_digest(
         values
@@ -715,6 +709,81 @@ fn verify_measurement_digest(
                     "measurement digest does not match any reference values"
                 ))
             }
+        }
+        None => Err(anyhow::anyhow!("empty binary reference value")),
+    }
+}
+
+/// Adapted version of verify_measure_digest() for kernels.
+fn verify_kernel_measurement_digest(
+    image_measurement: &RawDigest,
+    setup_data_measurement: &RawDigest,
+    now_utc_millis: i64,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+    reference_value: &KernelBinaryReferenceValue,
+) -> anyhow::Result<()> {
+    let actual_image = raw_to_hex_digest(image_measurement);
+    let actual_setup_data = raw_to_hex_digest(setup_data_measurement);
+    match reference_value.r#type.as_ref() {
+        Some(kernel_binary_reference_value::Type::Skip(_)) => Ok(()),
+        Some(kernel_binary_reference_value::Type::Endorsement(public_keys)) => {
+            let endorsement =
+                endorsement.context("matching endorsement not found for reference value")?;
+            verify_binary_endorsement(
+                now_utc_millis,
+                &endorsement.endorsement,
+                &endorsement.rekor_log_entry,
+                &public_keys.endorser_public_key,
+                &public_keys.rekor_public_key,
+            )?;
+            // Parse endorsement statement and verify attachment digest.
+            let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
+            if parsed_statement.predicate.usage != "kernel" {
+                anyhow::bail!("unexpected entry in usage field");
+            }
+            let expected_digest = get_digest(&parsed_statement)?;
+            let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
+            verify_hex_digests(&actual_digest, &expected_digest)?;
+
+            // Parse attachment and verify kernel components.
+            let kernel_attachment = KernelAttachment::decode(&*endorsement.subject)
+                .map_err(|_error| anyhow::anyhow!("couldn't parse kernel attachment"))?;
+            let expected_image = kernel_attachment
+                .image
+                .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
+            let expected_setup_data = kernel_attachment
+                .setup_data
+                .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
+            verify_hex_digests(&actual_image, &expected_image)?;
+            verify_hex_digests(&actual_setup_data, &expected_setup_data)
+        }
+        Some(kernel_binary_reference_value::Type::Digests(expected_digests)) => {
+            if !expected_digests
+                .image
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no kernel image digests specified"))?
+                .digests
+                .iter()
+                .any(|expected| {
+                    verify_hex_digests(&actual_image, &raw_to_hex_digest(expected)).is_ok()
+                })
+            {
+                anyhow::bail!("measurement digest does not match any reference values")
+            }
+            if !expected_digests
+                .setup_data
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no kernel setup data digests specified"))?
+                .digests
+                .iter()
+                .any(|expected| {
+                    verify_hex_digests(&actual_setup_data, &raw_to_hex_digest(expected)).is_ok()
+                })
+            {
+                anyhow::bail!("measurement digest does not match any reference values")
+            }
+
+            Ok(())
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
@@ -920,13 +989,13 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
         values,
         KERNEL_MEASUREMENT_ID,
     )?)?);
-    let kernel_cmd_line = Some(value_to_raw_digest(extract_value(
-        values,
-        KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    )?)?);
     let kernel_setup_data = Some(value_to_raw_digest(extract_value(
         values,
         SETUP_DATA_MEASUREMENT_ID,
+    )?)?);
+    let kernel_cmd_line = Some(value_to_raw_digest(extract_value(
+        values,
+        KERNEL_COMMANDLINE_MEASUREMENT_ID,
     )?)?);
     let init_ram_fs = Some(value_to_raw_digest(extract_value(
         values,
@@ -942,8 +1011,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     )?)?);
     Ok(KernelLayerData {
         kernel_image,
-        kernel_cmd_line,
         kernel_setup_data,
+        kernel_cmd_line,
         init_ram_fs,
         memory_map,
         acpi,

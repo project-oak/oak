@@ -6,7 +6,9 @@ license = "Apache-2.0"
 
 [dependencies]
 micro_rpc = { workspace = true }
-prost = { workspace = true }
+prost = { workspace = true, default-features = false, features = [
+  "prost-derive",
+] }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }

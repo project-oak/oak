@@ -128,17 +128,15 @@ message TcbVersion {
 
 // Values extracted from the the kernel layer evidence, as measured by stage0.
 message KernelLayerData {
-  // Measured digests for the kernel image that was extracted from the
-  // compressed kernel.
+  // Measured digests of the image part of the kernel.
   RawDigest kernel_image = 1;
+
+  // Measured digests of the setup data part of the kernel.
+  RawDigest kernel_setup_data = 3;
 
   // Measured digests of the command-line that was passed to the kernel
   // during startup.
   RawDigest kernel_cmd_line = 2;
-
-  // Measured digests of the kernel setup data that was extracted from the
-  // compressed kernel.
-  RawDigest kernel_setup_data = 3;
 
   // Measured digests of the initial RAM disk.
   RawDigest init_ram_fs = 4;

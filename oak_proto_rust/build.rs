@@ -16,6 +16,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
+        "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
         "../proto/attestation/evidence.proto",
@@ -25,7 +26,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/lookup_data.proto",
     ];
-    prost_build::compile_protos(&proto_paths, &[".."]).expect("proto compilation failed");
+    let mut config = prost_build::Config::new();
+    config
+        .btree_map(["."]) // Support no-std proto maps
+        .compile_protos(&proto_paths, &[".."])
+        .expect("proto compilation failed");
 
     micro_rpc_build::compile(
         &["../proto/oak_functions/testing.proto"],
