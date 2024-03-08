@@ -318,6 +318,11 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -403,6 +408,10 @@
     </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
     #[serde(rename = <span class="string">&quot;claimSpec&quot;</span>)]
     </span><span class="kw">pub </span>claim_spec: <span class="prelude-ty">Option</span>&lt;S&gt;,
+    <span class="comment">// Specifies which evidence field the endorsement targets.
+    // The `default` option should be removed once this is in operation.
+    </span><span class="attr">#[serde(default, rename = <span class="string">&quot;usage&quot;</span>)]
+    </span><span class="kw">pub </span>usage: String,
     <span class="doccomment">/// The timestamp (encoded as an Epoch time) when the claim was issued.
     </span><span class="attr">#[serde(with = <span class="string">&quot;time::serde::rfc3339&quot;</span>)]
     #[serde(rename = <span class="string">&quot;issuedOn&quot;</span>)]
@@ -586,7 +595,8 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Assembles digests found in endorsement statement into a protocol buffer.
+<span class="doccomment">/// Returns the digest found in the endorsement statement. This digest can
+/// be from the binary or from the attachment.
 </span><span class="kw">pub fn </span>get_digest(claim: <span class="kw-2">&amp;</span>EndorsementStatement) -&gt; anyhow::Result&lt;HexDigest&gt; {
     <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
         <span class="macro">anyhow::bail!</span>(

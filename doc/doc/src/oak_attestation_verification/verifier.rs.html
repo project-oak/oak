@@ -1054,6 +1054,75 @@
 <a href="#1054" id="1054">1054</a>
 <a href="#1055" id="1055">1055</a>
 <a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1088,23 +1157,24 @@
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
-        extracted_evidence::EvidenceValues, reference_values, root_layer_data::Report,
-        AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
-        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
-        ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelLayerData,
-        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TransparentReleaseEndorsement,
+        extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
+        root_layer_data::Report, AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys,
+        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        AttestationResults, BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues,
+        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        Endorsements, Evidence, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
+        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
+        RootLayerEvidence, RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
+<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -1116,7 +1186,10 @@
     amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
-    util::{hash_sha2_256, is_hex_digest_match, raw_to_hex_digest, MatchResult},
+    util::{
+        hash_sha2_256, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
+        MatchResult,
+    },
 };
 
 <span class="kw">const </span>ASK_MILAN_CERT_PEM: <span class="kw-2">&amp;</span>str = <span class="macro">include_str!</span>(<span class="string">&quot;../data/ask_milan.pem&quot;</span>);
@@ -1564,7 +1637,7 @@
     }
 }
 
-<span class="doccomment">/// Verifies the measurement values of the kernel layer, which is common to both the  Oak Restricted
+<span class="doccomment">/// Verifies the measurement values of the kernel layer, which is common to both the Oak Restricted
 /// Kernel and Oak Containers setups.
 </span><span class="kw">fn </span>verify_kernel_layer(
     now_utc_millis: i64,
@@ -1572,19 +1645,23 @@
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>KernelLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>KernelLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    verify_measurement_digest(
+    verify_kernel_measurement_digest(
         values
             .kernel_image
             .as_ref()
-            .context(<span class="string">&quot;no kernel image evidence value&quot;</span>)<span class="question-mark">?</span>,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_image.as_ref()),
-        reference_values
-            .kernel_image
+            .context(<span class="string">&quot;no kernel evidence value&quot;</span>)<span class="question-mark">?</span>,
+        values
+            .kernel_setup_data
             .as_ref()
-            .context(<span class="string">&quot;no kernel image reference value&quot;</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">&quot;no kernel setup data evidence value&quot;</span>)<span class="question-mark">?</span>,
+        now_utc_millis,
+        endorsements.and_then(|value| value.kernel.as_ref()),
+        reference_values
+            .kernel
+            .as_ref()
+            .context(<span class="string">&quot;no kernel reference value&quot;</span>)<span class="question-mark">?</span>,
     )
-    .context(<span class="string">&quot;kernel image failed verification&quot;</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">&quot;kernel failed verification&quot;</span>)<span class="question-mark">?</span>;
 
     verify_measurement_digest(
         values
@@ -1599,20 +1676,6 @@
             .context(<span class="string">&quot;no kernel command-line reference value&quot;</span>)<span class="question-mark">?</span>,
     )
     .context(<span class="string">&quot;kernel command-line failed verification&quot;</span>)<span class="question-mark">?</span>;
-
-    verify_measurement_digest(
-        values
-            .kernel_setup_data
-            .as_ref()
-            .context(<span class="string">&quot;no setup data evidence value&quot;</span>)<span class="question-mark">?</span>,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_setup_data.as_ref()),
-        reference_values
-            .kernel_setup_data
-            .as_ref()
-            .context(<span class="string">&quot;no kernel setup data reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;kernel setup data failed verification&quot;</span>)<span class="question-mark">?</span>;
 
     verify_measurement_digest(
         values
@@ -1771,6 +1834,81 @@
                     <span class="string">&quot;measurement digest does not match any reference values&quot;
                 </span>))
             }
+        }
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;empty binary reference value&quot;</span>)),
+    }
+}
+
+<span class="doccomment">/// Adapted version of verify_measure_digest() for kernels.
+</span><span class="kw">fn </span>verify_kernel_measurement_digest(
+    image_measurement: <span class="kw-2">&amp;</span>RawDigest,
+    setup_data_measurement: <span class="kw-2">&amp;</span>RawDigest,
+    now_utc_millis: i64,
+    endorsement: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TransparentReleaseEndorsement&gt;,
+    reference_value: <span class="kw-2">&amp;</span>KernelBinaryReferenceValue,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>actual_image = raw_to_hex_digest(image_measurement);
+    <span class="kw">let </span>actual_setup_data = raw_to_hex_digest(setup_data_measurement);
+    <span class="kw">match </span>reference_value.r#type.as_ref() {
+        <span class="prelude-val">Some</span>(kernel_binary_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(kernel_binary_reference_value::Type::Endorsement(public_keys)) =&gt; {
+            <span class="kw">let </span>endorsement =
+                endorsement.context(<span class="string">&quot;matching endorsement not found for reference value&quot;</span>)<span class="question-mark">?</span>;
+            verify_binary_endorsement(
+                now_utc_millis,
+                <span class="kw-2">&amp;</span>endorsement.endorsement,
+                <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
+                <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
+                <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+            )<span class="question-mark">?</span>;
+            <span class="comment">// Parse endorsement statement and verify attachment digest.
+            </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>;
+            <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">&quot;kernel&quot; </span>{
+                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unexpected entry in usage field&quot;</span>);
+            }
+            <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement)<span class="question-mark">?</span>;
+            <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
+            verify_hex_digests(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest)<span class="question-mark">?</span>;
+
+            <span class="comment">// Parse attachment and verify kernel components.
+            </span><span class="kw">let </span>kernel_attachment = KernelAttachment::decode(<span class="kw-2">&amp;*</span>endorsement.subject)
+                .map_err(|_error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse kernel attachment&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>expected_image = kernel_attachment
+                .image
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no image digest in kernel attachment&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>expected_setup_data = kernel_attachment
+                .setup_data
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no setup data digest in kernel attachment&quot;</span>))<span class="question-mark">?</span>;
+            verify_hex_digests(<span class="kw-2">&amp;</span>actual_image, <span class="kw-2">&amp;</span>expected_image)<span class="question-mark">?</span>;
+            verify_hex_digests(<span class="kw-2">&amp;</span>actual_setup_data, <span class="kw-2">&amp;</span>expected_setup_data)
+        }
+        <span class="prelude-val">Some</span>(kernel_binary_reference_value::Type::Digests(expected_digests)) =&gt; {
+            <span class="kw">if </span>!expected_digests
+                .image
+                .as_ref()
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no kernel image digests specified&quot;</span>))<span class="question-mark">?
+                </span>.digests
+                .iter()
+                .any(|expected| {
+                    verify_hex_digests(<span class="kw-2">&amp;</span>actual_image, <span class="kw-2">&amp;</span>raw_to_hex_digest(expected)).is_ok()
+                })
+            {
+                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;measurement digest does not match any reference values&quot;</span>)
+            }
+            <span class="kw">if </span>!expected_digests
+                .setup_data
+                .as_ref()
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no kernel setup data digests specified&quot;</span>))<span class="question-mark">?
+                </span>.digests
+                .iter()
+                .any(|expected| {
+                    verify_hex_digests(<span class="kw-2">&amp;</span>actual_setup_data, <span class="kw-2">&amp;</span>raw_to_hex_digest(expected)).is_ok()
+                })
+            {
+                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;measurement digest does not match any reference values&quot;</span>)
+            }
+
+            <span class="prelude-val">Ok</span>(())
         }
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;empty binary reference value&quot;</span>)),
     }
@@ -1976,13 +2114,13 @@
         values,
         KERNEL_MEASUREMENT_ID,
     )<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="kw">let </span>kernel_cmd_line = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(
-        values,
-        KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    )<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>kernel_setup_data = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(
         values,
         SETUP_DATA_MEASUREMENT_ID,
+    )<span class="question-mark">?</span>)<span class="question-mark">?</span>);
+    <span class="kw">let </span>kernel_cmd_line = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(
+        values,
+        KERNEL_COMMANDLINE_MEASUREMENT_ID,
     )<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(
         values,
@@ -1998,8 +2136,8 @@
     )<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="prelude-val">Ok</span>(KernelLayerData {
         kernel_image,
-        kernel_cmd_line,
         kernel_setup_data,
+        kernel_cmd_line,
         init_ram_fs,
         memory_map,
         acpi,
