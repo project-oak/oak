@@ -106,11 +106,6 @@ fn create_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
-    let kskip = KernelBinaryReferenceValue {
-        r#type: Some(kernel_binary_reference_value::Type::Skip(
-            SkipVerification {},
-        )),
-    };
 
     let amd_sev = AmdSevReferenceValues {
         amd_root_public_key: b"".to_vec(),
@@ -125,7 +120,11 @@ fn create_reference_values() -> ReferenceValues {
         ..Default::default()
     };
     let kernel_layer = KernelLayerReferenceValues {
-        kernel: Some(kskip.clone()),
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(
+                SkipVerification {},
+            )),
+        }),
         kernel_cmd_line: Some(skip.clone()),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),

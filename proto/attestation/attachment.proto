@@ -26,9 +26,8 @@ option java_package = "com.google.oak.attestation.v1";
 
 // The Transparent Release attachment for Oak Stage 0.
 message FirmwareAttachment {
-  HexDigest config_1 = 1;
-  HexDigest config_32 = 2;
-  HexDigest config_128 = 3;
+  // Maps number of vCPUs to measurement of the modified firmware binary.
+  map<int32, HexDigest> configs = 1;
 }
 
 // The Transparent Release attachment for Oak Containers Linux kernel.

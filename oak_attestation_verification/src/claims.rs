@@ -83,8 +83,7 @@ pub struct ClaimPredicate<S> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "claimSpec")]
     pub claim_spec: Option<S>,
-    // Whether the binary or an attachment is endorsed. If it is the
-    // attachment, provides a hint how to parse it.
+    // Specifies which evidence field the endorsement targets.
     // The `default` option should be removed once this is in operation.
     #[serde(default, rename = "usage")]
     pub usage: String,
