@@ -37,9 +37,28 @@ pub struct Params {
     #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_evidence.binarypb")]
     pub evidence: PathBuf,
 
-    /// Path VCEK endorsing the TEE.
+    /// Path endorsements.
     #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_endorsements.binarypb")]
     pub endorsements: PathBuf,
+
+    /// Expected Sha2-256 hash of the initial measurement of the VM memory in the attestation
+    /// report.
+    #[arg(
+        long,
+        value_parser = parse_ref_value,
+        // obtained by building stage0 and running `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`.
+        default_value = "f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
+    )]
+    pub initial_measurement: BinaryReferenceValue,
+
+    /// Expected Sha2-256 hash of the application
+    #[arg(
+        long,
+        value_parser = parse_ref_value,
+        // obtained by building the oak functions enclave app, and running `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`.
+        default_value = "adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
+    )]
+    pub app_hash: BinaryReferenceValue,
 }
 
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
@@ -54,7 +73,20 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     }
 }
 
-fn create_reference_values() -> ReferenceValues {
+pub fn parse_ref_value(hex_sha2_256_hash: &str) -> Result<BinaryReferenceValue, String> {
+    let mut raw_digest = RawDigest::default();
+    raw_digest.sha2_256 =
+        hex::decode(hex_sha2_256_hash).map_err(|_| "failed to parse hash".to_string())?;
+    let digests = [raw_digest].to_vec();
+    Ok(BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
+    })
+}
+
+fn create_reference_values(
+    application_ref: BinaryReferenceValue,
+    _initial_measurement_ref: BinaryReferenceValue,
+) -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(
             SkipVerification::default(),
@@ -65,7 +97,8 @@ fn create_reference_values() -> ReferenceValues {
         amd_root_public_key: b"".to_vec(),
         firmware_version: None,
         allow_debug: false,
-        // See b/327069120: Do not skip over stage0.
+        // See b/327069120: Stage0 verification currently fails due to an issue in the verificatin
+        // library. Hence it is skipped.
         stage0: Some(skip.clone()),
     };
 
@@ -82,17 +115,8 @@ fn create_reference_values() -> ReferenceValues {
         acpi: Some(skip.clone()),
     };
 
-    let digests = {
-        let vec = Vec::new();
-        vec.push(RawDigest { sha2_256: [] });
-        vec
-    }
     let application_layer = ApplicationLayerReferenceValues {
-        binary: Some(BinaryReferenceValue {
-            r#type: Some(binary_reference_value::Type::Digests(Digests {
-                digests,
-            })),
-        }),
+        binary: Some(application_ref),
         configuration: Some(skip.clone()),
     };
 
@@ -112,6 +136,8 @@ fn main() {
     let Params {
         evidence,
         endorsements,
+        app_hash,
+        initial_measurement,
     } = Params::parse();
 
     let serialized_evidence = fs::read(evidence).expect("couldn't read evidence");
@@ -122,7 +148,7 @@ fn main() {
     let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
         .expect("couldn't decode endorsements");
 
-    let reference_values = create_reference_values();
+    let reference_values = create_reference_values(app_hash, initial_measurement);
 
     let attestation_results = to_attestation_results(&verify(
         NOW_UTC_MILLIS,
