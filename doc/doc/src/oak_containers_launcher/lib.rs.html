@@ -372,8 +372,8 @@
     </span><span class="kw">pub </span>system_image: std::path::PathBuf,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
     </span><span class="kw">pub </span>container_bundle: std::path::PathBuf,
-    <span class="attr">#[arg(long, value_parser = path_exists,)]
-    </span><span class="kw">pub </span>application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    <span class="attr">#[clap(skip)]
+    </span><span class="kw">pub </span>application_config: Vec&lt;u8&gt;,
     <span class="attr">#[command(flatten)]
     </span><span class="kw">pub </span>qemu_params: qemu::Params,
 }
@@ -387,7 +387,7 @@
         <span class="self">Self </span>{
             system_image,
             container_bundle,
-            application_config: <span class="prelude-val">None</span>,
+            application_config: Vec::new(),
             qemu_params: qemu::Params::default_for_root(root),
         }
     }

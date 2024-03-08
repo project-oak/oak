@@ -296,15 +296,6 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -368,7 +359,7 @@
 </span><span class="kw">struct </span>LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    application_config: Vec&lt;u8&gt;,
     <span class="comment">// Will be used to send the Attestation Evidence to the Launcher.
     </span>evidence_sender: Mutex&lt;<span class="prelude-ty">Option</span>&lt;Sender&lt;Evidence&gt;&gt;&gt;,
     <span class="comment">// Will be used to notify the untrusted application that the trusted application is ready and
@@ -445,18 +436,9 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         _request: Request&lt;()&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetApplicationConfigResponse&gt;, tonic::Status&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.application_config {
-            <span class="prelude-val">Some</span>(config_path) =&gt; {
-                <span class="kw">let </span>application_config_file = tokio::fs::File::open(<span class="kw-2">&amp;</span>config_path).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
-                <span class="kw">let </span><span class="kw-2">mut </span>reader = BufReader::new(application_config_file);
-                reader.read_to_end(<span class="kw-2">&amp;mut </span>buffer).<span class="kw">await</span><span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(tonic::Response::new(GetApplicationConfigResponse {
-                    config: buffer,
-                }))
-            }
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(tonic::Response::new(GetApplicationConfigResponse::default())),
-        }
+        <span class="prelude-val">Ok</span>(tonic::Response::new(GetApplicationConfigResponse {
+            config: <span class="self">self</span>.application_config.clone(),
+        }))
     }
 
     <span class="kw">async fn </span>send_attestation_evidence(
@@ -591,7 +573,7 @@
     listener: TcpListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    application_config: Vec&lt;u8&gt;,
     evidence_sender: Sender&lt;Evidence&gt;,
     app_ready_notifier: Sender&lt;()&gt;,
     shutdown: Receiver&lt;()&gt;,

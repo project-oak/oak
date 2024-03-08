@@ -121,6 +121,9 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -140,6 +143,9 @@
     <span class="kw">pub mod </span>oak {
         <span class="kw">pub mod </span>functions {
             <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.functions&quot;</span>);
+            <span class="kw">pub mod </span>config {
+                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.functions.config&quot;</span>);
+            }
         }
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub use </span>oak_proto_rust::oak::attestation;
