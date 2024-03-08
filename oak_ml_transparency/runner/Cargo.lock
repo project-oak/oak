@@ -659,6 +659,7 @@ dependencies = [
  "oak_sev_snp_attestation_report",
  "p256",
  "p384",
+ "prost",
  "rsa",
  "serde",
  "serde_json",
