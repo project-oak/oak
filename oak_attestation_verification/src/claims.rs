@@ -83,6 +83,10 @@ pub struct ClaimPredicate<S> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "claimSpec")]
     pub claim_spec: Option<S>,
+    // Whether the binary or an attachment is endorsed. If it is the
+    // attachment, provides a hint how to parse it.
+    #[serde(default, rename = "usage")]
+    pub usage: String,
     /// The timestamp (encoded as an Epoch time) when the claim was issued.
     #[serde(with = "time::serde::rfc3339")]
     #[serde(rename = "issuedOn")]
@@ -266,7 +270,8 @@ fn set_digest_field_from_map_entry(
     Ok(())
 }
 
-/// Assembles digests found in endorsement statement into a protocol buffer.
+/// Returns the digest found in the endorsement statement. This digest can
+/// be from the binary or from the attachment.
 pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
     if claim.subject.len() != 1 {
         anyhow::bail!(

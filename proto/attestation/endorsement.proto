@@ -30,11 +30,15 @@ message TransparentReleaseEndorsement {
   // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
+  // If non-empty, then the endorsed data is not the actual binary, but this
+  // piece of data, which is usually a serialized proto containing digests.
+  bytes attachment = 2;
+
   // The signature for the endorsement.
-  bytes endorsement_signature = 2;
+  bytes endorsement_signature = 3;
 
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 3;
+  bytes rekor_log_entry = 4;
 }
 
 message RootLayerEndorsements {
@@ -52,9 +56,8 @@ message RootLayerEndorsements {
 }
 
 message KernelLayerEndorsements {
-  TransparentReleaseEndorsement kernel_image = 1;
+  TransparentReleaseEndorsement kernel = 1;
   TransparentReleaseEndorsement kernel_cmd_line = 2;
-  TransparentReleaseEndorsement kernel_setup_data = 3;
   TransparentReleaseEndorsement init_ram_fs = 4;
   TransparentReleaseEndorsement memory_map = 5;
   TransparentReleaseEndorsement acpi = 6;

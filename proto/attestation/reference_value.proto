@@ -53,6 +53,24 @@ message BinaryReferenceValue {
   }
 }
 
+message KernelDigests {
+  // Contains admissible digests for the kernel image part of the kernel.
+  Digests image = 2;
+
+  // Contains admissible digests for the setup data part of the kernel.
+  Digests setup_data = 3;
+}
+
+// Follows the lines of BinaryReferenceValue, but provides a custom proto
+// to facilitate the digest matching.
+message KernelBinaryReferenceValue {
+  oneof type {
+    SkipVerification skip = 1;
+    EndorsementReferenceValue endorsement = 2;
+    KernelDigests digests = 3;
+  }
+}
+
 // Reference value for a file including its digests.
 message FileReferenceValue {
   // Allowable digests for the file.
@@ -104,17 +122,14 @@ message Digests {
 
 // Reference values of the kernel layer, as measured by stage0.
 message KernelLayerReferenceValues {
-  // Verifies the kernel binary based on endorsement.
-  BinaryReferenceValue kernel_image = 1;
+  // Verifies the kernel based on endorsement.
+  KernelBinaryReferenceValue kernel = 1;
 
   // Verifies the command line by which the kernel was built. The command
   // line is treated as a binary blob, as if it were a binary.
   BinaryReferenceValue kernel_cmd_line = 2;
 
-  // One part of the kernel is modified by the system after loading. Verifies
-  // that part after these modifications.
-  BinaryReferenceValue kernel_setup_data = 3;
-
+  // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;
 
   BinaryReferenceValue memory_map = 5;

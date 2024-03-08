@@ -25,6 +25,22 @@ package(
 )
 
 proto_library(
+    name = "attachment_proto",
+    srcs = ["attachment.proto"],
+    deps = ["//proto:digest_proto"],
+)
+
+cc_proto_library(
+    name = "attachment_cc_proto",
+    deps = [":attachment_proto"],
+)
+
+java_proto_library(
+    name = "attachment_java_proto",
+    deps = [":attachment_proto"],
+)
+
+proto_library(
     name = "dice_proto",
     srcs = ["dice.proto"],
     deps = [":evidence_proto"],
@@ -125,6 +141,9 @@ java_lite_proto_library(
 build_test(
     name = "build_test",
     targets = [
+        ":attachment_proto",
+        ":attachment_cc_proto",
+        ":attachment_java_proto",
         ":dice_proto",
         ":dice_cc_proto",
         ":dice_java_proto",

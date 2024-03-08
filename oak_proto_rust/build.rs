@@ -16,6 +16,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
+        "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
         "../proto/attestation/evidence.proto",
