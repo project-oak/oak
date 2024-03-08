@@ -31,7 +31,7 @@ java_library(
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-        "//third_party/oak/proto/attestation:verification_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -46,6 +46,6 @@ android_library(
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
         "//java/src/main/java/com/google/oak/transport:transport_android",
         "//java/src/main/java/com/google/oak/util",
-        "//third_party/oak/proto/attestation:verification_java_proto_lite",
+        "//proto/attestation:verification_java_proto",
     ],
 )
