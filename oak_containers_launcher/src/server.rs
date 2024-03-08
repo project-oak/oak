@@ -61,7 +61,7 @@ type GetImageResponseStream = Pin<Box<dyn Stream<Item = Result<GetImageResponse,
 struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: Option<std::path::PathBuf>,
+    application_config: Vec<u8>,
     // Will be used to send the Attestation Evidence to the Launcher.
     evidence_sender: Mutex<Option<Sender<Evidence>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
@@ -138,18 +138,9 @@ impl Launcher for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
-        match &self.application_config {
-            Some(config_path) => {
-                let application_config_file = tokio::fs::File::open(&config_path).await?;
-                let mut buffer = Vec::new();
-                let mut reader = BufReader::new(application_config_file);
-                reader.read_to_end(&mut buffer).await?;
-                Ok(tonic::Response::new(GetApplicationConfigResponse {
-                    config: buffer,
-                }))
-            }
-            None => Ok(tonic::Response::new(GetApplicationConfigResponse::default())),
-        }
+        Ok(tonic::Response::new(GetApplicationConfigResponse {
+            config: self.application_config.clone(),
+        }))
     }
 
     async fn send_attestation_evidence(
@@ -284,7 +275,7 @@ pub async fn new(
     listener: TcpListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: Option<std::path::PathBuf>,
+    application_config: Vec<u8>,
     evidence_sender: Sender<Evidence>,
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
