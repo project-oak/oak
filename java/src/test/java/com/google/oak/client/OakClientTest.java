@@ -17,6 +17,7 @@
 package com.google.oak.client;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.oak.attestation.v1.AttestationResults;
@@ -105,9 +106,10 @@ public class OakClientTest {
 
   /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
-  public void testOakClient() throws Exception {
+  public void testOakClient_attestationSucceeds() throws Exception {
     AttestationResults attestationResults =
         AttestationResults.newBuilder()
+            .setStatus(AttestationResults.Status.STATUS_SUCCESS)
             .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
             .build();
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
@@ -122,5 +124,18 @@ public class OakClientTest {
         assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
       }
     }
+  }
+
+  @Test
+  public void testOakClient_attestationFails() throws Exception {
+    AttestationResults attestationResults =
+        AttestationResults.newBuilder()
+            .setStatus(AttestationResults.Status.STATUS_GENERIC_FAILURE)
+            .setReason("Attestation verification fails")
+            .build();
+    Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
+        OakClient.create(new TestTransport(keyPair),
+            new TestAttestationVerifier(attestationResults), Clock.systemUTC());
+    assertFalse(oakClientCreateResult.isSuccess());
   }
 }
