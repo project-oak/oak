@@ -64,6 +64,11 @@ pub struct Params {
     /// interactive debugging.
     #[arg(long)]
     pub telnet_console: Option<u16>,
+
+    /// Optional virtio guest CID for virtio-vsock.
+    /// Warning: This CID needs to be globally unique on the whole host!
+    #[arg(long)]
+    pub virtio_guest_cid: Option<u32>,
 }
 
 impl Params {
@@ -82,12 +87,14 @@ impl Params {
             num_cpus: 2,
             ramdrive_size: 3_000_000,
             telnet_console: None,
+            virtio_guest_cid: None,
         }
     }
 }
 
 pub struct Qemu {
     instance: tokio::process::Child,
+    guest_cid: Option<u32>,
 }
 
 impl Qemu {
@@ -163,6 +170,12 @@ impl Qemu {
             .as_str(),
         ]);
         cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
+        if let Some(virtio_guest_cid) = params.virtio_guest_cid {
+            cmd.args([
+                "-device",
+                &format!("vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0"),
+            ]);
+        }
         // And yes, use stage0 as the BIOS.
         cmd.args([
             "-bios",
@@ -226,7 +239,10 @@ impl Qemu {
 
         let instance = cmd.spawn()?;
 
-        Ok(Self { instance })
+        Ok(Self {
+            instance,
+            guest_cid: params.virtio_guest_cid,
+        })
     }
 
     pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
@@ -236,5 +252,10 @@ impl Qemu {
 
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
         self.instance.wait().await.map_err(anyhow::Error::from)
+    }
+
+    #[allow(unused)]
+    pub fn guest_cid(&self) -> Option<u32> {
+        self.guest_cid
     }
 }
