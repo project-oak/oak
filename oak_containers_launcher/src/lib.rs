@@ -37,7 +37,10 @@ pub mod proto {
 mod qemu;
 mod server;
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    fmt::Display,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 
 use anyhow::Context;
 use clap::Parser;
@@ -115,10 +118,44 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     }
 }
 
+#[derive(Clone)]
+pub enum Channel {
+    Network {
+        host_proxy_port: u16,
+        trusted_app_address: Option<SocketAddr>,
+    },
+}
+
+/// Interface that is connected to the trusted application.
+pub enum TrustedApplicationAddress {
+    Network(SocketAddr),
+}
+
+impl TryFrom<Channel> for TrustedApplicationAddress {
+    type Error = anyhow::Error;
+
+    fn try_from(channel: Channel) -> Result<TrustedApplicationAddress, Self::Error> {
+        match channel {
+            Channel::Network {
+                host_proxy_port: _,
+                trusted_app_address,
+            } => trusted_app_address.map(TrustedApplicationAddress::Network),
+        }
+        .ok_or_else(|| anyhow::anyhow!("trusted application address not set"))
+    }
+}
+
+impl Display for TrustedApplicationAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TrustedApplicationAddress::Network(addr) => addr.fmt(f),
+        }
+    }
+}
+
 pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
-    host_proxy_port: u16,
     host_orchestrator_proxy_port: u16,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
@@ -127,7 +164,7 @@ pub struct Launcher {
     evidence_receiver: Option<Receiver<Evidence>>,
     app_ready_notifier: Option<Receiver<()>>,
     orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
-    trusted_app_address: Option<SocketAddr>,
+    trusted_app_channel: Channel,
     shutdown: Option<Sender<()>>,
 }
 
@@ -173,7 +210,6 @@ impl Launcher {
         Ok(Self {
             vmm,
             server,
-            host_proxy_port,
             host_orchestrator_proxy_port,
             // Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
@@ -182,7 +218,10 @@ impl Launcher {
             evidence_receiver: Some(evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
             orchestrator_key_provisioning_client: None,
-            trusted_app_address: None,
+            trusted_app_channel: Channel::Network {
+                host_proxy_port,
+                trusted_app_address: None,
+            },
             shutdown: Some(shutdown_sender),
         })
     }
@@ -195,18 +234,24 @@ impl Launcher {
     ///
     /// This call will wait until the trusted app has notifiied the launcher once that it is ready
     /// via the orchestrator.
-    pub async fn get_trusted_app_address(&mut self) -> Result<SocketAddr, anyhow::Error> {
+    pub async fn get_trusted_app_address(
+        &mut self,
+    ) -> Result<TrustedApplicationAddress, anyhow::Error> {
         // If we haven't received a ready notification, wait for it.
         if let Some(receiver) = self.app_ready_notifier.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
             timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).await??;
-            self.trusted_app_address.replace(SocketAddr::new(
-                IpAddr::V4(PROXY_ADDRESS),
-                self.host_proxy_port,
-            ));
+            match &mut self.trusted_app_channel {
+                Channel::Network {
+                    host_proxy_port,
+                    trusted_app_address,
+                } => {
+                    trusted_app_address
+                        .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), *host_proxy_port));
+                }
+            }
         }
-        self.trusted_app_address
-            .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
+        self.trusted_app_channel.clone().try_into()
     }
 
     /// Gets the endorsed attestation evidence that the untrusted application can send to remote
