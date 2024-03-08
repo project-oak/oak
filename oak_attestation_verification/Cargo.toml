@@ -43,6 +43,3 @@ time = { version = "0.3.28", default-features = false, features = [
 ] }
 x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 zerocopy = "*"
-
-[dev-dependencies]
-prost = { workspace = true }
