@@ -49,7 +49,7 @@ pub struct Params {
         // Obtained by building stage0 and running:
         // `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`
         default_value = "f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
-        // default_value = "59a6338d110e6ae49a572d8af6177aef5516584afcfc5c39443dd663ae27dd618754bde3dcf7a0e1e219e14df1483952"
+        // default_value = "ed7866d5d103c2c30a73f385beb3533bd5138a41320c9a79d1079d75b32cf6b927d9f0aba3b531dcb3373f210acf1e11"
     )]
     pub initial_measurement: BinaryReferenceValue,
 
