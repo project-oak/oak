@@ -34,28 +34,31 @@ const NOW_UTC_MILLIS: i64 = 1709641620000;
 #[derive(clap::Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the evidence to verify.
-    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_evidence.binarypb")]
+    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/evidence.binarypb")]
     pub evidence: PathBuf,
 
     /// Path endorsements.
-    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_endorsements.binarypb")]
+    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/endorsements.binarypb")]
     pub endorsements: PathBuf,
 
-    /// Expected Sha2-256 hash of the initial measurement of the VM memory in the attestation
+    /// Expected Sha2-384 hash of the initial measurement of the VM memory in the attestation
     /// report.
     #[arg(
         long,
-        value_parser = parse_ref_value,
-        // obtained by building stage0 and running `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`.
+        value_parser = parse_hex_sha2_384_hash,
+        // Obtained by building stage0 and running:
+        // `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`
         default_value = "f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
+        // default_value = "59a6338d110e6ae49a572d8af6177aef5516584afcfc5c39443dd663ae27dd618754bde3dcf7a0e1e219e14df1483952"
     )]
     pub initial_measurement: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the application
     #[arg(
         long,
-        value_parser = parse_ref_value,
-        // obtained by building the oak functions enclave app, and running `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`.
+        value_parser = parse_hex_sha2_256_hash,
+        // Obtained by building the oak functions enclave app and running:
+        // `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`
         default_value = "adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
     )]
     pub app_hash: BinaryReferenceValue,
@@ -73,7 +76,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     }
 }
 
-pub fn parse_ref_value(hex_sha2_256_hash: &str) -> Result<BinaryReferenceValue, String> {
+pub fn parse_hex_sha2_256_hash(hex_sha2_256_hash: &str) -> Result<BinaryReferenceValue, String> {
     let mut raw_digest = RawDigest::default();
     raw_digest.sha2_256 =
         hex::decode(hex_sha2_256_hash).map_err(|_| "failed to parse hash".to_string())?;
@@ -83,9 +86,19 @@ pub fn parse_ref_value(hex_sha2_256_hash: &str) -> Result<BinaryReferenceValue, 
     })
 }
 
+pub fn parse_hex_sha2_384_hash(hex_sha2_384_hash: &str) -> Result<BinaryReferenceValue, String> {
+    let mut raw_digest = RawDigest::default();
+    raw_digest.sha2_384 =
+        hex::decode(hex_sha2_384_hash).map_err(|_| "failed to parse hash".to_string())?;
+    let digests = [raw_digest].to_vec();
+    Ok(BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
+    })
+}
+
 fn create_reference_values(
     application_ref: BinaryReferenceValue,
-    _initial_measurement_ref: BinaryReferenceValue,
+    initial_measurement_ref: BinaryReferenceValue,
 ) -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(
@@ -97,9 +110,7 @@ fn create_reference_values(
         amd_root_public_key: b"".to_vec(),
         firmware_version: None,
         allow_debug: false,
-        // See b/327069120: Stage0 verification currently fails due to an issue in the verificatin
-        // library. Hence it is skipped.
-        stage0: Some(skip.clone()),
+        stage0: Some(initial_measurement_ref),
     };
 
     let root_layer = RootLayerReferenceValues {
