@@ -46,18 +46,30 @@ pub struct Params {
     #[arg(
         long,
         value_parser = parse_hex_sha2_384_hash,
-        // Obtained by building stage0 and running:
+        // Obtained by building stage0 and getting its measurement:
+        // `just stage0_bin`
         // `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`
         default_value = "f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
-        // default_value = "ed7866d5d103c2c30a73f385beb3533bd5138a41320c9a79d1079d75b32cf6b927d9f0aba3b531dcb3373f210acf1e11"
     )]
     pub initial_measurement: BinaryReferenceValue,
 
-    /// Expected Sha2-256 hash of the application
+    /// Expected Sha2-256 hash of the Restricted Kernel.
     #[arg(
         long,
         value_parser = parse_hex_sha2_256_hash,
-        // Obtained by building the oak functions enclave app and running:
+        // Obtained by building Restricted Kernel and getting its measurement:
+        // `just oak_restricted_kernel_simple_io_wrapper`
+        // `cargo run -p oak_kernel_measurement -- --kernel=oak_containers_kernel/target/bzImage`
+        default_value = "cc8ea3ca6ac5e0a773e25b1f0f7df56aeee077421b5286fde5424f630507fb4e"
+    )]
+    pub kernel_hash: BinaryReferenceValue,
+
+    /// Expected Sha2-256 hash of the Enclave Application.
+    #[arg(
+        long,
+        value_parser = parse_hex_sha2_256_hash,
+        // Obtained by building Oak Functions enclave application and getting its measurement:
+        // `(cd enclave_apps; cargo build -p oak_functions_enclave_app --release)`
         // `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`
         default_value = "adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
     )]
@@ -97,8 +109,9 @@ pub fn parse_hex_sha2_384_hash(hex_sha2_384_hash: &str) -> Result<BinaryReferenc
 }
 
 fn create_reference_values(
-    application_ref: BinaryReferenceValue,
     initial_measurement_ref: BinaryReferenceValue,
+    kernel_ref: BinaryReferenceValue,
+    application_ref: BinaryReferenceValue,
 ) -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(
@@ -118,7 +131,7 @@ fn create_reference_values(
         ..Default::default()
     };
     let kernel_layer = KernelLayerReferenceValues {
-        kernel_image: Some(skip.clone()),
+        kernel_image: Some(kernel_ref),
         kernel_cmd_line: Some(skip.clone()),
         kernel_setup_data: Some(skip.clone()),
         init_ram_fs: Some(skip.clone()),
@@ -147,8 +160,9 @@ fn main() {
     let Params {
         evidence,
         endorsements,
-        app_hash,
         initial_measurement,
+        kernel_hash,
+        app_hash,
     } = Params::parse();
 
     let serialized_evidence = fs::read(evidence).expect("couldn't read evidence");
@@ -159,7 +173,7 @@ fn main() {
     let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
         .expect("couldn't decode endorsements");
 
-    let reference_values = create_reference_values(app_hash, initial_measurement);
+    let reference_values = create_reference_values(initial_measurement, kernel_hash, app_hash);
 
     let attestation_results = to_attestation_results(&verify(
         NOW_UTC_MILLIS,
