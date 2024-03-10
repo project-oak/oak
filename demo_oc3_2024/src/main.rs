@@ -46,10 +46,7 @@ pub struct Params {
     #[arg(
         long,
         value_parser = parse_hex_sha2_384_hash,
-        // Obtained by building stage0 and getting its measurement:
-        // `just stage0_bin`
-        // `cargo run -p snp_measurement -- --stage0-rom="./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"`
-        default_value = "f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
+        default_value = "sha2-384:f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
     )]
     pub initial_measurement: BinaryReferenceValue,
 
@@ -57,10 +54,7 @@ pub struct Params {
     #[arg(
         long,
         value_parser = parse_hex_sha2_256_hash,
-        // Obtained by building Restricted Kernel and getting its measurement:
-        // `just oak_restricted_kernel_simple_io_wrapper`
-        // `cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin`
-        default_value = "cc8ea3ca6ac5e0a773e25b1f0f7df56aeee077421b5286fde5424f630507fb4e"
+        default_value = "sha2-256:cc8ea3ca6ac5e0a773e25b1f0f7df56aeee077421b5286fde5424f630507fb4e"
     )]
     pub kernel_hash: BinaryReferenceValue,
 
@@ -68,10 +62,7 @@ pub struct Params {
     #[arg(
             long,
             value_parser = parse_hex_sha2_256_hash,
-            // Obtained by building Restricted Kernel and getting its measurement:
-            // `just oak_restricted_kernel_simple_io_wrapper`
-            // `cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin`
-            default_value = "4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1"
+            default_value = "sha2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1"
         )]
     pub kernel_setup_data_hash: BinaryReferenceValue,
 
@@ -79,10 +70,7 @@ pub struct Params {
     #[arg(
         long,
         value_parser = parse_hex_sha2_256_hash,
-        // Obtained by building Oak Functions enclave application and getting its measurement:
-        // `just oak_functions_enclave_app`
-        // `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`
-        default_value = "adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
+        default_value = "sha2-256:adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
     )]
     pub app_hash: BinaryReferenceValue,
 }
@@ -100,9 +88,16 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 }
 
 pub fn parse_hex_sha2_256_hash(hex_sha2_256_hash: &str) -> Result<BinaryReferenceValue, String> {
+    let hash = {
+        let parts: Vec<&str> = hex_sha2_256_hash.split(':').collect();
+        if parts[0] != "sha2-256" || parts.len() != 2 {
+            println!("Invalid input format");
+            return Err("invalid hash".to_string());
+        }
+        parts[1]
+    };
     let mut raw_digest = RawDigest::default();
-    raw_digest.sha2_256 =
-        hex::decode(hex_sha2_256_hash).map_err(|_| "failed to parse hash".to_string())?;
+    raw_digest.sha2_256 = hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?;
     let digests = [raw_digest].to_vec();
     Ok(BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
@@ -110,9 +105,16 @@ pub fn parse_hex_sha2_256_hash(hex_sha2_256_hash: &str) -> Result<BinaryReferenc
 }
 
 pub fn parse_hex_sha2_384_hash(hex_sha2_384_hash: &str) -> Result<BinaryReferenceValue, String> {
+    let hash = {
+        let parts: Vec<&str> = hex_sha2_384_hash.split(':').collect();
+        if parts[0] != "sha2-384" || parts.len() != 2 {
+            println!("Invalid input format");
+            return Err("invalid hash".to_string());
+        }
+        parts[1]
+    };
     let mut raw_digest = RawDigest::default();
-    raw_digest.sha2_384 =
-        hex::decode(hex_sha2_384_hash).map_err(|_| "failed to parse hash".to_string())?;
+    raw_digest.sha2_384 = hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?;
     let digests = [raw_digest].to_vec();
     Ok(BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
@@ -182,7 +184,6 @@ fn main() {
     };
 
     let extracted_evidence = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    println!("extrated evidence: {:?}", extracted_evidence);
     let attestation_results = to_attestation_results(&extracted_evidence);
 
     match attestation_results.status() {
