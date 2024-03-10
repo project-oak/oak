@@ -64,6 +64,17 @@ pub struct Params {
     )]
     pub kernel_hash: BinaryReferenceValue,
 
+    /// Expected Sha2-256 hash of the setup data for the Restricted Kernel.
+    #[arg(
+            long,
+            value_parser = parse_hex_sha2_256_hash,
+            // Obtained by building Restricted Kernel and getting its measurement:
+            // `just oak_restricted_kernel_simple_io_wrapper`
+            // `cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin`
+            default_value = "4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1"
+        )]
+    pub kernel_setup_data_hash: BinaryReferenceValue,
+
     /// Expected Sha2-256 hash of the Enclave Application.
     #[arg(
         long,
@@ -108,60 +119,13 @@ pub fn parse_hex_sha2_384_hash(hex_sha2_384_hash: &str) -> Result<BinaryReferenc
     })
 }
 
-fn create_reference_values(
-    initial_measurement_ref: BinaryReferenceValue,
-    kernel_ref: BinaryReferenceValue,
-    application_ref: BinaryReferenceValue,
-) -> ReferenceValues {
-    let skip = BinaryReferenceValue {
-        r#type: Some(binary_reference_value::Type::Skip(
-            SkipVerification::default(),
-        )),
-    };
-
-    let amd_sev = AmdSevReferenceValues {
-        amd_root_public_key: b"".to_vec(),
-        firmware_version: None,
-        allow_debug: false,
-        stage0: Some(initial_measurement_ref),
-    };
-
-    let root_layer = RootLayerReferenceValues {
-        amd_sev: Some(amd_sev),
-        ..Default::default()
-    };
-    let kernel_layer = KernelLayerReferenceValues {
-        kernel_image: Some(kernel_ref),
-        kernel_cmd_line: Some(skip.clone()),
-        kernel_setup_data: Some(skip.clone()),
-        init_ram_fs: Some(skip.clone()),
-        memory_map: Some(skip.clone()),
-        acpi: Some(skip.clone()),
-    };
-
-    let application_layer = ApplicationLayerReferenceValues {
-        binary: Some(application_ref),
-        configuration: Some(skip.clone()),
-    };
-
-    let reference_values = OakRestrictedKernelReferenceValues {
-        root_layer: Some(root_layer),
-        kernel_layer: Some(kernel_layer),
-        application_layer: Some(application_layer),
-    };
-    ReferenceValues {
-        r#type: Some(reference_values::Type::OakRestrictedKernel(
-            reference_values,
-        )),
-    }
-}
-
 fn main() {
     let Params {
         evidence,
         endorsements,
         initial_measurement,
         kernel_hash,
+        kernel_setup_data_hash,
         app_hash,
     } = Params::parse();
 
@@ -173,7 +137,49 @@ fn main() {
     let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
         .expect("couldn't decode endorsements");
 
-    let reference_values = create_reference_values(initial_measurement, kernel_hash, app_hash);
+    let reference_values = {
+        let skip = BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Skip(
+                SkipVerification::default(),
+            )),
+        };
+
+        let amd_sev = AmdSevReferenceValues {
+            amd_root_public_key: b"".to_vec(),
+            firmware_version: None,
+            allow_debug: false,
+            stage0: Some(initial_measurement),
+        };
+
+        let root_layer = RootLayerReferenceValues {
+            amd_sev: Some(amd_sev),
+            ..Default::default()
+        };
+        let kernel_layer = KernelLayerReferenceValues {
+            kernel_image: Some(kernel_hash),
+            kernel_cmd_line: Some(skip.clone()),
+            kernel_setup_data: Some(kernel_setup_data_hash),
+            init_ram_fs: Some(skip.clone()),
+            memory_map: Some(skip.clone()),
+            acpi: Some(skip.clone()),
+        };
+
+        let application_layer = ApplicationLayerReferenceValues {
+            binary: Some(app_hash),
+            configuration: Some(skip.clone()),
+        };
+
+        let reference_values = OakRestrictedKernelReferenceValues {
+            root_layer: Some(root_layer),
+            kernel_layer: Some(kernel_layer),
+            application_layer: Some(application_layer),
+        };
+        ReferenceValues {
+            r#type: Some(reference_values::Type::OakRestrictedKernel(
+                reference_values,
+            )),
+        }
+    };
 
     let attestation_results = to_attestation_results(&verify(
         NOW_UTC_MILLIS,
