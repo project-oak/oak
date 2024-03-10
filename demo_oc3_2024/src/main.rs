@@ -69,7 +69,7 @@ pub struct Params {
         long,
         value_parser = parse_hex_sha2_256_hash,
         // Obtained by building Oak Functions enclave application and getting its measurement:
-        // `(cd enclave_apps; cargo build -p oak_functions_enclave_app --release)`
+        // `just oak_functions_enclave_app`
         // `sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app`
         default_value = "adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
     )]
