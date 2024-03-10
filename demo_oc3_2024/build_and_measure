@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# This script builds the firmware, kernel, application measures the built artifact.
+# It should be run from the workspace root, and within the docker container and nix.
+# Eg the commands to run this from the repo root would be as follows.
+# First, enter docker and nix: `./scripts/docker_run bash -c "nix develop"`
+# Second, run this script: `./demo_oc3_2024/get_measurements`
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# Build artifacts.
+just stage0_bin oak_restricted_kernel_simple_io_wrapper oak_functions_enclave_app
+
+# Function to extract a hash given the label
+extract_hash() {
+  local label="$1"
+  local output="$2"
+
+  echo "$output" | grep "^${label}:" | cut -d ':' -f 2- | tr -d ' '
+}
+
+readonly FIRMWARE_MEASUREMENT_OUTPUT="$(cargo run -p snp_measurement -- --stage0-rom=./stage0_bin/target/x86_64-unknown-none/release/stage0_bin)"
+readonly FIRMWARE_MEASUREMENT=sha2-384:$(extract_hash "Attestation Measurement" "$FIRMWARE_MEASUREMENT_OUTPUT")
+
+# Get the kernel hashes using the measurement tool
+readonly KERNEL_MEASUREMENTS_OUTPUT="$(cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin)"
+
+# Store kernel hashes in seperate variables
+readonly KERNEL_IMAGE_MEASUREMENT=$(extract_hash "Kernel Image Measurement" "$KERNEL_MEASUREMENTS_OUTPUT")
+readonly KERNEL_SETUP_DATA_MEASUREMENT=$(extract_hash "Kernel Setup Data Measurement" "$KERNEL_MEASUREMENTS_OUTPUT")
+
+readonly APPLICATION_MEASUREMENT="sha2-256:$(sha256sum ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app | cut -d ' ' -f 1)"
+
+echo "Firmware Measurent: ${FIRMWARE_MEASUREMENT}"
+echo "Kernel Image Measurent: ${KERNEL_IMAGE_MEASUREMENT}"
+echo "Kernel Setup Data Measurent: ${KERNEL_SETUP_DATA_MEASUREMENT}"
+echo "Application Measurent: ${APPLICATION_MEASUREMENT}"
