@@ -181,12 +181,9 @@ fn main() {
         }
     };
 
-    let attestation_results = to_attestation_results(&verify(
-        NOW_UTC_MILLIS,
-        &evidence,
-        &endorsements,
-        &reference_values,
-    ));
+    let extracted_evidence = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    println!("extrated evidence: {:?}", extracted_evidence);
+    let attestation_results = to_attestation_results(&extracted_evidence);
 
     match attestation_results.status() {
         Status::Success => println!("Verification successful"),
