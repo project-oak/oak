@@ -59,7 +59,7 @@ pub struct Params {
         value_parser = parse_hex_sha2_256_hash,
         // Obtained by building Restricted Kernel and getting its measurement:
         // `just oak_restricted_kernel_simple_io_wrapper`
-        // `cargo run -p oak_kernel_measurement -- --kernel=oak_containers_kernel/target/bzImage`
+        // `cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin`
         default_value = "cc8ea3ca6ac5e0a773e25b1f0f7df56aeee077421b5286fde5424f630507fb4e"
     )]
     pub kernel_hash: BinaryReferenceValue,
