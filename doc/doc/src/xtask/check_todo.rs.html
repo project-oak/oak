@@ -108,6 +108,7 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -161,7 +162,8 @@
     <span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, _opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt; {
         <span class="kw">let </span>file_content = std::fs::read_to_string(<span class="kw-2">&amp;</span><span class="self">self</span>.path).expect(<span class="string">&quot;couldn&#39;t read file&quot;</span>);
         <span class="kw">let </span>invalid_todo_words = file_content
-            .split_whitespace()
+            .lines()
+            .map(|line| line.trim())
             .filter(|word| CheckTodo::is_invalid_todo(word))
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="kw">let </span>result = <span class="kw">if </span>invalid_todo_words.is_empty() {
