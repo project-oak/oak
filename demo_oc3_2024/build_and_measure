@@ -11,7 +11,10 @@ set -o nounset
 set -o pipefail
 
 # Build artifacts.
-just stage0_bin oak_restricted_kernel_simple_io_wrapper oak_functions_enclave_app
+echo "Artifacts building..."
+(just stage0_bin oak_restricted_kernel_simple_io_wrapper oak_functions_enclave_app > /dev/null 2>&1) &
+echo "Artifacts built."
+
 
 # Function to extract a hash given the label
 extract_hash() {
@@ -21,11 +24,11 @@ extract_hash() {
   echo "$output" | grep "^${label}:" | cut -d ':' -f 2- | tr -d ' '
 }
 
-readonly FIRMWARE_MEASUREMENT_OUTPUT="$(cargo run -p snp_measurement -- --stage0-rom=./stage0_bin/target/x86_64-unknown-none/release/stage0_bin)"
+readonly FIRMWARE_MEASUREMENT_OUTPUT="$(cargo run --quiet -p snp_measurement -- --stage0-rom=./stage0_bin/target/x86_64-unknown-none/release/stage0_bin)"
 readonly FIRMWARE_MEASUREMENT=sha2-384:$(extract_hash "Attestation Measurement" "$FIRMWARE_MEASUREMENT_OUTPUT")
 
 # Get the kernel hashes using the measurement tool
-readonly KERNEL_MEASUREMENTS_OUTPUT="$(cargo run -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin)"
+readonly KERNEL_MEASUREMENTS_OUTPUT="$(cargo run --quiet -p oak_kernel_measurement -- --kernel=./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin)"
 
 # Store kernel hashes in seperate variables
 readonly KERNEL_IMAGE_MEASUREMENT=$(extract_hash "Kernel Image Measurement" "$KERNEL_MEASUREMENTS_OUTPUT")
@@ -48,7 +51,7 @@ then
   protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto < demo_oc3_2024/evidence.textproto > ${EVIDENCE_BINARY_PB}
   protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto < demo_oc3_2024/endorsements.textproto > ${ENDORSEMENT_BINARY_PB}
 
-  cargo run -p demo_oc3_2024 -- \
+  cargo run --quiet -p demo_oc3_2024 -- \
     --evidence="${EVIDENCE_BINARY_PB}" \
     --endorsements="${ENDORSEMENT_BINARY_PB}" \
     --initial-measurement="${FIRMWARE_MEASUREMENT}" \
