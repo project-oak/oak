@@ -12,9 +12,10 @@ set -o pipefail
 
 # Build artifacts.
 echo "Artifacts building..."
-(just stage0_bin oak_restricted_kernel_simple_io_wrapper oak_functions_enclave_app > /dev/null 2>&1) &
+just stage0_bin oak_restricted_kernel_simple_io_wrapper oak_functions_enclave_app
 echo "Artifacts built."
-
+echo
+echo
 
 # Function to extract a hash given the label
 extract_hash() {
@@ -40,22 +41,25 @@ echo "Firmware Measurent: ${FIRMWARE_MEASUREMENT}"
 echo "Kernel Image Measurent: ${KERNEL_IMAGE_MEASUREMENT}"
 echo "Kernel Setup Data Measurent: ${KERNEL_SETUP_DATA_MEASUREMENT}"
 echo "Application Measurent: ${APPLICATION_MEASUREMENT}"
+echo
+echo
+
+readonly VERIFY="
+cargo run --quiet -p demo_oc3_2024 -- \\
+  --initial-measurement=${FIRMWARE_MEASUREMENT} \\
+  --kernel-image-measurement=${KERNEL_IMAGE_MEASUREMENT} \\
+  --kernel-setup-data-measurement=${KERNEL_SETUP_DATA_MEASUREMENT} \\
+  --application-measurement=${APPLICATION_MEASUREMENT} \\
+  --evidence=demo_oc3_2024/evidence.textproto \\
+  --endorsements=demo_oc3_2024/endorsements.textproto
+"
+
+echo Verify evidence against these hashes with the following command:
+echo "$VERIFY"
 
 read -p "Verify measurements against the DICE evidence? " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-  # Convert textprotos to binary
-  readonly EVIDENCE_BINARY_PB=$(mktemp)
-  readonly ENDORSEMENT_BINARY_PB=$(mktemp)
-  protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto < demo_oc3_2024/evidence.textproto > ${EVIDENCE_BINARY_PB}
-  protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto < demo_oc3_2024/endorsements.textproto > ${ENDORSEMENT_BINARY_PB}
-
-  cargo run --quiet -p demo_oc3_2024 -- \
-    --evidence="${EVIDENCE_BINARY_PB}" \
-    --endorsements="${ENDORSEMENT_BINARY_PB}" \
-    --initial-measurement="${FIRMWARE_MEASUREMENT}" \
-    --kernel-image-measurement="${KERNEL_IMAGE_MEASUREMENT}" \
-    --kernel-setup-data-measurement="${KERNEL_SETUP_DATA_MEASUREMENT}" \
-    --application-measurement="${APPLICATION_MEASUREMENT}"
+  eval echo "${VERIFY}"
 fi
