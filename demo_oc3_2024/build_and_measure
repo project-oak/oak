@@ -48,5 +48,3 @@ then
     --kernel-setup-data-hash="${KERNEL_SETUP_DATA_MEASUREMENT}" \
     --app-hash="${APPLICATION_MEASUREMENT}"
 fi
-
-

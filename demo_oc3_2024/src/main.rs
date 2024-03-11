@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fs, path::PathBuf};
-
 use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
 use oak_proto_rust::oak::{
@@ -27,11 +25,12 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use prost::Message;
+use std::{fs, path::PathBuf};
 
 // Timestamp taken for the purpose of demo: 5 Mar 2024, 12:27 UTC.
 const NOW_UTC_MILLIS: i64 = 1709641620000;
 
-#[derive(clap::Parser, Clone, Debug, PartialEq)]
+#[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the evidence to verify.
     #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/evidence.binarypb")]
@@ -75,9 +74,9 @@ pub struct Params {
     pub app_hash: BinaryReferenceValue,
 }
 
-pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
-    let path = std::path::PathBuf::from(s);
-    if !std::fs::metadata(s)
+pub fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if !fs::metadata(s)
         .map_err(|err| err.to_string())?
         .is_file()
     {

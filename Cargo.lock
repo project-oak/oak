@@ -1003,29 +1003,11 @@ dependencies = [
 name = "demo_oc3_2024"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "base64 0.21.7",
  "clap",
- "coset",
- "ecdsa",
- "getrandom",
  "hex",
  "oak_attestation_verification",
- "oak_dice",
  "oak_proto_rust",
- "oak_sev_snp_attestation_report",
- "p256",
- "p384",
  "prost 0.11.9",
- "rsa",
- "serde",
- "serde_json",
- "sha2",
- "time",
- "tokio",
- "tonic",
- "x509-cert",
- "zerocopy",
 ]
 
 [[package]]
