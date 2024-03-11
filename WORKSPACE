@@ -94,22 +94,21 @@ load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO
 
 grpc_java_repositories()
 
-# Google Protocol Buffers.
-# https://github.com/protocolbuffers/protobuf
+### --- Base Proto Support --- ###
 http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
-    strip_prefix = "protobuf-23.3",
+    name = "rules_proto",
+    sha256 = "dc3fb206a2cb3441b485eb1e423165b231235a1ea9b031b4433cf7bc1fa460dd",
+    strip_prefix = "rules_proto-5.3.0-21.7",
     urls = [
-        # Protocol Buffers v23.3 (2023-06-14).
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/5.3.0-21.7.tar.gz",
     ],
 )
 
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
 
-# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
-protobuf_deps()
+rules_proto_dependencies()
+
+rules_proto_toolchains()
 
 # External Java rules.
 # https://github.com/bazelbuild/rules_jvm_external

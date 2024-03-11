@@ -666,13 +666,31 @@ fn run_cargo_clean() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        command: Cmd::new("bazel", ["build", "--", "//java/...:all", "//cc/...:all"]),
+        command: Cmd::new(
+            "bazel",
+            [
+                "build",
+                "--",
+                "//java/...:all",
+                "//cc/...:all",
+                "//proto/...:all",
+            ],
+        ),
     }
 }
 
 fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
-        command: Cmd::new("bazel", ["test", "--", "//java/...:all", "//cc/...:all"]),
+        command: Cmd::new(
+            "bazel",
+            [
+                "test",
+                "--",
+                "//java/...:all",
+                "//cc/...:all",
+                "//proto/...:all",
+            ],
+        ),
     }
 }
