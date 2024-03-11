@@ -51,7 +51,8 @@ impl Runnable for CheckTodo {
     fn run(self: Box<Self>, _opt: &Opt) -> Box<dyn Running> {
         let file_content = std::fs::read_to_string(&self.path).expect("couldn't read file");
         let invalid_todo_words = file_content
-            .split_whitespace()
+            .lines()
+            .map(|line| line.trim())
             .filter(|word| CheckTodo::is_invalid_todo(word))
             .collect::<Vec<_>>();
         let result = if invalid_todo_words.is_empty() {
