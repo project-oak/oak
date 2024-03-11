@@ -462,16 +462,17 @@ fn verify_root_layer(
     endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    match (values.report.as_ref(), reference_values.insecure.as_ref()) {
-        (_, Some(insecure_values)) => verify_insecure(insecure_values),
-        (Some(Report::SevSnp(report_values)), None) => {
-            // See b/327069120: We don't have the correct digest in the endorsement
-            // to compare the stage0 measurement yet. This will fail UNLESS the stage0
-            // reference value is set to `skip {}`.
-            let measurement = RawDigest {
-                sha2_384: report_values.initial_measurement.to_vec(),
-                ..Default::default()
-            };
+    if let
+      Some(insecure_values) = reference_values.insecure.as_ref() {
+        return verify_insecure(insecure_values).context("insecure root layer verification failed");
+      }
+    match values.report.as_ref() {
+      Some(Report::SevSnp(report_values)) => {
+        // See b/327069120: We don't have the correct digest in the endorsement
+        // to compare the stage0 measurement yet. This will fail UNLESS the stage0
+        // reference value is set to `skip {}`.
+        let measurement =
+        RawDigest{sha2_384 : report_values.initial_measurement.to_vec(), ..Default::default()};
             verify_measurement_digest(
                 &measurement,
                 now_utc_millis,
@@ -491,18 +492,18 @@ fn verify_root_layer(
                     .as_ref()
                     .context("AMD SEV-SNP reference values not found")?,
             )
-        }
-        (Some(Report::Tdx(report_values)), None) => verify_intel_tdx_attestation_report(
+      }
+        Some(Report::Tdx(report_values)) => verify_intel_tdx_attestation_report(
             report_values,
             reference_values
                 .intel_tdx
                 .as_ref()
                 .context("Intel TDX reference values not found")?,
         ),
-        (Some(Report::Fake(report_values)), _) => {
+        Some(Report::Fake(_)) =>  {
             Err(anyhow::anyhow!("unexpected insecure attestation report"))
-        }
-        (None, _) => Err(anyhow::anyhow!("no attestation report")),
+        },
+        None => Err(anyhow::anyhow!("no attestation report")),
     }
 }
 
