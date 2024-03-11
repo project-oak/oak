@@ -1864,7 +1864,7 @@
             <span class="comment">// Parse endorsement statement and verify attachment digest.
             </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>;
             <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">&quot;kernel&quot; </span>{
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unexpected entry in usage field&quot;</span>);
+                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unexpected endorsement usage&quot;</span>);
             }
             <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement)<span class="question-mark">?</span>;
             <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
