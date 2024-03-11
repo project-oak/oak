@@ -95,8 +95,10 @@ pub fn parse_hex_sha2_256_hash(hex_sha2_256_hash: &str) -> Result<BinaryReferenc
         }
         parts[1]
     };
-    let mut raw_digest = RawDigest::default();
-    raw_digest.sha2_256 = hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?;
+    let raw_digest = RawDigest {
+        sha2_256: hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?,
+        ..Default::default()
+    };
     let digests = [raw_digest].to_vec();
     Ok(BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
@@ -112,8 +114,10 @@ pub fn parse_hex_sha2_384_hash(hex_sha2_384_hash: &str) -> Result<BinaryReferenc
         }
         parts[1]
     };
-    let mut raw_digest = RawDigest::default();
-    raw_digest.sha2_384 = hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?;
+    let raw_digest = RawDigest {
+        sha2_384: hex::decode(hash).map_err(|_| "failed to parse hash".to_string())?,
+        ..Default::default()
+    };
     let digests = [raw_digest].to_vec();
     Ok(BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Digests(Digests { digests })),
@@ -146,7 +150,10 @@ fn main() {
         };
 
         let amd_sev = AmdSevReferenceValues {
-            amd_root_public_key: b"".to_vec(),
+            // This field is empty, because it's outdated, and AMD certificates are currently
+            // built-in the Attestation Verification Library itself:
+            // https://github.com/project-oak/oak/blob/24a34be872de77f1b9109e1b1fd2b8236f4f5aa0/oak_attestation_verification/src/verifier.rs#L66
+            amd_root_public_key: vec![],
             firmware_version: None,
             allow_debug: false,
             stage0: Some(initial_measurement),
