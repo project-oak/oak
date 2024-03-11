@@ -124,6 +124,9 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -156,7 +159,7 @@
 <span class="kw">pub mod </span>server;
 
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_containers_launcher::Launcher;
+<span class="kw">use </span>oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 <span class="kw">use </span>oak_functions_launcher::LookupDataConfig;
 <span class="kw">use </span>tokio::time::Duration;
 <span class="kw">use </span>tonic::transport::Endpoint;
@@ -174,15 +177,18 @@
 <span class="kw">impl </span>UntrustedApp {
     <span class="kw">pub async fn </span>create(launcher_args: oak_containers_launcher::Args) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>launcher = oak_containers_launcher::Launcher::create(launcher_args).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">let </span>trusted_app_address = launcher.get_trusted_app_address().<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">let </span>oak_functions_client: GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt; = {
-            <span class="kw">let </span>channel = Endpoint::from_shared(<span class="macro">format!</span>(<span class="string">&quot;http://{trusted_app_address}&quot;</span>))
-                .context(<span class="string">&quot;couldn&#39;t form channel&quot;</span>)<span class="question-mark">?
-                </span>.connect_timeout(Duration::from_secs(<span class="number">120</span>))
-                .connect()
-                .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t connect to trusted app&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>channel = <span class="kw">match </span>launcher.get_trusted_app_address().<span class="kw">await</span><span class="question-mark">? </span>{
+                TrustedApplicationAddress::Network(trusted_app_address) =&gt; {
+                    Endpoint::from_shared(<span class="macro">format!</span>(<span class="string">&quot;http://{trusted_app_address}&quot;</span>))
+                        .context(<span class="string">&quot;couldn&#39;t form channel&quot;</span>)<span class="question-mark">?
+                        </span>.connect_timeout(Duration::from_secs(<span class="number">120</span>))
+                        .connect()
+                        .<span class="kw">await
+                        </span>.context(<span class="string">&quot;couldn&#39;t connect to trusted app&quot;</span>)<span class="question-mark">?
+                </span>}
+            };
             GrpcOakFunctionsClient::new(channel)
         };
 
