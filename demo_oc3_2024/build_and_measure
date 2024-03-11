@@ -57,9 +57,9 @@ cargo run --quiet -p demo_oc3_2024 -- \\
 echo Verify evidence against these hashes with the following command:
 echo "$VERIFY"
 
-read -p "Verify measurements against the DICE evidence? " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]
-then
-  eval echo "${VERIFY}"
-fi
+# read -p "Verify measurements against the DICE evidence? " -n 1 -r
+# echo
+# if [[ $REPLY =~ ^[Yy]$ ]]
+# then
+#   eval echo "${VERIFY}"
+# fi
