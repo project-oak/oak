@@ -7,6 +7,6 @@ license = "Apache-2.0"
 [dependencies]
 clap = { version = "*", features = ["derive"] }
 hex = { version = "*", default-features = false }
-oak_attestation_verification = { workspace = true }
+oak_attestation_verification = { workspace = true, features = ["std"] }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }

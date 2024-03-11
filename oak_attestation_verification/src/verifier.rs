@@ -127,6 +127,8 @@ pub fn verify(
     // Ensure the DICE chain signatures are valid and extract the measurements, public keys and
     // other attestation-related data from the DICE chain.
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
+    #[cfg(feature = "std")]
+    println!("✅ DICE chain is valid.",);
 
     // Ensure the extracted measurements match the endorsements.
     match (
@@ -178,9 +180,9 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
     };
 
     // Sequentially verify the layers, eventually retrieving the verifying key of the last layer.
-    let last_layer_verifying_key = evidence.layers.iter().try_fold(
+    let last_layer_verifying_key = evidence.layers.iter().enumerate().try_fold(
         root_layer_verifying_key,
-        |previous_layer_verifying_key, current_layer| {
+        |previous_layer_verifying_key, (index, current_layer)| {
             let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
             cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
@@ -188,6 +190,12 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
                 previous_layer_verifying_key.verify(contents, &sig)
             })
             .map_err(|error| anyhow::anyhow!(error))?;
+            #[cfg(feature = "std")]
+            println!(
+                "✅ layer {} is endorsed by the previous layer.",
+                // given there's a seperate root layer, we start the index at 1
+                index + 1
+            );
             let payload = cert
                 .payload
                 .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
@@ -227,6 +235,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
             })
             .map_err(|error| anyhow::anyhow!(error))?;
     }
+
+    println!("✅ application keys are endorsed by the previous layer",);
 
     extract_evidence(evidence)
 }
@@ -433,8 +443,9 @@ fn verify_root_attestation_signature(
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             // Ensure that the attestation report is signed by the VCEK public key.
+            #[cfg(feature = "std")]
             verify_attestation_report_signature(&vcek, report)?;
-
+            println!("✅ SEV-SNP Attestation Report is signed by AMD.");
             // Check that the root ECA public key for the DICE chain is bound to the attestation
             // report to ensure that the entire chain is valid.
             let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
@@ -446,6 +457,8 @@ fn verify_root_attestation_signature(
                 expected.len() < actual.len() && expected == &actual[..expected.len()],
                 "The root layer's ECA public key is not bound to the attestation report"
             );
+            #[cfg(feature = "std")]
+            println!("✅ SEV-SNP Attestation Report endorses root dice layer.");
 
             Ok(())
         }
@@ -482,6 +495,7 @@ fn verify_root_layer(
                     .as_ref()
                     .context("stage0 binary reference values not found")?,
             )?;
+            println!("✅ initial memory measurement matches the evidence.",);
             verify_amd_sev_attestation_report(
                 report_values,
                 reference_values
@@ -529,6 +543,7 @@ fn verify_kernel_layer(
             .context("no kernel image reference value")?,
     )
     .context("kernel image failed verification")?;
+    println!("✅ kernel image measurement matches the evidence and endorsement.",);
 
     verify_measurement_digest(
         values
@@ -557,6 +572,7 @@ fn verify_kernel_layer(
             .context("no kernel setup data reference value")?,
     )
     .context("kernel setup data failed verification")?;
+    println!("✅ kernel setup data measurement matches the evidence and endorsement.",);
 
     verify_measurement_digest(
         values
@@ -637,6 +653,7 @@ fn verify_application_layer(
             .context("application binary reference value")?,
     )
     .context("application binary failed verification")?;
+    println!("✅ application measurement matches the evidence and endorsement.",);
 
     verify_measurement_digest(
         values.config.as_ref().context("no config evidence value")?,

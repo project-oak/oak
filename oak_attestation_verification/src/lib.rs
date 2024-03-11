@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(all(not(test), not(feature = "std")), no_std)]
 #![feature(let_chains)]
 
 extern crate alloc;

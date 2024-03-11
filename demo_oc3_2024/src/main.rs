@@ -189,10 +189,10 @@ fn main() {
     let attestation_results = to_attestation_results(&extracted_evidence);
 
     match attestation_results.status() {
-        Status::Success => println!("Verification successful"),
+        Status::Success => println!("✨ Verification successful"),
         Status::GenericFailure => {
             eprintln!(
-                "Couldn't verify endorsed evidence: code={} reason={}",
+                "🙅 Couldn't verify endorsed evidence: code={} reason={}",
                 attestation_results.status as i32, attestation_results.reason
             );
         }
