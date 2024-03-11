@@ -15,7 +15,7 @@
 
 //! Simple CLI that verifies the provided measurements against evidences and endorsements.
 
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, process::Command};
 
 use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
@@ -130,13 +130,33 @@ fn main() {
         application_measurement,
     } = Params::parse();
 
-    let serialized_evidence = fs::read(evidence).expect("couldn't read evidence");
-    let evidence =
-        Evidence::decode(serialized_evidence.as_slice()).expect("couldn't decode evidence");
+    let evidence = {
+        // Get binary evidence using protoc
+        let vec = Command::new("protoc")
+            .args(&[
+                "--encode=oak.attestation.v1.Evidence",
+                "./proto/attestation/evidence.proto",
+            ])
+            .stdin(std::fs::File::open(evidence).expect("couldn't open evidence"))
+            .output()
+            .expect("failed to parse text proto")
+            .stdout;
+        Evidence::decode(vec.as_slice()).expect("couldn't decode evidence")
+    };
 
-    let serialized_endorsements = fs::read(endorsements).expect("couldn't read endorsements");
-    let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
-        .expect("couldn't decode endorsements");
+    let endorsements = {
+        // Get binary endorsements using protoc
+        let vec = Command::new("protoc")
+            .args(&[
+                "--encode=oak.attestation.v1.Endorsements",
+                "./proto/attestation/endorsement.proto",
+            ])
+            .stdin(std::fs::File::open(endorsements).expect("couldn't open endorsements"))
+            .output()
+            .expect("failed to parse text proto")
+            .stdout;
+        Endorsements::decode(vec.as_slice()).expect("couldn't decode endorsements")
+    };
 
     let reference_values = {
         let skip = BinaryReferenceValue {
