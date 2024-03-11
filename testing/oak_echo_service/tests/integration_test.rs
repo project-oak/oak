@@ -55,5 +55,5 @@ fn it_should_provide_evidence() {
     let response = client.get_evidence(&()).into_ok();
 
     assert!(response.is_ok());
-    assert!(response.unwrap().dice_evidence.is_some());
+    assert!(response.unwrap().evidence.is_some());
 }

@@ -76,7 +76,7 @@ where
                 )
             })?;
         Ok(proto::oak::echo::GetEvidenceResponse {
-            dice_evidence: Some(evidence),
+            evidence: Some(evidence),
         })
     }
 }

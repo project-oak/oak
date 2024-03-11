@@ -30,7 +30,7 @@ message EchoResponse {
 }
 
 message GetEvidenceResponse {
-  oak.attestation.v1.Evidence dice_evidence = 1;
+  oak.attestation.v1.Evidence evidence = 1;
 }
 
 service Echo {
