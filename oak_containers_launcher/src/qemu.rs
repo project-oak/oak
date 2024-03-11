@@ -101,7 +101,7 @@ impl Qemu {
     pub fn start(
         params: Params,
         launcher_service_port: u16,
-        host_proxy_port: u16,
+        host_proxy_port: Option<u16>,
         host_orchestrator_proxy_port: u16,
     ) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
@@ -155,6 +155,11 @@ impl Qemu {
         let vm_port = crate::VM_LOCAL_PORT;
         let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
+        let host_proxy_rule = if let Some(host_proxy_port) = host_proxy_port {
+            format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}")
+        } else {
+            String::new()
+        };
         cmd.args([
             "-netdev",
             [
@@ -163,7 +168,7 @@ impl Qemu {
                 &format!(
                     "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
                 ),
-                &format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"),
+                &host_proxy_rule,
                 &format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
             ]
             .join(",")

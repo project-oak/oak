@@ -43,7 +43,7 @@ use std::{
 };
 
 use anyhow::Context;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use oak_proto_rust::oak::attestation::v1::{
     endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
 };
@@ -78,6 +78,13 @@ const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 /// Number of seconds to wait for the VM to start up.
 const VM_START_TIMEOUT: u64 = 300;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, ValueEnum)]
+pub enum ChannelType {
+    /// Use virtual networking.
+    #[default]
+    Network,
+}
+
 #[derive(Parser, Debug)]
 #[group(skip)]
 pub struct Args {
@@ -89,6 +96,10 @@ pub struct Args {
     pub application_config: Vec<u8>,
     #[command(flatten)]
     pub qemu_params: qemu::Params,
+
+    // Method of communication with the trusted application in the enclave.
+    #[arg(long, value_enum, default_value_t = ChannelType::default())]
+    pub communication_channel: ChannelType,
 }
 
 impl Args {
@@ -102,6 +113,7 @@ impl Args {
             container_bundle,
             application_config: Vec::new(),
             qemu_params: qemu::Params::default_for_root(root),
+            communication_channel: ChannelType::default(),
         }
     }
 }
@@ -193,7 +205,22 @@ impl Launcher {
         // don't have a mechanism to pass this port to QEMU we have to unbind it by dropping it.
         // There is a small window for a race condition, but since the assigned port will be random
         // the probability of another process grabbing the port before QEMU can should be very low.
-        let host_proxy_port = { TcpListener::bind(sockaddr).await?.local_addr()?.port() };
+
+        let trusted_app_channel = match args.communication_channel {
+            ChannelType::Network => {
+                // Also get an open port for that QEMU can use for proxying requests to the server.
+                // Since we don't have a mechanism to pass this port to QEMU we have
+                // to unbind it by dropping it. There is a small window for a race
+                // condition, but since the assigned port will be random
+                // the probability of another process grabbing the port before QEMU can should be
+                // very low.
+                let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
+                Channel::Network {
+                    host_proxy_port,
+                    trusted_app_address: None,
+                }
+            }
+        };
         let host_orchestrator_proxy_port = {
             TcpListener::bind(orchestrator_sockaddr)
                 .await?
@@ -203,7 +230,12 @@ impl Launcher {
         let vmm = qemu::Qemu::start(
             args.qemu_params,
             port,
-            host_proxy_port,
+            match trusted_app_channel {
+                Channel::Network {
+                    host_proxy_port,
+                    trusted_app_address: _,
+                } => Some(host_proxy_port),
+            },
             host_orchestrator_proxy_port,
         )?;
 
@@ -218,10 +250,7 @@ impl Launcher {
             evidence_receiver: Some(evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
             orchestrator_key_provisioning_client: None,
-            trusted_app_channel: Channel::Network {
-                host_proxy_port,
-                trusted_app_address: None,
-            },
+            trusted_app_channel,
             shutdown: Some(shutdown_sender),
         })
     }
