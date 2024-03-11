@@ -739,7 +739,7 @@ fn verify_kernel_measurement_digest(
             // Parse endorsement statement and verify attachment digest.
             let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
             if parsed_statement.predicate.usage != "kernel" {
-                anyhow::bail!("unexpected entry in usage field");
+                anyhow::bail!("unexpected endorsement usage");
             }
             let expected_digest = get_digest(&parsed_statement)?;
             let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));

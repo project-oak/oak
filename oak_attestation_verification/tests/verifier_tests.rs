@@ -75,8 +75,10 @@ fn create_endorsements() -> Endorsements {
         tee_certificate: vcek_milan_cert,
         stage0: Some(tre.clone()),
     };
+    #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
         kernel: Some(tre.clone()),
+        kernel_image: Some(tre.clone()),
         kernel_cmd_line: Some(tre.clone()),
         init_ram_fs: Some(tre.clone()),
         memory_map: Some(tre.clone()),
@@ -119,12 +121,15 @@ fn create_reference_values() -> ReferenceValues {
         amd_sev: Some(amd_sev),
         ..Default::default()
     };
+    #[allow(deprecated)]
     let kernel_layer = KernelLayerReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
             r#type: Some(kernel_binary_reference_value::Type::Skip(
                 SkipVerification {},
             )),
         }),
+        kernel_image: Some(skip.clone()),
+        kernel_setup_data: Some(skip.clone()),
         kernel_cmd_line: Some(skip.clone()),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),

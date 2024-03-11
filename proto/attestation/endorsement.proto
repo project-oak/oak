@@ -62,6 +62,9 @@ message KernelLayerEndorsements {
   TransparentReleaseEndorsement init_ram_fs = 4;
   TransparentReleaseEndorsement memory_map = 5;
   TransparentReleaseEndorsement acpi = 6;
+
+  // Field is deprecated and kept only for backwards compatibility. Remove ASAP.
+  TransparentReleaseEndorsement kernel_image = 7 [deprecated = true];
 }
 
 message SystemLayerEndorsements {
