@@ -2617,6 +2617,9 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_attestation",
+ "oak_proto_rust",
+ "oak_restricted_kernel_sdk",
  "prost",
 ]
 

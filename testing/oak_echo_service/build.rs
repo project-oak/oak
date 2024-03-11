@@ -15,5 +15,12 @@
 //
 
 fn main() {
-    micro_rpc_build::compile(&["proto/oak_echo.proto"], &["."], Default::default());
+    micro_rpc_build::compile(
+        &[
+            "testing/oak_echo_service/proto/oak_echo.proto",
+            "proto/attestation/evidence.proto",
+        ],
+        &["../.."],
+        Default::default(),
+    );
 }
