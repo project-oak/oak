@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Simple CLI that verifies the provided measurements against evidences and endorsements.
+
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
@@ -54,21 +56,21 @@ pub struct Params {
         long,
         value_parser = parse_hex_sha2_256_hash
     )]
-    pub kernel_hash: BinaryReferenceValue,
+    pub kernel_image_measurement: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the setup data for the Restricted Kernel.
     #[arg(
             long,
             value_parser = parse_hex_sha2_256_hash
         )]
-    pub kernel_setup_data_hash: BinaryReferenceValue,
+    pub kernel_setup_data_measurement: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the Enclave Application.
     #[arg(
         long,
         value_parser = parse_hex_sha2_256_hash
     )]
-    pub app_hash: BinaryReferenceValue,
+    pub application_measurement: BinaryReferenceValue,
 }
 
 pub fn path_exists(s: &str) -> Result<PathBuf, String> {
@@ -123,9 +125,9 @@ fn main() {
         evidence,
         endorsements,
         initial_measurement,
-        kernel_hash,
-        kernel_setup_data_hash,
-        app_hash,
+        kernel_image_measurement,
+        kernel_setup_data_measurement,
+        application_measurement,
     } = Params::parse();
 
     let serialized_evidence = fs::read(evidence).expect("couldn't read evidence");
@@ -158,16 +160,16 @@ fn main() {
             ..Default::default()
         };
         let kernel_layer = KernelLayerReferenceValues {
-            kernel_image: Some(kernel_hash),
+            kernel_image: Some(kernel_image_measurement),
             kernel_cmd_line: Some(skip.clone()),
-            kernel_setup_data: Some(kernel_setup_data_hash),
+            kernel_setup_data: Some(kernel_setup_data_measurement),
             init_ram_fs: Some(skip.clone()),
             memory_map: Some(skip.clone()),
             acpi: Some(skip.clone()),
         };
 
         let application_layer = ApplicationLayerReferenceValues {
-            binary: Some(app_hash),
+            binary: Some(application_measurement),
             configuration: Some(skip.clone()),
         };
 

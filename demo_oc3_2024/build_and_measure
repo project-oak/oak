@@ -52,7 +52,7 @@ then
     --evidence="${EVIDENCE_BINARY_PB}" \
     --endorsements="${ENDORSEMENT_BINARY_PB}" \
     --initial-measurement="${FIRMWARE_MEASUREMENT}" \
-    --kernel-hash="${KERNEL_IMAGE_MEASUREMENT}" \
-    --kernel-setup-data-hash="${KERNEL_SETUP_DATA_MEASUREMENT}" \
-    --app-hash="${APPLICATION_MEASUREMENT}"
+    --kernel-image-measurement="${KERNEL_IMAGE_MEASUREMENT}" \
+    --kernel-setup-data-measurement="${KERNEL_SETUP_DATA_MEASUREMENT}" \
+    --application-measurement="${APPLICATION_MEASUREMENT}"
 fi
