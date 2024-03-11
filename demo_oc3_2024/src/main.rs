@@ -192,7 +192,7 @@ fn main() {
         Status::Success => println!("✨ Verification successful"),
         Status::GenericFailure => {
             eprintln!(
-                "🙅 Couldn't verify endorsed evidence: code={} reason={}",
+                "🚫 Couldn't verify endorsed evidence: code={} reason={}",
                 attestation_results.status as i32, attestation_results.reason
             );
         }
