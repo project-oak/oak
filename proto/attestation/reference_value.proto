@@ -131,6 +131,11 @@ message KernelLayerReferenceValues {
   // line is treated as a binary blob, as if it were a binary.
   BinaryReferenceValue kernel_cmd_line = 2;
 
+  // These two fields are deprecated and kept only for backwards compatibility.
+  // Remove ASAP.
+  BinaryReferenceValue kernel_setup_data = 3;
+  BinaryReferenceValue kernel_image = 7;
+
   // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;
 

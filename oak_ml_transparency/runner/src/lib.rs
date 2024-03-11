@@ -61,7 +61,6 @@ pub fn generate_claim(
     let predicate = ClaimPredicate {
         claim_type: String::from("https://github.com/project-oak/transparent-release/ml-eval/v0"),
         claim_spec: Some(claim_spec),
-        usage: "".to_owned(),
         issued_on: OffsetDateTime::now_utc(),
         validity: None,
         evidence: vec![],

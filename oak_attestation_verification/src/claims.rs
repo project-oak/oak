@@ -83,10 +83,6 @@ pub struct ClaimPredicate<S> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "claimSpec")]
     pub claim_spec: Option<S>,
-    // Specifies which evidence field the endorsement targets.
-    // The `default` option should be removed once this is in operation.
-    #[serde(default, rename = "usage")]
-    pub usage: String,
     /// The timestamp (encoded as an Epoch time) when the claim was issued.
     #[serde(with = "time::serde::rfc3339")]
     #[serde(rename = "issuedOn")]
