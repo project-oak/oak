@@ -51,7 +51,7 @@ cargo run --quiet -p demo_oc3_2024 -- \\
   --kernel-setup-data-measurement=${KERNEL_SETUP_DATA_MEASUREMENT} \\
   --application-measurement=${APPLICATION_MEASUREMENT} \\
   --evidence=demo_oc3_2024/evidence.textproto \\
-  --endorsements=demo_oc3_2024/endorsements.textproto
+  --endorsements=demo_oc3_2024/evidence-endorsements.textproto
 "
 
 echo Verify evidence against these hashes with the following command:
