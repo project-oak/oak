@@ -30,7 +30,7 @@ mod lookup;
 pub mod server;
 
 use anyhow::Context;
-use oak_containers_launcher::Launcher;
+use oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 use oak_functions_launcher::LookupDataConfig;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
@@ -48,15 +48,18 @@ pub struct UntrustedApp {
 impl UntrustedApp {
     pub async fn create(launcher_args: oak_containers_launcher::Args) -> anyhow::Result<Self> {
         let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
-        let trusted_app_address = launcher.get_trusted_app_address().await?;
 
         let oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::from_shared(format!("http://{trusted_app_address}"))
-                .context("couldn't form channel")?
-                .connect_timeout(Duration::from_secs(120))
-                .connect()
-                .await
-                .context("couldn't connect to trusted app")?;
+            let channel = match launcher.get_trusted_app_address().await? {
+                TrustedApplicationAddress::Network(trusted_app_address) => {
+                    Endpoint::from_shared(format!("http://{trusted_app_address}"))
+                        .context("couldn't form channel")?
+                        .connect_timeout(Duration::from_secs(120))
+                        .connect()
+                        .await
+                        .context("couldn't connect to trusted app")?
+                }
+            };
             GrpcOakFunctionsClient::new(channel)
         };
 
