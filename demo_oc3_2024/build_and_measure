@@ -39,13 +39,15 @@ echo "Kernel Setup Data Measurent: ${KERNEL_SETUP_DATA_MEASUREMENT}"
 echo "Application Measurent: ${APPLICATION_MEASUREMENT}"
 
 read -p "Verify measurements against the DICE evidence? " -n 1 -r
-echo    # (optional) move to a new line
+echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
+  # Convert textprotos to binary
   readonly EVIDENCE_BINARY_PB=$(mktemp)
   readonly ENDORSEMENT_BINARY_PB=$(mktemp)
   protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto < demo_oc3_2024/evidence.textproto > ${EVIDENCE_BINARY_PB}
   protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto < demo_oc3_2024/endorsements.textproto > ${ENDORSEMENT_BINARY_PB}
+
   cargo run -p demo_oc3_2024 -- \
     --evidence="${EVIDENCE_BINARY_PB}" \
     --endorsements="${ENDORSEMENT_BINARY_PB}" \
