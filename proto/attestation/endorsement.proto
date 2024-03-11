@@ -63,6 +63,7 @@ message KernelLayerEndorsements {
   TransparentReleaseEndorsement memory_map = 5;
   TransparentReleaseEndorsement acpi = 6;
 
+  // TODO: b/309623922 - Remove ASAP.
   // Field is deprecated and kept only for backwards compatibility. Remove ASAP.
   TransparentReleaseEndorsement kernel_image = 7 [deprecated = true];
 }

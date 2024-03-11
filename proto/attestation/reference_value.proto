@@ -131,8 +131,8 @@ message KernelLayerReferenceValues {
   // line is treated as a binary blob, as if it were a binary.
   BinaryReferenceValue kernel_cmd_line = 2;
 
-  // These two fields are deprecated and kept only for backwards compatibility.
-  // Remove ASAP.
+  // TODO: b/309623922 - Remove ASAP.
+  // Fields are deprecated and kept only for backwards compatibility.
   BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
   BinaryReferenceValue kernel_image = 7 [deprecated = true];
 
