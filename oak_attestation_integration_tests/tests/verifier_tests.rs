@@ -77,12 +77,15 @@ fn verify_mock_evidence() {
                         insecure: Some(InsecureReferenceValues::default()),
                         ..Default::default()
                     }),
+                    #[allow(deprecated)]
                     kernel_layer: Some(KernelLayerReferenceValues {
                         kernel: Some(KernelBinaryReferenceValue {
                             r#type: Some(kernel_binary_reference_value::Type::Skip(
                                 SkipVerification {},
                             )),
                         }),
+                        kernel_image: Some(skip.clone()),
+                        kernel_setup_data: Some(skip.clone()),
                         kernel_cmd_line: Some(skip.clone()),
                         init_ram_fs: Some(skip.clone()),
                         memory_map: Some(skip.clone()),

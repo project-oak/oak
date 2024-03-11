@@ -64,7 +64,7 @@ message KernelLayerEndorsements {
   TransparentReleaseEndorsement acpi = 6;
 
   // Field is deprecated and kept only for backwards compatibility. Remove ASAP.
-  TransparentReleaseEndorsement kernel_image = 7;
+  TransparentReleaseEndorsement kernel_image = 7 [deprecated = true];
 }
 
 message SystemLayerEndorsements {
