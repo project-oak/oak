@@ -288,6 +288,51 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -327,7 +372,10 @@
 <span class="kw">mod </span>qemu;
 <span class="kw">mod </span>server;
 
-<span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
+<span class="kw">use </span>std::{
+    fmt::Display,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
@@ -405,10 +453,44 @@
     }
 }
 
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub enum </span>Channel {
+    Network {
+        host_proxy_port: u16,
+        trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
+    },
+}
+
+<span class="doccomment">/// Interface that is connected to the trusted application.
+</span><span class="kw">pub enum </span>TrustedApplicationAddress {
+    Network(SocketAddr),
+}
+
+<span class="kw">impl </span>TryFrom&lt;Channel&gt; <span class="kw">for </span>TrustedApplicationAddress {
+    <span class="kw">type </span>Error = anyhow::Error;
+
+    <span class="kw">fn </span>try_from(channel: Channel) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedApplicationAddress, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">match </span>channel {
+            Channel::Network {
+                host_proxy_port: <span class="kw">_</span>,
+                trusted_app_address,
+            } =&gt; trusted_app_address.map(TrustedApplicationAddress::Network),
+        }
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted application address not set&quot;</span>))
+    }
+}
+
+<span class="kw">impl </span>Display <span class="kw">for </span>TrustedApplicationAddress {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            TrustedApplicationAddress::Network(addr) =&gt; addr.fmt(f),
+        }
+    }
+}
+
 <span class="kw">pub struct </span>Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;&gt;,
-    host_proxy_port: u16,
     host_orchestrator_proxy_port: u16,
     <span class="comment">// Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
@@ -417,7 +499,7 @@
     </span>evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;Evidence&gt;&gt;,
     app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
     orchestrator_key_provisioning_client: <span class="prelude-ty">Option</span>&lt;KeyProvisioningClient&lt;TonicChannel&gt;&gt;,
-    trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
+    trusted_app_channel: Channel,
     shutdown: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
 }
 
@@ -463,7 +545,6 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             vmm,
             server,
-            host_proxy_port,
             host_orchestrator_proxy_port,
             <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
@@ -472,7 +553,10 @@
             evidence_receiver: <span class="prelude-val">Some</span>(evidence_receiver),
             app_ready_notifier: <span class="prelude-val">Some</span>(app_notifier_receiver),
             orchestrator_key_provisioning_client: <span class="prelude-val">None</span>,
-            trusted_app_address: <span class="prelude-val">None</span>,
+            trusted_app_channel: Channel::Network {
+                host_proxy_port,
+                trusted_app_address: <span class="prelude-val">None</span>,
+            },
             shutdown: <span class="prelude-val">Some</span>(shutdown_sender),
         })
     }
@@ -485,18 +569,24 @@
     ///
     /// This call will wait until the trusted app has notifiied the launcher once that it is ready
     /// via the orchestrator.
-    </span><span class="kw">pub async fn </span>get_trusted_app_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, anyhow::Error&gt; {
+    </span><span class="kw">pub async fn </span>get_trusted_app_address(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedApplicationAddress, anyhow::Error&gt; {
         <span class="comment">// If we haven&#39;t received a ready notification, wait for it.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.app_ready_notifier.take() {
             <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
             </span>timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).<span class="kw">await</span><span class="question-mark">??</span>;
-            <span class="self">self</span>.trusted_app_address.replace(SocketAddr::new(
-                IpAddr::V4(PROXY_ADDRESS),
-                <span class="self">self</span>.host_proxy_port,
-            ));
+            <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.trusted_app_channel {
+                Channel::Network {
+                    host_proxy_port,
+                    trusted_app_address,
+                } =&gt; {
+                    trusted_app_address
+                        .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), <span class="kw-2">*</span>host_proxy_port));
+                }
+            }
         }
-        <span class="self">self</span>.trusted_app_address
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted app address not set&quot;</span>))
+        <span class="self">self</span>.trusted_app_channel.clone().try_into()
     }
 
     <span class="doccomment">/// Gets the endorsed attestation evidence that the untrusted application can send to remote
