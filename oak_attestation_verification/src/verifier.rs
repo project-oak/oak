@@ -499,7 +499,9 @@ fn verify_root_layer(
                 .as_ref()
                 .context("Intel TDX reference values not found")?,
         ),
-        (Some(Report::Fake(report_values)), _) => Err(anyhow::anyhow!("unexpected insecure attestation report")),
+        (Some(Report::Fake(report_values)), _) => {
+            Err(anyhow::anyhow!("unexpected insecure attestation report"))
+        }
         (None, _) => Err(anyhow::anyhow!("no attestation report")),
     }
 }
