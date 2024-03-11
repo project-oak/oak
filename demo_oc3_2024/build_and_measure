@@ -44,8 +44,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]
 then
   readonly EVIDENCE_BINARY_PB=$(mktemp)
   readonly ENDORSEMENT_BINARY_PB=$(mktemp)
-  cat demo_oc3_2024/evidence.textproto | protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto > ${EVIDENCE_BINARY_PB}
-  cat demo_oc3_2024/endorsements.textproto | protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto > ${ENDORSEMENT_BINARY_PB}
+  protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto < demo_oc3_2024/evidence.textproto > ${EVIDENCE_BINARY_PB}
+  protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto < demo_oc3_2024/endorsements.textproto > ${ENDORSEMENT_BINARY_PB}
   cargo run -p demo_oc3_2024 -- \
     --evidence="${EVIDENCE_BINARY_PB}" \
     --endorsements="${ENDORSEMENT_BINARY_PB}" \
