@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fs, path::PathBuf};
+
 use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
 use oak_proto_rust::oak::{
@@ -25,7 +27,6 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use prost::Message;
-use std::{fs, path::PathBuf};
 
 // Timestamp taken for the purpose of demo: 5 Mar 2024, 12:27 UTC.
 const NOW_UTC_MILLIS: i64 = 1709641620000;
@@ -33,53 +34,46 @@ const NOW_UTC_MILLIS: i64 = 1709641620000;
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the evidence to verify.
-    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/evidence.binarypb")]
+    #[arg(long, value_parser = path_exists)]
     pub evidence: PathBuf,
 
     /// Path endorsements.
-    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/endorsements.binarypb")]
+    #[arg(long, value_parser = path_exists)]
     pub endorsements: PathBuf,
 
     /// Expected Sha2-384 hash of the initial measurement of the VM memory in the attestation
     /// report.
     #[arg(
         long,
-        value_parser = parse_hex_sha2_384_hash,
-        default_value = "sha2-384:f6df2054a387f3f829914196086d5992646b7cbd834270c4db205cd36879977ee06016c1e65c9ec453e334a1353e933a"
+        value_parser = parse_hex_sha2_384_hash
     )]
     pub initial_measurement: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the Restricted Kernel.
     #[arg(
         long,
-        value_parser = parse_hex_sha2_256_hash,
-        default_value = "sha2-256:cc8ea3ca6ac5e0a773e25b1f0f7df56aeee077421b5286fde5424f630507fb4e"
+        value_parser = parse_hex_sha2_256_hash
     )]
     pub kernel_hash: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the setup data for the Restricted Kernel.
     #[arg(
             long,
-            value_parser = parse_hex_sha2_256_hash,
-            default_value = "sha2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1"
+            value_parser = parse_hex_sha2_256_hash
         )]
     pub kernel_setup_data_hash: BinaryReferenceValue,
 
     /// Expected Sha2-256 hash of the Enclave Application.
     #[arg(
         long,
-        value_parser = parse_hex_sha2_256_hash,
-        default_value = "sha2-256:adda5dc6e483ddb49bbb53d8d73b40486eb5fde2c41986074c6e2ea489e0f328"
+        value_parser = parse_hex_sha2_256_hash
     )]
     pub app_hash: BinaryReferenceValue,
 }
 
 pub fn path_exists(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
-    if !fs::metadata(s)
-        .map_err(|err| err.to_string())?
-        .is_file()
-    {
+    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
         Err(String::from("path does not represent a file"))
     } else {
         Ok(path)

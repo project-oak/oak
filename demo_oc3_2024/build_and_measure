@@ -38,11 +38,17 @@ echo "Kernel Image Measurent: ${KERNEL_IMAGE_MEASUREMENT}"
 echo "Kernel Setup Data Measurent: ${KERNEL_SETUP_DATA_MEASUREMENT}"
 echo "Application Measurent: ${APPLICATION_MEASUREMENT}"
 
-read -p "Verify measurements against the AMD SEV-SNP attestation report? " -n 1 -r
+read -p "Verify measurements against the DICE evidence? " -n 1 -r
 echo    # (optional) move to a new line
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-    cargo run -p demo_oc3_2024 -- \
+  readonly EVIDENCE_BINARY_PB=$(mktemp)
+  readonly ENDORSEMENT_BINARY_PB=$(mktemp)
+  cat demo_oc3_2024/evidence.textproto | protoc --encode=oak.attestation.v1.Evidence ./proto/attestation/evidence.proto > ${EVIDENCE_BINARY_PB}
+  cat demo_oc3_2024/endorsements.textproto | protoc --encode=oak.attestation.v1.Endorsements ./proto/attestation/endorsement.proto > ${ENDORSEMENT_BINARY_PB}
+  cargo run -p demo_oc3_2024 -- \
+    --evidence="${EVIDENCE_BINARY_PB}" \
+    --endorsements="${ENDORSEMENT_BINARY_PB}" \
     --initial-measurement="${FIRMWARE_MEASUREMENT}" \
     --kernel-hash="${KERNEL_IMAGE_MEASUREMENT}" \
     --kernel-setup-data-hash="${KERNEL_SETUP_DATA_MEASUREMENT}" \
