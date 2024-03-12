@@ -2,8 +2,8 @@
 # proto-message: oak.attestaton.v1.Evidence
 #
 # Valid real-world evidence for an Oak Containers chain, used for testing.
-# Generated on Feb 23 2024. `evidence.binarypb` is the same instance in
-# serialized binary format. ECA: External Certification Authority
+# Generated on 2024-02-23. `oc_evidence.binarypb` is the same instance in
+# serialized binary format. ECA: Embedded Certification Authority
 #
 # The stage0 binary is measured in the attestation report.
 root_layer {
