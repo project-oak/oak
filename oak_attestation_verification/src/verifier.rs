@@ -462,11 +462,8 @@ fn verify_root_layer(
     endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    if let Some(insecure_values) = reference_values.insecure.as_ref() {
-        return verify_insecure(insecure_values).context("insecure root layer verification failed");
-    }
-    match values.report.as_ref() {
-        Some(Report::SevSnp(report_values)) => {
+    match (values.report.as_ref(), reference_values.amd_sev.as_ref(), reference_values.intel_tdx.as_ref(), reference_values.insecure.as_ref()) {
+        (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
             // See b/327069120: We don't have the correct digest in the endorsement
             // to compare the stage0 measurement yet. This will fail UNLESS the stage0
             // reference value is set to `skip {}`.
@@ -478,31 +475,24 @@ fn verify_root_layer(
                 &measurement,
                 now_utc_millis,
                 endorsements.and_then(|value| value.stage0.as_ref()),
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context("AMD SEV-SNP reference values not found")?
+                amd_sev_values
                     .stage0
                     .as_ref()
                     .context("stage0 binary reference values not found")?,
             )?;
             verify_amd_sev_attestation_report(
                 report_values,
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context("AMD SEV-SNP reference values not found")?,
+                amd_sev_values,
             )
         }
-        Some(Report::Tdx(report_values)) => verify_intel_tdx_attestation_report(
+        (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => verify_intel_tdx_attestation_report(
             report_values,
-            reference_values
-                .intel_tdx
-                .as_ref()
-                .context("Intel TDX reference values not found")?,
+            intel_tdx_values,
         ),
-        Some(Report::Fake(_)) => Err(anyhow::anyhow!("unexpected insecure attestation report")),
-        None => Err(anyhow::anyhow!("no attestation report")),
+        (_, _, _, Some(insecure_values)) => verify_insecure(insecure_values).context("insecure root layer verification failed"),
+        (Some(Report::Fake(_)), _, _, None) => Err(anyhow::anyhow!("unexpected insecure attestation report")),
+        (None, _, _, _) => Err(anyhow::anyhow!("no attestation report")),
+        (_, _, _, _) => Err(anyhow::anyhow!("invalid combination of root layer reference values and endorsed evidence")),
     }
 }
 
