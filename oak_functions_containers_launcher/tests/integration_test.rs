@@ -32,24 +32,30 @@ async fn test_launcher_key_value_lookup() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let (mut _background, port) = xtask::containers::run_oak_functions_example_in_background(
-        &wasm_path,
-        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
-    )
-    .await;
+    async fn run(wasm_path: &str, communication_channel: &str) {
+        let (mut _background, port) = xtask::containers::run_oak_functions_example_in_background(
+            wasm_path,
+            MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+            communication_channel,
+        )
+        .await;
 
-    // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(60)).await;
+        // Wait for the server to start up.
+        tokio::time::sleep(Duration::from_secs(60)).await;
 
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
+        let mut client = OakFunctionsClient::new(
+            &format!("http://localhost:{port}"),
+            &InsecureAttestationVerifier {},
+        )
+        .await
+        .expect("failed to create client");
 
-    let response = client.invoke(b"test_key").await.expect("failed to invoke");
-    assert_eq!(response, b"test_value");
+        let response = client.invoke(b"test_key").await.expect("failed to invoke");
+        assert_eq!(response, b"test_value");
+    }
+
+    run(&wasm_path, "network").await;
+    run(&wasm_path, "virtio-vsock").await;
 }
 
 // Allow enough worker threads to collect output from background tasks.
@@ -66,6 +72,7 @@ async fn test_launcher_echo() {
     let (_background, port) = xtask::containers::run_oak_functions_example_in_background(
         &wasm_path,
         MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+        "network",
     )
     .await;
 
