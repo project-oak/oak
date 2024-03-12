@@ -4766,6 +4766,8 @@ dependencies = [
  "bytes",
  "futures",
  "libc",
+ "rand",
+ "sha2",
  "tokio",
  "tonic",
  "vsock",

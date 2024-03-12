@@ -26,11 +26,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/abseil/abseil-cpp
 http_archive(
     name = "com_google_absl",
-    sha256 = "5366d7e7fa7ba0d915014d387b66d0d002c03236448e1ba9ef98122c13b35c36",
-    strip_prefix = "abseil-cpp-20230125.3",
+    sha256 = "3c743204df78366ad2eaf236d6631d83f6bc928d1705dd0000b872e53b73dc6a",
+    strip_prefix = "abseil-cpp-20240116.1",
     urls = [
-        # Abseil LTS 20230125.3.
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.tar.gz",
+        # Abseil LTS 20240116.1
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240116.1.tar.gz",
     ],
 )
 
@@ -62,11 +62,10 @@ http_archive(
 # https://github.com/grpc/grpc
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "e034992a0b464042021f6d440f2090acc2422c103a322b0844e3921ccea981dc",
-    strip_prefix = "grpc-1.56.0",
+    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
+    strip_prefix = "grpc-1.62.0",
     urls = [
-        # gRPC v1.56.0 (2023-06-14).
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.56.0.tar.gz",
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
     ],
 )
 
@@ -271,3 +270,105 @@ gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
     target_arch = ARCHS.x86_64,
 )
+
+# Rust support
+http_archive(
+    name = "rules_rust",
+    integrity = "sha256-ww398ehv1QZQp26mRbOkXy8AZnsGGHpoXpVU4WfKl+4=",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.40.0/rules_rust-v0.40.0.tar.gz"],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition = "2021",
+    versions = [
+        # TODO(b/309612743) Can we automatically sync this with flake.nix?
+        "1.76.0",
+        "nightly/2023-11-15",
+    ],
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies(bootstrap = True)
+
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+
+crates_repository(
+    name = "oak_crates_index",
+    cargo_lockfile = "//:Cargo.lock",
+    lockfile = "//:cargo-bazel-lock.json",
+    manifests = [
+        "//:Cargo.toml",
+        "//:linux_boot_params/Cargo.toml",
+        "//:micro_rpc/Cargo.toml",
+        "//:micro_rpc_build/Cargo.toml",
+        "//:micro_rpc_tests/Cargo.toml",
+        "//:oak_attestation/Cargo.toml",
+        "//:oak_attestation_integration_tests/Cargo.toml",
+        "//:oak_attestation_verification/Cargo.toml",
+        "//:oak_channel/Cargo.toml",
+        "//:oak_client/Cargo.toml",
+        "//:oak_containers_hello_world_trusted_app/Cargo.toml",
+        "//:oak_containers_hello_world_untrusted_app/Cargo.toml",
+        "//:oak_containers_launcher/Cargo.toml",
+        "//:oak_containers_orchestrator/Cargo.toml",
+        "//:oak_containers_sdk/Cargo.toml",
+        "//:oak_containers_stage1/Cargo.toml",
+        "//:oak_containers_syslogd/Cargo.toml",
+        "//:oak_core/Cargo.toml",
+        "//:oak_crypto/Cargo.toml",
+        "//:oak_debug_service/Cargo.toml",
+        "//:oak_dice/Cargo.toml",
+        "//:oak_docker_linux_init/Cargo.toml",
+        "//:oak_echo_linux_init/Cargo.toml",
+        "//:oak_enclave_runtime_support/Cargo.toml",
+        "//:oak_functions/examples/echo/module/Cargo.toml",
+        "//:oak_functions/examples/invalid_module/module/Cargo.toml",
+        "//:oak_functions/examples/key_value_lookup/module/Cargo.toml",
+        "//:oak_functions/lookup_data_generator/Cargo.toml",
+        "//:oak_functions_abi/Cargo.toml",
+        "//:oak_functions_client/Cargo.toml",
+        "//:oak_functions_containers_app/Cargo.toml",
+        "//:oak_functions_containers_launcher/Cargo.toml",
+        "//:oak_functions_enclave_service/Cargo.toml",
+        "//:oak_functions_launcher/Cargo.toml",
+        "//:oak_functions_sdk/Cargo.toml",
+        "//:oak_functions_sdk/tests/lookup_module/Cargo.toml",
+        "//:oak_functions_sdk/tests/testing_module/Cargo.toml",
+        "//:oak_functions_service/Cargo.toml",
+        "//:oak_functions_test_module/Cargo.toml",
+        "//:oak_functions_test_utils/Cargo.toml",
+        "//:oak_hello_world_linux_init/Cargo.toml",
+        "//:oak_kernel_measurement/Cargo.toml",
+        "//:oak_launcher_utils/Cargo.toml",
+        "//:oak_proto_rust/Cargo.toml",
+        "//:oak_restricted_kernel/Cargo.toml",
+        "//:oak_restricted_kernel_dice/Cargo.toml",
+        "//:oak_restricted_kernel_interface/Cargo.toml",
+        "//:oak_restricted_kernel_launcher/Cargo.toml",
+        "//:oak_restricted_kernel_orchestrator/Cargo.toml",
+        "//:oak_restricted_kernel_sdk/Cargo.toml",
+        "//:oak_restricted_kernel_sdk_proc_macro/Cargo.toml",
+        "//:oak_sev_guest/Cargo.toml",
+        "//:oak_sev_snp_attestation_report/Cargo.toml",
+        "//:oak_simple_io/Cargo.toml",
+        "//:oak_tdx_guest/Cargo.toml",
+        "//:oak_virtio/Cargo.toml",
+        "//:sev_serial/Cargo.toml",
+        "//:snp_measurement/Cargo.toml",
+        "//:stage0/Cargo.toml",
+        "//:stage0_dice/Cargo.toml",
+        "//:testing/oak_echo_service/Cargo.toml",
+        "//:xtask/Cargo.toml",
+        "//:third_party/rust-hypervisor-firmware-virtio/Cargo.toml",
+        "//:third_party/tokio-vsock/Cargo.toml",
+    ],
+)
+
+load("@oak_crates_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()
