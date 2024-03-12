@@ -2,7 +2,7 @@
 # proto-message: oak.attestaton.v1.Evidence
 #
 # Valid real-world evidence for a Restricted Kernel chain, used for testing.
-# Generated on Mar 12 2024. `oc_evidence.binarypb` is the same instance in
+# Generated on 2024-03-12. `oc_evidence.binarypb` is the same instance in
 # serialized binary format. ECA: Embedded Certification Authority
 #
 # The stage0 binary is measured in the attestation report.
