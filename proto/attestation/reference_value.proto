@@ -94,6 +94,9 @@ message RootLayerReferenceValues {
   // Verification is skipped when not running in a TEE.
   AmdSevReferenceValues amd_sev = 1;
   IntelTdxReferenceValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This can
+  // be used when not running in a TEE or when the client is agnostic about the
+  // platform and doesn't care about the hardware verification.
   InsecureReferenceValues insecure = 3;
 }
 
