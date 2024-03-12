@@ -2,7 +2,7 @@
 
 This demo reproducably builds the entire software stack powering the deployment
 of an Oak Enclave Application (firmware, kernel, application) from source code.
-The resulting build artifacts are measured.
+The build artifacts are measured.
 
 The resulting measurements are then used to verify DICE attestation evidence
 returned by prior deployment of these build artifacts in a genuine AMD SEV-SNP
