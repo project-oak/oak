@@ -8,7 +8,7 @@ The resulting measurements are then used to verify DICE attestation evidence
 returned by a prior deployment of this Oak Enclave Application in a genuine AMD
 SEV-SNP TEE.
 
-Comparing the measurements of local builds against those found in the
+Matching the measurements of the local builds with those found in the
 attestation evidence makes it possible to trace the deployment all the way back
 to (public) source code. This permits clients/users to make informed choices
 about which workloads to connect to.
