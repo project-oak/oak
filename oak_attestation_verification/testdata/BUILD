@@ -27,6 +27,7 @@ exports_files([
     "fake_evidence.binarypb",
     "fake_evidence.textproto",
     "logentry.json",
+    "oak_containers_stage1.pem",
     "oak-development.pem",
     "rekor_public_key.pem",
     # The VCEK cert needs to match the hardware ID of the attestation report in the

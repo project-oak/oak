@@ -25,7 +25,9 @@ use crate::{
         EndorsementStatement,
     },
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
-    util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
+    util::{
+        convert_pem_to_raw, equal_keys, is_hex_digest_match, verify_signature_raw, MatchResult,
+    },
 };
 
 /// Compares the digest contained in the endorsement against the given one.
@@ -38,19 +40,27 @@ pub fn verify_binary_digest(
     Ok(is_hex_digest_match(&actual, expected))
 }
 
-/// Verifies the binary endorsement for a given measurement.
+/// Verifies the binary endorsement against log entry and public keys.
 pub fn verify_binary_endorsement(
     now_utc_millis: i64,
     endorsement: &[u8],
+    signature: &[u8],
     log_entry: &[u8],
     endorser_public_key: &[u8],
     rekor_public_key: &[u8],
 ) -> anyhow::Result<()> {
     let statement = parse_endorsement_statement(endorsement)?;
 
-    verify_endorsement_statement(now_utc_millis, &statement)?;
-    verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
-    verify_endorser_public_key(log_entry, endorser_public_key)?;
+    if !log_entry.is_empty() {
+        verify_endorsement_statement(now_utc_millis, &statement)?;
+        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
+        verify_endorser_public_key(log_entry, endorser_public_key)?;
+    } else {
+        if !rekor_public_key.is_empty() {
+            anyhow::bail!("log entry unavailable but verification was requested");
+        }
+        verify_signature_raw(signature, endorsement, endorser_public_key)?;
+    }
 
     Ok(())
 }
@@ -68,13 +78,14 @@ pub fn verify_endorsement_statement(
     Ok(())
 }
 
-/// Verifies that the endorser public key coincides with the one contained in the attestation.
+/// Verifies that the endorser public key coincides with the one contained in
+/// the attestation.
 pub fn verify_endorser_public_key(
     log_entry: &[u8],
     endorser_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
-    // support verifying rolling keys.
+    // TODO(#4231): Currently, we only check that the public keys are the same.
+    // Should be updated to support verifying rolling keys.
 
     let body = get_rekor_log_entry_body(log_entry)?;
 

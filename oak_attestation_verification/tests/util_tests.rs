@@ -26,7 +26,7 @@ use oak_attestation_verification::util::{
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const ENDORSEMENT_SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
+const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
 struct TestData {
