@@ -26,6 +26,6 @@ about which workloads to connect to.
 # Second, start the docker container and enter the build shell.
 ./scripts/docker_run bash -c "nix develop"
 
-# Lastly, run the demo script and build the artifacts.
+# Lastly, run the demo script.
 ./demo_oc3_2024/get_measurements
 ```
