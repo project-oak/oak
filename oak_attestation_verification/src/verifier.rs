@@ -462,7 +462,12 @@ fn verify_root_layer(
     endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    match (values.report.as_ref(), reference_values.amd_sev.as_ref(), reference_values.intel_tdx.as_ref(), reference_values.insecure.as_ref()) {
+    match (
+        values.report.as_ref(),
+        reference_values.amd_sev.as_ref(),
+        reference_values.intel_tdx.as_ref(),
+        reference_values.insecure.as_ref(),
+    ) {
         (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
             // See b/327069120: We don't have the correct digest in the endorsement
             // to compare the stage0 measurement yet. This will fail UNLESS the stage0
@@ -480,19 +485,21 @@ fn verify_root_layer(
                     .as_ref()
                     .context("stage0 binary reference values not found")?,
             )?;
-            verify_amd_sev_attestation_report(
-                report_values,
-                amd_sev_values,
-            )
+            verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
-        (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => verify_intel_tdx_attestation_report(
-            report_values,
-            intel_tdx_values,
-        ),
-        (_, _, _, Some(insecure_values)) => verify_insecure(insecure_values).context("insecure root layer verification failed"),
-        (Some(Report::Fake(_)), _, _, None) => Err(anyhow::anyhow!("unexpected insecure attestation report")),
+        (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
+            verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
+        }
+        (_, _, _, Some(insecure_values)) => {
+            verify_insecure(insecure_values).context("insecure root layer verification failed")
+        }
+        (Some(Report::Fake(_)), _, _, None) => {
+            Err(anyhow::anyhow!("unexpected insecure attestation report"))
+        }
         (None, _, _, _) => Err(anyhow::anyhow!("no attestation report")),
-        (_, _, _, _) => Err(anyhow::anyhow!("invalid combination of root layer reference values and endorsed evidence")),
+        (_, _, _, _) => Err(anyhow::anyhow!(
+            "invalid combination of root layer reference values and endorsed evidence"
+        )),
     }
 }
 
