@@ -10,7 +10,7 @@ Application in a genuine AMD SEV-SNP TEE.
 
 Matching the measurements of the local builds with those found in the
 attestation evidence makes it possible to trace the deployment all the way back
-to (public) source code.
+to source code.
 
 This process permits clients to meaningfully reason about the behavior of remote
 workloads.
