@@ -21,7 +21,9 @@ oak_functions_launcher = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio-vsock = "*"
 tonic = { workspace = true }
+tower = "*"
 ubyte = "*"
 
 [dev-dependencies]

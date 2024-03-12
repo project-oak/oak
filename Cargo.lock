@@ -2419,6 +2419,7 @@ dependencies = [
  "prost-types",
  "tokio",
  "tokio-stream",
+ "tokio-vsock",
  "tonic",
  "which 5.0.0",
 ]
@@ -2719,7 +2720,9 @@ dependencies = [
  "oak_proto_rust",
  "prost",
  "tokio",
+ "tokio-vsock",
  "tonic",
+ "tower",
  "ubyte",
  "xtask",
 ]
