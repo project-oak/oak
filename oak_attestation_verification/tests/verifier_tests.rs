@@ -110,7 +110,6 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        amd_root_public_key: vec![],
         firmware_version: None,
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
