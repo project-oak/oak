@@ -12,8 +12,8 @@ Matching the measurements of the local builds with those found in the
 attestation evidence makes it possible to trace the deployment all the way back
 to (public) source code.
 
-This process permits clients/users to meaningfully reason about the behavior of
-remote workloads.
+This process permits clients to meaningfully reason about the behavior of remote
+workloads.
 
 ## Prerequisites
 
