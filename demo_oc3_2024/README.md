@@ -5,8 +5,8 @@ of an Oak Enclave Application (firmware, kernel, application) from source code.
 The build artifacts are measured.
 
 The resulting measurements are then used to verify DICE attestation evidence
-returned by prior deployment of these build artifacts in a genuine AMD SEV-SNP
-TEE.
+returned by a prior deployment of this Oak Enclave Application in a genuine AMD
+SEV-SNP TEE.
 
 Comparing the measurements of local builds against those found in the
 attestation evidence makes it possible to trace the deployment all the way back
