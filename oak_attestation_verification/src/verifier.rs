@@ -640,7 +640,7 @@ fn verify_application_layer(
     .context("application binary failed verification")?;
 
     verify_measurement_digest(
-        values.config.as_ref().context("config evidence missing")?,
+        values.config.as_ref().context("no config evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
         reference_values

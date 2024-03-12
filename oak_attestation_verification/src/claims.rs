@@ -37,8 +37,7 @@ pub const PREDICATE_V2: &str = "https://github.com/project-oak/transparent-relea
 /// the predicate type in an in-toto statement.
 const ENDORSEMENT_V2: &str = "https://github.com/project-oak/transparent-release/endorsement/v2";
 
-/// URI representing in-toto v01 statements. This is constant for all predicate
-/// types.
+/// URI representing in-toto statements. We only use V1.
 pub const STATEMENT_V1: &str = "https://in-toto.io/Statement/v1";
 
 // A map from algorithm name to lowercase hex-encoded value.

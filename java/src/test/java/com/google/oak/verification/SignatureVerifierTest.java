@@ -27,12 +27,9 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SignatureVerifierTest {
-  private static final String SIGNATURE_PATH =
-      "oak_attestation_verification/testdata/endorsement.json.sig";
-  private static final String PUBLIC_KEY_PATH =
-      "oak_attestation_verification/testdata/oak-development.pem";
-  private static final String CONTENT_PATH =
-      "oak_attestation_verification/testdata/endorsement.json";
+  private static final String SIGNATURE_PATH = "oak_attestation_verification/testdata/endorsement.json.sig";
+  private static final String PUBLIC_KEY_PATH = "oak_attestation_verification/testdata/oak_containers_stage1.pem";
+  private static final String CONTENT_PATH = "oak_attestation_verification/testdata/endorsement.json";
 
   private byte[] signatureBytes;
   private byte[] publicKeyBytes;
@@ -47,8 +44,7 @@ public class SignatureVerifierTest {
 
   @Test
   public void testVerifySucceeds() {
-    Optional<Failure> failure =
-        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+    Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
     Assert.assertFalse(failure.isPresent());
   }
@@ -56,8 +52,7 @@ public class SignatureVerifierTest {
   @Test
   public void testVerifyFailsWithManipulatedSignature() {
     signatureBytes[signatureBytes.length / 2]++;
-    Optional<Failure> failure =
-        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+    Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
     Assert.assertTrue(failure.isPresent());
   }
@@ -65,8 +60,7 @@ public class SignatureVerifierTest {
   @Test
   public void testVerifyFailsWithManipulatedPublicKey() {
     publicKeyBytes[publicKeyBytes.length / 2]++;
-    Optional<Failure> failure =
-        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+    Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
     Assert.assertTrue(failure.isPresent());
   }
@@ -74,8 +68,7 @@ public class SignatureVerifierTest {
   @Test
   public void testVerifyFailsWithWrongContent() {
     contentBytes[contentBytes.length / 2]++;
-    Optional<Failure> failure =
-        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+    Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
     Assert.assertTrue(failure.isPresent());
   }
