@@ -1114,6 +1114,20 @@
 <a href="#1114" id="1114">1114</a>
 <a href="#1115" id="1115">1115</a>
 <a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1207,15 +1221,16 @@
 }
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work progresses.
+/// The `now_utc_millis` argument will be changed to a time type as work
+/// progresses.
 </span><span class="kw">pub fn </span>verify(
     now_utc_millis: i64,
     evidence: <span class="kw-2">&amp;</span>Evidence,
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
 ) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
-    <span class="comment">// Ensure the Attestation report is properly signed by the platform and that it includes the
-    // root public key used in the DICE chain.
+    <span class="comment">// Ensure the Attestation report is properly signed by the platform and that it
+    // includes the root public key used in the DICE chain.
     </span>{
         <span class="kw">let </span>tee_certificate = <span class="kw">match </span>endorsements.r#type.as_ref().context(<span class="string">&quot;no endorsements&quot;</span>)<span class="question-mark">? </span>{
             endorsements::Type::OakRestrictedKernel(endorsements) =&gt; endorsements
@@ -1244,8 +1259,8 @@
         verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)<span class="question-mark">?</span>;
     };
 
-    <span class="comment">// Ensure the DICE chain signatures are valid and extract the measurements, public keys and
-    // other attestation-related data from the DICE chain.
+    <span class="comment">// Ensure the DICE chain signatures are valid and extract the measurements,
+    // public keys and other attestation-related data from the DICE chain.
     </span><span class="kw">let </span>extracted_evidence = verify_dice_chain(evidence).context(<span class="string">&quot;invalid DICE chain&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Ensure the extracted measurements match the endorsements.
@@ -1281,8 +1296,8 @@
     <span class="prelude-val">Ok</span>(extracted_evidence)
 }
 
-<span class="doccomment">/// Verifies signatures of the certificates in the DICE chain and extracts the evidence values from
-/// the certificates if the verification is successful.
+<span class="doccomment">/// Verifies signatures of the certificates in the DICE chain and extracts the
+/// evidence values from the certificates if the verification is successful.
 </span><span class="kw">pub fn </span>verify_dice_chain(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
     <span class="kw">let </span>root_layer_verifying_key = {
         <span class="kw">let </span>cose_key = {
@@ -1297,7 +1312,8 @@
         cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?
     </span>};
 
-    <span class="comment">// Sequentially verify the layers, eventually retrieving the verifying key of the last layer.
+    <span class="comment">// Sequentially verify the layers, eventually retrieving the verifying key of
+    // the last layer.
     </span><span class="kw">let </span>last_layer_verifying_key = evidence.layers.iter().try_fold(
         root_layer_verifying_key,
         |previous_layer_verifying_key, current_layer| {
@@ -1319,7 +1335,8 @@
         },
     )<span class="question-mark">?</span>;
 
-    <span class="comment">// Finally, use the last layer&#39;s verification key to verify the application keys.
+    <span class="comment">// Finally, use the last layer&#39;s verification key to verify the application
+    // keys.
     </span>{
         <span class="kw">let </span>appl_keys = evidence
             .application_keys
@@ -1351,8 +1368,8 @@
     extract_evidence(evidence)
 }
 
-<span class="doccomment">/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for Oak Restricted Kernel applications.
+<span class="doccomment">/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Kernel applications.
 </span><span class="kw">fn </span>verify_oak_restricted_kernel(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>OakRestrictedKernelData,
@@ -1402,8 +1419,8 @@
     .context(<span class="string">&quot;application layer verification failed&quot;</span>)
 }
 
-<span class="doccomment">/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for Oak Restricted Containers applications.
+<span class="doccomment">/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Containers applications.
 </span><span class="kw">fn </span>verify_oak_containers(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>OakContainersData,
@@ -1467,8 +1484,8 @@
     .context(<span class="string">&quot;container layer verification failed&quot;</span>)
 }
 
-<span class="doccomment">/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for CB workloads.
+<span class="doccomment">/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for CB workloads.
 </span><span class="kw">fn </span>verify_cb(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>CbData,
@@ -1525,7 +1542,8 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Verifies the signature chain for the attestation report included in the root.
+<span class="doccomment">/// Verifies the signature chain for the attestation report included in the
+/// root.
 </span><span class="kw">fn </span>verify_root_attestation_signature(
     _now_utc_millis: i64,
     root_layer: <span class="kw-2">&amp;</span>RootLayerEvidence,
@@ -1552,8 +1570,8 @@
             <span class="comment">// Ensure that the attestation report is signed by the VCEK public key.
             </span>verify_attestation_report_signature(<span class="kw-2">&amp;</span>vcek, report)<span class="question-mark">?</span>;
 
-            <span class="comment">// Check that the root ECA public key for the DICE chain is bound to the attestation
-            // report to ensure that the entire chain is valid.
+            <span class="comment">// Check that the root ECA public key for the DICE chain is bound to the
+            // attestation report to ensure that the entire chain is valid.
             </span><span class="kw">let </span>expected = <span class="kw-2">&amp;</span>hash_sha2_256(<span class="kw-2">&amp;</span>root_layer.eca_public_key[..])[..];
             <span class="kw">let </span>actual = report.data.report_data;
 
@@ -1571,7 +1589,8 @@
     }
 }
 
-<span class="doccomment">/// Verifies the measurement values of the root layer containing the attestation report.
+<span class="doccomment">/// Verifies the measurement values of the root layer containing the attestation
+/// report.
 </span><span class="kw">fn </span>verify_root_layer(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>RootLayerData,
@@ -1619,8 +1638,8 @@
     }
 }
 
-<span class="doccomment">/// Verifies the measurement values of the kernel layer, which is common to both the Oak Restricted
-/// Kernel and Oak Containers setups.
+<span class="doccomment">/// Verifies the measurement values of the kernel layer, which is common to both
+/// the Oak Restricted Kernel and Oak Containers setups.
 </span><span class="kw">fn </span>verify_kernel_layer(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>KernelLayerData,
@@ -1699,7 +1718,8 @@
     .context(<span class="string">&quot;ACPI table building commands failed verification&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the measurement values of the system image layer for Oak Containers.
+<span class="doccomment">/// Verifies the measurement values of the system image layer for Oak
+/// Containers.
 </span><span class="kw">fn </span>verify_system_layer(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>SystemLayerData,
@@ -1721,7 +1741,8 @@
     .context(<span class="string">&quot;system image failed verification&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the measurement values of the application layer for Oak Restricted Kernel.
+<span class="doccomment">/// Verifies the measurement values of the application layer for Oak Restricted
+/// Kernel.
 </span><span class="kw">fn </span>verify_application_layer(
     now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>ApplicationLayerData,
@@ -1781,8 +1802,8 @@
     .context(<span class="string">&quot;configuration failed verification&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the measurement digest value against a reference value and an optional transparent
-/// release endorsement.
+<span class="doccomment">/// Verifies the measurement digest value against a reference value and an
+/// optional transparent release endorsement.
 </span><span class="kw">fn </span>verify_measurement_digest(
     measurement: <span class="kw-2">&amp;</span>RawDigest,
     now_utc_millis: i64,
@@ -1798,6 +1819,7 @@
             verify_binary_endorsement(
                 now_utc_millis,
                 <span class="kw-2">&amp;</span>endorsement.endorsement,
+                <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
@@ -1839,6 +1861,7 @@
             verify_binary_endorsement(
                 now_utc_millis,
                 <span class="kw-2">&amp;</span>endorsement.endorsement,
+                <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
@@ -1911,7 +1934,8 @@
     signing_public_key: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Extracts measurements, public keys and other attestation-related values from the evidence.
+<span class="doccomment">/// Extracts measurements, public keys and other attestation-related values from
+/// the evidence.
 </span><span class="kw">fn </span>extract_evidence(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
     <span class="kw">let </span>evidence_values =
         <span class="prelude-val">Some</span>(extract_evidence_values(evidence).context(<span class="string">&quot;couldn&#39;t extract evidence values&quot;</span>)<span class="question-mark">?</span>);
@@ -1933,7 +1957,8 @@
     })
 }
 
-<span class="doccomment">/// Extracts the measurements and other attestation-related values from the evidence.
+<span class="doccomment">/// Extracts the measurements and other attestation-related values from the
+/// evidence.
 </span><span class="kw">fn </span>extract_evidence_values(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;EvidenceValues&gt; {
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(extract_root_values(
         evidence
@@ -1951,7 +1976,8 @@
     )
     .context(<span class="string">&quot;couldn&#39;t parse final DICE layer certificate&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Determine the type of evidence from the claims in the certificate for the final.
+    <span class="comment">// Determine the type of evidence from the claims in the certificate for the
+    // final.
     </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(container_layer_data) = extract_container_layer_data(final_layer_claims) {
         <span class="kw">match </span><span class="kw-2">&amp;</span>evidence.layers[..] {
             [kernel_layer, system_layer] =&gt; {
@@ -2047,8 +2073,8 @@
         }
         TeePlatform::IntelTdx =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;not supported&quot;</span>)),
         TeePlatform::None =&gt; {
-            <span class="comment">// We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake when not
-            // running in a TEE.
+            <span class="comment">// We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake
+            // when not running in a TEE.
             </span><span class="kw">let </span>report = AttestationReport::ref_from(<span class="kw-2">&amp;</span>root_layer.remote_attestation_report)
                 .context(<span class="string">&quot;invalid fake attestation report&quot;</span>)<span class="question-mark">?</span>;
 
@@ -2196,7 +2222,8 @@
         .context(<span class="string">&quot;couldn&#39;t find layer values&quot;</span>)
 }
 
-<span class="doccomment">/// Extracts a value for the label from the layer&#39;s mapping between labels and values.
+<span class="doccomment">/// Extracts a value for the label from the layer&#39;s mapping between labels and
+/// values.
 </span><span class="kw">fn </span>extract_value(values: <span class="kw-2">&amp;</span>[(Value, Value)], label_id: i64) -&gt; anyhow::Result&lt;<span class="kw-2">&amp;</span>Value&gt; {
     <span class="kw">let </span>target_key = Value::Integer(label_id.into());
     values
@@ -2211,7 +2238,8 @@
         .context(<span class="string">&quot;couldn&#39;t find measurement&quot;</span>)
 }
 
-<span class="doccomment">/// Extracts the individual digests from a value that represents a set of digests.
+<span class="doccomment">/// Extracts the individual digests from a value that represents a set of
+/// digests.
 </span><span class="kw">fn </span>value_to_raw_digest(value: <span class="kw-2">&amp;</span>Value) -&gt; anyhow::Result&lt;RawDigest&gt; {
     <span class="kw">if let </span>Value::Map(map) = value {
         <span class="kw">let </span><span class="kw-2">mut </span>result = RawDigest::default();

@@ -316,13 +316,6 @@
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -354,17 +347,16 @@
 </span><span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>time::OffsetDateTime;
 
-<span class="doccomment">/// PredicateType which identifies a V1 Claim, for in-toto statements.
-</span><span class="kw">pub const </span>CLAIM_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
+<span class="doccomment">/// Admissible predicate type of in-toto endorsement statements.
+</span><span class="kw">const </span>PREDICATE_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
+<span class="kw">pub const </span>PREDICATE_V2: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v2&quot;</span>;
 
 <span class="doccomment">/// ClaimType for endorsements. Expected to be used together with `ClaimV1` as
 /// the predicate type in an in-toto statement.
-</span><span class="kw">pub const </span>ENDORSEMENT_V2: <span class="kw-2">&amp;</span>str =
-    <span class="string">&quot;https://github.com/project-oak/transparent-release/endorsement/v2&quot;</span>;
+</span><span class="kw">const </span>ENDORSEMENT_V2: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/endorsement/v2&quot;</span>;
 
-<span class="doccomment">/// URI representing in-toto v01 statements. This is constant for all predicate
-/// types.
-</span><span class="kw">pub const </span>STATEMENT_INTOTO_V01: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://in-toto.io/Statement/v0.1&quot;</span>;
+<span class="doccomment">/// URI representing in-toto statements. We only use V1.
+</span><span class="kw">pub const </span>STATEMENT_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://in-toto.io/Statement/v1&quot;</span>;
 
 <span class="comment">// A map from algorithm name to lowercase hex-encoded value.
 </span><span class="kw">pub type </span>DigestSet = BTreeMap&lt;String, String&gt;;
@@ -471,10 +463,10 @@
 /// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
 </span><span class="kw">pub fn </span>validate_claim&lt;T&gt;(claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;T&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), InvalidClaimData&gt; {
-    <span class="kw">if </span>claim._type != STATEMENT_INTOTO_V01 {
+    <span class="kw">if </span>claim._type != STATEMENT_V1 {
         <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::StatementType);
     }
-    <span class="kw">if </span>claim.predicate_type != CLAIM_V1 {
+    <span class="kw">if </span>claim.predicate_type != PREDICATE_V1 &amp;&amp; claim.predicate_type != PREDICATE_V2 {
         <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::PredicateType);
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;</span>claim.predicate.validity {
@@ -541,19 +533,13 @@
             }
             digest.sha1.push_str(value);
         }
-        <span class="string">&quot;sha256&quot; </span>=&gt; {
+        <span class="string">&quot;sha256&quot; </span>| <span class="string">&quot;sha2_256&quot; </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_256.is_empty() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
             }
             digest.sha2_256.push_str(value);
         }
-        <span class="string">&quot;sha2_256&quot; </span>=&gt; {
-            <span class="kw">if </span>!digest.sha2_256.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
-            }
-            digest.sha2_256.push_str(value);
-        }
-        <span class="string">&quot;sha2_512&quot; </span>=&gt; {
+        <span class="string">&quot;sha512&quot; </span>| <span class="string">&quot;sha2_512&quot; </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_512.is_empty() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
             }
@@ -583,7 +569,7 @@
             }
             digest.sha3_224.push_str(value);
         }
-        <span class="string">&quot;sha2_384&quot; </span>=&gt; {
+        <span class="string">&quot;sha384&quot; </span>| <span class="string">&quot;sha2_384&quot; </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_384.is_empty() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
             }
@@ -644,7 +630,7 @@
 
         <span class="macro">assert_eq!</span>(
             digest.sha2_256,
-            <span class="string">&quot;39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6&quot;
+            <span class="string">&quot;18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc&quot;
         </span>);
     }
 }
