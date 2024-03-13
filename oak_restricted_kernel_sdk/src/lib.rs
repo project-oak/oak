@@ -30,11 +30,12 @@ pub mod utils;
 use oak_crypto::encryption_key::EncryptionKey;
 pub use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_dice::evidence::Evidence;
-/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
-/// allocator, logger, panic handler.
+/// Marks a function as the entrypoint to an enclave app and sets up an
+/// conviences such an allocator, logger, panic handler.
 ///
-/// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`]
-/// attributes, and enabled the [`alloc_error_handler`] unstable feature of the rust compiler.
+/// This macro assumes that crates using it have declared the [`no_std`] and
+/// [`no_main`] attributes, and enabled the [`alloc_error_handler`] unstable
+/// feature of the rust compiler.
 ///
 /// [`no_std`]: <https://github.com/rust-lang/rust/issues/51540>
 /// [`no_main`]: <https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code>
@@ -61,18 +62,19 @@ use oak_dice::evidence::Evidence;
 /// ```
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
-/// Exposes the ability to sign bytestrings using a private key that has been endorsed in
-/// the Attestation Evidence.
+/// Exposes the ability to sign bytestrings using a private key that has been
+/// endorsed in the Attestation Evidence.
 pub trait Signer {
-    /// Attempt to sign the provided message bytestring using a signing private key, a
-    /// corresponding public key of which is contained in the Attestation Evidence.
+    /// Attempt to sign the provided message bytestring using a signing private
+    /// key, a corresponding public key of which is contained in the
+    /// Attestation Evidence.
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
 }
 
 /// Exposes the ability to read the Attestation Evidence.
-/// Note: Applications should only use the evidence to initially send it to the host application
-/// once, which then sends it to the clients. It is discouraged for enclave applications to operate
-/// directly with evidences.
+/// Note: Applications should only use the evidence to initially send it to the
+/// host application once, which then sends it to the clients. It is discouraged
+/// for enclave applications to operate directly with evidences.
 pub trait EvidenceProvider {
     fn get_evidence(&self) -> &Evidence;
 }

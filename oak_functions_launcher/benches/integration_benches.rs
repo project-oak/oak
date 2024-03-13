@@ -40,16 +40,13 @@ struct OakFunctionsTestConfig {
     expected_response: Vec<u8>,
 }
 
-/// Runs a benchmark for the Oak Functions Launcher, invoking the given Wasm module with the given
-/// request, measuring the latency of the invocation.
+/// Runs a benchmark for the Oak Functions Launcher, invoking the given Wasm
+/// module with the given request, measuring the latency of the invocation.
 ///
-/// Similar to the integration test, but wrapped in a non-async function, and invoking the Wasm
-/// module in the benchmark loop.
+/// Similar to the integration test, but wrapped in a non-async function, and
+/// invoking the Wasm module in the benchmark loop.
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
 
     runtime.block_on(xtask::testing::run_step(xtask::launcher::build_stage0()));
     runtime.block_on(xtask::testing::run_step(xtask::launcher::just_build(
@@ -98,9 +95,8 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
-    let evidence = initialize_response
-        .evidence
-        .expect("initialize response doesn't have public key info");
+    let evidence =
+        initialize_response.evidence.expect("initialize response doesn't have public key info");
     let serialized_server_public_key =
         extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
@@ -108,16 +104,14 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("couldn't create client encryptor");
 
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
-    let encrypted_request = client_encryptor
-        .encrypt(&config.request, &[])
-        .expect("could not encrypt request");
+    let encrypted_request =
+        client_encryptor.encrypt(&config.request, &[]).expect("could not encrypt request");
     #[allow(clippy::needless_update)]
-    let invoke_request = InvokeRequest {
-        encrypted_request: Some(encrypted_request),
-        ..Default::default()
-    };
+    let invoke_request =
+        InvokeRequest { encrypted_request: Some(encrypted_request), ..Default::default() };
 
-    // Invoke the function once outside of the benchmark loop to make sure it's ready.
+    // Invoke the function once outside of the benchmark loop to make sure it's
+    // ready.
     {
         log::debug!("invoking handle_user_request");
         let response = runtime
@@ -128,9 +122,8 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
         // Only check this outside of the benchmark loop.
         let encrypted_response = response.unwrap().encrypted_response.unwrap();
-        let (decrypted_response, _authenticated_data) = client_encryptor
-            .decrypt(&encrypted_response)
-            .expect("could not decrypt response");
+        let (decrypted_response, _authenticated_data) =
+            client_encryptor.decrypt(&encrypted_response).expect("could not decrypt response");
         let response: Result<Vec<u8>, micro_rpc::Status> =
             micro_rpc::ResponseWrapper::decode(decrypted_response.as_ref())
                 .expect("could not decode response")
@@ -138,8 +131,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         assert_eq!(response.unwrap(), config.expected_response);
     }
 
-    // We need to make sure to block on the future returned by `handle_user_request`, otherwise the
-    // benchmark will finish before the request is sent.
+    // We need to make sure to block on the future returned by
+    // `handle_user_request`, otherwise the benchmark will finish before the
+    // request is sent.
     b.iter(|| {
         let response = runtime
             .block_on(client.handle_user_request(&invoke_request))
@@ -149,18 +143,13 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     log::info!("stopping launcher");
 
-    runtime
-        .block_on(launched_instance.kill())
-        .expect("Failed to stop launcher");
+    runtime.block_on(launched_instance.kill()).expect("Failed to stop launcher");
 }
 
 #[bench]
 fn bench_key_value_lookup(b: &mut Bencher) {
     // See https://github.com/rust-cli/env_logger/#in-tests.
-    let _ = env_logger::builder()
-        .is_test(true)
-        .filter_level(log::LevelFilter::Trace)
-        .try_init();
+    let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Trace).try_init();
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");

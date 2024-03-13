@@ -32,35 +32,32 @@ struct Inner<const N: usize> {
 
 impl<const N: usize> Inner<N> {
     const fn new() -> Self {
-        Self {
-            index: AtomicUsize::new(0),
-            storage: MaybeUninit::uninit(),
-        }
+        Self { index: AtomicUsize::new(0), storage: MaybeUninit::uninit() }
     }
 }
 
 /// Basic bump allocator that never deallocates memory.
 ///
-/// The algorithm is rather simple: we maintain an index into the buffer we hold, that marks the
-/// high water mark (already allocated memory). Whenever a request for memory comes in, me move the
-/// index forward by the padding necessary to maintain proper alignment for the structure plus the
+/// The algorithm is rather simple: we maintain an index into the buffer we
+/// hold, that marks the high water mark (already allocated memory). Whenever a
+/// request for memory comes in, me move the index forward by the padding
+/// necessary to maintain proper alignment for the structure plus the
 /// size of the structure.
 ///
-/// We do not support deallocation, and there is no optimizations to pack the allocations as
-/// efficiently as possible.
+/// We do not support deallocation, and there is no optimizations to pack the
+/// allocations as efficiently as possible.
 ///
-/// For stage0 uses these limitations are not an issue because (a) we use this allocator to allocate
-/// data structures we expect to outlive stage0 and (b) we allocate only a small number of data
-/// structures from it, so the padding overhead is minimal.
+/// For stage0 uses these limitations are not an issue because (a) we use this
+/// allocator to allocate data structures we expect to outlive stage0 and (b) we
+/// allocate only a small number of data structures from it, so the padding
+/// overhead is minimal.
 pub struct BumpAllocator<const N: usize> {
     inner: Spinlock<Inner<N>>,
 }
 
 impl<const N: usize> BumpAllocator<N> {
     pub const fn uninit() -> Self {
-        Self {
-            inner: Spinlock::new(Inner::new()),
-        }
+        Self { inner: Spinlock::new(Inner::new()) }
     }
 }
 
@@ -82,12 +79,10 @@ unsafe impl<const N: usize> Allocator for BumpAllocator<N> {
             return Err(AllocError);
         }
 
-        inner
-            .index
-            .fetch_add(align + layout.size(), Ordering::SeqCst);
+        inner.index.fetch_add(align + layout.size(), Ordering::SeqCst);
 
-        // Safety: we've reserved memory from [offset, offset + align + size) so this will not
-        // exceed the bounds of `self.storage` and is not aliased.
+        // Safety: we've reserved memory from [offset, offset + align + size) so this
+        // will not exceed the bounds of `self.storage` and is not aliased.
         Ok(NonNull::slice_from_raw_parts(
             unsafe { NonNull::new_unchecked(storage_ptr.add(offset + align)) },
             layout.size(),
@@ -114,12 +109,10 @@ pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
         panic!("heap is not backed by physical memory");
     }
 
-    // Safety: The memory between 1MiB and 2MiB is not used for anything else, and we have checked
-    // that this range is backed by physical memory.
+    // Safety: The memory between 1MiB and 2MiB is not used for anything else, and
+    // we have checked that this range is backed by physical memory.
     unsafe {
-        crate::SHORT_TERM_ALLOC
-            .lock()
-            .init(start.as_mut_ptr(), size);
+        crate::SHORT_TERM_ALLOC.lock().init(start.as_mut_ptr(), size);
     }
 }
 
@@ -157,17 +150,15 @@ mod tests {
             _y: u64,
         }
         // Allow for max 7-byte alignment + 2*8 (size of Foo)
-        // The padding we need to use is ~random; it depends where exactly in memory our buffer
-        // lands, as that is not required to be perfectly aligned with any particular boundary.
+        // The padding we need to use is ~random; it depends where exactly in memory our
+        // buffer lands, as that is not required to be perfectly aligned with
+        // any particular boundary.
         let alloc = BumpAllocator::<23>::uninit();
         let val = Box::new_in(Foo { x: 16, _y: 16 }, &alloc);
-        assert_eq!(
-            0,
-            val.as_ref() as *const Foo as usize % core::mem::align_of::<Foo>()
-        );
+        assert_eq!(0, val.as_ref() as *const Foo as usize % core::mem::align_of::<Foo>());
         assert_eq!(16, val.x);
-        // Even if the initial alignment was perfect by chance, we've used up 16 bytes, so this
-        // won't fit
+        // Even if the initial alignment was perfect by chance, we've used up 16 bytes,
+        // so this won't fit
         let val = Box::try_new_in(Foo { x: 1, _y: 1 }, &alloc);
         assert!(val.is_err());
     }

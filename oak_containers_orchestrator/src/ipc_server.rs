@@ -77,8 +77,9 @@ where
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
-    // Change permissions on the socket to be world-RW, as otherwise processes running as `oakc`
-    // can't access it. (Either that, or we should change the owner of the socket to oakc.)
+    // Change permissions on the socket to be world-RW, as otherwise processes
+    // running as `oakc` can't access it. (Either that, or we should change the
+    // owner of the socket to oakc.)
     set_permissions(socket_address, Permissions::from_mode(0o666)).await?;
 
     Server::builder()

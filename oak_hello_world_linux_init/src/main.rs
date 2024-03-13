@@ -25,8 +25,8 @@ fn main() -> ! {
 
     info!("Hello World.");
 
-    // Linux does not expect the initial process to ever exit, so we keep sleeping 1 second at a
-    // time.
+    // Linux does not expect the initial process to ever exit, so we keep sleeping 1
+    // second at a time.
     loop {
         nix::unistd::sleep(1);
     }

@@ -27,15 +27,14 @@ use spinning_top::Spinlock;
 
 extern crate log;
 
-// Base I/O port for the first serial port in the system (colloquially known as COM1).
+// Base I/O port for the first serial port in the system (colloquially known as
+// COM1).
 static COM1_BASE: u16 = 0x3f8;
 
 lazy_static! {
     static ref GHCB_PROTOCOL: Spinlock<GhcbProtocol<'static, Ghcb>> = {
         let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-        Spinlock::new(crate::ghcb::init_ghcb(
-            sev_status.contains(SevStatus::SNP_ACTIVE),
-        ))
+        Spinlock::new(crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE)))
     };
 }
 

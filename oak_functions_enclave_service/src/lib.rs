@@ -59,12 +59,7 @@ where
         encryption_key_handle: Arc<EKH>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
-        Self {
-            evidence_provider,
-            encryption_key_handle,
-            instance: OnceCell::new(),
-            observer,
-        }
+        Self { evidence_provider, encryption_key_handle, instance: OnceCell::new(), observer }
     }
     fn get_instance(&self) -> Result<&OakFunctionsInstance<H>, micro_rpc::Status> {
         self.instance.get().ok_or_else(|| {
@@ -86,10 +81,7 @@ where
         &self,
         request: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
-        log::debug!(
-            "called initialize (Wasm module size: {} bytes)",
-            request.wasm_module.len()
-        );
+        log::debug!("called initialize (Wasm module size: {} bytes)", request.wasm_module.len());
         match self.instance.get() {
             Some(_) => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -110,9 +102,7 @@ where
                             format!("failed to convert evidence to proto: {err}"),
                         )
                     })?;
-                Ok(InitializeResponse {
-                    evidence: Some(evidence),
-                })
+                Ok(InitializeResponse { evidence: Some(evidence) })
             }
         }
     }

@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! This module provides an implementation of the State Save Area (VMSA) that is used to store
-//! encrypted CPU-related state on AMD SEV-ES and SEV-SNP.
+//! This module provides an implementation of the State Save Area (VMSA) that is
+//! used to store encrypted CPU-related state on AMD SEV-ES and SEV-SNP.
 
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
@@ -40,21 +40,15 @@ static_assertions::assert_eq_size!(VmsaPage, [u8; VMSA_PAGE_SIZE]);
 
 impl VmsaPage {
     pub fn new(vmsa: Vmsa) -> Self {
-        Self {
-            vmsa,
-            _reserved: [0u8; VMSA_PAGE_SIZE - VMSA_SIZE],
-        }
+        Self { vmsa, _reserved: [0u8; VMSA_PAGE_SIZE - VMSA_SIZE] }
     }
 }
 
 impl Default for VmsaPage {
     fn default() -> Self {
-        // We cannot derive Default because Default is only implemented for fixed-size arrays up to
-        // size 32.
-        Self {
-            vmsa: Vmsa::default(),
-            _reserved: [0u8; VMSA_PAGE_SIZE - VMSA_SIZE],
-        }
+        // We cannot derive Default because Default is only implemented for fixed-size
+        // arrays up to size 32.
+        Self { vmsa: Vmsa::default(), _reserved: [0u8; VMSA_PAGE_SIZE - VMSA_SIZE] }
     }
 }
 
@@ -150,15 +144,18 @@ pub struct Vmsa {
     pub isst_addr: u64,
     /// The RAX register.
     pub rax: u64,
-    /// The target address, code segment and stack segment when making a syscall in legacy mode.
+    /// The target address, code segment and stack segment when making a syscall
+    /// in legacy mode.
     pub star: u64,
     /// The target instruction pointer when making a syscall in 64-bit mode.
     pub lstar: u64,
-    /// The target instruction pointer when making a syscall in compatibility mode.
+    /// The target instruction pointer when making a syscall in compatibility
+    /// mode.
     pub cstar: u64,
     /// The syscall flag mask.
     pub sfmask: u64,
-    /// Register used by the SWAPGS instruction to swap the base of the GS general purpose segment.
+    /// Register used by the SWAPGS instruction to swap the base of the GS
+    /// general purpose segment.
     pub kernel_gs_base: u64,
     /// The code segment when using SYSENTER or SYSEXIT in legacy mode.
     pub sysenter_cs: u64,
@@ -244,8 +241,8 @@ pub struct Vmsa {
     pub virtual_tom: u64,
     /// Used by the hardware to track TLB information for the guest.
     pub tlb_id: u64,
-    /// Used to control flushing of the guest TLB. Writing 0 to this value will cause the TLB to be
-    /// flushed on the next VMRUN.
+    /// Used to control flushing of the guest TLB. Writing 0 to this value will
+    /// cause the TLB to be flushed on the next VMRUN.
     pub pcpu_id: u64,
     /// Field used for injecting events into the guest.
     pub event_inj: u64,
@@ -306,13 +303,14 @@ pub struct Vmsa {
 static_assertions::assert_eq_size!(Vmsa, [u8; VMSA_SIZE]);
 
 impl Vmsa {
-    /// Creates a new instance of the VMSA that represents the state of a newly reset vCPU at boot
-    /// time.
+    /// Creates a new instance of the VMSA that represents the state of a newly
+    /// reset vCPU at boot time.
     ///
-    /// The current implementation tries to match the state of a new vCPU on QEMU running with KVM.
+    /// The current implementation tries to match the state of a new vCPU on
+    /// QEMU running with KVM.
     ///
-    /// The value of RDX depends on the family, model and stepping of the CPU and can be calculated
-    /// using `calculate_rdx_from_fms`.
+    /// The value of RDX depends on the family, model and stepping of the CPU
+    /// and can be calculated using `calculate_rdx_from_fms`.
     ///
     /// For reference see <https://github.com/qemu/qemu/blob/master/target/i386/cpu.h>,
     /// <https://github.com/qemu/qemu/blob/master/target/i386/cpu.c> and
@@ -350,14 +348,8 @@ impl Vmsa {
                 attributes: 0x93, // (P|S|W|A)
                 ..Default::default()
             },
-            gdtr: SegmentRegister {
-                limit: 0xffff,
-                ..Default::default()
-            },
-            idtr: SegmentRegister {
-                limit: 0xffff,
-                ..Default::default()
-            },
+            gdtr: SegmentRegister { limit: 0xffff, ..Default::default() },
+            idtr: SegmentRegister { limit: 0xffff, ..Default::default() },
             ldtr: SegmentRegister {
                 limit: 0xffff,
                 attributes: 0x82, // (P|LDT)
@@ -386,8 +378,8 @@ impl Vmsa {
 
 impl Default for Vmsa {
     fn default() -> Self {
-        // We cannot derive Default because Default is only implemented for fixed-size arrays up to
-        // size 32.
+        // We cannot derive Default because Default is only implemented for fixed-size
+        // arrays up to size 32.
         Self {
             es: SegmentRegister::default(),
             cs: SegmentRegister::default(),
@@ -511,8 +503,8 @@ impl Default for Vmsa {
     }
 }
 
-/// When the CPU is reset, the value of RDX is set to the same value that would be returned in EAX
-/// when calling CPUID for leaf 1.
+/// When the CPU is reset, the value of RDX is set to the same value that would
+/// be returned in EAX when calling CPUID for leaf 1.
 ///
 /// See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
 pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
@@ -552,7 +544,8 @@ pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
 pub struct SegmentRegister {
     /// The segment selector.
     pub selector: u16,
-    /// The segment attributes. The meaning of the attribute bits is register-dependent.
+    /// The segment attributes. The meaning of the attribute bits is
+    /// register-dependent.
     ///
     /// See section 4.7 in <https://www.amd.com/system/files/TechDocs/24593.pdf>.
     pub attributes: u16,

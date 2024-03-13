@@ -59,9 +59,7 @@ where
         info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;
 
-        Ok(proto::oak::echo::EchoResponse {
-            body: response_body,
-        })
+        Ok(proto::oak::echo::EchoResponse { body: response_body })
     }
 
     fn get_evidence(
@@ -75,8 +73,6 @@ where
                     format!("failed to convert evidence to proto: {err}"),
                 )
             })?;
-        Ok(proto::oak::echo::GetEvidenceResponse {
-            evidence: Some(evidence),
-        })
+        Ok(proto::oak::echo::GetEvidenceResponse { evidence: Some(evidence) })
     }
 }

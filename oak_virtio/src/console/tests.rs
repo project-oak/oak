@@ -88,9 +88,7 @@ fn test_write_bytes() {
     console.init(identity_map, inverse_identity_map).unwrap();
     let len = console.write_bytes(&data[..]).unwrap();
     assert_eq!(len, 5);
-    let bytes = transport
-        .device_read_once_from_queue::<QUEUE_SIZE>(1)
-        .unwrap();
+    let bytes = transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap();
     assert_eq!(data, bytes);
 }
 
@@ -120,12 +118,8 @@ fn test_write_all() {
     let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     assert!(console.write_all(&data[..]).is_ok());
-    let first = transport
-        .device_read_once_from_queue::<QUEUE_SIZE>(1)
-        .unwrap();
-    let second = transport
-        .device_read_once_from_queue::<QUEUE_SIZE>(1)
-        .unwrap();
+    let first = transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap();
+    let second = transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap();
     assert_eq!(&data[..DATA_BUFFER_SIZE], &first[..]);
     assert_eq!(&data[DATA_BUFFER_SIZE..], &second[..]);
 }

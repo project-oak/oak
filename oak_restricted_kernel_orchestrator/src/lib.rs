@@ -43,10 +43,6 @@ impl AttestedApp {
             oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
         let dice_data =
             oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
-        Self {
-            elf_binary,
-            derived_key,
-            dice_data,
-        }
+        Self { elf_binary, derived_key, dice_data }
     }
 }

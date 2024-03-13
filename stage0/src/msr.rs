@@ -20,7 +20,8 @@ use x86_64::{registers::model_specific::Msr as DirectMsr, PhysAddr};
 
 use crate::sev::GHCB_WRAPPER;
 
-/// Wrapper that can access a MSR either directly or through the GHCB, depending on the environment.
+/// Wrapper that can access a MSR either directly or through the GHCB, depending
+/// on the environment.
 pub struct Msr {
     msr_id: u32,
     msr: DirectMsr,
@@ -28,10 +29,7 @@ pub struct Msr {
 
 impl Msr {
     pub const fn new(reg: u32) -> Self {
-        Self {
-            msr_id: reg,
-            msr: DirectMsr::new(reg),
-        }
+        Self { msr_id: reg, msr: DirectMsr::new(reg) }
     }
 
     /// Read the MSR.
@@ -89,8 +87,9 @@ bitflags! {
 
 /// The APIC Base Address Register.
 ///
-/// See Sections 16.3.1 (Local APIC Enable) and 16.9 (Detecting and Enabling x2APIC Mode) in the
-/// AMD64 Architecture Programmer's Manual, Volume 2 for more details.
+/// See Sections 16.3.1 (Local APIC Enable) and 16.9 (Detecting and Enabling
+/// x2APIC Mode) in the AMD64 Architecture Programmer's Manual, Volume 2 for
+/// more details.
 pub struct ApicBase;
 
 impl ApicBase {
@@ -127,8 +126,9 @@ bitflags! {
     }
 }
 
-/// The cache memory type used with MTRR.  We only use Write-Protect mode which the Linux kernel
-/// expects to be enabled by the firmware in order to enable SEV.
+/// The cache memory type used with MTRR.  We only use Write-Protect mode which
+/// the Linux kernel expects to be enabled by the firmware in order to enable
+/// SEV.
 #[repr(u8)]
 #[allow(dead_code)] // Remove if this is ever ported to a public crate.
 #[derive(FromRepr)]
@@ -157,35 +157,35 @@ impl MTRRDefType {
     const MSR: Msr = Msr::new(0x0000_02FF);
 
     pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
-        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
-        // to read the MSR, otherwise we read the MSR directly.
-        // Safety: This is safe because this MSR has been supported since the P6 family of
-        // Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the
+        // GHCB protocol to read the MSR, otherwise we read the MSR directly.
+        // Safety: This is safe because this MSR has been supported since the P6 family
+        // of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
         let msr_value = unsafe { Self::MSR.read() };
-        let memory_type: MemoryType = (msr_value as u8)
-            .try_into()
-            .expect("invalid MemoryType value");
+        let memory_type: MemoryType =
+            (msr_value as u8).try_into().expect("invalid MemoryType value");
         (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
     }
 
-    /// Write the MTRRDefType flags and caching mode, preserving reserved values.
-    /// The Linux kernel requires the mode be set to `MemoryType::WP` since
-    /// July, 2022, with this requirement back-ported to 5.15.X, or it will silently crash when
-    /// SEV is enabled.
+    /// Write the MTRRDefType flags and caching mode, preserving reserved
+    /// values. The Linux kernel requires the mode be set to
+    /// `MemoryType::WP` since July, 2022, with this requirement back-ported
+    /// to 5.15.X, or it will silently crash when SEV is enabled.
     ///
-    /// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
-    /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
-    /// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
-    /// [    0.122245] mtrr: corrected configuration.
+    /// The Linux kernel gives a warning that MTRR is not setup properly, which
+    /// we can igore: [    0.120763] mtrr: your CPUs had inconsistent
+    /// MTRRdefType settings [    0.121529] mtrr: probably your BIOS does
+    /// not setup all CPUs. [    0.122245] mtrr: corrected configuration.
     ///
     /// ## Safety
     ///
-    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to ROM, in a mode that
-    /// caches the write, although this would require unsafe code to do.
+    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to
+    /// ROM, in a mode that caches the write, although this would require
+    /// unsafe code to do.
     ///
-    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
-    /// this specific MSR and mode has been supported since the P6 family of Pentium processors
-    /// (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
+    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this
+    /// operation is safe because this specific MSR and mode has been
+    /// supported since the P6 family of Pentium processors (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
     pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
         let (old_flags, _old_memory_type) = Self::read();
@@ -198,11 +198,11 @@ impl MTRRDefType {
 
 /// The x2APIC_ID register.
 ///
-/// Contains the 32-bit local x2APIC ID. It is assigned by hardware at reset time, and the exact
-/// structure is manufacturer-dependent.
+/// Contains the 32-bit local x2APIC ID. It is assigned by hardware at reset
+/// time, and the exact structure is manufacturer-dependent.
 ///
-/// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer's Manual, Volume 2 for
-/// more details.
+/// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer's Manual,
+/// Volume 2 for more details.
 pub struct X2ApicIdRegister;
 
 impl X2ApicIdRegister {
@@ -257,10 +257,7 @@ impl X2ApicSpuriousInterruptRegister {
     pub unsafe fn read() -> (SpuriousInterruptFlags, u8) {
         let val = Self::MSR.read();
 
-        (
-            SpuriousInterruptFlags::from_bits_truncate((val & 0xFFFF_FF00) as u32),
-            (val & 0xFF) as u8,
-        )
+        (SpuriousInterruptFlags::from_bits_truncate((val & 0xFFFF_FF00) as u32), (val & 0xFF) as u8)
     }
 
     pub unsafe fn write(flags: SpuriousInterruptFlags, vec: u8) {
@@ -329,54 +326,58 @@ impl X2ApicErrorStatusRegister {
 
 /// Interrupt types that can be sent via the Interrupt Command Register.
 ///
-/// Note that this enum contains only values supported by x2APIC; the legacy xAPIC supports some
-/// extra message types that are deprecated (and reserved) under x2APIC.
+/// Note that this enum contains only values supported by x2APIC; the legacy
+/// xAPIC supports some extra message types that are deprecated (and reserved)
+/// under x2APIC.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 #[allow(dead_code, clippy::upper_case_acronyms)]
 #[repr(u32)]
 pub enum MessageType {
-    /// IPI delivers an interrupt to the target local APIC specified in the Destination field.
+    /// IPI delivers an interrupt to the target local APIC specified in the
+    /// Destination field.
     Fixed = 0b000 << 8,
 
-    /// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode is edge-triggered
-    /// and Vector must be 0x00.
+    /// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode
+    /// is edge-triggered and Vector must be 0x00.
     SMI = 0b010 << 8,
 
     // IPI delivers an non-maskable interrupt to the target local APIC specified in the
     // Destination field. Vector is ignored.
     NMI = 0b100 << 8,
 
-    /// IPI delivers an INIT request to the target local APIC(s), causing the CPU core to assume
-    /// INIT state. Trigger mode is edge-triggered, Vector must be 0x00. After INIT, target APIC
-    /// will only accept a Startup IPI, all other interrupts will be held pending.
+    /// IPI delivers an INIT request to the target local APIC(s), causing the
+    /// CPU core to assume INIT state. Trigger mode is edge-triggered,
+    /// Vector must be 0x00. After INIT, target APIC will only accept a
+    /// Startup IPI, all other interrupts will be held pending.
     Init = 0b101 << 8,
 
-    /// IPI delives a start-up request (SIPI) to the target local APIC(s) in the Destination field,
-    /// causing the core to start processing the routing whose address is specified by the Vector
-    /// field.
+    /// IPI delives a start-up request (SIPI) to the target local APIC(s) in the
+    /// Destination field, causing the core to start processing the routing
+    /// whose address is specified by the Vector field.
     Startup = 0b110 << 8,
 }
 
 /// Values for the destination mode flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 #[allow(dead_code)]
 #[repr(u32)]
 pub enum DestinationMode {
     // Physical destination, single local APIC ID.
     Physical = 0 << 11,
 
-    /// Logical destination, one or more local APICs with a common destination logical ID.
+    /// Logical destination, one or more local APICs with a common destination
+    /// logical ID.
     Logical = 1 << 11,
 }
 
 /// Values for the level flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 #[repr(u32)]
 pub enum Level {
     Deassert = 0 << 14,
@@ -385,8 +386,8 @@ pub enum Level {
 
 /// Values for the trigger mode flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 #[repr(u32)]
 pub enum TriggerMode {
     Edge = 0 << 15,
@@ -395,8 +396,8 @@ pub enum TriggerMode {
 
 /// Values for the destination shorthand flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 #[allow(dead_code)]
 #[repr(u32)]
 pub enum DestinationShorthand {
@@ -406,10 +407,12 @@ pub enum DestinationShorthand {
     /// The issuing APIC is the only destination.
     SelfOnly = 0b01 << 18,
 
-    /// The IPI is sent to all local APICs including itself (destination field = 0xFF)
+    /// The IPI is sent to all local APICs including itself (destination field =
+    /// 0xFF)
     AllInclSelf = 0b10 << 18,
 
-    /// The IPI is sent to all local APICs except itself (destination field = 0xFF)
+    /// The IPI is sent to all local APICs except itself (destination field =
+    /// 0xFF)
     AllExclSelf = 0b11 << 18,
 }
 

@@ -35,9 +35,9 @@ pub mod socket;
 
 /// The number of buffer descriptors in each of the queues.
 ///
-/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of
-/// descriptors to the maximum queue size rather than the negotiated size.
-/// See <https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74>.
+/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets
+/// the number of descriptors to the maximum queue size rather than the
+/// negotiated size. See <https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74>.
 const QUEUE_SIZE: usize = 256;
 
 /// The size of each of the buffers used by the transmit and receive queues.
@@ -85,30 +85,32 @@ pub struct VSock<'a, T: VirtioTransport, A: Allocator> {
     rx_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// The transmit queue.
     tx_queue: DriverWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
-    /// The event queue used by the device to notify the driver that the guest CID has changed. We
-    /// ignore it for now as we don't support live migration, but it still must exist and be
-    /// configured.
+    /// The event queue used by the device to notify the driver that the guest
+    /// CID has changed. We ignore it for now as we don't support live
+    /// migration, but it still must exist and be configured.
     event_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, EVENT_BUFFER_SIZE, A>,
     /// The the CID assigned to this VM.
     guest_cid: u64,
 }
 
 impl<'a, A: Allocator> VSock<'a, VirtioPciTransport, A> {
-    /// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
+    /// Finds the virtio vsock PCI device, initialises the device, and
+    /// configures the queues.
     pub fn find_and_configure_device<VP: Translator, PV: InverseTranslator>(
         translate: VP,
         inverse: PV,
         alloc: &'a A,
     ) -> anyhow::Result<Self> {
-        // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
-        // the vendor ID and device ID.
+        // For now we just scan the first 32 devices on PCI bus 0 to find the first one
+        // that matches the vendor ID and device ID.
         let pci_device = find_device(super::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| anyhow::anyhow!("couldn't find a virtio vsock device"))?;
         let transport = VirtioPciTransport::new(pci_device);
         let device = VirtioBaseDevice::new(transport);
         let mut result = Self::new(device, &translate, alloc);
         result.init(translate, inverse)?;
-        // Let the device know there are available buffers in the receiver and event queues.
+        // Let the device know there are available buffers in the receiver and event
+        // queues.
         result.device.notify_queue(RX_QUEUE_ID);
         result.device.notify_queue(EVENT_QUEUE_ID);
         Ok(result)
@@ -124,7 +126,8 @@ where
         loop {
             let buffer = self.rx_queue.read_next_used_buffer()?;
             if self.rx_queue.inner.must_notify_device() {
-                // Notify the device that a packet has been read and the buffer is available again.
+                // Notify the device that a packet has been read and the buffer is available
+                // again.
                 self.device.notify_queue(RX_QUEUE_ID);
             }
             // Silently drop packets where the CIDs don't match.
@@ -136,14 +139,16 @@ where
         }
     }
 
-    /// Reads the next valid packet that matches the filter, if one is available.
+    /// Reads the next valid packet that matches the filter, if one is
+    /// available.
     ///
-    /// If invalid packets are found it will continue reading until a valid one is found, or no more
-    /// packets are available to read.
+    /// If invalid packets are found it will continue reading until a valid one
+    /// is found, or no more packets are available to read.
     ///
-    /// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify
-    /// the host that the packets are not part of a valid connected socket (e.g. unexpected source
-    /// or destintation ports) and any related connections on the host should be disconnected.
+    /// If `reset_unmatched` is true we send RST packets in response to
+    /// unmatched packets to notify the host that the packets are not part
+    /// of a valid connected socket (e.g. unexpected source or destintation
+    /// ports) and any related connections on the host should be disconnected.
     pub fn read_filtered_packet<F: Fn(&Packet) -> bool>(
         &mut self,
         filter: F,
@@ -185,13 +190,7 @@ where
         let tx_queue = DriverWriteOnlyQueue::new(&translate, alloc);
         let rx_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
         let event_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
-        VSock {
-            device,
-            tx_queue,
-            rx_queue,
-            event_queue,
-            guest_cid: Default::default(),
-        }
+        VSock { device, tx_queue, rx_queue, event_queue, guest_cid: Default::default() }
     }
 
     /// Initializes the device and configures the queues.
@@ -204,9 +203,10 @@ where
             .start_init(DEVICE_ID as u32, inverse)
             .map_err(|error| anyhow::anyhow!("virtio error: {:?}", error))
             .context("couldn't initialize the PCI device")?;
-        // We have to configure the event queue before the receive queue, otherwise the event
-        // queue's configuration interferes with the receiver queue. This seems to be related to
-        // something specific in the Linux kernel vhost vsock implementation.
+        // We have to configure the event queue before the receive queue, otherwise the
+        // event queue's configuration interferes with the receiver queue. This
+        // seems to be related to something specific in the Linux kernel vhost
+        // vsock implementation.
         self.device
             .configure_queue(
                 EVENT_QUEUE_ID,
@@ -251,17 +251,18 @@ where
             .map_err(|error| anyhow::anyhow!("device activation error: {:?}", error))
             .context("couldn't activate the PCI device")?;
 
-        // Read the guest CID from the PCI config. The upper 32 bits must be 0, so we only read the
-        // lower 32 bits.
+        // Read the guest CID from the PCI config. The upper 32 bits must be 0, so we
+        // only read the lower 32 bits.
         self.guest_cid = self.device.get_config(CID_CONFIG_OFFSET) as u64;
         Ok(())
     }
 
-    /// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly
-    /// disconnected.
+    /// Sends a vsock RST packet indicating that a socket is disconnected, or
+    /// must be forcibly disconnected.
     ///
-    /// This is typically done in response to a packet with unexpected source or destination ports,
-    /// an invalid op for the connection state, or to confirm that a socket has been diconnected.
+    /// This is typically done in response to a packet with unexpected source or
+    /// destination ports, an invalid op for the connection state, or to
+    /// confirm that a socket has been diconnected.
     fn send_rst_packet(&mut self, host_port: u32, local_port: u32) {
         let mut packet = Packet::new_control(local_port, host_port, VSockOp::Rst).unwrap();
         self.write_packet(&mut packet);

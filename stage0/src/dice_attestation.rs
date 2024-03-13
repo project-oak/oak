@@ -27,19 +27,22 @@ use crate::sev::send_guest_message_request;
 
 type DerivedKey = [u8; 32];
 
-// The number of bytes of custom data that can be included in the attestation report.
+// The number of bytes of custom data that can be included in the attestation
+// report.
 const REPORT_DATA_SIZE: usize = 64;
 
 /// Returns an attestation report.
 ///
-/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation report. In other cases
-/// it generates an empty attestation report for testing. The additional data will be set in both
-/// cases to bind the DICE chain to the attestation report.
+/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+/// report. In other cases it generates an empty attestation report for testing.
+/// The additional data will be set in both cases to bind the DICE chain to the
+/// attestation report.
 ///
 /// # Arguments
 ///
-/// * `report_data` - The custom data that must be included in the report. This is typically used to
-///   bind information (such as the hash of a public key) to the report.
+/// * `report_data` - The custom data that must be included in the report. This
+///   is typically used to bind information (such as the hash of a public key)
+///   to the report.
 pub fn get_attestation(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -> Result<AttestationReport, &'static str> {
@@ -59,11 +62,11 @@ pub fn get_attestation(
 
 /// Requests a derived key.
 ///
-/// The key is derived from the VCEK. The key derivation mixes in the VM launch measurement and
-/// guest policy and uses VMPL0.
+/// The key is derived from the VCEK. The key derivation mixes in the VM launch
+/// measurement and guest policy and uses VMPL0.
 ///
-/// We use this key as the unique device secret for deriving compound devices identifiers for each
-/// layer, and eventually a sealing key in the last layer.
+/// We use this key as the unique device secret for deriving compound devices
+/// identifiers for each layer, and eventually a sealing key in the last layer.
 pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
     if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
         let mut key_request = KeyRequest::new();

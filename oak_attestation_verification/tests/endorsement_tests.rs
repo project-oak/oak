@@ -38,8 +38,8 @@ const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 
-// Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from
-// https://rekor.sigstore.dev/api/v1/log/publicKey.
+// Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
+// from https://rekor.sigstore.dev/api/v1/log/publicKey.
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC
@@ -54,10 +54,7 @@ struct TestData {
 }
 
 fn create_hex_digest() -> HexDigest {
-    HexDigest {
-        sha2_256: BINARY_DIGEST.to_owned(),
-        ..Default::default()
-    }
+    HexDigest { sha2_256: BINARY_DIGEST.to_owned(), ..Default::default() }
 }
 
 fn load_testdata() -> TestData {
@@ -74,13 +71,7 @@ fn load_testdata() -> TestData {
     let rekor_public_key =
         convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
 
-    TestData {
-        endorsement,
-        signature,
-        log_entry,
-        endorser_public_key,
-        rekor_public_key,
-    }
+    TestData { endorsement, signature, log_entry, endorser_public_key, rekor_public_key }
 }
 
 #[test]
@@ -112,9 +103,7 @@ fn test_verify_binary_digest_different() {
 #[test]
 fn test_verify_binary_digest_undecidable() {
     let testdata = load_testdata();
-    let empty = HexDigest {
-        ..Default::default()
-    };
+    let empty = HexDigest { ..Default::default() };
     let result = verify_binary_digest(&testdata.endorsement, &empty);
     assert!(result.is_ok_and(|m| m == MatchResult::UNDECIDABLE));
 }

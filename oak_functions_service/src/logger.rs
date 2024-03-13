@@ -17,16 +17,19 @@
 pub use log::Level;
 
 pub trait OakLogger: Send + Sync {
-    /// Logs the message, which might contain sensitive information, at the specified `Level`.
+    /// Logs the message, which might contain sensitive information, at the
+    /// specified `Level`.
     ///
-    /// Only insecure debug-only implementations may provide a non-empty implementation. Production
-    /// implementations must not do anything.
+    /// Only insecure debug-only implementations may provide a non-empty
+    /// implementation. Production implementations must not do anything.
     fn log_sensitive(&self, level: Level, message: &str);
 
-    /// Logs a message that contains only public, non-sensitive content at the specified `Level`.
+    /// Logs a message that contains only public, non-sensitive content at the
+    /// specified `Level`.
     ///
-    /// All code that uses this function must be inspected to ensure that the message can never
-    /// contain any information that could have been derived from sensitive or non-public data.
+    /// All code that uses this function must be inspected to ensure that the
+    /// message can never contain any information that could have been
+    /// derived from sensitive or non-public data.
     fn log_public(&self, level: Level, message: &str);
 }
 
@@ -35,7 +38,8 @@ pub trait OakLogger: Send + Sync {
 /// TODO(#2783): Replace with redesigned logger implementation.
 pub struct StandaloneLogger;
 
-// TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
+// TODO(#2783): Implement a logger that differentiates between public and
+// sensitive loges.
 impl OakLogger for StandaloneLogger {
     #[cfg(not(feature = "deny_sensitive_logging"))]
     fn log_sensitive(&self, level: Level, message: &str) {

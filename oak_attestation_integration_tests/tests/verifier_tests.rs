@@ -55,20 +55,16 @@ fn verify_mock_evidence() {
         .expect("failed to convert evidence to proto");
 
     let endorsements = Endorsements {
-        r#type: Some(endorsements::Type::OakRestrictedKernel(
-            OakRestrictedKernelEndorsements {
-                root_layer: Some(RootLayerEndorsements::default()),
-                ..Default::default()
-            },
-        )),
+        r#type: Some(endorsements::Type::OakRestrictedKernel(OakRestrictedKernelEndorsements {
+            root_layer: Some(RootLayerEndorsements::default()),
+            ..Default::default()
+        })),
     };
 
     // reference values that skip everything.
     let reference_values = {
         let skip = BinaryReferenceValue {
-            r#type: Some(binary_reference_value::Type::Skip(
-                SkipVerification::default(),
-            )),
+            r#type: Some(binary_reference_value::Type::Skip(SkipVerification::default())),
         };
         ReferenceValues {
             r#type: Some(reference_values::Type::OakRestrictedKernel(

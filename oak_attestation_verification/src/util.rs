@@ -42,9 +42,7 @@ pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
         .expect("could not find expected footer");
     let remove_newlines = stripped.replace('\n', "");
 
-    BASE64_STANDARD
-        .decode(remove_newlines)
-        .map_err(|error| anyhow::anyhow!(error))
+    BASE64_STANDARD.decode(remove_newlines).map_err(|error| anyhow::anyhow!(error))
 }
 
 /// Converts a raw public key to PEM format.
@@ -65,10 +63,7 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
 pub fn convert_pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<VerifyingKey> {
     VerifyingKey::from_str(public_key_pem).map_err(|error| {
-        anyhow::anyhow!(
-            "couldn't parse pem as a p256::ecdsa::VerifyingKey: {}",
-            error
-        )
+        anyhow::anyhow!("couldn't parse pem as a p256::ecdsa::VerifyingKey: {}", error)
     })
 }
 
@@ -79,9 +74,10 @@ pub fn convert_raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<Verifyi
     convert_pem_to_verifying_key(&public_key_pem)
 }
 
-/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the bytes
-/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
-/// This means that the keys could have different bytes, but still be the same key.
+/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the
+/// bytes and compare p256 keys. Keys are considered equal if they are the same
+/// on the elliptic curve. This means that the keys could have different bytes,
+/// but still be the same key.
 pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bool> {
     let key_a = convert_raw_to_verifying_key(public_key_a)?;
     let key_b = convert_raw_to_verifying_key(public_key_b)?;

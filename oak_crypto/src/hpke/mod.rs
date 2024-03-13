@@ -44,8 +44,8 @@ pub(crate) fn generate_kem_key_pair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
 }
 
-/// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
-/// public key) and creating a sender context.
+/// Sets up an HPKE sender by generating an ephemeral keypair (and serializing
+/// the corresponding public key) and creating a sender context.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 pub(crate) fn setup_base_sender(
     serialized_recipient_public_key: &[u8],
@@ -63,11 +63,11 @@ pub(crate) fn setup_base_sender(
     .map_err(|error| anyhow!("couldn't create sender context: {}", error))?;
 
     // Derive request key and nonce.
-    // This is a deviation from the HPKE RFC, because we are deriving both session request and
-    // response keys from the exporter secret, instead of having a request key be directly derived
-    // from the shared secret. This is required to be able to share session keys between the Kernel
-    // and the Application via RPC.
-    // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+    // This is a deviation from the HPKE RFC, because we are deriving both session
+    // request and response keys from the exporter secret, instead of having a
+    // request key be directly derived from the shared secret. This is required
+    // to be able to share session keys between the Kernel and the Application
+    // via RPC. <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     let mut request_key = [0u8; AEAD_ALGORITHM_KEY_SIZE_BYTES];
     sender_context
         .export(b"request_key", &mut request_key)
@@ -79,13 +79,7 @@ pub(crate) fn setup_base_sender(
         .export(b"response_key", &mut response_key)
         .map_err(|error| anyhow!("couldn't export response key: {}", error))?;
 
-    Ok((
-        encapsulated_public_key.to_bytes().to_vec(),
-        SenderContext {
-            request_key,
-            response_key,
-        },
-    ))
+    Ok((encapsulated_public_key.to_bytes().to_vec(), SenderContext { request_key, response_key }))
 }
 
 /// Sets up an HPKE recipient by creating a recipient context.
@@ -96,12 +90,7 @@ pub(crate) fn setup_base_recipient(
     info: &[u8],
 ) -> anyhow::Result<RecipientContext> {
     let encapsulated_public_key = EncappedKey::from_bytes(serialized_encapsulated_public_key)
-        .map_err(|error| {
-            anyhow!(
-                "couldn't deserialize the encapsulated public key: {}",
-                error
-            )
-        })?;
+        .map_err(|error| anyhow!("couldn't deserialize the encapsulated public key: {}", error))?;
 
     let recipient_context = hpke::setup_receiver::<Aead, Kdf, Kem>(
         &OpModeR::Base,
@@ -112,11 +101,11 @@ pub(crate) fn setup_base_recipient(
     .map_err(|error| anyhow!("couldn't create recipient context: {}", error))?;
 
     // Derive request key and nonce.
-    // This is a deviation from the HPKE RFC, because we are deriving both session request and
-    // response keys from the exporter secret, instead of having a request key be directly derived
-    // from the shared secret. This is required to be able to share session keys between the Kernel
-    // and the Application via RPC.
-    // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+    // This is a deviation from the HPKE RFC, because we are deriving both session
+    // request and response keys from the exporter secret, instead of having a
+    // request key be directly derived from the shared secret. This is required
+    // to be able to share session keys between the Kernel and the Application
+    // via RPC. <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     let mut request_key = [0u8; AEAD_ALGORITHM_KEY_SIZE_BYTES];
     recipient_context
         .export(b"request_key", &mut request_key)
@@ -128,10 +117,7 @@ pub(crate) fn setup_base_recipient(
         .export(b"response_key", &mut response_key)
         .map_err(|error| anyhow!("couldn't export response key: {}", error))?;
 
-    Ok(RecipientContext {
-        request_key,
-        response_key,
-    })
+    Ok(RecipientContext { request_key, response_key })
 }
 
 pub struct SenderContext {
@@ -154,8 +140,8 @@ impl SenderContext {
         Ok(ciphertext)
     }
 
-    /// Decrypts response message and validates associated data using AEAD as part of bidirectional
-    /// communication.
+    /// Decrypts response message and validates associated data using AEAD as
+    /// part of bidirectional communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn open(
         &self,
@@ -190,8 +176,8 @@ impl RecipientContext {
         Ok(plaintext)
     }
 
-    /// Encrypts response message with associated data using AEAD as part of bidirectional
-    /// communication.
+    /// Encrypts response message with associated data using AEAD as part of
+    /// bidirectional communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn seal(
         &self,
@@ -243,10 +229,6 @@ pub(crate) fn generate_random_nonce() -> AeadNonce {
 
 pub(crate) fn deserialize_nonce(nonce: &[u8]) -> anyhow::Result<AeadNonce> {
     nonce.try_into().map_err(|_| {
-        anyhow!(
-            "incorrect nonce size, expected {}, found {}",
-            AEAD_NONCE_SIZE_BYTES,
-            nonce.len()
-        )
+        anyhow!("incorrect nonce size, expected {}, found {}", AEAD_NONCE_SIZE_BYTES, nonce.len())
     })
 }

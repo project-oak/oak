@@ -53,7 +53,8 @@ fn create_containers_evidence() -> Evidence {
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
-// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel application.
+// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
+// application.
 fn create_rk_evidence() -> Evidence {
     let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
@@ -80,10 +81,8 @@ fn create_containers_endorsements() -> Endorsements {
         rekor_log_entry: log_entry,
     };
 
-    let root_layer = RootLayerEndorsements {
-        tee_certificate: vcek_milan_cert,
-        stage0: Some(tre.clone()),
-    };
+    let root_layer =
+        RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: Some(tre.clone()) };
     #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
         kernel: Some(tre.clone()),
@@ -93,13 +92,9 @@ fn create_containers_endorsements() -> Endorsements {
         memory_map: Some(tre.clone()),
         acpi: Some(tre.clone()),
     };
-    let system_layer = SystemLayerEndorsements {
-        system_image: Some(tre.clone()),
-    };
-    let container_layer = ContainerLayerEndorsements {
-        binary: Some(tre.clone()),
-        configuration: Some(tre.clone()),
-    };
+    let system_layer = SystemLayerEndorsements { system_image: Some(tre.clone()) };
+    let container_layer =
+        ContainerLayerEndorsements { binary: Some(tre.clone()), configuration: Some(tre.clone()) };
 
     let ends = OakContainersEndorsements {
         root_layer: Some(root_layer),
@@ -116,10 +111,7 @@ fn create_containers_endorsements() -> Endorsements {
 fn create_rk_endorsements() -> Endorsements {
     let vcek_milan_cert = fs::read(RK_VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
 
-    let root_layer = RootLayerEndorsements {
-        tee_certificate: vcek_milan_cert,
-        stage0: None,
-    };
+    let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
     #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
         kernel: None,
@@ -129,10 +121,7 @@ fn create_rk_endorsements() -> Endorsements {
         memory_map: None,
         acpi: None,
     };
-    let application_layer = ApplicationLayerEndorsements {
-        binary: None,
-        configuration: None,
-    };
+    let application_layer = ApplicationLayerEndorsements { binary: None, configuration: None };
 
     let ends = OakRestrictedKernelEndorsements {
         root_layer: Some(root_layer),
@@ -159,16 +148,11 @@ fn create_containers_reference_values() -> ReferenceValues {
         stage0: Some(skip.clone()),
     };
 
-    let root_layer = RootLayerReferenceValues {
-        amd_sev: Some(amd_sev),
-        ..Default::default()
-    };
+    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
     #[allow(deprecated)]
     let kernel_layer = KernelLayerReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
-            r#type: Some(kernel_binary_reference_value::Type::Skip(
-                SkipVerification {},
-            )),
+            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
         kernel_image: Some(skip.clone()),
         kernel_setup_data: Some(skip.clone()),
@@ -177,9 +161,7 @@ fn create_containers_reference_values() -> ReferenceValues {
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),
     };
-    let system_layer = SystemLayerReferenceValues {
-        system_image: Some(skip.clone()),
-    };
+    let system_layer = SystemLayerReferenceValues { system_image: Some(skip.clone()) };
     let container_layer = ContainerLayerReferenceValues {
         binary: Some(skip.clone()),
         configuration: Some(skip.clone()),
@@ -190,9 +172,7 @@ fn create_containers_reference_values() -> ReferenceValues {
         system_layer: Some(system_layer),
         container_layer: Some(container_layer),
     };
-    ReferenceValues {
-        r#type: Some(reference_values::Type::OakContainers(vs)),
-    }
+    ReferenceValues { r#type: Some(reference_values::Type::OakContainers(vs)) }
 }
 
 // Creates valid reference values for a restricted kernel application.
@@ -208,16 +188,11 @@ fn create_rk_reference_values() -> ReferenceValues {
         stage0: Some(skip.clone()),
     };
 
-    let root_layer = RootLayerReferenceValues {
-        amd_sev: Some(amd_sev),
-        ..Default::default()
-    };
+    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
     #[allow(deprecated)]
     let kernel_layer = KernelLayerReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
-            r#type: Some(kernel_binary_reference_value::Type::Skip(
-                SkipVerification {},
-            )),
+            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
         kernel_image: Some(skip.clone()),
         kernel_setup_data: Some(skip.clone()),
@@ -235,9 +210,7 @@ fn create_rk_reference_values() -> ReferenceValues {
         kernel_layer: Some(kernel_layer),
         application_layer: Some(application_layer),
     };
-    ReferenceValues {
-        r#type: Some(reference_values::Type::OakRestrictedKernel(vs)),
-    }
+    ReferenceValues { r#type: Some(reference_values::Type::OakRestrictedKernel(vs)) }
 }
 
 #[test]
@@ -314,10 +287,7 @@ fn verify_fails_with_stage0_reference_value_set() {
         .expect("failed to convert endorser key");
     let rekor_public_key =
         convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-    let erv = EndorsementReferenceValue {
-        endorser_public_key,
-        rekor_public_key,
-    };
+    let erv = EndorsementReferenceValue { endorser_public_key, rekor_public_key };
     let brv = BinaryReferenceValue {
         r#type: Some(
             oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
@@ -325,13 +295,7 @@ fn verify_fails_with_stage0_reference_value_set() {
     };
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer
-                .as_mut()
-                .unwrap()
-                .amd_sev
-                .as_mut()
-                .unwrap()
-                .stage0 = Some(brv);
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().stage0 = Some(brv);
         }
         Some(_) => {}
         None => {}
@@ -353,18 +317,10 @@ fn verify_fails_with_firmware_reference_value_set() {
     let endorsements = create_containers_endorsements();
     let mut reference_values = create_containers_reference_values();
     // Set the firmware version to something.
-    let srv = StringReferenceValue {
-        values: ["whatever".to_owned()].to_vec(),
-    };
+    let srv = StringReferenceValue { values: ["whatever".to_owned()].to_vec() };
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer
-                .as_mut()
-                .unwrap()
-                .amd_sev
-                .as_mut()
-                .unwrap()
-                .firmware_version = Some(srv);
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().firmware_version = Some(srv);
         }
         Some(_) => {}
         None => {}

@@ -26,8 +26,8 @@ pub trait AttestationVerifier {
     ) -> anyhow::Result<ExtractedEvidence>;
 }
 
-/// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
-/// correctness.
+/// Verifier that doesn't check the Evidence against Reference Values and only
+/// checks the DICE chain correctness.
 /// Should be only used for testing.
 pub struct InsecureAttestationVerifier;
 

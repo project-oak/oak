@@ -50,8 +50,9 @@ pub struct Desc {
     pub length: u32,
     /// Flags providing more info about this descriptor.
     pub flags: DescFlags,
-    /// The index of the next descriptor in the chain if this is not the end (i.e. flags contain
-    /// `DescFlags::VIRTQ_DESC_F_NEXT`), ignored otherwise.
+    /// The index of the next descriptor in the chain if this is not the end
+    /// (i.e. flags contain `DescFlags::VIRTQ_DESC_F_NEXT`), ignored
+    /// otherwise.
     ///
     /// Not used for now, as we don't currently support chaining.
     pub next: u16,
@@ -63,10 +64,7 @@ impl Desc {
             !flags.contains(DescFlags::VIRTQ_DESC_F_INDIRECT),
             "indirect descriptors not supported"
         );
-        assert!(
-            !flags.contains(DescFlags::VIRTQ_DESC_F_NEXT),
-            "chained descriptors not supported"
-        );
+        assert!(!flags.contains(DescFlags::VIRTQ_DESC_F_NEXT), "chained descriptors not supported");
         Self {
             addr,
             length,
@@ -86,7 +84,8 @@ bitflags! {
     }
 }
 
-/// The ring buffer that indicates which descriptors have been made available by the driver.
+/// The ring buffer that indicates which descriptors have been made available by
+/// the driver.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-380006>.
 #[repr(C, align(2))]
@@ -95,13 +94,15 @@ pub struct AvailRing<const QUEUE_SIZE: usize> {
     pub flags: RingFlags,
     /// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
-    /// maximum `u16` value.
+    /// Starts at 0 and always increments. Must never be decremented. Wraps
+    /// naturally when at the maximum `u16` value.
     pub idx: Wrapping<u16>,
-    /// The ring-buffer containing indices of the heads of available descriptor chains.
+    /// The ring-buffer containing indices of the heads of available descriptor
+    /// chains.
     pub ring: [u16; QUEUE_SIZE],
-    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don't
-    /// currently support. The field is only added to act as padding for now.
+    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated,
+    /// which we don't currently support. The field is only added to act as
+    /// padding for now.
     pub used_event: u16,
 }
 
@@ -117,7 +118,8 @@ impl<const QUEUE_SIZE: usize> Default for AvailRing<QUEUE_SIZE> {
     }
 }
 
-/// The ring buffer that indicates which available descriptors have been consumed by the device.
+/// The ring buffer that indicates which available descriptors have been
+/// consumed by the device.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008>.
 #[repr(C, align(4))]
@@ -127,13 +129,14 @@ pub struct UsedRing<const QUEUE_SIZE: usize> {
     pub flags: RingFlags,
     /// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
-    /// maximum `u16` value.
+    /// Starts at 0 and always increments. Must never be decremented. Wraps
+    /// naturally when at the maximum `u16` value.
     pub idx: Wrapping<u16>,
     /// The ring-buffer containing the used elements.
     pub ring: [UsedElem; QUEUE_SIZE],
-    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don't
-    /// currently support. The field is only added to act as padding for now.
+    /// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated,
+    /// which we don't currently support. The field is only added to act as
+    /// padding for now.
     pub avail_event: u16,
 }
 
@@ -156,8 +159,8 @@ impl<const QUEUE_SIZE: usize> Default for UsedRing<QUEUE_SIZE> {
 pub struct UsedElem {
     /// The index of the head of the used descriptor chain.
     pub id: u32,
-    /// Total length of the bytes that was written to the used descriptor chain (only used for
-    /// device-write-only descriptors).
+    /// Total length of the bytes that was written to the used descriptor chain
+    /// (only used for device-write-only descriptors).
     pub len: u32,
 }
 

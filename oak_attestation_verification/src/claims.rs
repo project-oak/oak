@@ -116,7 +116,8 @@ pub struct ClaimValidity {
     pub not_after: OffsetDateTime,
 }
 
-/// Metadata about an artifact that serves as the evidence for the truth of a claim.
+/// Metadata about an artifact that serves as the evidence for the truth of a
+/// claim.
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct ClaimEvidence {
@@ -153,14 +154,10 @@ pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), Inv
     }
     if let Some(validity) = &claim.predicate.validity {
         if validity.not_before < claim.predicate.issued_on {
-            return Err(InvalidClaimData::Validity(String::from(
-                "notBefore before issuedOn",
-            )));
+            return Err(InvalidClaimData::Validity(String::from("notBefore before issuedOn")));
         }
         if validity.not_before > validity.not_after {
-            return Err(InvalidClaimData::Validity(String::from(
-                "notBefore after notAfter",
-            )));
+            return Err(InvalidClaimData::Validity(String::from("notBefore after notAfter")));
         }
     }
 
@@ -267,20 +264,14 @@ fn set_digest_field_from_map_entry(
 /// be from the binary or from the attachment.
 pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
     if claim.subject.len() != 1 {
-        anyhow::bail!(
-            "expected a single endorsement subject, found {}",
-            claim.subject.len()
-        );
+        anyhow::bail!("expected a single endorsement subject, found {}", claim.subject.len());
     }
 
     let mut digest = HexDigest::default();
-    claim.subject[0]
-        .digest
-        .iter()
-        .try_fold(&mut digest, |acc, (key, value)| {
-            set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
-            Ok::<&mut HexDigest, anyhow::Error>(acc)
-        })?;
+    claim.subject[0].digest.iter().try_fold(&mut digest, |acc, (key, value)| {
+        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+        Ok::<&mut HexDigest, anyhow::Error>(acc)
+    })?;
 
     Ok(digest)
 }

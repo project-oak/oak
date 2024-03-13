@@ -46,7 +46,8 @@ struct DataBuilder {
 }
 
 impl DataBuilder {
-    /// Build data from the builder and set the builder back to the initial state.
+    /// Build data from the builder and set the builder back to the initial
+    /// state.
     fn build(&mut self) -> Data {
         self.state = BuilderState::Empty;
         core::mem::take(&mut self.data)
@@ -54,8 +55,8 @@ impl DataBuilder {
 
     /// Extends the DataBuilder with new data.
     ///
-    /// Note, if new data contains a key already present in the existing data, calling extend
-    /// overwrites the value.
+    /// Note, if new data contains a key already present in the existing data,
+    /// calling extend overwrites the value.
     fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data)
@@ -68,18 +69,20 @@ impl DataBuilder {
 
 /// Utility for managing lookup data.
 ///
-/// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
-/// It can also update the underlying data. After updating the data, new `LookupData` instances will
-/// use the new data, but earlier instances will still used the earlier data.
+/// `LookupDataManager` can be used to create `LookupData` instances that share
+/// the underlying data. It can also update the underlying data. After updating
+/// the data, new `LookupData` instances will use the new data, but earlier
+/// instances will still used the earlier data.
 ///
 /// LookupDataManager maintains the invariants [consistent view on lookup
 /// data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-consistent-view-on-lookup-data) , and [shared
 /// lookup data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-shared-lookup-data)
 ///
-/// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
-/// idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.
+/// Note that the data is never mutated in-place, but only ever replaced. So
+/// instead of the Rust idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.
 ///
-/// In the future we may replace both the mutex and the hash map with something like RCU.
+/// In the future we may replace both the mutex and the hash map with something
+/// like RCU.
 pub struct LookupDataManager {
     data: RwSpinlock<Arc<Data>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
@@ -124,7 +127,8 @@ impl LookupDataManager {
         info!("Finish extending next lookup data");
     }
 
-    // Finish building the next lookup data and replace the current lookup data in place.
+    // Finish building the next lookup data and replace the current lookup data in
+    // place.
     pub fn finish_next_lookup_data(&self) {
         let data_len;
         let next_data_len;
@@ -153,7 +157,8 @@ impl LookupDataManager {
         info!("Finish aborting next lookup data");
     }
 
-    /// Creates a new `LookupData` instance with a reference to the current backing data.
+    /// Creates a new `LookupData` instance with a reference to the current
+    /// backing data.
     pub fn create_lookup_data(&self) -> LookupData {
         let keys;
         let data = {
@@ -208,17 +213,16 @@ impl LookupData {
     }
 }
 
-/// Returns a slice covering up to the first `limit` elements of the given slice.
+/// Returns a slice covering up to the first `limit` elements of the given
+/// slice.
 pub fn limit<T>(slice: &[T], limit: usize) -> &[T] {
     &slice[..limit.min(slice.len())]
 }
 
-/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
-/// vector of bytes otherwise.
+/// Converts a binary sequence to a string if it is a valid UTF-8 string, or
+/// formats it as a numeric vector of bytes otherwise.
 pub fn format_bytes(v: &[u8]) -> String {
-    alloc::str::from_utf8(v)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|_| format!("{:?}", v))
+    alloc::str::from_utf8(v).map(|s| s.to_string()).unwrap_or_else(|_| format!("{:?}", v))
 }
 
 #[cfg(test)]
@@ -237,8 +241,8 @@ mod tests {
 
     #[test]
     fn test_lookup_data_instance_consistency() {
-        // Ensure that the data for a specific lookup data instance remains consistent even if the
-        // data in the manager has been updated.
+        // Ensure that the data for a specific lookup data instance remains consistent
+        // even if the data in the manager has been updated.
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
@@ -328,7 +332,8 @@ mod tests {
         assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
     }
 
-    // Create test data with size distinct keys between inclusive start and exclusive end.
+    // Create test data with size distinct keys between inclusive start and
+    // exclusive end.
     fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
         let mut vec: Vec<(Bytes, Bytes)> = vec![];
         for i in start..end {

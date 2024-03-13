@@ -17,15 +17,16 @@
 //! Main 'kernel' for baremetal Oak Functions.
 //!
 //! This code takes care of initializing the x86-64 machine properly and
-//! handing the reins over to the oak_baremetal_runtime. It is in a separate crate so that we
-//! could support different boot protocols (eg Linux boot protocol or PVH) that
-//! require different targets, linker scripts and/or provide machine
-//! information in different data structures.
+//! handing the reins over to the oak_baremetal_runtime. It is in a separate
+//! crate so that we could support different boot protocols (eg Linux boot
+//! protocol or PVH) that require different targets, linker scripts and/or
+//! provide machine information in different data structures.
 //!
 //! Bootloaders (and VMMs under them) have to adhere to the following protocol:
-//!   * Enter 64-bit long mode, and set up basic paging -- enough to load the code, as we will set
-//!     up a full page table in `start_kernel`.
-//!   * Implement a `#[panic_handler]` that delegates to `panic()` in this crate.
+//!   * Enter 64-bit long mode, and set up basic paging -- enough to load the
+//!     code, as we will set up a full page table in `start_kernel`.
+//!   * Implement a `#[panic_handler]` that delegates to `panic()` in this
+//!     crate.
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
 #![cfg_attr(not(test), no_std)]
@@ -99,16 +100,17 @@ use crate::{
 pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
     Spinlock::new(PhysicalMemoryAllocator::new());
 
-/// The allocator for allocating space in the memory area that is shared with the hypervisor.
+/// The allocator for allocating space in the memory area that is shared with
+/// the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
 pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
     Spinlock::new(CurrentRootPageTable::empty());
 
-/// Level 4 page table that is free in application space, but has all entries for kernel space
-/// populated. It can be used to create free page tables for applications, that maintain correct
-/// mapping in kernel space.
+/// Level 4 page table that is free in application space, but has all entries
+/// for kernel space populated. It can be used to create free page tables for
+/// applications, that maintain correct mapping in kernel space.
 pub static BASE_L4_PAGE_TABLE: OnceCell<PageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
@@ -143,26 +145,28 @@ pub fn start_kernel(info: &BootParams) -> ! {
         log::warn!("error disabling 8259 PIC: {}", err);
     }
 
-    // We need to be done with the boot info struct before intializing memory. For example, the
-    // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
-    // highly likely we will overwrite some data after we initialize the heap. args::init_args()
-    // caches the arguments (as long they are of reasonable length) in a static variable, allowing
-    // us to refer to the args in the future.
+    // We need to be done with the boot info struct before intializing memory. For
+    // example, the multiboot protocol explicitly states data can be placed
+    // anywhere in memory; therefore, it's highly likely we will overwrite some
+    // data after we initialize the heap. args::init_args() caches the arguments
+    // (as long they are of reasonable length) in a static variable, allowing us
+    // to refer to the args in the future.
     let kernel_args = args::init_args(info.args()).unwrap();
     info!("Kernel boot args: {}", kernel_args.args());
 
     let protocol = info.protocol();
     info!("Boot protocol:  {}", protocol);
     let snp_pages = if sev_snp_enabled {
-        // We have to get the physical addresses of the CPUID pages now while the identity mapping
-        // is still in place, but we can only initialize the instances after the new page
-        // mappings have been set up.
+        // We have to get the physical addresses of the CPUID pages now while the
+        // identity mapping is still in place, but we can only initialize the
+        // instances after the new page mappings have been set up.
         Some(get_snp_page_addresses(info))
     } else {
         None
     };
 
-    // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
+    // Safety: in the linker script we specify that the ELF header should be placed
+    // at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
     #[cfg(feature = "initrd")]
@@ -180,14 +184,15 @@ pub fn start_kernel(info: &BootParams) -> ! {
     {
         let pml4_frame = mm::initial_pml4(program_headers).unwrap();
         // Prevent execution code in data only memory pages.
-        // Safety: executeable memory is assumed to be appropiately marked in the page table.
+        // Safety: executeable memory is assumed to be appropiately marked in the page
+        // table.
         unsafe {
             x86_64::registers::model_specific::Efer::update(|flags| {
                 flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
             });
         };
-        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
-        // load the new page tables.
+        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's
+        // safe to load the new page tables.
         let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
         assert!(
             prev_page_table.is_none(),
@@ -215,8 +220,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     // Re-map boot params to the new virtual address.
-    // Safety: we know we're addressing valid memory that contains the correct data structure, as
-    // we're just translating addresses differently due to the new page tables.
+    // Safety: we know we're addressing valid memory that contains the correct data
+    // structure, as we're just translating addresses differently due to the new
+    // page tables.
     let info = unsafe {
         #[allow(clippy::unnecessary_cast)]
         (PAGE_TABLES
@@ -233,36 +239,35 @@ pub fn start_kernel(info: &BootParams) -> ! {
     if sev_es_enabled {
         let pt_guard = PAGE_TABLES.lock();
         let mapper = pt_guard.get().unwrap();
-        // Now that the page tables have been updated, we have to re-share the GHCB with the
-        // hypervisor.
+        // Now that the page tables have been updated, we have to re-share the GHCB with
+        // the hypervisor.
         ghcb::reshare_ghcb(mapper);
         if sev_snp_enabled {
-            // We must also initialise the CPUID and secrets pages and the guest message encryptor
-            // when SEV-SNP is active. Panicking is OK at this point, because these pages are
-            // required to support the full features and we don't want to run without them.
-            init_snp_pages(
-                snp_pages.expect("missing SNP CPUID and secrets pages"),
-                mapper,
-            );
+            // We must also initialise the CPUID and secrets pages and the guest message
+            // encryptor when SEV-SNP is active. Panicking is OK at this point,
+            // because these pages are required to support the full features and
+            // we don't want to run without them.
+            init_snp_pages(snp_pages.expect("missing SNP CPUID and secrets pages"), mapper);
         }
     }
 
-    // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
-    // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
+    // Allocate a section for guest-host communication (without the `ENCRYPTED` bit
+    // set) We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
+    // structures.
     let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
         let pt_guard = PAGE_TABLES.lock();
         let pt = pt_guard.get().unwrap();
         Page::range(
-            pt.translate_physical_frame(guest_host_frames.start)
-                .unwrap(),
+            pt.translate_physical_frame(guest_host_frames.start).unwrap(),
             pt.translate_physical_frame(guest_host_frames.end).unwrap(),
         )
     };
 
-    // If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
-    // to crash if we cannot mark the pages as shared in the RMP.
+    // If we are running on SNP we have to mark the guest-host frames as shared in
+    // the RMP. It is OK to crash if we cannot mark the pages as shared in the
+    // RMP.
     if sev_snp_enabled {
         // TODO(#3414): Use the GHCB protocol when it is available.
         for frame in guest_host_frames {
@@ -271,9 +276,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     }
 
-    // Safety: initializing the new heap is safe as the frame allocator guarantees we're not
-    // overwriting any other memory; writing to the static mut is safe as we're in the
-    // initialization code and thus there can be no concurrent access.
+    // Safety: initializing the new heap is safe as the frame allocator guarantees
+    // we're not overwriting any other memory; writing to the static mut is safe
+    // as we're in the initialization code and thus there can be no concurrent
+    // access.
     if GUEST_HOST_HEAP
         .set(
             unsafe {
@@ -295,14 +301,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
         let dice_memory_slice = {
             let dice_data_phys_addr = {
                 let arg = kernel_args
-                    .get(&alloc::format!(
-                        "--{}",
-                        oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
-                    ))
+                    .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
                     .expect("no dice data address supplied in the kernel args");
                 let parsed_arg = u64::from_str_radix(
-                    arg.strip_prefix("0x")
-                        .expect("failed stripping the hex prefix"),
+                    arg.strip_prefix("0x").expect("failed stripping the hex prefix"),
                     16,
                 )
                 .expect("couldn't parse address as a hex number");
@@ -357,13 +359,14 @@ pub fn start_kernel(info: &BootParams) -> ! {
         dice_data
     };
 
-    // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with descriptors for
-    // user mode.
+    // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with
+    // descriptors for user mode.
     let double_fault_stack = mm::allocate_stack();
     let privileged_interrupt_stack = mm::allocate_stack();
     let double_fault_stack_index =
         descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
-    // Safety: we've just loaded a new GDT with a valid IST entry for the double fault.
+    // Safety: we've just loaded a new GDT with a valid IST entry for the double
+    // fault.
     unsafe {
         interrupts::init_idt(double_fault_stack_index);
     }
@@ -381,20 +384,12 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     #[cfg(not(feature = "initrd"))]
-    let mut channel = get_channel(
-        &kernel_args,
-        GUEST_HOST_HEAP.get().unwrap(),
-        acpi.as_mut(),
-        sev_status,
-    );
+    let mut channel =
+        get_channel(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
     #[cfg(feature = "initrd")]
-    let channel = get_channel(
-        &kernel_args,
-        GUEST_HOST_HEAP.get().unwrap(),
-        acpi.as_mut(),
-        sev_status,
-    );
+    let channel =
+        get_channel(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
     #[cfg(feature = "initrd")]
     let application_bytes: Box<[u8]> = {
@@ -508,9 +503,9 @@ fn get_channel<'a, A: Allocator + Sync>(
     acpi: Option<&mut Acpi>,
     sev_status: SevStatus,
 ) -> Box<dyn Channel + 'a> {
-    // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
-    // enum. Depending on features that are enabled, this means that the enum acts as kind of a
-    // reverse priority list for defaults.
+    // If we weren't told which channel to use, arbitrarily pick the first one in
+    // the `ChannelType` enum. Depending on features that are enabled, this
+    // means that the enum acts as kind of a reverse priority list for defaults.
     let chan_type = kernel_args
         .get("channel")
         .map(|chan_type| ChannelType::from_str(chan_type).unwrap())

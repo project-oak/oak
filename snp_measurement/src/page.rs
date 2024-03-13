@@ -30,7 +30,8 @@ use zerocopy::AsBytes;
 /// The size of the PageInfo struct.
 const PAGE_INFO_SIZE: usize = 112;
 
-/// Implementation of the Page Info structure used for extending the measurement in each step.
+/// Implementation of the Page Info structure used for extending the measurement
+/// in each step.
 ///
 /// See table 67 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
@@ -38,15 +39,15 @@ const PAGE_INFO_SIZE: usize = 112;
 pub struct PageInfo {
     /// The current measurement up to this point.
     pub digest_cur: [u8; 48],
-    /// The SHA-384 digest of the contents to be measured for normal and VMSA pages, or all zeros
-    /// for all other page types.
+    /// The SHA-384 digest of the contents to be measured for normal and VMSA
+    /// pages, or all zeros for all other page types.
     pub contents: [u8; 48],
     /// The length of this struct in bytes.
     _length: u16,
     /// The type of page being measured.
     pub page_type: PageType,
-    /// Whether the page is part of an initial migration image. For now we treat this as reserved
-    /// and zero.
+    /// Whether the page is part of an initial migration image. For now we treat
+    /// this as reserved and zero.
     _imi_page: ImiPage,
     /// Reserved. Must be 0.
     _reserved: u8,
@@ -78,7 +79,8 @@ impl PageInfo {
         }
     }
 
-    /// Updates the current measurement digest from a byte slice representing normal data pages.
+    /// Updates the current measurement digest from a byte slice representing
+    /// normal data pages.
     ///
     /// The current digest is updated separately for each 4KiB page.
     pub fn update_from_data(&mut self, data: &[u8], start_address: PhysAddr) {
@@ -104,10 +106,7 @@ impl PageInfo {
 
     /// Updates the current measurement digest from a VMSA page.
     pub fn update_from_vmsa(&mut self, vmsa: &VmsaPage, start_address: PhysAddr) {
-        debug!(
-            "Updating measurement with VMSA at address {:#018x}",
-            start_address
-        );
+        debug!("Updating measurement with VMSA at address {:#018x}", start_address);
         self.page_type = PageType::Vmsa;
         self.gpa = start_address.as_u64();
         self.set_contents_from_page_bytes(vmsa.as_bytes());
@@ -116,12 +115,10 @@ impl PageInfo {
 
     /// Updates the current measurement digest for a SEV-SNP-specific page.
     ///
-    /// Measurement of these pages do not include a measurement of the content, only the metadata.
+    /// Measurement of these pages do not include a measurement of the content,
+    /// only the metadata.
     pub fn update_from_snp_page(&mut self, page_type: PageType, start_address: PhysAddr) {
-        debug!(
-            "Updating measurement with {:?} page at address {:#018x}",
-            page_type, start_address
-        );
+        debug!("Updating measurement with {:?} page at address {:#018x}", page_type, start_address);
         match page_type {
             PageType::Cpuid | PageType::Secrets | PageType::Unmeasured | PageType::Zero => {
                 self.page_type = page_type;
@@ -133,17 +130,14 @@ impl PageInfo {
         }
     }
 
-    /// Sets the `contents` field based to the SHA-384 digest of the byte contents of a 4KiB memory
-    /// page.
+    /// Sets the `contents` field based to the SHA-384 digest of the byte
+    /// contents of a 4KiB memory page.
     ///
-    /// If fewer than 4KiB of data is received the page is padded with zeros to fill the entire 4KiB
-    /// area.
+    /// If fewer than 4KiB of data is received the page is padded with zeros to
+    /// fill the entire 4KiB area.
     fn set_contents_from_page_bytes(&mut self, page_bytes: &[u8]) {
         let byte_count = page_bytes.len();
-        assert!(
-            byte_count <= Size4KiB::SIZE as usize,
-            "too many bytes in page"
-        );
+        assert!(byte_count <= Size4KiB::SIZE as usize, "too many bytes in page");
         let mut contents_hasher = Sha384::new();
         if byte_count == Size4KiB::SIZE as usize {
             contents_hasher.update(page_bytes);
@@ -157,8 +151,8 @@ impl PageInfo {
         self.contents[..].copy_from_slice(&contents_digest);
     }
 
-    /// Calculates the SHA-384 digest of the struct's memory and updates `digest_cur` to the new
-    /// value.
+    /// Calculates the SHA-384 digest of the struct's memory and updates
+    /// `digest_cur` to the new value.
     fn update_current_digest(&mut self) {
         let mut digest_hasher = Sha384::new();
         digest_hasher.update(self.as_bytes());

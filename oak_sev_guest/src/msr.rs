@@ -16,23 +16,25 @@
 
 //! Rust implementations of the AMD SEV-SNP GHCB MSR protocol.
 //!
-//! The protocol is implemented by writing to, and reading from, model-specific register (MSR)
-//! 0xC001_0130. The guest makes a request by writing an appropriate value to the MSR and calling
-//! VMGEXIT. After the hypervisor processes the request and resumes the guest, the guest can read
-//! the response from the same MSR.
+//! The protocol is implemented by writing to, and reading from, model-specific
+//! register (MSR) 0xC001_0130. The guest makes a request by writing an
+//! appropriate value to the MSR and calling VMGEXIT. After the hypervisor
+//! processes the request and resumes the guest, the guest can read the response
+//! from the same MSR.
 //!
-//! The 12 least significant bits represent information about the operation being performed. The
-//! remaining 52 bits represent the data for the operation. The format of the data is dependent on
-//! the operation.
+//! The 12 least significant bits represent information about the operation
+//! being performed. The remaining 52 bits represent the data for the operation.
+//! The format of the data is dependent on the operation.
 //!
-//! The MSR protocol is primarily used to set up the GHCB communications with the hypervisor.
+//! The MSR protocol is primarily used to set up the GHCB communications with
+//! the hypervisor.
 //!
 //! See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more detail.
 //!
-//! Note: This implementation does not include the AP Reset Hold operations seeing that it is not
-//! the preferred mechanism for starting a new application processor (AP) under AMD SEV-SNP. The
-//! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
-//! <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+//! Note: This implementation does not include the AP Reset Hold operations
+//! seeing that it is not the preferred mechanism for starting a new application
+//! processor (AP) under AMD SEV-SNP. The SEV-SNP AP creation NAE should be used
+//! instead. See section 4.3.2 of <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 
 //use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
@@ -45,14 +47,16 @@ use x86_64::{
 
 use crate::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 
-/// The version of the GHCB MSR protocol supported by this library. This represents the version
-/// specific to AMD SEV-SNP.
+/// The version of the GHCB MSR protocol supported by this library. This
+/// represents the version specific to AMD SEV-SNP.
 pub const SUPPORTED_PROTOCOL_VERSION: u16 = 2;
 
-/// Value indicating that the hypervisor does not have a preferred location for the GHCB.
+/// Value indicating that the hypervisor does not have a preferred location for
+/// the GHCB.
 pub const NO_PREFERRED_GHCB_LOCATION: u64 = 0xFFFFFFFFFFFFF000;
 
-/// Value indicating that the hypervisor did not accept the registered location for the GHCB.
+/// Value indicating that the hypervisor did not accept the registered location
+/// for the GHCB.
 const GHCB_LOCATION_NOT_ACCEPTED: u64 = 0xFFFFFFFFFFFFF000;
 
 /// The identifier for the MSR used in the MSR protocol.
@@ -67,8 +71,8 @@ const GHCB_INFO_MASK: u64 = 0xFFF;
 /// Mask to extract the GHCB data from a u64 value.
 const GCHP_DATA_MASK: u64 = !GHCB_INFO_MASK;
 
-/// Contains the guest-physical address of the GHCB page. The address must have been registered with
-/// the hypervisor before using it.
+/// Contains the guest-physical address of the GHCB page. The address must have
+/// been registered with the hypervisor before using it.
 pub struct GhcbGpa {
     gpa: u64,
 }
@@ -94,12 +98,15 @@ pub fn set_ghcb_address_and_exit(ghcb_gpa: GhcbGpa) {
     write_protocol_msr_and_exit(ghcb_gpa.into());
 }
 
-/// Response from the hypervisor about the encryption bit and supported GHCB protocol versions. The
-/// encryption bit value is validated by the hardware before the guest is resumed.
+/// Response from the hypervisor about the encryption bit and supported GHCB
+/// protocol versions. The encryption bit value is validated by the hardware
+/// before the guest is resumed.
 pub struct SevInfoResponse {
-    /// The minimum version of the GHCB MSR protocol supported by the hypervisor.
+    /// The minimum version of the GHCB MSR protocol supported by the
+    /// hypervisor.
     pub min_protocol_version: u16,
-    /// The maximum version of the GHCB MSR protocol supported by the hypervisor.
+    /// The maximum version of the GHCB MSR protocol supported by the
+    /// hypervisor.
     pub max_protocol_version: u16,
     /// The page table bit used for inidicating that a page is encrypted.
     pub encryption_bit: u8,
@@ -115,15 +122,12 @@ impl TryFrom<u64> for SevInfoResponse {
         let max_protocol_version = (msr_value >> 48) as u16;
         let min_protocol_version = (msr_value >> 32) as u16;
         let encryption_bit = (msr_value >> 24) as u8;
-        Ok(Self {
-            min_protocol_version,
-            max_protocol_version,
-            encryption_bit,
-        })
+        Ok(Self { min_protocol_version, max_protocol_version, encryption_bit })
     }
 }
 
-/// A request for information about the supported GHCB MSR protocol version and the encryption bit.
+/// A request for information about the supported GHCB MSR protocol version and
+/// the encryption bit.
 pub struct SevInfoRequest;
 
 impl From<SevInfoRequest> for u64 {
@@ -132,8 +136,8 @@ impl From<SevInfoRequest> for u64 {
     }
 }
 
-/// Gets information about the supported GHCB MSR protocol versions and the location of the
-/// encryption bit.
+/// Gets information about the supported GHCB MSR protocol versions and the
+/// location of the encryption bit.
 pub fn get_sev_info() -> Result<SevInfoResponse, &'static str> {
     let request = SevInfoRequest;
     write_protocol_msr_and_exit(request.into());
@@ -150,12 +154,13 @@ pub enum CpuidRegister {
     Edx = 3,
 }
 
-/// A request to execute CPUID for a specific leaf and return one of the result registers.
+/// A request to execute CPUID for a specific leaf and return one of the result
+/// registers.
 pub struct CpuidRequest {
     /// The CPUID leaf to request. Sub-leafs are not supported by this protocol.
     pub leaf: u32,
-    /// The register to return from the result. This protocol only supports a single register at a
-    /// time.
+    /// The register to return from the result. This protocol only supports a
+    /// single register at a time.
     pub register: CpuidRegister,
 }
 
@@ -166,7 +171,8 @@ impl From<CpuidRequest> for u64 {
     }
 }
 
-/// A response from executing CPUID for a specific leaf. Only one register is returned at a time.
+/// A response from executing CPUID for a specific leaf. Only one register is
+/// returned at a time.
 pub struct CpuidResponse {
     /// The value of the requested register after executing CPUID.
     pub value: u32,
@@ -190,41 +196,26 @@ impl TryFrom<u64> for CpuidResponse {
     }
 }
 
-/// Gets the value of the specified register that was returned when executing CPUID for the
-/// specified leaf. Sub-leafs are not supported.
+/// Gets the value of the specified register that was returned when executing
+/// CPUID for the specified leaf. Sub-leafs are not supported.
 pub fn get_cpuid(request: CpuidRequest) -> Result<CpuidResponse, &'static str> {
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
 }
 
-/// Gets the CPUID values for EAX, EBX, ECX and EDX and updates the interrupt stackframe with these.
+/// Gets the CPUID values for EAX, EBX, ECX and EDX and updates the interrupt
+/// stackframe with these.
 pub fn get_cpuid_for_vc_exception(
     leaf: u32,
     stack_frame: &mut MutableInterruptStackFrame,
 ) -> Result<(), &'static str> {
-    stack_frame.rax = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Eax,
-    })?
-    .value as u64;
+    stack_frame.rax = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Eax })?.value as u64;
 
-    stack_frame.rbx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Ebx,
-    })?
-    .value as u64;
+    stack_frame.rbx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Ebx })?.value as u64;
 
-    stack_frame.rcx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Ecx,
-    })?
-    .value as u64;
+    stack_frame.rcx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Ecx })?.value as u64;
 
-    stack_frame.rdx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Edx,
-    })?
-    .value as u64;
+    stack_frame.rdx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Edx })?.value as u64;
 
     Ok(())
 }
@@ -258,18 +249,19 @@ impl TryFrom<u64> for PreferredGhcbGpaResponse {
 
 /// Requests the hypervisor's preferred location for the GHCB page.
 ///
-/// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor does not have a
-/// preferred location.
+/// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor
+/// does not have a preferred location.
 ///
-/// The guest must validate that the returned guest-physical address is not part of its known
-/// guest-private memory.
+/// The guest must validate that the returned guest-physical address is not part
+/// of its known guest-private memory.
 pub fn get_preferred_ghcb_location() -> Result<PreferredGhcbGpaResponse, &'static str> {
     let request = PreferredGhcbGpaRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
 }
 
-/// Request to register a guest-physical address for the GHCB with the hypervisor.
+/// Request to register a guest-physical address for the GHCB with the
+/// hypervisor.
 pub struct RegisterGhcbGpaRequest {
     ghcb_gpa: u64,
 }
@@ -319,26 +311,23 @@ impl TryFrom<u64> for RegisterGhcbGpaResponse {
     }
 }
 
-/// Registers the location of the GHCB page for the current vCPU with the hypervisor.
+/// Registers the location of the GHCB page for the current vCPU with the
+/// hypervisor.
 pub fn register_ghcb_location(request: RegisterGhcbGpaRequest) -> Result<(), RegisterGhcbGpaError> {
     let request_ghcb_gpa: u64 = request.ghcb_gpa;
     write_protocol_msr_and_exit(request.into());
     let response: RegisterGhcbGpaResponse = read_protocol_msr().try_into()?;
     // Ensure that the registration was successful.
-    ensure!(
-        response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED,
-        GhcbLocationNotAcceptedSnafu
-    );
+    ensure!(response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED, GhcbLocationNotAcceptedSnafu);
     ensure!(
         response.ghcb_gpa == request_ghcb_gpa,
-        GhcbResponseLocationNotMatchingRequestSnafu {
-            response_ghcb_gpa: response.ghcb_gpa,
-        }
+        GhcbResponseLocationNotMatchingRequestSnafu { response_ghcb_gpa: response.ghcb_gpa }
     );
     Ok(())
 }
 
-/// Whether a memory page is private to the guest, or shared with the hypervisor.
+/// Whether a memory page is private to the guest, or shared with the
+/// hypervisor.
 #[derive(Debug, FromRepr, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PageAssignment {
@@ -363,10 +352,7 @@ impl SnpPageStateChangeRequest {
         if page_gpa > ADDRESS_MAX {
             return Err("page address is too high");
         }
-        Ok(Self {
-            page_gpa,
-            assignment,
-        })
+        Ok(Self { page_gpa, assignment })
     }
 }
 
@@ -382,7 +368,8 @@ impl From<SnpPageStateChangeRequest> for u64 {
 pub struct SnpPageStateChangeResponse {
     /// The error code from the page state change operation.
     ///
-    /// A value of 0 indicates success. Any non-zero value means that the state was not changed.
+    /// A value of 0 indicates success. Any non-zero value means that the state
+    /// was not changed.
     error_code: u32,
 }
 
@@ -401,11 +388,11 @@ impl TryFrom<u64> for SnpPageStateChangeResponse {
     }
 }
 
-/// Requests a change of state for a page to be either private to the guest VM, or shared with the
-/// hypervisor.
+/// Requests a change of state for a page to be either private to the guest VM,
+/// or shared with the hypervisor.
 ///
-/// This is useful if the GHCB has not yet been established, for example if a page must be shared
-/// with the hypervisor to establish the GHCB.
+/// This is useful if the GHCB has not yet been established, for example if a
+/// page must be shared with the hypervisor to establish the GHCB.
 pub fn change_snp_page_state(request: SnpPageStateChangeRequest) -> Result<(), &'static str> {
     write_protocol_msr_and_exit(request.into());
     let response: SnpPageStateChangeResponse = read_protocol_msr().try_into()?;
@@ -532,7 +519,8 @@ impl From<TerminationRequest> for u64 {
 /// Requests termination from the hypervisor.
 pub fn request_termination(request: TerminationRequest) -> ! {
     write_protocol_msr_and_exit(request.into());
-    // Go into a HALT loop, in case the hypervisor did not honor the termination request.
+    // Go into a HALT loop, in case the hypervisor did not honor the termination
+    // request.
     loop {
         x86_64::instructions::hlt();
     }
@@ -587,10 +575,12 @@ pub fn get_sev_status() -> Result<SevStatus, SevStatusError> {
     SevStatus::from_bits(read_status_msr()).ok_or(SevStatusError::InvalidValue)
 }
 
-/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the hypervisor.
+/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the
+/// hypervisor.
 fn write_protocol_msr_and_exit(msr_value: u64) {
-    // Safety: This operation is safe because this specific MSR is used only for communicating with
-    // the hypervisor, and does not have any other side-effects within the guest.
+    // Safety: This operation is safe because this specific MSR is used only for
+    // communicating with the hypervisor, and does not have any other
+    // side-effects within the guest.
     unsafe {
         Msr::new(PROTOCOL_MSR_IDENTIFIER).write(msr_value);
     }
@@ -599,11 +589,12 @@ fn write_protocol_msr_and_exit(msr_value: u64) {
 
 /// Reads the value of the protocol model-specific register.
 ///
-/// This typically used to get the result of an operation when the hypervisor resumes the guest
-/// following a call to VMGEGIT.
+/// This typically used to get the result of an operation when the hypervisor
+/// resumes the guest following a call to VMGEGIT.
 fn read_protocol_msr() -> u64 {
-    // Safety: This operation is safe because this specific MSR is used only for communicating with
-    // the hypervisor, and does not have any other side-effects within the guest.
+    // Safety: This operation is safe because this specific MSR is used only for
+    // communicating with the hypervisor, and does not have any other
+    // side-effects within the guest.
     unsafe { Msr::new(PROTOCOL_MSR_IDENTIFIER).read() }
 }
 
@@ -611,15 +602,16 @@ fn read_protocol_msr() -> u64 {
 ///
 /// See section 15.34.10 of <https://www.amd.com/system/files/TechDocs/24593.pdf>.
 fn read_status_msr() -> u64 {
-    // Safety: This operation is safe because this specific MSR is used only for reading the SEV
-    // status and does not have any other side-effects within the guest.
+    // Safety: This operation is safe because this specific MSR is used only for
+    // reading the SEV status and does not have any other side-effects within
+    // the guest.
     unsafe { Msr::new(STATUS_MSR_IDENTIFIER).read() }
 }
 
 #[cfg(test)]
 mod tests {
-    //! These tests check the conversion logic between convenience request and response structs, and
-    //! the u64 values used for the MSR protocol.
+    //! These tests check the conversion logic between convenience request and
+    //! response structs, and the u64 values used for the MSR protocol.
     //!
     //! See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for details of
     //! how the requests and responses are represented as u64 values.
@@ -738,13 +730,8 @@ mod tests {
         assert!(SnpPageStateChangeRequest::new(invalid_page, assignment).is_err());
 
         let valid_page = 1111111usize << 12;
-        let msr_value: u64 = SnpPageStateChangeRequest::new(valid_page, assignment)
-            .unwrap()
-            .into();
-        assert_eq!(
-            (valid_page as u64) | ((assignment as u64) << 52) | 0x14,
-            msr_value
-        );
+        let msr_value: u64 = SnpPageStateChangeRequest::new(valid_page, assignment).unwrap().into();
+        assert_eq!((valid_page as u64) | ((assignment as u64) << 52) | 0x14, msr_value);
     }
 
     #[test]
@@ -786,9 +773,7 @@ mod tests {
 
     #[test]
     fn test_termination_request() {
-        let request = TerminationRequest {
-            reason: TerminationReason::GhcbProtocolVersion,
-        };
+        let request = TerminationRequest { reason: TerminationReason::GhcbProtocolVersion };
         let expected = 0x100u64 | ((TerminationReason::GhcbProtocolVersion as u64) << 16);
         assert_eq!(expected, request.into());
     }

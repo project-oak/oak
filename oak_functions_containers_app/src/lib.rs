@@ -79,17 +79,11 @@ impl<H: Handler> OakFunctionsContainersService<H> {
         encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
-        Self {
-            instance: OnceLock::new(),
-            encryption_key_handle,
-            observer,
-        }
+        Self { instance: OnceLock::new(), encryption_key_handle, observer }
     }
 
     fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
-        self.instance
-            .get()
-            .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
+        self.instance.get().ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
     }
 }
 
@@ -172,10 +166,7 @@ where
             },
         )
         .map_err(|err| {
-            tonic::Status::internal(format!(
-                "couldn't call handle_user_request handler: {:?}",
-                err
-            ))
+            tonic::Status::internal(format!("couldn't call handle_user_request handler: {:?}", err))
         })
     }
 
@@ -217,9 +208,7 @@ where
 
         let instance = self.get_instance()?;
         while let Some(chunk) = request.next().await {
-            instance
-                .extend_lookup_data_chunk(chunk?)
-                .map_err(map_status)?;
+            instance.extend_lookup_data_chunk(chunk?).map_err(map_status)?;
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})
@@ -232,10 +221,7 @@ where
         request: tonic::Request<ReserveRequest>,
     ) -> tonic::Result<tonic::Response<ReserveResponse>> {
         let request = request.into_inner();
-        self.get_instance()?
-            .reserve(request)
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        self.get_instance()?.reserve(request).map(tonic::Response::new).map_err(map_status)
     }
 }
 
@@ -300,8 +286,8 @@ where
             attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
         }
 
-        // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
-        // called on the proper instance (and not the clone!)
+        // copied from the example in `tower::Service` to guarantee that `poll_ready`
+        // has been called on the proper instance (and not the clone!)
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
@@ -310,10 +296,7 @@ where
         Box::pin(async move {
             let now = Instant::now();
             let resp = inner.call(req).await;
-            latencies.record(
-                now.elapsed().as_micros().try_into().unwrap_or(u64::MAX),
-                &attributes,
-            );
+            latencies.record(now.elapsed().as_micros().try_into().unwrap_or(u64::MAX), &attributes);
             resp
         })
     }
@@ -321,8 +304,8 @@ where
 
 /// Creates a `trace::Span` for the currently active gRPC request.
 ///
-/// The fields of the Span are filled out according to the OpenTelemetry specifications, if
-/// possible.
+/// The fields of the Span are filled out according to the OpenTelemetry
+/// specifications, if possible.
 fn create_trace<Body>(request: &http::Request<Body>) -> Span {
     let uri = request.uri();
     // The general format of a gRPC URI is `http://[::1]:1234/Foo/Bar``, where `Foo` is the service, and `Bar` is the method.
@@ -332,9 +315,10 @@ fn create_trace<Body>(request: &http::Request<Body>) -> Span {
 
     // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-spans/ and
     // https://opentelemetry.io/docs/specs/semconv/rpc/grpc/ for specifications on what OpenTelemetry
-    // expects the traces to look like. Unfortunately the OTel conventions say that the span name
-    // must be the full RPC method name, but Rust tracing wants the name to be static, so we'll
-    // need to figure something out in the future.
+    // expects the traces to look like. Unfortunately the OTel conventions say that
+    // the span name must be the full RPC method name, but Rust tracing wants
+    // the name to be static, so we'll need to figure something out in the
+    // future.
     tracing::info_span!(
         "request",
         rpc.method = method,
@@ -369,13 +353,11 @@ impl OtelObserver {
 }
 impl Observer for OtelObserver {
     fn wasm_initialization(&self, duration: core::time::Duration) {
-        self.wasm_initialization
-            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
+        self.wasm_initialization.record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 
     fn wasm_invocation(&self, duration: core::time::Duration) {
-        self.wasm_invocation
-            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
+        self.wasm_invocation.record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 }
 
@@ -385,14 +367,14 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 // Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
-// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB. We're not sending
-// traffic over a "real" network anyway, after all.
+// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB.
+// We're not sending traffic over a "real" network anyway, after all.
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
-/// Starts up and serves an OakFunctionsContainersService instance from the provided stream of
-/// connections.
-// The type of the stream is pretty horrible; we can define a slightly cleaner type aliases for it
-// when `type_alias_impl_trait` has been stabilized; see https://github.com/rust-lang/rust/issues/63063.
+/// Starts up and serves an OakFunctionsContainersService instance from the
+/// provided stream of connections.
+// The type of the stream is pretty horrible; we can define a slightly cleaner
+// type aliases for it when `type_alias_impl_trait` has been stabilized; see https://github.com/rust-lang/rust/issues/63063.
 pub async fn serve<H>(
     stream: Box<
         dyn tokio_stream::Stream<
@@ -412,9 +394,8 @@ where
 {
     tonic::transport::Server::builder()
         .layer(
-            tower_http::trace::TraceLayer::new_for_grpc()
-                .make_span_with(create_trace)
-                .on_response(|response: &http::Response<_>, _latency, span: &Span| {
+            tower_http::trace::TraceLayer::new_for_grpc().make_span_with(create_trace).on_response(
+                |response: &http::Response<_>, _latency, span: &Span| {
                     // If the request is successful, there's no `grpc-status` header, thus we assume
                     // the request was successful.
                     let code = response
@@ -424,7 +405,8 @@ where
                         .to_str()
                         .ok();
                     span.record("rpc.grpc.status_code", code);
-                }),
+                },
+            ),
         )
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))

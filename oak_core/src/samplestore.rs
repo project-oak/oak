@@ -16,9 +16,10 @@
 
 //! Probabilistic sample store to compute percentiles over some measurement.
 
-/// Basic Probabilistic sample store to compute percentiles over some measurement.
-/// N is the number of elements kept in memory; it must be larger than 0.
-/// The array is allocated statically; SampleStore does not use heap allocation.
+/// Basic Probabilistic sample store to compute percentiles over some
+/// measurement. N is the number of elements kept in memory; it must be larger
+/// than 0. The array is allocated statically; SampleStore does not use heap
+/// allocation.
 #[derive(Debug, PartialEq)]
 pub struct StaticSampleStore<const N: usize> {
     data: [u64; N],
@@ -28,25 +29,19 @@ pub struct StaticSampleStore<const N: usize> {
 pub trait SampleStore {
     /// Records a new data point value.
     ///
-    /// If the store has already been filled, it will probabilistically replace one of the
-    /// existing entries based on reservoir sampling.
+    /// If the store has already been filled, it will probabilistically replace
+    /// one of the existing entries based on reservoir sampling.
     fn record(&mut self, value: u64);
 
-    /// Gets the n-th percentile. n needs to be between 0 and 100, otherwise None is returned; also,
-    /// the store must have at least one recorded data point.
+    /// Gets the n-th percentile. n needs to be between 0 and 100, otherwise
+    /// None is returned; also, the store must have at least one recorded
+    /// data point.
     fn percentile(&self, n: f64) -> Option<u64>;
 }
 
 impl<const N: usize> StaticSampleStore<N> {
     pub fn new() -> Option<Self> {
-        if N == 0 {
-            None
-        } else {
-            Some(Self {
-                data: [0; N],
-                samples: 0,
-            })
-        }
+        if N == 0 { None } else { Some(Self { data: [0; N], samples: 0 }) }
     }
 }
 
@@ -59,7 +54,8 @@ impl<const N: usize> SampleStore for StaticSampleStore<N> {
             // generate a random number in [0..samples)
             let mut buf = [0u8; 8];
             getrandom::getrandom(&mut buf[..]).unwrap();
-            // This will introduce a small bias, but it should be small enough for our use case.
+            // This will introduce a small bias, but it should be small enough for our use
+            // case.
             usize::from_ne_bytes(buf) % self.samples
         };
 
@@ -80,8 +76,8 @@ impl<const N: usize> SampleStore for StaticSampleStore<N> {
         let size = core::cmp::min(N, self.samples);
         let slice = &mut array[..size];
         slice.sort_unstable();
-        // samples > 0 (because of the check above) and N > 0 (as otherwise `new()` would fail), so
-        // `size` will always be at least 1.
+        // samples > 0 (because of the check above) and N > 0 (as otherwise `new()`
+        // would fail), so `size` will always be at least 1.
         let index = (size as f64 - 1.0) * n / 100.0;
         slice.get(index as usize).copied()
     }
@@ -129,8 +125,8 @@ mod tests {
     pub fn probabilistic_replacement() {
         let mut store = StaticSampleStore::<10>::new().unwrap();
         (1..=10).for_each(|_| store.record(0));
-        // This will now get difficult, as replacing entries is probabilistic. But we should get at
-        // least one hit.
+        // This will now get difficult, as replacing entries is probabilistic. But we
+        // should get at least one hit.
         (1..=10).for_each(|_| store.record(10));
         assert_eq!(store.percentile(100.0), Some(10));
     }

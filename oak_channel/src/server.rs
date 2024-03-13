@@ -26,9 +26,7 @@ pub struct ServerChannelHandle {
 
 impl ServerChannelHandle {
     pub fn new(socket: Box<dyn Channel>) -> Self {
-        Self {
-            inner: InvocationChannel::new(socket),
-        }
+        Self { inner: InvocationChannel::new(socket) }
     }
     pub fn read_request(&mut self) -> anyhow::Result<(message::RequestMessage, Timer)> {
         self.inner.read_message()

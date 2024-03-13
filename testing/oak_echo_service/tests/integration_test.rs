@@ -35,9 +35,7 @@ fn it_should_handle_echo_requests() {
     let service = EchoService { evidence_provider };
     let mut client = EchoClient::new(EchoServer::new(service));
 
-    let request = EchoRequest {
-        body: TEST_DATA.to_vec(),
-    };
+    let request = EchoRequest { body: TEST_DATA.to_vec() };
     let response = client.echo(&request).into_ok();
 
     assert!(response.is_ok());

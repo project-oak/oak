@@ -63,10 +63,7 @@ impl UntrustedApp {
             GrpcOakFunctionsClient::new(channel)
         };
 
-        Ok(Self {
-            launcher,
-            oak_functions_client,
-        })
+        Ok(Self { launcher, oak_functions_client })
     }
 
     pub async fn initialize_enclave(
@@ -92,10 +89,7 @@ impl UntrustedApp {
 
         // Spawn task to periodically refresh lookup data.
         if config.update_interval.is_some() {
-            tokio::spawn(setup_periodic_update(
-                self.oak_functions_client.clone(),
-                config,
-            ));
+            tokio::spawn(setup_periodic_update(self.oak_functions_client.clone(), config));
         }
         Ok(())
     }

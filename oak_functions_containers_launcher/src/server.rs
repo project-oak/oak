@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-// TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor these to share
-// code.
+// TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor
+// these to share code.
 
 use std::{net::SocketAddr, pin::Pin};
 
@@ -96,9 +96,7 @@ impl StreamingSession for SessionProxy {
             }
         };
 
-        Ok(Response::new(
-            Box::pin(response_stream) as Self::StreamStream
-        ))
+        Ok(Response::new(Box::pin(response_stream) as Self::StreamStream))
     }
 }
 
@@ -108,13 +106,7 @@ pub fn new(
     evidence: Evidence,
     endorsements: Endorsements,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
-    let server_impl = SessionProxy {
-        connector_handle,
-        evidence,
-        endorsements,
-    };
+    let server_impl = SessionProxy { connector_handle, evidence, endorsements };
 
-    Server::builder()
-        .add_service(StreamingSessionServer::new(server_impl))
-        .serve(addr)
+    Server::builder().add_service(StreamingSessionServer::new(server_impl)).serve(addr)
 }

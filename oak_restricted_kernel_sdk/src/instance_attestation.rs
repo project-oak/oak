@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Structs for signing and encryption using keys attested in the instance's attestation evidence.
+//! Structs for signing and encryption using keys attested in the instance's
+//! attestation evidence.
 
 use anyhow::Ok;
 use oak_crypto::{
@@ -58,15 +59,12 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
         )
         .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
         let evidence = dice_data.evidence;
-        Ok(DiceWrapper {
-            evidence,
-            encryption_key,
-            signing_key,
-        })
+        Ok(DiceWrapper { evidence, encryption_key, signing_key })
     }
 }
 
-/// [`Signer`] implementation that using the instance's evidence and corresponding private keys.
+/// [`Signer`] implementation that using the instance's evidence and
+/// corresponding private keys.
 #[derive(Clone)]
 pub struct InstanceSigner {
     key: &'static SigningKey,
@@ -77,24 +75,18 @@ impl InstanceSigner {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(InstanceSigner {
-                    key: &d.signing_key,
-                })
-            })
+            .and_then(|d| Ok(InstanceSigner { key: &d.signing_key }))
     }
 }
 
 impl Signer for InstanceSigner {
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
-        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(
-            self.key, message,
-        ))
+        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
     }
 }
 
-/// [`EncryptionKeyHandle`] implementation that using the instance's evidence and corresponding
-/// private keys.
+/// [`EncryptionKeyHandle`] implementation that using the instance's evidence
+/// and corresponding private keys.
 #[derive(Clone)]
 pub struct InstanceEncryptionKeyHandle {
     key: &'static EncryptionKey,
@@ -105,11 +97,7 @@ impl InstanceEncryptionKeyHandle {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(InstanceEncryptionKeyHandle {
-                    key: &d.encryption_key,
-                })
-            })
+            .and_then(|d| Ok(InstanceEncryptionKeyHandle { key: &d.encryption_key }))
     }
 }
 
@@ -132,11 +120,7 @@ impl InstanceEvidenceProvider {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(InstanceEvidenceProvider {
-                    evidence: &d.evidence,
-                })
-            })
+            .and_then(|d| Ok(InstanceEvidenceProvider { evidence: &d.evidence }))
     }
 }
 

@@ -23,7 +23,8 @@ use crate::{
     },
 };
 
-/// Build the Rust crate that will be used as the Wasm module for the Oak Functions server.
+/// Build the Rust crate that will be used as the Wasm module for the Oak
+/// Functions server.
 pub fn build_rust_crate_wasm(crate_name: &str) -> Step {
     Step::Single {
         name: "cargo build Wasm".to_string(),

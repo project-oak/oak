@@ -18,9 +18,9 @@ use strum::{Display, FromRepr};
 
 /// Possible error values returned by Oak Restricted Kernel syscalls.
 ///
-/// In general, the errors and their associated values are inpired by and look similar to the
-/// Linux/POSIX ABI, but we make no claims about adhering to the behaviour, or specification, of
-/// either of those.
+/// In general, the errors and their associated values are inpired by and look
+/// similar to the Linux/POSIX ABI, but we make no claims about adhering to the
+/// behaviour, or specification, of either of those.
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Display, Eq, FromRepr, PartialEq)]
 #[repr(isize)]

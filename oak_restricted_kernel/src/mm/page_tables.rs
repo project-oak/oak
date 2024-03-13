@@ -36,8 +36,9 @@ use super::{
 ///
 /// ## Safety
 ///
-/// There are many ways you can cause memory safety errors and undefined behaviour when creating
-/// page mappings. See <Mapper::map_to_with_table_flags> for examples.
+/// There are many ways you can cause memory safety errors and undefined
+/// behaviour when creating page mappings. See <Mapper::map_to_with_table_flags>
+/// for examples.
 pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
     range: PhysFrameRange<S>,
     offset: VirtAddr,
@@ -45,10 +46,11 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
     mapper: &mut M,
 ) -> Result<(), MapToError<S>> {
     for (i, frame) in range.enumerate() {
-        // We don't set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel and AMD CPUs
-        // behave differently (Intel ignores the `G` bit in parent page table entries, AMD ignores
-        // it in lower entries _except_ PML4 and PML5); the `G` bit has semantic meaning only in the
-        // lowest level of page tables.
+        // We don't set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel
+        // and AMD CPUs behave differently (Intel ignores the `G` bit in parent
+        // page table entries, AMD ignores it in lower entries _except_ PML4 and
+        // PML5); the `G` bit has semantic meaning only in the lowest level of
+        // page tables.
         mapper
             .map_to_with_table_flags(
                 Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
@@ -61,29 +63,35 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
     Ok(())
 }
 
-/// Maps the kernel memory ranges (ie. vaddr in last 2GB of memory), respecting section permissions.
+/// Maps the kernel memory ranges (ie. vaddr in last 2GB of memory), respecting
+/// section permissions.
 ///
-/// Strictly speaking there's nothing int he ELF file that _requires_ sections to be page-aligned.
-/// It's entirely possible to have a section with write privileges and a section with execute
-/// privileges be on the same 4K page -- which would defeat the purpose of restricting the
-/// permissions, as we'd have to go for the lowest common denominator and mark the pages both
-/// writable and executable.
-/// For now, calling this function fails if there is any overlap when using 4K pages.
+/// Strictly speaking there's nothing int he ELF file that _requires_ sections
+/// to be page-aligned. It's entirely possible to have a section with write
+/// privileges and a section with execute privileges be on the same 4K page --
+/// which would defeat the purpose of restricting the permissions, as we'd have
+/// to go for the lowest common denominator and mark the pages both writable and
+/// executable. For now, calling this function fails if there is any overlap
+/// when using 4K pages.
 ///
-/// We also create mappings only for sections with vaddr above 0xFFFF_FFFF_8000_0000, that is, for
-/// the memory range where the kernel code should lie.
+/// We also create mappings only for sections with vaddr above
+/// 0xFFFF_FFFF_8000_0000, that is, for the memory range where the kernel code
+/// should lie.
 ///
-/// The mappings we create respect the `PF_W` and `PF_X` flags; there's no way how to map a page as
-/// not readable (but still writable or executable), so `PF_R` is ignored.
+/// The mappings we create respect the `PF_W` and `PF_X` flags; there's no way
+/// how to map a page as not readable (but still writable or executable), so
+/// `PF_R` is ignored.
 ///
-/// Note that even if this function returns an error, the page map may have been partially updated.
+/// Note that even if this function returns an error, the page map may have been
+/// partially updated.
 ///
 /// # Safety
-/// There are many ways you can cause memory safety errors and undefined behaviour when creating
-/// page mappings. See <Mapper::map_to_with_table_flags> for examples.
+/// There are many ways you can cause memory safety errors and undefined
+/// behaviour when creating page mappings. See <Mapper::map_to_with_table_flags>
+/// for examples.
 ///
-/// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page tables created by
-/// this function.
+/// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page
+/// tables created by this function.
 pub unsafe fn create_kernel_map<M: Mapper<Size2MiB> + Mapper<Size4KiB>>(
     program_headers: &[ProgramHeader],
     mapper: &mut M,
@@ -135,20 +143,19 @@ impl RootPageTable {
         offset: VirtAddr,
         encryption: MemoryEncryption,
     ) -> Self {
-        RootPageTable {
-            inner: EncryptedPageTable::new(pml4, offset, encryption),
-        }
+        RootPageTable { inner: EncryptedPageTable::new(pml4, offset, encryption) }
     }
     pub fn into_inner(self) -> EncryptedPageTable<MappedPageTable<'static, PhysOffset>> {
         self.inner
     }
     /// Checks wheter all the pages in the range are unallocated.
     ///
-    /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
-    /// range, as the mappings may be done with a smaller page size.
+    /// Even though the pages may be of arbitrary size, we check all
+    /// 4KiB-aligned addresses in the range, as the mappings may be done
+    /// with a smaller page size.
     ///
-    /// If we find an address with a valid mapping, we return the page which contains a valid
-    /// mapping.
+    /// If we find an address with a valid mapping, we return the page which
+    /// contains a valid mapping.
     pub fn is_unallocated<S: PageSize>(&self, range: PageRange<S>) -> Result<(), Page<S>> {
         if let Some(item) = Page::<Size4KiB>::range(
             Page::containing_address(range.start.start_address()),
@@ -171,15 +178,16 @@ impl RootPageTable {
     ///   - count: number of pages to allocate
     ///
     /// Returns:
-    /// The range of unallocated pages, if there was a big enough unallocated gap in the virtual
-    /// address space. The range may start at exactly `start`.
+    /// The range of unallocated pages, if there was a big enough unallocated
+    /// gap in the virtual address space. The range may start at exactly
+    /// `start`.
     pub fn find_unallocated_pages<S: PageSize>(
         &self,
         mut start: Page<S>,
         count: usize,
     ) -> Option<PageRange<S>> {
-        // This is highly inefficient, but it should be called rarely enough that it doesn't matter
-        // (famous last words...)
+        // This is highly inefficient, but it should be called rarely enough that it
+        // doesn't matter (famous last words...)
         // We assume virtual addresses are 48 bits, with the gap in the middle.
         let limit = Page::containing_address(if start.start_address().as_u64() < u64::pow(2, 47) {
             VirtAddr::new(u64::pow(2, 47) - 1)
@@ -189,8 +197,8 @@ impl RootPageTable {
         while start < limit {
             let range = Page::range(start, start + count as u64);
 
-            // If it turns out something in that range was allocated, we move forward to the page
-            // after that and try again.
+            // If it turns out something in that range was allocated, we move forward to the
+            // page after that and try again.
             match self.is_unallocated(range) {
                 Ok(()) => return Some(range),
                 Err(page) => start = page + 1,
@@ -210,8 +218,7 @@ impl Mapper<Size4KiB> for RootPageTable {
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>> {
-        self.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     unsafe fn unmap(
@@ -238,8 +245,7 @@ impl Mapper<Size2MiB> for RootPageTable {
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>> {
-        self.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     unsafe fn unmap(
@@ -284,7 +290,8 @@ impl CurrentRootPageTable {
 
     /// Replaces the current pagetable with the parameter, returning the old
     /// pagetable if there was one. Updates the page table on the CPU level.
-    /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
+    /// Safety: The new page tables must keep the identity mapping at -2GB
+    /// (kernel space) intact.
     pub unsafe fn replace(&mut self, pml4_frame: PhysFrame) -> Option<RootPageTable> {
         // This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
@@ -292,8 +299,8 @@ impl CurrentRootPageTable {
             Cr3::write(pml4_frame, Cr3Flags::empty());
         };
 
-        // Safety: we've reloaded page tables that place the direct mapping region at that offset,
-        // so the memory location is safe to access now.
+        // Safety: we've reloaded page tables that place the direct mapping region at
+        // that offset, so the memory location is safe to access now.
         let pml4 = unsafe {
             &mut *(super::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
         };

@@ -49,9 +49,7 @@ impl TrustedApplicationClient {
         encrypted_request: EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
         self.inner
-            .hello(HelloRequest {
-                encrypted_request: Some(encrypted_request),
-            })
+            .hello(HelloRequest { encrypted_request: Some(encrypted_request) })
             .await
             .context("couldn't send hello request")?
             .into_inner()

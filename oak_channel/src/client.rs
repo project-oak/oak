@@ -31,9 +31,7 @@ pub struct ClientChannelHandle {
 
 impl ClientChannelHandle {
     pub fn new(socket: Box<dyn Channel>) -> Self {
-        Self {
-            inner: InvocationChannel::new(socket),
-        }
+        Self { inner: InvocationChannel::new(socket) }
     }
     pub fn write_request(&mut self, request: RequestMessage) -> anyhow::Result<()> {
         self.inner.write_message(request)
@@ -52,10 +50,7 @@ pub struct RequestEncoder {
 impl RequestEncoder {
     pub fn encode_request(&mut self, request_body: &[u8]) -> RequestMessage {
         let invocation_id = self.invocation_id_counter.next_invocation_id();
-        RequestMessage {
-            invocation_id,
-            body: request_body.to_vec(),
-        }
+        RequestMessage { invocation_id, body: request_body.to_vec() }
     }
 }
 

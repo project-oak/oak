@@ -62,46 +62,42 @@ pub struct ExternPath {
 
 impl ExternPath {
     pub fn new(proto_path: &str, rust_path: &str) -> Self {
-        ExternPath {
-            proto_path: proto_path.to_string(),
-            rust_path: rust_path.to_string(),
-        }
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
     }
 }
 
 /// Compile Rust server code from the services in the provided protobuf file.
 ///
-/// Each method in a service definition must have exactly one comment line of the form `//
-/// method_id: 42`, which is used to generate a stable identifier for that method, which is part of
-/// the serialization protocol used for invocation.
+/// Each method in a service definition must have exactly one comment line of
+/// the form `// method_id: 42`, which is used to generate a stable identifier
+/// for that method, which is part of the serialization protocol used for
+/// invocation.
 ///
 /// For a service called `TestName`, `compile` generates the following objects:
 ///
-/// - a struct named `TestNameServer`, which implements the `micro_rpc::InvocationHandler` trait,
-///   dispatching each request to the appropriate method on the underlying service implementation.
-/// - a trait named `TestName`, with a method for each method defined in the protobuf service, and
-///   an additional default method named `serve` which returns an instance of `TestNameServer`; the
-///   developer of a service would usually define a concrete struct and manually implement this
-///   trait for it,
-/// - a struct named `TestNameClient`, exposing a method for each method defined in the protobuf
-///   service. This may be used to directly invoke the underlying handler in order to indirectly
-///   invoke methods on the corresponding `Server` object on the other side of the handler.
-/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with async support.
+/// - a struct named `TestNameServer`, which implements the
+///   `micro_rpc::InvocationHandler` trait, dispatching each request to the
+///   appropriate method on the underlying service implementation.
+/// - a trait named `TestName`, with a method for each method defined in the
+///   protobuf service, and an additional default method named `serve` which
+///   returns an instance of `TestNameServer`; the developer of a service would
+///   usually define a concrete struct and manually implement this trait for it,
+/// - a struct named `TestNameClient`, exposing a method for each method defined
+///   in the protobuf service. This may be used to directly invoke the
+///   underlying handler in order to indirectly invoke methods on the
+///   corresponding `Server` object on the other side of the handler.
+/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with
+///   async support.
 pub fn compile(
     protos: &[impl AsRef<Path>],
     includes: &[impl AsRef<Path>],
     options: CompileOptions,
 ) {
     protos.iter().for_each(|filename| {
-        println!(
-            "cargo:rerun-if-changed={}",
-            filename.as_ref().as_os_str().to_string_lossy()
-        )
+        println!("cargo:rerun-if-changed={}", filename.as_ref().as_os_str().to_string_lossy())
     });
     let mut config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator {
-        options: options.clone(),
-    }));
+    config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
     for extern_path in options.extern_paths {
         config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
@@ -129,8 +125,8 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
     }
 }
 
-/// Generate the Rust objects from the input [`Service`] instance, corresponding to a `service`
-/// entry.
+/// Generate the Rust objects from the input [`Service`] instance, corresponding
+/// to a `service` entry.
 fn generate_service(service: &Service, receiver_type: ReceiverType) -> anyhow::Result<String> {
     let server_name = server_name(service);
     let service_name = service_name(service);
@@ -186,24 +182,18 @@ fn generate_service(service: &Service, receiver_type: ReceiverType) -> anyhow::R
         format!("pub trait {service_name}: Sized {{"),
     ]);
     lines.extend(
-        service
-            .methods
-            .iter()
-            .flat_map(|method| generate_service_method(method, receiver_type)),
+        service.methods.iter().flat_map(|method| generate_service_method(method, receiver_type)),
     );
     lines.extend(vec![format!("}}"), format!("")]);
     Ok(lines.into_iter().intersperse("\n".to_string()).collect())
 }
 
-/// Generate the service client Rust objects from the input [`Service`] instance, corresponding to
-/// an `rpc` entry.
+/// Generate the service client Rust objects from the input [`Service`]
+/// instance, corresponding to an `rpc` entry.
 fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Result<String> {
     let client_name = client_name(service, asynchronous);
-    let transport_trait = if asynchronous {
-        "::micro_rpc::AsyncTransport"
-    } else {
-        "::micro_rpc::Transport"
-    };
+    let transport_trait =
+        if asynchronous { "::micro_rpc::AsyncTransport" } else { "::micro_rpc::Transport" };
     let mut lines = Vec::new();
     lines.extend(vec![
         format!("pub struct {client_name}<T: {transport_trait}> {{",),
@@ -238,9 +228,13 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
     let method_name = method_name(method);
     let fn_modifier = if asynchronous { "async " } else { "" };
     Ok(vec![
-        format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<Result<{response_type}, ::micro_rpc::Status>, T::Error> {{"),
+        format!(
+            "    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<Result<{response_type}, ::micro_rpc::Status>, T::Error> {{"
+        ),
         if asynchronous {
-            format!("        ::micro_rpc::async_client_invoke(&mut self.transport, {method_id}, request).await")
+            format!(
+                "        ::micro_rpc::async_client_invoke(&mut self.transport, {method_id}, request).await"
+            )
         } else {
             format!("        ::micro_rpc::client_invoke(&mut self.transport, {method_id}, request)")
         },
@@ -249,10 +243,11 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
 }
 
 fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
-    // This handler appears inside a `match` block in the server implementation. Its purpose is to
-    // parse the incoming request buffer as an object of the correct type, and dispatch a reference
-    // to that parsed object to the underlying service implementation, provided by the developer,
-    // which deals with type safe generated objects instead of raw byte buffers.
+    // This handler appears inside a `match` block in the server implementation. Its
+    // purpose is to parse the incoming request buffer as an object of the
+    // correct type, and dispatch a reference to that parsed object to the
+    // underlying service implementation, provided by the developer, which deals
+    // with type safe generated objects instead of raw byte buffers.
     let method_id = method_id(method)?;
     let request_type = request_type(method);
     let method_name = method_name(method);
@@ -260,10 +255,14 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
         format!("            {method_id} => {{"),
         // We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
-        format!("                let request = <{request_type}>::decode(request.body.as_ref()).map_err(|err| {{"),
+        format!(
+            "                let request = <{request_type}>::decode(request.body.as_ref()).map_err(|err| {{"
+        ),
         format!("                    ::micro_rpc::Status::new_with_message("),
         format!("                        ::micro_rpc::StatusCode::Internal,"),
-        format!("                        ::micro_rpc::format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
+        format!(
+            "                        ::micro_rpc::format!(\"Service failed to deserialize the request: {{:?}}\", err)"
+        ),
         format!("                    )"),
         format!("                }})?;"),
         format!("                let response = self.service.{method_name}(request)?;"),
@@ -278,7 +277,9 @@ fn generate_service_method(method: &Method, receiver_type: ReceiverType) -> Vec<
     let request_type = request_type(method);
     let response_type = response_type(method);
     let self_type = receiver_type.value();
-    vec![format!("    fn {method_name}({self_type}, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
+    vec![format!(
+        "    fn {method_name}({self_type}, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;"
+    )]
 }
 
 /// Returns the value of the `method_id` comment on the method.
@@ -292,10 +293,7 @@ fn method_id(method: &Method) -> anyhow::Result<u32> {
     if method_ids.is_empty() {
         anyhow::bail!("no method_id comment on method {}", method.proto_name,)
     } else if method_ids.len() > 1 {
-        anyhow::bail!(
-            "multiple method_id comments on method {}",
-            method.proto_name
-        )
+        anyhow::bail!("multiple method_id comments on method {}", method.proto_name)
     } else {
         Ok(method_ids[0].parse()?)
     }
@@ -303,15 +301,7 @@ fn method_id(method: &Method) -> anyhow::Result<u32> {
 
 /// The type name of the generated Rust client struct.
 fn client_name(service: &Service, asynchronous: bool) -> String {
-    format!(
-        "{}{}",
-        service.name,
-        if asynchronous {
-            "AsyncClient"
-        } else {
-            "Client"
-        }
-    )
+    format!("{}{}", service.name, if asynchronous { "AsyncClient" } else { "Client" })
 }
 
 /// The type name of the generated Rust server struct.

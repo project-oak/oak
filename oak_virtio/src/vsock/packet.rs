@@ -86,10 +86,7 @@ impl Packet {
         dst_port: u32,
     ) -> anyhow::Result<Self> {
         if buffer_len > super::DATA_BUFFER_SIZE {
-            anyhow::bail!(
-                "total buffer length must be less than {}",
-                super::DATA_BUFFER_SIZE
-            );
+            anyhow::bail!("total buffer length must be less than {}", super::DATA_BUFFER_SIZE);
         }
         let buffer = vec![0u8; buffer_len];
         let mut result = Self { buffer };
@@ -203,8 +200,8 @@ impl Packet {
         self.write_u32(BUF_ALLOC_OFFSET, buf_alloc);
     }
 
-    /// Gets the number of bytes that the peer has read out of the stream buffer (hence making space
-    /// in the buffer).
+    /// Gets the number of bytes that the peer has read out of the stream buffer
+    /// (hence making space in the buffer).
     ///
     /// Used to facilitate flow-control calculations.
     pub fn get_fwd_cnt(&self) -> u32 {
@@ -234,8 +231,8 @@ impl Packet {
 
     /// Sets the payload of a data packet from a slice.
     ///
-    /// The length of the slice must match the packets configures payload length. Only usable if the
-    /// packet's op is `VSockOp::Rw`.
+    /// The length of the slice must match the packets configures payload
+    /// length. Only usable if the packet's op is `VSockOp::Rw`.
     fn set_payload(&mut self, data: &[u8]) -> anyhow::Result<()> {
         if self.get_op()? != VSockOp::Rw {
             anyhow::bail!("non-empty payloads are only allowed with data packets");
@@ -328,16 +325,19 @@ pub enum VSockOp {
     Request = 1,
     /// Connections accepted response.
     Response = 2,
-    /// Connection reset, either in reponse to a shutdown request or invalid packets received.
+    /// Connection reset, either in reponse to a shutdown request or invalid
+    /// packets received.
     Rst = 3,
     /// Connection shutdown request.
     Shutdown = 4,
     /// Represents a data packet.
     ///
-    /// Used to send payload. Only data packets with this op can contain a payload.
+    /// Used to send payload. Only data packets with this op can contain a
+    /// payload.
     Rw = 5,
-    /// Give update on credit to support flow control, either in response to a credit request or at
-    /// any time it might be useful to inform the peer of the state of the stream buffer.
+    /// Give update on credit to support flow control, either in response to a
+    /// credit request or at any time it might be useful to inform the peer
+    /// of the state of the stream buffer.
     CreditUpdate = 6,
     /// Request for update on credit to calculate stream buffer availability.
     CreditRequest = 7,

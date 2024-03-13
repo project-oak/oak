@@ -112,8 +112,8 @@ fn test_read_empty_buffer_in_wasm_memory() {
 #[test]
 fn test_read_request() {
     let mut test_state = create_test_state();
-    // Instead of calling read_request, we mimick the functionality here. This is not pretty,
-    // but the best I can do for now.
+    // Instead of calling read_request, we mimick the functionality here. This is
+    // not pretty, but the best I can do for now.
     let request_bytes = test_state.request.clone();
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
@@ -132,12 +132,7 @@ fn test_read_request() {
 fn test_invoke() {
     let test_state = create_test_state();
     let data = b"Hello, world!";
-    let response = test_state
-        .wasm_handler
-        .handle_invoke(Request {
-            body: data.to_vec(),
-        })
-        .unwrap();
+    let response = test_state.wasm_handler.handle_invoke(Request { body: data.to_vec() }).unwrap();
     assert_eq!(response.body, data.to_vec());
 }
 
@@ -151,20 +146,15 @@ struct TestState {
 fn create_test_state() -> TestState {
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(Vec::default(), logger.clone()));
-    let api_factory = Arc::new(StdWasmApiFactory {
-        lookup_data_manager: lookup_data_manager.clone(),
-    });
+    let api_factory =
+        Arc::new(StdWasmApiFactory { lookup_data_manager: lookup_data_manager.clone() });
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = WasmHandler::create(
-        &wasm_module_bytes,
-        api_factory.clone(),
-        logger.clone(),
-        None,
-    )
-    .expect("couldn't create WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&wasm_module_bytes, api_factory.clone(), logger.clone(), None)
+            .expect("couldn't create WasmHandler");
 
     let request = Vec::new();
     let response = Arc::new(Spinlock::new(Vec::new()));
@@ -175,16 +165,10 @@ fn create_test_state() -> TestState {
     let module = wasm_handler.wasm_module.clone();
     let mut store = wasmi::Store::new(module.engine(), user_state);
     let linker = OakLinker::new(module.engine());
-    let instance = linker
-        .instantiate(&mut store, module)
-        .expect("couldn't instantiate Wasm module");
+    let instance =
+        linker.instantiate(&mut store, module).expect("couldn't instantiate Wasm module");
 
-    TestState {
-        instance,
-        store,
-        wasm_handler,
-        request: request.clone(),
-    }
+    TestState { instance, store, wasm_handler, request: request.clone() }
 }
 
 // Read the u32 value at the `address` from the Wasm memory.
@@ -194,8 +178,9 @@ fn read_u32(test_state: &mut TestState, address: AbiPointer) -> u32 {
     LittleEndian::read_u32(&address)
 }
 
-// Mirrors the implementation `read_buffer` with less error handling. I have found no other way
-// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+// Mirrors the implementation `read_buffer` with less error handling. I have
+// found no other way to unit-test whether our use of the wasmi API is correct,
+// as we cannot create a test `Caller`.
 fn read_buffer(
     test_state: &mut TestState,
     buf_ptr: AbiPointer,
@@ -214,8 +199,9 @@ fn read_buffer(
     buf
 }
 
-// Mirrors the implementation `alloc_and_write` with less error handling. I have found no other way
-// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+// Mirrors the implementation `alloc_and_write` with less error handling. I have
+// found no other way to unit-test whether our use of the wasmi API is correct,
+// as we cannot create a test `Caller`.
 fn alloc_and_write(
     test_state: &mut TestState,
     buf_ptr_ptr: AbiPointer,
@@ -240,12 +226,12 @@ fn alloc_and_write(
     write_u32(test_state, len as u32, buf_ptr_len)
 }
 
-// Mirrors the implementation `write_buffer` with less error handling. I have found no other way to
-// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+// Mirrors the implementation `write_buffer` with less error handling. I have
+// found no other way to unit-test whether our use of the wasmi API is correct,
+// as we cannot create a test `Caller`.
 fn write_buffer(test_state: &mut TestState, source: &[u8], dest: AbiPointer) {
-    let dest = dest
-        .try_into()
-        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    let dest =
+        dest.try_into().expect("failed to convert AbiPointer to usize as required by wasmi API");
 
     // Get memory.
     let memory = test_state
@@ -258,8 +244,9 @@ fn write_buffer(test_state: &mut TestState, source: &[u8], dest: AbiPointer) {
     memory.write(&mut test_state.store, dest, source).unwrap()
 }
 
-// Mirrors the implementation `write_u32` with less error handling. I have found no other way to
-// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+// Mirrors the implementation `write_u32` with less error handling. I have found
+// no other way to unit-test whether our use of the wasmi API is correct, as we
+// cannot create a test `Caller`.
 fn write_u32(test_state: &mut TestState, value: u32, address: AbiPointer) {
     let value_bytes = &mut [0; 4];
     LittleEndian::write_u32(value_bytes, value);

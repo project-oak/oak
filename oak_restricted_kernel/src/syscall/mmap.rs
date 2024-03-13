@@ -52,9 +52,9 @@ pub fn mmap(
         return Err(Errno::EINVAL);
     }
 
-    // Don't touch anything below 2 MiB boundary (we don't want to make 0x0 a valid address).
-    // We also need to ensure the address is aligned to a 2 MiB boundary; adjust the address, if
-    // we're allowed to do so.
+    // Don't touch anything below 2 MiB boundary (we don't want to make 0x0 a valid
+    // address). We also need to ensure the address is aligned to a 2 MiB
+    // boundary; adjust the address, if we're allowed to do so.
     let addr = if flags.contains(MmapFlags::MAP_FIXED) {
         let addr = addr.ok_or(Errno::EINVAL)?;
         if !addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() < Size2MiB::SIZE {
@@ -63,14 +63,12 @@ pub fn mmap(
         }
         addr
     } else {
-        max(
-            addr.unwrap_or(VirtAddr::zero()),
-            VirtAddr::new(Size2MiB::SIZE),
-        )
-        .align_up(Size2MiB::SIZE)
+        max(addr.unwrap_or(VirtAddr::zero()), VirtAddr::new(Size2MiB::SIZE))
+            .align_up(Size2MiB::SIZE)
     };
 
-    // We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB boundary as well.
+    // We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB
+    // boundary as well.
     let size = align_up(size as u64, Size2MiB::SIZE) as usize;
     let count = size / Size2MiB::SIZE as usize;
 
@@ -115,9 +113,9 @@ pub fn mmap(
 
         // For each page we also need a physical frame to back it to create a mapping.
         for (page, frame) in pages.zip(frames) {
-            // Safety: find_unallocated_pages returns, well, unallocated pages and we've held the
-            // lock all the time so we can be sure that nobody else has mapped those
-            // pages.
+            // Safety: find_unallocated_pages returns, well, unallocated pages and we've
+            // held the lock all the time so we can be sure that nobody else has
+            // mapped those pages.
             unsafe {
                 pt.map_to_with_table_flags(
                     page,
@@ -161,8 +159,8 @@ pub fn mmap(
         pages
     };
 
-    // Safety: we've just allocated and mapped that chunk of memory, so (a) we know it's valid and
-    // (b) nobody else can have a reference to it yet.
+    // Safety: we've just allocated and mapped that chunk of memory, so (a) we know
+    // it's valid and (b) nobody else can have a reference to it yet.
     let buf = unsafe { slice::from_raw_parts_mut(pages.start.start_address().as_mut_ptr(), size) };
     // Zero out the memory, as required by mmap() semantics.
     buf.fill(0u8);
@@ -178,11 +176,7 @@ pub fn syscall_mmap(
     offset: usize,
 ) -> isize {
     if fd != -1 || offset != 0 {
-        log::warn!(
-            "mmap syscall called with invalid fd: {} or offset: {}",
-            fd,
-            offset
-        );
+        log::warn!("mmap syscall called with invalid fd: {} or offset: {}", fd, offset);
     }
     let prot = if let Some(prot) = MmapProtection::from_bits(prot as i32) {
         prot

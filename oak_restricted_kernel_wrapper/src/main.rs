@@ -42,9 +42,10 @@ pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
 
 /// Passes control to the extracted kernel.
 ///
-/// The stack is reset without dropping anything that is currently allocated on the stack. This is
-/// OK, since the wrapper code and data structures will essentially disappear after the jump. No
-/// structures in the wrapper are intended to outlive the wrapper itself.
+/// The stack is reset without dropping anything that is currently allocated on
+/// the stack. This is OK, since the wrapper code and data structures will
+/// essentially disappear after the jump. No structures in the wrapper are
+/// intended to outlive the wrapper itself.
 ///
 /// # Safety
 ///
@@ -65,8 +66,8 @@ unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and
-    // terminate the program.
+    // Trigger a breakpoint exception. As we don't have a #BP handler, this will
+    // triple fault and terminate the program.
     int3();
 
     loop {

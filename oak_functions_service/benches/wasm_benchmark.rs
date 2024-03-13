@@ -49,12 +49,8 @@ fn bench_invoke_echo(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let data = vec![88u8; size];
             b.iter(|| {
-                let response = test_state
-                    .wasm_handler
-                    .handle_invoke(Request {
-                        body: data.to_vec(),
-                    })
-                    .unwrap();
+                let response =
+                    test_state.wasm_handler.handle_invoke(Request { body: data.to_vec() }).unwrap();
                 assert_eq!(response.body, data.to_vec());
             })
         });
@@ -70,21 +66,15 @@ fn bench_invoke_lookup(c: &mut Criterion) {
     const KEY_INDEX: i32 = 100;
 
     let test_data = create_test_data(0, MAX_DATA_SIZE);
-    test_state
-        .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
+    test_state.lookup_data_manager.extend_next_lookup_data(test_data.clone());
     test_state.lookup_data_manager.finish_next_lookup_data();
 
     c.bench_function("lookup wasm", |b| {
         let request = format!("key{KEY_INDEX}").into_bytes();
         let expected_response = format!("value{KEY_INDEX}").into_bytes();
         b.iter(|| {
-            let response = test_state
-                .wasm_handler
-                .handle_invoke(Request {
-                    body: request.to_vec(),
-                })
-                .unwrap();
+            let response =
+                test_state.wasm_handler.handle_invoke(Request { body: request.to_vec() }).unwrap();
             assert_eq!(response.body, expected_response);
         })
     });
@@ -106,13 +96,7 @@ struct Transport<'a, H: Handler> {
 
 impl<'a, H: Handler> micro_rpc::Transport for Transport<'a, H> {
     fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, !> {
-        Ok(self
-            .wasm_handler
-            .handle_invoke(Request {
-                body: request.to_vec(),
-            })
-            .unwrap()
-            .body)
+        Ok(self.wasm_handler.handle_invoke(Request { body: request.to_vec() }).unwrap().body)
     }
 }
 
@@ -127,19 +111,11 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
     const START_KEY_INDEX: i32 = 100;
 
     let test_data = create_test_data(0, MAX_DATA_SIZE);
-    test_state_wasmi
-        .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
-    test_state_wasmi
-        .lookup_data_manager
-        .finish_next_lookup_data();
+    test_state_wasmi.lookup_data_manager.extend_next_lookup_data(test_data.clone());
+    test_state_wasmi.lookup_data_manager.finish_next_lookup_data();
 
-    test_state_wasmtime
-        .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
-    test_state_wasmtime
-        .lookup_data_manager
-        .finish_next_lookup_data();
+    test_state_wasmtime.lookup_data_manager.extend_next_lookup_data(test_data.clone());
+    test_state_wasmtime.lookup_data_manager.finish_next_lookup_data();
 
     fn run_lookup_with_items<H: Handler>(
         b: &mut criterion::Bencher,
@@ -160,9 +136,8 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
                 .collect(),
         };
 
-        let mut client = TestModuleClient::new(Transport {
-            wasm_handler: &mut test_state.wasm_handler,
-        });
+        let mut client =
+            TestModuleClient::new(Transport { wasm_handler: &mut test_state.wasm_handler });
 
         b.iter(|| {
             let response = client.lookup(&lookup_request).into_ok().unwrap();
@@ -197,9 +172,7 @@ fn flamegraph(c: &mut Criterion) {
     const START_KEY_INDEX: i32 = 100;
 
     let test_data = create_test_data(0, MAX_DATA_SIZE);
-    test_state
-        .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
+    test_state.lookup_data_manager.extend_next_lookup_data(test_data.clone());
     test_state.lookup_data_manager.finish_next_lookup_data();
 
     fn run_lookup_with_items<H: Handler>(
@@ -221,9 +194,8 @@ fn flamegraph(c: &mut Criterion) {
                 .collect(),
         };
 
-        let mut client = TestModuleClient::new(Transport {
-            wasm_handler: &mut test_state.wasm_handler,
-        });
+        let mut client =
+            TestModuleClient::new(Transport { wasm_handler: &mut test_state.wasm_handler });
 
         b.iter(|| {
             let response = client.lookup(&lookup_request).into_ok().unwrap();
@@ -237,10 +209,7 @@ fn flamegraph(c: &mut Criterion) {
 
 fn create_test_data(start: i32, end: i32) -> HashMap<Bytes, Bytes> {
     HashMap::from_iter((start..end).map(|i| {
-        (
-            format!("key{}", i).into_bytes().into(),
-            format!("value{}", i).into_bytes().into(),
-        )
+        (format!("key{}", i).into_bytes().into(), format!("value{}", i).into_bytes().into())
     }))
 }
 
@@ -259,8 +228,5 @@ fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -
     let wasm_handler =
         H::new_handler(&wasm_module_bytes, lookup_data_manager.clone(), None).unwrap();
 
-    TestState {
-        wasm_handler,
-        lookup_data_manager,
-    }
+    TestState { wasm_handler, lookup_data_manager }
 }

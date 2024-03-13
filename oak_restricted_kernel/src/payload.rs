@@ -31,14 +31,15 @@ use x86_64::{
 
 use crate::syscall::mmap::mmap;
 
-// Set up the userspace stack at the end of the lower half of the virtual address space.
-// Well... almost. It's one page lower than the very end, as otherwise the initial stack
-// pointer would need to be a noncanonical address, so let's avoid that whole mess
-// by moving down a bit.
+// Set up the userspace stack at the end of the lower half of the virtual
+// address space. Well... almost. It's one page lower than the very end, as
+// otherwise the initial stack pointer would need to be a noncanonical address,
+// so let's avoid that whole mess by moving down a bit.
 static APPLICATION_STACK_VIRT_ADDR: u64 = 0x8000_0000_0000 - Size2MiB::SIZE;
 
 self_cell!(
-    /// Self-referential struct so that we don't have to parse the ELF file multiple times.
+    /// Self-referential struct so that we don't have to parse the ELF file
+    /// multiple times.
     struct Binary {
         owner: Box<[u8]>,
 
@@ -47,14 +48,15 @@ self_cell!(
     }
 );
 
-/// Representation of an Restricted Application that the Restricted Kernel can run.
+/// Representation of an Restricted Application that the Restricted Kernel can
+/// run.
 pub struct Application {
     binary: Binary,
 }
 
 impl Application {
-    /// Attempts to parse the provided binary blob as an ELF file representing an Restricted
-    /// Application.
+    /// Attempts to parse the provided binary blob as an ELF file representing
+    /// an Restricted Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
         Ok(Application {
             binary: Binary::try_new(blob, |boxed| {
@@ -77,15 +79,15 @@ impl Application {
     }
 
     fn load_segment(&self, phdr: &ProgramHeader) -> Result<()> {
-        // In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment address if it
-        // isn't aligned on a 2 MiB page boundary.
+        // In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment
+        // address if it isn't aligned on a 2 MiB page boundary.
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
-        // As we've aligned the address down, we may need extra memory to account for the
-        // padding.
+        // As we've aligned the address down, we may need extra memory to account for
+        // the padding.
         let size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) as usize;
 
-        // PROT_READ is always implied; it's not possible to have a page that's, say, executable but
-        // not readable.
+        // PROT_READ is always implied; it's not possible to have a page that's, say,
+        // executable but not readable.
         let mut prot = MmapProtection::PROT_READ;
         if phdr.p_flags & PF_W > 0 {
             prot |= MmapProtection::PROT_WRITE;
@@ -94,10 +96,10 @@ impl Application {
             prot |= MmapProtection::PROT_EXEC;
         }
 
-        // As we need memory in the user space anyway, use the `mmap()` syscall that will
-        // allocate physical frames and sets up user-accessible page tables for us.
-        // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
-        // otherwise the mmap() will fail.
+        // As we need memory in the user space anyway, use the `mmap()` syscall that
+        // will allocate physical frames and sets up user-accessible page tables
+        // for us. Note that the expectation here is that all the sections are
+        // nicely 2 MiB-aligned, otherwise the mmap() will fail.
         mmap(
             Some(vaddr),
             size,
@@ -106,7 +108,8 @@ impl Application {
         )
         .expect("failed to allocate user memory");
 
-        // Safety: we know the target memory is valid as we've just allocated it with mmap().
+        // Safety: we know the target memory is valid as we've just allocated it with
+        // mmap().
         unsafe {
             core::ptr::copy_nonoverlapping(
                 self.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
@@ -122,14 +125,10 @@ impl Application {
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application.
+    /// The application must be built from a valid ELF file representing an Oak
+    /// Restricted Application.
     pub(self) unsafe fn map_into_memory(&self) -> VirtAddr {
-        for phdr in self
-            .program_headers()
-            .iter()
-            .filter(|&phdr| phdr.p_type == PT_LOAD)
-        {
+        for phdr in self.program_headers().iter().filter(|&phdr| phdr.p_type == PT_LOAD) {
             self.load_segment(phdr).unwrap();
         }
 
@@ -170,16 +169,13 @@ impl Process {
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application.
+    /// The application must be built from a valid ELF file representing an Oak
+    /// Restricted Application.
     pub unsafe fn from_application(application: &Application) -> Result<Self, anyhow::Error> {
-        let pml4 = crate::BASE_L4_PAGE_TABLE
-            .get()
-            .context("base l4 table should be set")?
-            .clone();
-        // Load the process's page table, so the application can be loaded into its memory. Hold
-        // onto the previous PT, so we can revert to it once the application has been mapped
-        // into the process pt.
+        let pml4 = crate::BASE_L4_PAGE_TABLE.get().context("base l4 table should be set")?.clone();
+        // Load the process's page table, so the application can be loaded into its
+        // memory. Hold onto the previous PT, so we can revert to it once the
+        // application has been mapped into the process pt.
         let mut outer_prev_page_table = {
             let pml4_frame = identify_pml4_frame(&pml4).context("could not get pml4 frame")?;
             // Safety: the new page table maintains the same mappings for kernel space.
@@ -188,12 +184,12 @@ impl Process {
                 .into_inner()
         };
 
-        // Safety: caller ensured the application is a valid ELF file representing an Oak Restricted
-        // Application.
+        // Safety: caller ensured the application is a valid ELF file representing an
+        // Oak Restricted Application.
         let entry = unsafe { application.map_into_memory() };
 
-        // We've mapped the memory into the process page tables. Let's revert to the previous page
-        // table.
+        // We've mapped the memory into the process page tables. Let's revert to the
+        // previous page table.
         {
             let mut mapped_prev_pt = outer_prev_page_table.inner().lock();
             let prev_page_table = mapped_prev_pt.level_4_table();
@@ -214,8 +210,8 @@ impl Process {
         let entry = self.entry;
         log::info!("Running application");
         // Enter Ring 3 and jump to user code.
-        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
-        // guarantee that the file made sense.
+        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
+        // user to guarantee that the file made sense.
         unsafe {
             asm! {
                 "mov rsp, {}", // user stack

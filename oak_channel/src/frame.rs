@@ -65,9 +65,7 @@ pub struct Frame<'a> {
 impl Frame<'_> {
     fn write<C: Channel + ?Sized>(&self, channel: &mut C) -> Result<(), anyhow::Error> {
         let frame_length = {
-            let length = BODY_OFFSET
-                .checked_add(self.body.len())
-                .expect("body length overflow");
+            let length = BODY_OFFSET.checked_add(self.body.len()).expect("body length overflow");
             Length::try_from(length).map_err(|_error| {
                 anyhow::Error::msg(format!(
                     "could convert the frame length usize to {:?}",
@@ -100,10 +98,11 @@ impl Framed {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read_exact(&mut padding_bytes)?;
         };
-        // As the read() above can block indefinitely we'll start measuring the time it took to read
-        // the data _after_ we've read the padding bytes. Strictly speaking we should start
-        // measuring the time as we're reading the first padding byte, but this should be close
-        // enough to get a rough idea.
+        // As the read() above can block indefinitely we'll start measuring the time it
+        // took to read the data _after_ we've read the padding bytes. Strictly
+        // speaking we should start measuring the time as we're reading the
+        // first padding byte, but this should be close enough to get a rough
+        // idea.
         let timer = Timer::new_rdtsc();
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];
@@ -124,9 +123,8 @@ impl Framed {
         };
 
         let body = {
-            let body_length: usize = length
-                .checked_sub(BODY_OFFSET)
-                .expect("body length underflow");
+            let body_length: usize =
+                length.checked_sub(BODY_OFFSET).expect("body length underflow");
             let tail = message_buffer.len();
             // Lack of capacity indicates corrupted frames and causes panic.
             message_buffer.put_bytes(0x00, body_length);
@@ -151,10 +149,7 @@ pub fn bytes_into_frames(data: &[u8]) -> anyhow::Result<Vec<Frame<'_>>> {
 
     let mut frames: Vec<Frame> = data
         .chunks(MAX_BODY_SIZE)
-        .map(|frame_body| Frame {
-            flags: Flags::default(),
-            body: frame_body,
-        })
+        .map(|frame_body| Frame { flags: Flags::default(), body: frame_body })
         .collect();
 
     frames

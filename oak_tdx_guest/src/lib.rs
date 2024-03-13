@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Rust implementation of features needed to implement guest enlightenment for operating systems
-//! running under Intel TDX.
+//! Rust implementation of features needed to implement guest enlightenment for
+//! operating systems running under Intel TDX.
 
 #![no_std]
 #![feature(split_array)]

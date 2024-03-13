@@ -32,7 +32,8 @@ pub struct DriverWriteOnlyQueue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: 
     /// The inner queue.
     pub inner: Queue<'a, QUEUE_SIZE, BUFFER_SIZE, A>,
 
-    /// The indices of free descriptors that can be used by the driver for writing.
+    /// The indices of free descriptors that can be used by the driver for
+    /// writing.
     free_ids: VecDeque<u16>,
 }
 
@@ -51,11 +52,12 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
         Self { inner, free_ids }
     }
 
-    /// Writes the data to a buffer and adds its descriptor to the available ring if possible and
-    /// returns the number of bytes that was copied from the `data` slice.
+    /// Writes the data to a buffer and adds its descriptor to the available
+    /// ring if possible and returns the number of bytes that was copied
+    /// from the `data` slice.
     ///
-    /// If there are no free buffers (the device has not used any of the available buffers) we
-    /// cannot write and have to wait.
+    /// If there are no free buffers (the device has not used any of the
+    /// available buffers) we cannot write and have to wait.
     ///
     /// Note: we can only write data to a driver-write-only queue.
     pub fn write_buffer(&mut self, data: &[u8]) -> Option<usize> {
@@ -68,9 +70,7 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
 
         let id = self.free_ids.pop_back()?;
         // TODO(#2876): Avoid copying the buffer slice if possible.
-        self.inner
-            .get_mut_slice_from_index(id as usize, len)
-            .copy_from_slice(&data[..len]);
+        self.inner.get_mut_slice_from_index(id as usize, len).copy_from_slice(&data[..len]);
 
         // Update the length of the descriptor.
         let desc = &mut self.inner.virt_queue.desc[id as usize];
@@ -105,18 +105,17 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
         Self { inner }
     }
 
-    /// Reads the contents of the next used buffer from the queue, if one is avaialble.
+    /// Reads the contents of the next used buffer from the queue, if one is
+    /// avaialble.
     ///
-    /// If a used buffer is found, this also advances the last used index by one.
+    /// If a used buffer is found, this also advances the last used index by
+    /// one.
     ///
     /// Note: we can only read data from a device-write-only queue.
     pub fn read_next_used_buffer(&mut self) -> Option<Vec<u8>> {
         let UsedElem { id, len } = self.inner.get_next_used_element()?;
         // TODO(#2876): Avoid copying the buffer slice if possible.
-        let result = self
-            .inner
-            .get_mut_slice_from_index(id as usize, len as usize)
-            .to_vec();
+        let result = self.inner.get_mut_slice_from_index(id as usize, len as usize).to_vec();
 
         // Recycle used element to so the buffer is available again.
         self.inner.add_available_descriptor(id as u16);
@@ -130,8 +129,8 @@ pub struct Queue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Alloc
     /// The underlying virtqueue.
     virt_queue: Box<VirtQueue<QUEUE_SIZE>, &'a A>,
 
-    /// The global buffer used by the virtqueue. Each descriptor uses a slice with an offset into
-    /// this single buffer for it own buffer.
+    /// The global buffer used by the virtqueue. Each descriptor uses a slice
+    /// with an offset into this single buffer for it own buffer.
     buffer: Vec<u8, &'a A>,
 
     /// The address of the first byte in the global buffer.
@@ -144,25 +143,16 @@ pub struct Queue<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Alloc
 impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
     Queue<'a, QUEUE_SIZE, BUFFER_SIZE, A>
 {
-    /// Creates a new instance of `Queue` by pre-initialising all the descriptors and creating
-    /// enough buffer space for each descriptor.
+    /// Creates a new instance of `Queue` by pre-initialising all the
+    /// descriptors and creating enough buffer space for each descriptor.
     fn new<VP: Translator>(flags: DescFlags, translate: VP, alloc: &'a A) -> Self {
-        assert!(
-            QUEUE_SIZE.is_power_of_two(),
-            "queue size must be a power of 2"
-        );
+        assert!(QUEUE_SIZE.is_power_of_two(), "queue size must be a power of 2");
 
         let mut buffer = Vec::with_capacity_in(BUFFER_SIZE * QUEUE_SIZE, alloc);
         buffer.resize(BUFFER_SIZE * QUEUE_SIZE, 0u8);
         let base_offset = translate(VirtAddr::from_ptr(buffer.as_ptr())).unwrap();
         let desc: Vec<Desc> = (0..QUEUE_SIZE)
-            .map(|i| {
-                Desc::new(
-                    flags,
-                    base_offset + (i * BUFFER_SIZE) as u64,
-                    BUFFER_SIZE as u32,
-                )
-            })
+            .map(|i| Desc::new(flags, base_offset + (i * BUFFER_SIZE) as u64, BUFFER_SIZE as u32))
             .collect();
         let desc: [Desc; QUEUE_SIZE] = desc.try_into().unwrap();
         let virt_queue = Box::new_in(
@@ -173,12 +163,7 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
             },
             alloc,
         );
-        Self {
-            virt_queue,
-            buffer,
-            base_offset,
-            last_used_idx: Wrapping(0),
-        }
+        Self { virt_queue, buffer, base_offset, last_used_idx: Wrapping(0) }
     }
 
     /// Gets the address of the descriptor table.
@@ -210,10 +195,11 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
         &mut self.buffer[start..end]
     }
 
-    /// Tries to get the element referencing the next used descriptor that we have not yet seen, if
-    /// any.
+    /// Tries to get the element referencing the next used descriptor that we
+    /// have not yet seen, if any.
     ///
-    /// If an unseen used descriptor is found, this also advances the last used index by one.
+    /// If an unseen used descriptor is found, this also advances the last used
+    /// index by one.
     fn get_next_used_element(&mut self) -> Option<UsedElem> {
         // Memory fence so that we read a fresh value from the device-owned section.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
@@ -233,8 +219,8 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
         // Increment the available ring index to use next time.
         let next = self.virt_queue.avail.idx + Wrapping(1);
         let idx = &mut self.virt_queue.avail.idx;
-        // Memory fence to ensure the device will not see the index update before the available ring
-        // entry update.
+        // Memory fence to ensure the device will not see the index update before the
+        // available ring entry update.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
         *idx = next;
     }

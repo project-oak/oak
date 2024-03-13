@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-//! This module contains structs that can be used to interpret the contents of the secrets page that
-//! is provisioned into the VM guest memory during SEV-SNP startup.
+//! This module contains structs that can be used to interpret the contents of
+//! the secrets page that is provisioned into the VM guest memory during SEV-SNP
+//! startup.
 
 use strum::FromRepr;
 use zerocopy::{FromBytes, FromZeroes};
@@ -86,31 +87,37 @@ static_assertions::assert_eq_size!(GuestReservedArea, [u8; 96]);
 pub struct SecretsPage {
     /// The version of the secrets page.
     pub version: u32,
-    /// The least significant bit indicates whether an initial migration image is enabled in the
-    /// guest context. All other bits are reserved and must be zero.
+    /// The least significant bit indicates whether an initial migration image
+    /// is enabled in the guest context. All other bits are reserved and
+    /// must be zero.
     ///
     /// Use `SecretsPage::get_imi_en` to try to get this as an `Imi` enum.
     pub imi_en: u32,
-    /// The family, model and stepping of the CPU as reported in CPUID Fn0000_0001_EAX.
-    /// See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
+    /// The family, model and stepping of the CPU as reported in CPUID
+    /// Fn0000_0001_EAX. See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
     pub fms: u32,
     /// Reserved. Must be 0.
     _reserved: u32,
-    /// Guest-OS-visible workarounds provided by the hypervisor during SNP_LAUNCH_START. The format
-    /// is hypervisor-defined.
+    /// Guest-OS-visible workarounds provided by the hypervisor during
+    /// SNP_LAUNCH_START. The format is hypervisor-defined.
     pub gosv: [u8; 16],
-    /// VM-platform communication key 0. AES key used for encrypting messages to the platform.
+    /// VM-platform communication key 0. AES key used for encrypting messages to
+    /// the platform.
     pub vmpck_0: [u8; 32],
-    /// VM-platform communication key 1. AES key used for encrypting messages to the platform.
+    /// VM-platform communication key 1. AES key used for encrypting messages to
+    /// the platform.
     pub vmpck_1: [u8; 32],
-    /// VM-platform communication key 2. AES key used for encrypting messages to the platform.
+    /// VM-platform communication key 2. AES key used for encrypting messages to
+    /// the platform.
     pub vmpck_2: [u8; 32],
-    /// VM-platform communication key 3. AES key used for encrypting messages to the platform.
+    /// VM-platform communication key 3. AES key used for encrypting messages to
+    /// the platform.
     pub vmpck_3: [u8; 32],
     /// Area reserved for guest OS use.
     pub guest_area_0: GuestReservedArea,
-    /// Bitmap indicating which quadwords of the VM Save Area have been tweaked. This is only used
-    /// if the VMSA Register Protection feature is enabled.
+    /// Bitmap indicating which quadwords of the VM Save Area have been tweaked.
+    /// This is only used if the VMSA Register Protection feature is
+    /// enabled.
     pub vmsa_tweak_bitmap: [u8; 64],
     /// Area reserved for guest OS use.
     pub guest_area_1: [u8; 32],
@@ -138,8 +145,8 @@ pub enum Imi {
 }
 
 impl SecretsPage {
-    /// Checks that version is the expected value, `SecretsPage::imi_en` has a valid value, and that
-    /// the reserved bytes are all zero.
+    /// Checks that version is the expected value, `SecretsPage::imi_en` has a
+    /// valid value, and that the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if !(SECRETS_PAGE_MIN_VERSION..=SECRETS_PAGE_MAX_VERSION).contains(&self.version) {
             return Err("invalid version");
