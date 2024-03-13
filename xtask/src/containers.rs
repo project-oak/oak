@@ -76,6 +76,7 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
     wasm_path: &str,
     port: u16,
     lookup_data_path: &str,
+    communication_channel: &str,
 ) -> Box<dyn Runnable> {
     let args = vec![
         format!("--vmm-binary={}", which::which("qemu-system-x86_64").unwrap().to_str().unwrap()),
@@ -117,6 +118,10 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
         format!("--wasm={}", wasm_path),
         format!("--port={}", port),
         format!("--lookup-data={}", lookup_data_path),
+        // Use the current thread ID as the CID, as we may have tests that start multiple QEMUs in
+        // parallel. Starting multiple QEMUs in one thread will fail.
+        format!("--virtio-guest-cid={}", nix::unistd::gettid()),
+        format!("--communication-channel={}", communication_channel),
     ];
     Cmd::new(
         workspace_path(&[
@@ -136,6 +141,7 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
 pub async fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
+    communication_channel: &str,
 ) -> (crate::testing::BackgroundStep, u16) {
     build_prerequisites().await;
 
@@ -144,10 +150,14 @@ pub async fn run_oak_functions_example_in_background(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
-    let background = crate::testing::run_background(
-        run_oak_functions_launcher_example_with_lookup_data(wasm_path, port, lookup_data_path),
-    )
-    .await;
+    let background =
+        crate::testing::run_background(run_oak_functions_launcher_example_with_lookup_data(
+            wasm_path,
+            port,
+            lookup_data_path,
+            communication_channel,
+        ))
+        .await;
 
     (background, port)
 }

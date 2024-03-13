@@ -146,28 +146,22 @@ impl Qemu {
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
         let vm_address = crate::VM_LOCAL_ADDRESS;
-        let vm_port = crate::VM_LOCAL_PORT;
         let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
-        let host_proxy_rule = if let Some(host_proxy_port) = host_proxy_port {
-            format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}")
-        } else {
-            String::new()
+
+        let mut netdev_rules = vec![
+            "user".to_string(),
+            "id=netdev".to_string(),
+            format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
+            format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
+        ];
+        if let Some(host_proxy_port) = host_proxy_port {
+            let vm_port = crate::VM_LOCAL_PORT;
+            netdev_rules.push(format!(
+                "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
+            ));
         };
-        cmd.args([
-            "-netdev",
-            [
-                "user",
-                "id=netdev",
-                &format!(
-                    "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
-                ),
-                &host_proxy_rule,
-                &format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
-            ]
-            .join(",")
-            .as_str(),
-        ]);
+        cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         if let Some(virtio_guest_cid) = params.virtio_guest_cid {
             cmd.args([
@@ -226,7 +220,6 @@ impl Qemu {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
 
-    #[allow(unused)]
     pub fn guest_cid(&self) -> Option<u32> {
         self.guest_cid
     }
