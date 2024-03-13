@@ -1,10 +1,33 @@
+# Configures Rust code formatting for Oak.
 # See https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
-comment_width = 100
-format_code_in_doc_comments = true
-max_width = 100
-normalize_doc_attributes = true
+#
+# Google rustfmt configuration.
+
+edition = "2021"
+version = "Two"
+
+# The "Default" setting has a heuristic which splits lines too aggresively.
+# We are willing to revisit this setting in future versions of rustfmt.
+# Bugs:
+#   * https://github.com/rust-lang/rustfmt/issues/3119
+#   * https://github.com/rust-lang/rustfmt/issues/3120
+use_small_heuristics = "Max"
+newline_style = "Unix"
 wrap_comments = true
+format_generated_files = false
+
+#
+# Overrides from Oak.
+#
+# These are the defaults, repeated to avoid reformatting when they change:
+#
+comment_width = 80
+max_width = 100
+#
+# Non-default values from here:
+#
+format_code_in_doc_comments = true
+normalize_doc_attributes = true
 imports_granularity = "Crate"
 imports_layout = "mixed"
-edition = "2021"
 group_imports = "StdExternalCrate"
