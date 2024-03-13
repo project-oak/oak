@@ -192,7 +192,7 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
             .map_err(|error| anyhow::anyhow!(error))?;
             #[cfg(feature = "std")]
             println!(
-                "✅ layer {} is endorsed by the previous layer.",
+                "✅ layer {} is signed by the previous layer.",
                 // given there's a seperate root layer, we start the index at 1
                 index + 1
             );
@@ -236,7 +236,7 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
             .map_err(|error| anyhow::anyhow!(error))?;
     }
 
-    println!("✅ application keys are endorsed by the previous layer",);
+    println!("✅ application keys are signed by the previous layer",);
 
     extract_evidence(evidence)
 }
@@ -543,7 +543,7 @@ fn verify_kernel_layer(
             .context("no kernel image reference value")?,
     )
     .context("kernel image failed verification")?;
-    println!("✅ kernel image measurement matches the evidence and endorsement.",);
+    println!("✅ kernel image measurement matches the evidence.",);
 
     verify_measurement_digest(
         values
@@ -572,7 +572,7 @@ fn verify_kernel_layer(
             .context("no kernel setup data reference value")?,
     )
     .context("kernel setup data failed verification")?;
-    println!("✅ kernel setup data measurement matches the evidence and endorsement.",);
+    println!("✅ kernel setup data measurement matches the evidence.",);
 
     verify_measurement_digest(
         values
@@ -653,7 +653,7 @@ fn verify_application_layer(
             .context("application binary reference value")?,
     )
     .context("application binary failed verification")?;
-    println!("✅ application measurement matches the evidence and endorsement.",);
+    println!("✅ application measurement matches the evidence.",);
 
     verify_measurement_digest(
         values.config.as_ref().context("no config evidence value")?,
