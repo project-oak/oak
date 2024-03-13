@@ -153,7 +153,9 @@ impl Qemu {
             "user".to_string(),
             "id=netdev".to_string(),
             format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
-            format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
+            format!(
+                "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
+            ),
         ];
         if let Some(host_proxy_port) = host_proxy_port {
             let vm_port = crate::VM_LOCAL_PORT;

@@ -134,13 +134,8 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 
 #[derive(Clone)]
 pub enum Channel {
-    Network {
-        host_proxy_port: u16,
-        trusted_app_address: Option<SocketAddr>,
-    },
-    VirtioVsock {
-        trusted_app_address: Option<VsockAddr>,
-    },
+    Network { host_proxy_port: u16, trusted_app_address: Option<SocketAddr> },
+    VirtioVsock { trusted_app_address: Option<VsockAddr> },
 }
 
 /// Interface that is connected to the trusted application.
@@ -154,13 +149,12 @@ impl TryFrom<Channel> for TrustedApplicationAddress {
 
     fn try_from(channel: Channel) -> Result<TrustedApplicationAddress, Self::Error> {
         match channel {
-            Channel::Network {
-                host_proxy_port: _,
-                trusted_app_address,
-            } => trusted_app_address.map(TrustedApplicationAddress::Network),
-            Channel::VirtioVsock {
-                trusted_app_address,
-            } => trusted_app_address.map(TrustedApplicationAddress::VirtioVsock),
+            Channel::Network { host_proxy_port: _, trusted_app_address } => {
+                trusted_app_address.map(TrustedApplicationAddress::Network)
+            }
+            Channel::VirtioVsock { trusted_app_address } => {
+                trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
+            }
         }
         .ok_or_else(|| anyhow::anyhow!("trusted application address not set"))
     }
@@ -222,28 +216,19 @@ impl Launcher {
                 let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
                 Channel::Network { host_proxy_port, trusted_app_address: None }
             }
-            ChannelType::VirtioVsock => Channel::VirtioVsock {
-                trusted_app_address: None,
-            },
+            ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
-        let host_orchestrator_proxy_port = {
-            TcpListener::bind(orchestrator_sockaddr)
-                .await?
-                .local_addr()?
-                .port()
-        };
+        let host_orchestrator_proxy_port =
+            { TcpListener::bind(orchestrator_sockaddr).await?.local_addr()?.port() };
         let vmm = qemu::Qemu::start(
             args.qemu_params,
             port,
             match trusted_app_channel {
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address: _,
-                } => Some(host_proxy_port),
-                Channel::VirtioVsock {
-                    trusted_app_address: _,
-                } => None,
+                Channel::Network { host_proxy_port, trusted_app_address: _ } => {
+                    Some(host_proxy_port)
+                }
+                Channel::VirtioVsock { trusted_app_address: _ } => None,
             },
             host_orchestrator_proxy_port,
         )?;
@@ -285,9 +270,7 @@ impl Launcher {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), *host_proxy_port));
                 }
-                Channel::VirtioVsock {
-                    trusted_app_address,
-                } => {
+                Channel::VirtioVsock { trusted_app_address } => {
                     trusted_app_address.replace(VsockAddr::new(
                         self.vmm.guest_cid().expect("VMM does not have a guest CID"),
                         VM_LOCAL_PORT.into(),

@@ -52,15 +52,11 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut config = ApplicationConfig::default();
     if args.containers_args.communication_channel == ChannelType::VirtioVsock {
-        config.communication_channel = Some(CommunicationChannel::VsockChannel(
-            VsockCommunicationChannel::default(),
-        ));
+        config.communication_channel =
+            Some(CommunicationChannel::VsockChannel(VsockCommunicationChannel::default()));
 
         // If no explicit CID was specified, override it to be the current process ID.
-        args.containers_args
-            .qemu_params
-            .virtio_guest_cid
-            .get_or_insert_with(std::process::id);
+        args.containers_args.qemu_params.virtio_guest_cid.get_or_insert_with(std::process::id);
     }
     args.containers_args.application_config = config.encode_to_vec();
 
