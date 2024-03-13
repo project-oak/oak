@@ -801,6 +801,9 @@
 <a href="#801" id="801">801</a>
 <a href="#802" id="802">802</a>
 <a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1194,7 +1197,10 @@
     </span><span class="kw">pub </span>amd_sev: ::core::option::Option&lt;AmdSevReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>intel_tdx: ::core::option::Option&lt;IntelTdxReferenceValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="doccomment">/// When insecure is set no verification of the TEE platform is performed. This can
+    /// be used when not running in a TEE or when the client is agnostic about the
+    /// platform and doesn&#39;t care about the hardware verification.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>insecure: ::core::option::Option&lt;InsecureReferenceValues&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]

@@ -1114,15 +1114,6 @@
 <a href="#1114" id="1114">1114</a>
 <a href="#1115" id="1115">1115</a>
 <a href="#1116" id="1116">1116</a>
-<a href="#1117" id="1117">1117</a>
-<a href="#1118" id="1118">1118</a>
-<a href="#1119" id="1119">1119</a>
-<a href="#1120" id="1120">1120</a>
-<a href="#1121" id="1121">1121</a>
-<a href="#1122" id="1122">1122</a>
-<a href="#1123" id="1123">1123</a>
-<a href="#1124" id="1124">1124</a>
-<a href="#1125" id="1125">1125</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1529,11 +1520,8 @@
     <span class="macro">anyhow::bail!</span>(<span class="string">&quot;needs implementation&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies a fake attestation report.
-</span><span class="kw">fn </span>verify_fake_attestation_report(
-    _attestation_report_values: <span class="kw-2">&amp;</span>FakeAttestationReport,
-    _reference_values: <span class="kw-2">&amp;</span>InsecureReferenceValues,
-) -&gt; anyhow::Result&lt;()&gt; {
+<span class="doccomment">/// Verifies insecure attestation.
+</span><span class="kw">fn </span>verify_insecure(_reference_values: <span class="kw-2">&amp;</span>InsecureReferenceValues) -&gt; anyhow::Result&lt;()&gt; {
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -1590,8 +1578,13 @@
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RootLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">match </span>values.report.as_ref() {
-        <span class="prelude-val">Some</span>(Report::SevSnp(report_values)) =&gt; {
+    <span class="kw">match </span>(
+        values.report.as_ref(),
+        reference_values.amd_sev.as_ref(),
+        reference_values.intel_tdx.as_ref(),
+        reference_values.insecure.as_ref(),
+    ) {
+        (<span class="prelude-val">Some</span>(Report::SevSnp(report_values)), <span class="prelude-val">Some</span>(amd_sev_values), <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
             <span class="comment">// See b/327069120: We don&#39;t have the correct digest in the endorsement
             // to compare the stage0 measurement yet. This will fail UNLESS the stage0
             // reference value is set to `skip {}`.
@@ -1603,37 +1596,26 @@
                 <span class="kw-2">&amp;</span>measurement,
                 now_utc_millis,
                 endorsements.and_then(|value| value.stage0.as_ref()),
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context(<span class="string">&quot;AMD SEV-SNP reference values not found&quot;</span>)<span class="question-mark">?
-                    </span>.stage0
+                amd_sev_values
+                    .stage0
                     .as_ref()
                     .context(<span class="string">&quot;stage0 binary reference values not found&quot;</span>)<span class="question-mark">?</span>,
             )<span class="question-mark">?</span>;
-            verify_amd_sev_attestation_report(
-                report_values,
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context(<span class="string">&quot;AMD SEV-SNP reference values not found&quot;</span>)<span class="question-mark">?</span>,
-            )
+            verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
-        <span class="prelude-val">Some</span>(Report::Tdx(report_values)) =&gt; verify_intel_tdx_attestation_report(
-            report_values,
-            reference_values
-                .intel_tdx
-                .as_ref()
-                .context(<span class="string">&quot;Intel TDX reference values not found&quot;</span>)<span class="question-mark">?</span>,
-        ),
-        <span class="prelude-val">Some</span>(Report::Fake(report_values)) =&gt; verify_fake_attestation_report(
-            report_values,
-            reference_values
-                .insecure
-                .as_ref()
-                .context(<span class="string">&quot;insecure reference values not found&quot;</span>)<span class="question-mark">?</span>,
-        ),
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no attestation report&quot;</span>)),
+        (<span class="prelude-val">Some</span>(Report::Tdx(report_values)), <span class="kw">_</span>, <span class="prelude-val">Some</span>(intel_tdx_values), <span class="kw">_</span>) =&gt; {
+            verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
+        }
+        (<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">Some</span>(insecure_values)) =&gt; {
+            verify_insecure(insecure_values).context(<span class="string">&quot;insecure root layer verification failed&quot;</span>)
+        }
+        (<span class="prelude-val">Some</span>(Report::Fake(<span class="kw">_</span>)), <span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; {
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;unexpected insecure attestation report&quot;</span>))
+        }
+        (<span class="prelude-val">None</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no attestation report&quot;</span>)),
+        (<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+            <span class="string">&quot;invalid combination of root layer reference values and endorsed evidence&quot;
+        </span>)),
     }
 }
 
