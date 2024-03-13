@@ -27,7 +27,7 @@ use std::{
 use anyhow::Result;
 use log::warn;
 use oak_attestation_verification::claims::{
-    ClaimPredicate, Statement, Subject, CLAIM_V1, STATEMENT_INTOTO_V01,
+    ClaimPredicate, Statement, Subject, PREDICATE_V2, STATEMENT_V1,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
@@ -68,8 +68,8 @@ pub fn generate_claim(
     };
 
     Ok(Statement {
-        _type: String::from(STATEMENT_INTOTO_V01),
-        predicate_type: String::from(CLAIM_V1),
+        _type: String::from(STATEMENT_V1),
+        predicate_type: String::from(PREDICATE_V2),
         subject: vec![Subject {
             name: String::from(model_name),
             digest: BTreeMap::from([(String::from("sha256"), String::from(model_digest))]),

@@ -25,6 +25,7 @@ exports_files([
     "fake_evidence.binarypb",
     "fake_evidence.textproto",
     "logentry.json",
+    "oak_containers_stage1.pem",
     "oak-development.pem",
     "oc_evidence.binarypb",
     "oc_evidence.textproto",

@@ -30,7 +30,7 @@ public class SignatureVerifierTest {
   private static final String SIGNATURE_PATH =
       "oak_attestation_verification/testdata/endorsement.json.sig";
   private static final String PUBLIC_KEY_PATH =
-      "oak_attestation_verification/testdata/oak-development.pem";
+      "oak_attestation_verification/testdata/oak_containers_stage1.pem";
   private static final String CONTENT_PATH =
       "oak_attestation_verification/testdata/endorsement.json";
 
