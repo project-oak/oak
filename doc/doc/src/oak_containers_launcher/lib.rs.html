@@ -362,6 +362,28 @@
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -418,6 +440,7 @@
     task::JoinHandle,
     time::{timeout, Duration},
 };
+<span class="kw">use </span>tokio_vsock::VsockAddr;
 <span class="kw">use </span>tonic::transport::Channel <span class="kw">as </span>TonicChannel;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
@@ -447,6 +470,9 @@
     <span class="doccomment">/// Use virtual networking.
     </span><span class="attr">#[default]
     </span>Network,
+
+    <span class="comment">// Use virtio-vsock.
+    </span>VirtioVsock,
 }
 
 <span class="attr">#[derive(Parser, Debug)]
@@ -500,11 +526,15 @@
         host_proxy_port: u16,
         trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
     },
+    VirtioVsock {
+        trusted_app_address: <span class="prelude-ty">Option</span>&lt;VsockAddr&gt;,
+    },
 }
 
 <span class="doccomment">/// Interface that is connected to the trusted application.
 </span><span class="kw">pub enum </span>TrustedApplicationAddress {
     Network(SocketAddr),
+    VirtioVsock(VsockAddr),
 }
 
 <span class="kw">impl </span>TryFrom&lt;Channel&gt; <span class="kw">for </span>TrustedApplicationAddress {
@@ -516,6 +546,9 @@
                 host_proxy_port: <span class="kw">_</span>,
                 trusted_app_address,
             } =&gt; trusted_app_address.map(TrustedApplicationAddress::Network),
+            Channel::VirtioVsock {
+                trusted_app_address,
+            } =&gt; trusted_app_address.map(TrustedApplicationAddress::VirtioVsock),
         }
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted application address not set&quot;</span>))
     }
@@ -525,6 +558,7 @@
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
             TrustedApplicationAddress::Network(addr) =&gt; addr.fmt(f),
+            TrustedApplicationAddress::VirtioVsock(addr) =&gt; addr.fmt(f),
         }
     }
 }
@@ -565,12 +599,7 @@
             shutdown_receiver,
         ));
 
-        <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the server. Since we
-        // don&#39;t have a mechanism to pass this port to QEMU we have to unbind it by dropping it.
-        // There is a small window for a race condition, but since the assigned port will be random
-        // the probability of another process grabbing the port before QEMU can should be very low.
-
-        </span><span class="kw">let </span>trusted_app_channel = <span class="kw">match </span>args.communication_channel {
+        <span class="kw">let </span>trusted_app_channel = <span class="kw">match </span>args.communication_channel {
             ChannelType::Network =&gt; {
                 <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the server.
                 // Since we don&#39;t have a mechanism to pass this port to QEMU we have
@@ -584,7 +613,11 @@
                     trusted_app_address: <span class="prelude-val">None</span>,
                 }
             }
+            ChannelType::VirtioVsock =&gt; Channel::VirtioVsock {
+                trusted_app_address: <span class="prelude-val">None</span>,
+            },
         };
+
         <span class="kw">let </span>host_orchestrator_proxy_port = {
             TcpListener::bind(orchestrator_sockaddr)
                 .<span class="kw">await</span><span class="question-mark">?
@@ -599,6 +632,9 @@
                     host_proxy_port,
                     trusted_app_address: <span class="kw">_</span>,
                 } =&gt; <span class="prelude-val">Some</span>(host_proxy_port),
+                Channel::VirtioVsock {
+                    trusted_app_address: <span class="kw">_</span>,
+                } =&gt; <span class="prelude-val">None</span>,
             },
             host_orchestrator_proxy_port,
         )<span class="question-mark">?</span>;
@@ -641,6 +677,14 @@
                 } =&gt; {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), <span class="kw-2">*</span>host_proxy_port));
+                }
+                Channel::VirtioVsock {
+                    trusted_app_address,
+                } =&gt; {
+                    trusted_app_address.replace(VsockAddr::new(
+                        <span class="self">self</span>.vmm.guest_cid().expect(<span class="string">&quot;VMM does not have a guest CID&quot;</span>),
+                        VM_LOCAL_PORT.into(),
+                    ));
                 }
             }
         }

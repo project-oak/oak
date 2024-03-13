@@ -127,6 +127,26 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -162,7 +182,9 @@
 <span class="kw">use </span>oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 <span class="kw">use </span>oak_functions_launcher::LookupDataConfig;
 <span class="kw">use </span>tokio::time::Duration;
+<span class="kw">use </span>tokio_vsock::VsockStream;
 <span class="kw">use </span>tonic::transport::Endpoint;
+<span class="kw">use </span>tower::service_fn;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InitializeRequest,
@@ -187,6 +209,24 @@
                         .connect()
                         .<span class="kw">await
                         </span>.context(<span class="string">&quot;couldn&#39;t connect to trusted app&quot;</span>)<span class="question-mark">?
+                </span>}
+                TrustedApplicationAddress::VirtioVsock(trusted_app_address) =&gt; {
+                    <span class="comment">// The common URI scheme would be `vsock:cid:port` (see
+                    // https://grpc.github.io/grpc/cpp/md_doc_naming.html), but this is not palatable
+                    // to the URI class in Rust. The URL is ignored anyway as we&#39;re going to
+                    // override the connector so it doesn&#39;t matter what we pass in there.
+                    </span>Endpoint::from_shared(<span class="macro">format!</span>(
+                        <span class="string">&quot;vsock://{}:{}&quot;</span>,
+                        trusted_app_address.cid(),
+                        trusted_app_address.port()
+                    ))
+                    .context(<span class="string">&quot;couldn&#39;t form channel&quot;</span>)<span class="question-mark">?
+                    </span>.connect_timeout(Duration::from_secs(<span class="number">120</span>))
+                    .connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
+                        VsockStream::connect(trusted_app_address)
+                    }))
+                    .<span class="kw">await
+                    </span>.context(<span class="string">&quot;couldn&#39;t connect to trusted app&quot;</span>)<span class="question-mark">?
                 </span>}
             };
             GrpcOakFunctionsClient::new(channel)
