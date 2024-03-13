@@ -804,6 +804,15 @@
 <a href="#804" id="804">804</a>
 <a href="#805" id="805">805</a>
 <a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1266,6 +1275,16 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;BinaryReferenceValue&gt;,
 }
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>CbSystemLayerReferenceValues {
+    <span class="doccomment">/// Verifies the system image binary.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;BinaryReferenceValue&gt;,
+    <span class="doccomment">/// Verifies the command line by which the system image was built.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>system_cmd_line: ::core::option::Option&lt;StringReferenceValue&gt;,
+}
 <span class="doccomment">/// Represents an application running under Oak Restricted Kernel.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1276,6 +1295,14 @@
     <span class="doccomment">/// Verifies configuration with respect to the application binary.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;BinaryReferenceValue&gt;,
+}
+<span class="doccomment">/// Represents digest of application task config.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>CbApplicationLayerReferenceValues {
+    <span class="doccomment">/// Verifies the application task config.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;BinaryReferenceValue&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1311,24 +1338,15 @@
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbLayerReferenceValues {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>layer_name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>files: ::prost::alloc::vec::Vec&lt;FileReferenceValue&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>config: ::core::option::Option&lt;StringReferenceValue&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
-    </span><span class="kw">pub </span>command_line: ::core::option::Option&lt;StringReferenceValue&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>CbReferenceValues {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerReferenceValues&gt;,
-    <span class="doccomment">/// Generic reference values starting from the second layer.
-    </span><span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>layers: ::prost::alloc::vec::Vec&lt;CbLayerReferenceValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerReferenceValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;CbSystemLayerReferenceValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;CbApplicationLayerReferenceValues&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
