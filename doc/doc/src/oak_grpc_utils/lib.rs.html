@@ -82,11 +82,6 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -124,18 +119,15 @@
 
 <span class="kw">impl </span>ExternPath {
     <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        ExternPath {
-            proto_path: proto_path.to_string(),
-            rust_path: rust_path.to_string(),
-        }
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
     }
 }
 
 <span class="doccomment">/// Generate gRPC code from Protobuf using `tonic` library.
 ///
-/// The path to the root repository must be passed as `include`. All paths to `.proto` files
-/// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
-/// be specified relative to this path.
+/// The path to the root repository must be passed as `include`. All paths to
+/// `.proto` files must be specified relative to this path. Likewise, all
+/// imported paths in `.proto` files must be specified relative to this path.
 </span><span class="kw">pub fn </span>generate_grpc_code(
     protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
     include: <span class="kw">impl </span>AsRef&lt;Path&gt;,
@@ -151,16 +143,14 @@
         .build_client(options.build_client)
         .build_server(options.build_server);
 
-    <span class="comment">// Do not use the default logic for re-running the build script, as it covers the entire
-    // include directory, which also includes all the Rust code, so everything is always rebuilt
-    // every time. Instead, we specify the list of files to watch explicitly, even though that
-    // may not have 100% recall, since some of the transitive includes may be missed.
+    <span class="comment">// Do not use the default logic for re-running the build script, as it covers
+    // the entire include directory, which also includes all the Rust code, so
+    // everything is always rebuilt every time. Instead, we specify the list of
+    // files to watch explicitly, even though that may not have 100% recall,
+    // since some of the transitive includes may be missed.
     </span>config = config.emit_rerun_if_changed(<span class="bool-val">false</span>);
     protos.iter().for_each(|filename| {
-        <span class="macro">println!</span>(
-            <span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>,
-            filename.as_ref().as_os_str().to_string_lossy()
-        )
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, filename.as_ref().as_os_str().to_string_lossy())
     });
 
     <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
@@ -171,8 +161,8 @@
 
 <span class="kw">fn </span>set_protoc_env_if_unset() {
     <span class="kw">if </span>std::env::var(<span class="string">&quot;PROTOC&quot;</span>).is_err() {
-        <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to use the
-        // bundled one that we remove as part of the vendoring process.
+        <span class="comment">// Use the system protoc if no override is set, so prost-build does not try to
+        // use the bundled one that we remove as part of the vendoring process.
         </span>std::env::set_var(<span class="string">&quot;PROTOC&quot;</span>, <span class="string">&quot;protoc&quot;</span>);
     }
 }

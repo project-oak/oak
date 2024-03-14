@@ -152,24 +152,6 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -203,8 +185,8 @@
 };
 
 <span class="doccomment">/// The main purpose of this factory is to allow creating a new instance of the
-/// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the
-/// current lookup data.
+/// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable
+/// snapshot of the current lookup data.
 </span><span class="kw">pub struct </span>StdWasmApiFactory {
     <span class="kw">pub </span>lookup_data_manager: Arc&lt;LookupDataManager&gt;,
 }
@@ -226,8 +208,8 @@
 
 <span class="doccomment">/// Implementation of the standard Oak Functions API.
 ///
-/// There are probably more locks than necessary here, it should be possible to reduce them in the
-/// future.
+/// There are probably more locks than necessary here, it should be possible to
+/// reduce them in the future.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>StdWasmApiImpl {
     lookup_data: LookupData,
@@ -243,26 +225,21 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw">_</span>: ReadRequestRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ReadRequestResponse, micro_rpc::Status&gt; {
-        <span class="self">self</span>.logger
-            .log_sensitive(Level::Debug, <span class="string">&quot;invoked read_request&quot;</span>);
-        <span class="prelude-val">Ok</span>(ReadRequestResponse {
-            body: <span class="self">self</span>.request.clone(),
-        })
+        <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">&quot;invoked read_request&quot;</span>);
+        <span class="prelude-val">Ok</span>(ReadRequestResponse { body: <span class="self">self</span>.request.clone() })
     }
     <span class="kw">fn </span>write_response(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         req: WriteResponseRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;WriteResponseResponse, micro_rpc::Status&gt; {
-        <span class="self">self</span>.logger
-            .log_sensitive(Level::Debug, <span class="string">&quot;invoked write_response&quot;</span>);
+        <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">&quot;invoked write_response&quot;</span>);
         <span class="kw-2">*</span><span class="self">self</span>.response.lock() = req.body;
         <span class="prelude-val">Ok</span>(WriteResponseResponse::default())
     }
 
     <span class="kw">fn </span>log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: LogRequest) -&gt; <span class="prelude-ty">Result</span>&lt;LogResponse, ::micro_rpc::Status&gt; {
         <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">&quot;invoked log&quot;</span>);
-        <span class="self">self</span>.logger
-            .log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[Wasm] {}&quot;</span>, request.message));
+        <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;[Wasm] {}&quot;</span>, request.message));
         <span class="prelude-val">Ok</span>(LogResponse::default())
     }
 
@@ -282,8 +259,7 @@
         <span class="comment">// Log found value.
         </span>value.as_ref().map_or_else(
             || {
-                <span class="self">self</span>.logger
-                    .log_sensitive(Level::Debug, <span class="string">&quot;storage_get_item(): value not found&quot;</span>);
+                <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">&quot;storage_get_item(): value not found&quot;</span>);
             },
             |value| {
                 <span class="comment">// Truncate value for logging.
@@ -295,9 +271,7 @@
             },
         );
 
-        <span class="prelude-val">Ok</span>(LookupDataResponse {
-            value: value.map(Into::into),
-        })
+        <span class="prelude-val">Ok</span>(LookupDataResponse { value: value.map(Into::into) })
     }
 
     <span class="kw">fn </span>lookup_data_multi(
@@ -307,22 +281,14 @@
         <span class="comment">// The request contains the keys to lookup.
         </span><span class="kw">let </span>keys = request.keys;
 
-        <span class="self">self</span>.logger.log_sensitive(
-            Level::Debug,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;lookup_data_multi(): {} keys&quot;</span>, keys.len()),
-        );
+        <span class="self">self</span>.logger
+            .log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;lookup_data_multi(): {} keys&quot;</span>, keys.len()));
 
         <span class="kw">let </span>values: Vec&lt;BytesValue&gt; = keys
             .iter()
             .map(|key| <span class="kw">match </span><span class="self">self</span>.lookup_data.get(key) {
-                <span class="prelude-val">Some</span>(value) =&gt; BytesValue {
-                    found: <span class="bool-val">true</span>,
-                    value: value.into(),
-                },
-                <span class="prelude-val">None </span>=&gt; BytesValue {
-                    found: <span class="bool-val">false</span>,
-                    value: Vec::new(),
-                },
+                <span class="prelude-val">Some</span>(value) =&gt; BytesValue { found: <span class="bool-val">true</span>, value: value.into() },
+                <span class="prelude-val">None </span>=&gt; BytesValue { found: <span class="bool-val">false</span>, value: Vec::new() },
             })
             .collect();
 
@@ -331,9 +297,7 @@
 
     <span class="kw">fn </span>test(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: TestRequest) -&gt; <span class="prelude-ty">Result</span>&lt;TestResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">&quot;invoked test&quot;</span>);
-        <span class="prelude-val">Ok</span>(TestResponse {
-            body: <span class="kw">if </span>req.echo { req.body } <span class="kw">else </span>{ Vec::new() },
-        })
+        <span class="prelude-val">Ok</span>(TestResponse { body: <span class="kw">if </span>req.echo { req.body } <span class="kw">else </span>{ Vec::new() } })
     }
 }
 

@@ -214,10 +214,6 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -242,19 +238,15 @@
 <span class="kw">pub fn </span>read_file(path: <span class="kw-2">&amp;</span>Path) -&gt; String {
     <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
-    file.read_to_string(<span class="kw-2">&amp;mut </span>contents)
-        .expect(<span class="string">&quot;couldn&#39;t read file contents&quot;</span>);
+    file.read_to_string(<span class="kw-2">&amp;mut </span>contents).expect(<span class="string">&quot;couldn&#39;t read file contents&quot;</span>);
     contents
 }
 
-<span class="doccomment">/// Return an iterator of all the first-party and non-ignored files in the repository, which can be
-/// then additionally filtered by the caller.
+<span class="doccomment">/// Return an iterator of all the first-party and non-ignored files in the
+/// repository, which can be then additionally filtered by the caller.
 </span><span class="kw">pub fn </span>source_files() -&gt; <span class="kw">impl </span>Iterator&lt;Item = PathBuf&gt; {
     <span class="kw">let </span>walker = walkdir::WalkDir::new(<span class="string">&quot;.&quot;</span>).into_iter();
-    walker
-        .filter_entry(|e| !is_ignored_entry(e))
-        .filter_map(Result::ok)
-        .map(|e| e.into_path())
+    walker.filter_entry(|e| !is_ignored_entry(e)).filter_map(Result::ok).map(|e| e.into_path())
 }
 
 <span class="kw">pub fn </span>file_contains(path: <span class="kw-2">&amp;</span>Path, pattern: <span class="kw-2">&amp;</span>str) -&gt; bool {
@@ -262,11 +254,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
         <span class="comment">// Content may be non-UTF-8, in which case we just return false.
-        </span><span class="kw">if </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents).is_ok() {
-            contents.contains(pattern)
-        } <span class="kw">else </span>{
-            <span class="bool-val">false
-        </span>}
+        </span><span class="kw">if </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents).is_ok() { contents.contains(pattern) } <span class="kw">else </span>{ <span class="bool-val">false </span>}
     } <span class="kw">else </span>{
         <span class="bool-val">false
     </span>}
@@ -282,12 +270,11 @@
 
 <span class="doccomment">/// Return an iterator of all known Cargo Manifest files that define workspaces.
 </span><span class="kw">pub fn </span>workspace_manifest_files() -&gt; <span class="kw">impl </span>Iterator&lt;Item = PathBuf&gt; {
-    source_files()
-        .filter(|p| is_cargo_toml_file(p))
-        .filter(|p| is_cargo_workspace_file(p))
+    source_files().filter(|p| is_cargo_toml_file(p)).filter(|p| is_cargo_workspace_file(p))
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a source file in a programming language.
+<span class="doccomment">/// Return whether the provided path refers to a source file in a programming
+/// language.
 </span><span class="kw">pub fn </span>is_source_code_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
     filename.ends_with(<span class="string">&quot;.cc&quot;</span>)
@@ -299,7 +286,8 @@
         || filename.ends_with(<span class="string">&quot;.java&quot;</span>)
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
+<span class="doccomment">/// Return whether the provided path refers to a source file that can be
+/// formatted by clang-tidy.
 </span><span class="kw">pub fn </span>is_clang_format_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
     filename.ends_with(<span class="string">&quot;.cc&quot;</span>)
@@ -308,7 +296,8 @@
         || filename.ends_with(<span class="string">&quot;.java&quot;</span>)
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
+<span class="doccomment">/// Return whether the provided path refers to a Bazel file (`BUILD`,
+/// `WORKSPACE`, or `*.bzl`)
 </span><span class="kw">pub fn </span>is_bazel_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
     filename == <span class="string">&quot;BUILD&quot; </span>|| filename == <span class="string">&quot;WORKSPACE&quot; </span>|| filename.ends_with(<span class="string">&quot;.bzl&quot;</span>)
@@ -368,33 +357,36 @@
     </span>}
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a `fuzz` crate for fuzz testing with `cargo-fuzz`.
+<span class="doccomment">/// Return whether the provided path refers to a `fuzz` crate for fuzz testing
+/// with `cargo-fuzz`.
 </span><span class="kw">pub fn </span>is_fuzzing_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, path).contains(<span class="string">&quot;/fuzz/&quot;</span>)
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
-/// differentiate between workspace-level and crate-level files.
+<span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file. Note that it
+/// does not differentiate between workspace-level and crate-level files.
 </span><span class="kw">fn </span>is_cargo_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
     filename == <span class="string">&quot;Cargo.toml&quot;
 </span>}
 
-<span class="doccomment">/// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
-/// the contents of the file.
+<span class="doccomment">/// Return whether the provided path refers to a workspace-level `Cargo.toml`
+/// file, by looking at the contents of the file.
 </span><span class="kw">fn </span>is_cargo_workspace_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="comment">// We naively look for the `[workspace]` string to appear in the contents of the file. A better
-    // alternative would be to actually parse the file as `toml` and figure out whether it has a
-    // `workspace` section, but it seems overkill for now.
+    <span class="comment">// We naively look for the `[workspace]` string to appear in the contents of the
+    // file. A better alternative would be to actually parse the file as `toml`
+    // and figure out whether it has a `workspace` section, but it seems
+    // overkill for now.
     </span>file_contains(path, <span class="string">&quot;[workspace]&quot;</span>)
 }
 
-<span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file that defines a crate, by looking
-/// at the contents of the file.
+<span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file that defines
+/// a crate, by looking at the contents of the file.
 </span><span class="kw">fn </span>is_cargo_package_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="comment">// We naively look for the `[package]` string to appear in the contents of the file. A better
-    // alternative would be to actually parse the file as `toml` and figure out whether it has a
-    // `package` section, but it seems overkill for now.
+    <span class="comment">// We naively look for the `[package]` string to appear in the contents of the
+    // file. A better alternative would be to actually parse the file as `toml`
+    // and figure out whether it has a `package` section, but it seems overkill
+    // for now.
     </span>file_contains(path, <span class="string">&quot;[package]&quot;</span>)
 }
 
@@ -404,8 +396,8 @@
     </span>is_ignored_path(<span class="kw-2">&amp;</span>path) || file_contains(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;DO NOT {}&quot;</span>, <span class="string">&quot;EDIT&quot;</span>))
 }
 
-<span class="doccomment">/// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
-/// avoid descending into blacklisted directories.
+<span class="doccomment">/// Return whether to ignore the specified path. This is used by the `walker`
+/// package to efficiently avoid descending into blacklisted directories.
 </span><span class="kw">fn </span>is_ignored_path(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>components = path.components().collect::&lt;std::collections::HashSet&lt;<span class="kw">_</span>&gt;&gt;();
     components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;.git&quot;</span>.as_ref()))

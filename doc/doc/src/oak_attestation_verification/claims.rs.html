@@ -307,15 +307,6 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -434,7 +425,8 @@
     </span><span class="kw">pub </span>not_after: OffsetDateTime,
 }
 
-<span class="doccomment">/// Metadata about an artifact that serves as the evidence for the truth of a claim.
+<span class="doccomment">/// Metadata about an artifact that serves as the evidence for the truth of a
+/// claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimEvidence {
@@ -471,14 +463,10 @@
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;</span>claim.predicate.validity {
         <span class="kw">if </span>validity.not_before &lt; claim.predicate.issued_on {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(
-                <span class="string">&quot;notBefore before issuedOn&quot;</span>,
-            )));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">&quot;notBefore before issuedOn&quot;</span>)));
         }
         <span class="kw">if </span>validity.not_before &gt; validity.not_after {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(
-                <span class="string">&quot;notBefore after notAfter&quot;</span>,
-            )));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">&quot;notBefore after notAfter&quot;</span>)));
         }
     }
 
@@ -585,20 +573,14 @@
 /// be from the binary or from the attachment.
 </span><span class="kw">pub fn </span>get_digest(claim: <span class="kw-2">&amp;</span>EndorsementStatement) -&gt; anyhow::Result&lt;HexDigest&gt; {
     <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(
-            <span class="string">&quot;expected a single endorsement subject, found {}&quot;</span>,
-            claim.subject.len()
-        );
+        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a single endorsement subject, found {}&quot;</span>, claim.subject.len());
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>digest = HexDigest::default();
-    claim.subject[<span class="number">0</span>]
-        .digest
-        .iter()
-        .try_fold(<span class="kw-2">&amp;mut </span>digest, |acc, (key, value)| {
-            set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>::&lt;<span class="kw-2">&amp;mut </span>HexDigest, anyhow::Error&gt;(acc)
-        })<span class="question-mark">?</span>;
+    claim.subject[<span class="number">0</span>].digest.iter().try_fold(<span class="kw-2">&amp;mut </span>digest, |acc, (key, value)| {
+        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>::&lt;<span class="kw-2">&amp;mut </span>HexDigest, anyhow::Error&gt;(acc)
+    })<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(digest)
 }

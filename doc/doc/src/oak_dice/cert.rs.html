@@ -367,17 +367,6 @@
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -416,8 +405,8 @@
 </span><span class="kw">pub const </span>KEY_ID_LENGTH: usize = <span class="number">20</span>;
 <span class="doccomment">/// ID for the CWT private claim corresponding to the Subject of the CWT.
 </span><span class="kw">pub const </span>SUBJECT_PUBLIC_KEY_ID: i64 = -<span class="number">4670552</span>;
-<span class="doccomment">/// ID for the bitstring used to describe the intended usage for the key represented by the
-/// certificate.
+<span class="doccomment">/// ID for the bitstring used to describe the intended usage for the key
+/// represented by the certificate.
 </span><span class="kw">pub const </span>KEY_USAGE_ID: i64 = -<span class="number">4670553</span>;
 <span class="doccomment">/// The CWT private claim ID for the Kernel layer.
 </span><span class="kw">pub const </span>KERNEL_LAYER_ID: i64 = -<span class="number">4670555</span>;
@@ -437,13 +426,15 @@
 </span><span class="kw">pub const </span>INITRD_MEASUREMENT_ID: i64 = -<span class="number">4670564</span>;
 <span class="doccomment">/// The CWT private claim ID for the physical memory map (e820 table).
 </span><span class="kw">pub const </span>MEMORY_MAP_MEASUREMENT_ID: i64 = -<span class="number">4670565</span>;
-<span class="doccomment">/// The CWT private claim ID for the concatenated hash of the commands for building the ACPI tables.
+<span class="doccomment">/// The CWT private claim ID for the concatenated hash of the commands for
+/// building the ACPI tables.
 </span><span class="kw">pub const </span>ACPI_MEASUREMENT_ID: i64 = -<span class="number">4670566</span>;
 <span class="doccomment">/// The CWT private claim ID for the measurement of the layer 2 binary.
 </span><span class="kw">pub const </span>LAYER_2_CODE_MEASUREMENT_ID: i64 = -<span class="number">4670567</span>;
 <span class="doccomment">/// The CWT private claim ID for the measurement of the layer 3 binary.
 </span><span class="kw">pub const </span>LAYER_3_CODE_MEASUREMENT_ID: i64 = -<span class="number">4670569</span>;
-<span class="doccomment">/// The CWT private claim ID for the measurement of the application or container config.
+<span class="doccomment">/// The CWT private claim ID for the measurement of the application or container
+/// config.
 </span><span class="kw">pub const </span>FINAL_LAYER_CONFIG_MEASUREMENT_ID: i64 = -<span class="number">4670570</span>;
 <span class="doccomment">/// The CWT private claim ID for SHA2_256 digests.
 </span><span class="kw">pub const </span>SHA2_256_ID: i64 = -<span class="number">4670572</span>;
@@ -478,8 +469,7 @@
     <span class="kw">let </span>ikm = public_key.to_encoded_point(<span class="bool-val">false</span>);
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(ID_SALT), ikm.as_bytes());
     <span class="kw">let </span><span class="kw-2">mut </span>result = [<span class="number">0u8</span>; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result)
-        .expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
+    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
     result
 }
 
@@ -487,8 +477,7 @@
 </span><span class="kw">pub fn </span>derive_kem_public_key_id(public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; KEY_ID_LENGTH] {
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(ID_SALT), public_key_bytes);
     <span class="kw">let </span><span class="kw-2">mut </span>result = [<span class="number">0u8</span>; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result)
-        .expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
+    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
     result
 }
 
@@ -507,10 +496,7 @@
     <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid algorithm&quot;</span>);
     }
-    <span class="kw">if </span>!cose_key
-        .key_ops
-        .contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::WrapKey))
-    {
+    <span class="kw">if </span>!cose_key.key_ops.contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::WrapKey)) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key operations&quot;</span>);
     }
     <span class="kw">if </span>!cose_key.params.iter().any(|(label, value)| {
@@ -540,18 +526,13 @@
         kty: KeyType::Assigned(iana::KeyType::OKP),
         key_id: Vec::from(derive_kem_public_key_id(public_key)),
         alg: <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)),
-        key_ops: <span class="macro">vec!</span>[KeyOperation::Assigned(iana::KeyOperation::WrapKey)]
-            .into_iter()
-            .collect(),
+        key_ops: <span class="macro">vec!</span>[KeyOperation::Assigned(iana::KeyOperation::WrapKey)].into_iter().collect(),
         params: <span class="macro">vec!</span>[
             (
                 Label::Int(iana::OkpKeyParameter::Crv <span class="kw">as </span>i64),
                 Value::from(iana::EllipticCurve::X25519 <span class="kw">as </span>u64),
             ),
-            (
-                Label::Int(iana::OkpKeyParameter::X <span class="kw">as </span>i64),
-                Value::Bytes(public_key.to_vec()),
-            ),
+            (Label::Int(iana::OkpKeyParameter::X <span class="kw">as </span>i64), Value::Bytes(public_key.to_vec())),
         ],
         ..Default::default()
     }
@@ -565,10 +546,7 @@
     <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256)) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid algorithm&quot;</span>);
     }
-    <span class="kw">if </span>!cose_key
-        .key_ops
-        .contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::Verify))
-    {
+    <span class="kw">if </span>!cose_key.key_ops.contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::Verify)) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key operations&quot;</span>);
     }
     <span class="kw">if </span>!cose_key.params.iter().any(|(label, value)| {
@@ -619,9 +597,7 @@
         kty: KeyType::Assigned(iana::KeyType::EC2),
         key_id: Vec::from(derive_verifying_key_id(public_key)),
         alg: <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256)),
-        key_ops: <span class="macro">vec!</span>[KeyOperation::Assigned(iana::KeyOperation::Verify)]
-            .into_iter()
-            .collect(),
+        key_ops: <span class="macro">vec!</span>[KeyOperation::Assigned(iana::KeyOperation::Verify)].into_iter().collect(),
         params: <span class="macro">vec!</span>[
             (
                 Label::Int(iana::Ec2KeyParameter::Crv <span class="kw">as </span>i64),
@@ -640,17 +616,20 @@
     }
 }
 
-<span class="doccomment">/// Generates a CWT certificate representing an ECDSA signing key, such as an embedded certificate
-/// authority (ECA), and returns the certificate and its associated private key.
+<span class="doccomment">/// Generates a CWT certificate representing an ECDSA signing key, such as an
+/// embedded certificate authority (ECA), and returns the certificate and its
+/// associated private key.
 ///
 /// # Arguments
 ///
-/// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
-/// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
-///   encoding of the output from calling `derive_verifying_key_id` using the issuer&#39;s public key.
-/// * `additional_claims` - Any additional claims that must be included in the certificate. This is
-///   typically used to provide measurements of the components in the layer associated with th
-///   certificate.
+/// * `issuer_eca_key` - The private key that the issuer uses to sign issued
+///   certificates.
+/// * `issuer_id` - A string identifying the key used by the issuer. This would
+///   typically be the hex encoding of the output from calling
+///   `derive_verifying_key_id` using the issuer&#39;s public key.
+/// * `additional_claims` - Any additional claims that must be included in the
+///   certificate. This is typically used to provide measurements of the
+///   components in the layer associated with th certificate.
 </span><span class="kw">pub fn </span>generate_signing_certificate(
     issuer_eca_key: <span class="kw-2">&amp;</span>SigningKey,
     issuer_id: String,
@@ -666,18 +645,20 @@
     )
 }
 
-<span class="doccomment">/// Generates a CWT certificate representing a Key Encapsulation Mechanism (KEM) for Hybrid
-/// Public-Key Encryption (HPKE) from a serialized public key.
+<span class="doccomment">/// Generates a CWT certificate representing a Key Encapsulation Mechanism (KEM)
+/// for Hybrid Public-Key Encryption (HPKE) from a serialized public key.
 ///
 /// # Arguments
 ///
-/// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
-/// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
-///   encoding of the output from calling `derive_kem_public_key_id` using the issuer&#39;s public key.
+/// * `issuer_eca_key` - The private key that the issuer uses to sign issued
+///   certificates.
+/// * `issuer_id` - A string identifying the key used by the issuer. This would
+///   typically be the hex encoding of the output from calling
+///   `derive_kem_public_key_id` using the issuer&#39;s public key.
 /// * `kem_public_key` - The serialized HPKE KEM public key.
-/// * `additional_claims` - Any additional claims that must be included in the certificate. This is
-///   typically used to provide measurements of the components in the layer associated with th
-///   certificate.
+/// * `additional_claims` - Any additional claims that must be included in the
+///   certificate. This is typically used to provide measurements of the
+///   components in the layer associated with th certificate.
 </span><span class="kw">pub fn </span>generate_kem_certificate(
     issuer_eca_key: <span class="kw-2">&amp;</span>SigningKey,
     issuer_id: String,
@@ -717,12 +698,8 @@
         }
     }
 
-    <span class="kw">let </span>protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES256)
-        .build();
-    <span class="kw">let </span>unprotected = coset::HeaderBuilder::new()
-        .key_id((<span class="kw-2">*</span><span class="string">b&quot;AsymmetricECDSA256&quot;</span>).into())
-        .build();
+    <span class="kw">let </span>protected = coset::HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
+    <span class="kw">let </span>unprotected = coset::HeaderBuilder::new().key_id((<span class="kw-2">*</span><span class="string">b&quot;AsymmetricECDSA256&quot;</span>).into()).build();
     <span class="prelude-val">Ok</span>(coset::CoseSign1Builder::new()
         .protected(protected)
         .unprotected(unprotected)
@@ -734,7 +711,8 @@
         .build())
 }
 
-<span class="doccomment">/// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
+<span class="doccomment">/// Parses a bytes slice as a CWT certificate and extracts the payload as a set
+/// of claims.
 </span><span class="kw">pub fn </span>get_claims_set_from_certificate_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;ClaimsSet, CoseError&gt; {
     <span class="kw">let </span>cwt = CoseSign1::from_slice(bytes)<span class="question-mark">?</span>;
     <span class="kw">let </span>payload = cwt.payload.unwrap_or_default();

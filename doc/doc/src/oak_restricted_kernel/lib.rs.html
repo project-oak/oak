@@ -531,11 +531,6 @@
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -555,15 +550,16 @@
 </span><span class="doccomment">//! Main &#39;kernel&#39; for baremetal Oak Functions.
 //!
 //! This code takes care of initializing the x86-64 machine properly and
-//! handing the reins over to the oak_baremetal_runtime. It is in a separate crate so that we
-//! could support different boot protocols (eg Linux boot protocol or PVH) that
-//! require different targets, linker scripts and/or provide machine
-//! information in different data structures.
+//! handing the reins over to the oak_baremetal_runtime. It is in a separate
+//! crate so that we could support different boot protocols (eg Linux boot
+//! protocol or PVH) that require different targets, linker scripts and/or
+//! provide machine information in different data structures.
 //!
 //! Bootloaders (and VMMs under them) have to adhere to the following protocol:
-//!   * Enter 64-bit long mode, and set up basic paging -- enough to load the code, as we will set
-//!     up a full page table in `start_kernel`.
-//!   * Implement a `#[panic_handler]` that delegates to `panic()` in this crate.
+//!   * Enter 64-bit long mode, and set up basic paging -- enough to load the
+//!     code, as we will set up a full page table in `start_kernel`.
+//!   * Implement a `#[panic_handler]` that delegates to `panic()` in this
+//!     crate.
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
 </span><span class="attr">#![cfg_attr(not(test), no_std)]
@@ -637,16 +633,17 @@
 </span><span class="kw">pub static </span>FRAME_ALLOCATOR: Spinlock&lt;PhysicalMemoryAllocator&lt;<span class="number">4096</span>&gt;&gt; =
     Spinlock::new(PhysicalMemoryAllocator::new());
 
-<span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
+<span class="doccomment">/// The allocator for allocating space in the memory area that is shared with
+/// the hypervisor.
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
 
 <span class="doccomment">/// Active page tables.
 </span><span class="kw">pub static </span>PAGE_TABLES: Spinlock&lt;CurrentRootPageTable&gt; =
     Spinlock::new(CurrentRootPageTable::empty());
 
-<span class="doccomment">/// Level 4 page table that is free in application space, but has all entries for kernel space
-/// populated. It can be used to create free page tables for applications, that maintain correct
-/// mapping in kernel space.
+<span class="doccomment">/// Level 4 page table that is free in application space, but has all entries
+/// for kernel space populated. It can be used to create free page tables for
+/// applications, that maintain correct mapping in kernel space.
 </span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;PageTable&gt; = OnceCell::new();
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
@@ -681,26 +678,28 @@
         <span class="macro">log::warn!</span>(<span class="string">&quot;error disabling 8259 PIC: {}&quot;</span>, err);
     }
 
-    <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the
-    // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it&#39;s
-    // highly likely we will overwrite some data after we initialize the heap. args::init_args()
-    // caches the arguments (as long they are of reasonable length) in a static variable, allowing
-    // us to refer to the args in the future.
+    <span class="comment">// We need to be done with the boot info struct before intializing memory. For
+    // example, the multiboot protocol explicitly states data can be placed
+    // anywhere in memory; therefore, it&#39;s highly likely we will overwrite some
+    // data after we initialize the heap. args::init_args() caches the arguments
+    // (as long they are of reasonable length) in a static variable, allowing us
+    // to refer to the args in the future.
     </span><span class="kw">let </span>kernel_args = args::init_args(info.args()).unwrap();
     <span class="macro">info!</span>(<span class="string">&quot;Kernel boot args: {}&quot;</span>, kernel_args.args());
 
     <span class="kw">let </span>protocol = info.protocol();
     <span class="macro">info!</span>(<span class="string">&quot;Boot protocol:  {}&quot;</span>, protocol);
     <span class="kw">let </span>snp_pages = <span class="kw">if </span>sev_snp_enabled {
-        <span class="comment">// We have to get the physical addresses of the CPUID pages now while the identity mapping
-        // is still in place, but we can only initialize the instances after the new page
-        // mappings have been set up.
+        <span class="comment">// We have to get the physical addresses of the CPUID pages now while the
+        // identity mapping is still in place, but we can only initialize the
+        // instances after the new page mappings have been set up.
         </span><span class="prelude-val">Some</span>(get_snp_page_addresses(info))
     } <span class="kw">else </span>{
         <span class="prelude-val">None
     </span>};
 
-    <span class="comment">// Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
+    <span class="comment">// Safety: in the linker script we specify that the ELF header should be placed
+    // at 0x200000.
     </span><span class="kw">let </span>program_headers = <span class="kw">unsafe </span>{ elf::get_phdrs(VirtAddr::new(<span class="number">0x20_0000</span>)) };
 
     <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
@@ -718,14 +717,15 @@
     </span>{
         <span class="kw">let </span>pml4_frame = mm::initial_pml4(program_headers).unwrap();
         <span class="comment">// Prevent execution code in data only memory pages.
-        // Safety: executeable memory is assumed to be appropiately marked in the page table.
+        // Safety: executeable memory is assumed to be appropiately marked in the page
+        // table.
         </span><span class="kw">unsafe </span>{
             x86_64::registers::model_specific::Efer::update(|flags| {
                 flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
             });
         };
-        <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s safe to
-        // load the new page tables.
+        <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s
+        // safe to load the new page tables.
         </span><span class="kw">let </span>prev_page_table = <span class="kw">unsafe </span>{ PAGE_TABLES.lock().replace(pml4_frame) };
         <span class="macro">assert!</span>(
             prev_page_table.is_none(),
@@ -753,8 +753,9 @@
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.
-    // Safety: we know we&#39;re addressing valid memory that contains the correct data structure, as
-    // we&#39;re just translating addresses differently due to the new page tables.
+    // Safety: we know we&#39;re addressing valid memory that contains the correct data
+    // structure, as we&#39;re just translating addresses differently due to the new
+    // page tables.
     </span><span class="kw">let </span>info = <span class="kw">unsafe </span>{
         <span class="attr">#[allow(clippy::unnecessary_cast)]
         </span>(PAGE_TABLES
@@ -771,36 +772,35 @@
     <span class="kw">if </span>sev_es_enabled {
         <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
         <span class="kw">let </span>mapper = pt_guard.get().unwrap();
-        <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
-        // hypervisor.
+        <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with
+        // the hypervisor.
         </span>ghcb::reshare_ghcb(mapper);
         <span class="kw">if </span>sev_snp_enabled {
-            <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message encryptor
-            // when SEV-SNP is active. Panicking is OK at this point, because these pages are
-            // required to support the full features and we don&#39;t want to run without them.
-            </span>init_snp_pages(
-                snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>),
-                mapper,
-            );
+            <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message
+            // encryptor when SEV-SNP is active. Panicking is OK at this point,
+            // because these pages are required to support the full features and
+            // we don&#39;t want to run without them.
+            </span>init_snp_pages(snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>), mapper);
         }
     }
 
-    <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
-    // We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
+    <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit
+    // set) We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
+    // structures.
     </span><span class="kw">let </span>guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(<span class="number">2</span>).unwrap();
 
     <span class="kw">let </span>guest_host_pages = {
         <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
         <span class="kw">let </span>pt = pt_guard.get().unwrap();
         Page::range(
-            pt.translate_physical_frame(guest_host_frames.start)
-                .unwrap(),
+            pt.translate_physical_frame(guest_host_frames.start).unwrap(),
             pt.translate_physical_frame(guest_host_frames.end).unwrap(),
         )
     };
 
-    <span class="comment">// If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
-    // to crash if we cannot mark the pages as shared in the RMP.
+    <span class="comment">// If we are running on SNP we have to mark the guest-host frames as shared in
+    // the RMP. It is OK to crash if we cannot mark the pages as shared in the
+    // RMP.
     </span><span class="kw">if </span>sev_snp_enabled {
         <span class="comment">// TODO(#3414): Use the GHCB protocol when it is available.
         </span><span class="kw">for </span>frame <span class="kw">in </span>guest_host_frames {
@@ -809,9 +809,10 @@
         }
     }
 
-    <span class="comment">// Safety: initializing the new heap is safe as the frame allocator guarantees we&#39;re not
-    // overwriting any other memory; writing to the static mut is safe as we&#39;re in the
-    // initialization code and thus there can be no concurrent access.
+    <span class="comment">// Safety: initializing the new heap is safe as the frame allocator guarantees
+    // we&#39;re not overwriting any other memory; writing to the static mut is safe
+    // as we&#39;re in the initialization code and thus there can be no concurrent
+    // access.
     </span><span class="kw">if </span>GUEST_HOST_HEAP
         .set(
             <span class="kw">unsafe </span>{
@@ -833,14 +834,10 @@
         <span class="kw">let </span>dice_memory_slice = {
             <span class="kw">let </span>dice_data_phys_addr = {
                 <span class="kw">let </span>arg = kernel_args
-                    .get(<span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(
-                        <span class="string">&quot;--{}&quot;</span>,
-                        oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
-                    ))
+                    .get(<span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">&quot;--{}&quot;</span>, oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
                     .expect(<span class="string">&quot;no dice data address supplied in the kernel args&quot;</span>);
                 <span class="kw">let </span>parsed_arg = u64::from_str_radix(
-                    arg.strip_prefix(<span class="string">&quot;0x&quot;</span>)
-                        .expect(<span class="string">&quot;failed stripping the hex prefix&quot;</span>),
+                    arg.strip_prefix(<span class="string">&quot;0x&quot;</span>).expect(<span class="string">&quot;failed stripping the hex prefix&quot;</span>),
                     <span class="number">16</span>,
                 )
                 .expect(<span class="string">&quot;couldn&#39;t parse address as a hex number&quot;</span>);
@@ -895,13 +892,14 @@
         dice_data
     };
 
-    <span class="comment">// Okay. We&#39;ve got page tables and a heap. Set up the &quot;late&quot; IDT, this time with descriptors for
-    // user mode.
+    <span class="comment">// Okay. We&#39;ve got page tables and a heap. Set up the &quot;late&quot; IDT, this time with
+    // descriptors for user mode.
     </span><span class="kw">let </span>double_fault_stack = mm::allocate_stack();
     <span class="kw">let </span>privileged_interrupt_stack = mm::allocate_stack();
     <span class="kw">let </span>double_fault_stack_index =
         descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
-    <span class="comment">// Safety: we&#39;ve just loaded a new GDT with a valid IST entry for the double fault.
+    <span class="comment">// Safety: we&#39;ve just loaded a new GDT with a valid IST entry for the double
+    // fault.
     </span><span class="kw">unsafe </span>{
         interrupts::init_idt(double_fault_stack_index);
     }
@@ -919,20 +917,12 @@
     };
 
     <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-    </span><span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
-        <span class="kw-2">&amp;</span>kernel_args,
-        GUEST_HOST_HEAP.get().unwrap(),
-        acpi.as_mut(),
-        sev_status,
-    );
+    </span><span class="kw">let </span><span class="kw-2">mut </span>channel =
+        get_channel(<span class="kw-2">&amp;</span>kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
     <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
-    </span><span class="kw">let </span>channel = get_channel(
-        <span class="kw-2">&amp;</span>kernel_args,
-        GUEST_HOST_HEAP.get().unwrap(),
-        acpi.as_mut(),
-        sev_status,
-    );
+    </span><span class="kw">let </span>channel =
+        get_channel(<span class="kw-2">&amp;</span>kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
     <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
     </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
@@ -1046,9 +1036,9 @@
     acpi: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Acpi&gt;,
     sev_status: SevStatus,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Channel + <span class="lifetime">&#39;a</span>&gt; {
-    <span class="comment">// If we weren&#39;t told which channel to use, arbitrarily pick the first one in the `ChannelType`
-    // enum. Depending on features that are enabled, this means that the enum acts as kind of a
-    // reverse priority list for defaults.
+    <span class="comment">// If we weren&#39;t told which channel to use, arbitrarily pick the first one in
+    // the `ChannelType` enum. Depending on features that are enabled, this
+    // means that the enum acts as kind of a reverse priority list for defaults.
     </span><span class="kw">let </span>chan_type = kernel_args
         .get(<span class="string">&quot;channel&quot;</span>)
         .map(|chan_type| ChannelType::from_str(chan_type).unwrap())

@@ -103,11 +103,6 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -135,8 +130,8 @@
     EMPTY_ASSOCIATED_DATA,
 };
 
-<span class="doccomment">/// Wraps a closure to an underlying function with request encryption and response decryption logic,
-/// based on the provided encryption key.
+<span class="doccomment">/// Wraps a closure to an underlying function with request encryption and
+/// response decryption logic, based on the provided encryption key.
 </span><span class="kw">pub struct </span>EncryptionHandler&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; {
     encryption_key_handle: Arc&lt;<span class="kw">dyn </span>EncryptionKeyHandle&gt;,
     request_handler: H,
@@ -144,10 +139,7 @@
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; EncryptionHandler&lt;H&gt; {
     <span class="kw">pub fn </span>create(encryption_key_handle: Arc&lt;<span class="kw">dyn </span>EncryptionKeyHandle&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            encryption_key_handle,
-            request_handler,
-        }
+        <span class="self">Self </span>{ encryption_key_handle, request_handler }
     }
 }
 
@@ -162,17 +154,18 @@
         </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request);
 
         <span class="comment">// Encrypt and serialize response.
-        // The resulting decryptor for subsequent requests is discarded because we don&#39;t expect
-        // another message from the stream.
+        // The resulting decryptor for subsequent requests is discarded because we don&#39;t
+        // expect another message from the stream.
         </span>server_encryptor
             .encrypt(<span class="kw-2">&amp;</span>response, EMPTY_ASSOCIATED_DATA)
             .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)
     }
 }
 
-<span class="doccomment">/// Wraps a closure to an underlying function with request encryption and response decryption logic,
-/// based on the provided encryption key.
-/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
+<span class="doccomment">/// Wraps a closure to an underlying function with request encryption and
+/// response decryption logic, based on the provided encryption key.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`]
+/// is needed.
 </span><span class="kw">pub struct </span>AsyncEncryptionHandler&lt;H, F&gt;
 <span class="kw">where
     </span>H: FnOnce(Vec&lt;u8&gt;) -&gt; F,
@@ -191,10 +184,7 @@
         encryption_key_handle: Arc&lt;<span class="kw">dyn </span>AsyncEncryptionKeyHandle + Send + Sync&gt;,
         request_handler: H,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            encryption_key_handle,
-            request_handler,
-        }
+        <span class="self">Self </span>{ encryption_key_handle, request_handler }
     }
 
     <span class="kw">pub async fn </span>invoke(
@@ -211,8 +201,8 @@
         </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request).<span class="kw">await</span>;
 
         <span class="comment">// Encrypt and serialize response.
-        // The resulting decryptor for consequent requests is discarded because we don&#39;t expect
-        // another message from the stream.
+        // The resulting decryptor for consequent requests is discarded because we don&#39;t
+        // expect another message from the stream.
         </span>server_encryptor
             .encrypt(<span class="kw-2">&amp;</span>response, EMPTY_ASSOCIATED_DATA)
             .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)

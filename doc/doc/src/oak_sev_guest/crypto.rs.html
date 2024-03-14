@@ -141,6 +141,13 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -157,8 +164,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This module provides an optional implementation for encrypting and decrypting guest requests
-//! using the RustCrypto `aes-gcm` crate.
+</span><span class="doccomment">//! This module provides an optional implementation for encrypting and
+//! decrypting guest requests using the RustCrypto `aes-gcm` crate.
 
 </span><span class="kw">use </span>core::mem::size_of;
 
@@ -172,17 +179,19 @@
 
 <span class="doccomment">/// Wrapper for encrypting and decrypting guest messages.
 ///
-/// The sequence number is used as an initialization vector/nonce for AES-GCM. The sequence number
-/// is internally incremented on every encryption to avoid reuse. It is also incremented on every
-/// decryption to synchronize it with the sequence number used by the Platform Secure Processor
-/// (PSP).
+/// The sequence number is used as an initialization vector/nonce for AES-GCM.
+/// The sequence number is internally incremented on every encryption to avoid
+/// reuse. It is also incremented on every decryption to synchronize it with the
+/// sequence number used by the Platform Secure Processor (PSP).
 ///
-/// To make sure that the same sequence number is never reused with the same key, the same key must
-/// never be used to instantiate more than one instance of this struct.
+/// To make sure that the same sequence number is never reused with the same
+/// key, the same key must never be used to instantiate more than one instance
+/// of this struct.
 ///
-/// If a request fails the PSP will not increment the sequence number. This means that we will be
-/// out of sync with its sequence number. There is no safe way to recover from that, so the best
-/// course of action is to delete the key or shut down the VM.
+/// If a request fails the PSP will not increment the sequence number. This
+/// means that we will be out of sync with its sequence number. There is no safe
+/// way to recover from that, so the best course of action is to delete the key
+/// or shut down the VM.
 ///
 /// See Chapter 7 and Section 8.26.2 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="kw">pub struct </span>GuestMessageEncryptor {
@@ -200,9 +209,10 @@
 
     <span class="doccomment">/// Creates a new instance with a specific sequence number.
     ///
-    /// This function should only be used if the sequence number was incremented previously to a
-    /// known value but can not be incremented further outside of this struct, e.g. use this in the
-    /// kernel if the firmware used the same key to encrypt and decrypt guest messages.
+    /// This function should only be used if the sequence number was incremented
+    /// previously to a known value but can not be incremented further
+    /// outside of this struct, e.g. use this in the kernel if the firmware
+    /// used the same key to encrypt and decrypt guest messages.
     </span><span class="kw">pub fn </span>new_with_sequence_number(
         key: <span class="kw-2">&amp;</span>[u8],
         initial_sequence_number: u64,
@@ -213,14 +223,17 @@
         })
     }
 
-    <span class="doccomment">/// Creates an encrypted payload from the provided message and writes that to the target&#39;s
-    /// payload field. It also updates the target&#39;s header with the appropriate information:
-    /// message type, message size and sequence number.
+    <span class="doccomment">/// Creates an encrypted payload from the provided message and writes that
+    /// to the target&#39;s payload field. It also updates the target&#39;s header
+    /// with the appropriate information: message type, message size and
+    /// sequence number.
     ///
-    /// The sequence number is incremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is
+    /// successful.
     ///
-    /// We consume the input message because we encrypt its memory in place before copying it to the
-    /// payload buffer that is shared with the hypervisor.
+    /// We consume the input message because we encrypt its memory in place
+    /// before copying it to the payload buffer that is shared with the
+    /// hypervisor.
     </span><span class="kw">pub fn </span>encrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw-2">mut </span>message: M,
@@ -250,7 +263,8 @@
 
     <span class="doccomment">/// Extracts a decrypted message from an encrypted `GuestMessage`.
     ///
-    /// The sequence number is incremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is
+    /// successful.
     </span><span class="kw">pub fn </span>decrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         source: <span class="kw-2">&amp;</span>GuestMessage,
@@ -272,9 +286,9 @@
         <span class="kw">if </span>buffer.len() != source.header.auth_header.message_size <span class="kw">as </span>usize {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid message length&quot;</span>);
         }
-        <span class="comment">// The source message is in memory that is shared with the hypervisor, so we must not
-        // decrypt the payload in place. Copy the encrypted payload into the buffer and
-        // decrypt it there.
+        <span class="comment">// The source message is in memory that is shared with the hypervisor, so we
+        // must not decrypt the payload in place. Copy the encrypted payload
+        // into the buffer and decrypt it there.
         </span>buffer.copy_from_slice(<span class="kw-2">&amp;</span>source.payload[<span class="number">0</span>..buffer.len()]);
         <span class="kw">let </span>tag = Tag::from_slice(<span class="kw-2">&amp;</span>source.header.auth_tag[<span class="number">0</span>..size_of::&lt;Tag&gt;()]);
         <span class="self">self</span>.cipher

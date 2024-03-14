@@ -468,28 +468,6 @@
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
-<a href="#478" id="478">478</a>
-<a href="#479" id="479">479</a>
-<a href="#480" id="480">480</a>
-<a href="#481" id="481">481</a>
-<a href="#482" id="482">482</a>
-<a href="#483" id="483">483</a>
-<a href="#484" id="484">484</a>
-<a href="#485" id="485">485</a>
-<a href="#486" id="486">486</a>
-<a href="#487" id="487">487</a>
-<a href="#488" id="488">488</a>
-<a href="#489" id="489">489</a>
-<a href="#490" id="490">490</a>
-<a href="#491" id="491">491</a>
-<a href="#492" id="492">492</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -525,8 +503,9 @@
 ///
 /// Used to send inter-processor interrupts (IPIs) to other cores in the system.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC Interrupt Command
-/// Register Operations) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC
+/// Interrupt Command Register Operations) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>InterprocessorInterrupt {
     <span class="doccomment">/// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
     </span><span class="attr">#[allow(clippy::too_many_arguments)]
@@ -544,8 +523,8 @@
 
 <span class="doccomment">/// APIC Error Status.
 ///
-/// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>ErrorStatus {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags;
     <span class="kw">fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
@@ -560,16 +539,16 @@
 
 <span class="doccomment">/// APIC Version.
 ///
-/// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>ApicVersion {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8);
 }
 
 <span class="doccomment">/// APIC spurious interrupt register.
 ///
-/// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>SpuriousInterrupts {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8);
     <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: SpuriousInterruptFlags, vec: u8);
@@ -589,10 +568,11 @@
 
     <span class="doccomment">/// Representation of the APIC MMIO registers.
     ///
-    /// We do not represent _all_ the xAPIC registers here, but only the ones we are interested in.
+    /// We do not represent _all_ the xAPIC registers here, but only the ones we
+    /// are interested in.
     ///
-    /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC Registers) of the AMD64
-    /// Architecture Programmer&#39;s Manual, Volume 2.
+    /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC
+    /// Registers) of the AMD64 Architecture Programmer&#39;s Manual, Volume 2.
     </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
     </span><span class="kw">struct </span>ApicRegisters {
         registers: [u32; <span class="number">1024</span>],
@@ -617,8 +597,8 @@
 
     <span class="kw">impl </span>Xapic {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, register: usize) -&gt; u32 {
-            <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
+            <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which
+            // we should have established where the MMIO area is.
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
                 ghcb.lock()
                     .mmio_read_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()))
@@ -634,8 +614,8 @@
                     .mmio_write_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()), val)
                     .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
             } <span class="kw">else </span>{
-                <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
-                // should have established where the MMIO area is.
+                <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which
+                // we should have established where the MMIO area is.
                 </span><span class="kw">unsafe </span>{ (<span class="kw-2">&amp;mut </span><span class="self">self</span>.mmio_area.registers[register] <span class="kw">as </span><span class="kw-2">*mut </span>u32).write_volatile(val) }
             }
         }
@@ -644,8 +624,8 @@
     <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>Xapic {
         <span class="doccomment">/// Read the Local APIC ID register.
         ///
-        /// See Section 16.3.3 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for the
-        /// register format.
+        /// See Section 16.3.3 in the AMD64 Architecture Programmer&#39;s Manual,
+        /// Volume 2 for the register format.
         </span><span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
             <span class="self">self</span>.read(APIC_ID_REGISTER_OFFSET) &gt;&gt; <span class="number">24
         </span>}
@@ -662,13 +642,9 @@
             trigger_mode: <span class="kw">super</span>::TriggerMode,
             destination_shorthand: <span class="kw">super</span>::DestinationShorthand,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-            <span class="kw">let </span>destination: u8 = destination
-                .try_into()
-                .map_err(|<span class="kw">_</span>| <span class="string">&quot;destination APIC ID too big for xAPIC&quot;</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.write(
-                INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET,
-                (destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>,
-            );
+            <span class="kw">let </span>destination: u8 =
+                destination.try_into().map_err(|<span class="kw">_</span>| <span class="string">&quot;destination APIC ID too big for xAPIC&quot;</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.write(INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET, (destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>);
             <span class="self">self</span>.write(
                 INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
                 destination_shorthand <span class="kw">as </span>u32
@@ -708,30 +684,24 @@
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8) {
             <span class="kw">let </span>val = <span class="self">self</span>.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
-            (
-                SpuriousInterruptFlags::from_bits_truncate(val),
-                (val &amp; <span class="number">0xFF</span>) <span class="kw">as </span>u8,
-            )
+            (SpuriousInterruptFlags::from_bits_truncate(val), (val &amp; <span class="number">0xFF</span>) <span class="kw">as </span>u8)
         }
 
         <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: <span class="kw">super</span>::SpuriousInterruptFlags, vec: u8) {
-            <span class="self">self</span>.write(
-                SPURIOUS_INTERRUPT_REGISTER_OFFSET,
-                flags.bits() | vec <span class="kw">as </span>u32,
-            )
+            <span class="self">self</span>.write(SPURIOUS_INTERRUPT_REGISTER_OFFSET, flags.bits() | vec <span class="kw">as </span>u32)
         }
     }
 
-    <span class="comment">// Reserve a 4K chunk of memory -- we don&#39;t really care where, we only care that we don&#39;t
-    // overlap and can change the physical address it points to.
+    <span class="comment">// Reserve a 4K chunk of memory -- we don&#39;t really care where, we only care that
+    // we don&#39;t overlap and can change the physical address it points to.
     </span><span class="kw">static </span><span class="kw-2">mut </span>APIC_MMIO_AREA: MaybeUninit&lt;ApicRegisters&gt; = MaybeUninit::uninit();
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init(apic_base: PhysAddr) -&gt; Xapic {
-        <span class="comment">// Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA virtual
-        // address to be somewhere in the first two megabytes.
+        <span class="comment">// Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA
+        // virtual address to be somewhere in the first two megabytes.
 
-        // Safety: we&#39;re not dereferencing the pointer, we just want to know where it landed in
-        // virtual memory.
+        // Safety: we&#39;re not dereferencing the pointer, we just want to know where it
+        // landed in virtual memory.
         </span><span class="kw">let </span>vaddr = VirtAddr::from_ptr(<span class="kw">unsafe </span>{ APIC_MMIO_AREA.as_ptr() });
         <span class="kw">if </span>vaddr.as_u64() &gt; Size2MiB::SIZE {
             <span class="macro">panic!</span>(<span class="string">&quot;APIC_MMIO_AREA virtual address does not land in the first page table&quot;</span>);
@@ -743,10 +713,7 @@
         );
         flush_all();
         <span class="comment">// Safety: we&#39;ve mapped APIC_MMIO_AREA to where the caller claimed it to be.
-        </span>Xapic {
-            mmio_area: <span class="kw">unsafe </span>{ APIC_MMIO_AREA.assume_init_mut() },
-            aba: apic_base,
-        }
+        </span>Xapic { mmio_area: <span class="kw">unsafe </span>{ APIC_MMIO_AREA.assume_init_mut() }, aba: apic_base }
     }
 }
 
@@ -843,21 +810,14 @@
 <span class="kw">impl </span>Lapic {
     <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>x2apic = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .get_cpuid(CpuidInput {
-                    eax: <span class="number">0x0000_0001</span>,
-                    ecx: <span class="number">0</span>,
-                    xcr0: <span class="number">0</span>,
-                    xss: <span class="number">0</span>,
-                })<span class="question-mark">?
-                </span>.ecx
+            ghcb.lock().get_cpuid(CpuidInput { eax: <span class="number">0x0000_0001</span>, ecx: <span class="number">0</span>, xcr0: <span class="number">0</span>, xss: <span class="number">0 </span>})<span class="question-mark">?</span>.ecx
         } <span class="kw">else </span>{
             <span class="comment">// Safety: the CPUs we support are new enough to support CPUID.
             </span><span class="kw">unsafe </span>{ __cpuid(<span class="number">0x0000_0001</span>) }.ecx
         } &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>)
             &gt; <span class="number">0</span>;
-        <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for explanation
-        // of the initialization procedure.
+        <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for
+        // explanation of the initialization procedure.
         </span><span class="kw">let </span>(aba, <span class="kw-2">mut </span>flags) = ApicBase::read();
         <span class="kw">if </span>!flags.contains(ApicBaseFlags::AE) {
             flags |= ApicBaseFlags::AE;
@@ -883,10 +843,7 @@
         } <span class="kw">else </span>{
             <span class="macro">log::info!</span>(<span class="string">&quot;Using xAPIC for AP initialization.&quot;</span>);
             <span class="kw">let </span>apic = xapic::init(aba);
-            Lapic {
-                apic_id: apic.apic_id(),
-                interface: Apic::Xapic(apic),
-            }
+            Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         <span class="comment">// Version should be between [0x10...0x20).
         </span><span class="kw">let </span>(<span class="kw">_</span>, <span class="kw">_</span>, version) = apic.apic_version().read();
@@ -896,8 +853,7 @@
         }
         <span class="kw">let </span>(flags, vec) = apic.spurious_interrupt_register().read();
         <span class="kw">if </span>!flags.contains(SpuriousInterruptFlags::ASE) {
-            apic.spurious_interrupt_register()
-                .write(flags | SpuriousInterruptFlags::ASE, vec)
+            apic.spurious_interrupt_register().write(flags | SpuriousInterruptFlags::ASE, vec)
         }
         <span class="prelude-val">Ok</span>(apic)
     }

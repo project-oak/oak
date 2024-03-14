@@ -168,23 +168,6 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -223,14 +206,8 @@
     <span class="kw">let </span>(encryption_key, encryption_public_key) = generate_encryption_key_pair();
     <span class="kw">let </span>(signing_key, signing_public_key) = generate_ecdsa_key_pair();
     (
-        InstanceKeys {
-            encryption_key,
-            signing_key,
-        },
-        InstancePublicKeys {
-            encryption_public_key,
-            signing_public_key,
-        },
+        InstanceKeys { encryption_key, signing_key },
+        InstancePublicKeys { encryption_public_key, signing_public_key },
     )
 }
 
@@ -248,17 +225,14 @@
     <span class="kw">pub fn </span>generate_group_keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (GroupKeys, GroupPublicKeys) {
         <span class="kw">let </span>(group_encryption_key, group_encryption_public_key) = generate_encryption_key_pair();
         (
-            GroupKeys {
-                encryption_key: group_encryption_key,
-            },
-            GroupPublicKeys {
-                encryption_public_key: group_encryption_public_key,
-            },
+            GroupKeys { encryption_key: group_encryption_key },
+            GroupPublicKeys { encryption_public_key: group_encryption_public_key },
         )
     }
 
     <span class="kw">pub fn </span>provide_group_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, group_keys: GroupKeysProto) -&gt; anyhow::Result&lt;GroupKeys&gt; {
-        <span class="comment">// Create server encryptor for decrypting the group keys received from the leader enclave.
+        <span class="comment">// Create server encryptor for decrypting the group keys received from the
+        // leader enclave.
         </span><span class="kw">let </span>encrypted_encryption_private_key = group_keys
             .encrypted_encryption_private_key
             .context(<span class="string">&quot;encrypted encryption key wasn&#39;t provided&quot;</span>)<span class="question-mark">?</span>;
@@ -272,9 +246,7 @@
             EncryptionKey::deserialize(<span class="kw-2">&amp;mut </span>decrypted_encryption_private_key)
                 .context(<span class="string">&quot;couldn&#39;t deserialize private key&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(GroupKeys {
-            encryption_key: group_encryption_key,
-        })
+        <span class="prelude-val">Ok</span>(GroupKeys { encryption_key: group_encryption_key })
     }
 }
 
@@ -287,7 +259,8 @@
 }
 
 <span class="kw">impl </span>GroupKeys {
-    <span class="doccomment">/// Returns group encryption private key which was encrypted with the `peer_public_key`.
+    <span class="doccomment">/// Returns group encryption private key which was encrypted with the
+    /// `peer_public_key`.
     </span><span class="kw">pub fn </span>encrypted_group_encryption_key(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         peer_public_key: <span class="kw-2">&amp;</span>[u8],
@@ -303,10 +276,7 @@
 
 <span class="kw">impl </span>CryptoService {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(instance_keys: InstanceKeys, group_keys: Arc&lt;GroupKeys&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            instance_keys,
-            group_keys,
-        }
+        <span class="self">Self </span>{ instance_keys, group_keys }
     }
 
     <span class="kw">fn </span>signing_key(
@@ -352,9 +322,7 @@
             .map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t serialize session keys: {err}&quot;</span>))
             })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(tonic::Response::new(DeriveSessionKeysResponse {
-            session_keys: <span class="prelude-val">Some</span>(session_keys),
-        }))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(DeriveSessionKeysResponse { session_keys: <span class="prelude-val">Some</span>(session_keys) }))
     }
 
     <span class="kw">async fn </span>sign(
@@ -367,9 +335,7 @@
             signing_key,
             <span class="kw-2">&amp;</span>request.message,
         );
-        <span class="prelude-val">Ok</span>(tonic::Response::new(SignResponse {
-            signature: <span class="prelude-val">Some</span>(signature),
-        }))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(SignResponse { signature: <span class="prelude-val">Some</span>(signature) }))
     }
 }
 </code></pre></div></section></main></body></html>

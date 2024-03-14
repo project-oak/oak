@@ -186,16 +186,6 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -257,12 +247,7 @@
         encryption_key_handle: Arc&lt;EKH&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            evidence_provider,
-            encryption_key_handle,
-            instance: OnceCell::new(),
-            observer,
-        }
+        <span class="self">Self </span>{ evidence_provider, encryption_key_handle, instance: OnceCell::new(), observer }
     }
     <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&lt;H&gt;, micro_rpc::Status&gt; {
         <span class="self">self</span>.instance.get().ok_or_else(|| {
@@ -284,10 +269,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
-        <span class="macro">log::debug!</span>(
-            <span class="string">&quot;called initialize (Wasm module size: {} bytes)&quot;</span>,
-            request.wasm_module.len()
-        );
+        <span class="macro">log::debug!</span>(<span class="string">&quot;called initialize (Wasm module size: {} bytes)&quot;</span>, request.wasm_module.len());
         <span class="kw">match </span><span class="self">self</span>.instance.get() {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -308,9 +290,7 @@
                             <span class="macro">format!</span>(<span class="string">&quot;failed to convert evidence to proto: {err}&quot;</span>),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(InitializeResponse {
-                    evidence: <span class="prelude-val">Some</span>(evidence),
-                })
+                <span class="prelude-val">Ok</span>(InitializeResponse { evidence: <span class="prelude-val">Some</span>(evidence) })
             }
         }
     }

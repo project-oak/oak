@@ -75,6 +75,9 @@
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -104,19 +107,22 @@
 
 <span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
 
-<span class="comment">// The number of bytes of custom data that can be included in the attestation report.
+<span class="comment">// The number of bytes of custom data that can be included in the attestation
+// report.
 </span><span class="kw">const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
 
 <span class="doccomment">/// Returns an attestation report.
 ///
-/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation report. In other cases
-/// it generates an empty attestation report for testing. The additional data will be set in both
-/// cases to bind the DICE chain to the attestation report.
+/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+/// report. In other cases it generates an empty attestation report for testing.
+/// The additional data will be set in both cases to bind the DICE chain to the
+/// attestation report.
 ///
 /// # Arguments
 ///
-/// * `report_data` - The custom data that must be included in the report. This is typically used to
-///   bind information (such as the hash of a public key) to the report.
+/// * `report_data` - The custom data that must be included in the report. This
+///   is typically used to bind information (such as the hash of a public key)
+///   to the report.
 </span><span class="kw">pub fn </span>get_attestation(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -136,11 +142,11 @@
 
 <span class="doccomment">/// Requests a derived key.
 ///
-/// The key is derived from the VCEK. The key derivation mixes in the VM launch measurement and
-/// guest policy and uses VMPL0.
+/// The key is derived from the VCEK. The key derivation mixes in the VM launch
+/// measurement and guest policy and uses VMPL0.
 ///
-/// We use this key as the unique device secret for deriving compound devices identifiers for each
-/// layer, and eventually a sealing key in the last layer.
+/// We use this key as the unique device secret for deriving compound devices
+/// identifiers for each layer, and eventually a sealing key in the last layer.
 </span><span class="kw">pub fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span><span class="kw-2">mut </span>key_request = KeyRequest::new();

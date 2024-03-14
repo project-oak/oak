@@ -104,10 +104,6 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -137,13 +133,14 @@
 <span class="kw">use </span><span class="kw">crate</span>::systemd_journal::{Journal, JournalOpenFlags};
 
 <span class="kw">pub async fn </span>run(launcher_client: LauncherClient, terminate: Arc&lt;OnceCell&lt;()&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="comment">// Journal is not Send, because the underlying systemd journal can&#39;t be shared between threads
-    // (even with locking). Thus, let&#39;s wrap things in a channel.
+    <span class="comment">// Journal is not Send, because the underlying systemd journal can&#39;t be shared
+    // between threads (even with locking). Thus, let&#39;s wrap things in a
+    // channel.
     </span><span class="kw">let </span>(send, <span class="kw-2">mut </span>recv) = mpsc::unbounded_channel();
 
     <span class="kw">let </span>reader = <span class="kw">async move </span>{
-        <span class="comment">// Iterating over the journal can block (synchronously), so we need to wrap this in a
-        // `spawn_blocking` call so that we don&#39;t hog the thread.
+        <span class="comment">// Iterating over the journal can block (synchronously), so we need to wrap this
+        // in a `spawn_blocking` call so that we don&#39;t hog the thread.
         </span><span class="kw">let </span>x = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
             <span class="kw">let </span><span class="kw-2">mut </span>journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES, terminate)<span class="question-mark">?</span>;
             journal.seek_head()<span class="question-mark">?</span>;
@@ -151,12 +148,9 @@
             <span class="comment">// `(Journal as Iterator)::next()` will block if there is nothing to read
             </span><span class="kw">for </span>entry <span class="kw">in </span>journal {
                 <span class="kw">let </span>entry = entry.context(<span class="string">&quot;failed to read next journal entry&quot;</span>)<span class="question-mark">?</span>;
-                <span class="comment">// DEBUG will contain _tons_ of garbage; if you need that level of detail, you can
-                // enable debug mode and log in directly.
-                </span><span class="kw">if </span>entry
-                    .get(<span class="string">&quot;PRIORITY&quot;</span>)
-                    .and_then(|val| val.parse::&lt;i32&gt;().ok())
-                    .unwrap_or_default()
+                <span class="comment">// DEBUG will contain _tons_ of garbage; if you need that level of detail, you
+                // can enable debug mode and log in directly.
+                </span><span class="kw">if </span>entry.get(<span class="string">&quot;PRIORITY&quot;</span>).and_then(|val| val.parse::&lt;i32&gt;().ok()).unwrap_or_default()
                     &gt; <span class="number">6
                 </span>{
                     <span class="kw">continue</span>;
@@ -207,9 +201,7 @@
                 builder = builder.with_body(AnyValue::String(val.into()));
             }
             builder = builder.with_attributes(
-                msg.into_iter()
-                    .map(|(k, v)| (k.into(), AnyValue::String(v.into())))
-                    .collect(),
+                msg.into_iter().map(|(k, v)| (k.into(), AnyValue::String(v.into()))).collect(),
             );
             logger.emit(builder.build());
         }

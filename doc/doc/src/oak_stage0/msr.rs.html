@@ -442,6 +442,9 @@
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -464,7 +467,8 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
 
-<span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending on the environment.
+<span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending
+/// on the environment.
 </span><span class="kw">pub struct </span>Msr {
     msr_id: u32,
     msr: DirectMsr,
@@ -472,10 +476,7 @@
 
 <span class="kw">impl </span>Msr {
     <span class="kw">pub const fn </span>new(reg: u32) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            msr_id: reg,
-            msr: DirectMsr::new(reg),
-        }
+        <span class="self">Self </span>{ msr_id: reg, msr: DirectMsr::new(reg) }
     }
 
     <span class="doccomment">/// Read the MSR.
@@ -533,8 +534,9 @@
 
 <span class="doccomment">/// The APIC Base Address Register.
 ///
-/// See Sections 16.3.1 (Local APIC Enable) and 16.9 (Detecting and Enabling x2APIC Mode) in the
-/// AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more details.
+/// See Sections 16.3.1 (Local APIC Enable) and 16.9 (Detecting and Enabling
+/// x2APIC Mode) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for
+/// more details.
 </span><span class="kw">pub struct </span>ApicBase;
 
 <span class="kw">impl </span>ApicBase {
@@ -571,8 +573,9 @@
     }
 }
 
-<span class="doccomment">/// The cache memory type used with MTRR.  We only use Write-Protect mode which the Linux kernel
-/// expects to be enabled by the firmware in order to enable SEV.
+<span class="doccomment">/// The cache memory type used with MTRR.  We only use Write-Protect mode which
+/// the Linux kernel expects to be enabled by the firmware in order to enable
+/// SEV.
 </span><span class="attr">#[repr(u8)]
 #[allow(dead_code)] </span><span class="comment">// Remove if this is ever ported to a public crate.
 </span><span class="attr">#[derive(FromRepr)]
@@ -601,35 +604,35 @@
     </span><span class="kw">const </span>MSR: Msr = Msr::new(<span class="number">0x0000_02FF</span>);
 
     <span class="kw">pub fn </span>read() -&gt; (MTRRDefTypeFlags, MemoryType) {
-        <span class="comment">// If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
-        // to read the MSR, otherwise we read the MSR directly.
-        // Safety: This is safe because this MSR has been supported since the P6 family of
-        // Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+        <span class="comment">// If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the
+        // GHCB protocol to read the MSR, otherwise we read the MSR directly.
+        // Safety: This is safe because this MSR has been supported since the P6 family
+        // of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
         </span><span class="kw">let </span>msr_value = <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() };
-        <span class="kw">let </span>memory_type: MemoryType = (msr_value <span class="kw">as </span>u8)
-            .try_into()
-            .expect(<span class="string">&quot;invalid MemoryType value&quot;</span>);
+        <span class="kw">let </span>memory_type: MemoryType =
+            (msr_value <span class="kw">as </span>u8).try_into().expect(<span class="string">&quot;invalid MemoryType value&quot;</span>);
         (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
     }
 
-    <span class="doccomment">/// Write the MTRRDefType flags and caching mode, preserving reserved values.
-    /// The Linux kernel requires the mode be set to `MemoryType::WP` since
-    /// July, 2022, with this requirement back-ported to 5.15.X, or it will silently crash when
-    /// SEV is enabled.
+    <span class="doccomment">/// Write the MTRRDefType flags and caching mode, preserving reserved
+    /// values. The Linux kernel requires the mode be set to
+    /// `MemoryType::WP` since July, 2022, with this requirement back-ported
+    /// to 5.15.X, or it will silently crash when SEV is enabled.
     ///
-    /// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
-    /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
-    /// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
-    /// [    0.122245] mtrr: corrected configuration.
+    /// The Linux kernel gives a warning that MTRR is not setup properly, which
+    /// we can igore: [    0.120763] mtrr: your CPUs had inconsistent
+    /// MTRRdefType settings [    0.121529] mtrr: probably your BIOS does
+    /// not setup all CPUs. [    0.122245] mtrr: corrected configuration.
     ///
     /// ## Safety
     ///
-    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to ROM, in a mode that
-    /// caches the write, although this would require unsafe code to do.
+    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to
+    /// ROM, in a mode that caches the write, although this would require
+    /// unsafe code to do.
     ///
-    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
-    /// this specific MSR and mode has been supported since the P6 family of Pentium processors
-    /// (see &lt;https://en.wikipedia.org/wiki/Memory_type_range_register&gt;).
+    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this
+    /// operation is safe because this specific MSR and mode has been
+    /// supported since the P6 family of Pentium processors (see &lt;https://en.wikipedia.org/wiki/Memory_type_range_register&gt;).
     </span><span class="kw">pub unsafe fn </span>write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         <span class="comment">// Preserve values of reserved bits.
         </span><span class="kw">let </span>(old_flags, _old_memory_type) = <span class="self">Self</span>::read();
@@ -642,11 +645,11 @@
 
 <span class="doccomment">/// The x2APIC_ID register.
 ///
-/// Contains the 32-bit local x2APIC ID. It is assigned by hardware at reset time, and the exact
-/// structure is manufacturer-dependent.
+/// Contains the 32-bit local x2APIC ID. It is assigned by hardware at reset
+/// time, and the exact structure is manufacturer-dependent.
 ///
-/// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for
-/// more details.
+/// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer&#39;s Manual,
+/// Volume 2 for more details.
 </span><span class="kw">pub struct </span>X2ApicIdRegister;
 
 <span class="kw">impl </span>X2ApicIdRegister {
@@ -701,10 +704,7 @@
     <span class="kw">pub unsafe fn </span>read() -&gt; (SpuriousInterruptFlags, u8) {
         <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read();
 
-        (
-            SpuriousInterruptFlags::from_bits_truncate((val &amp; <span class="number">0xFFFF_FF00</span>) <span class="kw">as </span>u32),
-            (val &amp; <span class="number">0xFF</span>) <span class="kw">as </span>u8,
-        )
+        (SpuriousInterruptFlags::from_bits_truncate((val &amp; <span class="number">0xFFFF_FF00</span>) <span class="kw">as </span>u32), (val &amp; <span class="number">0xFF</span>) <span class="kw">as </span>u8)
     }
 
     <span class="kw">pub unsafe fn </span>write(flags: SpuriousInterruptFlags, vec: u8) {
@@ -773,54 +773,58 @@
 
 <span class="doccomment">/// Interrupt types that can be sent via the Interrupt Command Register.
 ///
-/// Note that this enum contains only values supported by x2APIC; the legacy xAPIC supports some
-/// extra message types that are deprecated (and reserved) under x2APIC.
+/// Note that this enum contains only values supported by x2APIC; the legacy
+/// xAPIC supports some extra message types that are deprecated (and reserved)
+/// under x2APIC.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code, clippy::upper_case_acronyms)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>MessageType {
-    <span class="doccomment">/// IPI delivers an interrupt to the target local APIC specified in the Destination field.
+    <span class="doccomment">/// IPI delivers an interrupt to the target local APIC specified in the
+    /// Destination field.
     </span>Fixed = <span class="number">0b000 </span>&lt;&lt; <span class="number">8</span>,
 
-    <span class="doccomment">/// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode is edge-triggered
-    /// and Vector must be 0x00.
+    <span class="doccomment">/// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode
+    /// is edge-triggered and Vector must be 0x00.
     </span>SMI = <span class="number">0b010 </span>&lt;&lt; <span class="number">8</span>,
 
     <span class="comment">// IPI delivers an non-maskable interrupt to the target local APIC specified in the
     // Destination field. Vector is ignored.
     </span>NMI = <span class="number">0b100 </span>&lt;&lt; <span class="number">8</span>,
 
-    <span class="doccomment">/// IPI delivers an INIT request to the target local APIC(s), causing the CPU core to assume
-    /// INIT state. Trigger mode is edge-triggered, Vector must be 0x00. After INIT, target APIC
-    /// will only accept a Startup IPI, all other interrupts will be held pending.
+    <span class="doccomment">/// IPI delivers an INIT request to the target local APIC(s), causing the
+    /// CPU core to assume INIT state. Trigger mode is edge-triggered,
+    /// Vector must be 0x00. After INIT, target APIC will only accept a
+    /// Startup IPI, all other interrupts will be held pending.
     </span>Init = <span class="number">0b101 </span>&lt;&lt; <span class="number">8</span>,
 
-    <span class="doccomment">/// IPI delives a start-up request (SIPI) to the target local APIC(s) in the Destination field,
-    /// causing the core to start processing the routing whose address is specified by the Vector
-    /// field.
+    <span class="doccomment">/// IPI delives a start-up request (SIPI) to the target local APIC(s) in the
+    /// Destination field, causing the core to start processing the routing
+    /// whose address is specified by the Vector field.
     </span>Startup = <span class="number">0b110 </span>&lt;&lt; <span class="number">8</span>,
 }
 
 <span class="doccomment">/// Values for the destination mode flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>DestinationMode {
     <span class="comment">// Physical destination, single local APIC ID.
     </span>Physical = <span class="number">0 </span>&lt;&lt; <span class="number">11</span>,
 
-    <span class="doccomment">/// Logical destination, one or more local APICs with a common destination logical ID.
+    <span class="doccomment">/// Logical destination, one or more local APICs with a common destination
+    /// logical ID.
     </span>Logical = <span class="number">1 </span>&lt;&lt; <span class="number">11</span>,
 }
 
 <span class="doccomment">/// Values for the level flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="attr">#[repr(u32)]
 </span><span class="kw">pub enum </span>Level {
     Deassert = <span class="number">0 </span>&lt;&lt; <span class="number">14</span>,
@@ -829,8 +833,8 @@
 
 <span class="doccomment">/// Values for the trigger mode flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="attr">#[repr(u32)]
 </span><span class="kw">pub enum </span>TriggerMode {
     Edge = <span class="number">0 </span>&lt;&lt; <span class="number">15</span>,
@@ -839,8 +843,8 @@
 
 <span class="doccomment">/// Values for the destination shorthand flag in the Interrupt Command Register.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
-/// Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture
+/// Programmer&#39;s Manual, Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>DestinationShorthand {
@@ -850,10 +854,12 @@
     <span class="doccomment">/// The issuing APIC is the only destination.
     </span>SelfOnly = <span class="number">0b01 </span>&lt;&lt; <span class="number">18</span>,
 
-    <span class="doccomment">/// The IPI is sent to all local APICs including itself (destination field = 0xFF)
+    <span class="doccomment">/// The IPI is sent to all local APICs including itself (destination field =
+    /// 0xFF)
     </span>AllInclSelf = <span class="number">0b10 </span>&lt;&lt; <span class="number">18</span>,
 
-    <span class="doccomment">/// The IPI is sent to all local APICs except itself (destination field = 0xFF)
+    <span class="doccomment">/// The IPI is sent to all local APICs except itself (destination field =
+    /// 0xFF)
     </span>AllExclSelf = <span class="number">0b11 </span>&lt;&lt; <span class="number">18</span>,
 }
 

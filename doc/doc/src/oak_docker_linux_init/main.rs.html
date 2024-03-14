@@ -58,6 +58,7 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -92,9 +93,10 @@
     <span class="comment">// Set up the Linux environment, since we expect to be the initial process.
     </span>init::init().unwrap();
 
-    <span class="comment">// For now, just set PATH to some common locations. Docker image has information about
-    // the environment variables that need to be set up before the container is launched. We
-    // should use that information to set up all the necessary environment variables.
+    <span class="comment">// For now, just set PATH to some common locations. Docker image has information
+    // about the environment variables that need to be set up before the
+    // container is launched. We should use that information to set up all the
+    // necessary environment variables.
     </span>std::env::set_var(<span class="string">&quot;PATH&quot;</span>, <span class="string">&quot;/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin&quot;</span>);
 
     <span class="kw">let </span>file = File::open(DOCKER_COMMAND_PATH).expect(<span class="string">&quot;Error reading file&quot;</span>);
@@ -112,8 +114,8 @@
         <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">println!</span>(<span class="string">&quot;Error running docker command: {:?}&quot;</span>, error),
     }
 
-    <span class="comment">// Linux does not expect the initial process to ever exit, so we keep sleeping 1 second at a
-    // time.
+    <span class="comment">// Linux does not expect the initial process to ever exit, so we keep sleeping 1
+    // second at a time.
     </span><span class="kw">loop </span>{
         nix::unistd::sleep(<span class="number">1</span>);
     }

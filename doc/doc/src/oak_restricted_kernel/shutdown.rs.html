@@ -55,10 +55,6 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -88,9 +84,7 @@
     <span class="comment">// 1. Attempt the SEV-ES shutdown protocol, if we&#39;re under SEV-ES.
     </span><span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        request_termination(TerminationRequest {
-            reason: TerminationReason::General,
-        });
+        request_termination(TerminationRequest { reason: TerminationReason::General });
     }
 
     <span class="comment">// 2. If we&#39;re still here, attempt shutdown via i8042.
@@ -105,13 +99,11 @@
         <span class="kw">let _ </span>= port.try_write(<span class="number">0xFE_u8</span>);
     }
 
-    <span class="comment">// 3. If we&#39;re still here, the gloves come off. Load a garbage IDT and cause #UD.
-    </span><span class="kw">let </span>idt = DescriptorTablePointer {
-        limit: <span class="number">0</span>,
-        base: VirtAddr::new(<span class="number">0x0</span>),
-    };
-    <span class="comment">// Safety: this is technically safe, as it will cause the machine to crash, and that&#39;s
-    // the intent.
+    <span class="comment">// 3. If we&#39;re still here, the gloves come off. Load a garbage IDT and cause
+    //    #UD.
+    </span><span class="kw">let </span>idt = DescriptorTablePointer { limit: <span class="number">0</span>, base: VirtAddr::new(<span class="number">0x0</span>) };
+    <span class="comment">// Safety: this is technically safe, as it will cause the machine to crash, and
+    // that&#39;s the intent.
     </span><span class="kw">unsafe </span>{
         lidt(<span class="kw-2">&amp;</span>idt);
         <span class="macro">asm! </span>{

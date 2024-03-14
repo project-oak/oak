@@ -78,6 +78,7 @@
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -147,15 +148,16 @@
 ///
 /// # Safety
 ///
-/// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known I/O ports of 0x20
-/// and 0xA0.
+/// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known
+/// I/O ports of 0x20 and 0xA0.
 </span><span class="kw">pub unsafe fn </span>disable_pic8259() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>pic0 = Pic::new(PIC0_BASE);
     <span class="kw">let </span><span class="kw-2">mut </span>pic1 = Pic::new(PIC1_BASE);
 
     <span class="comment">// PIC0 interrupts will start at 0x20 (32), PIC1 at IRQ2, disable all interrupts
     </span>pic0.init(<span class="number">0x20</span>, <span class="number">4</span>, <span class="number">0xFF</span>)<span class="question-mark">?</span>;
-    <span class="comment">// PIC1 interrupts will start at 0x28 (40), cascade identity, and again disable all interrupts
+    <span class="comment">// PIC1 interrupts will start at 0x28 (40), cascade identity, and again disable
+    // all interrupts
     </span>pic1.init(<span class="number">0x28</span>, <span class="number">2</span>, <span class="number">0xFF</span>)
 }
 </code></pre></div></section></main></body></html>

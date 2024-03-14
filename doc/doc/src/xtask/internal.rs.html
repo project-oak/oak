@@ -752,80 +752,6 @@
 <a href="#752" id="752">752</a>
 <a href="#753" id="753">753</a>
 <a href="#754" id="754">754</a>
-<a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a>
-<a href="#761" id="761">761</a>
-<a href="#762" id="762">762</a>
-<a href="#763" id="763">763</a>
-<a href="#764" id="764">764</a>
-<a href="#765" id="765">765</a>
-<a href="#766" id="766">766</a>
-<a href="#767" id="767">767</a>
-<a href="#768" id="768">768</a>
-<a href="#769" id="769">769</a>
-<a href="#770" id="770">770</a>
-<a href="#771" id="771">771</a>
-<a href="#772" id="772">772</a>
-<a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
-<a href="#782" id="782">782</a>
-<a href="#783" id="783">783</a>
-<a href="#784" id="784">784</a>
-<a href="#785" id="785">785</a>
-<a href="#786" id="786">786</a>
-<a href="#787" id="787">787</a>
-<a href="#788" id="788">788</a>
-<a href="#789" id="789">789</a>
-<a href="#790" id="790">790</a>
-<a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
-<a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
-<a href="#814" id="814">814</a>
-<a href="#815" id="815">815</a>
-<a href="#816" id="816">816</a>
-<a href="#817" id="817">817</a>
-<a href="#818" id="818">818</a>
-<a href="#819" id="819">819</a>
-<a href="#820" id="820">820</a>
-<a href="#821" id="821">821</a>
-<a href="#822" id="822">822</a>
-<a href="#823" id="823">823</a>
-<a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
-<a href="#828" id="828">828</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -933,7 +859,8 @@
 
 <span class="attr">#[derive(serde::Deserialize, Default, Debug, Clone, PartialEq, EnumIter)]
 </span><span class="kw">pub enum </span>ServerVariant {
-    <span class="doccomment">/// Production-like server variant, without logging or any of the experimental features enabled
+    <span class="doccomment">/// Production-like server variant, without logging or any of the
+    /// experimental features enabled
     </span><span class="attr">#[default]
     </span>Base,
 }
@@ -943,10 +870,7 @@
     <span class="kw">fn </span>from_str(variant: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
         <span class="kw">match </span>variant {
             <span class="string">&quot;base&quot; </span>=&gt; <span class="prelude-val">Ok</span>(ServerVariant::Base),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;couldn&#39;t parse functions server variant {}&quot;</span>,
-                variant
-            )),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse functions server variant {}&quot;</span>, variant)),
         }
     }
 }
@@ -971,19 +895,13 @@
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
 </span><span class="kw">pub struct </span>RunTestsOpt {
-    <span class="attr">#[arg(
-        long,
-        help = <span class="string">&quot;Remove generated files after running tests for each crate&quot;
-    </span>)]
+    <span class="attr">#[arg(long, help = <span class="string">&quot;Remove generated files after running tests for each crate&quot;</span>)]
     </span><span class="kw">pub </span>cleanup: bool,
 }
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
 </span><span class="kw">pub struct </span>RunCargoFuzz {
-    <span class="attr">#[arg(
-        long,
-        help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;
-    </span>)]
+    <span class="attr">#[arg(long, help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>)]
     </span><span class="kw">pub </span>target_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary
     </span><span class="attr">#[arg(last(<span class="bool-val">true</span>))]
@@ -992,8 +910,8 @@
 
 <span class="doccomment">/// Partial representation of Cargo manifest files.
 ///
-/// Only the fields that are required for extracting specific information (e.g., names of fuzz
-/// targets) are included.
+/// Only the fields that are required for extracting specific information (e.g.,
+/// names of fuzz targets) are included.
 </span><span class="attr">#[derive(serde::Deserialize, Debug)]
 </span><span class="kw">pub struct </span>CargoManifest {
     <span class="attr">#[serde(default)]
@@ -1025,7 +943,8 @@
     </span>Json(DependencySpec),
 }
 
-<span class="doccomment">/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.
+<span class="doccomment">/// Partial representation of a Json specification of a dependency in a
+/// `Cargo.toml` file.
 </span><span class="attr">#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
 </span><span class="kw">pub struct </span>DependencySpec {
     <span class="attr">#[serde(default)]
@@ -1077,8 +996,8 @@
     </span><span class="kw">pub </span>out_dir: String,
 }
 
-<span class="doccomment">/// A construct to keep track of the status of the execution. It only cares about the top-level
-/// steps.
+<span class="doccomment">/// A construct to keep track of the status of the execution. It only cares
+/// about the top-level steps.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Status {
     error: usize,
@@ -1088,21 +1007,17 @@
 
 <span class="kw">impl </span>Status {
     <span class="kw">pub fn </span>new(remaining: usize) -&gt; <span class="self">Self </span>{
-        Status {
-            error: <span class="number">0</span>,
-            ok: <span class="number">0</span>,
-            remaining,
-        }
+        Status { error: <span class="number">0</span>, ok: <span class="number">0</span>, remaining }
     }
 
-    <span class="doccomment">/// Guarantees that the `error`, `ok`, and `remaining` counts are updated only after the
-    /// completions of each top-level step.
+    <span class="doccomment">/// Guarantees that the `error`, `ok`, and `remaining` counts are updated
+    /// only after the completions of each top-level step.
     </span><span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, context: <span class="kw-2">&amp;</span>Context, step_has_error: bool) {
         <span class="comment">// Update the status with results from the step, only if it is a top-level step.
         </span><span class="kw">if </span>context.depth() == <span class="number">1 </span>{
             <span class="self">self</span>.remaining -= <span class="number">1</span>;
-            <span class="comment">// We only care about pass (`ok`) and fail (`error`). If an entire step is skipped, we
-            // count it as a passed step.
+            <span class="comment">// We only care about pass (`ok`) and fail (`error`). If an entire step is
+            // skipped, we count it as a passed step.
             </span><span class="kw">if </span>step_has_error {
                 <span class="self">self</span>.error += <span class="number">1</span>;
             } <span class="kw">else </span>{
@@ -1112,15 +1027,16 @@
     }
 }
 
-<span class="doccomment">/// Formats the status as `E:&lt;error-count&gt;,O:&lt;ok-count&gt;,R:&lt;remaining-count&gt;`, suitable for
-/// annotating the log lines.
+<span class="doccomment">/// Formats the status as `E:&lt;error-count&gt;,O:&lt;ok-count&gt;,R:&lt;remaining-count&gt;`,
+/// suitable for annotating the log lines.
 </span><span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Status {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
         <span class="macro">write!</span>(f, <span class="string">&quot;✓:{},✗:{},⠇:{}&quot;</span>, <span class="self">self</span>.ok, <span class="self">self</span>.error, <span class="self">self</span>.remaining)
     }
 }
 
-<span class="doccomment">/// Encapsulates all the local state relative to a step, and is propagated to child steps.
+<span class="doccomment">/// Encapsulates all the local state relative to a step, and is propagated to
+/// child steps.
 </span><span class="kw">pub struct </span>Context {
     opt: Opt,
     prefix: Vec&lt;String&gt;,
@@ -1128,19 +1044,13 @@
 
 <span class="kw">impl </span>Context {
     <span class="kw">pub fn </span>root(opt: <span class="kw-2">&amp;</span>Opt) -&gt; <span class="self">Self </span>{
-        Context {
-            opt: opt.clone(),
-            prefix: <span class="macro">vec!</span>[],
-        }
+        Context { opt: opt.clone(), prefix: <span class="macro">vec!</span>[] }
     }
 
     <span class="kw">fn </span>child(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>prefix = <span class="self">self</span>.prefix.clone();
         prefix.push(name.to_string());
-        Context {
-            opt: <span class="self">self</span>.opt.clone(),
-            prefix,
-        }
+        Context { opt: <span class="self">self</span>.opt.clone(), prefix }
     }
 
     <span class="kw">fn </span>depth(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
@@ -1154,7 +1064,8 @@
 
     <span class="doccomment">/// Prints a footer that repeats information from the header.
     ///
-    /// Useful when footer and header are expected to be far away from each other.
+    /// Useful when footer and header are expected to be far away from each
+    /// other.
     </span><span class="kw">fn </span>footer_long(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
         <span class="macro">format!</span>(<span class="string">&quot;{}└[{}]─▶&quot;</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
@@ -1203,27 +1114,19 @@
     <span class="kw">pub </span>logs: String,
 }
 
-<span class="doccomment">/// An execution step, which may be a single `Runnable`, or a collection of sub-steps.
+<span class="doccomment">/// An execution step, which may be a single `Runnable`, or a collection of
+/// sub-steps.
 </span><span class="kw">pub enum </span>Step {
-    Single {
-        name: String,
-        command: Box&lt;<span class="kw">dyn </span>Runnable&gt;,
-    },
-    Multiple {
-        name: String,
-        steps: Vec&lt;Step&gt;,
-    },
+    Single { name: String, command: Box&lt;<span class="kw">dyn </span>Runnable&gt; },
+    Multiple { name: String, steps: Vec&lt;Step&gt; },
 }
 
 <span class="kw">impl </span>Step {
-    <span class="doccomment">/// Returns the number of top-level steps or commands. The number of sub-steps is not
-    /// recursively accumulated in the returned length.
+    <span class="doccomment">/// Returns the number of top-level steps or commands. The number of
+    /// sub-steps is not recursively accumulated in the returned length.
     </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="kw">match </span><span class="self">self </span>{
-            Step::Single {
-                name: <span class="kw">_</span>,
-                command: <span class="kw">_</span>,
-            } =&gt; <span class="number">1</span>,
+            Step::Single { name: <span class="kw">_</span>, command: <span class="kw">_ </span>} =&gt; <span class="number">1</span>,
             Step::Multiple { name: <span class="kw">_</span>, steps: s } =&gt; s.len(),
         }
     }
@@ -1250,27 +1153,19 @@
     </span>T: IntoIterator,
     T::Item: std::fmt::Display,
 {
-    <span class="macro">format!</span>(
-        <span class="string">&quot;[{}]&quot;</span>,
-        values
-            .into_iter()
-            .map(|v| v.to_string())
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-            .join(<span class="string">&quot;,&quot;</span>)
-    )
+    <span class="macro">format!</span>(<span class="string">&quot;[{}]&quot;</span>, values.into_iter().map(|v| v.to_string()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;,&quot;</span>))
 }
 
 <span class="doccomment">/// Reads the entire content of the provided future into a vector.
 </span><span class="kw">pub async fn </span>read_to_end&lt;A: AsyncRead + Unpin&gt;(<span class="kw-2">mut </span>io: A) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
-    io.read_to_end(<span class="kw-2">&amp;mut </span>buf)
-        .<span class="kw">await
-        </span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
+    io.read_to_end(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
     buf
 }
 
-<span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of
-/// status results from the single or multiple steps that were executed.
+<span class="doccomment">/// Run the provided step, printing out information about the execution, and
+/// returning a set of status results from the single or multiple steps that
+/// were executed.
 </span><span class="attr">#[async_recursion]
 </span><span class="kw">pub async fn </span>run_step(context: <span class="kw-2">&amp;</span>Context, step: Step, <span class="kw-2">mut </span>run_status: Status) -&gt; StepResult {
     <span class="kw">let </span><span class="kw-2">mut </span>step_result = StepResult::default();
@@ -1321,9 +1216,7 @@
                     context.margin(),
                     <span class="string">&quot;╚════════════════════════&quot;</span>.blue()
                 );
-                step_result
-                    .failed_steps_prefixes
-                    .push(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, context));
+                step_result.failed_steps_prefixes.push(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, context));
             }
 
             <span class="macro">eprintln!</span>(
@@ -1344,9 +1237,7 @@
             <span class="kw">for </span>step <span class="kw">in </span>steps {
                 <span class="kw">let </span><span class="kw-2">mut </span>result = run_step(<span class="kw-2">&amp;</span>context, step, run_status.clone()).<span class="kw">await</span>;
                 step_result.values = step_result.values.union(<span class="kw-2">&amp;</span>result.values).cloned().collect();
-                step_result
-                    .failed_steps_prefixes
-                    .append(<span class="kw-2">&amp;mut </span>result.failed_steps_prefixes);
+                step_result.failed_steps_prefixes.append(<span class="kw-2">&amp;mut </span>result.failed_steps_prefixes);
                 <span class="kw">let </span>failed = result.values.contains(<span class="kw-2">&amp;</span>StatusResultValue::Error);
                 run_status.update(<span class="kw-2">&amp;</span>context, failed);
                 <span class="kw">if </span>failed &amp;&amp; !context.opt.keep_going {
@@ -1408,28 +1299,22 @@
             <span class="self">self</span>.args.join(<span class="string">&quot; &quot;</span>),
             <span class="self">self</span>.current_dir
                 .as_ref()
-                .map_or(<span class="string">&quot;&quot;</span>.to_string(), |dir| <span class="macro">format!</span>(
-                    <span class="string">&quot; (in directory {})&quot;</span>,
-                    dir.display()
-                ))
+                .map_or(<span class="string">&quot;&quot;</span>.to_string(), |dir| <span class="macro">format!</span>(<span class="string">&quot; (in directory {})&quot;</span>, dir.display()))
         )
     }
-    <span class="doccomment">/// Run the provided command, printing a status message with the current prefix.
-    /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
-    /// to run was not found).
+    <span class="doccomment">/// Run the provided command, printing a status message with the current
+    /// prefix. TODO(#396): Return one of three results: pass, fail, or
+    /// internal error (e.g. if the binary to run was not found).
     </span><span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(<span class="kw-2">&amp;</span><span class="self">self</span>.executable);
         cmd.args(<span class="kw-2">&amp;</span><span class="self">self</span>.args);
 
-        <span class="comment">// Ensure that the child process is killed when the `Running` instance is dropped (including
-        // on panic).
+        <span class="comment">// Ensure that the child process is killed when the `Running` instance is
+        // dropped (including on panic).
         </span>cmd.kill_on_drop(<span class="bool-val">true</span>);
 
         <span class="kw">if </span>opt.dry_run {
-            Box::new(SingleStatusResult {
-                value: StatusResultValue::Skipped,
-                logs: String::new(),
-            })
+            Box::new(SingleStatusResult { value: StatusResultValue::Skipped, logs: String::new() })
         } <span class="kw">else </span>{
             <span class="comment">// If the `logs` flag is enabled, inherit stdout and stderr from the main xtask
             // process.
@@ -1456,10 +1341,7 @@
                 .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = child.id() {
-                PROCESSES
-                    .lock()
-                    .expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>)
-                    .push(pid <span class="kw">as </span>i32);
+                PROCESSES.lock().expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>).push(pid <span class="kw">as </span>i32);
             }
 
             Box::new(RunningCmd { child })
@@ -1523,22 +1405,12 @@
     }
 
     <span class="kw">async fn </span>result(<span class="kw-2">mut </span><span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; SingleStatusResult {
-        <span class="kw">let </span>output = <span class="self">self
-            </span>.child
-            .wait_with_output()
-            .<span class="kw">await
-            </span>.expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
+        <span class="kw">let </span>output = <span class="self">self</span>.child.wait_with_output().<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
         <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>output.stdout, <span class="kw-2">&amp;</span>output.stderr);
         <span class="kw">if </span>output.status.success() {
-            SingleStatusResult {
-                value: StatusResultValue::Ok,
-                logs,
-            }
+            SingleStatusResult { value: StatusResultValue::Ok, logs }
         } <span class="kw">else </span>{
-            SingleStatusResult {
-                value: StatusResultValue::Error,
-                logs,
-            }
+            SingleStatusResult { value: StatusResultValue::Error, logs }
         }
     }
 }
@@ -1562,7 +1434,8 @@
 
 <span class="doccomment">/// A task that can be run asynchronously.
 </span><span class="kw">pub trait </span>Runnable: Send {
-    <span class="doccomment">/// Returns a description of the task, e.g. the command line arguments that are part of it.
+    <span class="doccomment">/// Returns a description of the task, e.g. the command line arguments that
+    /// are part of it.
     </span><span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String;
     <span class="doccomment">/// Starts the task and returns a [`Running`] implementation.
     </span><span class="kw">fn </span>run(<span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;, opt: <span class="kw-2">&amp;</span>Opt) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt;;
@@ -1592,8 +1465,8 @@
     </span>}
 }
 
-<span class="doccomment">/// Similar to the `vec!` macro, but also allows a &quot;spread&quot; operator syntax (`...`) to inline and
-/// expand nested iterable values.
+<span class="doccomment">/// Similar to the `vec!` macro, but also allows a &quot;spread&quot; operator syntax
+/// (`...`) to inline and expand nested iterable values.
 ///
 /// See &lt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax&gt;.
 </span><span class="attr">#[macro_export]
@@ -1624,34 +1497,13 @@
 </span><span class="kw">fn </span>test_spread() {
     <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>], <span class="macro">spread!</span>[<span class="number">1</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
     <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>], <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>], <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, ...[<span class="number">2</span>, <span class="number">3</span>], <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, ...[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>], ...[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>],
-        <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;()
-    );
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>], <span class="number">3</span>, <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[<span class="number">1</span>, ...[<span class="number">2</span>, <span class="number">3</span>], <span class="number">4</span>].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[<span class="number">1</span>, <span class="number">2</span>, ...[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>], ...[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
 
-    <span class="macro">assert_eq!</span>(
-        <span class="macro">vec!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>],
-        <span class="macro">spread!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>].cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-    );
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>], <span class="macro">spread!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>].cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
 }
 </code></pre></div></section></main></body></html>

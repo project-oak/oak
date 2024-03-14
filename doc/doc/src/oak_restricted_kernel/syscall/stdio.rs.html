@@ -57,6 +57,7 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -90,16 +91,17 @@
     }
 
     <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, oak_restricted_kernel_interface::Errno&gt; {
-        <span class="comment">// buf may be up to usize, but we need to return the number of bytes as isize. Let&#39;s follow
-        // the Linux example of only writing up to isize::MAX bytes.
+        <span class="comment">// buf may be up to usize, but we need to return the number of bytes as isize.
+        // Let&#39;s follow the Linux example of only writing up to isize::MAX
+        // bytes.
         </span><span class="kw">let </span>buf = <span class="kw-2">&amp;</span>buf[..min(buf.len(), isize::MAX <span class="kw">as </span>usize)];
         <span class="kw">let </span><span class="kw-2">mut </span>lock = SERIAL1.lock();
         <span class="kw">let </span>port = lock.as_mut().unwrap();
         <span class="kw">for </span><span class="kw-2">&amp;</span>byte <span class="kw">in </span>buf {
-            <span class="comment">// We don&#39;t log the error, as (a) we&#39;re holding the mutex on the serial port so logging
-            // wouldn&#39;t work, and (b) it&#39;s the write to the serial port that failed, and our
-            // logs would go over the exact same serial port so writing the log would likely fail as
-            // well.
+            <span class="comment">// We don&#39;t log the error, as (a) we&#39;re holding the mutex on the serial port so
+            // logging wouldn&#39;t work, and (b) it&#39;s the write to the serial port
+            // that failed, and our logs would go over the exact same serial
+            // port so writing the log would likely fail as well.
             </span>port.send(byte).map_err(|<span class="kw">_</span>| Errno::EIO)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(buf.len() <span class="kw">as </span>isize)

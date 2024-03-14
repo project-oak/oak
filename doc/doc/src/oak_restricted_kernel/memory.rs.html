@@ -214,14 +214,6 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -286,17 +278,14 @@
     <span class="kw">pub const fn </span>empty() -&gt; <span class="self">Self </span>{
         <span class="comment">// Safety: zero is definitely aligned with a 2 MiB boundary.
         </span><span class="kw">let </span>zero_page = <span class="kw">unsafe </span>{ Page::from_start_address_unchecked(VirtAddr::zero()) };
-        <span class="self">Self </span>{
-            heap: Heap::empty(),
-            base: zero_page,
-            available: Page::range(zero_page, zero_page),
-        }
+        <span class="self">Self </span>{ heap: Heap::empty(), base: zero_page, available: Page::range(zero_page, zero_page) }
     }
 
     <span class="doccomment">/// Extends the current pool of memory by one 2 MiB page.
     </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// We might want to do something more clever here, such as exponentially increasing the
-        // number of frames we allocate. For now, let&#39;s just keep extending by one frame.
+        <span class="comment">// We might want to do something more clever here, such as exponentially
+        // increasing the number of frames we allocate. For now, let&#39;s just keep
+        // extending by one frame.
         </span><span class="kw">let </span>frame: PhysFrame&lt;Size2MiB&gt; = FRAME_ALLOCATOR
             .lock()
             .allocate_frame()
@@ -304,9 +293,10 @@
         <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
         <span class="kw">let </span>mapper = pt_guard.get().unwrap();
 
-        <span class="comment">// Safety: if the page is already mapped, then we&#39;ll get an error and thus we won&#39;t
-        // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
-        // the memory is currently unused and thus there should be no references to that memory.
+        <span class="comment">// Safety: if the page is already mapped, then we&#39;ll get an error and thus we
+        // won&#39;t overwrite any existing mappings, Otherwise, creating a new
+        // mapping is safe as the memory is currently unused and thus there
+        // should be no references to that memory.
         </span><span class="kw">unsafe </span>{
             mapper
                 .map_to_with_table_flags(
@@ -342,15 +332,13 @@
         <span class="comment">// Get the first 2 MiB of memory for the heap.
         </span><span class="self">self</span>.extend().unwrap();
 
-        <span class="self">self</span>.heap.init(
-            <span class="self">self</span>.base.start_address().as_mut_ptr(),
-            Size2MiB::SIZE <span class="kw">as </span>usize,
-        );
+        <span class="self">self</span>.heap.init(<span class="self">self</span>.base.start_address().as_mut_ptr(), Size2MiB::SIZE <span class="kw">as </span>usize);
     }
 
     <span class="kw">pub fn </span>allocate_first_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;u8&gt;, ()&gt; {
-        <span class="comment">// Try allocating the data structure; if the allocation fails, grow the heap and try again
-        // until we succeed (or until we can&#39;t extend ourselves any further)
+        <span class="comment">// Try allocating the data structure; if the allocation fails, grow the heap and
+        // try again until we succeed (or until we can&#39;t extend ourselves any
+        // further)
         </span><span class="kw">loop </span>{
             <span class="kw">match </span><span class="self">self</span>.heap.allocate_first_fit(layout) {
                 <span class="prelude-val">Ok</span>(ptr) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(ptr),
@@ -394,17 +382,16 @@
     }
 
     <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
-        <span class="self">self</span>.<span class="number">0
-            </span>.lock()
-            .deallocate(NonNull::new_unchecked(ptr), layout)
+        <span class="self">self</span>.<span class="number">0</span>.lock().deallocate(NonNull::new_unchecked(ptr), layout)
     }
 }
 
-<span class="doccomment">/// Initializes the global allocator from the largest contiguous slice of available memory.
+<span class="doccomment">/// Initializes the global allocator from the largest contiguous slice of
+/// available memory.
 ///
-/// Pointers to addresses in the memory area (or references to data contained within the slice) must
-/// be considered invalid after calling this function, as the allocator may overwrite the data at
-/// any point.
+/// Pointers to addresses in the memory area (or references to data contained
+/// within the slice) must be considered invalid after calling this function, as
+/// the allocator may overwrite the data at any point.
 </span><span class="kw">pub fn </span>init_kernel_heap(range: PageRange&lt;Size2MiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// This is safe as we know the memory is available based on the e820 map.
     </span><span class="kw">unsafe </span>{
@@ -417,8 +404,8 @@
 ///
 /// # Safety
 ///
-/// The caller has to guarantee that the page range is valid and not in use, as we will change page
-/// table flags for pages in that range.
+/// The caller has to guarantee that the page range is valid and not in use, as
+/// we will change page table flags for pages in that range.
 </span><span class="kw">pub unsafe fn </span>init_guest_host_heap&lt;S: PageSize, M: Mapper&lt;S&gt;&gt;(
     pages: PageRange&lt;S&gt;,
     mapper: <span class="kw-2">&amp;</span>M,
@@ -441,9 +428,6 @@
         pages.end.start_address().as_u64()
     );
 
-    <span class="prelude-val">Ok</span>(LockedHeap::new(
-        pages.start.start_address().as_mut_ptr(),
-        pages.count() * S::SIZE <span class="kw">as </span>usize,
-    ))
+    <span class="prelude-val">Ok</span>(LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE <span class="kw">as </span>usize))
 }
 </code></pre></div></section></main></body></html>

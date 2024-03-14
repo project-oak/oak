@@ -55,8 +55,6 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -105,10 +103,8 @@
             </span>.into_inner();
 
         <span class="kw">let </span><span class="kw-2">mut </span>image_buf: Vec&lt;u8&gt; = Vec::new();
-        <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>load_response) = stream
-            .message()
-            .<span class="kw">await
-            </span>.context(<span class="string">&quot;couldn&#39;t load message from stream&quot;</span>)<span class="question-mark">?
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>load_response) =
+            stream.message().<span class="kw">await</span>.context(<span class="string">&quot;couldn&#39;t load message from stream&quot;</span>)<span class="question-mark">?
         </span>{
             image_buf.append(<span class="kw-2">&amp;mut </span>load_response.image_chunk);
         }

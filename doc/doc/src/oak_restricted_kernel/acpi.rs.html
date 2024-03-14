@@ -427,6 +427,7 @@
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -570,7 +571,14 @@
     }
 
     <span class="kw">fn </span>read_pci_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, segment: u16, bus: u8, device: u8, function: u8, offset: u16) -&gt; u8 {
-        <span class="macro">log::error!</span>(<span class="string">&quot;unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}&quot;</span>, segment, bus, device, function, offset);
+        <span class="macro">log::error!</span>(
+            <span class="string">&quot;unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}&quot;</span>,
+            segment,
+            bus,
+            device,
+            function,
+            offset
+        );
         <span class="number">0
     </span>}
 
@@ -644,25 +652,29 @@
             .unwrap()
             .translate_physical(PhysAddr::new(<span class="self">self</span>.address <span class="kw">as </span>u64))
             .unwrap();
-        <span class="comment">// Safety: this address was specified in the ACPI tables by the firmware, so if the tables
-        // are correct, this is safe.
+        <span class="comment">// Safety: this address was specified in the ACPI tables by the firmware, so if
+        // the tables are correct, this is safe.
         </span><span class="kw">unsafe </span>{ core::slice::from_raw_parts(virt_addr.as_ptr(), <span class="self">self</span>.length <span class="kw">as </span>usize) }
     }
 }
 
-<span class="doccomment">/// Translates an EISA ID (a compressed 32-bit identifier) to its string representation.
+<span class="doccomment">/// Translates an EISA ID (a compressed 32-bit identifier) to its string
+/// representation.
 ///
-/// For the full specification, see the Plug and Play BIOS Specification (the latest of which seems
-/// to be v1.0a from 1994), but in short:
-/// The EISA ID is a 32-bit identifier that encodes a 8-character ASCII string as follows:
-/// 0b0_AAAAA_BBBBB_CCCCC_1111_2222_3333_4444
+/// For the full specification, see the Plug and Play BIOS Specification (the
+/// latest of which seems to be v1.0a from 1994), but in short:
+/// The EISA ID is a 32-bit identifier that encodes a 8-character ASCII string
+/// as follows: 0b0_AAAAA_BBBBB_CCCCC_1111_2222_3333_4444
 ///   - The 31th bit is always 0.
-///   - Bits 30..26, 25..21, 20..16 (five bits each) encode the compressed three-letter manufacturer
-///     ID; the compression algorithm is the lowest 5 bits of (character - 0x40).
-///   - Bits 15..12, 11..8, 7..4, 3..0 (four bits each) encode a hexadecimal digit.
+///   - Bits 30..26, 25..21, 20..16 (five bits each) encode the compressed
+///     three-letter manufacturer ID; the compression algorithm is the lowest 5
+///     bits of (character - 0x40).
+///   - Bits 15..12, 11..8, 7..4, 3..0 (four bits each) encode a hexadecimal
+///     digit.
 ///
-/// As to what the IDs map to, as the specfication says, look for &quot;Device Identifier Reference Table
-/// &amp; Device Type Code Table&quot; on the PlugPlay forum on CompuServe.
+/// As to what the IDs map to, as the specfication says, look for &quot;Device
+/// Identifier Reference Table &amp; Device Type Code Table&quot; on the PlugPlay forum
+/// on CompuServe.
 </span><span class="kw">fn </span>name_from_eisa_id(eisa_id: u64) -&gt; <span class="prelude-ty">Result</span>&lt;String, AmlError&gt; {
     <span class="kw">let </span>eisa_id: u32 = u32::from_be(eisa_id.try_into().map_err(|<span class="kw">_</span>| AmlError::InvalidNameSeg)<span class="question-mark">?</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>str = String::with_capacity(<span class="number">7</span>);
@@ -712,11 +724,10 @@
 
     <span class="doccomment">/// Return the valuie of the `_CRS` object, if present.
     ///
-    /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI spec for more details.
+    /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI
+    /// spec for more details.
     </span><span class="kw">pub fn </span>crs(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>AmlContext) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Resource&gt;&gt;&gt; {
-        <span class="kw">let </span>crs = <span class="self">self
-            </span>.invoke(<span class="string">&quot;_CRS&quot;</span>, ctx)
-            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;error resolving CRS: {:?}&quot;</span>, err));
+        <span class="kw">let </span>crs = <span class="self">self</span>.invoke(<span class="string">&quot;_CRS&quot;</span>, ctx).map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;error resolving CRS: {:?}&quot;</span>, err));
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(crs) = crs {
             <span class="kw">let </span>resources = resource_descriptor_list(<span class="kw-2">&amp;</span>crs)
@@ -756,11 +767,7 @@
 
         <span class="kw">for </span>ssdt <span class="kw">in </span>acpi.tables.ssdts() {
             acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
-                <span class="macro">anyhow!</span>(
-                    <span class="string">&quot;failed to parse ACPI SSDT at address {}: {:?}&quot;</span>,
-                    ssdt.address,
-                    err
-                )
+                <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ACPI SSDT at address {}: {:?}&quot;</span>, ssdt.address, err)
             })<span class="question-mark">?</span>;
         }
 
@@ -800,12 +807,7 @@
     <span class="kw">pub fn </span>print_devices(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">for </span>device <span class="kw">in </span><span class="self">self</span>.devices()<span class="question-mark">? </span>{
             <span class="kw">if let </span><span class="prelude-val">Some</span>(hid) = device.hid(<span class="kw-2">&amp;mut </span><span class="self">self</span>.aml)<span class="question-mark">? </span>{
-                <span class="macro">log::info!</span>(
-                    <span class="string">&quot;ACPI device: {} {:7} {}&quot;</span>,
-                    device.name,
-                    hid,
-                    description(hid.as_str())
-                );
+                <span class="macro">log::info!</span>(<span class="string">&quot;ACPI device: {} {:7} {}&quot;</span>, device.name, hid, description(hid.as_str()));
             } <span class="kw">else </span>{
                 <span class="macro">log::info!</span>(<span class="string">&quot;ACPI device: {} (no HID)&quot;</span>, device.name);
             }
@@ -850,9 +852,9 @@
             });
     }
 
-    <span class="comment">// Safety: the EBDA area will be mapped and valid, so this is memory-safe, but we&#39;re still
-    // searching 1 KiB of memory for the signature that may not be there or match some random
-    // garbage.
+    <span class="comment">// Safety: the EBDA area will be mapped and valid, so this is memory-safe, but
+    // we&#39;re still searching 1 KiB of memory for the signature that may not be
+    // there or match some random garbage.
     </span><span class="kw">unsafe </span>{ AcpiTables::search_for_rsdp_bios(Handler {}) }
         .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to load ACPI tables from EBDA: {:?}&quot;</span>, err))
 }

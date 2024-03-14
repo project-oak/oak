@@ -49,6 +49,10 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -68,16 +72,19 @@
 </span><span class="kw">pub use </span>log::Level;
 
 <span class="kw">pub trait </span>OakLogger: Send + Sync {
-    <span class="doccomment">/// Logs the message, which might contain sensitive information, at the specified `Level`.
+    <span class="doccomment">/// Logs the message, which might contain sensitive information, at the
+    /// specified `Level`.
     ///
-    /// Only insecure debug-only implementations may provide a non-empty implementation. Production
-    /// implementations must not do anything.
+    /// Only insecure debug-only implementations may provide a non-empty
+    /// implementation. Production implementations must not do anything.
     </span><span class="kw">fn </span>log_sensitive(<span class="kw-2">&amp;</span><span class="self">self</span>, level: Level, message: <span class="kw-2">&amp;</span>str);
 
-    <span class="doccomment">/// Logs a message that contains only public, non-sensitive content at the specified `Level`.
+    <span class="doccomment">/// Logs a message that contains only public, non-sensitive content at the
+    /// specified `Level`.
     ///
-    /// All code that uses this function must be inspected to ensure that the message can never
-    /// contain any information that could have been derived from sensitive or non-public data.
+    /// All code that uses this function must be inspected to ensure that the
+    /// message can never contain any information that could have been
+    /// derived from sensitive or non-public data.
     </span><span class="kw">fn </span>log_public(<span class="kw-2">&amp;</span><span class="self">self</span>, level: Level, message: <span class="kw-2">&amp;</span>str);
 }
 
@@ -86,7 +93,8 @@
 /// TODO(#2783): Replace with redesigned logger implementation.
 </span><span class="kw">pub struct </span>StandaloneLogger;
 
-<span class="comment">// TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
+<span class="comment">// TODO(#2783): Implement a logger that differentiates between public and
+// sensitive loges.
 </span><span class="kw">impl </span>OakLogger <span class="kw">for </span>StandaloneLogger {
     <span class="attr">#[cfg(not(feature = <span class="string">&quot;deny_sensitive_logging&quot;</span>))]
     </span><span class="kw">fn </span>log_sensitive(<span class="kw-2">&amp;</span><span class="self">self</span>, level: Level, message: <span class="kw-2">&amp;</span>str) {

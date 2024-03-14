@@ -585,6 +585,12 @@
 <a href="#585" id="585">585</a>
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -646,10 +652,7 @@
 
 <span class="kw">impl </span>GuestMessage {
     <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
-        GuestMessage {
-            header: GuestMessageHeader::new(),
-            payload: [<span class="number">0</span>; MAX_PAYLOAD_SIZE],
-        }
+        GuestMessage { header: GuestMessageHeader::new(), payload: [<span class="number">0</span>; MAX_PAYLOAD_SIZE] }
     }
 
     <span class="doccomment">/// Checks that header is valid.
@@ -658,7 +661,8 @@
     }
 }
 
-<span class="doccomment">/// The authenticated subsection of the header used for an encrypted guest request message.
+<span class="doccomment">/// The authenticated subsection of the header used for an encrypted guest
+/// request message.
 ///
 /// See Table 99 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
@@ -666,7 +670,8 @@
 </span><span class="kw">pub struct </span>AuthenticatedHeader {
     <span class="doccomment">/// The algorithm used to encrypt the payload.
     ///
-    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
+    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an
+    /// `AeadAlgorithm` enum.
     </span><span class="kw">pub </span>algorithm: u8,
     <span class="doccomment">/// The header version. Currently only version 1 is supported.
     </span><span class="kw">pub </span>header_version: u8,
@@ -674,9 +679,11 @@
     </span><span class="kw">pub </span>header_size: u16,
     <span class="doccomment">/// The type of message that the payload represents.
     ///
-    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a `MessageType` enum.
+    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a
+    /// `MessageType` enum.
     </span><span class="kw">pub </span>message_type: u8,
-    <span class="doccomment">/// The version of the message. Currently only version 1 is supported for all message types.
+    <span class="doccomment">/// The version of the message. Currently only version 1 is supported for
+    /// all message types.
     </span><span class="kw">pub </span>message_version: u8,
     <span class="doccomment">/// The size of the encrypted message payload in bytes.
     </span><span class="kw">pub </span>message_size: u16,
@@ -704,7 +711,8 @@
     </span><span class="kw">pub </span>sequence_number: u64,
     <span class="doccomment">/// Reserved. Must be zero.
     </span>_reserved_0: u64,
-    <span class="doccomment">/// The the sub-section of the header that is treated as additional data in the AEAD.
+    <span class="doccomment">/// The the sub-section of the header that is treated as additional data in
+    /// the AEAD.
     </span><span class="kw">pub </span>auth_header: AuthenticatedHeader,
 }
 
@@ -742,8 +750,9 @@
 
     <span class="doccomment">/// Checks that the authenticated header subsection is valid.
     ///
-    /// The reserved fields do not have zero values in the guest messages returned from the Platform
-    /// Secure Processor, so we don&#39;t validate these.
+    /// The reserved fields do not have zero values in the guest messages
+    /// returned from the Platform Secure Processor, so we don&#39;t validate
+    /// these.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.get_algorithm().is_none()
             || <span class="self">self</span>.auth_header.algorithm == AeadAlgorithm::Invalid <span class="kw">as </span>u8
@@ -811,7 +820,8 @@
     </span>ExportRequest = <span class="number">7</span>,
     <span class="doccomment">/// VM export response. Used for VM migration.
     </span>ExportResponse = <span class="number">8</span>,
-    <span class="doccomment">/// VM import request. Used during VM migration, typically by a migration agent.
+    <span class="doccomment">/// VM import request. Used during VM migration, typically by a migration
+    /// agent.
     </span>ImportRequest = <span class="number">9</span>,
     <span class="doccomment">/// VM import response. Used during VM migration.
     </span>ImportResponse = <span class="number">10</span>,
@@ -841,16 +851,17 @@
 </span><span class="kw">pub struct </span>KeyRequest {
     <span class="doccomment">/// Selects which key will be used to derive the key.
     ///
-    /// This contains the ROOT_KEY_SELECT and KEY_SEL bit-fields. To interact with the individual
-    /// bit-fields use `KeyRequest::get_key_select`, `KeyRequest::get_root_key_select`,
-    /// `KeyRequest::set_key_select` or `KeyRequest::set_root_key_select`
+    /// This contains the ROOT_KEY_SELECT and KEY_SEL bit-fields. To interact
+    /// with the individual bit-fields use `KeyRequest::get_key_select`,
+    /// `KeyRequest::get_root_key_select`, `KeyRequest::set_key_select` or
+    /// `KeyRequest::set_root_key_select`
     </span>key_select: u32,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved: u32,
     <span class="doccomment">/// Mask indicating which guest data will be mixed into the derived key.
     ///
-    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to a
-    /// `GuestFieldFlags` enum.
+    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to
+    /// a `GuestFieldFlags` enum.
     </span><span class="kw">pub </span>guest_field_select: u64,
     <span class="doccomment">/// The VM Protection Level (VMPL) to mix into the derived key.
     ///
@@ -886,7 +897,8 @@
         }
     }
 
-    <span class="doccomment">/// Gets the `guest_field_select` field as a `GuestFieldFlags` representation if possible.
+    <span class="doccomment">/// Gets the `guest_field_select` field as a `GuestFieldFlags`
+    /// representation if possible.
     </span><span class="kw">pub fn </span>get_guest_field_select_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;GuestFieldFlags&gt; {
         GuestFieldFlags::from_bits(<span class="self">self</span>.guest_field_select)
     }
@@ -928,7 +940,8 @@
 </span><span class="kw">pub struct </span>KeyResponse {
     <span class="doccomment">/// The status of the operation.
     ///
-    /// Use `KeyResponse::get_status` to try to convert this to a `KeyStatus` enum.
+    /// Use `KeyResponse::get_status` to try to convert this to a `KeyStatus`
+    /// enum.
     </span><span class="kw">pub </span>status: u32,
     <span class="doccomment">/// Reserved. Must be 0.
     </span>_reserved: [u8; <span class="number">28</span>],
@@ -950,8 +963,8 @@
         KeyStatus::from_repr(<span class="self">self</span>.status)
     }
 
-    <span class="doccomment">/// Checks that all reserved bytes are zero and that the status field, the report size and the
-    /// report format are all valid.
+    <span class="doccomment">/// Checks that all reserved bytes are zero and that the status field, the
+    /// report size and the report format are all valid.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>._reserved.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;nonzero value in _reserved&quot;</span>);
@@ -1038,11 +1051,7 @@
 
 <span class="kw">impl </span>AttestationRequest {
     <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
-        AttestationRequest {
-            report_data: [<span class="number">0</span>; <span class="number">64</span>],
-            vmpl: <span class="number">0</span>,
-            _reserved: [<span class="number">0</span>; <span class="number">28</span>],
-        }
+        AttestationRequest { report_data: [<span class="number">0</span>; <span class="number">64</span>], vmpl: <span class="number">0</span>, _reserved: [<span class="number">0</span>; <span class="number">28</span>] }
     }
 }
 
@@ -1060,7 +1069,8 @@
 </span><span class="kw">pub struct </span>AttestationResponse {
     <span class="doccomment">/// The status of the operation.
     ///
-    /// Use `AttestationResponse::get_status` to try to convert this to a `ReportStatus` enum.
+    /// Use `AttestationResponse::get_status` to try to convert this to a
+    /// `ReportStatus` enum.
     </span><span class="kw">pub </span>status: u32,
     <span class="doccomment">/// The size of the report.
     </span><span class="kw">pub </span>report_size: u32,
@@ -1084,8 +1094,8 @@
         ReportStatus::from_repr(<span class="self">self</span>.status)
     }
 
-    <span class="doccomment">/// Checks that all reserved bytes are zero and that the status field, the report size and the
-    /// report format are all valid.
+    <span class="doccomment">/// Checks that all reserved bytes are zero and that the status field, the
+    /// report size and the report format are all valid.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>._reserved.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;nonzero value in _reserved&quot;</span>);
@@ -1118,9 +1128,11 @@
 </span><span class="kw">pub struct </span>EcdsaPublicKey {
     <span class="doccomment">/// The curve for this public key.
     </span><span class="kw">pub </span>curve: EccCurve,
-    <span class="doccomment">/// The R component of this public. The value is zero-extended and little-endian encoded.
+    <span class="doccomment">/// The R component of this public. The value is zero-extended and
+    /// little-endian encoded.
     </span><span class="kw">pub </span>r: [u8; <span class="number">72</span>],
-    <span class="doccomment">/// The S component of this public key. The value is zero-extended and little-endian encoded.
+    <span class="doccomment">/// The S component of this public key. The value is zero-extended and
+    /// little-endian encoded.
     </span><span class="kw">pub </span>s: [u8; <span class="number">72</span>],
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved: [u8; <span class="number">880</span>],
@@ -1146,8 +1158,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="doccomment">//! Test to check the getters and setters for the bit fields of the `key_select` field in the
-    //! `KeyRequest` struct.
+    <span class="doccomment">//! Test to check the getters and setters for the bit fields of the
+    //! `key_select` field in the `KeyRequest` struct.
 
     </span><span class="kw">use </span>strum::IntoEnumIterator;
 

@@ -359,31 +359,6 @@
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -459,7 +434,8 @@
 <span class="doccomment">/// The local port that the Orchestrator should be listening on.
 </span><span class="kw">const </span>VM_ORCHESTRATOR_LOCAL_PORT: u16 = <span class="number">4000</span>;
 
-<span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP adress.
+<span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP
+/// adress.
 </span><span class="kw">const </span>PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
 <span class="doccomment">/// Number of seconds to wait for the VM to start up.
@@ -510,10 +486,7 @@
 
 <span class="kw">pub fn </span>path_exists(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;std::path::PathBuf, String&gt; {
     <span class="kw">let </span>path = std::path::PathBuf::from(s);
-    <span class="kw">if </span>!std::fs::metadata(s)
-        .map_err(|err| err.to_string())<span class="question-mark">?
-        </span>.is_file()
-    {
+    <span class="kw">if </span>!std::fs::metadata(s).map_err(|err| err.to_string())<span class="question-mark">?</span>.is_file() {
         <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;path does not represent a file&quot;</span>))
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(path)
@@ -522,13 +495,8 @@
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub enum </span>Channel {
-    Network {
-        host_proxy_port: u16,
-        trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
-    },
-    VirtioVsock {
-        trusted_app_address: <span class="prelude-ty">Option</span>&lt;VsockAddr&gt;,
-    },
+    Network { host_proxy_port: u16, trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt; },
+    VirtioVsock { trusted_app_address: <span class="prelude-ty">Option</span>&lt;VsockAddr&gt; },
 }
 
 <span class="doccomment">/// Interface that is connected to the trusted application.
@@ -542,13 +510,12 @@
 
     <span class="kw">fn </span>try_from(channel: Channel) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedApplicationAddress, <span class="self">Self</span>::Error&gt; {
         <span class="kw">match </span>channel {
-            Channel::Network {
-                host_proxy_port: <span class="kw">_</span>,
-                trusted_app_address,
-            } =&gt; trusted_app_address.map(TrustedApplicationAddress::Network),
-            Channel::VirtioVsock {
-                trusted_app_address,
-            } =&gt; trusted_app_address.map(TrustedApplicationAddress::VirtioVsock),
+            Channel::Network { host_proxy_port: <span class="kw">_</span>, trusted_app_address } =&gt; {
+                trusted_app_address.map(TrustedApplicationAddress::Network)
+            }
+            Channel::VirtioVsock { trusted_app_address } =&gt; {
+                trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
+            }
         }
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted application address not set&quot;</span>))
     }
@@ -601,40 +568,28 @@
 
         <span class="kw">let </span>trusted_app_channel = <span class="kw">match </span>args.communication_channel {
             ChannelType::Network =&gt; {
-                <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the server.
-                // Since we don&#39;t have a mechanism to pass this port to QEMU we have
-                // to unbind it by dropping it. There is a small window for a race
-                // condition, but since the assigned port will be random
-                // the probability of another process grabbing the port before QEMU can should be
-                // very low.
+                <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the
+                // server. Since we don&#39;t have a mechanism to pass this port to
+                // QEMU we have to unbind it by dropping it. There is a small
+                // window for a race condition, but since the assigned port will
+                // be random the probability of another process grabbing the
+                // port before QEMU can should be very low.
                 </span><span class="kw">let </span>host_proxy_port = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>.local_addr()<span class="question-mark">?</span>.port();
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address: <span class="prelude-val">None</span>,
-                }
+                Channel::Network { host_proxy_port, trusted_app_address: <span class="prelude-val">None </span>}
             }
-            ChannelType::VirtioVsock =&gt; Channel::VirtioVsock {
-                trusted_app_address: <span class="prelude-val">None</span>,
-            },
+            ChannelType::VirtioVsock =&gt; Channel::VirtioVsock { trusted_app_address: <span class="prelude-val">None </span>},
         };
 
-        <span class="kw">let </span>host_orchestrator_proxy_port = {
-            TcpListener::bind(orchestrator_sockaddr)
-                .<span class="kw">await</span><span class="question-mark">?
-                </span>.local_addr()<span class="question-mark">?
-                </span>.port()
-        };
+        <span class="kw">let </span>host_orchestrator_proxy_port =
+            { TcpListener::bind(orchestrator_sockaddr).<span class="kw">await</span><span class="question-mark">?</span>.local_addr()<span class="question-mark">?</span>.port() };
         <span class="kw">let </span>vmm = qemu::Qemu::start(
             args.qemu_params,
             port,
             <span class="kw">match </span>trusted_app_channel {
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address: <span class="kw">_</span>,
-                } =&gt; <span class="prelude-val">Some</span>(host_proxy_port),
-                Channel::VirtioVsock {
-                    trusted_app_address: <span class="kw">_</span>,
-                } =&gt; <span class="prelude-val">None</span>,
+                Channel::Network { host_proxy_port, trusted_app_address: <span class="kw">_ </span>} =&gt; {
+                    <span class="prelude-val">Some</span>(host_proxy_port)
+                }
+                Channel::VirtioVsock { trusted_app_address: <span class="kw">_ </span>} =&gt; <span class="prelude-val">None</span>,
             },
             host_orchestrator_proxy_port,
         )<span class="question-mark">?</span>;
@@ -655,32 +610,28 @@
         })
     }
 
-    <span class="doccomment">/// Gets the address that the untrusted application can use to connect to the trusted
-    /// application.
+    <span class="doccomment">/// Gets the address that the untrusted application can use to connect to
+    /// the trusted application.
     ///
-    /// This is a host-visible address that the VMM will proxy to the trusted application&#39;s service
-    /// endpoint.
+    /// This is a host-visible address that the VMM will proxy to the trusted
+    /// application&#39;s service endpoint.
     ///
-    /// This call will wait until the trusted app has notifiied the launcher once that it is ready
-    /// via the orchestrator.
+    /// This call will wait until the trusted app has notifiied the launcher
+    /// once that it is ready via the orchestrator.
     </span><span class="kw">pub async fn </span>get_trusted_app_address(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedApplicationAddress, anyhow::Error&gt; {
         <span class="comment">// If we haven&#39;t received a ready notification, wait for it.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.app_ready_notifier.take() {
-            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
+            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start
+            // properly.
             </span>timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).<span class="kw">await</span><span class="question-mark">??</span>;
             <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.trusted_app_channel {
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address,
-                } =&gt; {
+                Channel::Network { host_proxy_port, trusted_app_address } =&gt; {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), <span class="kw-2">*</span>host_proxy_port));
                 }
-                Channel::VirtioVsock {
-                    trusted_app_address,
-                } =&gt; {
+                Channel::VirtioVsock { trusted_app_address } =&gt; {
                     trusted_app_address.replace(VsockAddr::new(
                         <span class="self">self</span>.vmm.guest_cid().expect(<span class="string">&quot;VMM does not have a guest CID&quot;</span>),
                         VM_LOCAL_PORT.into(),
@@ -691,13 +642,14 @@
         <span class="self">self</span>.trusted_app_channel.clone().try_into()
     }
 
-    <span class="doccomment">/// Gets the endorsed attestation evidence that the untrusted application can send to remote
-    /// clients, which will verify it before connecting.
+    <span class="doccomment">/// Gets the endorsed attestation evidence that the untrusted application
+    /// can send to remote clients, which will verify it before connecting.
     </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="comment">// If we haven&#39;t received an attestation evidence, wait for it.
         </span><span class="attr">#[allow(deprecated)]
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.evidence_receiver.take() {
-            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
+            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start
+            // properly.
             </span><span class="kw">let </span>evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
                 .<span class="kw">await
                 </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
@@ -716,10 +668,8 @@
                 )),
             };
 
-            <span class="kw">let </span>endorsed_evidence = EndorsedEvidence {
-                evidence: <span class="prelude-val">Some</span>(evidence),
-                endorsements: <span class="prelude-val">Some</span>(endorsements),
-            };
+            <span class="kw">let </span>endorsed_evidence =
+                EndorsedEvidence { evidence: <span class="prelude-val">Some</span>(evidence), endorsements: <span class="prelude-val">Some</span>(endorsements) };
             <span class="self">self</span>.endorsed_evidence.replace(endorsed_evidence);
         }
         <span class="self">self</span>.endorsed_evidence

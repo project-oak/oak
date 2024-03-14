@@ -226,37 +226,6 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -306,8 +275,8 @@
     </span><span class="attr">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>initrd: PathBuf,
 
-    <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for Megabyte, G for
-    /// Gigabyte).
+    <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for
+    /// Megabyte, G for Gigabyte).
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
@@ -319,8 +288,8 @@
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>ramdrive_size: u32,
 
-    <span class="doccomment">/// Optional port where QEMU will start a telnet server for the serial console; useful for
-    /// interactive debugging.
+    <span class="doccomment">/// Optional port where QEMU will start a telnet server for the serial
+    /// console; useful for interactive debugging.
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>telnet_console: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
@@ -370,16 +339,16 @@
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
 
-        <span class="comment">// Extract the raw file descriptor numbers from the streams before passing them to the child
-        // process, since that takes ownership of them.
+        <span class="comment">// Extract the raw file descriptor numbers from the streams before passing them
+        // to the child process, since that takes ownership of them.
         </span><span class="kw">let </span>guest_socket_fd = guest_socket.as_raw_fd();
 
         cmd.preserved_fds(<span class="macro">vec!</span>[guest_socket.into()]);
 
         <span class="comment">// Construct the command-line arguments for `qemu`.
         </span>cmd.arg(<span class="string">&quot;-enable-kvm&quot;</span>);
-        <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
-        // attestation.
+        <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required
+        // for remote attestation.
         </span>cmd.args([<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;host&quot;</span>]);
         <span class="comment">// Set memory size if given.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory_size) = params.memory_size {
@@ -390,22 +359,16 @@
         <span class="comment">// Disable a bunch of hardware we don&#39;t need.
         </span>cmd.arg(<span class="string">&quot;-nodefaults&quot;</span>);
         cmd.arg(<span class="string">&quot;-nographic&quot;</span>);
-        <span class="comment">// If the VM restarts, don&#39;t restart it (we&#39;re not expecting any restarts so any restart
-        // should be treated as a failure)
+        <span class="comment">// If the VM restarts, don&#39;t restart it (we&#39;re not expecting any restarts so any
+        // restart should be treated as a failure)
         </span>cmd.arg(<span class="string">&quot;-no-reboot&quot;</span>);
         <span class="comment">// Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
         </span>cmd.args([<span class="string">&quot;-machine&quot;</span>, <span class="string">&quot;microvm,acpi=on,pcie=on&quot;</span>]);
         <span class="comment">// Route first serial port to console.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(port) = params.telnet_console {
-            cmd.args([
-                <span class="string">&quot;-serial&quot;</span>,
-                <span class="macro">format!</span>(<span class="string">&quot;telnet:localhost:{port},server&quot;</span>).as_str(),
-            ]);
+            cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;telnet:localhost:{port},server&quot;</span>).as_str()]);
         } <span class="kw">else </span>{
-            cmd.args([
-                <span class="string">&quot;-chardev&quot;</span>,
-                <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_socket_fd}&quot;</span>).as_str(),
-            ]);
+            cmd.args([<span class="string">&quot;-chardev&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_socket_fd}&quot;</span>).as_str()]);
             cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
         }
         <span class="comment">// Set up the networking. `rombar=0` is so that QEMU wouldn&#39;t bother with the
@@ -418,7 +381,9 @@
             <span class="string">&quot;user&quot;</span>.to_string(),
             <span class="string">&quot;id=netdev&quot;</span>.to_string(),
             <span class="macro">format!</span>(<span class="string">&quot;guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}&quot;</span>),
-            <span class="macro">format!</span>(<span class="string">&quot;hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}&quot;</span>),
+            <span class="macro">format!</span>(
+                <span class="string">&quot;hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}&quot;
+            </span>),
         ];
         <span class="kw">if let </span><span class="prelude-val">Some</span>(host_proxy_port) = host_proxy_port {
             <span class="kw">let </span>vm_port = <span class="kw">crate</span>::VM_LOCAL_PORT;
@@ -435,34 +400,10 @@
             ]);
         }
         <span class="comment">// And yes, use stage0 as the BIOS.
-        </span>cmd.args([
-            <span class="string">&quot;-bios&quot;</span>,
-            params
-                .stage0_binary
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-bios&quot;</span>, params.stage0_binary.into_os_string().into_string().unwrap().as_str()]);
         <span class="comment">// stage0 accoutrements: the kernel, initrd and inital kernel cmdline.
-        </span>cmd.args([
-            <span class="string">&quot;-kernel&quot;</span>,
-            params
-                .kernel
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
-        cmd.args([
-            <span class="string">&quot;-initrd&quot;</span>,
-            params
-                .initrd
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-kernel&quot;</span>, params.kernel.into_os_string().into_string().unwrap().as_str()]);
+        cmd.args([<span class="string">&quot;-initrd&quot;</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
         <span class="kw">let </span>ramdrive_size = params.ramdrive_size;
         cmd.args([
             <span class="string">&quot;-append&quot;</span>,
@@ -497,10 +438,7 @@
 
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            instance,
-            guest_cid: params.virtio_guest_cid,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance, guest_cid: params.virtio_guest_cid })
     }
 
     <span class="kw">pub async fn </span>kill(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt; {

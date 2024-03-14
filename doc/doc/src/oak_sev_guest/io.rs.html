@@ -288,22 +288,6 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -333,8 +317,8 @@
 
 <span class="doccomment">/// Factory for instantiating IO port readers and writers.
 ///
-/// The typical usage is to either create raw instances that peform direct IO on the ports, or
-/// instances that use the GHCB IOIO protocol.
+/// The typical usage is to either create raw instances that peform direct IO on
+/// the ports, or instances that use the GHCB IOIO protocol.
 </span><span class="kw">pub trait </span>IoPortFactory&lt;<span class="lifetime">&#39;a</span>, T, R: PortReader&lt;T&gt; + <span class="lifetime">&#39;a</span>, W: PortWriter&lt;T&gt; + <span class="lifetime">&#39;a</span>&gt; {
     <span class="doccomment">/// Creates a new IO port reader instance.
     </span><span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; R;
@@ -348,7 +332,8 @@
     ///
     /// # Safety
     ///
-    /// This function is unsafe because port access could have unsafe side-effects.
+    /// This function is unsafe because port access could have unsafe
+    /// side-effects.
     </span><span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
 }
 
@@ -358,11 +343,13 @@
     ///
     /// # Safety
     ///
-    /// This function is unsafe because port access could have unsafe side-effects.
+    /// This function is unsafe because port access could have unsafe
+    /// side-effects.
     </span><span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
 }
 
-<span class="doccomment">/// A factory for creating port readers and writers that use the GHCB IOIO protocol.
+<span class="doccomment">/// A factory for creating port readers and writers that use the GHCB IOIO
+/// protocol.
 </span><span class="kw">pub struct </span>GhcbIoFactory&lt;
     <span class="lifetime">&#39;a</span>,
     R: RawMutex + <span class="lifetime">&#39;a</span>,
@@ -380,10 +367,7 @@
     G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
 {
     <span class="kw">pub fn </span>new(ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Mutex&lt;R, P&gt;) -&gt; <span class="self">Self </span>{
-        GhcbIoFactory {
-            ghcb_protocol,
-            _phantom: PhantomData,
-        }
+        GhcbIoFactory { ghcb_protocol, _phantom: PhantomData }
     }
 }
 
@@ -396,19 +380,11 @@
     GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
 {
     <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; {
-        GhcbIoPort {
-            ghcb_protocol: <span class="self">self</span>.ghcb_protocol,
-            port,
-            _phantom: PhantomData,
-        }
+        GhcbIoPort { ghcb_protocol: <span class="self">self</span>.ghcb_protocol, port, _phantom: PhantomData }
     }
 
     <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; {
-        GhcbIoPort {
-            ghcb_protocol: <span class="self">self</span>.ghcb_protocol,
-            port,
-            _phantom: PhantomData,
-        }
+        GhcbIoPort { ghcb_protocol: <span class="self">self</span>.ghcb_protocol, port, _phantom: PhantomData }
     }
 }
 
@@ -464,10 +440,7 @@
     G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
 {
     <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="self">self</span>.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u8(<span class="self">self</span>.port, value)
+        <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u8(<span class="self">self</span>.port, value)
     }
 }
 
@@ -478,10 +451,7 @@
     G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
 {
     <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="self">self</span>.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u16(<span class="self">self</span>.port, value)
+        <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u16(<span class="self">self</span>.port, value)
     }
 }
 
@@ -492,14 +462,12 @@
     G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
 {
     <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="self">self</span>.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u32(<span class="self">self</span>.port, value)
+        <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u32(<span class="self">self</span>.port, value)
     }
 }
 
-<span class="doccomment">/// Factory for creating port reader and writers that perform direct IO operations.
+<span class="doccomment">/// Factory for creating port reader and writers that perform direct IO
+/// operations.
 </span><span class="kw">pub struct </span>RawIoPortFactory;
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">&#39;a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>RawIoPortFactory
@@ -536,12 +504,12 @@
     }
 }
 
-<span class="doccomment">/// An IO port reader and writer implementation that uses the GHCB IOIO protocol, static references
-/// and a spinlock for synchronisation.
+<span class="doccomment">/// An IO port reader and writer implementation that uses the GHCB IOIO
+/// protocol, static references and a spinlock for synchronisation.
 </span><span class="kw">pub type </span>StaticGhcbIoPort = GhcbIoPort&lt;<span class="lifetime">&#39;static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;, Ghcb&gt;;
 
-<span class="doccomment">/// Wrapper implementation that can either create IO ports that perform direct IO or IO ports that
-/// use the GHCB IOIO protocol.
+<span class="doccomment">/// Wrapper implementation that can either create IO ports that perform direct
+/// IO or IO ports that use the GHCB IOIO protocol.
 </span><span class="kw">pub enum </span>PortFactoryWrapper {
     Raw(RawIoPortFactory),
     Ghcb(GhcbIoFactory&lt;<span class="lifetime">&#39;static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;, Ghcb&gt;),
@@ -578,8 +546,8 @@
     }
 }
 
-<span class="comment">// Wrapper implementation of an IO port that either performs direct IO or uses the GHCB IOIO
-// protocol.
+<span class="comment">// Wrapper implementation of an IO port that either performs direct IO or uses
+// the GHCB IOIO protocol.
 </span><span class="kw">pub enum </span>PortWrapper&lt;T&gt; {
     Raw(Port&lt;T&gt;),
     Ghcb(StaticGhcbIoPort),

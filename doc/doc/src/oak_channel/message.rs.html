@@ -124,13 +124,6 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -163,7 +156,8 @@
 
 <span class="kw">pub const </span>BODY_OFFSET: usize = <span class="number">8</span>;
 
-<span class="comment">// messages never have a length of zero, since it always includes a fixed size header.
+<span class="comment">// messages never have a length of zero, since it always includes a fixed size
+// header.
 </span><span class="attr">#[allow(clippy::len_without_is_empty)]
 </span><span class="kw">pub trait </span>Message {
     <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
@@ -188,9 +182,8 @@
         <span class="kw">let </span>len = <span class="self">self</span>.len();
         <span class="kw">let </span><span class="kw-2">mut </span>message_bytes: Vec&lt;u8&gt; = Vec::with_capacity(len);
 
-        <span class="kw">let </span>length: Length = len
-            .try_into()
-            .expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
+        <span class="kw">let </span>length: Length =
+            len.try_into().expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
 
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span>length.to_le_bytes());
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.invocation_id.to_le_bytes());
@@ -211,10 +204,7 @@
         // reference counting.
         </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message[BODY_OFFSET..].into();
 
-        <span class="self">Self </span>{
-            invocation_id,
-            body,
-        }
+        <span class="self">Self </span>{ invocation_id, body }
     }
 }
 
@@ -235,9 +225,8 @@
         <span class="kw">let </span>len = <span class="self">self</span>.len();
         <span class="kw">let </span><span class="kw-2">mut </span>message_bytes: Vec&lt;u8&gt; = Vec::with_capacity(len);
 
-        <span class="kw">let </span>length: Length = len
-            .try_into()
-            .expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
+        <span class="kw">let </span>length: Length =
+            len.try_into().expect(<span class="string">&quot;couldn&#39;t convert the message length usize to u32&quot;</span>);
 
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span>length.to_le_bytes());
         message_bytes.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.invocation_id.to_le_bytes());
@@ -258,10 +247,7 @@
         // reference counting.
         </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message[BODY_OFFSET..].into();
 
-        <span class="self">Self </span>{
-            invocation_id,
-            body,
-        }
+        <span class="self">Self </span>{ invocation_id, body }
     }
 }
 </code></pre></div></section></main></body></html>

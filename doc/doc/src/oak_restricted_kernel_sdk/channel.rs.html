@@ -129,7 +129,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Provides functionality to communicate with host application over the communication channel.
+</span><span class="doccomment">//! Provides functionality to communicate with host application over the
+//! communication channel.
 
 </span><span class="kw">use </span>alloc::boxed::Box;
 
@@ -151,8 +152,8 @@
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>FileDescriptorChannel {
-    <span class="doccomment">/// Constructs a new FileDescriptorChannel that assumes we&#39;ll use the well-known Oak file
-    /// descriptor number.
+    <span class="doccomment">/// Constructs a new FileDescriptorChannel that assumes we&#39;ll use the
+    /// well-known Oak file descriptor number.
     </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new(OAK_CHANNEL_FD)
     }
@@ -205,9 +206,8 @@
     <span class="kw">let </span>channel_handle = <span class="kw-2">&amp;mut </span>oak_channel::server::ServerChannelHandle::new(channel);
     <span class="kw">loop </span>{
         <span class="macro">log::debug!</span>(<span class="string">&quot;waiting for a request message&quot;</span>);
-        <span class="kw">let </span>(request_message, timer) = channel_handle
-            .read_request()
-            .context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(request_message, timer) =
+            channel_handle.read_request().context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
         <span class="macro">log::debug!</span>(
             <span class="string">&quot;received request message with invocation id {} ({} bytes)&quot;</span>,

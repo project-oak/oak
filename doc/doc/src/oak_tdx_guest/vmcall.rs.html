@@ -518,20 +518,6 @@
 <a href="#518" id="518">518</a>
 <a href="#519" id="519">519</a>
 <a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a>
-<a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -548,10 +534,11 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Rust implementation of the sub-functions of the TDX TDCALL[TDG.VP.VMCALL] leaf.
+</span><span class="doccomment">//! Rust implementation of the sub-functions of the TDX TDCALL[TDG.VP.VMCALL]
+//! leaf.
 //!
-//! See section 2.4.1 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-//! Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+//! See section 2.4.1 of [Guest-Host-Communication Interface (GHCI) for Intel®
+//! Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 //! for more information.
 
 </span><span class="kw">use </span>core::arch::{asm, x86_64::CpuidResult};
@@ -570,7 +557,8 @@
 <span class="doccomment">/// The TDG.VP.VMCALL leaf number for TDCALL.
 </span><span class="kw">const </span>VM_CALL_LEAF: u64 = <span class="number">0</span>;
 
-<span class="doccomment">/// Indicator that the sub-function specified is intended to be used as defined in the GHCI spec.
+<span class="doccomment">/// Indicator that the sub-function specified is intended to be used as defined
+/// in the GHCI spec.
 </span><span class="kw">const </span>DEFAULT_SUB_FUNCTION_USAGE: u64 = <span class="number">0</span>;
 
 <span class="macro">bitflags! </span>{
@@ -617,9 +605,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Registers {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="comment">// R10 (bit 10) and R11 (bit 11) must always be 1.
-        </span>Registers::empty()
-            .union(Registers::R10)
-            .union(Registers::R11)
+        </span>Registers::empty().union(Registers::R10).union(Registers::R11)
     }
 }
 
@@ -629,55 +615,52 @@
     MapFailure(PhysAddr),
 }
 
-<span class="doccomment">/// Maps a range of guest-physical addresses (GPAs) as shared with the hypervisor or guest-private.
+<span class="doccomment">/// Maps a range of guest-physical addresses (GPAs) as shared with the
+/// hypervisor or guest-private.
 ///
-/// If the shared bit of the GPA is set to 1 it will change the page mappings from private to
-/// shared.
+/// If the shared bit of the GPA is set to 1 it will change the page mappings
+/// from private to shared.
 ///
-/// If the guest changes pages back from shared to private, these will be added to the guest as
-/// pending pages, so the guest must also call `TDCALL[TDG.MEM.PAGE.ACCEPT]` before using them
-/// again.
+/// If the guest changes pages back from shared to private, these will be added
+/// to the guest as pending pages, so the guest must also call
+/// `TDCALL[TDG.MEM.PAGE.ACCEPT]` before using them again.
 ///
-/// The function will return an error if the page was already mapped in the desired state (e.g.
-/// trying to share a page that was already shared).
+/// The function will return an error if the page was already mapped in the
+/// desired state (e.g. trying to share a page that was already shared).
 ///
-/// See section 3.2 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 ///
 /// # Safety
 ///
-/// Sharing or unsharing a pages changes the guest-physical address for those pages, so the caller
-/// must make sure that the pages are appropriately mapped in the page tables after the operation is
-/// successful.
+/// Sharing or unsharing a pages changes the guest-physical address for those
+/// pages, so the caller must make sure that the pages are appropriately mapped
+/// in the page tables after the operation is successful.
 </span><span class="kw">pub unsafe fn </span>map_gpa(frames: PhysFrameRange&lt;Size4KiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), MapGpaError&gt; {
     <span class="comment">// The VMCALL sub-function for MAP_GPA.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">0x10001</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>vm_call_result: u64;
     <span class="kw">let </span><span class="kw-2">mut </span>sub_function_result: u64;
-    <span class="kw">let </span>registers = Registers::default()
-        .union(Registers::R12)
-        .union(Registers::R13);
+    <span class="kw">let </span>registers = Registers::default().union(Registers::R12).union(Registers::R13);
     <span class="kw">let </span>gpa_start = frames.start.start_address().as_u64();
-    <span class="kw">let </span>gpa_size = frames
-        .end
-        .start_address()
-        .as_u64()
-        .checked_sub(gpa_start)
-        .unwrap();
+    <span class="kw">let </span>gpa_size = frames.end.start_address().as_u64().checked_sub(gpa_start).unwrap();
     <span class="kw">let </span><span class="kw-2">mut </span>failing_gpa: u64;
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11 and the failing
-    // address is returned in R11 in case of failure. The start GPA goes into R12 (must be
-    // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes into R13.
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11 and the failing address is
+    // returned in R11 in case of failure. The start GPA goes into R12 (must be
+    // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
+    // into R13.
     //
-    // Safety: as long as the changed physical address of the page is handled correctly by the
-    // caller, calling TDCALL here is safe since it does not alter memory directly and all the
-    // affected registers are specified, so no unspecified registers will be clobbered.
+    // Safety: as long as the changed physical address of the page is handled
+    // correctly by the caller, calling TDCALL here is safe since it does not
+    // alter memory directly and all the affected registers are specified, so no
+    // unspecified registers will be clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -691,29 +674,24 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::MapFailure(PhysAddr::new(failing_gpa)));
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
-    </span><span class="macro">assert_eq!</span>(
-        sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;MapGPA&gt; returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
+    </span><span class="macro">assert_eq!</span>(sub_function_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL&lt;MapGPA&gt; returned an invalid result&quot;</span>);
 
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Executes CPUID for the specified leaf and sub-leaf.
 ///
-/// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 </span><span class="kw">pub fn </span>call_cpuid(leaf: u32, sub_leaf: u32) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResult, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.CPUID.
@@ -732,17 +710,19 @@
         .union(Registers::R14)
         .union(Registers::R15);
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11. The CPUID leaf
-    // goes into R12 and the subleaf into R13. The CPUID EAX values is returned in R12, the EBX
-    // value in R13, the ECX value in R14 and the EDX value in R15. We zero out all output
-    // registers in the input to make sure old register values don&#39;t accidentally leak to the
-    // hypervisor.
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. The CPUID leaf goes into R12
+    // and the subleaf into R13. The CPUID EAX values is returned in R12, the EBX
+    // value in R13, the ECX value in R14 and the EDX value in R15. We zero out all
+    // output registers in the input to make sure old register values don&#39;t
+    // accidentally leak to the hypervisor.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -758,28 +738,21 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid CPUID request&quot;</span>);
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
         <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.CPUID&gt; returned an invalid result&quot;
     </span>);
 
-    <span class="prelude-val">Ok</span>(CpuidResult {
-        eax: eax <span class="kw">as </span>u32,
-        ebx: ebx <span class="kw">as </span>u32,
-        ecx: ecx <span class="kw">as </span>u32,
-        edx: edx <span class="kw">as </span>u32,
-    })
+    <span class="prelude-val">Ok</span>(CpuidResult { eax: eax <span class="kw">as </span>u32, ebx: ebx <span class="kw">as </span>u32, ecx: ecx <span class="kw">as </span>u32, edx: edx <span class="kw">as </span>u32 })
 }
 
 <span class="doccomment">/// Reads a single byte from the specified IO port.
@@ -834,8 +807,8 @@
 
 <span class="doccomment">/// Performs a port-based IO read operation.
 ///
-/// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 </span><span class="kw">fn </span>io_read(port: u32, size: IoWidth) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.IO.
@@ -843,22 +816,23 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>vm_call_result: u64;
     <span class="kw">let </span><span class="kw-2">mut </span>sub_function_result: u64;
-    <span class="kw">let </span>registers = Registers::default()
-        .union(Registers::R12)
-        .union(Registers::R13)
-        .union(Registers::R14);
+    <span class="kw">let </span>registers =
+        Registers::default().union(Registers::R12).union(Registers::R13).union(Registers::R14);
 
     <span class="kw">let </span><span class="kw-2">mut </span>data: u64;
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11 and the data is
-    // returned in R11 if the read is successful. The size of the read (1,2 or 4 bytes) goes
-    // into R12. The direction (read) goes into R13. The IO port number goes into R14.
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11 and the data is returned in
+    // R11 if the read is successful. The size of the read (1,2 or 4 bytes) goes
+    // into R12. The direction (read) goes into R13. The IO port number goes into
+    // R14.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -873,17 +847,15 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;IO read operation failed&quot;</span>);
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
         <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result&quot;
@@ -894,8 +866,8 @@
 
 <span class="doccomment">/// Performs a port-based IO write operation.
 ///
-/// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 </span><span class="kw">fn </span>io_write(port: u32, size: IoWidth, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.IO.
@@ -911,15 +883,17 @@
         .union(Registers::R14)
         .union(Registers::R15);
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11. The size of the
-    // write (1,2 or 4 bytes) goes into R12. The direction (write) goes into R13. The IO port
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. The size of the write (1,2
+    // or 4 bytes) goes into R12. The direction (write) goes into R13. The IO port
     // number goes into R14. The data to write goes into R15.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -935,17 +909,15 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;IO write operation failed&quot;</span>);
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
         <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result&quot;
@@ -956,14 +928,14 @@
 
 <span class="doccomment">/// Writes a value to the specified model-specific register.
 ///
-/// See section 3.11 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.11 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 ///
 /// # Safety
 ///
-/// Modifying an MSR could impact the execution environment, so the caller must ensure that the MSR
-/// modification will not lead to undefined behavior.
+/// Modifying an MSR could impact the execution environment, so the caller must
+/// ensure that the MSR modification will not lead to undefined behavior.
 </span><span class="kw">pub unsafe fn </span>msr_write(msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.WRMSR.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">32</span>;
@@ -972,15 +944,17 @@
     <span class="kw">let </span><span class="kw-2">mut </span>sub_function_result: u64;
     <span class="kw">let </span>registers = Registers::default().union(Registers::R12);
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11, and the MSR value is
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11, and the MSR value is
     // returned in T11. The MSR index goes into R12.
     //
-    // Safety: if the MSR modification is safe, calling TDCALL here is safe since it does not alter
-    // memory and all the affected registers are specified, so no unspecified registers will be
-    // clobbered. It is up to the caller to ensure that the MSR modification itself is safe.
+    // Safety: if the MSR modification is safe, calling TDCALL here is safe since it
+    // does not alter memory and all the affected registers are specified, so no
+    // unspecified registers will be clobbered. It is up to the caller to ensure
+    // that the MSR modification itself is safe.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -994,17 +968,15 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;MSR write operation failed&quot;</span>);
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
         <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.WRMSR&gt; returned an invalid result&quot;
@@ -1015,8 +987,8 @@
 
 <span class="doccomment">/// Reads a value from the specified model-specific register.
 ///
-/// See section 3.10 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 3.10 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 </span><span class="kw">pub fn </span>msr_read(msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.RDMSR.
@@ -1028,14 +1000,16 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>data: u64;
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is success). The
-    // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
-    // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
-    // subfunction is returned in R10. The sub-function to call goes into R11, and the MSR value is
+    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11, and the MSR value is
     // returned in T11. The MSR index goes into R12.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
@@ -1048,17 +1022,15 @@
         );
     }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways be 0 as long as
-    // the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(
-        vm_call_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;
-    </span>);
+    <span class="comment">// According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;MSR read operation failed&quot;</span>);
     }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or INVALID_OPERAND.
+    <span class="comment">// According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
         <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.RDMSR&gt; returned an invalid result&quot;

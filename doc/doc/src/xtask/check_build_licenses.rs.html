@@ -43,9 +43,6 @@
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
 <a href="#45" id="45">45</a>
-<a href="#46" id="46">46</a>
-<a href="#47" id="47">47</a>
-<a href="#48" id="48">48</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -64,8 +61,8 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::internal::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// A [`Runnable`] command that checks for the existence of BUILD files without the necessary
-/// licenses declaration.
+<span class="doccomment">/// A [`Runnable`] command that checks for the existence of BUILD files without
+/// the necessary licenses declaration.
 </span><span class="kw">pub struct </span>CheckBuildLicenses {
     path: String,
 }
@@ -88,10 +85,7 @@
         } <span class="kw">else </span>{
             StatusResultValue::Error
         };
-        Box::new(SingleStatusResult {
-            value: result_value,
-            logs: String::new(),
-        })
+        Box::new(SingleStatusResult { value: result_value, logs: String::new() })
     }
 }
 </code></pre></div></section></main></body></html>

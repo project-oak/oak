@@ -210,15 +210,6 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -267,14 +258,8 @@
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
 // Ideally, we&#39;d check everything listed there.
 </span><span class="kw">pub fn </span>validate_ark_ask_certs(ark: <span class="kw-2">&amp;</span>Certificate, ask: <span class="kw-2">&amp;</span>Certificate) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">anyhow::ensure!</span>(
-        ark.tbs_certificate.version == Version::V3,
-        <span class="string">&quot;unexpected version of ARK cert&quot;
-    </span>);
-    <span class="macro">anyhow::ensure!</span>(
-        ask.tbs_certificate.version == Version::V3,
-        <span class="string">&quot;unexpected version of ASK cert&quot;
-    </span>);
+    <span class="macro">anyhow::ensure!</span>(ark.tbs_certificate.version == Version::V3, <span class="string">&quot;unexpected version of ARK cert&quot;</span>);
+    <span class="macro">anyhow::ensure!</span>(ask.tbs_certificate.version == Version::V3, <span class="string">&quot;unexpected version of ASK cert&quot;</span>);
 
     verify_cert_signature(ark, ask)<span class="question-mark">?</span>;
     verify_cert_signature(ark, ark)<span class="question-mark">?</span>;
@@ -290,10 +275,7 @@
     );
 
     <span class="kw">let </span>verifying_key = {
-        <span class="kw">let </span>pubkey_info = signer
-            .tbs_certificate
-            .subject_public_key_info
-            .owned_to_ref();
+        <span class="kw">let </span>pubkey_info = signer.tbs_certificate.subject_public_key_info.owned_to_ref();
         <span class="kw">let </span>pubkey = RsaPublicKey::try_from(pubkey_info)
             .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse RSA public key&quot;</span>))<span class="question-mark">?</span>;
         rsa::pss::VerifyingKey::&lt;Sha384&gt;::new(pubkey)

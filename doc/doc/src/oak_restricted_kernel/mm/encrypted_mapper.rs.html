@@ -702,8 +702,6 @@
 <a href="#702" id="702">702</a>
 <a href="#703" id="703">703</a>
 <a href="#704" id="704">704</a>
-<a href="#705" id="705">705</a>
-<a href="#706" id="706">706</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -740,15 +738,17 @@
 
 <span class="attr">#[derive(Clone, Copy, Debug)]
 </span><span class="kw">pub enum </span>MemoryEncryption {
-    <span class="doccomment">/// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it is ignored.
+    <span class="doccomment">/// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it
+    /// is ignored.
     </span>NoEncryption,
 
     <span class="doccomment">/// Memory encryption uses bit `C` in the page tables.
     ///
-    /// The location of the C-bit is machine-dependent; it is reported by CPUID function 8000_001F
-    /// in EBX\[5:0\].
-    /// See AMD64 Architecture Programmer&#39;s Manual, Volume 2, Section 15.34.1 and
-    /// AMD64 Architecture Programmer&#39;s Manual, Volume 3, Section E.4.17 for more details.
+    /// The location of the C-bit is machine-dependent; it is reported by CPUID
+    /// function 8000_001F in EBX\[5:0\].
+    /// See AMD64 Architecture Programmer&#39;s Manual, Volume 2, Section 15.34.1
+    /// and AMD64 Architecture Programmer&#39;s Manual, Volume 3, Section E.4.17
+    /// for more details.
     </span>Encrypted(u8),
 }
 
@@ -763,7 +763,8 @@
 
 <span class="doccomment">/// Helper for mapper that assumes all memory is mapped to a given fixed offset.
 ///
-/// See &lt;x86_64::structures::paging::mapper::PageTableFrameMapping&gt; for more details.
+/// See &lt;x86_64::structures::paging::mapper::PageTableFrameMapping&gt; for more
+/// details.
 </span><span class="kw">pub struct </span>PhysOffset {
     offset: VirtAddr,
     encryption: MemoryEncryption,
@@ -788,10 +789,11 @@
     }
 }
 
-<span class="doccomment">/// Wrapper around `FrameAllocator` that sets the encrypted bit on the allocated frame, if needed.
+<span class="doccomment">/// Wrapper around `FrameAllocator` that sets the encrypted bit on the allocated
+/// frame, if needed.
 ///
-/// This is only meant to be used inside `EncryptedPageTable` to lie to `MappedPageTable` about the
-/// physical addresses.
+/// This is only meant to be used inside `EncryptedPageTable` to lie to
+/// `MappedPageTable` about the physical addresses.
 </span><span class="kw">struct </span>EncryptedFrameAllocator {
     encryption: MemoryEncryption,
 }
@@ -826,7 +828,8 @@
 
 <span class="doccomment">/// Frame allocator that always fails to allocate.
 ///
-/// This is useful in situations where we do not expect any new allocations to take place.
+/// This is useful in situations where we do not expect any new allocations to
+/// take place.
 </span><span class="kw">struct </span>FailAllocator {}
 <span class="kw">unsafe impl</span>&lt;S: PageSize&gt; FrameAllocator&lt;S&gt; <span class="kw">for </span>FailAllocator {
     <span class="kw">fn </span>allocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrame&lt;S&gt;&gt; {
@@ -897,7 +900,8 @@
         page: Page&lt;S&gt;,
         flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt; {
-        <span class="comment">// `ENCRYPTED` requires special treatment, therefore it&#39;s easier to just re-map the page.
+        <span class="comment">// `ENCRYPTED` requires special treatment, therefore it&#39;s easier to just re-map
+        // the page.
         </span><span class="kw">let </span>frame = <span class="kw">match </span><span class="self">self</span>.unmap(page) {
             <span class="prelude-val">Err</span>(UnmapError::ParentEntryHugePage) =&gt; <span class="prelude-val">Err</span>(FlagUpdateError::ParentEntryHugePage),
             <span class="prelude-val">Err</span>(UnmapError::PageNotMapped) =&gt; <span class="prelude-val">Err</span>(FlagUpdateError::PageNotMapped),
@@ -914,10 +918,9 @@
                 <span class="macro">panic!</span>(<span class="string">&quot;unexpected frame allocation when changing page table flags&quot;</span>)
             }
             <span class="comment">// This should never happen, as we&#39;ve just unmapped the page.
-            </span><span class="prelude-val">Err</span>(MapToError::PageAlreadyMapped(page)) =&gt; <span class="macro">panic!</span>(
-                <span class="string">&quot;expected page {:?} to be unmapped, but it was still mapped&quot;</span>,
-                page
-            ),
+            </span><span class="prelude-val">Err</span>(MapToError::PageAlreadyMapped(page)) =&gt; {
+                <span class="macro">panic!</span>(<span class="string">&quot;expected page {:?} to be unmapped, but it was still mapped&quot;</span>, page)
+            }
             <span class="prelude-val">Err</span>(MapToError::ParentEntryHugePage) =&gt; <span class="prelude-val">Err</span>(FlagUpdateError::ParentEntryHugePage),
         }
     }
@@ -1001,9 +1004,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>frame_allocator_unencrypted() {
         <span class="kw">let </span>frame = PhysFrame::from_start_address(PhysAddr::new(<span class="number">1u64 </span>&lt;&lt; <span class="number">21</span>)).unwrap();
-        FRAME_ALLOCATOR
-            .lock()
-            .mark_valid(PhysFrame::range(frame, frame + <span class="number">1</span>), <span class="bool-val">true</span>);
+        FRAME_ALLOCATOR.lock().mark_valid(PhysFrame::range(frame, frame + <span class="number">1</span>), <span class="bool-val">true</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator: EncryptedFrameAllocator =
             EncryptedFrameAllocator::new(MemoryEncryption::NoEncryption);
         <span class="kw">let </span>allocated_frame = frame_allocator.allocate_frame().unwrap();
@@ -1013,16 +1014,11 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>frame_allocator_encrypted() {
         <span class="kw">let </span>frame = PhysFrame::from_start_address(PhysAddr::new(<span class="number">1u64 </span>&lt;&lt; <span class="number">21</span>)).unwrap();
-        FRAME_ALLOCATOR
-            .lock()
-            .mark_valid(PhysFrame::range(frame, frame + <span class="number">1</span>), <span class="bool-val">true</span>);
+        FRAME_ALLOCATOR.lock().mark_valid(PhysFrame::range(frame, frame + <span class="number">1</span>), <span class="bool-val">true</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator: EncryptedFrameAllocator =
             EncryptedFrameAllocator::new(MemoryEncryption::Encrypted(<span class="number">51</span>));
         <span class="kw">let </span>allocated_frame = frame_allocator.allocate_frame().unwrap();
-        <span class="macro">assert_eq!</span>(
-            allocated_frame.start_address().as_u64() &amp; (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>),
-            (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>)
-        );
+        <span class="macro">assert_eq!</span>(allocated_frame.start_address().as_u64() &amp; (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>), (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>));
     }
 
     <span class="kw">struct </span>FakeMapper {

@@ -68,8 +68,8 @@
 
 <span class="kw">use </span>nix::mount::{mount, MsFlags};
 
-<span class="doccomment">/// Performs the minimum initialization required from the initial process on Linux to allow an
-/// application on an initial RAM disk to operate as expected.
+<span class="doccomment">/// Performs the minimum initialization required from the initial process on
+/// Linux to allow an application on an initial RAM disk to operate as expected.
 </span><span class="kw">pub fn </span>init() -&gt; anyhow::Result&lt;()&gt; {
     set_current_dir(<span class="string">&quot;/&quot;</span>)<span class="question-mark">?</span>;
 

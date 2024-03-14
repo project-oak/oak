@@ -126,15 +126,6 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -168,15 +159,16 @@
 <span class="kw">pub static </span><span class="kw-2">mut </span>PD_0: PageTable = PageTable::new();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PD_3: PageTable = PageTable::new();
 
-<span class="doccomment">/// Wrapper for the page table references so that we can access them via a mutex rather than
-/// directly via unsafe code.
+<span class="doccomment">/// Wrapper for the page table references so that we can access them via a mutex
+/// rather than directly via unsafe code.
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>PageTableRefs {
-    <span class="doccomment">/// The root page-map level 4 table coverting virtual memory ranges 0..128TiB and
-    /// (16EiB-128TiB)..16EiB.
+    <span class="doccomment">/// The root page-map level 4 table coverting virtual memory ranges
+    /// 0..128TiB and (16EiB-128TiB)..16EiB.
     </span><span class="kw">pub </span>pml4: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>PageTable,
 
-    <span class="doccomment">/// The page-directory pointer table covering virtual memory range 0..512GiB.
+    <span class="doccomment">/// The page-directory pointer table covering virtual memory range
+    /// 0..512GiB.
     </span><span class="kw">pub </span>pdpt: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>PageTable,
 
     <span class="doccomment">/// The page directory covering virtual memory range 0..1GiB.
@@ -185,7 +177,8 @@
     <span class="doccomment">/// The page directory covering virtual memory range 3..4GiB.
     </span><span class="kw">pub </span>pd_3: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>PageTable,
 
-    <span class="doccomment">/// The page table covering virtual memory range 0..2MiB where we want 4KiB pages.
+    <span class="doccomment">/// The page table covering virtual memory range 0..2MiB where we want 4KiB
+    /// pages.
     </span><span class="kw">pub </span>pt_0: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>PageTable,
 }
 
@@ -194,17 +187,17 @@
 
 <span class="doccomment">/// Initialises the page table references.
 </span><span class="kw">pub fn </span>init_page_table_refs(encrypted: u64) {
-    <span class="comment">// Safety: accessing the mutable statics here is safe since we only do it once and protect the
-    // mutable references with a mutex. This function can only be called once, since updating
-    // `PAGE_TABLE_REFS` twice will panic.
+    <span class="comment">// Safety: accessing the mutable statics here is safe since we only do it once
+    // and protect the mutable references with a mutex. This function can only
+    // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
     </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>PML4 };
     <span class="kw">let </span>pdpt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>PDPT };
     <span class="kw">let </span>pd_0 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>PD_0 };
     <span class="kw">let </span>pd_3 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>PD_3 };
 
-    <span class="comment">// Set up a new page table that maps the first 2MiB as 4KiB pages, so that we can share
-    // individual 4KiB pages with the hypervisor as needed. We are using an identity mapping
-    // between virtual and physical addresses.
+    <span class="comment">// Set up a new page table that maps the first 2MiB as 4KiB pages, so that we
+    // can share individual 4KiB pages with the hypervisor as needed. We are
+    // using an identity mapping between virtual and physical addresses.
     </span><span class="kw">let </span>pt_0 = Box::leak(Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC));
     pt_0.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
         entry.set_addr(
@@ -217,13 +210,7 @@
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
 
-    <span class="kw">let </span>page_tables = PageTableRefs {
-        pml4,
-        pdpt,
-        pd_0,
-        pd_3,
-        pt_0,
-    };
+    <span class="kw">let </span>page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };
 
     <span class="kw">if </span>PAGE_TABLE_REFS.set(Spinlock::new(page_tables)).is_err() {
         <span class="macro">panic!</span>(<span class="string">&quot;page table wrapper already initialized&quot;</span>);
@@ -232,14 +219,11 @@
     flush_all();
 }
 
-<span class="doccomment">/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first 2MiB that was already
-/// mapped as 512 4KiB pages.
+<span class="doccomment">/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
+/// 2MiB that was already mapped as 512 4KiB pages.
 </span><span class="kw">pub fn </span>map_additional_memory(encrypted: u64) {
     {
-        <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS
-            .get()
-            .expect(<span class="string">&quot;page tables not initiallized&quot;</span>)
-            .lock();
+        <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">&quot;page tables not initiallized&quot;</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
         pd.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
             entry.set_addr(
@@ -252,17 +236,15 @@
     flush_all();
 }
 
-<span class="comment">// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB pages, as a single 2MiB
-// huge page again.
+<span class="comment">// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
+// pages, as a single 2MiB huge page again.
 </span><span class="kw">pub fn </span>remap_first_huge_page(encrypted: u64) {
     {
-        <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS
-            .get()
-            .expect(<span class="string">&quot;page tables not initiallized&quot;</span>)
-            .lock();
+        <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">&quot;page tables not initiallized&quot;</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
 
-        <span class="comment">// Allow identity-op to keep the fact that the address we&#39;re talking about here is 0x00.
+        <span class="comment">// Allow identity-op to keep the fact that the address we&#39;re talking about here
+        // is 0x00.
         </span><span class="attr">#[allow(clippy::identity_op)]
         </span>pd[<span class="number">0</span>].set_addr(
             PhysAddr::new(<span class="number">0x0 </span>| encrypted),

@@ -68,8 +68,6 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -138,8 +136,6 @@
     .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio vsock device&quot;</span>);
     <span class="macro">info!</span>(<span class="string">&quot;Socket device status: {}&quot;</span>, vsock.get_status());
     <span class="kw">let </span>listener = oak_virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
-    Channel {
-        inner: listener.accept().expect(<span class="string">&quot;couldn&#39;t accept connection&quot;</span>),
-    }
+    Channel { inner: listener.accept().expect(<span class="string">&quot;couldn&#39;t accept connection&quot;</span>) }
 }
 </code></pre></div></section></main></body></html>

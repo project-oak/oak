@@ -395,6 +395,12 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -444,24 +450,27 @@
 <span class="doccomment">/// The offset used for the direct mapping of all physical memory.
 </span><span class="kw">const </span>DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(<span class="number">0xFFFF_8800_0000_0000</span>);
 
-<span class="doccomment">/// For now we use a fixed position for the encrypted bit. For now we assume that we will be running
-/// on AMD Arcadia-Milan CPUs, which use bit 51.
+<span class="doccomment">/// For now we use a fixed position for the encrypted bit. For now we assume
+/// that we will be running on AMD Arcadia-Milan CPUs, which use bit 51.
 </span><span class="kw">pub const </span>ENCRYPTED_BIT_POSITION: u8 = <span class="number">51</span>;
 
 <span class="comment">// TODO(#3394): Move to a shared crate.
 </span><span class="kw">pub trait </span>Translator {
-    <span class="doccomment">/// Translates the given virtual address to the physical address that it maps to.
+    <span class="doccomment">/// Translates the given virtual address to the physical address that it
+    /// maps to.
     ///
     /// Returns `None` if there is no valid mapping for the given address.
     </span><span class="kw">fn </span>translate_virtual(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt;;
 
     <span class="doccomment">/// Translate a physical address to a virtual address.
     ///
-    /// Note that a physical address may be mapped multiple times. This function will always return
-    /// the address from the directly mapped region, ignoring ohter mappings if they exist.
+    /// Note that a physical address may be mapped multiple times. This function
+    /// will always return the address from the directly mapped region,
+    /// ignoring ohter mappings if they exist.
     </span><span class="kw">fn </span>translate_physical(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: PhysAddr) -&gt; <span class="prelude-ty">Option</span>&lt;VirtAddr&gt;;
 
-    <span class="doccomment">/// Translate a physical frame to virtual page, using the directly mapped region.
+    <span class="doccomment">/// Translate a physical frame to virtual page, using the directly mapped
+    /// region.
     </span><span class="kw">fn </span>translate_physical_frame&lt;S: PageSize&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, frame: PhysFrame&lt;S&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Page&lt;S&gt;&gt;;
 }
 
@@ -529,8 +538,8 @@
 
 <span class="doccomment">/// Page mapper for pages of type `&lt;S&gt;`.
 ///
-/// This is equivalent to &lt;x86_64::structures::paging::mapper::Mapper&gt;, but knows about memory
-/// encryption.
+/// This is equivalent to &lt;x86_64::structures::paging::mapper::Mapper&gt;, but
+/// knows about memory encryption.
 </span><span class="kw">pub trait </span>Mapper&lt;S: PageSize&gt; {
     <span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -551,9 +560,10 @@
     ///
     /// # Safety
     ///
-    /// There are many ways how changing page table entries can break memory safety or cause other
-    /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
-    /// `WRITABLE` from the page that contains your stack.
+    /// There are many ways how changing page table entries can break memory
+    /// safety or cause other failures, e.g. by setting the `NO_EXECUTE` bit
+    /// on pages that contain your code or removing `WRITABLE` from the page
+    /// that contains your stack.
     </span><span class="kw">unsafe fn </span>update_flags(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         page: Page&lt;S&gt;,
@@ -582,7 +592,8 @@
         })
         .filter(|e| e.entry_type() == <span class="prelude-val">Some</span>(E820EntryType::RAM))
         .map(|e| {
-            <span class="comment">// Clip both ends, if necessary, to make sure that we are aligned with 2 MiB pages.
+            <span class="comment">// Clip both ends, if necessary, to make sure that we are aligned with 2 MiB
+            // pages.
             </span>(
                 PhysAddr::new(align_up(e.addr() <span class="kw">as </span>u64, Size2MiB::SIZE)),
                 PhysAddr::new(align_down((e.addr() + e.size()) <span class="kw">as </span>u64, Size2MiB::SIZE)),
@@ -601,7 +612,8 @@
 
     <span class="comment">// Step 2: mark known in-use regions as not available.
 
-    // First, leave out the first 2 MiB as there be dragons (and bootloader data structures)
+    // First, leave out the first 2 MiB as there be dragons (and bootloader data
+    // structures)
     </span>alloc.mark_valid(
         PhysFrame::range(
             PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x0</span>)).unwrap(),
@@ -615,7 +627,8 @@
         .iter()
         .filter(|phdr| phdr.p_type == PT_LOAD)
         .map(|phdr| {
-            <span class="comment">// Align the physical addresses to 2 MiB boundaries, making them larger if necessary.
+            <span class="comment">// Align the physical addresses to 2 MiB boundaries, making them larger if
+            // necessary.
             </span>PhysFrame::range(
                 PhysFrame::from_start_address(PhysAddr::new(align_down(
                     phdr.p_paddr,
@@ -667,11 +680,9 @@
 }
 
 <span class="kw">pub fn </span>encryption() -&gt; MemoryEncryption {
-    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let&#39;s assume it&#39;s bit 51.
-    </span><span class="kw">if </span>get_sev_status()
-        .unwrap_or(SevStatus::empty())
-        .contains(SevStatus::SEV_ENABLED)
-    {
+    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let&#39;s assume
+    // it&#39;s bit 51.
+    </span><span class="kw">if </span>get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
         MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } <span class="kw">else </span>{
         MemoryEncryption::NoEncryption
@@ -694,27 +705,26 @@
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
 </span><span class="kw">pub fn </span>initial_pml4(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;PhysFrame, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
-    // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
-    // This reference will no longer be valid after we reload the page tables!
-    </span><span class="kw">let </span>pml4_frame: PhysFrame&lt;Size4KiB&gt; = FRAME_ALLOCATOR
-        .lock()
-        .allocate_frame()
-        .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory
+    // region it&#39;s handing memory out of to be identity mapped. This is true for
+    // the lower 2 GiB after we boot. This reference will no longer be valid
+    // after we reload the page tables!
+    </span><span class="kw">let </span>pml4_frame: PhysFrame&lt;Size4KiB&gt; =
+        FRAME_ALLOCATOR.lock().allocate_frame().ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml4_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
     pml4.zero();
 
-    <span class="comment">// Populate all the kernel space entries of the level 4 page table. This means that these
-    // entries should never change, memory allocation will happen on lower level page tables. This
-    // is done to permit the kernel to switch between different level 4 page tables in the future.
-    // All page tables that include these mappings will point to the same lower level page tables /
+    <span class="comment">// Populate all the kernel space entries of the level 4 page table. This means
+    // that these entries should never change, memory allocation will happen on
+    // lower level page tables. This is done to permit the kernel to switch
+    // between different level 4 page tables in the future. All page tables that
+    // include these mappings will point to the same lower level page tables /
     // memory in kernel space.
     </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>fa = FRAME_ALLOCATOR.lock();
         <span class="kw">for </span>entry <span class="kw">in </span>pml4.iter_mut().skip(<span class="number">256</span>) {
-            <span class="kw">let </span>pml3_frame: PhysFrame&lt;Size4KiB&gt; = fa
-                .allocate_frame()
-                .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML3&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>pml3_frame: PhysFrame&lt;Size4KiB&gt; =
+                fa.allocate_frame().ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML3&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>pml3 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml3_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
             pml3.zero();
             entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
@@ -725,8 +735,9 @@
 
     <span class="comment">// Safety: these operations are safe as they&#39;re not done on active page tables.
     </span><span class="kw">unsafe </span>{
-        <span class="comment">// Create a direct map for all physical memory, marking it NO_EXECUTE. The size (128 GB) has
-        // been chosen go coincide with the amout of memory our frame allocator can track.
+        <span class="comment">// Create a direct map for all physical memory, marking it NO_EXECUTE. The size
+        // (128 GB) has been chosen go coincide with the amout of memory our
+        // frame allocator can track.
         </span>page_tables::create_offset_map(
             PhysFrame::&lt;Size2MiB&gt;::range(
                 PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x00_0000_0000</span>)).unwrap(),
@@ -742,8 +753,8 @@
         )
         .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for physical memory&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
-        // permissions) in the program header.
+        <span class="comment">// Mapping for the kernel itself in the upper -2G of memory, based on the
+        // mappings (and permissions) in the program header.
         </span>page_tables::create_kernel_map(program_headers, <span class="kw-2">&amp;mut </span>page_table)
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
     }
@@ -753,15 +764,16 @@
 
 <span class="doccomment">/// Allocates memory usable as a stack.
 ///
-/// The stack will be one page (2 MiB) in size, will be allocated in the VMA_ALLOCATOR area, and
-/// will consume two pages: one as a unmapped stack guard (so that we&#39;d get a page fault if we blow
-/// the stack), and one backed by a physical frame as the actual stack.
+/// The stack will be one page (2 MiB) in size, will be allocated in the
+/// VMA_ALLOCATOR area, and will consume two pages: one as a unmapped stack
+/// guard (so that we&#39;d get a page fault if we blow the stack), and one backed
+/// by a physical frame as the actual stack.
 ///
-/// The return address is usable as the stack pointer; that is, it points to the end of the
-/// allocated stack page.
+/// The return address is usable as the stack pointer; that is, it points to the
+/// end of the allocated stack page.
 </span><span class="kw">pub fn </span>allocate_stack() -&gt; VirtAddr {
-    <span class="comment">// Of the two pages we allocate, the first will be the stack guard page, and the second will be
-    // the actual stack.
+    <span class="comment">// Of the two pages we allocate, the first will be the stack guard page, and the
+    // second will be the actual stack.
     </span><span class="kw">let </span>pages = VMA_ALLOCATOR
         .lock()
         .allocate(<span class="number">2</span>)

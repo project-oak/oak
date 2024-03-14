@@ -800,21 +800,6 @@
 <a href="#800" id="800">800</a>
 <a href="#801" id="801">801</a>
 <a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
-<a href="#814" id="814">814</a>
-<a href="#815" id="815">815</a>
-<a href="#816" id="816">816</a>
-<a href="#817" id="817">817</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -833,23 +818,25 @@
 
 </span><span class="doccomment">//! Rust implementations of the AMD SEV-SNP GHCB MSR protocol.
 //!
-//! The protocol is implemented by writing to, and reading from, model-specific register (MSR)
-//! 0xC001_0130. The guest makes a request by writing an appropriate value to the MSR and calling
-//! VMGEXIT. After the hypervisor processes the request and resumes the guest, the guest can read
-//! the response from the same MSR.
+//! The protocol is implemented by writing to, and reading from, model-specific
+//! register (MSR) 0xC001_0130. The guest makes a request by writing an
+//! appropriate value to the MSR and calling VMGEXIT. After the hypervisor
+//! processes the request and resumes the guest, the guest can read the response
+//! from the same MSR.
 //!
-//! The 12 least significant bits represent information about the operation being performed. The
-//! remaining 52 bits represent the data for the operation. The format of the data is dependent on
-//! the operation.
+//! The 12 least significant bits represent information about the operation
+//! being performed. The remaining 52 bits represent the data for the operation.
+//! The format of the data is dependent on the operation.
 //!
-//! The MSR protocol is primarily used to set up the GHCB communications with the hypervisor.
+//! The MSR protocol is primarily used to set up the GHCB communications with
+//! the hypervisor.
 //!
 //! See section 2.3.1 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt; for more detail.
 //!
-//! Note: This implementation does not include the AP Reset Hold operations seeing that it is not
-//! the preferred mechanism for starting a new application processor (AP) under AMD SEV-SNP. The
-//! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
-//! &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+//! Note: This implementation does not include the AP Reset Hold operations
+//! seeing that it is not the preferred mechanism for starting a new application
+//! processor (AP) under AMD SEV-SNP. The SEV-SNP AP creation NAE should be used
+//! instead. See section 4.3.2 of &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
 
 </span><span class="comment">//use anyhow::{anyhow, bail, Result};
 </span><span class="kw">use </span>bitflags::bitflags;
@@ -862,14 +849,16 @@
 
 <span class="kw">use crate</span>::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 
-<span class="doccomment">/// The version of the GHCB MSR protocol supported by this library. This represents the version
-/// specific to AMD SEV-SNP.
+<span class="doccomment">/// The version of the GHCB MSR protocol supported by this library. This
+/// represents the version specific to AMD SEV-SNP.
 </span><span class="kw">pub const </span>SUPPORTED_PROTOCOL_VERSION: u16 = <span class="number">2</span>;
 
-<span class="doccomment">/// Value indicating that the hypervisor does not have a preferred location for the GHCB.
+<span class="doccomment">/// Value indicating that the hypervisor does not have a preferred location for
+/// the GHCB.
 </span><span class="kw">pub const </span>NO_PREFERRED_GHCB_LOCATION: u64 = <span class="number">0xFFFFFFFFFFFFF000</span>;
 
-<span class="doccomment">/// Value indicating that the hypervisor did not accept the registered location for the GHCB.
+<span class="doccomment">/// Value indicating that the hypervisor did not accept the registered location
+/// for the GHCB.
 </span><span class="kw">const </span>GHCB_LOCATION_NOT_ACCEPTED: u64 = <span class="number">0xFFFFFFFFFFFFF000</span>;
 
 <span class="doccomment">/// The identifier for the MSR used in the MSR protocol.
@@ -884,8 +873,8 @@
 <span class="doccomment">/// Mask to extract the GHCB data from a u64 value.
 </span><span class="kw">const </span>GCHP_DATA_MASK: u64 = !GHCB_INFO_MASK;
 
-<span class="doccomment">/// Contains the guest-physical address of the GHCB page. The address must have been registered with
-/// the hypervisor before using it.
+<span class="doccomment">/// Contains the guest-physical address of the GHCB page. The address must have
+/// been registered with the hypervisor before using it.
 </span><span class="kw">pub struct </span>GhcbGpa {
     gpa: u64,
 }
@@ -911,12 +900,15 @@
     write_protocol_msr_and_exit(ghcb_gpa.into());
 }
 
-<span class="doccomment">/// Response from the hypervisor about the encryption bit and supported GHCB protocol versions. The
-/// encryption bit value is validated by the hardware before the guest is resumed.
+<span class="doccomment">/// Response from the hypervisor about the encryption bit and supported GHCB
+/// protocol versions. The encryption bit value is validated by the hardware
+/// before the guest is resumed.
 </span><span class="kw">pub struct </span>SevInfoResponse {
-    <span class="doccomment">/// The minimum version of the GHCB MSR protocol supported by the hypervisor.
+    <span class="doccomment">/// The minimum version of the GHCB MSR protocol supported by the
+    /// hypervisor.
     </span><span class="kw">pub </span>min_protocol_version: u16,
-    <span class="doccomment">/// The maximum version of the GHCB MSR protocol supported by the hypervisor.
+    <span class="doccomment">/// The maximum version of the GHCB MSR protocol supported by the
+    /// hypervisor.
     </span><span class="kw">pub </span>max_protocol_version: u16,
     <span class="doccomment">/// The page table bit used for inidicating that a page is encrypted.
     </span><span class="kw">pub </span>encryption_bit: u8,
@@ -932,15 +924,12 @@
         <span class="kw">let </span>max_protocol_version = (msr_value &gt;&gt; <span class="number">48</span>) <span class="kw">as </span>u16;
         <span class="kw">let </span>min_protocol_version = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u16;
         <span class="kw">let </span>encryption_bit = (msr_value &gt;&gt; <span class="number">24</span>) <span class="kw">as </span>u8;
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            min_protocol_version,
-            max_protocol_version,
-            encryption_bit,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ min_protocol_version, max_protocol_version, encryption_bit })
     }
 }
 
-<span class="doccomment">/// A request for information about the supported GHCB MSR protocol version and the encryption bit.
+<span class="doccomment">/// A request for information about the supported GHCB MSR protocol version and
+/// the encryption bit.
 </span><span class="kw">pub struct </span>SevInfoRequest;
 
 <span class="kw">impl </span>From&lt;SevInfoRequest&gt; <span class="kw">for </span>u64 {
@@ -949,8 +938,8 @@
     </span>}
 }
 
-<span class="doccomment">/// Gets information about the supported GHCB MSR protocol versions and the location of the
-/// encryption bit.
+<span class="doccomment">/// Gets information about the supported GHCB MSR protocol versions and the
+/// location of the encryption bit.
 </span><span class="kw">pub fn </span>get_sev_info() -&gt; <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span>request = SevInfoRequest;
     write_protocol_msr_and_exit(request.into());
@@ -967,12 +956,13 @@
     Edx = <span class="number">3</span>,
 }
 
-<span class="doccomment">/// A request to execute CPUID for a specific leaf and return one of the result registers.
+<span class="doccomment">/// A request to execute CPUID for a specific leaf and return one of the result
+/// registers.
 </span><span class="kw">pub struct </span>CpuidRequest {
     <span class="doccomment">/// The CPUID leaf to request. Sub-leafs are not supported by this protocol.
     </span><span class="kw">pub </span>leaf: u32,
-    <span class="doccomment">/// The register to return from the result. This protocol only supports a single register at a
-    /// time.
+    <span class="doccomment">/// The register to return from the result. This protocol only supports a
+    /// single register at a time.
     </span><span class="kw">pub </span>register: CpuidRegister,
 }
 
@@ -983,7 +973,8 @@
     </span>}
 }
 
-<span class="doccomment">/// A response from executing CPUID for a specific leaf. Only one register is returned at a time.
+<span class="doccomment">/// A response from executing CPUID for a specific leaf. Only one register is
+/// returned at a time.
 </span><span class="kw">pub struct </span>CpuidResponse {
     <span class="doccomment">/// The value of the requested register after executing CPUID.
     </span><span class="kw">pub </span>value: u32,
@@ -1007,41 +998,26 @@
     }
 }
 
-<span class="doccomment">/// Gets the value of the specified register that was returned when executing CPUID for the
-/// specified leaf. Sub-leafs are not supported.
+<span class="doccomment">/// Gets the value of the specified register that was returned when executing
+/// CPUID for the specified leaf. Sub-leafs are not supported.
 </span><span class="kw">pub fn </span>get_cpuid(request: CpuidRequest) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
 }
 
-<span class="doccomment">/// Gets the CPUID values for EAX, EBX, ECX and EDX and updates the interrupt stackframe with these.
+<span class="doccomment">/// Gets the CPUID values for EAX, EBX, ECX and EDX and updates the interrupt
+/// stackframe with these.
 </span><span class="kw">pub fn </span>get_cpuid_for_vc_exception(
     leaf: u32,
     stack_frame: <span class="kw-2">&amp;mut </span>MutableInterruptStackFrame,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    stack_frame.rax = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Eax,
-    })<span class="question-mark">?
-    </span>.value <span class="kw">as </span>u64;
+    stack_frame.rax = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Eax })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
 
-    stack_frame.rbx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Ebx,
-    })<span class="question-mark">?
-    </span>.value <span class="kw">as </span>u64;
+    stack_frame.rbx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Ebx })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
 
-    stack_frame.rcx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Ecx,
-    })<span class="question-mark">?
-    </span>.value <span class="kw">as </span>u64;
+    stack_frame.rcx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Ecx })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
 
-    stack_frame.rdx = get_cpuid(CpuidRequest {
-        leaf,
-        register: CpuidRegister::Edx,
-    })<span class="question-mark">?
-    </span>.value <span class="kw">as </span>u64;
+    stack_frame.rdx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Edx })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -1075,18 +1051,19 @@
 
 <span class="doccomment">/// Requests the hypervisor&#39;s preferred location for the GHCB page.
 ///
-/// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor does not have a
-/// preferred location.
+/// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor
+/// does not have a preferred location.
 ///
-/// The guest must validate that the returned guest-physical address is not part of its known
-/// guest-private memory.
+/// The guest must validate that the returned guest-physical address is not part
+/// of its known guest-private memory.
 </span><span class="kw">pub fn </span>get_preferred_ghcb_location() -&gt; <span class="prelude-ty">Result</span>&lt;PreferredGhcbGpaResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span>request = PreferredGhcbGpaRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
 }
 
-<span class="doccomment">/// Request to register a guest-physical address for the GHCB with the hypervisor.
+<span class="doccomment">/// Request to register a guest-physical address for the GHCB with the
+/// hypervisor.
 </span><span class="kw">pub struct </span>RegisterGhcbGpaRequest {
     ghcb_gpa: u64,
 }
@@ -1136,26 +1113,23 @@
     }
 }
 
-<span class="doccomment">/// Registers the location of the GHCB page for the current vCPU with the hypervisor.
+<span class="doccomment">/// Registers the location of the GHCB page for the current vCPU with the
+/// hypervisor.
 </span><span class="kw">pub fn </span>register_ghcb_location(request: RegisterGhcbGpaRequest) -&gt; <span class="prelude-ty">Result</span>&lt;(), RegisterGhcbGpaError&gt; {
     <span class="kw">let </span>request_ghcb_gpa: u64 = request.ghcb_gpa;
     write_protocol_msr_and_exit(request.into());
     <span class="kw">let </span>response: RegisterGhcbGpaResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the registration was successful.
-    </span><span class="macro">ensure!</span>(
-        response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED,
-        GhcbLocationNotAcceptedSnafu
-    );
+    </span><span class="macro">ensure!</span>(response.ghcb_gpa != GHCB_LOCATION_NOT_ACCEPTED, GhcbLocationNotAcceptedSnafu);
     <span class="macro">ensure!</span>(
         response.ghcb_gpa == request_ghcb_gpa,
-        GhcbResponseLocationNotMatchingRequestSnafu {
-            response_ghcb_gpa: response.ghcb_gpa,
-        }
+        GhcbResponseLocationNotMatchingRequestSnafu { response_ghcb_gpa: response.ghcb_gpa }
     );
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Whether a memory page is private to the guest, or shared with the hypervisor.
+<span class="doccomment">/// Whether a memory page is private to the guest, or shared with the
+/// hypervisor.
 </span><span class="attr">#[derive(Debug, FromRepr, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>PageAssignment {
@@ -1180,10 +1154,7 @@
         <span class="kw">if </span>page_gpa &gt; ADDRESS_MAX {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page address is too high&quot;</span>);
         }
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            page_gpa,
-            assignment,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ page_gpa, assignment })
     }
 }
 
@@ -1199,7 +1170,8 @@
 </span><span class="kw">pub struct </span>SnpPageStateChangeResponse {
     <span class="doccomment">/// The error code from the page state change operation.
     ///
-    /// A value of 0 indicates success. Any non-zero value means that the state was not changed.
+    /// A value of 0 indicates success. Any non-zero value means that the state
+    /// was not changed.
     </span>error_code: u32,
 }
 
@@ -1218,11 +1190,11 @@
     }
 }
 
-<span class="doccomment">/// Requests a change of state for a page to be either private to the guest VM, or shared with the
-/// hypervisor.
+<span class="doccomment">/// Requests a change of state for a page to be either private to the guest VM,
+/// or shared with the hypervisor.
 ///
-/// This is useful if the GHCB has not yet been established, for example if a page must be shared
-/// with the hypervisor to establish the GHCB.
+/// This is useful if the GHCB has not yet been established, for example if a
+/// page must be shared with the hypervisor to establish the GHCB.
 </span><span class="kw">pub fn </span>change_snp_page_state(request: SnpPageStateChangeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     write_protocol_msr_and_exit(request.into());
     <span class="kw">let </span>response: SnpPageStateChangeResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
@@ -1349,7 +1321,8 @@
 <span class="doccomment">/// Requests termination from the hypervisor.
 </span><span class="kw">pub fn </span>request_termination(request: TerminationRequest) -&gt; ! {
     write_protocol_msr_and_exit(request.into());
-    <span class="comment">// Go into a HALT loop, in case the hypervisor did not honor the termination request.
+    <span class="comment">// Go into a HALT loop, in case the hypervisor did not honor the termination
+    // request.
     </span><span class="kw">loop </span>{
         x86_64::instructions::hlt();
     }
@@ -1404,10 +1377,12 @@
     SevStatus::from_bits(read_status_msr()).ok_or(SevStatusError::InvalidValue)
 }
 
-<span class="doccomment">/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the hypervisor.
+<span class="doccomment">/// Writes a value to the protocol MSR and calls VMGEXIT to hand control to the
+/// hypervisor.
 </span><span class="kw">fn </span>write_protocol_msr_and_exit(msr_value: u64) {
-    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for communicating with
-    // the hypervisor, and does not have any other side-effects within the guest.
+    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for
+    // communicating with the hypervisor, and does not have any other
+    // side-effects within the guest.
     </span><span class="kw">unsafe </span>{
         Msr::new(PROTOCOL_MSR_IDENTIFIER).write(msr_value);
     }
@@ -1416,11 +1391,12 @@
 
 <span class="doccomment">/// Reads the value of the protocol model-specific register.
 ///
-/// This typically used to get the result of an operation when the hypervisor resumes the guest
-/// following a call to VMGEGIT.
+/// This typically used to get the result of an operation when the hypervisor
+/// resumes the guest following a call to VMGEGIT.
 </span><span class="kw">fn </span>read_protocol_msr() -&gt; u64 {
-    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for communicating with
-    // the hypervisor, and does not have any other side-effects within the guest.
+    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for
+    // communicating with the hypervisor, and does not have any other
+    // side-effects within the guest.
     </span><span class="kw">unsafe </span>{ Msr::new(PROTOCOL_MSR_IDENTIFIER).read() }
 }
 
@@ -1428,15 +1404,16 @@
 ///
 /// See section 15.34.10 of &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt;.
 </span><span class="kw">fn </span>read_status_msr() -&gt; u64 {
-    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for reading the SEV
-    // status and does not have any other side-effects within the guest.
+    <span class="comment">// Safety: This operation is safe because this specific MSR is used only for
+    // reading the SEV status and does not have any other side-effects within
+    // the guest.
     </span><span class="kw">unsafe </span>{ Msr::new(STATUS_MSR_IDENTIFIER).read() }
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="doccomment">//! These tests check the conversion logic between convenience request and response structs, and
-    //! the u64 values used for the MSR protocol.
+    <span class="doccomment">//! These tests check the conversion logic between convenience request and
+    //! response structs, and the u64 values used for the MSR protocol.
     //!
     //! See section 2.3.1 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt; for details of
     //! how the requests and responses are represented as u64 values.
@@ -1555,13 +1532,8 @@
         <span class="macro">assert!</span>(SnpPageStateChangeRequest::new(invalid_page, assignment).is_err());
 
         <span class="kw">let </span>valid_page = <span class="number">1111111usize </span>&lt;&lt; <span class="number">12</span>;
-        <span class="kw">let </span>msr_value: u64 = SnpPageStateChangeRequest::new(valid_page, assignment)
-            .unwrap()
-            .into();
-        <span class="macro">assert_eq!</span>(
-            (valid_page <span class="kw">as </span>u64) | ((assignment <span class="kw">as </span>u64) &lt;&lt; <span class="number">52</span>) | <span class="number">0x14</span>,
-            msr_value
-        );
+        <span class="kw">let </span>msr_value: u64 = SnpPageStateChangeRequest::new(valid_page, assignment).unwrap().into();
+        <span class="macro">assert_eq!</span>((valid_page <span class="kw">as </span>u64) | ((assignment <span class="kw">as </span>u64) &lt;&lt; <span class="number">52</span>) | <span class="number">0x14</span>, msr_value);
     }
 
     <span class="attr">#[test]
@@ -1603,9 +1575,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_termination_request() {
-        <span class="kw">let </span>request = TerminationRequest {
-            reason: TerminationReason::GhcbProtocolVersion,
-        };
+        <span class="kw">let </span>request = TerminationRequest { reason: TerminationReason::GhcbProtocolVersion };
         <span class="kw">let </span>expected = <span class="number">0x100u64 </span>| ((TerminationReason::GhcbProtocolVersion <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
         <span class="macro">assert_eq!</span>(expected, request.into());
     }

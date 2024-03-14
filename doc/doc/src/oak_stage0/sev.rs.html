@@ -530,26 +530,6 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -602,14 +582,16 @@
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
-<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
+/// message protocol.
 </span><span class="kw">static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
-<span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
+<span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the
+/// pages as shared.
 ///
-/// This allocator is inefficient as it will only allocate 4K chunks, potentially wasting memory.
-/// For example, if you allocate two u32-s, although they could well fit on one page, currently
-/// that&#39;d use 8K of memory.
+/// This allocator is inefficient as it will only allocate 4K chunks,
+/// potentially wasting memory. For example, if you allocate two u32-s, although
+/// they could well fit on one page, currently that&#39;d use 8K of memory.
 /// That, however, is an implementation detail, and may change in the future.
 </span><span class="attr">#[repr(transparent)]
 </span><span class="kw">struct </span>SharedAllocator&lt;A: Allocator&gt; {
@@ -624,15 +606,13 @@
 
 <span class="kw">unsafe impl</span>&lt;A: Allocator&gt; Allocator <span class="kw">for </span>SharedAllocator&lt;A&gt; {
     <span class="kw">fn </span>allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;[u8]&gt;, AllocError&gt; {
-        <span class="kw">let </span>layout = layout
-            .align_to(Size4KiB::SIZE <span class="kw">as </span>usize)
-            .map_err(|<span class="kw">_</span>| AllocError)<span class="question-mark">?
-            </span>.pad_to_align();
+        <span class="kw">let </span>layout =
+            layout.align_to(Size4KiB::SIZE <span class="kw">as </span>usize).map_err(|<span class="kw">_</span>| AllocError)<span class="question-mark">?</span>.pad_to_align();
         <span class="kw">let </span>allocation = <span class="self">self</span>.inner.allocate(layout)<span class="question-mark">?</span>;
         <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
             <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..allocation.len()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
-                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of the
-                // allocation.
+                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of
+                // the allocation.
                 </span>share_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                     allocation.as_non_null_ptr().as_ptr().add(offset)
                 })))
@@ -649,8 +629,8 @@
             .pad_to_align();
         <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
             <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..layout.size()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
-                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of the
-                // allocation.
+                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of
+                // the allocation.
                 </span>unshare_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                     ptr.as_ptr().add(offset)
                 })))
@@ -670,9 +650,7 @@
     </span><span class="kw">where
         </span>A: <span class="lifetime">&#39;static</span>,
     {
-        <span class="self">Self </span>{
-            inner: Box::new_in(t, SharedAllocator::new(alloc)),
-        }
+        <span class="self">Self </span>{ inner: Box::new_in(t, SharedAllocator::new(alloc)) }
     }
 }
 
@@ -729,7 +707,8 @@
     }
 }
 
-<span class="doccomment">/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
+<span class="doccomment">/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP
+/// enabled.
 </span><span class="kw">pub fn </span>deinit_ghcb() {
     <span class="kw">let </span>ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
     unshare_page(Page::containing_address(ghcb_addr));
@@ -738,7 +717,8 @@
 <span class="doccomment">/// Shares a single 4KiB page with the hypervisor.
 </span><span class="kw">pub fn </span>share_page(page: Page&lt;Size4KiB&gt;) {
     <span class="kw">let </span>page_start = page.start_address().as_u64();
-    <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
     </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
     <span class="comment">// Remove the ENCRYPTED bit from the entry that maps the page.
     </span>{
@@ -759,10 +739,12 @@
     }
 }
 
-<span class="doccomment">/// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
+<span class="doccomment">/// Stops sharing a single 4KiB page with the hypervisor when running with AMD
+/// SEV-SNP enabled.
 </span><span class="kw">pub fn </span>unshare_page(page: Page&lt;Size4KiB&gt;) {
     <span class="kw">let </span>page_start = page.start_address().as_u64();
-    <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
     </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Private)
@@ -787,11 +769,12 @@
     }
 }
 
-<span class="comment">// Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
-// be invoked on 2 MiB and 4 KiB pages.
-// This trait translates between the page sizes defined in the x86_64 crate (`Size4KiB`, `Size2MiB`)
-// and the sizes defined in `oak_sev_guest` crate (`Page4KiB`, `Page2MiB`). There is no mapping for
-// `Size1GiB` as pages of that size can&#39;t be used for valitation.
+<span class="comment">// Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
+// `PVALIDATE` can only be invoked on 2 MiB and 4 KiB pages.
+// This trait translates between the page sizes defined in the x86_64 crate
+// (`Size4KiB`, `Size2MiB`) and the sizes defined in `oak_sev_guest` crate
+// (`Page4KiB`, `Page2MiB`). There is no mapping for `Size1GiB` as pages of that
+// size can&#39;t be used for valitation.
 </span><span class="kw">pub trait </span>ValidatablePageSize {
     <span class="kw">const </span>SEV_PAGE_SIZE: SevPageSize;
 }
@@ -810,16 +793,12 @@
 
 <span class="kw">impl</span>&lt;S: PageSize + ValidatablePageSize&gt; Validate&lt;S&gt; <span class="kw">for </span>Page&lt;S&gt; {
     <span class="kw">fn </span>pvalidate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
-        pvalidate(
-            <span class="self">self</span>.start_address().as_u64() <span class="kw">as </span>usize,
-            S::SEV_PAGE_SIZE,
-            Validation::Validated,
-        )
+        pvalidate(<span class="self">self</span>.start_address().as_u64() <span class="kw">as </span>usize, S::SEV_PAGE_SIZE, Validation::Validated)
     }
 }
 
-<span class="doccomment">/// Container for a page of virtual memory, and the page table that controls the mappings for that
-/// page.
+<span class="doccomment">/// Container for a page of virtual memory, and the page table that controls the
+/// mappings for that page.
 </span><span class="kw">struct </span>MappedPage&lt;S: PageSize&gt; {
     <span class="kw">pub </span>page: Page&lt;S&gt;,
     <span class="kw">pub </span>page_table: PageTable,
@@ -827,10 +806,8 @@
 
 <span class="kw">impl</span>&lt;S: PageSize&gt; MappedPage&lt;S&gt; {
     <span class="kw">pub fn </span>new(vaddr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, AddressNotAligned&gt; {
-        <span class="kw">let </span>mapped_page = <span class="self">Self </span>{
-            page: Page::from_start_address(vaddr)<span class="question-mark">?</span>,
-            page_table: PageTable::new(),
-        };
+        <span class="kw">let </span>mapped_page =
+            <span class="self">Self </span>{ page: Page::from_start_address(vaddr)<span class="question-mark">?</span>, page_table: PageTable::new() };
         <span class="prelude-val">Ok</span>(mapped_page)
     }
 }
@@ -848,14 +825,16 @@
     <span class="comment">// Create a copy as we&#39;ll be consuming the range as we call `next()`, below.
     </span><span class="kw">let </span><span class="kw-2">mut </span>range = <span class="kw-2">*</span>range;
 
-    <span class="comment">// A page table consists of 512 entries; let&#39;s figure out what the pages would be.
+    <span class="comment">// A page table consists of 512 entries; let&#39;s figure out what the pages would
+    // be.
     </span><span class="kw">let </span>start = Page::from_start_address(memory.page.start_address()).unwrap();
     <span class="kw">let </span>pages = Page::&lt;S&gt;::range(start, start + <span class="number">512</span>);
 
-    <span class="comment">// We have 512 entries to play with, but the frame range can contain many more entries than
-    // that. Thus, we need to iterate over the range in chunks of 512; the easiest way to do it is
-    // to iterate (mutably) over the page directory itself, and for each entry, fetch the next
-    // entry in the range. If we&#39;ve covered everything, `range.next()` will return `None`, and
+    <span class="comment">// We have 512 entries to play with, but the frame range can contain many more
+    // entries than that. Thus, we need to iterate over the range in chunks of
+    // 512; the easiest way to do it is to iterate (mutably) over the page
+    // directory itself, and for each entry, fetch the next entry in the range.
+    // If we&#39;ve covered everything, `range.next()` will return `None`, and
     // the count will be zero once we&#39;ve covered everything.
     </span>memory.page_table.zero();
     <span class="kw">while </span>memory
@@ -863,16 +842,13 @@
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_addr(
-                frame.start_address() + encrypted,
-                PageTableFlags::PRESENT | flags,
-            )
+            entry.set_addr(frame.start_address() + encrypted, PageTableFlags::PRESENT | flags)
         })
         .count()
         &gt; <span class="number">0
     </span>{
-        <span class="comment">// We now know we&#39;ve filled in at least one entry of the page table, and thus have something
-        // to validate.
+        <span class="comment">// We now know we&#39;ve filled in at least one entry of the page table, and thus
+        // have something to validate.
         </span>tlb::flush_all();
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(err) = memory
@@ -898,8 +874,8 @@
     <span class="doccomment">/// Validate a region of memory using 4 KiB pages.
     ///
     /// Args:
-    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to memory
-    ///   encrypted: value of the encrypted bit in the page table
+    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to
+    /// memory   encrypted: value of the encrypted bit in the page table
     </span><span class="kw">fn </span>pvalidate(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
@@ -913,31 +889,27 @@
         pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
         encrypted: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
-        pvalidate_range(
-            <span class="self">self</span>,
-            pt,
-            encrypted,
-            PageTableFlags::empty(),
-            |_addr, err| <span class="kw">match </span>err {
-                InstructionError::ValidationStatusNotUpdated =&gt; {
-                    <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
-                    </span><span class="prelude-val">Ok</span>(())
-                }
-                other =&gt; <span class="prelude-val">Err</span>(other),
-            },
-        )
+        pvalidate_range(<span class="self">self</span>, pt, encrypted, PageTableFlags::empty(), |_addr, err| <span class="kw">match </span>err {
+            InstructionError::ValidationStatusNotUpdated =&gt; {
+                <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
+                // or it is already validated. See the PVALIDATE instruction in
+                // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
+                </span><span class="prelude-val">Ok</span>(())
+            }
+            other =&gt; <span class="prelude-val">Err</span>(other),
+        })
     }
 }
 
 <span class="kw">trait </span>Validatable2MiB {
-    <span class="doccomment">/// Validate a region of memory using 2 MiB pages, falling back to 4 KiB if necessary.
+    <span class="doccomment">/// Validate a region of memory using 2 MiB pages, falling back to 4 KiB if
+    /// necessary.
     ///
     /// Args:
-    ///   pd: pointer to the page directory we can mutate to map 2 MiB pages to memory
-    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to memory
-    ///   encrypted: value of the encrypted bit in the page table
+    ///   pd: pointer to the page directory we can mutate to map 2 MiB pages to
+    /// memory   pt: pointer to the page table we can mutate to map 4 KiB
+    /// pages to memory   encrypted: value of the encrypted bit in the page
+    /// table
     </span><span class="kw">fn </span>pvalidate(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         pd: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size1GiB&gt;,
@@ -953,36 +925,31 @@
         pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
         encrypted: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
-        pvalidate_range(
-            <span class="self">self</span>,
-            pd,
-            encrypted,
-            PageTableFlags::HUGE_PAGE,
-            |addr, err| <span class="kw">match </span>err {
-                InstructionError::FailSizeMismatch =&gt; {
-                    <span class="comment">// 2MiB is no go, fail back to 4KiB pages.
-                    // This will not panic as every address that is 2 MiB-aligned is by definition
-                    // also 4 KiB-aligned.
-                    </span><span class="kw">let </span>start = PhysFrame::&lt;Size4KiB&gt;::from_start_address(PhysAddr::new(
-                        addr.as_u64() &amp; !encrypted,
-                    ))
-                    .unwrap();
-                    <span class="kw">let </span>range = PhysFrame::range(start, start + <span class="number">512</span>);
-                    range.pvalidate(pt, encrypted)
-                }
-                InstructionError::ValidationStatusNotUpdated =&gt; {
-                    <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
-                    </span><span class="prelude-val">Ok</span>(())
-                }
-                other =&gt; <span class="prelude-val">Err</span>(other),
-            },
-        )
+        pvalidate_range(<span class="self">self</span>, pd, encrypted, PageTableFlags::HUGE_PAGE, |addr, err| <span class="kw">match </span>err {
+            InstructionError::FailSizeMismatch =&gt; {
+                <span class="comment">// 2MiB is no go, fail back to 4KiB pages.
+                // This will not panic as every address that is 2 MiB-aligned is by definition
+                // also 4 KiB-aligned.
+                </span><span class="kw">let </span>start = PhysFrame::&lt;Size4KiB&gt;::from_start_address(PhysAddr::new(
+                    addr.as_u64() &amp; !encrypted,
+                ))
+                .unwrap();
+                <span class="kw">let </span>range = PhysFrame::range(start, start + <span class="number">512</span>);
+                range.pvalidate(pt, encrypted)
+            }
+            InstructionError::ValidationStatusNotUpdated =&gt; {
+                <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
+                // or it is already validated. See the PVALIDATE instruction in
+                // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
+                </span><span class="prelude-val">Ok</span>(())
+            }
+            other =&gt; <span class="prelude-val">Err</span>(other),
+        })
     }
 }
 
-<span class="doccomment">/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type `RAM`.
+<span class="doccomment">/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
+/// `RAM`.
 </span><span class="kw">pub fn </span>validate_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], encrypted: u64) {
     <span class="macro">log::info!</span>(<span class="string">&quot;starting SEV-SNP memory validation&quot;</span>);
 
@@ -990,12 +957,9 @@
 
     <span class="comment">// Page directory, for validation with 2 MiB pages.
     </span><span class="kw">let </span><span class="kw-2">mut </span>validation_pd = MappedPage::new(VirtAddr::new(Size1GiB::SIZE)).unwrap();
-    <span class="comment">// For virtual address space, we currently shouldn&#39;t have anything at the second gigabyte, so we
-    // can map the page to virtual address [1 GiB..2 GiB).
-    </span><span class="kw">if </span>page_tables.pdpt[<span class="number">1</span>]
-        .flags()
-        .contains(PageTableFlags::PRESENT)
-    {
+    <span class="comment">// For virtual address space, we currently shouldn&#39;t have anything at the second
+    // gigabyte, so we can map the page to virtual address [1 GiB..2 GiB).
+    </span><span class="kw">if </span>page_tables.pdpt[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">&quot;PDPT[1] is in use&quot;</span>);
     }
     page_tables.pdpt[<span class="number">1</span>].set_addr(
@@ -1005,12 +969,10 @@
 
     <span class="comment">// Page table, for validation with 4 KiB pages.
     </span><span class="kw">let </span><span class="kw-2">mut </span>validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
-    <span class="comment">// Find a location for our (temporary) page table. The initial page tables map [0..2MiB), so it
-    // should be safe to put our temporary mappings at [2..4MiB).
-    </span><span class="kw">if </span>page_tables.pd_0[<span class="number">1</span>]
-        .flags()
-        .contains(PageTableFlags::PRESENT)
-    {
+    <span class="comment">// Find a location for our (temporary) page table. The initial page tables map
+    // [0..2MiB), so it should be safe to put our temporary mappings at
+    // [2..4MiB).
+    </span><span class="kw">if </span>page_tables.pd_0[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">&quot;PD_0[1] is in use&quot;</span>);
     }
     page_tables.pd_0[<span class="number">1</span>].set_addr(
@@ -1018,9 +980,10 @@
         PageTableFlags::PRESENT,
     );
 
-    <span class="comment">// We already pvalidated the memory in the first 640KiB of RAM in the boot assembly code. We
-    // avoid redoing this as calling pvalidate again on these pages leads to unexpected results,
-    // such us removing the shared state from the RMP for the fw_cfg DMA buffer.
+    <span class="comment">// We already pvalidated the memory in the first 640KiB of RAM in the boot
+    // assembly code. We avoid redoing this as calling pvalidate again on these
+    // pages leads to unexpected results, such us removing the shared state from
+    // the RMP for the fw_cfg DMA buffer.
     </span><span class="kw">let </span>min_addr = <span class="number">0xA0000</span>;
 
     <span class="kw">for </span>entry <span class="kw">in </span>e820_table {
@@ -1033,7 +996,8 @@
 
         <span class="comment">// If the memory boundaries align with 2 MiB, start with that.
         </span><span class="kw">if </span>start_address.is_aligned(Size2MiB::SIZE) &amp;&amp; limit_address.is_aligned(Size2MiB::SIZE) {
-            <span class="comment">// These unwraps can&#39;t fail as we&#39;ve made sure that the addresses are 2 MiB-aligned.
+            <span class="comment">// These unwraps can&#39;t fail as we&#39;ve made sure that the addresses are 2
+            // MiB-aligned.
             </span><span class="kw">let </span>range = PhysFrame::&lt;Size2MiB&gt;::range(
                 PhysFrame::from_start_address(start_address).unwrap(),
                 PhysFrame::from_start_address(limit_address).unwrap(),
@@ -1059,15 +1023,13 @@
 
 <span class="doccomment">/// Initializes the Guest Message encryptor using VMPCK0.
 </span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
-    // underlying bytes.
+    <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
+    // requirements on the underlying bytes.
     </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR
-        .lock()
-        .replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
-    <span class="comment">// Once the we have read VMPCK0 we wipe it so that later boot stages cannot request attestation
-    // reports or derived sealing keys for VMPL0. This stops later boot stages from creating
-    // counterfeit DICE chains.
+    GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
+    <span class="comment">// Once the we have read VMPCK0 we wipe it so that later boot stages cannot
+    // request attestation reports or derived sealing keys for VMPL0. This stops
+    // later boot stages from creating counterfeit DICE chains.
     </span>key.zeroize();
     <span class="prelude-val">Ok</span>(())
 }
@@ -1080,9 +1042,7 @@
     request: Request,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    <span class="kw">let </span>encryptor = guard
-        .as_mut()
-        .ok_or(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>encryptor = guard.as_mut().ok_or(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
     <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;

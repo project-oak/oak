@@ -60,9 +60,6 @@
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -88,12 +85,14 @@
     kernel::KernelInfo,
 };
 
-<span class="doccomment">/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg device.
+<span class="doccomment">/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg
+/// device.
 </span><span class="kw">const </span>INITIAL_RAM_DISK_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/initramfs\0&quot;</span>;
 
 <span class="doccomment">/// Tries to load an initial RAM disk from the QEMU FW_CFG device.
 ///
-/// If it finds a RAM disk it returns the byte slice where it is loaded. If not it returns `None`.
+/// If it finds a RAM disk it returns the byte slice where it is loaded. If not
+/// it returns `None`.
 </span><span class="kw">pub fn </span>try_load_initial_ram_disk(
     fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
@@ -115,17 +114,12 @@
     check_non_overlapping(address, size, kernel_info.start_address, kernel_info.size)
         .expect(<span class="string">&quot;initial RAM disk location overlaps with the kernel&quot;</span>);
 
-    <span class="comment">// Safety: We already checked that the slice falls in a suitable memory range and does not
-    // overlap with the kernel. We only write to the slice and don&#39;t assume anything about its
-    // layout or alignment.
+    <span class="comment">// Safety: We already checked that the slice falls in a suitable memory range
+    // and does not overlap with the kernel. We only write to the slice and
+    // don&#39;t assume anything about its layout or alignment.
     </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(address.as_mut_ptr(), size) };
-    <span class="kw">let </span>actual_size = fw_cfg
-        .read_file(<span class="kw-2">&amp;</span>file, buf)
-        .expect(<span class="string">&quot;could not read initial RAM disk&quot;</span>);
-    <span class="macro">assert_eq!</span>(
-        actual_size, size,
-        <span class="string">&quot;initial RAM disk size did not match expected size&quot;
-    </span>);
+    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">&quot;could not read initial RAM disk&quot;</span>);
+    <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;initial RAM disk size did not match expected size&quot;</span>);
     <span class="prelude-val">Some</span>(buf)
 }
 </code></pre></div></section></main></body></html>

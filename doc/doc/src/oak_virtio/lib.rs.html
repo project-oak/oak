@@ -82,8 +82,8 @@
 
 </span><span class="doccomment">//! Simple virtio drivers implemented based on polling.
 //!
-//! This crate assumes that an identity mapping is used in page tables, so that guest-virtual and
-//! guest-physical addresses are the same.
+//! This crate assumes that an identity mapping is used in page tables, so that
+//! guest-virtual and guest-physical addresses are the same.
 
 </span><span class="attr">#![no_std]
 #![feature(allocator_api)]
@@ -103,8 +103,8 @@
 
 <span class="doccomment">/// Read bytes from a source.
 ///
-/// This trait is similar to the &lt;std::io::Read&gt; trait, except that this trait is pared down to a
-/// minimum and works in a `no_std` environment.
+/// This trait is similar to the &lt;std::io::Read&gt; trait, except that this trait
+/// is pared down to a minimum and works in a `no_std` environment.
 </span><span class="kw">pub trait </span>Read {
     <span class="doccomment">/// Read bytes until `data` has been filled.
     </span><span class="kw">fn </span>read_exact(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
@@ -112,8 +112,8 @@
 
 <span class="doccomment">/// Write bytes to a source.
 ///
-/// This trait is similar to the &lt;std::io::Write&gt; trait, except that this trait is pared down to a
-/// minimum and works in a `no_std` environment.
+/// This trait is similar to the &lt;std::io::Write&gt; trait, except that this trait
+/// is pared down to a minimum and works in a `no_std` environment.
 </span><span class="kw">pub trait </span>Write {
     <span class="doccomment">/// Write all bytes in `data`.
     </span><span class="kw">fn </span>write_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;

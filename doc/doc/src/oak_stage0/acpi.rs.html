@@ -554,17 +554,6 @@
 <a href="#554" id="554">554</a>
 <a href="#555" id="555">555</a>
 <a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -581,8 +570,8 @@
 // limitations under the License.
 //
 
-// These data structures (and constants) are derived from qemu/hw/acpi/bios-linker-loader.c that
-// defines the interface.
+// These data structures (and constants) are derived from
+// qemu/hw/acpi/bios-linker-loader.c that defines the interface.
 
 </span><span class="kw">use </span>core::{
     ffi::CStr,
@@ -596,15 +585,16 @@
 
 <span class="kw">use crate</span>::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 
-<span class="comment">// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The full size of EBDA
-// is 128 KiB, but let&#39;s reserve the whole 1 KiB for the RSDP.
+<span class="comment">// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The
+// full size of EBDA is 128 KiB, but let&#39;s reserve the whole 1 KiB for the RSDP.
 </span><span class="kw">pub const </span>EBDA_SIZE: usize = <span class="number">127 </span>* <span class="number">1024</span>;
 <span class="attr">#[link_section = <span class="string">&quot;.ebda.rsdp&quot;</span>]
 </span><span class="kw">static </span><span class="kw-2">mut </span>RSDP: MaybeUninit&lt;Rsdp&gt; = MaybeUninit::uninit();
 <span class="attr">#[link_section = <span class="string">&quot;.ebda&quot;</span>]
 </span><span class="kw">pub static </span><span class="kw-2">mut </span>EBDA: MaybeUninit&lt;[u8; EBDA_SIZE]&gt; = MaybeUninit::uninit();
 
-<span class="comment">// Safety: we include a nul byte at the end of the string, and that is the only nul byte.
+<span class="comment">// Safety: we include a nul byte at the end of the string, and that is the only
+// nul byte.
 </span><span class="kw">const </span>TABLE_LOADER_FILE_NAME: <span class="kw-2">&amp;</span>CStr =
     <span class="kw">unsafe </span>{ CStr::from_bytes_with_nul_unchecked(<span class="string">b&quot;etc/table-loader\0&quot;</span>) };
 <span class="kw">const </span>RSDP_FILE_NAME_SUFFIX: <span class="kw-2">&amp;</span>str = <span class="string">&quot;acpi/rsdp&quot;</span>;
@@ -615,8 +605,9 @@
 <span class="kw">type </span>RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
 <span class="kw">fn </span>get_file(name: <span class="kw-2">&amp;</span>CStr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="comment">// Safety: we do not have concurrent threads so accessing the static is safe, and even if
-    // Allocate has not been called yet, all values are valid for an [u8].
+    <span class="comment">// Safety: we do not have concurrent threads so accessing the static is safe,
+    // and even if Allocate has not been called yet, all values are valid for an
+    // [u8].
     </span><span class="kw">let </span>name = name.to_str().map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid file name&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>name.ends_with(RSDP_FILE_NAME_SUFFIX) {
         <span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ RSDP.assume_init_mut().as_bytes_mut() })
@@ -640,7 +631,8 @@
 }
 
 <span class="kw">impl </span>CommandTag {
-    <span class="doccomment">/// VMM-specific commands that are not supported by QEMU should have the highest bit set.
+    <span class="doccomment">/// VMM-specific commands that are not supported by QEMU should have the
+    /// highest bit set.
     </span><span class="kw">const </span>VMM_SPECIFIC: u32 = <span class="number">0x80000000</span>;
 }
 
@@ -651,10 +643,12 @@
     FSeg = <span class="number">2</span>,
 }
 
-<span class="doccomment">/// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment (must be power of
+<span class="doccomment">/// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
+/// (must be power of
 /// 2) and `zone` (can be HIGH or FSEG) requirements.
 ///
-/// Must appear exactly once for each file, and before this file is referenced by any other command.
+/// Must appear exactly once for each file, and before this file is referenced
+/// by any other command.
 </span><span class="attr">#[repr(C)]
 #[derive(Copy, Clone)]
 </span><span class="kw">struct </span>Allocate {
@@ -680,8 +674,8 @@
 
         <span class="kw">if </span>name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             <span class="comment">// ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
-            // We don&#39;t really care which version we&#39;re dealing with, as long as the data structure
-            // is one of the two.
+            // We don&#39;t really care which version we&#39;re dealing with, as long as the data
+            // structure is one of the two.
             </span><span class="kw">if </span>file.size() &gt; size_of::&lt;Rsdp&gt;() || (file.size() != <span class="number">20 </span>&amp;&amp; file.size() != <span class="number">36</span>) {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDP doesn&#39;t match expected size&quot;</span>);
             }
@@ -706,11 +700,7 @@
             </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ EBDA.write(zeroed()) };
 
             <span class="kw">if </span>(buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64) % <span class="self">self</span>.align <span class="kw">as </span>u64 != <span class="number">0 </span>{
-                <span class="macro">log::error!</span>(
-                    <span class="string">&quot;ACPI tables address: {:p}, required alignment: {}&quot;</span>,
-                    buf,
-                    <span class="self">self</span>.align
-                );
+                <span class="macro">log::error!</span>(<span class="string">&quot;ACPI tables address: {:p}, required alignment: {}&quot;</span>, buf, <span class="self">self</span>.align);
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI tables address not aligned properly&quot;</span>);
             }
             fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf)<span class="question-mark">?</span>;
@@ -732,8 +722,8 @@
     }
 }
 
-<span class="doccomment">/// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at `offset`, by adding a
-/// pointer to the table originating from `src_file`.
+<span class="doccomment">/// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at
+/// `offset`, by adding a pointer to the table originating from `src_file`.
 ///
 /// 1,2,4 or 8 byte unsigned addition is used depending on `size`.
 </span><span class="attr">#[repr(C)]
@@ -790,11 +780,11 @@
     }
 }
 
-<span class="doccomment">/// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start` and `length` fields,
-/// and then add the value at `offset`.
+<span class="doccomment">/// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start`
+/// and `length` fields, and then add the value at `offset`.
 ///
-/// Checksum simply sums -X for each byte X in the range using 8-bit math (or in our case, we just
-/// sum together all the numbers and subtract in the end.)
+/// Checksum simply sums -X for each byte X in the range using 8-bit math (or in
+/// our case, we just sum together all the numbers and subtract in the end.)
 </span><span class="attr">#[repr(C)]
 #[derive(Copy, Clone)]
 </span><span class="kw">struct </span>AddChecksum {
@@ -844,8 +834,9 @@
     }
 }
 
-<span class="doccomment">/// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`) at `offset`, by
-/// adding a pointer to `src_offset` within the table originating from `src_file`.
+<span class="doccomment">/// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`)
+/// at `offset`, by adding a pointer to `src_offset` within the table
+/// originating from `src_file`.
 ///
 /// 1,2,4 or 8 byte unsigned addition is used depending on `size`.
 </span><span class="attr">#[repr(C)]
@@ -917,18 +908,12 @@
 }
 
 <span class="kw">fn </span>populate_firmware_data() -&gt; <span class="prelude-ty">Result</span>&lt;FirmwareData, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="comment">// There may be a way how to dynamically determine these values, but for now, hard-code the
-    // expected values as it&#39;s unlikely they will ever change.
+    <span class="comment">// There may be a way how to dynamically determine these values, but for now,
+    // hard-code the expected values as it&#39;s unlikely they will ever change.
 
     </span><span class="prelude-val">Ok</span>(FirmwareData {
-        pci_window_32: Window {
-            base: <span class="number">0xE0000000u32</span>,
-            end: <span class="number">0xFEBFF000u32</span>,
-        },
-        pci_window_64: Window {
-            base: <span class="number">0x8000000000u64</span>,
-            end: <span class="number">0x10000000000u64</span>,
-        },
+        pci_window_32: Window { base: <span class="number">0xE0000000u32</span>, end: <span class="number">0xFEBFF000u32 </span>},
+        pci_window_64: Window { base: <span class="number">0x8000000000u64</span>, end: <span class="number">0x10000000000u64 </span>},
     })
 }
 
@@ -1015,9 +1000,7 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Body {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        Body {
-            padding: [Default::default(); <span class="number">124</span>],
-        }
+        Body { padding: [Default::default(); <span class="number">124</span>] }
     }
 }
 
@@ -1055,8 +1038,8 @@
     }
 
     <span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Command&lt;<span class="lifetime">&#39;_</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we extract the value out of the union based on the tag value, which is safe to
-        // do.
+        <span class="comment">// Safety: we extract the value out of the union based on the tag value, which
+        // is safe to do.
         </span><span class="kw">match </span><span class="self">self</span>.tag() {
             <span class="prelude-val">Some</span>(CommandTag::Allocate) =&gt; <span class="prelude-val">Ok</span>(Command::Allocate(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span><span class="self">self</span>.body.allocate })),
             <span class="prelude-val">Some</span>(CommandTag::AddPointer) =&gt; <span class="prelude-val">Ok</span>(Command::AddPointer(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span><span class="self">self</span>.body.pointer })),
@@ -1075,19 +1058,15 @@
 
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.tag &gt; CommandTag::VMM_SPECIFIC &amp;&amp; <span class="self">self</span>.tag().is_none() {
-            <span class="macro">log::warn!</span>(
-                <span class="string">&quot;ignoring proprietary ACPI linker command with tag {:#x}&quot;</span>,
-                <span class="self">self</span>.tag
-            );
+            <span class="macro">log::warn!</span>(<span class="string">&quot;ignoring proprietary ACPI linker command with tag {:#x}&quot;</span>, <span class="self">self</span>.tag);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
         <span class="kw">if </span><span class="self">self</span>.tag == <span class="number">0 </span>{
-            <span class="comment">// Safety: interpreting the union as a byte array is safe, as it makes no assumptions
-            // about the meaning of any of the bytes.
-            </span><span class="macro">log::debug!</span>(
-                <span class="string">&quot;ignoring empty ACPI linker command with body {:?}&quot;</span>,
-                <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span><span class="self">self</span>.body.padding }
-            );
+            <span class="comment">// Safety: interpreting the union as a byte array is safe, as it makes no
+            // assumptions about the meaning of any of the bytes.
+            </span><span class="macro">log::debug!</span>(<span class="string">&quot;ignoring empty ACPI linker command with body {:?}&quot;</span>, <span class="kw">unsafe </span>{
+                <span class="kw-2">&amp;</span><span class="self">self</span>.body.padding
+            });
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
         <span class="self">self</span>.extract()<span class="question-mark">?</span>.invoke(fwcfg, acpi_digest)
@@ -1101,9 +1080,8 @@
     fwcfg: <span class="kw-2">&amp;mut </span>FwCfg,
     acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span>file = fwcfg
-        .find(TABLE_LOADER_FILE_NAME)
-        .ok_or(<span class="string">&quot;Could not find &#39;etc/table-loader&#39; in fw_cfg&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>file =
+        fwcfg.find(TABLE_LOADER_FILE_NAME).ok_or(<span class="string">&quot;Could not find &#39;etc/table-loader&#39; in fw_cfg&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>file.size() % core::mem::size_of::&lt;RomfileCommand&gt;() != <span class="number">0 </span>{
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;length of &#39;etc/table-loader&#39; is not a multiple of command struct size&quot;</span>);
@@ -1112,10 +1090,10 @@
     <span class="kw">let </span>buf = fwcfg.read_file_vec(<span class="kw-2">&amp;</span>file)<span class="question-mark">?</span>;
     acpi_digest.update(<span class="kw-2">&amp;</span>buf);
 
-    <span class="comment">// We can&#39;t use zerocopy::FromBytes/AsBytes here, as the fields of the structs have padding that
-    // zerocopy doesn&#39;t support.
-    // Safety: we&#39;re using `size_of` here to ensure that we don&#39;t go over the boundaries of the
-    // original array.
+    <span class="comment">// We can&#39;t use zerocopy::FromBytes/AsBytes here, as the fields of the structs
+    // have padding that zerocopy doesn&#39;t support.
+    // Safety: we&#39;re using `size_of` here to ensure that we don&#39;t go over the
+    // boundaries of the original array.
     </span><span class="kw">let </span>commands = <span class="kw">unsafe </span>{
         core::slice::from_raw_parts(
             buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>RomfileCommand,

@@ -201,13 +201,6 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -245,7 +238,8 @@
         marker::{PhantomData, PhantomPinned},
     };
 
-    <span class="doccomment">/// Opaque type representing the systemd journal obtained via the systemd C API.
+    <span class="doccomment">/// Opaque type representing the systemd journal obtained via the systemd C
+    /// API.
     ///
     /// See &lt;https://doc.rust-lang.org/nomicon/ffi.html#representing-opaque-structs&gt; that describes this trick.
     </span><span class="attr">#[repr(C)]
@@ -291,7 +285,8 @@
     }
 }
 
-<span class="doccomment">/// Simple wrapper around libsystemd for reading entries from the systemd journal.
+<span class="doccomment">/// Simple wrapper around libsystemd for reading entries from the systemd
+/// journal.
 </span><span class="kw">pub struct </span>Journal {
     journal: <span class="kw-2">*mut </span>sd_journal,
     terminate: Arc&lt;OnceCell&lt;()&gt;&gt;,
@@ -300,14 +295,10 @@
 <span class="kw">impl </span>Journal {
     <span class="kw">pub fn </span>new(flags: JournalOpenFlags, terminate: Arc&lt;OnceCell&lt;()&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Errno&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>journal = std::ptr::null_mut();
-        <span class="comment">// Safety: we pass in a valid pointer (to the pointer). The returned journal value is opaque
-        // and we never directly access it.
+        <span class="comment">// Safety: we pass in a valid pointer (to the pointer). The returned journal
+        // value is opaque and we never directly access it.
         </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{ sd_journal_open(<span class="kw-2">&amp;mut </span>journal, flags.bits()) };
-        <span class="kw">if </span>ret == <span class="number">0 </span>{
-            <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ journal, terminate })
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(nix::errno::from_i32(ret))
-        }
+        <span class="kw">if </span>ret == <span class="number">0 </span>{ <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ journal, terminate }) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(nix::errno::from_i32(ret)) }
     }
 
     <span class="doccomment">/// Moves the cursor to before the first record in the journal.
@@ -315,20 +306,17 @@
         <span class="comment">// Safety: `self.journal` must be valid because of Journal::new().
         </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{ sd_journal_seek_head(<span class="self">self</span>.journal) };
 
-        <span class="kw">if </span>ret == <span class="number">0 </span>{
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(nix::errno::from_i32(ret))
-        }
+        <span class="kw">if </span>ret == <span class="number">0 </span>{ <span class="prelude-val">Ok</span>(()) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(nix::errno::from_i32(ret)) }
     }
 
-    <span class="comment">// The slice will be valid until the next call to `next()` or `next_data()`, hence this is
-    // private.
+    <span class="comment">// The slice will be valid until the next call to `next()` or `next_data()`,
+    // hence this is private.
     </span><span class="kw">fn </span>next_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;, Errno&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>data: <span class="kw-2">*mut </span>c_void = std::ptr::null_mut();
         <span class="kw">let </span><span class="kw-2">mut </span>len: c_size_t = <span class="number">0</span>;
-        <span class="comment">// Safety: `self.journal` must be valid because of `Journal::new()`; we pass in pointers to
-        // valid data structures. Any value is valid for both `data` and `len`.
+        <span class="comment">// Safety: `self.journal` must be valid because of `Journal::new()`; we pass in
+        // pointers to valid data structures. Any value is valid for both `data`
+        // and `len`.
         </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{
             sd_journal_enumerate_data(<span class="self">self</span>.journal, <span class="kw-2">&amp;mut </span>data <span class="kw">as </span><span class="kw-2">*mut *mut </span>c_void, <span class="kw-2">&amp;mut </span>len)
         };
@@ -337,16 +325,17 @@
             Ordering::Less =&gt; <span class="prelude-val">Err</span>(nix::errno::from_i32(ret)),
             Ordering::Equal =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             <span class="comment">// Safety: we trust systemd didn&#39;t lie to us when giving back the pointer and length.
-            </span>Ordering::Greater =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{
-                std::slice::from_raw_parts(data <span class="kw">as </span><span class="kw-2">*const </span>u8, len)
-            })),
+            </span>Ordering::Greater =&gt; {
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ std::slice::from_raw_parts(data <span class="kw">as </span><span class="kw-2">*const </span>u8, len) }))
+            }
         }
     }
 
-    <span class="doccomment">/// Reads the next entry from the journal; returns None if there is no next entry.
+    <span class="doccomment">/// Reads the next entry from the journal; returns None if there is no next
+    /// entry.
     </span><span class="kw">pub fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt;, Errno&gt; {
-        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this is via
-        // `Journal::new()`.
+        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this
+        // is via `Journal::new()`.
         </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{ sd_journal_next(<span class="self">self</span>.journal) };
 
         <span class="kw">match </span>ret.cmp(<span class="kw-2">&amp;</span><span class="number">0</span>) {
@@ -374,14 +363,11 @@
     ///
     /// Returns false if we&#39;ve been asked to terminate.
     </span><span class="kw">pub fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool, Errno&gt; {
-        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this is via
-        // `Journal::new()`.
+        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this
+        // is via `Journal::new()`.
         </span><span class="kw">loop </span>{
             <span class="kw">let </span>ret = <span class="kw">unsafe </span>{
-                sd_journal_wait(
-                    <span class="self">self</span>.journal,
-                    Duration::new(<span class="number">1</span>, <span class="number">0</span>).as_micros().try_into().unwrap(),
-                )
+                sd_journal_wait(<span class="self">self</span>.journal, Duration::new(<span class="number">1</span>, <span class="number">0</span>).as_micros().try_into().unwrap())
             };
             <span class="kw">match </span>ret.cmp(<span class="kw-2">&amp;</span><span class="number">0</span>) {
                 Ordering::Less =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(nix::errno::from_i32(ret)),
@@ -398,8 +384,8 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>Journal {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this is via
-        // `Journal::new()`.
+        <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this
+        // is via `Journal::new()`.
         </span><span class="kw">unsafe </span>{ sd_journal_close(<span class="self">self</span>.journal) };
     }
 }

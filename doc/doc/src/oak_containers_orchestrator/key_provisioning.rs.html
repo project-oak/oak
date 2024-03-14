@@ -95,7 +95,6 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -145,15 +144,16 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetGroupKeysResponse&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request = request.into_inner();
 
-        <span class="comment">// Verify attestation evidence and get encryption public key, which will be used to encrypt
-        // group keys.
-        </span><span class="kw">let </span>evidence = request.evidence.ok_or(tonic::Status::invalid_argument(
-            <span class="string">&quot;request message doesn&#39;t contain evidence&quot;</span>,
-        ))<span class="question-mark">?</span>;
+        <span class="comment">// Verify attestation evidence and get encryption public key, which will be used
+        // to encrypt group keys.
+        </span><span class="kw">let </span>evidence = request
+            .evidence
+            .ok_or(tonic::Status::invalid_argument(<span class="string">&quot;request message doesn&#39;t contain evidence&quot;</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>_endorsements = request.endorsements.ok_or(tonic::Status::invalid_argument(
             <span class="string">&quot;request message doesn&#39;t contain endorsements&quot;</span>,
         ))<span class="question-mark">?</span>;
-        <span class="comment">// TODO(#4442): Provide reference values by the hostlib and use `verify` function.
+        <span class="comment">// TODO(#4442): Provide reference values by the hostlib and use `verify`
+        // function.
         </span><span class="kw">let </span>attestation_results = verify_dice_chain(<span class="kw-2">&amp;</span>evidence).map_err(|err| {
             tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t verify endorsed evidence: {err}&quot;</span>))
         })<span class="question-mark">?</span>;
@@ -183,9 +183,7 @@
     <span class="kw">let </span>listener = TcpListener::bind(address).<span class="kw">await</span><span class="question-mark">?</span>;
 
     Server::builder()
-        .add_service(KeyProvisioningServer::new(
-            key_provisioning_service_instance,
-        ))
+        .add_service(KeyProvisioningServer::new(key_provisioning_service_instance))
         .serve_with_incoming_shutdown(
             TcpListenerStream::new(listener),
             cancellation_token.cancelled(),

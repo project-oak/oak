@@ -360,64 +360,6 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -482,10 +424,7 @@
     error_code: u64,
 ) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: GENERAL PROTECTION FAULT!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
 }
@@ -499,10 +438,7 @@
     error_code: PageFaultErrorCode,
 ) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: PAGE FAULT&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Faulting virtual address: {:#018x}&quot;</span>, Cr2::read());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
@@ -512,22 +448,16 @@
     stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -&gt; ! {
-    <span class="comment">// We&#39;re not calling `panic!` here because (a) the panic location would be all wrong (the error
-    // is not in the fault handler itself as the location would suggest), (b) in theory the
-    // panic handler itself could cause a double fault, and (c) we want to be sure that we shut
-    // down the machine after us.
-    // Note that for double fault handlers the error code will always be 0, so there&#39;s no point in
-    // logging that.
+    <span class="comment">// We&#39;re not calling `panic!` here because (a) the panic location would be all
+    // wrong (the error is not in the fault handler itself as the location would
+    // suggest), (b) in theory the panic handler itself could cause a double
+    // fault, and (c) we want to be sure that we shut down the machine after us.
+    // Note that for double fault handlers the error code will always be 0, so
+    // there&#39;s no point in logging that.
     </span><span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DOUBLE FAULT&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Code segment: {:#x}&quot;</span>, stack_frame.deref().code_segment);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Stack pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().stack_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Stack pointer: {:#016x}&quot;</span>, stack_frame.deref().stack_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Stack segment: {:#x}&quot;</span>, stack_frame.deref().stack_segment);
     <span class="macro">error!</span>(<span class="string">&quot;CPU flags: {:#x}&quot;</span>, stack_frame.deref().cpu_flags);
     shutdown::shutdown();
@@ -543,9 +473,8 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(cpuid_page) = CPUID_PAGE.get() {
                     <span class="kw">let </span>target = stack_frame.into();
                     <span class="kw">let </span>count = cpuid_page.count <span class="kw">as </span>usize;
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(found) = cpuid_page.cpuid_data[<span class="number">0</span>..count]
-                        .iter()
-                        .find(|item| item.input == target)
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(found) =
+                        cpuid_page.cpuid_data[<span class="number">0</span>..count].iter().find(|item| item.input == target)
                     {
                         stack_frame.rax = found.output.eax <span class="kw">as </span>u64;
                         stack_frame.rbx = found.output.ebx <span class="kw">as </span>u64;
@@ -574,7 +503,8 @@
                     }
                     get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;error reading CPUID&quot;</span>);
                 }
-                <span class="comment">// CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
+                <span class="comment">// CPUID instruction is 2 bytes long, so we advance the instruction pointer by
+                // 2.
                 </span>stack_frame.rip += <span class="number">2u64</span>;
             }
             <span class="kw">_ </span>=&gt; {
@@ -589,64 +519,43 @@
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>divide_error_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DIVIDE BY ZERO!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>nmi_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: NON-MASKABLE INTERRUPT!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>overflow_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: OVERFLOW!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>bound_range_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: BOUND RANGE EXCEEDED!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>invalid_opcode_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: INVALID OPCODE!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>device_not_available_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DEVICE NOT AVAILABLE!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: INVALID TSS!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
 }
@@ -656,10 +565,7 @@
     error_code: u64,
 ) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: SEGMENT NOT PRESENT!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
 }
@@ -669,20 +575,14 @@
     error_code: u64,
 ) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: STACK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>x87_floating_point_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: X87 FLOATING POINT EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
@@ -691,29 +591,20 @@
     error_code: u64,
 ) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: ALIGNMENT CHECK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>machine_check_handler(stack_frame: InterruptStackFrame) -&gt; ! {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: MACHINE CHECK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 <span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>simd_fp_handler(stack_frame: InterruptStackFrame) {
     <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(
-        <span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>,
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="kw">let </span>mxcsr = read();
     <span class="macro">error!</span>(<span class="string">&quot;MXCSR: {:?}&quot;</span>, mxcsr);
 
@@ -722,46 +613,41 @@
 
 <span class="kw">pub fn </span>init_idt_early() {
     <span class="comment">// The full list if interrupts is processor-specific.
-    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more
-    // details.
+    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer&#39;s Manual,
+    // Volume 2 for more details.
     </span><span class="kw">let </span><span class="kw-2">mut </span>idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); <span class="comment">// vector 0
-                                                           // skipping vector 1 (debug)
+    // skipping vector 1 (debug)
     </span>idt.non_maskable_interrupt.set_handler_fn(nmi_handler); <span class="comment">// vector 2
     </span>idt.breakpoint.set_handler_fn(breakpoint_handler); <span class="comment">// vector 3
     </span>idt.overflow.set_handler_fn(overflow_handler); <span class="comment">// vector 4
     </span>idt.bound_range_exceeded.set_handler_fn(bound_range_handler); <span class="comment">// vector 5
     </span>idt.invalid_opcode.set_handler_fn(invalid_opcode_handler); <span class="comment">// vector 6
-    </span>idt.device_not_available
-        .set_handler_fn(device_not_available_handler); <span class="comment">// vector 7
+    </span>idt.device_not_available.set_handler_fn(device_not_available_handler); <span class="comment">// vector 7
     </span>idt.double_fault.set_handler_fn(double_fault_handler); <span class="comment">// vector 8
-                                                           // vector 9 is reserved
+    // vector 9 is reserved
     </span>idt.invalid_tss.set_handler_fn(invalid_tss_handler); <span class="comment">// vector 10
-    </span>idt.segment_not_present
-        .set_handler_fn(segment_not_present_handler); <span class="comment">// vector 11
-    </span>idt.stack_segment_fault
-        .set_handler_fn(stack_exception_handler); <span class="comment">// vector 12
-    </span>idt.general_protection_fault
-        .set_handler_fn(general_protection_fault_handler); <span class="comment">// vector 13
+    </span>idt.segment_not_present.set_handler_fn(segment_not_present_handler); <span class="comment">// vector 11
+    </span>idt.stack_segment_fault.set_handler_fn(stack_exception_handler); <span class="comment">// vector 12
+    </span>idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); <span class="comment">// vector 13
     </span>idt.page_fault.set_handler_fn(page_fault_handler); <span class="comment">// vector 14
-                                                       // there is no vector 15
-    </span>idt.x87_floating_point
-        .set_handler_fn(x87_floating_point_handler); <span class="comment">// vector 16
+    // there is no vector 15
+    </span>idt.x87_floating_point.set_handler_fn(x87_floating_point_handler); <span class="comment">// vector 16
     </span>idt.alignment_check.set_handler_fn(alignment_check_handler); <span class="comment">// vector 17
     </span>idt.machine_check.set_handler_fn(machine_check_handler); <span class="comment">// vector 18
     </span>idt.simd_floating_point.set_handler_fn(simd_fp_handler); <span class="comment">// vector 19
-                                                             // there is no vector 20
+    // there is no vector 20
 
     </span><span class="kw">let </span>vc_handler_address = VirtAddr::new(vmm_communication_exception_handler <span class="kw">as </span>usize <span class="kw">as </span>u64);
-    <span class="comment">// Safety: we are passing a valid address of a function with the correct signature.
+    <span class="comment">// Safety: we are passing a valid address of a function with the correct
+    // signature.
     </span><span class="kw">unsafe </span>{
-        idt.vmm_communication_exception
-            .set_handler_addr(vc_handler_address); <span class="comment">// vector 29
+        idt.vmm_communication_exception.set_handler_addr(vc_handler_address); <span class="comment">// vector 29
     </span>}
 
-    <span class="comment">// Safety: unfortunately we have to escape from the borrow checker here, as we know the IDT is
-    // &#39;static but the `idt` variable (the mutex lock) is not &#39;static, so calling `idt.load()` will
-    // not work.
+    <span class="comment">// Safety: unfortunately we have to escape from the borrow checker here, as we
+    // know the IDT is &#39;static but the `idt` variable (the mutex lock) is not
+    // &#39;static, so calling `idt.load()` will not work.
     </span><span class="kw">unsafe </span>{ idt.load_unsafe() };
 }
 
@@ -784,10 +670,7 @@
 
 <span class="kw">impl </span>Pic {
     <span class="kw">pub fn </span>new(factory: <span class="kw-2">&amp;</span>PortFactoryWrapper, base: u16) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            command: factory.new_writer(base),
-            data: factory.new_writer(base + <span class="number">1</span>),
-        }
+        <span class="self">Self </span>{ command: factory.new_writer(base), data: factory.new_writer(base + <span class="number">1</span>) }
     }
 
     <span class="kw">pub unsafe fn </span>write_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>, command: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -803,8 +686,9 @@
 ///
 /// # Safety
 ///
-/// This uses raw I/O port access to talk to the PIC; the caller has to guarantee there will not be
-/// any adverse effect if there&#39;s no PIC at those ports.
+/// This uses raw I/O port access to talk to the PIC; the caller has to
+/// guarantee there will not be any adverse effect if there&#39;s no PIC at those
+/// ports.
 </span><span class="kw">pub unsafe fn </span>init_pic8259(sev_status: SevStatus) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span>io_port_factory = <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         <span class="kw">crate</span>::ghcb::get_ghcb_port_factory()

@@ -124,19 +124,6 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -178,11 +165,7 @@
         <span class="kw">let </span>channel = Channel::builder(addr.clone()).connect().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>inner = GrpcLauncherClient::new(channel.clone());
         <span class="kw">let </span>hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            addr,
-            inner,
-            hostlib_key_provisioning_client,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ addr, inner, hostlib_key_provisioning_client })
     }
 
     <span class="kw">pub async fn </span>get_container_bundle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
@@ -195,10 +178,8 @@
             </span>.into_inner();
 
         <span class="kw">let </span><span class="kw-2">mut </span>container_buf: Vec&lt;u8&gt; = Vec::new();
-        <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>load_response) = stream
-            .message()
-            .<span class="kw">await
-            </span>.context(<span class="string">&quot;couldn&#39;t load message from stream&quot;</span>)<span class="question-mark">?
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>load_response) =
+            stream.message().<span class="kw">await</span>.context(<span class="string">&quot;couldn&#39;t load message from stream&quot;</span>)<span class="question-mark">?
         </span>{
             container_buf.append(<span class="kw-2">&amp;mut </span>load_response.image_chunk);
         }
@@ -224,9 +205,8 @@
         evidence: Evidence,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="attr">#[allow(deprecated)]
-        </span><span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
-            dice_evidence: <span class="prelude-val">Some</span>(evidence),
-        });
+        </span><span class="kw">let </span>request =
+            tonic::Request::new(SendAttestationEvidenceRequest { dice_evidence: <span class="prelude-val">Some</span>(evidence) });
         <span class="self">self</span>.inner
             .clone()
             .send_attestation_evidence(request)
@@ -238,11 +218,7 @@
 
     <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>request = tonic::Request::new(());
-        <span class="self">self</span>.inner
-            .clone()
-            .notify_app_ready(request)
-            .<span class="kw">await
-            </span>.context(<span class="string">&quot;couldn&#39;t send notification&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.inner.clone().notify_app_ready(request).<span class="kw">await</span>.context(<span class="string">&quot;couldn&#39;t send notification&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -271,9 +247,7 @@
     }
 
     <span class="kw">pub fn </span>openmetrics_builder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; TonicExporterBuilder {
-        opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint(<span class="self">self</span>.addr.clone().to_string())
+        opentelemetry_otlp::new_exporter().tonic().with_endpoint(<span class="self">self</span>.addr.clone().to_string())
     }
 }
 </code></pre></div></section></main></body></html>

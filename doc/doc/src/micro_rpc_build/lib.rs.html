@@ -328,16 +328,6 @@
 <a href="#328" id="328">328</a>
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -402,46 +392,42 @@
 
 <span class="kw">impl </span>ExternPath {
     <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        ExternPath {
-            proto_path: proto_path.to_string(),
-            rust_path: rust_path.to_string(),
-        }
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
     }
 }
 
 <span class="doccomment">/// Compile Rust server code from the services in the provided protobuf file.
 ///
-/// Each method in a service definition must have exactly one comment line of the form `//
-/// method_id: 42`, which is used to generate a stable identifier for that method, which is part of
-/// the serialization protocol used for invocation.
+/// Each method in a service definition must have exactly one comment line of
+/// the form `// method_id: 42`, which is used to generate a stable identifier
+/// for that method, which is part of the serialization protocol used for
+/// invocation.
 ///
 /// For a service called `TestName`, `compile` generates the following objects:
 ///
-/// - a struct named `TestNameServer`, which implements the `micro_rpc::InvocationHandler` trait,
-///   dispatching each request to the appropriate method on the underlying service implementation.
-/// - a trait named `TestName`, with a method for each method defined in the protobuf service, and
-///   an additional default method named `serve` which returns an instance of `TestNameServer`; the
-///   developer of a service would usually define a concrete struct and manually implement this
-///   trait for it,
-/// - a struct named `TestNameClient`, exposing a method for each method defined in the protobuf
-///   service. This may be used to directly invoke the underlying handler in order to indirectly
-///   invoke methods on the corresponding `Server` object on the other side of the handler.
-/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with async support.
+/// - a struct named `TestNameServer`, which implements the
+///   `micro_rpc::InvocationHandler` trait, dispatching each request to the
+///   appropriate method on the underlying service implementation.
+/// - a trait named `TestName`, with a method for each method defined in the
+///   protobuf service, and an additional default method named `serve` which
+///   returns an instance of `TestNameServer`; the developer of a service would
+///   usually define a concrete struct and manually implement this trait for it,
+/// - a struct named `TestNameClient`, exposing a method for each method defined
+///   in the protobuf service. This may be used to directly invoke the
+///   underlying handler in order to indirectly invoke methods on the
+///   corresponding `Server` object on the other side of the handler.
+/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with
+///   async support.
 </span><span class="kw">pub fn </span>compile(
     protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
     includes: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
     options: CompileOptions,
 ) {
     protos.iter().for_each(|filename| {
-        <span class="macro">println!</span>(
-            <span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>,
-            filename.as_ref().as_os_str().to_string_lossy()
-        )
+        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, filename.as_ref().as_os_str().to_string_lossy())
     });
     <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator {
-        options: options.clone(),
-    }));
+    config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
     <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
         config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
@@ -469,8 +455,8 @@
     }
 }
 
-<span class="doccomment">/// Generate the Rust objects from the input [`Service`] instance, corresponding to a `service`
-/// entry.
+<span class="doccomment">/// Generate the Rust objects from the input [`Service`] instance, corresponding
+/// to a `service` entry.
 </span><span class="kw">fn </span>generate_service(service: <span class="kw-2">&amp;</span>Service, receiver_type: ReceiverType) -&gt; anyhow::Result&lt;String&gt; {
     <span class="kw">let </span>server_name = server_name(service);
     <span class="kw">let </span>service_name = service_name(service);
@@ -526,24 +512,18 @@
         <span class="macro">format!</span>(<span class="string">&quot;pub trait {service_name}: Sized {{&quot;</span>),
     ]);
     lines.extend(
-        service
-            .methods
-            .iter()
-            .flat_map(|method| generate_service_method(method, receiver_type)),
+        service.methods.iter().flat_map(|method| generate_service_method(method, receiver_type)),
     );
     lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
     <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">&quot;\n&quot;</span>.to_string()).collect())
 }
 
-<span class="doccomment">/// Generate the service client Rust objects from the input [`Service`] instance, corresponding to
-/// an `rpc` entry.
+<span class="doccomment">/// Generate the service client Rust objects from the input [`Service`]
+/// instance, corresponding to an `rpc` entry.
 </span><span class="kw">fn </span>generate_service_client(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; anyhow::Result&lt;String&gt; {
     <span class="kw">let </span>client_name = client_name(service, asynchronous);
-    <span class="kw">let </span>transport_trait = <span class="kw">if </span>asynchronous {
-        <span class="string">&quot;::micro_rpc::AsyncTransport&quot;
-    </span>} <span class="kw">else </span>{
-        <span class="string">&quot;::micro_rpc::Transport&quot;
-    </span>};
+    <span class="kw">let </span>transport_trait =
+        <span class="kw">if </span>asynchronous { <span class="string">&quot;::micro_rpc::AsyncTransport&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;::micro_rpc::Transport&quot; </span>};
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;pub struct {client_name}&lt;T: {transport_trait}&gt; {{&quot;</span>,),
@@ -578,9 +558,13 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="kw">let </span>fn_modifier = <span class="kw">if </span>asynchronous { <span class="string">&quot;async &quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;Result&lt;{response_type}, ::micro_rpc::Status&gt;, T::Error&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(
+            <span class="string">&quot;    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;Result&lt;{response_type}, ::micro_rpc::Status&gt;, T::Error&gt; {{&quot;
+        </span>),
         <span class="kw">if </span>asynchronous {
-            <span class="macro">format!</span>(<span class="string">&quot;        ::micro_rpc::async_client_invoke(&amp;mut self.transport, {method_id}, request).await&quot;</span>)
+            <span class="macro">format!</span>(
+                <span class="string">&quot;        ::micro_rpc::async_client_invoke(&amp;mut self.transport, {method_id}, request).await&quot;
+            </span>)
         } <span class="kw">else </span>{
             <span class="macro">format!</span>(<span class="string">&quot;        ::micro_rpc::client_invoke(&amp;mut self.transport, {method_id}, request)&quot;</span>)
         },
@@ -589,10 +573,11 @@
 }
 
 <span class="kw">fn </span>generate_server_handler(method: <span class="kw-2">&amp;</span>Method) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt; {
-    <span class="comment">// This handler appears inside a `match` block in the server implementation. Its purpose is to
-    // parse the incoming request buffer as an object of the correct type, and dispatch a reference
-    // to that parsed object to the underlying service implementation, provided by the developer,
-    // which deals with type safe generated objects instead of raw byte buffers.
+    <span class="comment">// This handler appears inside a `match` block in the server implementation. Its
+    // purpose is to parse the incoming request buffer as an object of the
+    // correct type, and dispatch a reference to that parsed object to the
+    // underlying service implementation, provided by the developer, which deals
+    // with type safe generated objects instead of raw byte buffers.
     </span><span class="kw">let </span>method_id = method_id(method)<span class="question-mark">?</span>;
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>method_name = method_name(method);
@@ -600,10 +585,14 @@
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
         <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
-        </span><span class="macro">format!</span>(<span class="string">&quot;                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
+        </span><span class="macro">format!</span>(
+            <span class="string">&quot;                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{&quot;
+        </span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    ::micro_rpc::Status::new_with_message(&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::StatusCode::Internal,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
+        <span class="macro">format!</span>(
+            <span class="string">&quot;                        ::micro_rpc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;
+        </span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    )&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                }})?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(request)?;&quot;</span>),
@@ -618,7 +607,9 @@
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>response_type = response_type(method);
     <span class="kw">let </span>self_type = receiver_type.value();
-    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;    fn {method_name}({self_type}, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;&quot;</span>)]
+    <span class="macro">vec!</span>[<span class="macro">format!</span>(
+        <span class="string">&quot;    fn {method_name}({self_type}, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;&quot;
+    </span>)]
 }
 
 <span class="doccomment">/// Returns the value of the `method_id` comment on the method.
@@ -632,10 +623,7 @@
     <span class="kw">if </span>method_ids.is_empty() {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;no method_id comment on method {}&quot;</span>, method.proto_name,)
     } <span class="kw">else if </span>method_ids.len() &gt; <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(
-            <span class="string">&quot;multiple method_id comments on method {}&quot;</span>,
-            method.proto_name
-        )
+        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;multiple method_id comments on method {}&quot;</span>, method.proto_name)
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(method_ids[<span class="number">0</span>].parse()<span class="question-mark">?</span>)
     }
@@ -643,15 +631,7 @@
 
 <span class="doccomment">/// The type name of the generated Rust client struct.
 </span><span class="kw">fn </span>client_name(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; String {
-    <span class="macro">format!</span>(
-        <span class="string">&quot;{}{}&quot;</span>,
-        service.name,
-        <span class="kw">if </span>asynchronous {
-            <span class="string">&quot;AsyncClient&quot;
-        </span>} <span class="kw">else </span>{
-            <span class="string">&quot;Client&quot;
-        </span>}
-    )
+    <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, service.name, <span class="kw">if </span>asynchronous { <span class="string">&quot;AsyncClient&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Client&quot; </span>})
 }
 
 <span class="doccomment">/// The type name of the generated Rust server struct.

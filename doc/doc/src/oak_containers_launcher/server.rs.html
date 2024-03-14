@@ -284,18 +284,6 @@
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -397,9 +385,7 @@
             }
         };
 
-        <span class="prelude-val">Ok</span>(Response::new(
-            Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::GetOakSystemImageStream
-        ))
+        <span class="prelude-val">Ok</span>(Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::GetOakSystemImageStream))
     }
 
     <span class="kw">async fn </span>get_container_bundle(
@@ -427,9 +413,7 @@
             }
         };
 
-        <span class="prelude-val">Ok</span>(Response::new(
-            Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::GetContainerBundleStream
-        ))
+        <span class="prelude-val">Ok</span>(Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::GetContainerBundleStream))
     }
 
     <span class="kw">async fn </span>get_application_config(
@@ -492,7 +476,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         _request: Request&lt;()&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetKeyProvisioningRoleResponse&gt;, tonic::Status&gt; {
-        <span class="comment">// TODO(#4442): Implement setting Hostlib Key Provisioning role via an input argument.
+        <span class="comment">// TODO(#4442): Implement setting Hostlib Key Provisioning role via an input
+        // argument.
         </span><span class="prelude-val">Ok</span>(tonic::Response::new(GetKeyProvisioningRoleResponse {
             role: KeyProvisioningRole::Leader.into(),
         }))
@@ -503,9 +488,7 @@
         _request: Request&lt;()&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetGroupKeysResponse&gt;, tonic::Status&gt; {
         <span class="comment">// TODO(#4442): Implement sending group keys to the orchestrator.
-        </span><span class="prelude-val">Err</span>(tonic::Status::unimplemented(
-            <span class="string">&quot;Key Provisioning is not implemented&quot;</span>,
-        ))
+        </span><span class="prelude-val">Err</span>(tonic::Status::unimplemented(<span class="string">&quot;Key Provisioning is not implemented&quot;</span>))
     }
 }
 
@@ -517,9 +500,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;ExportMetricsServiceResponse&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request = request.into_inner();
         <span class="macro">log::debug!</span>(<span class="string">&quot;metrics: {:?}&quot;</span>, request);
-        <span class="prelude-val">Ok</span>(Response::new(ExportMetricsServiceResponse {
-            partial_success: <span class="prelude-val">None</span>,
-        }))
+        <span class="prelude-val">Ok</span>(Response::new(ExportMetricsServiceResponse { partial_success: <span class="prelude-val">None </span>}))
     }
 }
 
@@ -533,22 +514,19 @@
         <span class="kw">for </span>resource_log <span class="kw">in </span><span class="kw-2">&amp;</span>request.resource_logs {
             <span class="kw">for </span>scope_log <span class="kw">in </span><span class="kw-2">&amp;</span>resource_log.scope_logs {
                 <span class="kw">for </span>log_record <span class="kw">in </span><span class="kw-2">&amp;</span>scope_log.log_records {
-                    <span class="kw">let </span>unit = log_record
-                        .attributes
-                        .iter()
-                        .find_map(|x| {
-                            <span class="kw">if </span>x.key == <span class="string">&quot;_SYSTEMD_UNIT&quot; </span>{
-                                x.value.as_ref()
-                            } <span class="kw">else </span>{
-                                <span class="prelude-val">None
-                            </span>}
-                        })
-                        .and_then(|value| value.value.as_ref())
-                        .and_then(|value| <span class="kw">match </span>value {
-                            Value::StringValue(x) =&gt; <span class="prelude-val">Some</span>(x.as_str()),
-                            <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-                        })
-                        .unwrap_or_default();
+                    <span class="kw">let </span>unit =
+                        log_record
+                            .attributes
+                            .iter()
+                            .find_map(|x| {
+                                <span class="kw">if </span>x.key == <span class="string">&quot;_SYSTEMD_UNIT&quot; </span>{ x.value.as_ref() } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
+                            })
+                            .and_then(|value| value.value.as_ref())
+                            .and_then(|value| <span class="kw">match </span>value {
+                                Value::StringValue(x) =&gt; <span class="prelude-val">Some</span>(x.as_str()),
+                                <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+                            })
+                            .unwrap_or_default();
                     <span class="kw">let </span>body = log_record
                         .body
                         .as_ref()
@@ -563,9 +541,7 @@
             }
         }
 
-        <span class="prelude-val">Ok</span>(Response::new(ExportLogsServiceResponse {
-            partial_success: <span class="prelude-val">None</span>,
-        }))
+        <span class="prelude-val">Ok</span>(Response::new(ExportLogsServiceResponse { partial_success: <span class="prelude-val">None </span>}))
     }
 }
 

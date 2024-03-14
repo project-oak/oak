@@ -556,13 +556,6 @@
 <a href="#556" id="556">556</a>
 <a href="#557" id="557">557</a>
 <a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -579,8 +572,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This module provides an implementation of the State Save Area (VMSA) that is used to store
-//! encrypted CPU-related state on AMD SEV-ES and SEV-SNP.
+</span><span class="doccomment">//! This module provides an implementation of the State Save Area (VMSA) that is
+//! used to store encrypted CPU-related state on AMD SEV-ES and SEV-SNP.
 
 </span><span class="comment">// TODO(#3703): Remove when fixed.
 </span><span class="attr">#![allow(clippy::extra_unused_type_parameters)]
@@ -605,21 +598,15 @@
 
 <span class="kw">impl </span>VmsaPage {
     <span class="kw">pub fn </span>new(vmsa: Vmsa) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            vmsa,
-            _reserved: [<span class="number">0u8</span>; VMSA_PAGE_SIZE - VMSA_SIZE],
-        }
+        <span class="self">Self </span>{ vmsa, _reserved: [<span class="number">0u8</span>; VMSA_PAGE_SIZE - VMSA_SIZE] }
     }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>VmsaPage {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="comment">// We cannot derive Default because Default is only implemented for fixed-size arrays up to
-        // size 32.
-        </span><span class="self">Self </span>{
-            vmsa: Vmsa::default(),
-            _reserved: [<span class="number">0u8</span>; VMSA_PAGE_SIZE - VMSA_SIZE],
-        }
+        <span class="comment">// We cannot derive Default because Default is only implemented for fixed-size
+        // arrays up to size 32.
+        </span><span class="self">Self </span>{ vmsa: Vmsa::default(), _reserved: [<span class="number">0u8</span>; VMSA_PAGE_SIZE - VMSA_SIZE] }
     }
 }
 
@@ -715,15 +702,18 @@
     </span><span class="kw">pub </span>isst_addr: u64,
     <span class="doccomment">/// The RAX register.
     </span><span class="kw">pub </span>rax: u64,
-    <span class="doccomment">/// The target address, code segment and stack segment when making a syscall in legacy mode.
+    <span class="doccomment">/// The target address, code segment and stack segment when making a syscall
+    /// in legacy mode.
     </span><span class="kw">pub </span>star: u64,
     <span class="doccomment">/// The target instruction pointer when making a syscall in 64-bit mode.
     </span><span class="kw">pub </span>lstar: u64,
-    <span class="doccomment">/// The target instruction pointer when making a syscall in compatibility mode.
+    <span class="doccomment">/// The target instruction pointer when making a syscall in compatibility
+    /// mode.
     </span><span class="kw">pub </span>cstar: u64,
     <span class="doccomment">/// The syscall flag mask.
     </span><span class="kw">pub </span>sfmask: u64,
-    <span class="doccomment">/// Register used by the SWAPGS instruction to swap the base of the GS general purpose segment.
+    <span class="doccomment">/// Register used by the SWAPGS instruction to swap the base of the GS
+    /// general purpose segment.
     </span><span class="kw">pub </span>kernel_gs_base: u64,
     <span class="doccomment">/// The code segment when using SYSENTER or SYSEXIT in legacy mode.
     </span><span class="kw">pub </span>sysenter_cs: u64,
@@ -809,8 +799,8 @@
     </span><span class="kw">pub </span>virtual_tom: u64,
     <span class="doccomment">/// Used by the hardware to track TLB information for the guest.
     </span><span class="kw">pub </span>tlb_id: u64,
-    <span class="doccomment">/// Used to control flushing of the guest TLB. Writing 0 to this value will cause the TLB to be
-    /// flushed on the next VMRUN.
+    <span class="doccomment">/// Used to control flushing of the guest TLB. Writing 0 to this value will
+    /// cause the TLB to be flushed on the next VMRUN.
     </span><span class="kw">pub </span>pcpu_id: u64,
     <span class="doccomment">/// Field used for injecting events into the guest.
     </span><span class="kw">pub </span>event_inj: u64,
@@ -871,13 +861,14 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(Vmsa, [u8; VMSA_SIZE]);
 
 <span class="kw">impl </span>Vmsa {
-    <span class="doccomment">/// Creates a new instance of the VMSA that represents the state of a newly reset vCPU at boot
-    /// time.
+    <span class="doccomment">/// Creates a new instance of the VMSA that represents the state of a newly
+    /// reset vCPU at boot time.
     ///
-    /// The current implementation tries to match the state of a new vCPU on QEMU running with KVM.
+    /// The current implementation tries to match the state of a new vCPU on
+    /// QEMU running with KVM.
     ///
-    /// The value of RDX depends on the family, model and stepping of the CPU and can be calculated
-    /// using `calculate_rdx_from_fms`.
+    /// The value of RDX depends on the family, model and stepping of the CPU
+    /// and can be calculated using `calculate_rdx_from_fms`.
     ///
     /// For reference see &lt;https://github.com/qemu/qemu/blob/master/target/i386/cpu.h&gt;,
     /// &lt;https://github.com/qemu/qemu/blob/master/target/i386/cpu.c&gt; and
@@ -915,14 +906,8 @@
                 attributes: <span class="number">0x93</span>, <span class="comment">// (P|S|W|A)
                 </span>..Default::default()
             },
-            gdtr: SegmentRegister {
-                limit: <span class="number">0xffff</span>,
-                ..Default::default()
-            },
-            idtr: SegmentRegister {
-                limit: <span class="number">0xffff</span>,
-                ..Default::default()
-            },
+            gdtr: SegmentRegister { limit: <span class="number">0xffff</span>, ..Default::default() },
+            idtr: SegmentRegister { limit: <span class="number">0xffff</span>, ..Default::default() },
             ldtr: SegmentRegister {
                 limit: <span class="number">0xffff</span>,
                 attributes: <span class="number">0x82</span>, <span class="comment">// (P|LDT)
@@ -951,8 +936,8 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Vmsa {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="comment">// We cannot derive Default because Default is only implemented for fixed-size arrays up to
-        // size 32.
+        <span class="comment">// We cannot derive Default because Default is only implemented for fixed-size
+        // arrays up to size 32.
         </span><span class="self">Self </span>{
             es: SegmentRegister::default(),
             cs: SegmentRegister::default(),
@@ -1076,8 +1061,8 @@
     }
 }
 
-<span class="doccomment">/// When the CPU is reset, the value of RDX is set to the same value that would be returned in EAX
-/// when calling CPUID for leaf 1.
+<span class="doccomment">/// When the CPU is reset, the value of RDX is set to the same value that would
+/// be returned in EAX when calling CPUID for leaf 1.
 ///
 /// See &lt;https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits&gt;.
 </span><span class="kw">pub fn </span>calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -&gt; u64 {
@@ -1117,7 +1102,8 @@
 </span><span class="kw">pub struct </span>SegmentRegister {
     <span class="doccomment">/// The segment selector.
     </span><span class="kw">pub </span>selector: u16,
-    <span class="doccomment">/// The segment attributes. The meaning of the attribute bits is register-dependent.
+    <span class="doccomment">/// The segment attributes. The meaning of the attribute bits is
+    /// register-dependent.
     ///
     /// See section 4.7 in &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt;.
     </span><span class="kw">pub </span>attributes: u16,

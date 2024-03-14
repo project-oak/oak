@@ -114,14 +114,6 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -224,9 +216,7 @@
             }
         };
 
-        <span class="prelude-val">Ok</span>(Response::new(
-            Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::StreamStream
-        ))
+        <span class="prelude-val">Ok</span>(Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::StreamStream))
     }
 }
 
@@ -236,14 +226,8 @@
     evidence: Evidence,
     endorsements: Endorsements,
 ) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), tonic::transport::Error&gt;&gt; {
-    <span class="kw">let </span>server_impl = SessionProxy {
-        connector_handle,
-        evidence,
-        endorsements,
-    };
+    <span class="kw">let </span>server_impl = SessionProxy { connector_handle, evidence, endorsements };
 
-    Server::builder()
-        .add_service(StreamingSessionServer::new(server_impl))
-        .serve(addr)
+    Server::builder().add_service(StreamingSessionServer::new(server_impl)).serve(addr)
 }
 </code></pre></div></section></main></body></html>

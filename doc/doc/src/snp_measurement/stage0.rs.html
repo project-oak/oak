@@ -379,33 +379,6 @@
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -441,16 +414,18 @@
 /// The firmware image gets loaded just below the 4GiB boundary.
 </span><span class="kw">const </span>FIRMWARE_TOP: PhysAddr = PhysAddr::new(<span class="number">0x1_0000_0000</span>);
 
-<span class="doccomment">/// The address of the first byte after the end of the legacy boot shadow firmware image.
+<span class="doccomment">/// The address of the first byte after the end of the legacy boot shadow
+/// firmware image.
 ///
-/// To support legacy booting the last 128KiB of the firmware gets shadowed just below the end of
-/// 20-bit memory.
+/// To support legacy booting the last 128KiB of the firmware gets shadowed just
+/// below the end of 20-bit memory.
 </span><span class="kw">const </span>LEGACY_TOP: PhysAddr = PhysAddr::new(<span class="number">0x10_0000</span>);
 
 <span class="doccomment">/// The maximum size of the shadow firmware for legacy boot.
 </span><span class="kw">const </span>LEGACY_MAX_SIZE: usize = <span class="number">128 </span>* <span class="number">1024</span>;
 
-<span class="doccomment">/// The reverse offset from the end of the firmware blob to the end of the GUID tables.
+<span class="doccomment">/// The reverse offset from the end of the firmware blob to the end of the GUID
+/// tables.
 </span><span class="kw">const </span>GUID_TABLE_END_OFFSET: usize = <span class="number">0x20</span>;
 
 <span class="doccomment">/// The size of the header of an entry in the GUID table.
@@ -466,7 +441,8 @@
 
 <span class="doccomment">/// The footer GUID identifying the end of the GUID table.
 ///
-/// This matches the footer GUID used in OVMF (96b582de-1fb2-45f7-baea-a366c55a082d).
+/// This matches the footer GUID used in OVMF
+/// (96b582de-1fb2-45f7-baea-a366c55a082d).
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm&gt;.
 </span><span class="kw">const </span>GUID_TABLE_FOOTER_GUID: u128 = u128::from_le_bytes([
@@ -475,7 +451,8 @@
 
 <span class="doccomment">/// The GUID identifying the SEV metadata GUID table entry.
 ///
-/// This matches the SEV metadata GUID used in OVMF (dc886566-984a-4798-A75e-5585a7bf67cc).
+/// This matches the SEV metadata GUID used in OVMF
+/// (dc886566-984a-4798-A75e-5585a7bf67cc).
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm&gt;.
 </span><span class="kw">const </span>SEV_MEATADATA_GUID: u128 = u128::from_le_bytes([
@@ -484,7 +461,8 @@
 
 <span class="doccomment">/// The GUID identifying the SEV ES reset block GUID table entry.
 ///
-/// This matches the SEV ES reset block GUID used in OVMF (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
+/// This matches the SEV ES reset block GUID used in OVMF
+/// (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm&gt;.
 </span><span class="kw">const </span>SEV_ES_RESET_GUID: u128 = u128::from_le_bytes([
@@ -503,9 +481,11 @@
     </span>bytes: Vec&lt;u8&gt;,
     <span class="doccomment">/// The start address of the firmware ROM in guest memory.
     </span><span class="kw">pub </span>start_address: PhysAddr,
-    <span class="doccomment">/// The start address of the legacy boot shadow of the firmware ROM in guest memory.
+    <span class="doccomment">/// The start address of the legacy boot shadow of the firmware ROM in guest
+    /// memory.
     </span><span class="kw">pub </span>legacy_start_address: PhysAddr,
-    <span class="doccomment">/// The offset into the firmware ROM image from where the legacy boot shadow starts.
+    <span class="doccomment">/// The offset into the firmware ROM image from where the legacy boot shadow
+    /// starts.
     </span>legacy_offset: usize,
 }
 
@@ -520,7 +500,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.bytes[<span class="self">self</span>.legacy_offset..]
     }
 
-    <span class="doccomment">/// Gets the SEV-SNP specific pages defined in the firmware SEV metadata section entries.
+    <span class="doccomment">/// Gets the SEV-SNP specific pages defined in the firmware SEV metadata
+    /// section entries.
     </span><span class="kw">pub fn </span>get_snp_pages(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;SevMetadataPageInfo&gt; {
         <span class="kw">let </span>sev_metadata_content = <span class="kw-2">*</span><span class="self">self
             </span>.parse_firmware_guid_table()
@@ -531,19 +512,15 @@
             size_of::&lt;u32&gt;(),
             <span class="string">&quot;invalid length for SEV metadata entry&quot;
         </span>);
-        <span class="comment">// We expect the SEV metadata entry in the GUID table to contain only 4 bytes that represent
-        // the 32-bit unsigned little-endian encoding of the reverse offset from the end of the
-        // firmware image to the start of the SEV metadata section.
+        <span class="comment">// We expect the SEV metadata entry in the GUID table to contain only 4 bytes
+        // that represent the 32-bit unsigned little-endian encoding of the
+        // reverse offset from the end of the firmware image to the start of the
+        // SEV metadata section.
         </span><span class="kw">let </span><span class="kw-2">mut </span>sev_metadata_offset: u32 = <span class="number">0</span>;
-        sev_metadata_offset
-            .as_bytes_mut()
-            .copy_from_slice(sev_metadata_content);
+        sev_metadata_offset.as_bytes_mut().copy_from_slice(sev_metadata_content);
         <span class="kw">let </span>sev_metadata_offset = sev_metadata_offset <span class="kw">as </span>usize;
         <span class="macro">trace!</span>(<span class="string">&quot;SEV metadata offset: {}&quot;</span>, sev_metadata_offset);
-        <span class="macro">assert!</span>(
-            sev_metadata_offset &lt; <span class="self">self</span>.bytes.len(),
-            <span class="string">&quot;invalid SEV metadata offset&quot;
-        </span>);
+        <span class="macro">assert!</span>(sev_metadata_offset &lt; <span class="self">self</span>.bytes.len(), <span class="string">&quot;invalid SEV metadata offset&quot;</span>);
         <span class="kw">let </span>sev_metadata_header_start = <span class="self">self</span>.bytes.len() - sev_metadata_offset;
         <span class="kw">let </span>sev_metadata_header_end = sev_metadata_header_start + SEV_METADATA_HEADER_SIZE;
         <span class="kw">let </span>header = SevMetadataHeader::parse(
@@ -568,28 +545,25 @@
             size_of::&lt;u32&gt;(),
             <span class="string">&quot;invalid length for SEV-ES reset block entry&quot;
         </span>);
-        <span class="comment">// We expect the SEV-ES reset block entry in the GUID table to contain only 4 bytes that
-        // represent the 32-bit unsigned little-endian encoding of the reset address.
+        <span class="comment">// We expect the SEV-ES reset block entry in the GUID table to contain only 4
+        // bytes that represent the 32-bit unsigned little-endian encoding of
+        // the reset address.
         </span><span class="kw">let </span><span class="kw-2">mut </span>sev_es_reset_address: u32 = <span class="number">0</span>;
-        sev_es_reset_address
-            .as_bytes_mut()
-            .copy_from_slice(sev_es_reset_block_content);
+        sev_es_reset_address.as_bytes_mut().copy_from_slice(sev_es_reset_block_content);
         sev_es_reset_address.into()
     }
 
     <span class="doccomment">/// Parses the GUID table from the firmware image as a map.
     ///
-    /// The GUID (represented as a u128) of each table entry is the key and the associated data of
-    /// the entry is the value.
+    /// The GUID (represented as a u128) of each table entry is the key and the
+    /// associated data of the entry is the value.
     </span><span class="kw">fn </span>parse_firmware_guid_table(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashMap&lt;u128, <span class="kw-2">&amp;</span>[u8]&gt; {
         <span class="kw">let </span>content = <span class="self">self</span>.get_guid_table_content();
         <span class="kw">let </span><span class="kw-2">mut </span>entry_end = content.len();
         <span class="kw">let </span><span class="kw-2">mut </span>result = HashMap::new();
         <span class="kw">while </span>entry_end &gt; GUID_TABLE_ENTRY_HEADER_SIZE {
-            <span class="kw">let </span>GuidTableEntryHeader {
-                guid: entry_guid,
-                size: entry_size,
-            } = GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span>content[..entry_end]);
+            <span class="kw">let </span>GuidTableEntryHeader { guid: entry_guid, size: entry_size } =
+                GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span>content[..entry_end]);
             <span class="macro">assert!</span>(entry_end &gt;= entry_size <span class="kw">as </span>usize, <span class="string">&quot;invalid entry size&quot;</span>);
             <span class="kw">let </span>content_end = entry_end - GUID_TABLE_ENTRY_HEADER_SIZE;
             <span class="kw">let </span>content_start = entry_end - entry_size <span class="kw">as </span>usize;
@@ -612,10 +586,8 @@
         <span class="comment">// We parse the GUID table from the end, starting at the footer.
         </span><span class="kw">let </span>table_end = <span class="self">self</span>.bytes.len() - GUID_TABLE_END_OFFSET;
         <span class="macro">trace!</span>(<span class="string">&quot;GUID table end: {}&quot;</span>, table_end);
-        <span class="kw">let </span>GuidTableEntryHeader {
-            guid: footer_guid,
-            size: table_size,
-        } = GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes[..table_end]);
+        <span class="kw">let </span>GuidTableEntryHeader { guid: footer_guid, size: table_size } =
+            GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes[..table_end]);
         <span class="macro">assert_eq!</span>(
             footer_guid, GUID_TABLE_FOOTER_GUID,
             <span class="string">&quot;firmware image doesn&#39;t contain a valid GUID table&quot;
@@ -636,12 +608,7 @@
         <span class="kw">let </span>legacy_size = size.min(LEGACY_MAX_SIZE);
         <span class="kw">let </span>legacy_start_address = LEGACY_TOP - legacy_size;
         <span class="kw">let </span>legacy_offset = size - legacy_size;
-        <span class="self">Self </span>{
-            bytes,
-            start_address,
-            legacy_start_address,
-            legacy_offset,
-        }
+        <span class="self">Self </span>{ bytes, start_address, legacy_start_address, legacy_offset }
     }
 }
 
@@ -654,14 +621,12 @@
     <span class="kw">let </span><span class="kw-2">mut </span>stage0_hasher = Sha256::new();
     stage0_hasher.update(<span class="kw-2">&amp;</span>stage0_bytes);
     <span class="kw">let </span>stage0_sha256_digest = stage0_hasher.finalize();
-    <span class="macro">info!</span>(
-        <span class="string">&quot;Stage0 digest: sha256:{}&quot;</span>,
-        hex::encode(stage0_sha256_digest)
-    );
+    <span class="macro">info!</span>(<span class="string">&quot;Stage0 digest: sha256:{}&quot;</span>, hex::encode(stage0_sha256_digest));
     <span class="prelude-val">Ok</span>(Stage0Info::new(stage0_bytes))
 }
 
-<span class="doccomment">/// Information about the pages specified in the firmware SEV metadata section entries.
+<span class="doccomment">/// Information about the pages specified in the firmware SEV metadata section
+/// entries.
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm&gt;
 </span><span class="kw">pub struct </span>SevMetadataPageInfo {
@@ -684,30 +649,17 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>size: u32 = <span class="number">0</span>;
         size.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">4</span>..<span class="number">8</span>]);
-        <span class="macro">assert_eq!</span>(
-            (size <span class="kw">as </span>u64) % Size4KiB::SIZE,
-            <span class="number">0</span>,
-            <span class="string">&quot;invalid SEV metadata entry size&quot;
-        </span>);
+        <span class="macro">assert_eq!</span>((size <span class="kw">as </span>u64) % Size4KiB::SIZE, <span class="number">0</span>, <span class="string">&quot;invalid SEV metadata entry size&quot;</span>);
         <span class="kw">let </span>page_count = (size <span class="kw">as </span>usize) / (Size4KiB::SIZE <span class="kw">as </span>usize);
 
         <span class="kw">let </span><span class="kw-2">mut </span>page_type: u32 = <span class="number">0</span>;
         page_type.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">8</span>..<span class="number">12</span>]);
-        <span class="macro">trace!</span>(
-            <span class="string">&quot;Metadata page entry: base: {}, size: {}, page_type: {}&quot;</span>,
-            base,
-            size,
-            page_type
-        );
+        <span class="macro">trace!</span>(<span class="string">&quot;Metadata page entry: base: {}, size: {}, page_type: {}&quot;</span>, base, size, page_type);
         <span class="kw">let </span>page_type = SevMetadataPageType::from_repr(page_type)
             .expect(<span class="string">&quot;invalid SEV metadata page type&quot;</span>)
             .into();
 
-        <span class="self">Self </span>{
-            start_address,
-            page_count,
-            page_type,
-        }
+        <span class="self">Self </span>{ start_address, page_count, page_type }
     }
 }
 
@@ -734,7 +686,8 @@
     }
 }
 
-<span class="doccomment">/// The instruction pointer and code segment base that will be set when a non-boot vCPU is reset.
+<span class="doccomment">/// The instruction pointer and code segment base that will be set when a
+/// non-boot vCPU is reset.
 </span><span class="kw">pub struct </span>SevEsResetBlock {
     <span class="kw">pub </span>rip: u64,
     <span class="kw">pub </span>segment_base: u64,
@@ -744,7 +697,8 @@
     <span class="kw">fn </span>from(value: u32) -&gt; <span class="self">Self </span>{
         <span class="comment">// The instruction pointer is the two least significant bytes of the address.
         </span><span class="kw">let </span>rip = (value &amp; <span class="number">0x0000ffff</span>) <span class="kw">as </span>u64;
-        <span class="comment">// The code segment base is the address with the two least significant bytes zeroed out.
+        <span class="comment">// The code segment base is the address with the two least significant bytes
+        // zeroed out.
         </span><span class="kw">let </span>segment_base = (value &amp; <span class="number">0xffff0000</span>) <span class="kw">as </span>u64;
         <span class="self">Self </span>{ rip, segment_base }
     }
@@ -764,20 +718,18 @@
         <span class="kw">let </span><span class="kw-2">mut </span>guid: u128 = <span class="number">0</span>;
         <span class="kw">let </span>guid_end = bytes.len();
         <span class="kw">let </span>guid_start = guid_end - size_of::&lt;u128&gt;();
-        guid.as_bytes_mut()
-            .copy_from_slice(<span class="kw-2">&amp;</span>bytes[guid_start..guid_end]);
+        guid.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[guid_start..guid_end]);
         <span class="kw">let </span><span class="kw-2">mut </span>size: u16 = <span class="number">0</span>;
         <span class="kw">let </span>size_start = guid_start - size_of::&lt;u16&gt;();
-        size.as_bytes_mut()
-            .copy_from_slice(<span class="kw-2">&amp;</span>bytes[size_start..guid_start]);
+        size.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[size_start..guid_start]);
         <span class="self">Self </span>{ guid, size }
     }
 }
 
 <span class="doccomment">/// The header of the SEV metadata section.
 ///
-/// We validate the signature and version, but don&#39;t use it for anything else, so we don&#39;t need to
-/// store their values in the struct.
+/// We validate the signature and version, but don&#39;t use it for anything else,
+/// so we don&#39;t need to store their values in the struct.
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm&gt;
 </span><span class="kw">struct </span>SevMetadataHeader {
@@ -790,16 +742,10 @@
         <span class="macro">assert!</span>(bytes.len() == SEV_METADATA_HEADER_SIZE);
         <span class="kw">let </span><span class="kw-2">mut </span>signature: [u8; <span class="number">4</span>] = [<span class="number">0</span>; <span class="number">4</span>];
         signature[..].copy_from_slice(<span class="kw-2">&amp;</span>bytes[..<span class="number">4</span>]);
-        <span class="macro">assert_eq!</span>(
-            signature, SEV_SECTION_SIGNATURE,
-            <span class="string">&quot;invalid signature for SEV metadata section&quot;
-        </span>);
+        <span class="macro">assert_eq!</span>(signature, SEV_SECTION_SIGNATURE, <span class="string">&quot;invalid signature for SEV metadata section&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>version: u32 = <span class="number">0</span>;
         version.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">8</span>..<span class="number">12</span>]);
-        <span class="macro">assert_eq!</span>(
-            version, SEV_METADATA_VERSION,
-            <span class="string">&quot;invalid version for SEV metadata section&quot;
-        </span>);
+        <span class="macro">assert_eq!</span>(version, SEV_METADATA_VERSION, <span class="string">&quot;invalid version for SEV metadata section&quot;</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>length: u32 = <span class="number">0</span>;
         length.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">4</span>..<span class="number">8</span>]);

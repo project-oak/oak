@@ -31,6 +31,8 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -50,9 +52,11 @@
 </span><span class="kw">use </span>goblin::elf64::program_header::ProgramHeader;
 <span class="kw">use </span>x86_64::VirtAddr;
 
-<span class="doccomment">/// Interpret raw memory at the given address as an ELF header and return the program headers.
+<span class="doccomment">/// Interpret raw memory at the given address as an ELF header and return the
+/// program headers.
 ///
-/// Safety: this virtual address must be valid and contain ELF headers and program headers.
+/// Safety: this virtual address must be valid and contain ELF headers and
+/// program headers.
 </span><span class="kw">pub unsafe fn </span>get_phdrs(addr: VirtAddr) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[ProgramHeader] {
     <span class="kw">let </span>raw_header = core::slice::from_raw_parts(
         addr.as_u64() <span class="kw">as </span><span class="kw-2">*const </span>u8,

@@ -545,23 +545,6 @@
 <a href="#545" id="545">545</a>
 <a href="#546" id="546">546</a>
 <a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
-<a href="#554" id="554">554</a>
-<a href="#555" id="555">555</a>
-<a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -623,15 +606,14 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>DmaBuffer {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        DmaBuffer {
-            data: [<span class="number">0u8</span>; Size4KiB::SIZE <span class="kw">as </span>usize],
-        }
+        DmaBuffer { data: [<span class="number">0u8</span>; Size4KiB::SIZE <span class="kw">as </span>usize] }
     }
 }
 
 <span class="doccomment">/// Selector keys for &quot;well-known&quot; fw_cfg entries.
 ///
-/// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative list.
+/// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative
+/// list.
 </span><span class="attr">#[allow(dead_code)]
 #[repr(u16)]
 </span><span class="kw">enum </span>FwCfgItems {
@@ -670,22 +652,13 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>DirEntry {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            size: <span class="number">0</span>,
-            select: <span class="number">0</span>,
-            _reserved: <span class="number">0</span>,
-            name: [<span class="number">0</span>; <span class="number">56</span>],
-        }
+        <span class="self">Self </span>{ size: <span class="number">0</span>, select: <span class="number">0</span>, _reserved: <span class="number">0</span>, name: [<span class="number">0</span>; <span class="number">56</span>] }
     }
 }
 
 <span class="kw">impl </span>DirEntry {
     <span class="kw">fn </span>new_for_selector(size: u32, selector: FwCfgItems) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            size: size.to_be(),
-            select: (selector <span class="kw">as </span>u16).to_be(),
-            ..Default::default()
-        }
+        <span class="self">Self </span>{ size: size.to_be(), select: (selector <span class="kw">as </span>u16).to_be(), ..Default::default() }
     }
 
     <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CStr {
@@ -727,12 +700,13 @@
 <span class="kw">impl </span>FwCfg {
     <span class="doccomment">/// # Safety
     ///
-    /// While we do probe for the existence of the QEMU fw_cfg device, reading or writing to I/O
-    /// ports that are not in use is inherently undefined behaviour. What&#39;s worse, if there happens
-    /// to be some other device using those I/O ports, the results are completely unknowable.
+    /// While we do probe for the existence of the QEMU fw_cfg device, reading
+    /// or writing to I/O ports that are not in use is inherently undefined
+    /// behaviour. What&#39;s worse, if there happens to be some other device
+    /// using those I/O ports, the results are completely unknowable.
     ///
-    /// The caller has to guarantee that at least doing the probe will not cause any adverse
-    /// effects.
+    /// The caller has to guarantee that at least doing the probe will not cause
+    /// any adverse effects.
     </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="self">Self </span>{
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
@@ -746,8 +720,8 @@
             dma_enabled: <span class="bool-val">false</span>,
         };
 
-        <span class="comment">// Make sure the fw_cfg device is available. If the device is not available, writing and
-        // reading to I/O ports is undefined behaviour.
+        <span class="comment">// Make sure the fw_cfg device is available. If the device is not available,
+        // writing and reading to I/O ports is undefined behaviour.
         </span>fwcfg.write_selector(FwCfgItems::Signature <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>signature = [<span class="number">0u8</span>; SIGNATURE.len()];
         fwcfg.read(<span class="kw-2">&amp;mut </span>signature)<span class="question-mark">?</span>;
@@ -763,28 +737,25 @@
             fwcfg.dma_enabled = <span class="bool-val">true</span>;
         }
 
-        <span class="kw">if </span>signature == SIGNATURE {
-            <span class="prelude-val">Ok</span>(fwcfg)
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="string">&quot;QEMU fw_cfg device not available&quot;</span>)
-        }
+        <span class="kw">if </span>signature == SIGNATURE { <span class="prelude-val">Ok</span>(fwcfg) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(<span class="string">&quot;QEMU fw_cfg device not available&quot;</span>) }
     }
 
     <span class="doccomment">/// Returns an iterator over the files in the fw_cfg system.
     ///
     /// # Safety
     ///
-    /// You should consume the iterator fully before calling any other methods of this struct, or at
-    /// the very least don&#39;t use the iterator after calling some other function.
-    /// (This means that, for example, you shouldn&#39;t try to read the files while iterating over the
+    /// You should consume the iterator fully before calling any other methods
+    /// of this struct, or at the very least don&#39;t use the iterator after
+    /// calling some other function. (This means that, for example, you
+    /// shouldn&#39;t try to read the files while iterating over the
     /// directory contents.)
-    /// If you call any other methods, the iterator will be in an undefined state and unsafe to read
-    /// from.
+    /// If you call any other methods, the iterator will be in an undefined
+    /// state and unsafe to read from.
     </span><span class="kw">pub unsafe fn </span>dir(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = DirEntry&gt; + <span class="lifetime">&#39;_ </span>{
         <span class="self">self</span>.write_selector(FwCfgItems::FileDir <span class="kw">as </span>u16).unwrap();
 
-        <span class="comment">// We don&#39;t represent FwCfgFiles as a struct, as you can&#39;t do that in safe Rust. Therefore,
-        // read fields individually.
+        <span class="comment">// We don&#39;t represent FwCfgFiles as a struct, as you can&#39;t do that in safe Rust.
+        // Therefore, read fields individually.
         </span><span class="kw">let </span>count = {
             <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">4</span>];
             <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>buf).unwrap();
@@ -808,9 +779,10 @@
     ///
     /// # Safety
     ///
-    /// While we will never write beyond the memory allocated to `object`, it is up to the caller to
-    /// ensure that the type of `object` is a faithful representation of the contents of the file;
-    /// otherwise, `object` may be left in an invalid state.
+    /// While we will never write beyond the memory allocated to `object`, it is
+    /// up to the caller to ensure that the type of `object` is a faithful
+    /// representation of the contents of the file; otherwise, `object` may
+    /// be left in an invalid state.
     </span><span class="kw">pub unsafe fn </span>read_file_by_name&lt;T: AsBytes + FromBytes&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         name: <span class="kw-2">&amp;</span>CStr,
@@ -836,8 +808,8 @@
 
     <span class="doccomment">/// Reads contents of a file; returns the number of bytes actually read.
     ///
-    /// If reading files via DMA is supported, it will use DMA. If not it will fall back to reading
-    /// byte by byte.
+    /// If reading files via DMA is supported, it will use DMA. If not it will
+    /// fall back to reading byte by byte.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
@@ -876,13 +848,12 @@
         <span class="prelude-val">Ok</span>(cmdline_size)
     }
 
-    <span class="doccomment">/// Gets an unnamed file representation of the kernel command-line using the dedicated selector.
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel command-line using the
+    /// dedicated selector.
     ///
     /// Returns `None` if the kernel command-line size is 0.
     </span><span class="kw">pub fn </span>get_cmdline_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="kw">let </span>size = <span class="self">self
-            </span>.read_cmdline_size()
-            .expect(<span class="string">&quot;couldn&#39;t read cmdline size&quot;</span>);
+        <span class="kw">let </span>size = <span class="self">self</span>.read_cmdline_size().expect(<span class="string">&quot;couldn&#39;t read cmdline size&quot;</span>);
         <span class="kw">if </span>size == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
@@ -898,7 +869,8 @@
         <span class="prelude-val">Ok</span>(initrd_size)
     }
 
-    <span class="doccomment">/// Gets an unnamed file representation of the initial RAM disk using the dedicated selector.
+    <span class="doccomment">/// Gets an unnamed file representation of the initial RAM disk using the
+    /// dedicated selector.
     ///
     /// Returns `None` if the initial RAM disk size is 0.
     </span><span class="kw">pub fn </span>get_initrd_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
@@ -918,7 +890,8 @@
         <span class="prelude-val">Ok</span>(kernel_size)
     }
 
-    <span class="doccomment">/// Gets an unnamed file representation of the kernel using the dedicated selector.
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel using the dedicated
+    /// selector.
     ///
     /// Returns `None` if the kernel size is 0.
     </span><span class="kw">pub fn </span>get_kernel_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
@@ -938,17 +911,13 @@
         <span class="prelude-val">Ok</span>(setup_size)
     }
 
-    <span class="doccomment">/// Gets an unnamed file representation of the kernel&#39;s setup information using the dedicated
-    /// selector.
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel&#39;s setup information
+    /// using the dedicated selector.
     ///
     /// Returns `None` if the kernel size is 0.
     </span><span class="kw">pub fn </span>get_setup_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
         <span class="kw">let </span>size = <span class="self">self</span>.read_setup_size().expect(<span class="string">&quot;couldn&#39;t read setup size&quot;</span>);
-        <span class="kw">if </span>size == <span class="number">0 </span>{
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
-        }
+        <span class="kw">if </span>size == <span class="number">0 </span>{ <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::SetupData)) }
     }
 
     <span class="kw">fn </span>write_selector(<span class="kw-2">&amp;mut </span><span class="self">self</span>, selector: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -962,8 +931,8 @@
 
     <span class="kw">fn </span>read_buf(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">for </span>i <span class="kw">in </span>buf {
-            <span class="comment">// Safety: We make sure that the device is available in `new()`, so reading from the
-            // port is safe.
+            <span class="comment">// Safety: We make sure that the device is available in `new()`, so reading from
+            // the port is safe.
             </span><span class="kw-2">*</span>i = <span class="kw">unsafe </span>{ <span class="self">self</span>.data.try_read() }<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
@@ -983,29 +952,31 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;chunk is larger than the DMA buffer&quot;</span>);
         }
 
-        <span class="comment">// We always use an identity mapping. We use the shared DMA buffer as a bounce-buffer to
-        // account for potential memory encryption.
+        <span class="comment">// We always use an identity mapping. We use the shared DMA buffer as a
+        // bounce-buffer to account for potential memory encryption.
         </span><span class="kw">let </span>address = PhysAddr::new(<span class="self">self</span>.dma_buf.data.as_ptr() <span class="kw">as </span>usize <span class="kw">as </span>u64);
-        <span class="comment">// The length of the buffer will always fit in 32 bits, since we only map the first 1GiB of
-        // physical memory to virtual memory.
+        <span class="comment">// The length of the buffer will always fit in 32 bits, since we only map the
+        // first 1GiB of physical memory to virtual memory.
         </span><span class="kw">let </span>length = chunk.len() <span class="kw">as </span>u32;
         <span class="kw-2">*</span><span class="self">self</span>.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
         <span class="kw">let </span>dma_access_address = <span class="self">self</span>.dma_access.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64;
         <span class="kw">let </span>dma_low = (dma_access_address &amp; <span class="number">0xFFFFFFFF</span>) <span class="kw">as </span>u32;
         <span class="kw">let </span>dma_high = (dma_access_address &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
-        <span class="comment">// The DMA address halves must be written in big endian format, and the high half must be
-        // written before the low half.
-        // Safety: We make sure that the device is available in `new()`, so writing to the ports is
-        // safe.
+        <span class="comment">// The DMA address halves must be written in big endian format, and the high
+        // half must be written before the low half.
+        // Safety: We make sure that the device is available in `new()`, so writing to
+        // the ports is safe.
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.dma_high.try_write(dma_high.to_be())<span class="question-mark">?</span>;
             <span class="self">self</span>.dma_low.try_write(dma_low.to_be())<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Memory fence to make sure that the DMA operation is complete before we read the result.
+        <span class="comment">// Memory fence to make sure that the DMA operation is complete before we read
+        // the result.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-        <span class="comment">// The control field will be cleared if the DMA operation is complete and successful.
+        <span class="comment">// The control field will be cleared if the DMA operation is complete and
+        // successful.
         </span><span class="kw">if </span><span class="self">self</span>.dma_access.control != <span class="number">0 </span>{
             <span class="prelude-val">Err</span>(<span class="string">&quot;fw_cfg DMA failed&quot;</span>)
         } <span class="kw">else </span>{
@@ -1025,14 +996,13 @@
     }
 }
 
-<span class="comment">// Finds the highest section of RAM that is big enough to hold the DMA buffer, and falls below 1GiB.
+<span class="comment">// Finds the highest section of RAM that is big enough to hold the DMA buffer,
+// and falls below 1GiB.
 </span><span class="kw">pub fn </span>find_suitable_dma_address(
     size: usize,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span>padded_size = (size <span class="kw">as </span>u64)
-        .checked_next_multiple_of(Size4KiB::SIZE)
-        .unwrap();
+    <span class="kw">let </span>padded_size = (size <span class="kw">as </span>u64).checked_next_multiple_of(Size4KiB::SIZE).unwrap();
     e820_table
         .iter()
         .filter_map(|entry| {
@@ -1092,7 +1062,8 @@
 }
 
 <span class="doccomment">/// Definition for a DMA access request.
-/// We also force it to be on a page boundary as we need to share it with the host.
+/// We also force it to be on a page boundary as we need to share it with the
+/// host.
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 #[derive(Debug)]
 </span><span class="kw">pub struct </span>FwCfgDmaAccess {
@@ -1106,12 +1077,7 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>FwCfgDmaAccess {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        FwCfgDmaAccess {
-            control: <span class="number">0</span>,
-            length: <span class="number">0</span>,
-            address: <span class="number">0</span>,
-            padding: [<span class="number">0u8</span>; <span class="number">4080</span>],
-        }
+        FwCfgDmaAccess { control: <span class="number">0</span>, length: <span class="number">0</span>, address: <span class="number">0</span>, padding: [<span class="number">0u8</span>; <span class="number">4080</span>] }
     }
 }
 

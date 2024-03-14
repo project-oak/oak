@@ -56,12 +56,6 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -81,12 +75,7 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::internal::{read_to_end, Command, Context, Opt, Runnable, Running, Status, Step};
 
 <span class="kw">fn </span>opt_for_test() -&gt; Opt {
-    Opt {
-        dry_run: <span class="bool-val">false</span>,
-        logs: <span class="bool-val">true</span>,
-        keep_going: <span class="bool-val">false</span>,
-        cmd: Command::RunTests,
-    }
+    Opt { dry_run: <span class="bool-val">false</span>, logs: <span class="bool-val">true</span>, keep_going: <span class="bool-val">false</span>, cmd: Command::RunTests }
 }
 
 <span class="doccomment">/// Runs a step, and asserts that it succeeds.
@@ -97,7 +86,8 @@
     <span class="macro">assert!</span>(result.success());
 }
 
-<span class="doccomment">/// Thin wrapper around an inner `Running` that kills the inner `Running` when dropped.
+<span class="doccomment">/// Thin wrapper around an inner `Running` that kills the inner `Running` when
+/// dropped.
 </span><span class="kw">pub struct </span>BackgroundStep {
     <span class="kw">pub </span>inner: Box&lt;<span class="kw">dyn </span>Running&gt;,
 }
@@ -108,7 +98,8 @@
     }
 }
 
-<span class="doccomment">/// Runs a step in the background, and returns a reference to the running process.
+<span class="doccomment">/// Runs a step in the background, and returns a reference to the running
+/// process.
 ///
 /// The running process is killed when the returned `BackgroundStep` is dropped.
 </span><span class="kw">pub async fn </span>run_background(step: Box&lt;<span class="kw">dyn </span>Runnable&gt;) -&gt; BackgroundStep {
@@ -118,12 +109,9 @@
     BackgroundStep { inner: running }
 }
 
-<span class="doccomment">/// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run
-/// tests that require nested virtualization.
+<span class="doccomment">/// Whether to skip the test. For instance, GitHub Actions does not support KVM,
+/// so we cannot run tests that require nested virtualization.
 </span><span class="kw">pub fn </span>skip_test() -&gt; bool {
-    std::env::var(<span class="string">&quot;OAK_KVM_TESTS&quot;</span>)
-        .unwrap_or_default()
-        .to_lowercase()
-        == <span class="string">&quot;skip&quot;
+    std::env::var(<span class="string">&quot;OAK_KVM_TESTS&quot;</span>).unwrap_or_default().to_lowercase() == <span class="string">&quot;skip&quot;
 </span>}
 </code></pre></div></section></main></body></html>

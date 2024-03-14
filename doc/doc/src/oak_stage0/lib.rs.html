@@ -407,21 +407,6 @@
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -491,7 +476,8 @@
 </span><span class="kw">type </span>BootAllocator = allocator::BumpAllocator&lt;<span class="number">0x20000</span>&gt;;
 <span class="kw">static </span>BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
-<span class="comment">// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
+<span class="comment">// Heap for short-term allocations. These allocations are not expected to
+// outlive Stage 0.
 </span><span class="attr">#[cfg_attr(not(test), global_allocator)]
 </span><span class="kw">static </span>SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
@@ -520,7 +506,8 @@
 
 <span class="kw">pub fn </span>create_idt(_idt: <span class="kw-2">&amp;mut </span>InterruptDescriptorTable) {}
 
-<span class="doccomment">/// Passes control to the operating system kernel. No more code from the BIOS will run.
+<span class="doccomment">/// Passes control to the operating system kernel. No more code from the BIOS
+/// will run.
 ///
 /// # Safety
 ///
@@ -543,15 +530,18 @@
     );
 }
 
-<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that&#39;s safe to read even if the CPU doesn&#39;t support it.
+<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that&#39;s safe to read even if the CPU
+/// doesn&#39;t support it.
 ///
 /// Initialized in the bootstrap assembly code.
 </span><span class="kw">pub fn </span>sev_status() -&gt; SevStatus {
-    <span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+    <span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR
+    // anyway.
     </span><span class="attr">#[no_mangle]
     </span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
 
-    <span class="comment">// Safety: we don&#39;t allow mutation and this is initialized in the bootstrap assembly.
+    <span class="comment">// Safety: we don&#39;t allow mutation and this is initialized in the bootstrap
+    // assembly.
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
 }
 
@@ -559,14 +549,16 @@
 ///
 /// # Arguments
 ///
-/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
+/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
+///   tables.
 </span><span class="kw">pub fn </span>rust64_start(encrypted: u64) -&gt; ! {
     <span class="comment">// We assume 0-th bit is never the encrypted bit.
     </span><span class="kw">let </span>encrypted = <span class="kw">if </span>encrypted &gt; <span class="number">0 </span>{ <span class="number">1 </span>&lt;&lt; encrypted } <span class="kw">else </span>{ <span class="number">0 </span>};
 
     paging::init_page_table_refs(encrypted);
 
-    <span class="comment">// If we&#39;re under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
+    <span class="comment">// If we&#39;re under SEV-ES or SNP, we need a GHCB block for communication (SNP
+    // implies SEV-ES).
     </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         sev::init_ghcb(<span class="kw-2">&amp;</span>BOOT_ALLOC);
     }
@@ -575,22 +567,22 @@
     <span class="macro">log::info!</span>(<span class="string">&quot;starting...&quot;</span>);
     <span class="macro">log::info!</span>(<span class="string">&quot;Enabled SEV features: {:?}&quot;</span>, sev_status());
 
-    ENCRYPTED
-        .set(encrypted)
-        .expect(<span class="string">&quot;encrypted bit already initialized&quot;</span>);
+    ENCRYPTED.set(encrypted).expect(<span class="string">&quot;encrypted bit already initialized&quot;</span>);
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we&#39;re using an originally supported mode
-        // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
-        // working, we may want to check that MTRR is supported, but only if we want to
-        // support very old processors. However, note that, this branch is only executed if
+        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we&#39;re using an originally
+        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
+        // If we get CPUID reads working, we may want to check that MTRR is
+        // supported, but only if we want to support very old processors.
+        // However, note that, this branch is only executed if
         // we have encryption, and this wouldn&#39;t be true for very old processors.
         </span><span class="kw">unsafe </span>{
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
     }
 
-    <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg IO ports.
+    <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg
+    // IO ports.
     </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">&quot;fw_cfg device not found!&quot;</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>zero_page = Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
@@ -626,19 +618,19 @@
 
     paging::map_additional_memory(encrypted);
 
-    <span class="comment">// Initialize the short-term heap. Any allocations that rely on a global allocator before this
-    // point will fail.
+    <span class="comment">// Initialize the short-term heap. Any allocations that rely on a global
+    // allocator before this point will fail.
     </span>allocator::init_global_allocator(zero_page.e820_table());
 
-    <span class="kw">let </span>setup_data_sha2_256_digest = zero_page
-        .try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg)
-        .unwrap_or_default();
+    <span class="kw">let </span>setup_data_sha2_256_digest =
+        zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="comment">// Initialize the Guest Message encryptor for generating attestation reports and a unique
-        // device secret.
+        <span class="comment">// Initialize the Guest Message encryptor for generating attestation reports and
+        // a unique device secret.
         </span>sev::init_guest_message_encryptor().expect(<span class="string">&quot;couldn&#39;t initialize guest message encryptor&quot;</span>);
-        <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its contents.
+        <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its
+        // contents.
         </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
             oak_linux_boot_params::CCBlobSevInfo::new(
                 <span class="kw">unsafe </span>{ SEV_SECRETS.as_ptr() },
@@ -646,10 +638,8 @@
             ),
             <span class="kw-2">&amp;</span>BOOT_ALLOC,
         ));
-        <span class="kw">let </span>setup_data = Box::leak(Box::new_in(
-            oak_linux_boot_params::CCSetupData::new(cc_blob),
-            <span class="kw-2">&amp;</span>BOOT_ALLOC,
-        ));
+        <span class="kw">let </span>setup_data =
+            Box::leak(Box::new_in(oak_linux_boot_params::CCSetupData::new(cc_blob), <span class="kw-2">&amp;</span>BOOT_ALLOC));
 
         zero_page.add_setup_data(setup_data);
     }
@@ -661,10 +651,10 @@
         kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table()).unwrap_or_default();
     <span class="kw">let </span><span class="kw-2">mut </span>entry = kernel_info.entry;
 
-    <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
-    // the entry point address from there; if there is no valid ELF header at that address, assume
-    // it&#39;s code, and jump there directly.
-    // Safety: this assumes the kernel is loaded at the given address.
+    <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If
+    // it works, extract the entry point address from there; if there is no
+    // valid ELF header at that address, assume it&#39;s code, and jump there
+    // directly. Safety: this assumes the kernel is loaded at the given address.
     </span><span class="kw">let </span>header = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(entry.as_u64() <span class="kw">as </span><span class="kw-2">*const </span>elf::file::Elf64_Ehdr) };
     <span class="kw">if </span>header.e_ident[<span class="number">0</span>] == elf::abi::ELFMAG0
         &amp;&amp; header.e_ident[<span class="number">1</span>] == elf::abi::ELFMAG1
@@ -687,10 +677,7 @@
     acpi_sha2_256_digest[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
-        <span class="macro">log::warn!</span>(
-            <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
-            err
-        );
+        <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>, err);
     }
 
     <span class="comment">// Register the AP Jump Table, if required.
@@ -699,8 +686,8 @@
         </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
         <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
             <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don&#39;t care about the contents of the secrets page beyond writing our jump
-            // table address into it.
+            // Safety: we don&#39;t care about the contents of the secrets page beyond writing
+            // our jump table address into it.
             </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
             secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
         } <span class="kw">else </span>{
@@ -723,30 +710,12 @@
 
     <span class="kw">let </span>memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>,
-        hex::encode(kernel_info.measurement)
-    );
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Kernel setup data digest: sha2-256:{}&quot;</span>,
-        hex::encode(setup_data_sha2_256_digest)
-    );
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>,
-        hex::encode(cmdline_sha2_256_digest)
-    );
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Initial RAM disk digest: sha2-256:{}&quot;</span>,
-        hex::encode(ram_disk_sha2_256_digest)
-    );
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;ACPI table generation digest: sha2-256:{}&quot;</span>,
-        hex::encode(acpi_sha2_256_digest)
-    );
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;E820 table digest: sha2-256:{}&quot;</span>,
-        hex::encode(memory_map_sha2_256_digest)
-    );
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>, hex::encode(kernel_info.measurement));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: sha2-256:{}&quot;</span>, hex::encode(setup_data_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>, hex::encode(cmdline_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: sha2-256:{}&quot;</span>, hex::encode(ram_disk_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: sha2-256:{}&quot;</span>, hex::encode(acpi_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: sha2-256:{}&quot;</span>, hex::encode(memory_map_sha2_256_digest));
 
     <span class="kw">let </span>measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
@@ -782,8 +751,8 @@
     <span class="comment">// Append the DICE data address to the kernel command-line.
     </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">&quot;--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}&quot;</span>);
     <span class="kw">let </span>cmdline = <span class="kw">if </span>kernel_info.kernel_type == KernelType::Elf {
-        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don&#39;t append the
-        // extra parameter.
+        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don&#39;t
+        // append the extra parameter.
         </span>cmdline
     } <span class="kw">else if </span>cmdline.is_empty() {
         extra
@@ -796,8 +765,9 @@
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
-    <span class="comment">// Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
-    // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
+    <span class="comment">// Clean-ups we need to do just before we jump to the kernel proper: clean up
+    // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
+    // hugepage for the first 2M of memory.
     </span>drop(fwcfg);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
         sev::deinit_ghcb();
@@ -809,13 +779,13 @@
     }
 }
 
-<span class="doccomment">/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a panic_handler
-/// function in individual binary crates.
+<span class="doccomment">/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a
+/// panic_handler function in individual binary crates.
 </span><span class="kw">pub fn </span>panic(info: <span class="kw-2">&amp;</span>PanicInfo) -&gt; ! {
     <span class="macro">log::error!</span>(<span class="string">&quot;{}&quot;</span>, info);
 
-    <span class="comment">// Trigger a breakpoint exception. As we don&#39;t have a #BP handler, this will triple fault and
-    // terminate the program.
+    <span class="comment">// Trigger a breakpoint exception. As we don&#39;t have a #BP handler, this will
+    // triple fault and terminate the program.
     </span>int3();
 
     <span class="kw">loop </span>{

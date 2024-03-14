@@ -256,7 +256,6 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -310,8 +309,8 @@
 /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1020002&gt;.
 </span><span class="kw">const </span>PCI_DEVICE_ID: u16 = <span class="number">0x1040 </span>+ DEVICE_ID;
 
-<span class="doccomment">/// Simple driver implementation for a virtio serial/console device that only supports a single port
-/// and no configuration.
+<span class="doccomment">/// Simple driver implementation for a virtio serial/console device that only
+/// supports a single port and no configuration.
 ///
 /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010&gt;.
 </span><span class="kw">pub struct </span>Console&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
@@ -321,21 +320,22 @@
     </span>rx_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
     <span class="doccomment">/// The transmit queue, used for sending bytes.
     </span>tx_queue: DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
-    <span class="doccomment">/// A buffer to temporarily store extra data from the device that was not fully read when using
-    /// `read_all`. This could happen if the device sent more bytes in a single buffer than was
-    /// expected by `read_all`.
+    <span class="doccomment">/// A buffer to temporarily store extra data from the device that was not
+    /// fully read when using `read_all`. This could happen if the device
+    /// sent more bytes in a single buffer than was expected by `read_all`.
     </span>pending_data: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Allocator&gt; Console&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt; {
-    <span class="doccomment">/// Finds the virtio console PCI device, initialises the device, and configures the queues.
+    <span class="doccomment">/// Finds the virtio console PCI device, initialises the device, and
+    /// configures the queues.
     </span><span class="kw">pub fn </span>find_and_configure_device&lt;VP: Translator, PV: InverseTranslator&gt;(
         translate: VP,
         inverse: PV,
         alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
-        // the vendor ID and device ID.
+        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one
+        // that matches the vendor ID and device ID.
         </span><span class="kw">let </span>pci_device = find_device(<span class="kw">super</span>::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find a virtio console device&quot;</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>transport = VirtioPciTransport::new(pci_device);
@@ -350,14 +350,16 @@
 <span class="kw">where
     </span>T: VirtioTransport,
 {
-    <span class="doccomment">/// Reads the next available bytes from the receive queue, if any are available.
+    <span class="doccomment">/// Reads the next available bytes from the receive queue, if any are
+    /// available.
     </span><span class="kw">pub fn </span>read_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt; {
         <span class="kw">let </span>buffer = <span class="self">self</span>.rx_queue.read_next_used_buffer()<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>result = VecDeque::with_capacity(buffer.len());
         result.extend(buffer);
 
         <span class="kw">if </span><span class="self">self</span>.rx_queue.inner.must_notify_device() {
-            <span class="comment">// Notify the device that bytes have been read and the buffer is available again.
+            <span class="comment">// Notify the device that bytes have been read and the buffer is available
+            // again.
             </span><span class="self">self</span>.device.notify_queue(RX_QUEUE_ID);
         }
 
@@ -392,12 +394,7 @@
     <span class="kw">fn </span>new&lt;VP: Translator&gt;(device: VirtioBaseDevice&lt;T&gt;, translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>tx_queue = DriverWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
         <span class="kw">let </span>rx_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
-        Console {
-            device,
-            tx_queue,
-            rx_queue,
-            pending_data: <span class="prelude-val">None</span>,
-        }
+        Console { device, tx_queue, rx_queue, pending_data: <span class="prelude-val">None </span>}
     }
 
     <span class="doccomment">/// Initializes the device and configures the queues.
@@ -447,12 +444,13 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer (if data was left over from the previous read), or from the next
-    /// available buffer in the queue if there was no data in the pending buffer.
+    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer (if data was left over from
+    /// the previous read), or from the next available buffer in the queue
+    /// if there was no data in the pending buffer.
     ///
-    /// If data is read from the queue and not fully used the remainder is stored back into the
-    /// pending buffer.
+    /// If data is read from the queue and not fully used the remainder is
+    /// stored back into the pending buffer.
     ///
     /// Returns the number of bytes read if any data was available to read.
     </span><span class="kw">fn </span>read_partial(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dest: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
@@ -508,8 +506,8 @@
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// We always flush on write, so do nothing.
-        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on write, and
-        // provide an actual flush implementation here.
+        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on
+        // write, and provide an actual flush implementation here.
         </span><span class="prelude-val">Ok</span>(())
     }
 }

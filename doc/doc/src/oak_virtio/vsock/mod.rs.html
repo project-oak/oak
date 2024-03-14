@@ -270,6 +270,7 @@
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
 <a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -307,9 +308,9 @@
 
 <span class="doccomment">/// The number of buffer descriptors in each of the queues.
 ///
-/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets the number of
-/// descriptors to the maximum queue size rather than the negotiated size.
-/// See &lt;https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74&gt;.
+/// Note: We match the CrosVM max size for vhost vsock, as it seems CrosVM sets
+/// the number of descriptors to the maximum queue size rather than the
+/// negotiated size. See &lt;https://chromium.googlesource.com/chromiumos/platform/crosvm/+/d4505a7f1c9e4aa502ff49367863aedeadbafb9d/devices/src/virtio/vhost/worker.rs#74&gt;.
 </span><span class="kw">const </span>QUEUE_SIZE: usize = <span class="number">256</span>;
 
 <span class="doccomment">/// The size of each of the buffers used by the transmit and receive queues.
@@ -357,30 +358,32 @@
     </span>rx_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
     <span class="doccomment">/// The transmit queue.
     </span>tx_queue: DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
-    <span class="doccomment">/// The event queue used by the device to notify the driver that the guest CID has changed. We
-    /// ignore it for now as we don&#39;t support live migration, but it still must exist and be
-    /// configured.
+    <span class="doccomment">/// The event queue used by the device to notify the driver that the guest
+    /// CID has changed. We ignore it for now as we don&#39;t support live
+    /// migration, but it still must exist and be configured.
     </span>event_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, EVENT_BUFFER_SIZE, A&gt;,
     <span class="doccomment">/// The the CID assigned to this VM.
     </span>guest_cid: u64,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Allocator&gt; VSock&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt; {
-    <span class="doccomment">/// Finds the virtio vsock PCI device, initialises the device, and configures the queues.
+    <span class="doccomment">/// Finds the virtio vsock PCI device, initialises the device, and
+    /// configures the queues.
     </span><span class="kw">pub fn </span>find_and_configure_device&lt;VP: Translator, PV: InverseTranslator&gt;(
         translate: VP,
         inverse: PV,
         alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
-        // the vendor ID and device ID.
+        <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one
+        // that matches the vendor ID and device ID.
         </span><span class="kw">let </span>pci_device = find_device(<span class="kw">super</span>::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find a virtio vsock device&quot;</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>transport = VirtioPciTransport::new(pci_device);
         <span class="kw">let </span>device = VirtioBaseDevice::new(transport);
         <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new(device, <span class="kw-2">&amp;</span>translate, alloc);
         result.init(translate, inverse)<span class="question-mark">?</span>;
-        <span class="comment">// Let the device know there are available buffers in the receiver and event queues.
+        <span class="comment">// Let the device know there are available buffers in the receiver and event
+        // queues.
         </span>result.device.notify_queue(RX_QUEUE_ID);
         result.device.notify_queue(EVENT_QUEUE_ID);
         <span class="prelude-val">Ok</span>(result)
@@ -396,7 +399,8 @@
         <span class="kw">loop </span>{
             <span class="kw">let </span>buffer = <span class="self">self</span>.rx_queue.read_next_used_buffer()<span class="question-mark">?</span>;
             <span class="kw">if </span><span class="self">self</span>.rx_queue.inner.must_notify_device() {
-                <span class="comment">// Notify the device that a packet has been read and the buffer is available again.
+                <span class="comment">// Notify the device that a packet has been read and the buffer is available
+                // again.
                 </span><span class="self">self</span>.device.notify_queue(RX_QUEUE_ID);
             }
             <span class="comment">// Silently drop packets where the CIDs don&#39;t match.
@@ -408,14 +412,16 @@
         }
     }
 
-    <span class="doccomment">/// Reads the next valid packet that matches the filter, if one is available.
+    <span class="doccomment">/// Reads the next valid packet that matches the filter, if one is
+    /// available.
     ///
-    /// If invalid packets are found it will continue reading until a valid one is found, or no more
-    /// packets are available to read.
+    /// If invalid packets are found it will continue reading until a valid one
+    /// is found, or no more packets are available to read.
     ///
-    /// If `reset_unmatched` is true we send RST packets in response to unmatched packets to notify
-    /// the host that the packets are not part of a valid connected socket (e.g. unexpected source
-    /// or destintation ports) and any related connections on the host should be disconnected.
+    /// If `reset_unmatched` is true we send RST packets in response to
+    /// unmatched packets to notify the host that the packets are not part
+    /// of a valid connected socket (e.g. unexpected source or destintation
+    /// ports) and any related connections on the host should be disconnected.
     </span><span class="kw">pub fn </span>read_filtered_packet&lt;F: Fn(<span class="kw-2">&amp;</span>Packet) -&gt; bool&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         filter: F,
@@ -457,13 +463,7 @@
         <span class="kw">let </span>tx_queue = DriverWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
         <span class="kw">let </span>rx_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
         <span class="kw">let </span>event_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
-        VSock {
-            device,
-            tx_queue,
-            rx_queue,
-            event_queue,
-            guest_cid: Default::default(),
-        }
+        VSock { device, tx_queue, rx_queue, event_queue, guest_cid: Default::default() }
     }
 
     <span class="doccomment">/// Initializes the device and configures the queues.
@@ -476,9 +476,10 @@
             .start_init(DEVICE_ID <span class="kw">as </span>u32, inverse)
             .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;virtio error: {:?}&quot;</span>, error))
             .context(<span class="string">&quot;couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
-        <span class="comment">// We have to configure the event queue before the receive queue, otherwise the event
-        // queue&#39;s configuration interferes with the receiver queue. This seems to be related to
-        // something specific in the Linux kernel vhost vsock implementation.
+        <span class="comment">// We have to configure the event queue before the receive queue, otherwise the
+        // event queue&#39;s configuration interferes with the receiver queue. This
+        // seems to be related to something specific in the Linux kernel vhost
+        // vsock implementation.
         </span><span class="self">self</span>.device
             .configure_queue(
                 EVENT_QUEUE_ID,
@@ -523,17 +524,18 @@
             .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;device activation error: {:?}&quot;</span>, error))
             .context(<span class="string">&quot;couldn&#39;t activate the PCI device&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Read the guest CID from the PCI config. The upper 32 bits must be 0, so we only read the
-        // lower 32 bits.
+        <span class="comment">// Read the guest CID from the PCI config. The upper 32 bits must be 0, so we
+        // only read the lower 32 bits.
         </span><span class="self">self</span>.guest_cid = <span class="self">self</span>.device.get_config(CID_CONFIG_OFFSET) <span class="kw">as </span>u64;
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Sends a vsock RST packet indicating that a socket is disconnected, or must be forcibly
-    /// disconnected.
+    <span class="doccomment">/// Sends a vsock RST packet indicating that a socket is disconnected, or
+    /// must be forcibly disconnected.
     ///
-    /// This is typically done in response to a packet with unexpected source or destination ports,
-    /// an invalid op for the connection state, or to confirm that a socket has been diconnected.
+    /// This is typically done in response to a packet with unexpected source or
+    /// destination ports, an invalid op for the connection state, or to
+    /// confirm that a socket has been diconnected.
     </span><span class="kw">fn </span>send_rst_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, host_port: u32, local_port: u32) {
         <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(local_port, host_port, VSockOp::Rst).unwrap();
         <span class="self">self</span>.write_packet(<span class="kw-2">&amp;mut </span>packet);

@@ -175,11 +175,6 @@
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -196,10 +191,10 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This crate contains the logic used by oak_restricted_kernel to create attestations. It is broken
-//! out into a separate crate to allow this logic to be used independently used in tests to create
-//! mock attestations, without also pulling in oak_restricted_kernel&#39;s allocator, which breaks
-//! tests.
+</span><span class="doccomment">//! This crate contains the logic used by oak_restricted_kernel to create
+//! attestations. It is broken out into a separate crate to allow this logic to
+//! be used independently used in tests to create mock attestations, without
+//! also pulling in oak_restricted_kernel&#39;s allocator, which breaks tests.
 
 </span><span class="attr">#![no_std]
 
@@ -233,8 +228,7 @@
     <span class="comment">// Mix in the application digest when deriving CDI for Layer 2.
     </span><span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(app_digest), <span class="kw-2">&amp;</span>stage0_dice_data.layer_1_cdi.cdi[..]);
     <span class="kw">let </span><span class="kw-2">mut </span>derived_key = DerivedKey::default();
-    hkdf.expand(<span class="string">b&quot;CDI_Seal&quot;</span>, <span class="kw-2">&amp;mut </span>derived_key)
-        .expect(<span class="string">&quot;invalid length for derived key&quot;</span>);
+    hkdf.expand(<span class="string">b&quot;CDI_Seal&quot;</span>, <span class="kw-2">&amp;mut </span>derived_key).expect(<span class="string">&quot;invalid length for derived key&quot;</span>);
     derived_key
 }
 
@@ -255,9 +249,8 @@
         oak_dice::evidence::ApplicationPrivateKeys,
     ) = {
         <span class="kw">let </span>kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
-            <span class="kw-2">&amp;</span>stage0_dice_data
-                .layer_1_certificate_authority
-                .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
+            <span class="kw-2">&amp;</span>stage0_dice_data.layer_1_certificate_authority.eca_private_key
+                [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
         )
         .expect(<span class="string">&quot;failed to parse the layer1 ECDSA private key bytes&quot;</span>);
 
@@ -357,9 +350,6 @@
         application_keys,
     };
 
-    oak_dice::evidence::RestrictedKernelDiceData {
-        evidence,
-        application_private_keys,
-    }
+    oak_dice::evidence::RestrictedKernelDiceData { evidence, application_private_keys }
 }
 </code></pre></div></section></main></body></html>

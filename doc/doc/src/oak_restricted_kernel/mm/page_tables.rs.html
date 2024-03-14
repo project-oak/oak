@@ -317,6 +317,13 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -355,8 +362,9 @@
 ///
 /// ## Safety
 ///
-/// There are many ways you can cause memory safety errors and undefined behaviour when creating
-/// page mappings. See &lt;Mapper::map_to_with_table_flags&gt; for examples.
+/// There are many ways you can cause memory safety errors and undefined
+/// behaviour when creating page mappings. See &lt;Mapper::map_to_with_table_flags&gt;
+/// for examples.
 </span><span class="kw">pub unsafe fn </span>create_offset_map&lt;S: PageSize, M: Mapper&lt;S&gt;&gt;(
     range: PhysFrameRange&lt;S&gt;,
     offset: VirtAddr,
@@ -364,10 +372,11 @@
     mapper: <span class="kw-2">&amp;mut </span>M,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), MapToError&lt;S&gt;&gt; {
     <span class="kw">for </span>(i, frame) <span class="kw">in </span>range.enumerate() {
-        <span class="comment">// We don&#39;t set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel and AMD CPUs
-        // behave differently (Intel ignores the `G` bit in parent page table entries, AMD ignores
-        // it in lower entries _except_ PML4 and PML5); the `G` bit has semantic meaning only in the
-        // lowest level of page tables.
+        <span class="comment">// We don&#39;t set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel
+        // and AMD CPUs behave differently (Intel ignores the `G` bit in parent
+        // page table entries, AMD ignores it in lower entries _except_ PML4 and
+        // PML5); the `G` bit has semantic meaning only in the lowest level of
+        // page tables.
         </span>mapper
             .map_to_with_table_flags(
                 Page::&lt;S&gt;::from_start_address(offset + i * (S::SIZE <span class="kw">as </span>usize)).unwrap(),
@@ -380,29 +389,35 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Maps the kernel memory ranges (ie. vaddr in last 2GB of memory), respecting section permissions.
+<span class="doccomment">/// Maps the kernel memory ranges (ie. vaddr in last 2GB of memory), respecting
+/// section permissions.
 ///
-/// Strictly speaking there&#39;s nothing int he ELF file that _requires_ sections to be page-aligned.
-/// It&#39;s entirely possible to have a section with write privileges and a section with execute
-/// privileges be on the same 4K page -- which would defeat the purpose of restricting the
-/// permissions, as we&#39;d have to go for the lowest common denominator and mark the pages both
-/// writable and executable.
-/// For now, calling this function fails if there is any overlap when using 4K pages.
+/// Strictly speaking there&#39;s nothing int he ELF file that _requires_ sections
+/// to be page-aligned. It&#39;s entirely possible to have a section with write
+/// privileges and a section with execute privileges be on the same 4K page --
+/// which would defeat the purpose of restricting the permissions, as we&#39;d have
+/// to go for the lowest common denominator and mark the pages both writable and
+/// executable. For now, calling this function fails if there is any overlap
+/// when using 4K pages.
 ///
-/// We also create mappings only for sections with vaddr above 0xFFFF_FFFF_8000_0000, that is, for
-/// the memory range where the kernel code should lie.
+/// We also create mappings only for sections with vaddr above
+/// 0xFFFF_FFFF_8000_0000, that is, for the memory range where the kernel code
+/// should lie.
 ///
-/// The mappings we create respect the `PF_W` and `PF_X` flags; there&#39;s no way how to map a page as
-/// not readable (but still writable or executable), so `PF_R` is ignored.
+/// The mappings we create respect the `PF_W` and `PF_X` flags; there&#39;s no way
+/// how to map a page as not readable (but still writable or executable), so
+/// `PF_R` is ignored.
 ///
-/// Note that even if this function returns an error, the page map may have been partially updated.
+/// Note that even if this function returns an error, the page map may have been
+/// partially updated.
 ///
 /// # Safety
-/// There are many ways you can cause memory safety errors and undefined behaviour when creating
-/// page mappings. See &lt;Mapper::map_to_with_table_flags&gt; for examples.
+/// There are many ways you can cause memory safety errors and undefined
+/// behaviour when creating page mappings. See &lt;Mapper::map_to_with_table_flags&gt;
+/// for examples.
 ///
-/// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page tables created by
-/// this function.
+/// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page
+/// tables created by this function.
 </span><span class="kw">pub unsafe fn </span>create_kernel_map&lt;M: Mapper&lt;Size2MiB&gt; + Mapper&lt;Size4KiB&gt;&gt;(
     program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
     mapper: <span class="kw-2">&amp;mut </span>M,
@@ -454,20 +469,19 @@
         offset: VirtAddr,
         encryption: MemoryEncryption,
     ) -&gt; <span class="self">Self </span>{
-        RootPageTable {
-            inner: EncryptedPageTable::new(pml4, offset, encryption),
-        }
+        RootPageTable { inner: EncryptedPageTable::new(pml4, offset, encryption) }
     }
     <span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt; {
         <span class="self">self</span>.inner
     }
     <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
     ///
-    /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
-    /// range, as the mappings may be done with a smaller page size.
+    /// Even though the pages may be of arbitrary size, we check all
+    /// 4KiB-aligned addresses in the range, as the mappings may be done
+    /// with a smaller page size.
     ///
-    /// If we find an address with a valid mapping, we return the page which contains a valid
-    /// mapping.
+    /// If we find an address with a valid mapping, we return the page which
+    /// contains a valid mapping.
     </span><span class="kw">pub fn </span>is_unallocated&lt;S: PageSize&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, range: PageRange&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Page&lt;S&gt;&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(item) = Page::&lt;Size4KiB&gt;::range(
             Page::containing_address(range.start.start_address()),
@@ -490,15 +504,16 @@
     ///   - count: number of pages to allocate
     ///
     /// Returns:
-    /// The range of unallocated pages, if there was a big enough unallocated gap in the virtual
-    /// address space. The range may start at exactly `start`.
+    /// The range of unallocated pages, if there was a big enough unallocated
+    /// gap in the virtual address space. The range may start at exactly
+    /// `start`.
     </span><span class="kw">pub fn </span>find_unallocated_pages&lt;S: PageSize&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>start: Page&lt;S&gt;,
         count: usize,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;PageRange&lt;S&gt;&gt; {
-        <span class="comment">// This is highly inefficient, but it should be called rarely enough that it doesn&#39;t matter
-        // (famous last words...)
+        <span class="comment">// This is highly inefficient, but it should be called rarely enough that it
+        // doesn&#39;t matter (famous last words...)
         // We assume virtual addresses are 48 bits, with the gap in the middle.
         </span><span class="kw">let </span>limit = Page::containing_address(<span class="kw">if </span>start.start_address().as_u64() &lt; u64::pow(<span class="number">2</span>, <span class="number">47</span>) {
             VirtAddr::new(u64::pow(<span class="number">2</span>, <span class="number">47</span>) - <span class="number">1</span>)
@@ -508,8 +523,8 @@
         <span class="kw">while </span>start &lt; limit {
             <span class="kw">let </span>range = Page::range(start, start + count <span class="kw">as </span>u64);
 
-            <span class="comment">// If it turns out something in that range was allocated, we move forward to the page
-            // after that and try again.
+            <span class="comment">// If it turns out something in that range was allocated, we move forward to the
+            // page after that and try again.
             </span><span class="kw">match </span><span class="self">self</span>.is_unallocated(range) {
                 <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">return </span><span class="prelude-val">Some</span>(range),
                 <span class="prelude-val">Err</span>(page) =&gt; start = page + <span class="number">1</span>,
@@ -529,8 +544,7 @@
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;Size4KiB&gt;, MapToError&lt;Size4KiB&gt;&gt; {
-        <span class="self">self</span>.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        <span class="self">self</span>.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     <span class="kw">unsafe fn </span>unmap(
@@ -557,8 +571,7 @@
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;Size2MiB&gt;, MapToError&lt;Size2MiB&gt;&gt; {
-        <span class="self">self</span>.inner
-            .map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        <span class="self">self</span>.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
     }
 
     <span class="kw">unsafe fn </span>unmap(
@@ -603,7 +616,8 @@
 
     <span class="doccomment">/// Replaces the current pagetable with the parameter, returning the old
     /// pagetable if there was one. Updates the page table on the CPU level.
-    /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
+    /// Safety: The new page tables must keep the identity mapping at -2GB
+    /// (kernel space) intact.
     </span><span class="kw">pub unsafe fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pml4_frame: PhysFrame) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
         <span class="comment">// This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
@@ -611,8 +625,8 @@
             Cr3::write(pml4_frame, Cr3Flags::empty());
         };
 
-        <span class="comment">// Safety: we&#39;ve reloaded page tables that place the direct mapping region at that offset,
-        // so the memory location is safe to access now.
+        <span class="comment">// Safety: we&#39;ve reloaded page tables that place the direct mapping region at
+        // that offset, so the memory location is safe to access now.
         </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{
             <span class="kw-2">&amp;mut *</span>(<span class="kw">super</span>::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
         };

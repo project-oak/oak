@@ -174,15 +174,6 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -232,10 +223,7 @@
 
 <span class="doccomment">/// See [`StdWasmApiClient::read_request`].
 </span><span class="kw">pub fn </span>read_request() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
-    client()
-        .read_request(<span class="kw-2">&amp;</span>ReadRequestRequest {})
-        .flatten()
-        .map(|ReadRequestResponse { body }| body)
+    client().read_request(<span class="kw-2">&amp;</span>ReadRequestRequest {}).flatten().map(|ReadRequestResponse { body }| body)
 }
 
 <span class="doccomment">/// See [`StdWasmApiClient::write_response`].
@@ -272,19 +260,13 @@
 }
 
 <span class="kw">fn </span>bytes_value_to_option(b: BytesValue) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">if </span>b.found {
-        <span class="prelude-val">Some</span>(b.value)
-    } <span class="kw">else </span>{
-        <span class="prelude-val">None
-    </span>}
+    <span class="kw">if </span>b.found { <span class="prelude-val">Some</span>(b.value) } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
 }
 
 <span class="doccomment">/// See [`StdWasmApiClient::log`].
 </span><span class="kw">pub fn </span>write_log_message&lt;T: AsRef&lt;str&gt;&gt;(message: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), Status&gt; {
     client()
-        .log(<span class="kw-2">&amp;</span>LogRequest {
-            message: message.as_ref().to_string(),
-        })
+        .log(<span class="kw-2">&amp;</span>LogRequest { message: message.as_ref().to_string() })
         .flatten()
         .map(|LogResponse {}| ())
 }
@@ -292,10 +274,7 @@
 <span class="doccomment">/// See [`StdWasmApiClient::test`].
 </span><span class="kw">pub fn </span>testing(request: <span class="kw-2">&amp;</span>[u8], echo: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
     client()
-        .test(<span class="kw-2">&amp;</span>TestRequest {
-            body: request.to_vec(),
-            echo,
-        })
+        .test(<span class="kw-2">&amp;</span>TestRequest { body: request.to_vec(), echo })
         .flatten()
         .map(|TestResponse { body }| body)
 }
@@ -324,8 +303,8 @@
 
 <span class="doccomment">/// Logs a debug message.
 ///
-/// These log messages are considered sensitive, so will only be logged by the runtime if the
-/// `oak_unsafe` feature is enabled.
+/// These log messages are considered sensitive, so will only be logged by the
+/// runtime if the `oak_unsafe` feature is enabled.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>log {
     ($(<span class="macro-nonterminal">$arg</span>:tt)+) =&gt; {
@@ -333,9 +312,11 @@
     }
 }
 
-<span class="doccomment">/// A wrapper around the `invoke` function that implements the [`micro_rpc::Transport`] trait.
+<span class="doccomment">/// A wrapper around the `invoke` function that implements the
+/// [`micro_rpc::Transport`] trait.
 ///
-/// This object is stateless, so it can be created and discarded for each invocation.
+/// This object is stateless, so it can be created and discarded for each
+/// invocation.
 </span><span class="kw">struct </span>Transport;
 
 <span class="kw">impl </span>micro_rpc::Transport <span class="kw">for </span>Transport {
@@ -356,15 +337,16 @@
     <span class="comment">// Create a new mutable buffer with capacity `len`.
     </span><span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::with_capacity(len <span class="kw">as </span>usize);
     <span class="kw">let </span>ptr = buf.as_mut_ptr();
-    <span class="comment">// Take ownership of the buffer and ensure that it is not freed at the end of this function.
+    <span class="comment">// Take ownership of the buffer and ensure that it is not freed at the end of
+    // this function.
     </span>core::mem::forget(buf);
     <span class="comment">// Return the pointer so the runtime can write data at this address.
     </span>ptr
 }
 
-<span class="doccomment">/// Convenience method to reconstruct an owned `Vec&lt;u8&gt;` from the raw parts (address and size)
-/// returned as part of an ABI method invocation that relies on the `alloc` method to allocate the
-/// buffer.
+<span class="doccomment">/// Convenience method to reconstruct an owned `Vec&lt;u8&gt;` from the raw parts
+/// (address and size) returned as part of an ABI method invocation that relies
+/// on the `alloc` method to allocate the buffer.
 </span><span class="kw">fn </span>from_alloc_buffer(buf_ptr: <span class="kw-2">*mut </span>u8, buf_len: usize) -&gt; Vec&lt;u8&gt; {
     <span class="kw">unsafe </span>{ Vec::from_raw_parts(buf_ptr, buf_len, buf_len) }
 }

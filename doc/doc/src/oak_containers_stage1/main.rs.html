@@ -159,49 +159,6 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -264,44 +221,22 @@
     <span class="kw">if </span>!Path::new(<span class="string">&quot;/dev&quot;</span>).try_exists()<span class="question-mark">? </span>{
         create_dir(<span class="string">&quot;/dev&quot;</span>).context(<span class="string">&quot;error creating /dev&quot;</span>)<span class="question-mark">?</span>;
     }
-    mount(
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-        <span class="string">&quot;/dev&quot;</span>,
-        <span class="prelude-val">Some</span>(<span class="string">&quot;devtmpfs&quot;</span>),
-        MsFlags::empty(),
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-    )
-    .context(<span class="string">&quot;error mounting /dev&quot;</span>)<span class="question-mark">?</span>;
+    mount(<span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="string">&quot;/dev&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;devtmpfs&quot;</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
+        .context(<span class="string">&quot;error mounting /dev&quot;</span>)<span class="question-mark">?</span>;
 
-    Command::new(<span class="string">&quot;/mke2fs&quot;</span>)
-        .args([<span class="string">&quot;/dev/ram0&quot;</span>])
-        .spawn()<span class="question-mark">?
-        </span>.wait()
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+    Command::new(<span class="string">&quot;/mke2fs&quot;</span>).args([<span class="string">&quot;/dev/ram0&quot;</span>]).spawn()<span class="question-mark">?</span>.wait().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">if </span>!Path::new(<span class="string">&quot;/rootfs&quot;</span>).try_exists()<span class="question-mark">? </span>{
         create_dir(<span class="string">&quot;/rootfs&quot;</span>).context(<span class="string">&quot;error creating /rootfs&quot;</span>)<span class="question-mark">?</span>;
     }
-    mount(
-        <span class="prelude-val">Some</span>(<span class="string">&quot;/dev/ram0&quot;</span>),
-        <span class="string">&quot;/rootfs&quot;</span>,
-        <span class="prelude-val">Some</span>(<span class="string">&quot;ext4&quot;</span>),
-        MsFlags::empty(),
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-    )
-    .context(<span class="string">&quot;error mounting ramdrive to /rootfs&quot;</span>)<span class="question-mark">?</span>;
+    mount(<span class="prelude-val">Some</span>(<span class="string">&quot;/dev/ram0&quot;</span>), <span class="string">&quot;/rootfs&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;ext4&quot;</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
+        .context(<span class="string">&quot;error mounting ramdrive to /rootfs&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Mount /sys so that we can read the memory map.
     </span><span class="kw">if </span>!Path::new(<span class="string">&quot;/sys&quot;</span>).try_exists()<span class="question-mark">? </span>{
         create_dir(<span class="string">&quot;/sys&quot;</span>).context(<span class="string">&quot;error creating /sys&quot;</span>)<span class="question-mark">?</span>;
     }
-    mount(
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-        <span class="string">&quot;/sys&quot;</span>,
-        <span class="prelude-val">Some</span>(<span class="string">&quot;sysfs&quot;</span>),
-        MsFlags::empty(),
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-    )
-    .context(<span class="string">&quot;error mounting /sys&quot;</span>)<span class="question-mark">?</span>;
+    mount(<span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="string">&quot;/sys&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;sysfs&quot;</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
+        .context(<span class="string">&quot;error mounting /sys&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_dice_data(args.dice_addr)<span class="question-mark">?</span>;
 
@@ -311,14 +246,8 @@
 
     <span class="comment">// switch_root(8) magic
     </span>chdir(<span class="string">&quot;/rootfs&quot;</span>).context(<span class="string">&quot;failed to chdir to /rootfs&quot;</span>)<span class="question-mark">?</span>;
-    mount(
-        <span class="prelude-val">Some</span>(<span class="string">&quot;/rootfs&quot;</span>),
-        <span class="string">&quot;/&quot;</span>,
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-        MsFlags::MS_MOVE,
-        <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-    )
-    .context(<span class="string">&quot;failed to move /rootfs to /&quot;</span>)<span class="question-mark">?</span>;
+    mount(<span class="prelude-val">Some</span>(<span class="string">&quot;/rootfs&quot;</span>), <span class="string">&quot;/&quot;</span>, <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, MsFlags::MS_MOVE, <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
+        .context(<span class="string">&quot;failed to move /rootfs to /&quot;</span>)<span class="question-mark">?</span>;
     chroot(<span class="string">&quot;.&quot;</span>).context(<span class="string">&quot;failed to chroot to .&quot;</span>)<span class="question-mark">?</span>;
     chdir(<span class="string">&quot;/&quot;</span>).context(<span class="string">&quot;failed to chdir to /&quot;</span>)<span class="question-mark">?</span>;
 
@@ -326,37 +255,33 @@
         .<span class="kw">await
         </span>.context(<span class="string">&quot;error creating the launcher client&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>buf = client
-        .get_oak_system_image()
-        .<span class="kw">await
-        </span>.context(<span class="string">&quot;error fetching system image&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>buf = client.get_oak_system_image().<span class="kw">await</span>.context(<span class="string">&quot;error fetching system image&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>system_image_claims = dice::measure_system_image(<span class="kw-2">&amp;</span>buf);
 
-    <span class="comment">// For safety we generate the DICE data for the next layer before processing the compressed
-    // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided
-    // by Stage 0.
+    <span class="comment">// For safety we generate the DICE data for the next layer before processing the
+    // compressed system image. This consumes the `DiceBuilder` which also
+    // clears the ECA private key provided by Stage 0.
     </span>dice_builder.add_layer(system_image_claims)<span class="question-mark">?</span>;
     <span class="kw">let </span>dice_data: DiceData = dice_builder.serialize();
 
-    image::extract(<span class="kw-2">&amp;</span>buf, Path::new(<span class="string">&quot;/&quot;</span>))
-        .<span class="kw">await
-        </span>.context(<span class="string">&quot;error loading the system image&quot;</span>)<span class="question-mark">?</span>;
+    image::extract(<span class="kw-2">&amp;</span>buf, Path::new(<span class="string">&quot;/&quot;</span>)).<span class="kw">await</span>.context(<span class="string">&quot;error loading the system image&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// If the image didn&#39;t contain a `/etc/machine-id` file, create a placeholder one that systemd
-    // will replace during startup. If you don&#39;t have that file at all, `systemd-machine-id-setup`
-    // unit will fail.
+    <span class="comment">// If the image didn&#39;t contain a `/etc/machine-id` file, create a placeholder
+    // one that systemd will replace during startup. If you don&#39;t have that file
+    // at all, `systemd-machine-id-setup` unit will fail.
     </span><span class="kw">if </span>!Path::new(<span class="string">&quot;/etc/machine-id&quot;</span>).exists() {
         fs::write(<span class="string">&quot;/etc/machine-id&quot;</span>, []).context(<span class="string">&quot;error writing placeholder /etc/machine-id&quot;</span>)<span class="question-mark">?</span>;
     }
 
-    <span class="comment">// Write the DICE data to a well-known location as a length-delimited protobuf file.
+    <span class="comment">// Write the DICE data to a well-known location as a length-delimited protobuf
+    // file.
     </span>create_dir(<span class="string">&quot;/oak&quot;</span>).context(<span class="string">&quot;error creating `oak` directory&quot;</span>)<span class="question-mark">?</span>;
     fs::write(<span class="string">&quot;/oak/dice&quot;</span>, dice_data.encode_length_delimited_to_vec())
         .context(<span class="string">&quot;error writing DICE data&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
-    // has an IP address.
+    <span class="comment">// Configure eth0 down, as systemd will want to manage it itself and gets
+    // confused if it already has an IP address.
     </span>{
         <span class="kw">let </span>(connection, handle, <span class="kw">_</span>) =
             rtnetlink::new_connection().context(<span class="string">&quot;error opening netlink connection&quot;</span>)<span class="question-mark">?</span>;
@@ -367,27 +292,16 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(link) = links.try_next().<span class="kw">await</span><span class="question-mark">? </span>{
             <span class="comment">// `ip link set dev $INDEX down`
-            </span>handle
-                .link()
-                .set(link.header.index)
-                .down()
-                .execute()
-                .<span class="kw">await</span><span class="question-mark">?</span>;
+            </span>handle.link().set(link.header.index).down().execute().<span class="kw">await</span><span class="question-mark">?</span>;
         } <span class="kw">else </span>{
             <span class="macro">println!</span>(<span class="string">&quot;warning: eth0 not found&quot;</span>);
         }
     }
 
-    <span class="comment">// We&#39;re not running under Docker, so if the system image has a lingering `/.dockerenv` in it,
-    // remove it.
+    <span class="comment">// We&#39;re not running under Docker, so if the system image has a lingering
+    // `/.dockerenv` in it, remove it.
     </span>fs::remove_file(<span class="string">&quot;/.dockerenv&quot;</span>)
-        .or_else(|err| {
-            <span class="kw">if </span>err.kind() == ErrorKind::NotFound {
-                <span class="prelude-val">Ok</span>(())
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Err</span>(err)
-            }
-        })
+        .or_else(|err| <span class="kw">if </span>err.kind() == ErrorKind::NotFound { <span class="prelude-val">Ok</span>(()) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(err) })
         .context(<span class="string">&quot;error removing `/.dockerenv`&quot;</span>)<span class="question-mark">?</span>;
 
     image::switch(<span class="kw-2">&amp;</span>args.init).context(<span class="string">&quot;error switching to the system image&quot;</span>)<span class="question-mark">?
@@ -395,8 +309,8 @@
 
 <span class="doccomment">/// Tries to parse a string slice as an address.
 ///
-/// Assumes that the address is a hexadecimal representation if it starts with &quot;0x&quot;, or decimal
-/// otherwise.
+/// Assumes that the address is a hexadecimal representation if it starts with
+/// &quot;0x&quot;, or decimal otherwise.
 </span><span class="kw">fn </span>try_parse_phys_addr(arg: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;PhysAddr&gt; {
     <span class="kw">let </span>address = <span class="kw">if </span>arg.starts_with(<span class="string">&quot;0x&quot;</span>) {
         u64::from_str_radix(arg.strip_prefix(<span class="string">&quot;0x&quot;</span>).unwrap(), <span class="number">16</span>)

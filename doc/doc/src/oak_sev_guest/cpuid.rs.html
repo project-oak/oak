@@ -123,12 +123,6 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -145,8 +139,9 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This module contains structs that can be used to interpret the contents of the CPUID page that
-//! is provisioned into the VM guest memory during SEV-SNP startup.
+</span><span class="doccomment">//! This module contains structs that can be used to interpret the contents of
+//! the CPUID page that is provisioned into the VM guest memory during SEV-SNP
+//! startup.
 
 </span><span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
 
@@ -178,16 +173,18 @@
 </span><span class="kw">pub struct </span>CpuidInput {
     <span class="doccomment">/// The input value of the EAX register, which represents the CPUID leaf.
     </span><span class="kw">pub </span>eax: u32,
-    <span class="doccomment">/// The input value of the ECX register, which represents the CPUID sub-leaf.
+    <span class="doccomment">/// The input value of the ECX register, which represents the CPUID
+    /// sub-leaf.
     </span><span class="kw">pub </span>ecx: u32,
     <span class="doccomment">/// The input value of the XCR0 extended control register.
     ///
-    /// Only required when a request for CPUID 0x0000_000D is made. Must be zero otherwise.
+    /// Only required when a request for CPUID 0x0000_000D is made. Must be zero
+    /// otherwise.
     </span><span class="kw">pub </span>xcr0: u64,
     <span class="doccomment">/// The value of the IA32_XSS model-specific register.
     ///
-    /// Only required when a request for CPUID 0x0000_000D is made and the guest supports the XSS
-    /// MSR. Must be zero otherwise.
+    /// Only required when a request for CPUID 0x0000_000D is made and the guest
+    /// supports the XSS MSR. Must be zero otherwise.
     </span><span class="kw">pub </span>xss: u64,
 }
 
@@ -197,22 +194,13 @@
         <span class="kw">let </span>ecx = value.rcx <span class="kw">as </span>u32;
         <span class="comment">// We only set the value of XCR0 for CPUID 0x0000_000D.
         // See table 6 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-        </span><span class="kw">let </span>xcr0 = <span class="kw">if </span>eax == <span class="number">0xD </span>{
-            x86_64::registers::xcontrol::XCr0::read_raw()
-        } <span class="kw">else </span>{
-            <span class="number">0
-        </span>};
-        <span class="comment">// We ignore XSS for now and always set it to 0, as it is only relevant for CPUID
-        // 0x0000_000D, if the guest supports the IA32_XSS MSR and the guest uses XSAVES and
-        // XRSTORS.
+        </span><span class="kw">let </span>xcr0 = <span class="kw">if </span>eax == <span class="number">0xD </span>{ x86_64::registers::xcontrol::XCr0::read_raw() } <span class="kw">else </span>{ <span class="number">0 </span>};
+        <span class="comment">// We ignore XSS for now and always set it to 0, as it is only relevant for
+        // CPUID 0x0000_000D, if the guest supports the IA32_XSS MSR and the
+        // guest uses XSAVES and XRSTORS.
         </span><span class="kw">let </span>xss = <span class="number">0</span>;
 
-        <span class="self">Self </span>{
-            eax,
-            ecx,
-            xcr0,
-            xss,
-        }
+        <span class="self">Self </span>{ eax, ecx, xcr0, xss }
     }
 }
 
@@ -236,8 +224,8 @@
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 #[derive(Debug, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>CpuidPage {
-    <span class="doccomment">/// The number of CPUID function results included in the page. Must not be greater than
-    /// `CPUID_COUNT_MAX`.
+    <span class="doccomment">/// The number of CPUID function results included in the page. Must not be
+    /// greater than `CPUID_COUNT_MAX`.
     </span><span class="kw">pub </span>count: u32,
     <span class="doccomment">/// Reserved. Must be 0.
     </span>_reserved: [u8; <span class="number">12</span>],
@@ -248,8 +236,8 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(CpuidPage, [u8; CPUID_PAGE_SIZE]);
 
 <span class="kw">impl </span>CpuidPage {
-    <span class="doccomment">/// Checks that the count is less than the maximum allowed count and that the reserved bytes are
-    /// all zero.
+    <span class="doccomment">/// Checks that the count is less than the maximum allowed count and that
+    /// the reserved bytes are all zero.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.count <span class="kw">as </span>usize &gt; CPUID_COUNT_MAX {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid count&quot;</span>);

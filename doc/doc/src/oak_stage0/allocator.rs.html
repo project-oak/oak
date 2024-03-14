@@ -171,15 +171,6 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -214,35 +205,32 @@
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; Inner&lt;N&gt; {
     <span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            index: AtomicUsize::new(<span class="number">0</span>),
-            storage: MaybeUninit::uninit(),
-        }
+        <span class="self">Self </span>{ index: AtomicUsize::new(<span class="number">0</span>), storage: MaybeUninit::uninit() }
     }
 }
 
 <span class="doccomment">/// Basic bump allocator that never deallocates memory.
 ///
-/// The algorithm is rather simple: we maintain an index into the buffer we hold, that marks the
-/// high water mark (already allocated memory). Whenever a request for memory comes in, me move the
-/// index forward by the padding necessary to maintain proper alignment for the structure plus the
+/// The algorithm is rather simple: we maintain an index into the buffer we
+/// hold, that marks the high water mark (already allocated memory). Whenever a
+/// request for memory comes in, me move the index forward by the padding
+/// necessary to maintain proper alignment for the structure plus the
 /// size of the structure.
 ///
-/// We do not support deallocation, and there is no optimizations to pack the allocations as
-/// efficiently as possible.
+/// We do not support deallocation, and there is no optimizations to pack the
+/// allocations as efficiently as possible.
 ///
-/// For stage0 uses these limitations are not an issue because (a) we use this allocator to allocate
-/// data structures we expect to outlive stage0 and (b) we allocate only a small number of data
-/// structures from it, so the padding overhead is minimal.
+/// For stage0 uses these limitations are not an issue because (a) we use this
+/// allocator to allocate data structures we expect to outlive stage0 and (b) we
+/// allocate only a small number of data structures from it, so the padding
+/// overhead is minimal.
 </span><span class="kw">pub struct </span>BumpAllocator&lt;<span class="kw">const </span>N: usize&gt; {
     inner: Spinlock&lt;Inner&lt;N&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; BumpAllocator&lt;N&gt; {
     <span class="kw">pub const fn </span>uninit() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            inner: Spinlock::new(Inner::new()),
-        }
+        <span class="self">Self </span>{ inner: Spinlock::new(Inner::new()) }
     }
 }
 
@@ -264,12 +252,10 @@
             </span><span class="kw">return </span><span class="prelude-val">Err</span>(AllocError);
         }
 
-        inner
-            .index
-            .fetch_add(align + layout.size(), Ordering::SeqCst);
+        inner.index.fetch_add(align + layout.size(), Ordering::SeqCst);
 
-        <span class="comment">// Safety: we&#39;ve reserved memory from [offset, offset + align + size) so this will not
-        // exceed the bounds of `self.storage` and is not aliased.
+        <span class="comment">// Safety: we&#39;ve reserved memory from [offset, offset + align + size) so this
+        // will not exceed the bounds of `self.storage` and is not aliased.
         </span><span class="prelude-val">Ok</span>(NonNull::slice_from_raw_parts(
             <span class="kw">unsafe </span>{ NonNull::new_unchecked(storage_ptr.add(offset + align)) },
             layout.size(),
@@ -296,12 +282,10 @@
         <span class="macro">panic!</span>(<span class="string">&quot;heap is not backed by physical memory&quot;</span>);
     }
 
-    <span class="comment">// Safety: The memory between 1MiB and 2MiB is not used for anything else, and we have checked
-    // that this range is backed by physical memory.
+    <span class="comment">// Safety: The memory between 1MiB and 2MiB is not used for anything else, and
+    // we have checked that this range is backed by physical memory.
     </span><span class="kw">unsafe </span>{
-        <span class="kw">crate</span>::SHORT_TERM_ALLOC
-            .lock()
-            .init(start.as_mut_ptr(), size);
+        <span class="kw">crate</span>::SHORT_TERM_ALLOC.lock().init(start.as_mut_ptr(), size);
     }
 }
 
@@ -339,17 +323,15 @@
             _y: u64,
         }
         <span class="comment">// Allow for max 7-byte alignment + 2*8 (size of Foo)
-        // The padding we need to use is ~random; it depends where exactly in memory our buffer
-        // lands, as that is not required to be perfectly aligned with any particular boundary.
+        // The padding we need to use is ~random; it depends where exactly in memory our
+        // buffer lands, as that is not required to be perfectly aligned with
+        // any particular boundary.
         </span><span class="kw">let </span>alloc = BumpAllocator::&lt;<span class="number">23</span>&gt;::uninit();
         <span class="kw">let </span>val = Box::new_in(Foo { x: <span class="number">16</span>, _y: <span class="number">16 </span>}, <span class="kw-2">&amp;</span>alloc);
-        <span class="macro">assert_eq!</span>(
-            <span class="number">0</span>,
-            val.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Foo <span class="kw">as </span>usize % core::mem::align_of::&lt;Foo&gt;()
-        );
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, val.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Foo <span class="kw">as </span>usize % core::mem::align_of::&lt;Foo&gt;());
         <span class="macro">assert_eq!</span>(<span class="number">16</span>, val.x);
-        <span class="comment">// Even if the initial alignment was perfect by chance, we&#39;ve used up 16 bytes, so this
-        // won&#39;t fit
+        <span class="comment">// Even if the initial alignment was perfect by chance, we&#39;ve used up 16 bytes,
+        // so this won&#39;t fit
         </span><span class="kw">let </span>val = Box::try_new_in(Foo { x: <span class="number">1</span>, _y: <span class="number">1 </span>}, <span class="kw-2">&amp;</span>alloc);
         <span class="macro">assert!</span>(val.is_err());
     }

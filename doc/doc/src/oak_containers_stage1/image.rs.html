@@ -37,7 +37,6 @@
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -69,12 +68,11 @@
 
 <span class="kw">pub fn </span>switch(init: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;!&gt; {
     <span class="comment">// On one hand, I feel like this function should be marked `unsafe` as this will
-    // unconditionally switch over to the new executable (if it succeeds) without any
-    // more Rust code executing. On the other hand, the return type is `!`, so you
-    // shouldn&#39;t expect the control to return.
-    </span><span class="kw">let </span>args: Vec&lt;CString&gt; = std::env::args_os()
-        .map(|arg| CString::new(arg.as_bytes()).unwrap())
-        .collect();
+    // unconditionally switch over to the new executable (if it succeeds) without
+    // any more Rust code executing. On the other hand, the return type is `!`,
+    // so you shouldn&#39;t expect the control to return.
+    </span><span class="kw">let </span>args: Vec&lt;CString&gt; =
+        std::env::args_os().map(|arg| CString::new(arg.as_bytes()).unwrap()).collect();
     execv(CString::new(init).unwrap().as_c_str(), <span class="kw-2">&amp;</span>args[..])<span class="question-mark">?</span>;
     <span class="macro">unreachable!</span>()
 }

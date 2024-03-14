@@ -125,6 +125,16 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -144,16 +154,19 @@
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::FromRepr;
 
-<span class="doccomment">/// Syscalls above this are unsafe, their behavior and availability cannot be relied upon.
+<span class="doccomment">/// Syscalls above this are unsafe, their behavior and availability cannot be
+/// relied upon.
 </span><span class="kw">pub const </span>UNSTABLE_SYSCALL_SPACE: usize = i32::MAX <span class="kw">as </span>usize - (<span class="number">10 </span>^ <span class="number">3</span>);
 
 <span class="doccomment">/// System calls implemented by Oak Restricted Kernel.
 ///
-/// In general, the system calls are inpired by and look similar to the Linux/POSIX ABI, but we make
-/// no claims about adhering to the behaviour, or specification, of either of those.
+/// In general, the system calls are inpired by and look similar to the
+/// Linux/POSIX ABI, but we make no claims about adhering to the behaviour, or
+/// specification, of either of those.
 ///
 /// See &lt;https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl&gt; for a
-/// full list of system call numbers; we will ever only support a small subset of these.
+/// full list of system call numbers; we will ever only support a small subset
+/// of these.
 </span><span class="attr">#[repr(usize)]
 #[derive(Debug, FromRepr)]
 </span><span class="kw">pub enum </span>Syscall {
@@ -164,37 +177,43 @@
     ///   - arg1 (*mut c_void): pointer to the buffer to be filled
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:
-    ///   a value of &lt;errno::Errno&gt; on failure; otherwise, the number of bytes read.
+    ///   a value of &lt;errno::Errno&gt; on failure; otherwise, the number of bytes
+    /// read.
     </span>Read = <span class="number">0</span>,
 
     <span class="doccomment">/// Write to a file descriptor.
     ///
     /// Arguments:
     ///   - arg0 (c_ssize_t): file descriptor number
-    ///   - arg1 (*const c_void): pointer to the buffer containing data to be written
+    ///   - arg1 (*const c_void): pointer to the buffer containing data to be
+    ///     written
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:
-    ///   a value of &lt;errno::Errno&gt; on failure; otherwise, the number of bytes written.
+    ///   a value of &lt;errno::Errno&gt; on failure; otherwise, the number of bytes
+    /// written.
     </span>Write = <span class="number">1</span>,
 
     <span class="doccomment">/// Creates a mapping for memory.
     /// Arguments:
-    ///   - arg0 (*const c_void): hint for start address for the new mapping, may be nullptr
+    ///   - arg0 (*const c_void): hint for start address for the new mapping,
+    ///     may be nullptr
     ///   - arg1 (c_size_t): size of the new mapping
-    ///   - arg2 (c_int): protection on mapping (PROT_EXEC, PROT_READ, PROT_WRITE, PROT_NONE)
-    ///   - arg3 (c_int): flags. We require MAP_PRIVATE and MAP_ANONYMOUS to be set, and
-    ///     additionally support MAP_FIXED.
-    ///   - arg4 (c_int): file descriptor. Ignored, as we only support anonymous mappings. Should
-    ///     be set to -1 by caller.
-    ///   - arg5 (c_int): offset. Ignored, as we only support anonymous mappings. Should be set to
-    ///     0 by caller.
+    ///   - arg2 (c_int): protection on mapping (PROT_EXEC, PROT_READ,
+    ///     PROT_WRITE, PROT_NONE)
+    ///   - arg3 (c_int): flags. We require MAP_PRIVATE and MAP_ANONYMOUS to be
+    ///     set, and additionally support MAP_FIXED.
+    ///   - arg4 (c_int): file descriptor. Ignored, as we only support anonymous
+    ///     mappings. Should be set to -1 by caller.
+    ///   - arg5 (c_int): offset. Ignored, as we only support anonymous
+    ///     mappings. Should be set to 0 by caller.
     /// Oak Restricted Kernel considerations:
-    ///   - our mmap will work on 2 MiB chunks; even if size is 1 byte, we will reserve a 2 MiB
-    ///     chunk of memory. Thus, size should be kept as a multiple of 2 MiB.
-    ///   - related to previous, the allocation address will always be 2 MiB-aligned (rounded
-    ///     upward from hint).
-    ///   - MAP_FIXED requires address to be 2 MiB-aligned, and will return an error if it&#39;d touch
-    ///     any existing mappings.
+    ///   - our mmap will work on 2 MiB chunks; even if size is 1 byte, we will
+    ///     reserve a 2 MiB chunk of memory. Thus, size should be kept as a
+    ///     multiple of 2 MiB.
+    ///   - related to previous, the allocation address will always be 2
+    ///     MiB-aligned (rounded upward from hint).
+    ///   - MAP_FIXED requires address to be 2 MiB-aligned, and will return an
+    ///     error if it&#39;d touch any existing mappings.
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
     </span>Mmap = <span class="number">9</span>,
 
@@ -202,19 +221,20 @@
     /// Arguments:
     ///   - arg0 (c_int): error code
     /// Oak Restricted Kernel considerations:
-    ///   We don&#39;t expect the user process to terminate, so this triggers a kernel panic, no matter
-    ///   the error code.
+    ///   We don&#39;t expect the user process to terminate, so this triggers a
+    /// kernel panic, no matter   the error code.
     </span>Exit = <span class="number">60</span>,
 
     <span class="doccomment">/// Flush a file descriptor.
     /// Arguments:
-    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don&#39;t support
-    ///     multiple file descriptors.
+    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as
+    ///     we don&#39;t support multiple file descriptors.
     /// Returns:
     ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
     </span>Fsync = <span class="number">74</span>,
 
-    <span class="doccomment">/// Terminates the calling process and executes the supplied ELF binary instead.
+    <span class="doccomment">/// Terminates the calling process and executes the supplied ELF binary
+    /// instead.
     ///
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file

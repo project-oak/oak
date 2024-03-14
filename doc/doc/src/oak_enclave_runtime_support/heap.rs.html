@@ -125,11 +125,6 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -161,7 +156,8 @@
 <span class="kw">struct </span>Source {}
 
 <span class="kw">impl </span>Source {
-    <span class="comment">// Restricted Kernel deals in 2 MiB pages, so that&#39;s what we use to request memory.
+    <span class="comment">// Restricted Kernel deals in 2 MiB pages, so that&#39;s what we use to request
+    // memory.
     </span><span class="kw">const </span>PAGE_SIZE: usize = <span class="number">0x20_0000usize</span>;
 }
 
@@ -194,13 +190,15 @@
     }
 }
 
-<span class="doccomment">/// Heap implementation that asks Restricted Kernel for more memory when allocations fail.
+<span class="doccomment">/// Heap implementation that asks Restricted Kernel for more memory when
+/// allocations fail.
 ///
-/// We don&#39;t implement a heap allocation algorithm ourselves, but rather wrap a real heap
-/// implementation; all allocations (and deallocations) are delegated to the real heap
-/// implementation. When an allocation fails, we ask Restricted Kernel for more memory and increase
-/// the size of the underlying heap, hoping that eventually the allocation will succeed (or the
-/// machine runs out memory).
+/// We don&#39;t implement a heap allocation algorithm ourselves, but rather wrap a
+/// real heap implementation; all allocations (and deallocations) are delegated
+/// to the real heap implementation. When an allocation fails, we ask Restricted
+/// Kernel for more memory and increase the size of the underlying heap, hoping
+/// that eventually the allocation will succeed (or the machine runs out
+/// memory).
 </span><span class="kw">pub struct </span>GrowableHeap {
     <span class="doccomment">/// Underlying heap implementation.
     </span>heap: FlexTlsf&lt;Source, usize, usize, { usize::BITS <span class="kw">as </span>usize }, { usize::BITS <span class="kw">as </span>usize }&gt;,
@@ -208,9 +206,7 @@
 
 <span class="kw">impl </span>GrowableHeap {
     <span class="kw">pub const fn </span>empty() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            heap: FlexTlsf::new(Source {}),
-        }
+        <span class="self">Self </span>{ heap: FlexTlsf::new(Source {}) }
     }
 
     <span class="attr">#[allow(clippy::result_unit_err)]
@@ -223,8 +219,8 @@
     <span class="doccomment">/// # Safety
     ///
     ///  - `ptr` must denote a memory block previously allocated via `self`.
-    ///  - The memory block must have been allocated with the same alignment ([`Layout::align`]) as
-    ///    `align`.
+    ///  - The memory block must have been allocated with the same alignment
+    ///    ([`Layout::align`]) as `align`.
     </span><span class="kw">pub unsafe fn </span>deallocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: NonNull&lt;u8&gt;, align: usize) {
         <span class="self">self</span>.heap.deallocate(ptr, align)
     }
@@ -249,17 +245,11 @@
 
 <span class="kw">unsafe impl </span>GlobalAlloc <span class="kw">for </span>LockedGrowableHeap {
     <span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
-        <span class="self">self</span>.<span class="number">0
-            </span>.lock()
-            .allocate(layout)
-            .map(NonNull::as_ptr)
-            .unwrap_or(core::ptr::null_mut())
+        <span class="self">self</span>.<span class="number">0</span>.lock().allocate(layout).map(NonNull::as_ptr).unwrap_or(core::ptr::null_mut())
     }
 
     <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
-        <span class="self">self</span>.<span class="number">0
-            </span>.lock()
-            .deallocate(NonNull::new_unchecked(ptr), layout.align())
+        <span class="self">self</span>.<span class="number">0</span>.lock().deallocate(NonNull::new_unchecked(ptr), layout.align())
     }
 }
 </code></pre></div></section></main></body></html>

@@ -107,10 +107,6 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -202,13 +198,9 @@
 
     </span><span class="kw">let </span>body = get_rekor_log_entry_body(log_entry)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>actual_pem_vec = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content)
-        .map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(
-                <span class="string">&quot;couldn&#39;t base64-decode public key bytes from server: {}&quot;</span>,
-                error
-            )
+    <span class="kw">let </span>actual_pem_vec =
+        BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
+            <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from server: {}&quot;</span>, error)
         })<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_pem =
         core::str::from_utf8(<span class="kw-2">&amp;</span>actual_pem_vec).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;

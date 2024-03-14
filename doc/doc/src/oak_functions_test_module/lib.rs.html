@@ -79,8 +79,6 @@
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -115,9 +113,7 @@
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
     <span class="kw">let </span>should_panic_afterwards = Arc::new(AtomicBool::new(<span class="bool-val">false</span>));
 
-    <span class="kw">let </span>service = Service {
-        should_panic_afterwards: should_panic_afterwards.clone(),
-    };
+    <span class="kw">let </span>service = Service { should_panic_afterwards: should_panic_afterwards.clone() };
     <span class="kw">let </span><span class="kw-2">mut </span>trasport = TestModuleServer::new(service);
     <span class="kw">let </span>request_bytes = oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read request body&quot;</span>);
     <span class="kw">let </span>response_bytes = trasport.invoke(<span class="kw-2">&amp;</span>request_bytes).into_ok();

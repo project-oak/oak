@@ -346,6 +346,11 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -394,7 +399,8 @@
 }
 
 <span class="kw">impl </span>DataBuilder {
-    <span class="doccomment">/// Build data from the builder and set the builder back to the initial state.
+    <span class="doccomment">/// Build data from the builder and set the builder back to the initial
+    /// state.
     </span><span class="kw">fn </span>build(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Data {
         <span class="self">self</span>.state = BuilderState::Empty;
         core::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.data)
@@ -402,8 +408,8 @@
 
     <span class="doccomment">/// Extends the DataBuilder with new data.
     ///
-    /// Note, if new data contains a key already present in the existing data, calling extend
-    /// overwrites the value.
+    /// Note, if new data contains a key already present in the existing data,
+    /// calling extend overwrites the value.
     </span><span class="kw">fn </span>extend&lt;T: IntoIterator&lt;Item = (Bytes, Bytes)&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
         <span class="self">self</span>.state = BuilderState::Extending;
         <span class="self">self</span>.data.extend(new_data)
@@ -416,18 +422,20 @@
 
 <span class="doccomment">/// Utility for managing lookup data.
 ///
-/// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
-/// It can also update the underlying data. After updating the data, new `LookupData` instances will
-/// use the new data, but earlier instances will still used the earlier data.
+/// `LookupDataManager` can be used to create `LookupData` instances that share
+/// the underlying data. It can also update the underlying data. After updating
+/// the data, new `LookupData` instances will use the new data, but earlier
+/// instances will still used the earlier data.
 ///
 /// LookupDataManager maintains the invariants [consistent view on lookup
 /// data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-consistent-view-on-lookup-data) , and [shared
 /// lookup data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-shared-lookup-data)
 ///
-/// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
-/// idiom `Arc&lt;Spinlock&lt;T&gt;&gt;` we have `Spinlock&lt;Arc&lt;T&gt;&gt;`.
+/// Note that the data is never mutated in-place, but only ever replaced. So
+/// instead of the Rust idiom `Arc&lt;Spinlock&lt;T&gt;&gt;` we have `Spinlock&lt;Arc&lt;T&gt;&gt;`.
 ///
-/// In the future we may replace both the mutex and the hash map with something like RCU.
+/// In the future we may replace both the mutex and the hash map with something
+/// like RCU.
 </span><span class="kw">pub struct </span>LookupDataManager {
     data: RwSpinlock&lt;Arc&lt;Data&gt;&gt;,
     <span class="comment">// Behind a lock, because we have multiple references to LookupDataManager and need to mutate
@@ -472,7 +480,8 @@
         <span class="macro">info!</span>(<span class="string">&quot;Finish extending next lookup data&quot;</span>);
     }
 
-    <span class="comment">// Finish building the next lookup data and replace the current lookup data in place.
+    <span class="comment">// Finish building the next lookup data and replace the current lookup data in
+    // place.
     </span><span class="kw">pub fn </span>finish_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span>data_len;
         <span class="kw">let </span>next_data_len;
@@ -501,7 +510,8 @@
         <span class="macro">info!</span>(<span class="string">&quot;Finish aborting next lookup data&quot;</span>);
     }
 
-    <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current backing data.
+    <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current
+    /// backing data.
     </span><span class="kw">pub fn </span>create_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LookupData {
         <span class="kw">let </span>keys;
         <span class="kw">let </span>data = {
@@ -556,17 +566,16 @@
     }
 }
 
-<span class="doccomment">/// Returns a slice covering up to the first `limit` elements of the given slice.
+<span class="doccomment">/// Returns a slice covering up to the first `limit` elements of the given
+/// slice.
 </span><span class="kw">pub fn </span>limit&lt;T&gt;(slice: <span class="kw-2">&amp;</span>[T], limit: usize) -&gt; <span class="kw-2">&amp;</span>[T] {
     <span class="kw-2">&amp;</span>slice[..limit.min(slice.len())]
 }
 
-<span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
-/// vector of bytes otherwise.
+<span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or
+/// formats it as a numeric vector of bytes otherwise.
 </span><span class="kw">pub fn </span>format_bytes(v: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    alloc::str::from_utf8(v)
-        .map(|s| s.to_string())
-        .unwrap_or_else(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, v))
+    alloc::str::from_utf8(v).map(|s| s.to_string()).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, v))
 }
 
 <span class="attr">#[cfg(test)]
@@ -585,8 +594,8 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_lookup_data_instance_consistency() {
-        <span class="comment">// Ensure that the data for a specific lookup data instance remains consistent even if the
-        // data in the manager has been updated.
+        <span class="comment">// Ensure that the data for a specific lookup data instance remains consistent
+        // even if the data in the manager has been updated.
         </span><span class="kw">let </span>manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
@@ -676,7 +685,8 @@
         </span><span class="macro">assert_eq!</span>(<span class="string">&quot;[0, 159, 146, 150]&quot;</span>, format_bytes(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">159</span>, <span class="number">146</span>, <span class="number">150</span>]));
     }
 
-    <span class="comment">// Create test data with size distinct keys between inclusive start and exclusive end.
+    <span class="comment">// Create test data with size distinct keys between inclusive start and
+    // exclusive end.
     </span><span class="kw">fn </span>create_test_data(start: i32, end: i32) -&gt; Vec&lt;(Bytes, Bytes)&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>vec: Vec&lt;(Bytes, Bytes)&gt; = <span class="macro">vec!</span>[];
         <span class="kw">for </span>i <span class="kw">in </span>start..end {

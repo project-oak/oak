@@ -174,14 +174,6 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -210,28 +202,31 @@
 
 <span class="doccomment">/// Allocator to track physical memory frames.
 ///
-/// The basic unit we track is a 2 MiB frame. If necessary, we will take one 2 MiB frame and break
-/// it into smaller, 4 KiB frames to satisfy demand.
+/// The basic unit we track is a 2 MiB frame. If necessary, we will take one 2
+/// MiB frame and break it into smaller, 4 KiB frames to satisfy demand.
 ///
-/// The parameter N needs to be set to the number of u64-s required to track the physical memory in
-/// a bitmap. For example, if we want to track 128 GiB of memory, that means 128Gi/2Mi = 65Ki
-/// frames, which in turn means we need 65Ki/64 = 1Ki u64-s (or: 1Ki * 8 = 8 KiB of memory).
+/// The parameter N needs to be set to the number of u64-s required to track the
+/// physical memory in a bitmap. For example, if we want to track 128 GiB of
+/// memory, that means 128Gi/2Mi = 65Ki frames, which in turn means we need
+/// 65Ki/64 = 1Ki u64-s (or: 1Ki * 8 = 8 KiB of memory).
 </span><span class="kw">pub struct </span>PhysicalMemoryAllocator&lt;<span class="kw">const </span>N: usize&gt; {
     <span class="doccomment">/// Allocator for 2 MiB frames.
     </span>large_frames: BitmapAllocator&lt;Size2MiB, N&gt;,
     <span class="doccomment">/// Allocator for 4 KiB frames.
     ///
-    /// When first asked for a 4K frame, we take one 2 MiB frame to hand out as 4 KiB frames; that
-    /// gives us 512 4K frames to hand out. Thus, the allocator bitmap needs to be 512/64 = 8
-    /// u64-s, or 64 B.
+    /// When first asked for a 4K frame, we take one 2 MiB frame to hand out as
+    /// 4 KiB frames; that gives us 512 4K frames to hand out. Thus, the
+    /// allocator bitmap needs to be 512/64 = 8 u64-s, or 64 B.
     </span>small_frames: <span class="prelude-ty">Option</span>&lt;BitmapAllocator&lt;Size4KiB, <span class="number">8</span>&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; PhysicalMemoryAllocator&lt;N&gt; {
-    <span class="doccomment">/// Assumes valid physical memory ranges from [0 ... N * 64 * Size2MiB::SIZE].
+    <span class="doccomment">/// Assumes valid physical memory ranges from [0 ... N * 64 *
+    /// Size2MiB::SIZE].
     </span><span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="comment">// Safety: we have to resort to `unsafe` as we need to call the const fn-s, but both
-        // addresses are definitely Size2MiB::SIZE-aligned, so these operations are safe.
+        <span class="comment">// Safety: we have to resort to `unsafe` as we need to call the const fn-s, but
+        // both addresses are definitely Size2MiB::SIZE-aligned, so these
+        // operations are safe.
         </span><span class="self">Self</span>::new_range(PhysFrame::range(
             <span class="kw">unsafe </span>{ PhysFrame::from_start_address_unchecked(PhysAddr::zero()) },
             <span class="comment">// N u64-s * 64 frames per u64 * 2 MiB per frame
@@ -244,10 +239,7 @@
     }
 
     <span class="kw">pub const fn </span>new_range(range: PhysFrameRange&lt;Size2MiB&gt;) -&gt; <span class="self">Self </span>{
-        PhysicalMemoryAllocator {
-            large_frames: BitmapAllocator::new(range),
-            small_frames: <span class="prelude-val">None</span>,
-        }
+        PhysicalMemoryAllocator { large_frames: BitmapAllocator::new(range), small_frames: <span class="prelude-val">None </span>}
     }
 
     <span class="kw">pub fn </span>mark_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: PhysFrameRange&lt;Size2MiB&gt;, valid: bool) {
@@ -260,8 +252,8 @@
 
     <span class="doccomment">/// Allocate `num` contiguous 2 MiB pages.
     ///
-    /// Returns the frame range if a contiguous range of sufficient size was available; the memory
-    /// is marked as allocated before returning.
+    /// Returns the frame range if a contiguous range of sufficient size was
+    /// available; the memory is marked as allocated before returning.
     </span><span class="kw">pub fn </span>allocate_contiguous(<span class="kw-2">&amp;mut </span><span class="self">self</span>, num: usize) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrameRange&lt;Size2MiB&gt;&gt; {
         <span class="self">self</span>.large_frames.allocate_contiguous(num)
     }
@@ -270,9 +262,7 @@
     </span><span class="kw">pub fn </span>num_valid_frames(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, usize) {
         (
             <span class="self">self</span>.large_frames.num_valid(),
-            <span class="self">self</span>.small_frames
-                .as_ref()
-                .map_or(<span class="number">0</span>, |frames| frames.num_valid()),
+            <span class="self">self</span>.small_frames.as_ref().map_or(<span class="number">0</span>, |frames| frames.num_valid()),
         )
     }
 
@@ -280,9 +270,7 @@
     </span><span class="kw">pub fn </span>num_allocated_frames(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (usize, usize) {
         (
             <span class="self">self</span>.large_frames.num_allocated(),
-            <span class="self">self</span>.small_frames
-                .as_ref()
-                .map_or(<span class="number">0</span>, |frames| frames.num_allocated()),
+            <span class="self">self</span>.small_frames.as_ref().map_or(<span class="number">0</span>, |frames| frames.num_allocated()),
         )
     }
 }
@@ -303,8 +291,8 @@
     <span class="kw">fn </span>allocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrame&lt;Size4KiB&gt;&gt; {
         <span class="kw">let </span>allocator = <span class="self">self</span>.small_frames.get_or_insert_with(|| {
             <span class="kw">let </span>frame = <span class="self">self</span>.large_frames.allocate_frame().unwrap();
-            <span class="comment">// Safety: the frame we get from the 2MiB allocator is aligned to 2 MiB, which means
-            // it&#39;s by definition aligned to 4K as well.
+            <span class="comment">// Safety: the frame we get from the 2MiB allocator is aligned to 2 MiB, which
+            // means it&#39;s by definition aligned to 4K as well.
             </span><span class="kw">let </span>range = PhysFrame::range(
                 PhysFrame::from_start_address(frame.start_address()).unwrap(),
                 PhysFrame::from_start_address(frame.start_address() + frame.size()).unwrap(),
@@ -344,12 +332,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>allocator =
             PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new_range(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE));
         allocator.mark_valid(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE), <span class="bool-val">true</span>);
-        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size2MiB&gt;)
-            .allocate_frame()
-            .unwrap();
-        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size4KiB&gt;)
-            .allocate_frame()
-            .unwrap();
+        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size2MiB&gt;).allocate_frame().unwrap();
+        (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size4KiB&gt;).allocate_frame().unwrap();
     }
 
     <span class="attr">#[test]

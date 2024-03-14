@@ -107,10 +107,6 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -143,15 +139,12 @@
     EMPTY_ASSOCIATED_DATA,
 };
 
-<span class="doccomment">/// Generates a random encryption key pair and returns an instance of the `EncryptionKey` and a
-/// NIST P-256 SEC1 encoded point public key.
+<span class="doccomment">/// Generates a random encryption key pair and returns an instance of the
+/// `EncryptionKey` and a NIST P-256 SEC1 encoded point public key.
 /// &lt;https://secg.org/sec1-v2.pdf&gt;
 </span><span class="kw">pub fn </span>generate_encryption_key_pair() -&gt; (EncryptionKey, Vec&lt;u8&gt;) {
     <span class="kw">let </span>(private_key, public_key) = generate_kem_key_pair();
-    (
-        EncryptionKey::new(private_key),
-        public_key.to_bytes().to_vec(),
-    )
+    (EncryptionKey::new(private_key), public_key.to_bytes().to_vec())
 }
 
 <span class="kw">pub struct </span>EncryptionKey {
@@ -181,15 +174,14 @@
     ) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>client_encryptor =
             ClientEncryptor::create(peer_public_key).context(<span class="string">&quot;couldn&#39;t create client encryptor&quot;</span>)<span class="question-mark">?</span>;
-        client_encryptor.encrypt(
-            <span class="kw-2">&amp;</span>Zeroizing::new(<span class="self">self</span>.private_key.to_bytes()),
-            EMPTY_ASSOCIATED_DATA,
-        )
+        client_encryptor
+            .encrypt(<span class="kw-2">&amp;</span>Zeroizing::new(<span class="self">self</span>.private_key.to_bytes()), EMPTY_ASSOCIATED_DATA)
     }
 }
 
-<span class="doccomment">/// Exposes the ability to derive a session key from the provided encapsulated private key,
-/// using a private key that has been endorsed in the Attestation Evidence.
+<span class="doccomment">/// Exposes the ability to derive a session key from the provided encapsulated
+/// private key, using a private key that has been endorsed in the Attestation
+/// Evidence.
 </span><span class="kw">pub trait </span>EncryptionKeyHandle {
     <span class="kw">fn </span>generate_recipient_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,

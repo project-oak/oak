@@ -145,10 +145,6 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -167,9 +163,10 @@
 
 </span><span class="doccomment">//! Probabilistic sample store to compute percentiles over some measurement.
 
-/// Basic Probabilistic sample store to compute percentiles over some measurement.
-/// N is the number of elements kept in memory; it must be larger than 0.
-/// The array is allocated statically; SampleStore does not use heap allocation.
+/// Basic Probabilistic sample store to compute percentiles over some
+/// measurement. N is the number of elements kept in memory; it must be larger
+/// than 0. The array is allocated statically; SampleStore does not use heap
+/// allocation.
 </span><span class="attr">#[derive(Debug, PartialEq)]
 </span><span class="kw">pub struct </span>StaticSampleStore&lt;<span class="kw">const </span>N: usize&gt; {
     data: [u64; N],
@@ -179,25 +176,19 @@
 <span class="kw">pub trait </span>SampleStore {
     <span class="doccomment">/// Records a new data point value.
     ///
-    /// If the store has already been filled, it will probabilistically replace one of the
-    /// existing entries based on reservoir sampling.
+    /// If the store has already been filled, it will probabilistically replace
+    /// one of the existing entries based on reservoir sampling.
     </span><span class="kw">fn </span>record(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64);
 
-    <span class="doccomment">/// Gets the n-th percentile. n needs to be between 0 and 100, otherwise None is returned; also,
-    /// the store must have at least one recorded data point.
+    <span class="doccomment">/// Gets the n-th percentile. n needs to be between 0 and 100, otherwise
+    /// None is returned; also, the store must have at least one recorded
+    /// data point.
     </span><span class="kw">fn </span>percentile(<span class="kw-2">&amp;</span><span class="self">self</span>, n: f64) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt;;
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; StaticSampleStore&lt;N&gt; {
     <span class="kw">pub fn </span>new() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">if </span>N == <span class="number">0 </span>{
-            <span class="prelude-val">None
-        </span>} <span class="kw">else </span>{
-            <span class="prelude-val">Some</span>(<span class="self">Self </span>{
-                data: [<span class="number">0</span>; N],
-                samples: <span class="number">0</span>,
-            })
-        }
+        <span class="kw">if </span>N == <span class="number">0 </span>{ <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(<span class="self">Self </span>{ data: [<span class="number">0</span>; N], samples: <span class="number">0 </span>}) }
     }
 }
 
@@ -210,7 +201,8 @@
             <span class="comment">// generate a random number in [0..samples)
             </span><span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">8</span>];
             getrandom::getrandom(<span class="kw-2">&amp;mut </span>buf[..]).unwrap();
-            <span class="comment">// This will introduce a small bias, but it should be small enough for our use case.
+            <span class="comment">// This will introduce a small bias, but it should be small enough for our use
+            // case.
             </span>usize::from_ne_bytes(buf) % <span class="self">self</span>.samples
         };
 
@@ -231,8 +223,8 @@
         </span><span class="kw">let </span>size = core::cmp::min(N, <span class="self">self</span>.samples);
         <span class="kw">let </span>slice = <span class="kw-2">&amp;mut </span>array[..size];
         slice.sort_unstable();
-        <span class="comment">// samples &gt; 0 (because of the check above) and N &gt; 0 (as otherwise `new()` would fail), so
-        // `size` will always be at least 1.
+        <span class="comment">// samples &gt; 0 (because of the check above) and N &gt; 0 (as otherwise `new()`
+        // would fail), so `size` will always be at least 1.
         </span><span class="kw">let </span>index = (size <span class="kw">as </span>f64 - <span class="number">1.0</span>) * n / <span class="number">100.0</span>;
         slice.get(index <span class="kw">as </span>usize).copied()
     }
@@ -280,8 +272,8 @@
     </span><span class="kw">pub fn </span>probabilistic_replacement() {
         <span class="kw">let </span><span class="kw-2">mut </span>store = StaticSampleStore::&lt;<span class="number">10</span>&gt;::new().unwrap();
         (<span class="number">1</span>..=<span class="number">10</span>).for_each(|<span class="kw">_</span>| store.record(<span class="number">0</span>));
-        <span class="comment">// This will now get difficult, as replacing entries is probabilistic. But we should get at
-        // least one hit.
+        <span class="comment">// This will now get difficult, as replacing entries is probabilistic. But we
+        // should get at least one hit.
         </span>(<span class="number">1</span>..=<span class="number">10</span>).for_each(|<span class="kw">_</span>| store.record(<span class="number">10</span>));
         <span class="macro">assert_eq!</span>(store.percentile(<span class="number">100.0</span>), <span class="prelude-val">Some</span>(<span class="number">10</span>));
     }

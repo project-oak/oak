@@ -267,10 +267,6 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -405,12 +401,8 @@
         <span class="kw">let </span>stats = procfs::KernelStats::current().unwrap();
 
         <span class="kw">for </span>(cpu, stats) <span class="kw">in </span>stats.cpu_time.iter().enumerate() {
-            <span class="kw">let </span>attributes = |mode| {
-                [
-                    KeyValue::new(<span class="string">&quot;cpu&quot;</span>, cpu.to_string()),
-                    KeyValue::new(<span class="string">&quot;mode&quot;</span>, mode),
-                ]
-            };
+            <span class="kw">let </span>attributes =
+                |mode| [KeyValue::new(<span class="string">&quot;cpu&quot;</span>, cpu.to_string()), KeyValue::new(<span class="string">&quot;mode&quot;</span>, mode)];
 
             counter.observe(stats.user, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;user&quot;</span>));
             counter.observe(stats.idle, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;idle&quot;</span>));

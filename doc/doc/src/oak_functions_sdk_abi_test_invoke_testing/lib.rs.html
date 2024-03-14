@@ -94,9 +94,9 @@
             <span class="comment">// We expect an empty response, because blackhole does not give back a result.
             </span><span class="macro">assert!</span>(blackhole_response.is_empty());
 
-            <span class="comment">// If we reached here, the assert did not fail and we send a response back. This helps
-            // us to distinguish from a failure in the Wasm module, where also an
-            // empty response would be sent.
+            <span class="comment">// If we reached here, the assert did not fail and we send a response back. This
+            // helps us to distinguish from a failure in the Wasm module, where
+            // also an empty response would be sent.
             </span>oak_functions_sdk::write_response(<span class="string">&quot;Blackholed&quot;</span>.as_bytes())
                 .expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
         }

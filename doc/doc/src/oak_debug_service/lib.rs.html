@@ -119,15 +119,6 @@
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -184,16 +175,9 @@
     ) -&gt; tonic::Result&lt;tonic::Response&lt;CpuProfileResponse&gt;&gt; {
         <span class="kw">let </span>request = request.into_inner();
         <span class="kw">let </span>duration: Duration =
-            request
-                .duration
-                .unwrap_or_default()
-                .try_into()
-                .map_err(|err| {
-                    tonic::Status::invalid_argument(<span class="macro">format!</span>(
-                        <span class="string">&quot;could not parse given duration: {}&quot;</span>,
-                        err
-                    ))
-                })<span class="question-mark">?</span>;
+            request.duration.unwrap_or_default().try_into().map_err(|err| {
+                tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">&quot;could not parse given duration: {}&quot;</span>, err))
+            })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>profile = {
             <span class="kw">let </span>guard = pprof::ProfilerGuardBuilder::default()
@@ -214,17 +198,15 @@
             })<span class="question-mark">?
         </span>};
 
-        <span class="comment">// This is silly, but becauce of differing versions of Prost we have to serialize and
-        // deserialize the profile protobuf, although they are quite literally the same protobuf
-        // under the hood.
+        <span class="comment">// This is silly, but becauce of differing versions of Prost we have to
+        // serialize and deserialize the profile protobuf, although they are
+        // quite literally the same protobuf under the hood.
         </span><span class="kw">let </span>encoded = profile.encode_to_vec();
         <span class="kw">let </span>profile = Profile::decode(<span class="kw-2">&amp;</span>encoded[..]).map_err(|err| {
             tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;failed to deserialize profile proto: {}&quot;</span>, err))
         })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(tonic::Response::new(CpuProfileResponse {
-            profile: <span class="prelude-val">Some</span>(profile),
-        }))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(CpuProfileResponse { profile: <span class="prelude-val">Some</span>(profile) }))
     }
 }
 
@@ -241,8 +223,8 @@
                 duration: <span class="prelude-val">Some</span>(Duration::from_secs(<span class="number">5</span>).try_into().unwrap()),
             })),
             <span class="kw">async </span>{
-                <span class="comment">// Burn some CPU doing something for the profiler to catch by computing some fake
-                // Fibonacci.
+                <span class="comment">// Burn some CPU doing something for the profiler to catch by computing some
+                // fake Fibonacci.
                 </span><span class="kw">let </span><span class="kw-2">mut </span>fib: Vec&lt;u64&gt; = Vec::with_capacity(<span class="number">1_000_000</span>);
                 fib.push(<span class="number">0u64</span>);
                 fib.push(<span class="number">1</span>);
@@ -253,8 +235,8 @@
         );
         <span class="kw">let </span>resp = resp.unwrap().into_inner();
 
-        <span class="comment">// What _exactly_ is in the profile is highly variable, but we should have _something_ in
-        // there.
+        <span class="comment">// What _exactly_ is in the profile is highly variable, but we should have
+        // _something_ in there.
         </span><span class="macro">assert!</span>(!resp.profile.unwrap().sample.is_empty());
     }
 }

@@ -515,10 +515,7 @@
         dst_port: u32,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span>buffer_len &gt; <span class="kw">super</span>::DATA_BUFFER_SIZE {
-            <span class="macro">anyhow::bail!</span>(
-                <span class="string">&quot;total buffer length must be less than {}&quot;</span>,
-                <span class="kw">super</span>::DATA_BUFFER_SIZE
-            );
+            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;total buffer length must be less than {}&quot;</span>, <span class="kw">super</span>::DATA_BUFFER_SIZE);
         }
         <span class="kw">let </span>buffer = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_len];
         <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self </span>{ buffer };
@@ -632,8 +629,8 @@
         <span class="self">self</span>.write_u32(BUF_ALLOC_OFFSET, buf_alloc);
     }
 
-    <span class="doccomment">/// Gets the number of bytes that the peer has read out of the stream buffer (hence making space
-    /// in the buffer).
+    <span class="doccomment">/// Gets the number of bytes that the peer has read out of the stream buffer
+    /// (hence making space in the buffer).
     ///
     /// Used to facilitate flow-control calculations.
     </span><span class="kw">pub fn </span>get_fwd_cnt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
@@ -663,8 +660,8 @@
 
     <span class="doccomment">/// Sets the payload of a data packet from a slice.
     ///
-    /// The length of the slice must match the packets configures payload length. Only usable if the
-    /// packet&#39;s op is `VSockOp::Rw`.
+    /// The length of the slice must match the packets configures payload
+    /// length. Only usable if the packet&#39;s op is `VSockOp::Rw`.
     </span><span class="kw">fn </span>set_payload(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">if </span><span class="self">self</span>.get_op()<span class="question-mark">? </span>!= VSockOp::Rw {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;non-empty payloads are only allowed with data packets&quot;</span>);
@@ -757,16 +754,19 @@
     </span>Request = <span class="number">1</span>,
     <span class="doccomment">/// Connections accepted response.
     </span>Response = <span class="number">2</span>,
-    <span class="doccomment">/// Connection reset, either in reponse to a shutdown request or invalid packets received.
+    <span class="doccomment">/// Connection reset, either in reponse to a shutdown request or invalid
+    /// packets received.
     </span>Rst = <span class="number">3</span>,
     <span class="doccomment">/// Connection shutdown request.
     </span>Shutdown = <span class="number">4</span>,
     <span class="doccomment">/// Represents a data packet.
     ///
-    /// Used to send payload. Only data packets with this op can contain a payload.
+    /// Used to send payload. Only data packets with this op can contain a
+    /// payload.
     </span>Rw = <span class="number">5</span>,
-    <span class="doccomment">/// Give update on credit to support flow control, either in response to a credit request or at
-    /// any time it might be useful to inform the peer of the state of the stream buffer.
+    <span class="doccomment">/// Give update on credit to support flow control, either in response to a
+    /// credit request or at any time it might be useful to inform the peer
+    /// of the state of the stream buffer.
     </span>CreditUpdate = <span class="number">6</span>,
     <span class="doccomment">/// Request for update on credit to calculate stream buffer availability.
     </span>CreditRequest = <span class="number">7</span>,

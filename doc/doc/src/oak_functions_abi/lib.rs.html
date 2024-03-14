@@ -152,15 +152,6 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -177,8 +168,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions application
-//! binary interface (ABI).
+</span><span class="doccomment">//! Type, constant and Wasm host function definitions for the Oak-Functions
+//! application binary interface (ABI).
 
 </span><span class="attr">#![no_std]
 
@@ -234,26 +225,25 @@
     /// Sets the `status` and `body` to the given status and body, and sets the
     /// `length` to the length of the body.
     </span><span class="kw">pub fn </span>create(status: StatusCode, body: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
-        Response {
-            status,
-            body: body.clone(),
-            length: body.len() <span class="kw">as </span>u64,
-        }
+        Response { status, body: body.clone(), length: body.len() <span class="kw">as </span>u64 }
     }
 
     <span class="doccomment">/// Returns the body of the response, excluding any trailing 0s.
     ///
-    /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
-    /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
+    /// Uses the effective length of the body, in `self.length`, to remove the
+    /// trailing 0s. Returns as error if `self.length` cannot be converted
+    /// to `usize` due to an overflow.
     </span><span class="kw">pub fn </span>body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>[u8], core::num::TryFromIntError&gt; {
         <span class="kw">let </span>length = usize::try_from(<span class="self">self</span>.length)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.body.as_slice()[..length])
     }
 
-    <span class="doccomment">/// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
-    /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
-    /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
-    /// Returns an error if the length of the `body` is larger than `body_size`.
+    <span class="doccomment">/// Creates and returns a new [`Response`] instance with the same `status`
+    /// and `body` as `self`, except that the `body` may be padded, by
+    /// adding a number trailing 0s, to make its length
+    /// equal to `body_size`. Sets the `length` of the new instance to the
+    /// length of `self.body`. Returns an error if the length of the `body`
+    /// is larger than `body_size`.
     </span><span class="kw">pub fn </span>pad(<span class="kw-2">&amp;</span><span class="self">self</span>, body_size: usize) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">if </span><span class="self">self</span>.body.len() &lt;= body_size {
             <span class="kw">let </span><span class="kw-2">mut </span>body = <span class="self">self</span>.body.as_slice().to_vec();
@@ -261,11 +251,7 @@
             </span><span class="kw">let </span>length = body.len() <span class="kw">as </span>u64;
             <span class="comment">// Add trailing 0s
             </span>body.resize(body_size, <span class="number">0</span>);
-            <span class="prelude-val">Ok</span>(Response {
-                status: <span class="self">self</span>.status,
-                body,
-                length,
-            })
+            <span class="prelude-val">Ok</span>(Response { status: <span class="self">self</span>.status, body, length })
         } <span class="kw">else </span>{
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;response body is larger than the input body_size&quot;</span>)
         }
@@ -302,17 +288,13 @@
 
         body.extend_from_slice(<span class="kw-2">&amp;</span>bytes[RESPONSE_BODY_OFFSET..bytes.len()]);
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            status,
-            body,
-            length,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ status, body, length })
     }
 }
 
-<span class="comment">// The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
-// &quot;oak_functions&quot; module that are made available to WebAssembly modules running as Oak-Functions
-// workloads.
+<span class="comment">// The Oak-Functions ABI primarily consists of a collection of Wasm host
+// functions in the &quot;oak_functions&quot; module that are made available to
+// WebAssembly modules running as Oak-Functions workloads.
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 </span><span class="attr">#[link(wasm_import_module = <span class="string">&quot;oak_functions&quot;</span>)]
 </span><span class="kw">extern </span><span class="string">&quot;C&quot; </span>{

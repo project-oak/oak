@@ -101,7 +101,6 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -129,8 +128,9 @@
 
 <span class="doccomment">/// Kernel arguments.
 ///
-/// The pattern for arguments is &quot;key1 key2=val2 key3=val3&quot;. The tokenization is rather simple, so
-/// whitespace matters and there is no way to escape spaces right now.
+/// The pattern for arguments is &quot;key1 key2=val2 key3=val3&quot;. The tokenization is
+/// rather simple, so whitespace matters and there is no way to escape spaces
+/// right now.
 </span><span class="kw">pub struct </span>Args {
     args: LazyCell&lt;BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt;,
 }
@@ -138,8 +138,9 @@
 <span class="kw">impl </span>Args {
     <span class="doccomment">/// Returns the full command line argument string.
     </span><span class="kw">pub fn </span>args(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-        <span class="comment">// Safety: `Args::args()` can only be called after `init_args` is called. Ostensibly, we
-        // could cache this in a Lazy as well, but that&#39;s probably not worth it.
+        <span class="comment">// Safety: `Args::args()` can only be called after `init_args` is called.
+        // Ostensibly, we could cache this in a Lazy as well, but that&#39;s
+        // probably not worth it.
         </span><span class="kw">unsafe </span>{ ARGS.as_str() }
     }
 
@@ -151,30 +152,27 @@
 
 <span class="doccomment">/// Buffers kernel arguments in a static variable.
 ///
-/// This function is intended to be called fairly early in the boot process, when we don&#39;t even
-/// have memory allocation available. This also means that we can&#39;t use anyhow::Result as the
-/// return value, as anyhow relies on allocation.
+/// This function is intended to be called fairly early in the boot process,
+/// when we don&#39;t even have memory allocation available. This also means that we
+/// can&#39;t use anyhow::Result as the return value, as anyhow relies on
+/// allocation.
 </span><span class="kw">pub fn </span>init_args(args: <span class="kw-2">&amp;</span>CStr) -&gt; core::result::Result&lt;Args, <span class="kw-2">&amp;</span>str&gt; {
     <span class="kw">let </span>args = args
         .to_str()
         .map_err(|core::str::Utf8Error { .. }| <span class="string">&quot;kernel arguments are not valid UTF-8&quot;</span>)<span class="question-mark">?</span>;
-    <span class="comment">// Safety: this is called once early in the initialization process from a single thread, so
-    // there will not be any concurrent writes.
+    <span class="comment">// Safety: this is called once early in the initialization process from a single
+    // thread, so there will not be any concurrent writes.
     </span><span class="kw">unsafe </span>{ ARGS.try_push_str(args) }
         .map_err(|arrayvec::CapacityError { .. }| <span class="string">&quot;kernel arguments too long&quot;</span>)<span class="question-mark">?</span>;
     <span class="comment">// Safety: we&#39;ve just populated ARGS, successfully, in the line just above.
-    </span><span class="prelude-val">Ok</span>(Args {
-        args: LazyCell::new(|| split_args(<span class="kw">unsafe </span>{ ARGS.as_str() })),
-    })
+    </span><span class="prelude-val">Ok</span>(Args { args: LazyCell::new(|| split_args(<span class="kw">unsafe </span>{ ARGS.as_str() })) })
 }
 
 <span class="kw">fn </span>split_args(args: <span class="kw-2">&amp;</span>str) -&gt; BTreeMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>m = BTreeMap::new();
-    args.split_whitespace()
-        .map(|x| x.split_once(<span class="string">&#39;=&#39;</span>).unwrap_or((x, <span class="string">&quot;&quot;</span>)))
-        .for_each(|(k, v)| {
-            m.insert(k, v);
-        });
+    args.split_whitespace().map(|x| x.split_once(<span class="string">&#39;=&#39;</span>).unwrap_or((x, <span class="string">&quot;&quot;</span>))).for_each(|(k, v)| {
+        m.insert(k, v);
+    });
     m
 }
 

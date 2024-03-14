@@ -165,8 +165,6 @@
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -217,7 +215,8 @@
 <span class="doccomment">/// The path for reading the physical memory from the mem device.
 </span><span class="kw">const </span>PHYS_MEM_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/dev/mem&quot;</span>;
 
-<span class="doccomment">/// Measures the downloaded system image bytes and returns it as a vector of additional CWT claims.
+<span class="doccomment">/// Measures the downloaded system image bytes and returns it as a vector of
+/// additional CWT claims.
 </span><span class="kw">pub fn </span>measure_system_image(system_image_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;(ClaimName, Value)&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
     digest.update(system_image_bytes);
@@ -250,15 +249,16 @@
     }
 }
 
-<span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
-/// address.
+<span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at
+/// the given physical address.
 </span><span class="kw">pub fn </span>extract_stage0_dice_data(start: PhysAddr) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
     <span class="kw">let </span>stage0_dice_data = read_stage0_dice_data(start)<span class="question-mark">?</span>;
     <span class="kw">let </span>dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)<span class="question-mark">?</span>;
     dice_data.try_into()
 }
 
-<span class="doccomment">/// Reads the DICE data from the physical memory range starting at the given address.
+<span class="doccomment">/// Reads the DICE data from the physical memory range starting at the given
+/// address.
 ///
 /// Zeroes out the source physical memory after copying it.
 </span><span class="kw">fn </span>read_stage0_dice_data(start: PhysAddr) -&gt; anyhow::Result&lt;Stage0DiceData&gt; {
@@ -267,11 +267,9 @@
     </span><span class="kw">let </span>end = start + (length <span class="kw">as </span>u64 - <span class="number">1</span>);
     <span class="comment">// Ensure that the memory range is in reserved memory.
     </span><span class="macro">anyhow::ensure!</span>(
-        read_memory_ranges()<span class="question-mark">?
-            </span>.iter()
-            .any(|range| range.type_description == RESERVED_E820_TYPE
-                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
-                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
+        read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| range.type_description == RESERVED_E820_TYPE
+            &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
+            &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
         <span class="string">&quot;DICE data range is not in reserved memory&quot;
     </span>);
 
@@ -282,8 +280,8 @@
         .open(PHYS_MEM_PATH)
         .context(<span class="string">&quot;couldn&#39;t open DICE memory device for reading&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Safety: we have checked that the exact memory range is marked as reserved so the Linux kernel
-    // will not use it for anything else.
+    <span class="comment">// Safety: we have checked that the exact memory range is marked as reserved so
+    // the Linux kernel will not use it for anything else.
     </span><span class="kw">let </span>start_ptr = <span class="kw">unsafe </span>{
         mmap(
             <span class="prelude-val">None</span>,
@@ -297,7 +295,8 @@
     </span>};
 
     <span class="kw">let </span>result = {
-        <span class="comment">// Safety: we have checked the length, know it is backed by physical memory and is reserved.
+        <span class="comment">// Safety: we have checked the length, know it is backed by physical memory and
+        // is reserved.
         </span><span class="kw">let </span>source = <span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8, length) };
 
         <span class="kw">let </span>result = Stage0DiceData::read_from(source)
@@ -312,7 +311,8 @@
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;invalid DICE data&quot;</span>);
     }
 
-    <span class="comment">// Safety: we have just mapped this memory, and the slice over it has been dropped.
+    <span class="comment">// Safety: we have just mapped this memory, and the slice over it has been
+    // dropped.
     </span><span class="kw">unsafe </span>{ munmap(start_ptr, length)<span class="question-mark">? </span>};
     <span class="prelude-val">Ok</span>(result)
 }
@@ -328,11 +328,7 @@
             <span class="kw">let </span>end = try_parse_phys_addr(read_to_string(path.join(<span class="string">&quot;end&quot;</span>))<span class="question-mark">?</span>.trim())
                 .context(<span class="string">&quot;couldn&#39;t parse end&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>type_description = read_to_string(path.join(<span class="string">&quot;type&quot;</span>))<span class="question-mark">?</span>.trim().to_string();
-            <span class="prelude-val">Ok</span>(MemoryRange {
-                start,
-                end,
-                type_description,
-            })
+            <span class="prelude-val">Ok</span>(MemoryRange { start, end, type_description })
         })
         .try_collect()
 }

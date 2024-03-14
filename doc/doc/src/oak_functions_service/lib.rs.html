@@ -70,6 +70,7 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -138,8 +139,9 @@
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>::HandlerType&gt;;
 
-    <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
-    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body
+    /// of the request to invoke and returns a reponse to invoke setting the
+    /// raw bytes in the body of the response.
     </span><span class="kw">fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt;;
 }
 </code></pre></div></section></main></body></html>

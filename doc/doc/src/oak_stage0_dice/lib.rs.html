@@ -221,6 +221,12 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -237,9 +243,10 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This crate contains the logic used by stage0 to create attestations. It is broken out into a
-//! seperate crate to allow this logic to be used independently used in tests to create mock
-//! attestations, without also pulling in the global allocator and attestation hardware attestation
+</span><span class="doccomment">//! This crate contains the logic used by stage0 to create attestations. It is
+//! broken out into a seperate crate to allow this logic to be used
+//! independently used in tests to create mock attestations, without also
+//! pulling in the global allocator and attestation hardware attestation
 //! retrieval logic of the stage0 crate.
 
 </span><span class="attr">#![no_std]
@@ -279,7 +286,8 @@
     </span><span class="kw">pub </span>ram_disk_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The measurement of the physical memory map.
     </span><span class="kw">pub </span>memory_map_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The concatenated measurement of the command used for building the ACPI tables.
+    <span class="doccomment">/// The concatenated measurement of the command used for building the ACPI
+    /// tables.
     </span><span class="kw">pub </span>acpi_sha2_256_digest: [u8; <span class="number">32</span>],
 }
 
@@ -352,7 +360,8 @@
     )
 }
 
-<span class="doccomment">/// Generates attestation evidence for the &#39;measurements&#39; of all Stage 1 components.
+<span class="doccomment">/// Generates attestation evidence for the &#39;measurements&#39; of all Stage 1
+/// components.
 </span><span class="kw">pub fn </span>generate_dice_data&lt;
     F: FnOnce([u8; REPORT_DATA_SIZE]) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
     G: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
@@ -363,7 +372,8 @@
     tee_platform: TeePlatform,
 ) -&gt; Stage0DiceData {
     <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
-    <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
+    <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
+    // certificate.
     </span><span class="kw">let </span>(stage0_eca_key, stage0_eca_verifying_key) = generate_ecdsa_key_pair();
 
     <span class="kw">let </span>(stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
@@ -376,11 +386,11 @@
         .to_vec()
         .expect(<span class="string">&quot;couldn&#39;t serialize the ECA public key&quot;</span>);
 
-    <span class="kw">let </span>stage1_eca_cert = stage1_eca_cert
-        .to_vec()
-        .expect(<span class="string">&quot;couldn&#39;t serialize stage 1 ECA certificate&quot;</span>);
+    <span class="kw">let </span>stage1_eca_cert =
+        stage1_eca_cert.to_vec().expect(<span class="string">&quot;couldn&#39;t serialize stage 1 ECA certificate&quot;</span>);
 
-    <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
+    <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report
+    // data.
     </span><span class="kw">let </span>eca_sha2_256_digest = {
         <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
         digest.update(<span class="kw-2">&amp;</span>stage0_eca_verifying_key);
@@ -393,11 +403,12 @@
     <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">&quot;couldn&#39;t get attestation report.&quot;</span>);
     <span class="kw">let </span>report_bytes = report.as_bytes();
 
-    <span class="comment">// Use the root derived key as the UDS (unique device secret) for deriving sealing keys.
+    <span class="comment">// Use the root derived key as the UDS (unique device secret) for deriving
+    // sealing keys.
     </span><span class="kw">let </span>ikm: DerivedKey = get_derived_key().expect(<span class="string">&quot;couldn&#39;t get derived key&quot;</span>);
 
-    <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel setup data and the
-    // initial RAM disk when deriving the CDI for Layer 1.
+    <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel
+    // setup data and the initial RAM disk when deriving the CDI for Layer 1.
     </span><span class="kw">let </span><span class="kw-2">mut </span>salt: Vec&lt;u8&gt; = Vec::with_capacity(<span class="number">128</span>);
     salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_sha2_256_digest[..]);
     salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.cmdline_sha2_256_digest[..]);
@@ -427,13 +438,14 @@
 
 <span class="doccomment">/// Returns an attestation report.
 ///
-/// Generates an empty attestation report for testing. The additional data will be set bind the DICE
-/// chain to the attestation report.
+/// Generates an empty attestation report for testing. The additional data will
+/// be set bind the DICE chain to the attestation report.
 ///
 /// # Arguments
 ///
-/// * `report_data` - The custom data that must be included in the report. This is typically used to
-///   bind information (such as the hash of a public key) to the report.
+/// * `report_data` - The custom data that must be included in the report. This
+///   is typically used to bind information (such as the hash of a public key)
+///   to the report.
 </span><span class="kw">pub fn </span>mock_attestation_report(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {

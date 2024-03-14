@@ -89,7 +89,6 @@
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -128,10 +127,7 @@
         application_config: Vec&lt;u8&gt;,
         encryption_key_handle: InstanceEncryptionKeyHandle,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            application_config,
-            encryption_key_handle,
-        }
+        <span class="self">Self </span>{ application_config, encryption_key_handle }
     }
 }
 
@@ -151,21 +147,22 @@
             ServerEncryptor::decrypt_async(<span class="kw-2">&amp;</span>encrypted_request, <span class="kw-2">&amp;</span><span class="self">self</span>.encryption_key_handle)
                 .<span class="kw">await
                 </span>.map_err(|error| {
-                    tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t decrypt request: {:?}&quot;</span>, error))
-                })<span class="question-mark">?</span>;
+                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t decrypt request: {:?}&quot;</span>, error))
+            })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>name = String::from_utf8(name_bytes)
             .map_err(|error| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;name is not UTF-8: {:?}&quot;</span>, error)))<span class="question-mark">?</span>;
-        <span class="kw">let </span>greeting: String = <span class="macro">format!</span>(<span class="string">&quot;Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.&quot;</span>, name, <span class="self">self</span>.application_config.len());
-        <span class="kw">let </span>response = server_encryptor
-            .encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA)
-            .map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t encrypt response: {:?}&quot;</span>, error))
-            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>greeting: String = <span class="macro">format!</span>(
+            <span class="string">&quot;Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.&quot;</span>,
+            name,
+            <span class="self">self</span>.application_config.len()
+        );
+        <span class="kw">let </span>response =
+            server_encryptor.encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA).map_err(
+                |error| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t encrypt response: {:?}&quot;</span>, error)),
+            )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(tonic::Response::new(HelloResponse {
-            encrypted_response: <span class="prelude-val">Some</span>(response),
-        }))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(HelloResponse { encrypted_response: <span class="prelude-val">Some</span>(response) }))
     }
 }
 
@@ -175,9 +172,10 @@
     encryption_key_handle: InstanceEncryptionKeyHandle,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tonic::transport::Server::builder()
-        .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation::new(application_config, encryption_key_handle),
-        ))
+        .add_service(TrustedApplicationServer::new(TrustedApplicationImplementation::new(
+            application_config,
+            encryption_key_handle,
+        )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))

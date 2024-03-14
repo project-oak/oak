@@ -186,16 +186,6 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -212,7 +202,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Simple I/O driver for communication between the guest and the host via shared memory.
+</span><span class="doccomment">//! Simple I/O driver for communication between the guest and the host via
+//! shared memory.
 
 </span><span class="attr">#![no_std]
 #![feature(allocator_api)]
@@ -226,27 +217,23 @@
 
 <span class="doccomment">/// I/O port descriptor for a buffer.
 </span><span class="kw">pub struct </span>BufferDescriptor {
-    <span class="doccomment">/// I/O port to use for the most significant bytes of the buffer guest-physical address.
+    <span class="doccomment">/// I/O port to use for the most significant bytes of the buffer
+    /// guest-physical address.
     </span>buffer_msb_port: u16,
-    <span class="doccomment">/// I/O port to use for the least significant bytes of the buffer guest-physical address.
+    <span class="doccomment">/// I/O port to use for the least significant bytes of the buffer
+    /// guest-physical address.
     </span>buffer_lsb_port: u16,
     <span class="doccomment">/// I/O port to use for length of output messages.
     </span>length_port: u16,
 }
 
 <span class="doccomment">/// Default I/O ports for the output buffer.
-</span><span class="kw">pub const </span>DEFAULT_OUTPUT_BUFFER: BufferDescriptor = BufferDescriptor {
-    buffer_msb_port: <span class="number">0x6421</span>,
-    buffer_lsb_port: <span class="number">0x6422</span>,
-    length_port: <span class="number">0x6423</span>,
-};
+</span><span class="kw">pub const </span>DEFAULT_OUTPUT_BUFFER: BufferDescriptor =
+    BufferDescriptor { buffer_msb_port: <span class="number">0x6421</span>, buffer_lsb_port: <span class="number">0x6422</span>, length_port: <span class="number">0x6423 </span>};
 
 <span class="doccomment">/// Default I/O ports for the input buffer.
-</span><span class="kw">pub const </span>DEFAULT_INPUT_BUFFER: BufferDescriptor = BufferDescriptor {
-    buffer_msb_port: <span class="number">0x6424</span>,
-    buffer_lsb_port: <span class="number">0x6425</span>,
-    length_port: <span class="number">0x6426</span>,
-};
+</span><span class="kw">pub const </span>DEFAULT_INPUT_BUFFER: BufferDescriptor =
+    BufferDescriptor { buffer_msb_port: <span class="number">0x6424</span>, buffer_lsb_port: <span class="number">0x6425</span>, length_port: <span class="number">0x6426 </span>};
 
 <span class="doccomment">/// The length of the buffer that will be used for output messages.
 </span><span class="kw">pub const </span>OUTPUT_BUFFER_LENGTH: usize = <span class="number">4096</span>;
@@ -296,12 +283,7 @@
             input.buffer_lsb_port,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            output_buffer,
-            input_buffer,
-            output_length_port,
-            input_length_port,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ output_buffer, input_buffer, output_length_port, input_length_port })
     }
 
     <span class="kw">pub fn </span>new_with_defaults&lt;VP: Translator&gt;(
@@ -318,25 +300,23 @@
         )
     }
 
-    <span class="doccomment">/// Reads the next available bytes from the input buffer, if any are available.
+    <span class="doccomment">/// Reads the next available bytes from the input buffer, if any are
+    /// available.
     </span><span class="kw">pub fn </span>read_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt; {
         <span class="comment">// Safety: we read the value as a u32 and validate it before using it.
         </span><span class="kw">let </span>length = <span class="kw">unsafe </span>{ <span class="self">self</span>.input_length_port.try_read().ok()<span class="question-mark">? </span>} <span class="kw">as </span>usize;
 
-        <span class="comment">// Use a memory fence to ensure the read from the device happens before the read from the
-        // buffer.
+        <span class="comment">// Use a memory fence to ensure the read from the device happens before the read
+        // from the buffer.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
         <span class="kw">if </span>length == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
-        <span class="comment">// A length larger than the buffer size indicates a corrupt or malicious VMM device
-        // implementation. This is probably not recoverable, so panic.
-        </span><span class="macro">assert!</span>(
-            length &lt;= INPUT_BUFFER_LENGTH,
-            <span class="string">&quot;invalid simple IO input message length.&quot;
-        </span>);
+        <span class="comment">// A length larger than the buffer size indicates a corrupt or malicious VMM
+        // device implementation. This is probably not recoverable, so panic.
+        </span><span class="macro">assert!</span>(length &lt;= INPUT_BUFFER_LENGTH, <span class="string">&quot;invalid simple IO input message length.&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>result = VecDeque::with_capacity(length);
         result.extend(<span class="kw-2">&amp;</span><span class="self">self</span>.input_buffer[..length]);
 
@@ -354,16 +334,17 @@
         <span class="kw">let </span>length = core::cmp::min(OUTPUT_BUFFER_LENGTH, data.len());
         <span class="self">self</span>.output_buffer[..length].copy_from_slice(<span class="kw-2">&amp;</span>data[..length]);
 
-        <span class="comment">// Use a memory fence to ensure that the data is written to the buffer before we notify the
-        // VMM.
+        <span class="comment">// Use a memory fence to ensure that the data is written to the buffer before we
+        // notify the VMM.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
 
-        <span class="comment">// Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
+        <span class="comment">// Safety: this usage is safe, as we as only write an uninterpreted u32 value to
+        // the port.
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.output_length_port.try_write(length <span class="kw">as </span>u32)<span class="question-mark">?</span>;
 
-            <span class="comment">// Read back how much the host was able to consume from the buffer. If the count is less
-            // than 0, there was an error.
+            <span class="comment">// Read back how much the host was able to consume from the buffer. If the count
+            // is less than 0, there was an error.
             </span><span class="self">self</span>.output_length_port.try_read()
         }
         .and_then(|ret| {
@@ -386,11 +367,10 @@
     </span><span class="kw">let </span>address = buffer_pointer.as_u64();
     <span class="kw">let </span>address_msb = (address &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
     <span class="kw">let </span>address_lsb = address <span class="kw">as </span>u32;
-    <span class="comment">// Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
+    <span class="comment">// Safety: this usage is safe, as we as only write uninterpreted u32 values to
+    // the ports.
     </span><span class="kw">unsafe </span>{
-        io_port_factory
-            .new_writer(msb_port)
-            .try_write(address_msb)<span class="question-mark">?</span>;
+        io_port_factory.new_writer(msb_port).try_write(address_msb)<span class="question-mark">?</span>;
         io_port_factory.new_writer(lsb_port).try_write(address_lsb)
     }
 }

@@ -791,6 +791,31 @@
 <a href="#791" id="791">791</a>
 <a href="#792" id="792">792</a>
 <a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -820,8 +845,8 @@
 
 <span class="attr">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
-</span><span class="doccomment">/// E820 address range types according to Chapter 15 of the ACPI Specification, Version 6.4.
-/// See &lt;https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html&gt; for more details.
+</span><span class="doccomment">/// E820 address range types according to Chapter 15 of the ACPI Specification,
+/// Version 6.4. See &lt;https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html&gt; for more details.
 </span><span class="kw">pub enum </span>E820EntryType {
     <span class="doccomment">/// Uninitialized entry in the table. Don&#39;t trust the address or size.
     </span>INVALID = <span class="number">0</span>,
@@ -837,7 +862,8 @@
     </span>UNUSABLE = <span class="number">5</span>,
     <span class="doccomment">/// Memory that is not enabled.
     </span>DISABLED = <span class="number">6</span>,
-    <span class="doccomment">/// Persistent memory: must be handled distinct from conventional volatile memory.
+    <span class="doccomment">/// Persistent memory: must be handled distinct from conventional volatile
+    /// memory.
     </span>PMEM = <span class="number">7</span>,
 }
 
@@ -926,13 +952,14 @@
 
 <span class="doccomment">/// Real-mode Kernel Header.
 ///
-/// For each field, some are information from the kernel to the bootloader (&quot;read&quot;), some are
-/// expected to be filled out by the bootloader (&quot;write&quot;), and some are expected to be read and
-/// modified by the bootloader (&quot;modify&quot;).
+/// For each field, some are information from the kernel to the bootloader
+/// (&quot;read&quot;), some are expected to be filled out by the bootloader (&quot;write&quot;),
+/// and some are expected to be read and modified by the bootloader (&quot;modify&quot;).
 ///
-/// All general purpose boot loaders should write the fields marked (obligatory). Boot loaders who
-/// want to load the kernel at a nonstandard address should fill in the fields marked (reloc); other
-/// boot loaders can ignore those fields.
+/// All general purpose boot loaders should write the fields marked
+/// (obligatory). Boot loaders who want to load the kernel at a nonstandard
+/// address should fill in the fields marked (reloc); other boot loaders can
+/// ignore those fields.
 ///
 /// The byte order of all fields is littleendian (this is x86, after all.)
 ///
@@ -945,23 +972,24 @@
     ///
     /// Type: read.
     ///
-    /// If this field is 0, the real value is 4. The real-mode code consists of the boot sector
-    /// (always one 512-byte sector) plus the setup code.
+    /// If this field is 0, the real value is 4. The real-mode code consists of
+    /// the boot sector (always one 512-byte sector) plus the setup code.
     </span><span class="kw">pub </span>setup_sects: u8,
     <span class="doccomment">/// If this field is nonzero, the root defaults to readonly.
     ///
     /// Type: read.
     ///
-    /// The use of this field is deprecated; use the “ro” or “rw” options on the command line
-    /// instead.
+    /// The use of this field is deprecated; use the “ro” or “rw” options on the
+    /// command line instead.
     </span><span class="attr">#[deprecated]
     </span><span class="kw">pub </span>root_flags: u16,
     <span class="doccomment">/// The size of the protected-mode code in units of 16-byte paragraphs.
     ///
     /// Type: read.
     ///
-    /// For protocol versions older than 2.04 this field is only two bytes wide, and therefore
-    /// cannot be trusted for the size of a kernel if the LOAD_HIGH flag is set.
+    /// For protocol versions older than 2.04 this field is only two bytes wide,
+    /// and therefore cannot be trusted for the size of a kernel if the
+    /// LOAD_HIGH flag is set.
     </span><span class="kw">pub </span>syssize: u32,
     <span class="doccomment">/// DO NOT USE - for bootsect.S use only
     ///
@@ -974,15 +1002,16 @@
     ///
     /// Type: modify (obligatory)
     ///
-    /// This value of `vga=&lt;mode&gt;` command line option should be entered into this field, as it is
-    /// used by the kernel before the command line is parsed.
+    /// This value of `vga=&lt;mode&gt;` command line option should be entered into
+    /// this field, as it is used by the kernel before the command line is
+    /// parsed.
     </span><span class="kw">pub </span>vid_mode: u16,
     <span class="doccomment">/// Default root device number
     ///
     /// Type: modify (optional)
     ///
-    /// The default root device device number. The use of this field is deprecated, use the `root=`
-    /// option on the command line instead.
+    /// The default root device device number. The use of this field is
+    /// deprecated, use the `root=` option on the command line instead.
     </span><span class="attr">#[deprecated]
     </span><span class="kw">pub </span>root_dev: u16,
     <span class="doccomment">/// 0xAA55 magic number
@@ -995,8 +1024,9 @@
     ///
     /// Type: read
     ///
-    /// Contains an x86 jump instruction, `0xEB` followed by a signed offset relative to byte
-    /// `0x202`. This can be used to determine the size of the header.
+    /// Contains an x86 jump instruction, `0xEB` followed by a signed offset
+    /// relative to byte `0x202`. This can be used to determine the size of
+    /// the header.
     </span><span class="kw">pub </span>jump: u16,
     <span class="doccomment">/// Magic signature &quot;HdrS&quot;
     ///
@@ -1008,8 +1038,9 @@
     ///
     /// Type: read
     ///
-    /// Contains the boot protocol version, in `(major &lt;&lt; 8)+minor` format, e.g. `0x0204` for
-    /// version 2.04, and `0x0a11` for a hypothetical version 10.17.
+    /// Contains the boot protocol version, in `(major &lt;&lt; 8)+minor` format, e.g.
+    /// `0x0204` for version 2.04, and `0x0a11` for a hypothetical version
+    /// 10.17.
     </span><span class="kw">pub </span>version: u16,
     <span class="doccomment">/// Boot loader hook
     ///
@@ -1028,24 +1059,27 @@
     ///
     /// Type: read
     ///
-    /// If set to a nonzero value, contains a pointer to a NUL-terminated human-readable kernel
-    /// version number string, less `0x200`. This can be used to display the kernel version to the
-    /// user. This value should be less than (`0x200*setup_sects`).
+    /// If set to a nonzero value, contains a pointer to a NUL-terminated
+    /// human-readable kernel version number string, less `0x200`. This can
+    /// be used to display the kernel version to the user. This value should
+    /// be less than (`0x200*setup_sects`).
     ///
-    /// For example, if this value is set to `0x1c00`, the kernel version number string can be
-    /// found at offset `0x1e00` in the kernel file.
+    /// For example, if this value is set to `0x1c00`, the kernel version number
+    /// string can be found at offset `0x1e00` in the kernel file.
     </span><span class="kw">pub </span>kernel_version: u16,
     <span class="doccomment">/// Boot loader identifier
     ///
     /// Type: write (obligatory)
     ///
-    /// If your boot loader has an assigned id, enter `0xTV` here, where `T` is an identifier for
-    /// the boot loader and `V` is a version number. Otherwise, enter `0xFF` here.
+    /// If your boot loader has an assigned id, enter `0xTV` here, where `T` is
+    /// an identifier for the boot loader and `V` is a version number.
+    /// Otherwise, enter `0xFF` here.
     ///
-    /// For boot loader IDs above `T` = `0xD`, write `T` = `0xE` to this field and write the
-    /// extended ID minus `0x10` to the [`SetupHeader::ext_loader_type`] field. Similarly, the
-    /// [`SetupHeader::ext_loader_ver`] field can be used to provide more than four bits for the
-    /// bootloader version.
+    /// For boot loader IDs above `T` = `0xD`, write `T` = `0xE` to this field
+    /// and write the extended ID minus `0x10` to the
+    /// [`SetupHeader::ext_loader_type`] field. Similarly, the
+    /// [`SetupHeader::ext_loader_ver`] field can be used to provide more than
+    /// four bits for the bootloader version.
     </span><span class="kw">pub </span>type_of_loader: u8,
     <span class="doccomment">/// Boot protocol option flags
     ///
@@ -1055,40 +1089,43 @@
     ///
     /// Type: modify (obligatory)
     ///
-    /// When using protocol 2.00 or 2.01, if the real mode kernel is not loaded at `0x90000`, it
-    /// gets moved there later in the loading sequence. Fill in this field if you want
-    /// additional data (such as the kernel command line) moved in addition to the real-mode
-    /// kernel itself.
+    /// When using protocol 2.00 or 2.01, if the real mode kernel is not loaded
+    /// at `0x90000`, it gets moved there later in the loading sequence.
+    /// Fill in this field if you want additional data (such as the kernel
+    /// command line) moved in addition to the real-mode kernel itself.
     ///
     /// The unit is bytes starting with the beginning of the boot sector.
     ///
-    /// This field is can be ignored when the protocol is 2.02 or higher, or if the real-mode code
-    /// is loaded at `0x90000`.
+    /// This field is can be ignored when the protocol is 2.02 or higher, or if
+    /// the real-mode code is loaded at `0x90000`.
     </span><span class="kw">pub </span>setup_move_size: u16,
     <span class="doccomment">/// Boot loader hook
     ///
     /// Type: optional, reloc
     ///
-    /// The address to jump to in protected mode. This defaults to the load address of the kernel,
-    /// and can be used by the boot loader to determine the proper load address.
+    /// The address to jump to in protected mode. This defaults to the load
+    /// address of the kernel, and can be used by the boot loader to
+    /// determine the proper load address.
     ///
     /// This field can be modified for two purposes:
     /// - as a boot loader hook
-    /// - if a bootloader which does not install a hook loads a relocatable kernel at a nonstandard
-    ///   address it will have to modify this field to point to the load address.
+    /// - if a bootloader which does not install a hook loads a relocatable
+    ///   kernel at a nonstandard address it will have to modify this field to
+    ///   point to the load address.
     </span><span class="kw">pub </span>code32_start: u32,
     <span class="doccomment">/// initrd load address (set by boot loader)
     ///
     /// Type: write (obligatory)
     ///
-    /// The 32-bit linear address of the initial ramdisk or ramfs. Leave at zero if there is no
-    /// initial ramdisk/ramfs.
+    /// The 32-bit linear address of the initial ramdisk or ramfs. Leave at zero
+    /// if there is no initial ramdisk/ramfs.
     </span><span class="kw">pub </span>ramdisk_image: u32,
     <span class="doccomment">/// initrd size (set by boot loader)
     ///
     /// Type: write (obligatory)
     ///
-    /// Size of the initial ramdisk or ramfs. Leave at zero if there is no initial ramdisk/ramfs.
+    /// Size of the initial ramdisk or ramfs. Leave at zero if there is no
+    /// initial ramdisk/ramfs.
     </span><span class="kw">pub </span>ramdisk_size: u32,
     <span class="doccomment">/// DO NOT USE - for bootsect.S use only
     ///
@@ -1099,82 +1136,92 @@
     ///
     /// Type: write (optional)
     ///
-    /// Set this field to the offset (from the beginning of the real-mode code) of the end of the
-    /// setup stack/heap, minus `0x0200`.
+    /// Set this field to the offset (from the beginning of the real-mode code)
+    /// of the end of the setup stack/heap, minus `0x0200`.
     </span><span class="kw">pub </span>heap_end_ptr: u16,
     <span class="doccomment">/// Extended boot loader version
     ///
     /// Type: write (optional)
     ///
-    /// This field is used as an extension of the version number in the type_of_loader field. The
-    /// total version number is considered to be `(type_of_loader &amp; 0x0f) + (ext_loader_ver &lt;&lt; 4)`.
+    /// This field is used as an extension of the version number in the
+    /// type_of_loader field. The total version number is considered to be
+    /// `(type_of_loader &amp; 0x0f) + (ext_loader_ver &lt;&lt; 4)`.
     ///
-    /// The use of this field is boot loader specific. If not written, it is zero.
+    /// The use of this field is boot loader specific. If not written, it is
+    /// zero.
     ///
-    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to write for protocol
-    /// version 2.02 or higher.
+    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to
+    /// write for protocol version 2.02 or higher.
     </span><span class="kw">pub </span>ext_loader_ver: u8,
     <span class="doccomment">/// Extended boot laoder ID
     ///
     /// Type: write (obligatory if `(type_of_loader &amp; 0xf0) == 0xe0`)
     ///
-    /// This field is used as an extension of the type number in type_of_loader field. If the type
-    /// in type_of_loader is `0xE`, then the actual type is `(ext_loader_type + 0x10)`.
+    /// This field is used as an extension of the type number in type_of_loader
+    /// field. If the type in type_of_loader is `0xE`, then the actual type
+    /// is `(ext_loader_type + 0x10)`.
     ///
     /// This field is ignored if the type in type_of_loader is not 0xE.
     ///
-    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to write for protocol
-    /// version 2.02 or higher.
+    /// Kernels prior to 2.6.31 did not recognize this field, but it is safe to
+    /// write for protocol version 2.02 or higher.
     </span><span class="kw">pub </span>ext_loader_type: u8,
     <span class="doccomment">/// 32-bit pointer to the kernel command line
     ///
     /// Type: write (obligatory)
     ///
-    /// Set this field to the linear address of the kernel command line. The kernel command line
-    /// can be located anywhere between the end of the setup heap and `0xA0000`; it does not have
-    /// to be located in the same 64K segment as the real-mode code itself.
+    /// Set this field to the linear address of the kernel command line. The
+    /// kernel command line can be located anywhere between the end of the
+    /// setup heap and `0xA0000`; it does not have to be located in the same
+    /// 64K segment as the real-mode code itself.
     ///
-    /// Fill in this field even if your boot loader does not support a command line, in which case
-    /// you can point this to an empty string (or better yet, to the string “auto”.) If this field
-    /// is left at zero, the kernel will assume that your boot loader does not support the 2.02+
+    /// Fill in this field even if your boot loader does not support a command
+    /// line, in which case you can point this to an empty string (or better
+    /// yet, to the string “auto”.) If this field is left at zero, the
+    /// kernel will assume that your boot loader does not support the 2.02+
     /// protocol.
     </span><span class="kw">pub </span>cmd_line_ptr: u32,
     <span class="doccomment">/// Highest legal initrd address
     ///
     /// Type: read
     ///
-    /// The maximum address that may be occupied by the initial ramdisk/ramfs contents. For boot
-    /// protocols 2.02 or earlier, this field is not present, and the maximum address is
-    /// `0x37FFFFFF`. (This address is defined as the address of the highest safe byte, so if your
-    /// ramdisk is exactly 131072 bytes long and this field is `0x37FFFFFF`, you can start your
-    /// ramdisk at `0x37FE0000`.)
+    /// The maximum address that may be occupied by the initial ramdisk/ramfs
+    /// contents. For boot protocols 2.02 or earlier, this field is not
+    /// present, and the maximum address is `0x37FFFFFF`. (This address is
+    /// defined as the address of the highest safe byte, so if your
+    /// ramdisk is exactly 131072 bytes long and this field is `0x37FFFFFF`, you
+    /// can start your ramdisk at `0x37FE0000`.)
     </span><span class="kw">pub </span>initrd_addr_max: u32,
     <span class="doccomment">/// Physical addr alignment required for kernel
     ///
     /// Type: read/modify (reloc)
-    /// Alignment unit required by the kernel (if relocatable_kernel is true.) A relocatable kernel
-    /// that is loaded at an alignment incompatible with the value in this field will be realigned
-    /// during kernel initialization.
+    /// Alignment unit required by the kernel (if relocatable_kernel is true.) A
+    /// relocatable kernel that is loaded at an alignment incompatible with
+    /// the value in this field will be realigned during kernel
+    /// initialization.
     ///
-    /// Starting with protocol version 2.10, this reflects the kernel alignment preferred for
-    /// optimal performance; it is possible for the loader to modify this field to permit a lesser
-    /// alignment. See the [`SetupHeader::min_alignment`] and [`SetupHeader::pref_address`] fields.
+    /// Starting with protocol version 2.10, this reflects the kernel alignment
+    /// preferred for optimal performance; it is possible for the loader to
+    /// modify this field to permit a lesser alignment. See the
+    /// [`SetupHeader::min_alignment`] and [`SetupHeader::pref_address`] fields.
     </span><span class="kw">pub </span>kernel_alignment: u32,
     <span class="doccomment">/// Whether kernel is relocatable or not
     ///
     /// Type: read (reloc)
     ///
-    /// If this field is nonzero, the protected-mode part of the kernel can be loaded at any
-    /// address that satisfies the kernel_alignment field. After loading, the boot loader must set
-    /// the code32_start field to point to the loaded code, or to a boot loader hook.
+    /// If this field is nonzero, the protected-mode part of the kernel can be
+    /// loaded at any address that satisfies the kernel_alignment field.
+    /// After loading, the boot loader must set the code32_start field to
+    /// point to the loaded code, or to a boot loader hook.
     </span><span class="kw">pub </span>relocatable_kernel: u8,
     <span class="doccomment">/// Minimum alignment, as a power of two
     ///
     /// Type: read (reloc)
     ///
-    /// This field, if nonzero, indicates as a power of two the minimum alignment required, as
-    /// opposed to preferred, by the kernel to boot. If a boot loader makes use of this field, it
-    /// should update the kernel_alignment field with the alignment unit desired; typically:
+    /// This field, if nonzero, indicates as a power of two the minimum
+    /// alignment required, as opposed to preferred, by the kernel to boot.
+    /// If a boot loader makes use of this field, it should update the
+    /// kernel_alignment field with the alignment unit desired; typically:
     ///
     /// ``` kernel_alignment = 1 &lt;&lt; min_alignment ```
     /// 
@@ -1190,41 +1237,43 @@
     ///
     /// Type: read
     ///
-    /// The maximum size of the command line without the terminating zero. This means that the
-    /// command line can contain at most `cmdline_size` characters. With protocol version 2.05 and
-    /// earlier, the maximum size was 255.
+    /// The maximum size of the command line without the terminating zero. This
+    /// means that the command line can contain at most `cmdline_size`
+    /// characters. With protocol version 2.05 and earlier, the maximum size
+    /// was 255.
     </span><span class="kw">pub </span>cmdline_size: u32,
     <span class="doccomment">/// Hardware subarchitecture
     ///
     /// Type: write, optional
     ///
-    /// In a paravirtualized environment the hardware low level architectural pieces such as
-    /// interrupt handling, page table handling, and accessing process control registers needs to
-    /// be done differently.
+    /// In a paravirtualized environment the hardware low level architectural
+    /// pieces such as interrupt handling, page table handling, and
+    /// accessing process control registers needs to be done differently.
     ///
-    /// This field allows the bootloader to inform the kernel we are in one one of those
-    /// environments.
+    /// This field allows the bootloader to inform the kernel we are in one one
+    /// of those environments.
     </span><span class="kw">pub </span>hardware_subarch: u32,
     <span class="doccomment">/// Subarchitecture-specific data
     ///
     /// Type: write (subarch-dependent)
     ///
-    /// A pointer to data that is specific to hardware subarch This field is currently unused for
-    /// the default x86/PC environment, do not modify.
+    /// A pointer to data that is specific to hardware subarch This field is
+    /// currently unused for the default x86/PC environment, do not modify.
     </span><span class="kw">pub </span>hardware_subarch_data: u64,
     <span class="doccomment">/// Offset of kernel payload
     ///
     /// Type: read
     ///
-    /// If non-zero then this field contains the offset from the beginning of the protected-mode
-    /// code to the payload.
+    /// If non-zero then this field contains the offset from the beginning of
+    /// the protected-mode code to the payload.
     ///
-    /// The payload may be compressed. The format of both the compressed and uncompressed data
-    /// should be determined using the standard magic numbers. The currently supported compression
-    /// formats are gzip (magic numbers `1F 8B` or `1F 9E`), bzip2 (magic number `42 5A`), LZMA
-    /// (magic number `5D 00`), XZ (magic number `FD 37`), LZ4 (magic number `02 21`) and ZSTD
-    /// (magic number `28 B5`). The uncompressed payload is currently always ELF (magic number
-    /// `7F 45 4C 46`).
+    /// The payload may be compressed. The format of both the compressed and
+    /// uncompressed data should be determined using the standard magic
+    /// numbers. The currently supported compression formats are gzip (magic
+    /// numbers `1F 8B` or `1F 9E`), bzip2 (magic number `42 5A`), LZMA
+    /// (magic number `5D 00`), XZ (magic number `FD 37`), LZ4 (magic number `02
+    /// 21`) and ZSTD (magic number `28 B5`). The uncompressed payload is
+    /// currently always ELF (magic number `7F 45 4C 46`).
     </span><span class="kw">pub </span>payload_offset: u32,
     <span class="doccomment">/// Length of kernel payload
     ///
@@ -1234,42 +1283,47 @@
     ///
     /// Type: write (special)
     ///
-    /// The 64-bit physical pointer to NULL terminated single linked list of struct setup_data.
-    /// This is used to define a more extensible boot parameters passing mechanism.
+    /// The 64-bit physical pointer to NULL terminated single linked list of
+    /// struct setup_data. This is used to define a more extensible boot
+    /// parameters passing mechanism.
     </span><span class="kw">pub </span>setup_data: u64,
     <span class="doccomment">/// Preferred loading address
     ///
     /// Type: read (reloc)
     ///
-    /// This field, if nonzero, represents a preferred load address for the kernel. A relocating
-    /// bootloader should attempt to load at this address if possible.
+    /// This field, if nonzero, represents a preferred load address for the
+    /// kernel. A relocating bootloader should attempt to load at this
+    /// address if possible.
     ///
-    /// A non-relocatable kernel will unconditionally move itself and to run at this address.
+    /// A non-relocatable kernel will unconditionally move itself and to run at
+    /// this address.
     </span><span class="kw">pub </span>pref_address: u64,
     <span class="doccomment">/// Linear memory required during initialization
     ///
     /// Type: read
     ///
-    /// This field indicates the amount of linear contiguous memory starting at the kernel runtime
-    /// start address that the kernel needs before it is capable of examining its memory map. This
-    /// is not the same thing as the total amount of memory the kernel needs to boot, but it can be
-    /// used by a relocating boot loader to help select a safe load address for the kernel.
+    /// This field indicates the amount of linear contiguous memory starting at
+    /// the kernel runtime start address that the kernel needs before it is
+    /// capable of examining its memory map. This is not the same thing as
+    /// the total amount of memory the kernel needs to boot, but it can be
+    /// used by a relocating boot loader to help select a safe load address for
+    /// the kernel.
     </span><span class="kw">pub </span>init_size: u32,
     <span class="doccomment">/// Offset of handover entry point
     ///
     /// Type: read
     ///
-    /// This field is the offset from the beginning of the kernel image to the EFI handover
-    /// protocol entry point. Boot loaders using the EFI handover protocol to boot the kernel
-    /// should jump to this offset.
+    /// This field is the offset from the beginning of the kernel image to the
+    /// EFI handover protocol entry point. Boot loaders using the EFI
+    /// handover protocol to boot the kernel should jump to this offset.
     </span><span class="kw">pub </span>handover_offset: u32,
     <span class="doccomment">/// Offset of the kernel_info
     ///
     /// Type: read
     ///
-    /// This field is the offset from the beginning of the kernel image to the kernel_info. The
-    /// kernel_info structure is embedded in the Linux image in the uncompressed protected mode
-    /// region.
+    /// This field is the offset from the beginning of the kernel image to the
+    /// kernel_info. The kernel_info structure is embedded in the Linux
+    /// image in the uncompressed protected mode region.
     </span><span class="kw">pub </span>kernel_info_offset: u32,
 }
 <span class="macro">static_assertions::assert_eq_size!</span>(SetupHeader, [u8; <span class="number">123usize</span>]);
@@ -1309,11 +1363,7 @@
 
 <span class="kw">impl </span>BootE820Entry {
     <span class="kw">pub fn </span>new(addr: usize, size: usize, type_: E820EntryType) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            addr,
-            size,
-            type_: type_ <span class="kw">as </span>u32,
-        }
+        <span class="self">Self </span>{ addr, size, type_: type_ <span class="kw">as </span>u32 }
     }
 
     <span class="kw">pub fn </span>entry_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;E820EntryType&gt; {
@@ -1542,8 +1592,8 @@
         <span class="kw">if </span><span class="self">self</span>.hdr.cmdline_size == <span class="number">0 </span>{
             Default::default()
         } <span class="kw">else </span>{
-            <span class="comment">// Safety: Linux boot protocol expects the pointer to be valid, even if there are no
-            // args.
+            <span class="comment">// Safety: Linux boot protocol expects the pointer to be valid, even if there
+            // are no args.
             </span><span class="kw">unsafe </span>{ CStr::from_ptr(<span class="self">self</span>.hdr.cmd_line_ptr <span class="kw">as </span><span class="kw-2">*const </span>c_char) }
         }
     }

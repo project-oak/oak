@@ -36,8 +36,6 @@
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -66,9 +64,7 @@
 
 <span class="kw">impl </span>ServerChannelHandle {
     <span class="kw">pub fn </span>new(socket: Box&lt;<span class="kw">dyn </span>Channel&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            inner: InvocationChannel::new(socket),
-        }
+        <span class="self">Self </span>{ inner: InvocationChannel::new(socket) }
     }
     <span class="kw">pub fn </span>read_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;(message::RequestMessage, Timer)&gt; {
         <span class="self">self</span>.inner.read_message()

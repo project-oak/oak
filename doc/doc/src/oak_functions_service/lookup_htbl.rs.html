@@ -676,6 +676,9 @@
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
 <a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -692,29 +695,30 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This is a key/value hash table optimized for large numbers of small k/v pairs.  We assume we
-//! bust out of on-chip cache, so speed is limited by cache misses, not the actual operations such
-//! as hashing and bit manipulation.
+</span><span class="doccomment">//! This is a key/value hash table optimized for large numbers of small k/v
+//! pairs.  We assume we bust out of on-chip cache, so speed is limited by cache
+//! misses, not the actual operations such as hashing and bit manipulation.
 //!
-//! The k/v pairs are loaded before any are read, and once they are loaded cannot be modified.  We
-//! take advantage of these restrictions to build a hash table with far less memory overhead per
-//! k/v pair (21 bytes vs ~128 bytes for hashbrown&lt;Bytes, Bytes&gt;).  Speed for k/v lookups is ~90ns
-//! on manual tests.
+//! The k/v pairs are loaded before any are read, and once they are loaded
+//! cannot be modified.  We take advantage of these restrictions to build a hash
+//! table with far less memory overhead per k/v pair (21 bytes vs ~128 bytes for
+//! hashbrown&lt;Bytes, Bytes&gt;).  Speed for k/v lookups is ~90ns on manual tests.
 //!
-//! The hash table consists of 2 vectors.  The first is a table of &quot;entries&quot;, which is a packed
-//! array of entries with the following layout:
+//! The hash table consists of 2 vectors.  The first is a table of &quot;entries&quot;,
+//! which is a packed array of entries with the following layout:
 //!
 //! ```ignore
 //!    hash_byte: u8,
 //!    data_index: u40,  // A 5-byte index, so we support up to 1TiB of data.
 //! ```
 //!
-//! This is a &quot;swiss&quot; table meaning that instead of the usual &quot;buckets&quot; of entries, the entries are
-//! collapsed into the hash table itself.  By adding a 1-byte hash, we can eliminate 99.6% of key
-//! comparisons to the wrong keys.  This is important for speed because comparing keys causes a
-//! page fault usually, while comparing the 1-byte hash is usually an L1 cache hit.  The number of
-//! cache misses per lookup should be close to 2 for values found in the table, and 1 for values
-//! not in the table.
+//! This is a &quot;swiss&quot; table meaning that instead of the usual &quot;buckets&quot; of
+//! entries, the entries are collapsed into the hash table itself.  By adding a
+//! 1-byte hash, we can eliminate 99.6% of key comparisons to the wrong keys.
+//! This is important for speed because comparing keys causes a page fault
+//! usually, while comparing the 1-byte hash is usually an L1 cache hit.  The
+//! number of cache misses per lookup should be close to 2 for values found in
+//! the table, and 1 for values not in the table.
 //!
 //! The storage for k/v pairs is chunked into 2MiB vectors:
 //!
@@ -722,8 +726,8 @@
 //!     data_chunks: Vec&lt;Box&lt;[u8]&gt;&gt;,
 //! ```
 //!
-//! `data_chunks` starts empty, and as data is added to the table, we allocate another chunk.  The
-//! format for each k/v pair of data in each chunk is:
+//! `data_chunks` starts empty, and as data is added to the table, we allocate
+//! another chunk.  The format for each k/v pair of data in each chunk is:
 //!
 //! ```ignore
 //!     key_len: &lt;compressed u30&gt;
@@ -732,17 +736,20 @@
 //!     value: [u8]
 //! ```
 //!
-//! Another memory savings comes from using a swiss table with exactly a 60% load factor.  Swiss
-//! tables require a significant portion of the table be empty, and normally as the table grows,
-//! they dynamically double the size.  At least when using the alloc crate, this resize causes a
-//! new table to be allocated at 2X the size, data is copied from the old table to the new, and the
-//! old table is freed.  This results in a 3X expansion in memory usage vs the prior array size.
-//! In contrast, this scheme has only 40% of the table empty and is never resized.
+//! Another memory savings comes from using a swiss table with exactly a 60%
+//! load factor.  Swiss tables require a significant portion of the table be
+//! empty, and normally as the table grows, they dynamically double the size.
+//! At least when using the alloc crate, this resize causes a new table to be
+//! allocated at 2X the size, data is copied from the old table to the new, and
+//! the old table is freed.  This results in a 3X expansion in memory usage vs
+//! the prior array size. In contrast, this scheme has only 40% of the table
+//! empty and is never resized.
 //!
 //! There are certain limits imposed by this structure:
 //!
 //!   * Every k/v pair must fit into a 2MiB chunk.
-//!   * The total memory allocated to keys and values, and their compressed lengths, is &lt; 1TiB.
+//!   * The total memory allocated to keys and values, and their compressed
+//!     lengths, is &lt; 1TiB.
 
 </span><span class="kw">use </span>alloc::{boxed::Box, vec, vec::Vec};
 <span class="kw">use </span>core::mem;
@@ -750,8 +757,8 @@
 <span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>rand_core::{OsRng, RngCore};
 
-<span class="comment">// To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
-// k/v pair.  It is referred to as u40 below.
+<span class="comment">// To save memory, we use 5 byte array index values instead of 8 bytes.  This
+// saves 12 bytes per k/v pair.  It is referred to as u40 below.
 </span><span class="kw">const </span>INDEX_SIZE: usize = <span class="number">5</span>;
 
 <span class="attr">#[derive(Clone, Copy, Default)]
@@ -786,9 +793,10 @@
 </span>}
 
 <span class="kw">impl </span>LookupHtbl {
-    <span class="doccomment">/// Set the initial size of self.table.  For best speed and memory use, this should be as large
-    /// as the number of key/value entries that will be loaded.  NOTE: Only call this once, before
-    /// storing anything in the table.
+    <span class="doccomment">/// Set the initial size of self.table.  For best speed and memory use, this
+    /// should be as large as the number of key/value entries that will be
+    /// loaded.  NOTE: Only call this once, before storing anything in the
+    /// table.
     </span><span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, max_entries: usize) {
         <span class="kw">if </span><span class="self">self</span>.used_entries != <span class="number">0 </span>{
             <span class="kw">return</span>; <span class="comment">// Too late to reserve memory.
@@ -798,15 +806,16 @@
         <span class="self">self</span>.max_entries = max_entries;
         <span class="self">self</span>.table = <span class="macro">vec!</span>[Entry::default(); allocated_entries];
         <span class="self">self</span>.data_chunks = <span class="macro">vec!</span>[];
-        <span class="comment">// Initialized used_data to 1, so that we can use 0 as the null value.  The first byte of
-        // the first chunk will never be used as a result.
+        <span class="comment">// Initialized used_data to 1, so that we can use 0 as the null value.  The
+        // first byte of the first chunk will never be used as a result.
         </span><span class="self">self</span>.used_data = <span class="number">1usize</span>;
         <span class="self">self</span>.used_entries = <span class="number">0usize</span>;
         <span class="self">self</span>.hash_secret = OsRng.next_u64();
         <span class="kw">if </span><span class="self">self</span>.hash_secret == <span class="number">0u64 </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;There is something very wrong with OsRng&quot;</span>);
         }
-        <span class="comment">// Set chunk size such that we have chunk sizes about 1/10th the size of the entries table.
+        <span class="comment">// Set chunk size such that we have chunk sizes about 1/10th the size of the
+        // entries table.
         </span><span class="kw">let </span><span class="kw-2">mut </span>chunk_size = allocated_entries.next_power_of_two();
         <span class="kw">if </span>chunk_size &lt; <span class="number">1 </span>&lt;&lt; <span class="number">21 </span>{
             <span class="comment">// The minimum chunk size is 2MiB.
@@ -817,25 +826,28 @@
         <span class="self">self</span>.chunk_bits = <span class="self">self</span>.chunk_size.ilog2() <span class="kw">as </span>usize;
     }
 
-    <span class="comment">// Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
-    // Otherwise, return the LookupResult::NotFound(table index, hash_byte).
+    <span class="comment">// Lookup the key/value pair.  If found, return LookupResult::Found(table_index,
+    // data_index). Otherwise, return the LookupResult::NotFound(table index,
+    // hash_byte).
     </span><span class="kw">fn </span>lookup(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; LookupResult {
         <span class="kw">if </span><span class="self">self</span>.table.is_empty() {
             <span class="macro">panic!</span>(<span class="string">&quot;Check for emtpy before calling lookup&quot;</span>);
         }
         <span class="kw">let </span>key_hash: u64 = hash(key, <span class="self">self</span>.hash_secret);
-        <span class="comment">// The lower 32-bites are used in reduce to compute the table index, and values next to
-        // each other in the table will have their lower-32 bits close to each other.  The next
-        // higher byte should have no significant correlation for unequal keys.
+        <span class="comment">// The lower 32-bites are used in reduce to compute the table index, and values
+        // next to each other in the table will have their lower-32 bits close
+        // to each other.  The next higher byte should have no significant
+        // correlation for unequal keys.
         </span><span class="kw">let </span>key_hash_byte = (key_hash &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u8;
         <span class="kw">let </span><span class="kw-2">mut </span>table_index = reduce(key_hash, <span class="self">self</span>.table.len());
-        <span class="comment">// To quickly find the correct entry, we skip entries that have hash_byte values that don&#39;t
-        // match the key&#39;s hash.  This avoids 99.6% of cache misses caused comparing the key to the
-        // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
-        // keys, and return Found if they match.  Otherwise, we start back at the top of the loop.
+        <span class="comment">// To quickly find the correct entry, we skip entries that have hash_byte values
+        // that don&#39;t match the key&#39;s hash.  This avoids 99.6% of cache misses
+        // caused comparing the key to the wrong key.  Once we found an entry
+        // with a matching hash byte, we then compare the two keys, and return
+        // Found if they match.  Otherwise, we start back at the top of the loop.
         </span><span class="kw">loop </span>{
-            <span class="comment">// We try to load only the hash byte to save time.  Once we have a matching hash byte,
-            // the loop ends and we compare keys.
+            <span class="comment">// We try to load only the hash byte to save time.  Once we have a matching hash
+            // byte, the loop ends and we compare keys.
             </span><span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="kw-2">&amp;</span><span class="self">self</span>.table[table_index];
             <span class="kw">while </span>entry.hash_byte != key_hash_byte &amp;&amp; entry.hash_byte != <span class="number">0 </span>{
                 table_index += <span class="number">1</span>;
@@ -898,8 +910,9 @@
         <span class="kw-2">&amp;</span>chunk[value_index..value_index + value_len]
     }
 
-    <span class="doccomment">/// Insert a k/v pair into the table.  Returns None if the key was not already in the table,
-    /// and Some(&amp;[u8]) referring to the prior value otherwise.
+    <span class="doccomment">/// Insert a k/v pair into the table.  Returns None if the key was not
+    /// already in the table, and Some(&amp;[u8]) referring to the prior value
+    /// otherwise.
     </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
         <span class="kw">if </span><span class="self">self</span>.table.is_empty() {
             <span class="self">self</span>.reserve(<span class="number">1</span>);
@@ -924,7 +937,8 @@
         }
     }
 
-    <span class="comment">// This increases memory for the table temporarily increase 3X, and permanently by 2X.
+    <span class="comment">// This increases memory for the table temporarily increase 3X, and permanently
+    // by 2X.
     </span><span class="kw">fn </span>grow_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span><span class="self">self</span>.max_entries == <span class="number">0 </span>{
             <span class="self">self</span>.reserve(<span class="number">1</span>);
@@ -949,9 +963,11 @@
         }
     }
 
-    <span class="comment">// Create a k/v pair in the most recent chunk.  Create a new chunk if this would overflow.
+    <span class="comment">// Create a k/v pair in the most recent chunk.  Create a new chunk if this would
+    // overflow.
     </span><span class="kw">fn </span>new_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; usize {
-        <span class="comment">// Check to see if we need a new chunk.  INDEX_SIZE is also the max for compressed ints.
+        <span class="comment">// Check to see if we need a new chunk.  INDEX_SIZE is also the max for
+        // compressed ints.
         </span><span class="kw">let </span>additional_data_len = <span class="number">2 </span>* INDEX_SIZE + key.len() + value.len();
         <span class="macro">assert!</span>(additional_data_len &lt; <span class="self">self</span>.chunk_size);
         <span class="kw">let </span>end_index = <span class="self">self</span>.used_data + additional_data_len;
@@ -960,8 +976,9 @@
             <span class="kw">let </span>values = Box::&lt;[u8]&gt;::new_zeroed_slice(<span class="self">self</span>.chunk_size);
             <span class="comment">// Safety:
             //     This is safe because we allocated these values as a zero-ed slice, which
-            //     initializes our u8 values to 0.  The assumption here is that the zero value for
-            //     u8 is zero, a safe assumption: what would happen if 0u8 != 0x00u8?
+            //     initializes our u8 values to 0.  The assumption here is that the zero
+            // value for     u8 is zero, a safe assumption: what would happen if
+            // 0u8 != 0x00u8?
             </span><span class="kw">let </span>values = <span class="kw">unsafe </span>{ values.assume_init() };
             <span class="self">self</span>.data_chunks.push(values);
             <span class="kw">if </span>chunk_index == <span class="number">0 </span>{
@@ -1001,10 +1018,7 @@
 
     <span class="doccomment">/// Return an iterator that can be used to iterate through k/v pairs.
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LookupHtblIter {
-        LookupHtblIter {
-            htbl: <span class="self">self</span>,
-            table_index: <span class="number">0</span>,
-        }
+        LookupHtblIter { htbl: <span class="self">self</span>, table_index: <span class="number">0 </span>}
     }
 }
 
@@ -1046,16 +1060,14 @@
 
     <span class="comment">// Required method
     </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
-        LookupHtblIter {
-            htbl: <span class="self">self</span>,
-            table_index: <span class="number">0usize</span>,
-        }
+        LookupHtblIter { htbl: <span class="self">self</span>, table_index: <span class="number">0usize </span>}
     }
 }
 
-<span class="comment">// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as the index into the
-// hash table.  This is faster than computing x % N, and avoids the wasted space of requiring the
-// hash table to be a power of 2 in size.
+<span class="comment">// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as
+// the index into the hash table.  This is faster than computing x % N, and
+// avoids the wasted space of requiring the hash table to be a power of 2 in
+// size.
 </span><span class="attr">#[inline]
 </span><span class="kw">fn </span>reduce(hash: u64, table_len: usize) -&gt; usize {
     (((hash <span class="kw">as </span>u128) * (table_len <span class="kw">as </span>u128)) &gt;&gt; <span class="number">64</span>) <span class="kw">as </span>usize
@@ -1072,14 +1084,13 @@
 <span class="comment">// Write a u40 index to unaligned memory LE.
 </span><span class="attr">#[inline]
 </span><span class="kw">fn </span>write_index(entry: <span class="kw-2">&amp;mut </span>Entry, value: usize) {
-    entry
-        .data_index
-        .copy_from_slice(<span class="kw-2">&amp;</span>value.to_le_bytes()[<span class="number">0</span>..INDEX_SIZE]);
+    entry.data_index.copy_from_slice(<span class="kw-2">&amp;</span>value.to_le_bytes()[<span class="number">0</span>..INDEX_SIZE]);
 }
 
-<span class="comment">// Read a compressed integer length.  Returns (length, num bytes of length) Compressed integers for
-// lengths are &lt;2-bit num_bytes&gt;&lt;6-bit MSBs&gt;.  num_bytes is 0 for small integers &lt;= 64.  Lengths up
-// to 2^30 can be represented, limiting keys and values to 1GiB each.
+<span class="comment">// Read a compressed integer length.  Returns (length, num bytes of length)
+// Compressed integers for lengths are &lt;2-bit num_bytes&gt;&lt;6-bit MSBs&gt;.  num_bytes
+// is 0 for small integers &lt;= 64.  Lengths up to 2^30 can be represented,
+// limiting keys and values to 1GiB each.
 </span><span class="attr">#[inline]
 </span><span class="kw">fn </span>read_len(data: <span class="kw-2">&amp;</span>[u8], index: usize) -&gt; (usize, usize) {
     <span class="kw">let </span>first_byte = data[index] <span class="kw">as </span>usize;
@@ -1094,7 +1105,8 @@
     (len, <span class="number">1 </span>+ num_bytes)
 }
 
-<span class="comment">// Write a compressed length to data.  Return the number of bytes used to represent the length.
+<span class="comment">// Write a compressed length to data.  Return the number of bytes used to
+// represent the length.
 </span><span class="attr">#[inline]
 </span><span class="kw">fn </span>write_len(data: <span class="kw-2">&amp;mut </span>[u8], index: usize, <span class="kw-2">mut </span>len: usize) -&gt; usize {
     <span class="kw">if </span>len &lt; <span class="number">64 </span>{
@@ -1112,9 +1124,10 @@
     num_bytes
 }
 
-<span class="comment">// This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
-// hashing in order to pass the dieharder tests.  It also passes distribution checks when used to
-// produce indexes into swiss hash tables in the way we do here, with reduce.
+<span class="comment">// This hash both defends against DDoS attacks and passes dieharder tests.  It
+// is 2 rounds of hashing in order to pass the dieharder tests.  It also passes
+// distribution checks when used to produce indexes into swiss hash tables in
+// the way we do here, with reduce.
 </span><span class="attr">#[inline(always)]
 </span><span class="kw">fn </span>hash_u64(v: u64, hash_secret: u64) -&gt; u64 {
     <span class="kw">let </span>v1 = v.wrapping_add(hash_secret) ^ v.rotate_left(<span class="number">32</span>);
@@ -1189,11 +1202,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_for_loop() {
         <span class="kw">let </span>keys = [<span class="string">&quot;key1&quot;</span>.as_bytes(), <span class="string">&quot;key2&quot;</span>.as_bytes(), <span class="string">&quot;key3&quot;</span>.as_bytes()];
-        <span class="kw">let </span>values = [
-            <span class="string">&quot;value1&quot;</span>.as_bytes(),
-            <span class="string">&quot;value2&quot;</span>.as_bytes(),
-            <span class="string">&quot;value3&quot;</span>.as_bytes(),
-        ];
+        <span class="kw">let </span>values = [<span class="string">&quot;value1&quot;</span>.as_bytes(), <span class="string">&quot;value2&quot;</span>.as_bytes(), <span class="string">&quot;value3&quot;</span>.as_bytes()];
         <span class="kw">let </span><span class="kw-2">mut </span>table = LookupHtbl::default();
         table.reserve(<span class="number">3</span>);
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
@@ -1251,10 +1260,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_rand_vals() {
-        <span class="kw">let </span><span class="kw-2">mut </span>r = Rand {
-            seed: <span class="number">0u64</span>,
-            hash_secret: <span class="number">0x54d3_582e_5012_b464</span>,
-        };
+        <span class="kw">let </span><span class="kw-2">mut </span>r = Rand { seed: <span class="number">0u64</span>, hash_secret: <span class="number">0x54d3_582e_5012_b464 </span>};
         <span class="kw">let </span><span class="kw-2">mut </span>kv_pairs: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; = <span class="macro">vec!</span>[];
         <span class="kw">let </span><span class="kw-2">mut </span>table = LookupHtbl::default();
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10_000 </span>{
@@ -1281,19 +1287,18 @@
         <span class="macro">assert!</span>(table.get(<span class="string">&quot;key&quot;</span>.as_bytes()) == <span class="prelude-val">Some</span>(<span class="string">&quot;value2&quot;</span>.as_bytes()));
     }
 
-    <span class="comment">// The RNG function should act like a random oracle, in which case the odds of seeing the same
-    // value as one that came before is determined by the Birthday Problem.  Using the rule of
-    // thumb for how large the sequence needs to be to have a .5 probability of collision: sqrt(0.5
-    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence longer
+    <span class="comment">// The RNG function should act like a random oracle, in which case the odds of
+    // seeing the same value as one that came before is determined by the
+    // Birthday Problem.  Using the rule of thumb for how large the sequence
+    // needs to be to have a .5 probability of collision: sqrt(0.5
+    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a
+    //   sequence longer
     // than 2^28 without collisions.
     //
     // This is a linear-time algorithm for finding the cycle length of an RNG.
     </span><span class="attr">#[test]
     </span><span class="kw">fn </span>test_rng_sequence_len() {
-        <span class="kw">let </span><span class="kw-2">mut </span>r = Rand {
-            seed: <span class="number">0u64</span>,
-            hash_secret: <span class="number">0x5b97_8fda_47ab_926d</span>,
-        };
+        <span class="kw">let </span><span class="kw-2">mut </span>r = Rand { seed: <span class="number">0u64</span>, hash_secret: <span class="number">0x5b97_8fda_47ab_926d </span>};
         <span class="kw">for </span>loop_power <span class="kw">in </span><span class="number">0</span>..<span class="number">28 </span>{
             <span class="kw">let </span>target = r.rand64();
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0usize</span>..(<span class="number">1usize </span>&lt;&lt; loop_power) {
@@ -1304,8 +1309,8 @@
         }
     }
 
-    <span class="comment">// Test that the hash function yeilds the expected 2.54 average sequence length in a swiss
-    // table with 50% load factor.
+    <span class="comment">// Test that the hash function yeilds the expected 2.54 average sequence length
+    // in a swiss table with 50% load factor.
     </span><span class="attr">#[test]
     </span><span class="kw">fn </span>test_swiss_collisions() {
         <span class="kw">let </span>table_len = <span class="number">1usize </span>&lt;&lt; <span class="number">25</span>;
@@ -1344,9 +1349,10 @@
             <span class="kw">let </span>ave_seq_len = total_len <span class="kw">as </span>f32 / num_seq <span class="kw">as </span>f32;
             <span class="kw">if </span>(ave_seq_len - <span class="number">2.5415f32</span>).abs() &gt;= <span class="number">0.02 </span>{
                 <span class="comment">// When SHA256(counter) is used to randomly fill a swiss hash table to 50%, then
-                // average sequence length of used entries in the table is (experimentally) 25415.
-                // A good hash function needs to distribute keys well enough to achieve a similar
-                // behavior to that of a cryptographic strength hash function.  For example, with
+                // average sequence length of used entries in the table is (experimentally)
+                // 25415. A good hash function needs to distribute keys well
+                // enough to achieve a similar behavior to that of a
+                // cryptographic strength hash function.  For example, with
                 // the old ahash function, I was seeing sequence lengths of 3.5, and this
                 // significantly slowed down lookups.
                 </span><span class="macro">panic!</span>(<span class="string">&quot;tweak {}: ave seq len = {}&quot;</span>, tweak, ave_seq_len);

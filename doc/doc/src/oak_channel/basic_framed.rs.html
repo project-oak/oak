@@ -81,26 +81,26 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::Channel;
 
-<span class="doccomment">/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
-/// read.
+<span class="doccomment">/// Reads a chunk of data and acknowledges the transmission by writing back the
+/// number of bytes read.
 </span><span class="kw">fn </span>read_chunk&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C, chunk: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">let </span>len: u32 = chunk
-        .len()
-        .try_into()
-        .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;chunk too big&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>len: u32 = chunk.len().try_into().map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;chunk too big&quot;</span>))<span class="question-mark">?</span>;
     channel.read_exact(chunk)<span class="question-mark">?</span>;
     channel.write_all(<span class="kw-2">&amp;</span>len.to_le_bytes())
 }
 
-<span class="doccomment">/// Loads a Restricted Application over the given channel using a basic framed format.
+<span class="doccomment">/// Loads a Restricted Application over the given channel using a basic framed
+/// format.
 ///
-/// This is intended for use after the kernel has started up to load the Restricted Application,
-/// before we start the application and hand off the channel to it.
+/// This is intended for use after the kernel has started up to load the
+/// Restricted Application, before we start the application and hand off the
+/// channel to it.
 ///
 /// The protocol to load the application is very simple:
 /// 1. loader sends the size of the application binary, as u32
 /// 2. loader sends MAX_SIZE of data and waits for the kernel to acknowledge
-/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the amount of data read
+/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the
+///    amount of data read
 /// 4. repeat (2) and (3) until all the data has been transmitted
 </span><span class="kw">pub fn </span>load_raw&lt;C: Channel + <span class="question-mark">?</span>Sized, <span class="kw">const </span>MAX_SIZE: usize&gt;(
     channel: <span class="kw-2">&amp;mut </span>C,

@@ -272,6 +272,12 @@
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -328,7 +334,8 @@
 
 <span class="doccomment">/// State we need to track for system calls.
 ///
-/// Do not change the order of the fields here, as this is accessed from assembly!
+/// Do not change the order of the fields here, as this is accessed from
+/// assembly!
 </span><span class="attr">#[repr(C)]
 #[derive(Debug)]
 </span><span class="kw">struct </span>GsData {
@@ -338,7 +345,8 @@
     <span class="doccomment">/// User stack pointer. Saved from RSP after SYSCALL.
     </span>user_sp: VirtAddr,
 
-    <span class="doccomment">/// User instruction pointer (where to return after SYSCALL). Saved from RCX.
+    <span class="doccomment">/// User instruction pointer (where to return after SYSCALL). Saved from
+    /// RCX.
     </span>user_ip: VirtAddr,
 
     <span class="doccomment">/// User flags. Saved from R11.
@@ -392,8 +400,8 @@
     arg5: usize,
     arg6: usize,
 ) -&gt; isize {
-    <span class="comment">// SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return value in RAX
-    // (which matches SYSRET!)
+    <span class="comment">// SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return
+    // value in RAX (which matches SYSRET!)
     </span><span class="kw">match </span>Syscall::from_repr(syscall) {
         <span class="prelude-val">Some</span>(Syscall::Read) =&gt; syscall_read(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg3),
         <span class="prelude-val">Some</span>(Syscall::Write) =&gt; syscall_write(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg3),
@@ -414,7 +422,8 @@
 
 <span class="doccomment">/// Main entry point for system calls in the Oak Restricted Kernel.
 ///
-/// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to invoke system calls.
+/// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to
+/// invoke system calls.
 ///
 /// The system calls follow the Linux calling convention:
 /// &lt;https://github.com/torvalds/linux/blob/master/arch/x86/entry/calling.h&gt;
@@ -424,27 +433,30 @@
 ///   - arguments go in `RDI`, `RSI`, `RDX`, `RCX`, `R8`, `R9`
 ///   - return value is in `RAX`
 ///
-/// For the list of system calls that are supported, see the `oak_restricted_kernel_interface`
-/// crate.
+/// For the list of system calls that are supported, see the
+/// `oak_restricted_kernel_interface` crate.
 </span><span class="attr">#[naked]
 </span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>syscall_entrypoint() {
     <span class="comment">// When user code uses `SYSCALL`, the following happens (abridged):
     //  - RIP of the instruction following the SYSCALL will be in RCX
     //  - RFLAGS will be saved in R11
     //  - new RIP will be loaded from LSTAR (see `enable_syscalls()`)
-    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in
+    //    `descriptors.rs`)
     //  - CPL will be forced to zero.
     //
     // For `SYSRET`, the fast system return:
     //  - lower 32 bits of RFLAGS will be loaded from R11, upper 32 are cleared
     //  - RIP will be loaded from RCX
-    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in
+    //    `descriptors.rs`)
     //  - CPL will be forced to 3
     //
-    // Note that (a) this does not preserve RCX and R11, which the user code will take into account,
-    // and (b) SYSRET will always go back to ring 3.
+    // Note that (a) this does not preserve RCX and R11, which the user code will
+    // take into account, and (b) SYSRET will always go back to ring 3.
     //
-    // See SYSCALL and SYSRET in AMD64 Architecture Programmer&#39;s Manual, Volume 3 for more details.
+    // See SYSCALL and SYSRET in AMD64 Architecture Programmer&#39;s Manual, Volume 3
+    // for more details.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm! </span>{
             <span class="comment">// Switch to the syscall stack

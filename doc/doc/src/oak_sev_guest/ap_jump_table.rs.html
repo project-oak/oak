@@ -34,6 +34,7 @@
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -65,7 +66,8 @@
 /// See: Section 4.3.1.1 in &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf&gt;
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>ApJumpTable {
-    <span class="doccomment">/// Reset address where the AP should jump when handing over control to the OS.
+    <span class="doccomment">/// Reset address where the AP should jump when handing over control to the
+    /// OS.
     </span>reset_address: ApResetAddress,
     _padding: [u8; <span class="number">4092</span>],
 }

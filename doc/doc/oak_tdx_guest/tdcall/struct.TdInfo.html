@@ -4,8 +4,8 @@
     pub num_vcpus: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
     pub max_vcpus: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a>,
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Information about the TD’s execution environment.</p>
-<p>See section 2.4.2 of <a href="https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf">Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-Extensions (Intel® TDX)</a>
+<p>See section 2.4.2 of <a href="https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf">Guest-Host-Communication Interface (GHCI) for Intel®
+Trust Domain Extensions (Intel® TDX)</a>
 for more information.</p>
 </div></details><h2 id="fields" class="fields small-section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.gpa_width" class="structfield small-section-header"><a href="#structfield.gpa_width" class="anchor field">§</a><code>gpa_width: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span><div class="docblock"><p>The effective GPA width. The “shared” bit is at position gpa_width - 1.</p>
 <p>Currently only values of 48 or 52 are possible.</p>

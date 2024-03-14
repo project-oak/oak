@@ -84,6 +84,7 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -133,7 +134,8 @@
 
 <span class="doccomment">/// [`log::Log`] implementation that outputs logs on standard error.
 ///
-/// Implicitly declared as the global logger when using the [`crate::entrypoint`] macro.
+/// Implicitly declared as the global logger when using the
+/// [`crate::entrypoint`] macro.
 </span><span class="kw">pub struct </span>StderrLogger {}
 
 <span class="kw">impl </span>log::Log <span class="kw">for </span>StderrLogger {

@@ -222,10 +222,6 @@
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
 <a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -270,9 +266,7 @@
         .expect(<span class="string">&quot;could not find expected footer&quot;</span>);
     <span class="kw">let </span>remove_newlines = stripped.replace(<span class="string">&#39;\n&#39;</span>, <span class="string">&quot;&quot;</span>);
 
-    BASE64_STANDARD
-        .decode(remove_newlines)
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
+    BASE64_STANDARD.decode(remove_newlines).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
 }
 
 <span class="doccomment">/// Converts a raw public key to PEM format.
@@ -293,10 +287,7 @@
 <span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
 </span><span class="kw">pub fn </span>convert_pem_to_verifying_key(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;VerifyingKey&gt; {
     VerifyingKey::from_str(public_key_pem).map_err(|error| {
-        <span class="macro">anyhow::anyhow!</span>(
-            <span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey: {}&quot;</span>,
-            error
-        )
+        <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey: {}&quot;</span>, error)
     })
 }
 
@@ -307,9 +298,10 @@
     convert_pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
 }
 
-<span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the bytes
-/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
-/// This means that the keys could have different bytes, but still be the same key.
+<span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the
+/// bytes and compare p256 keys. Keys are considered equal if they are the same
+/// on the elliptic curve. This means that the keys could have different bytes,
+/// but still be the same key.
 </span><span class="kw">pub fn </span>equal_keys(public_key_a: <span class="kw-2">&amp;</span>[u8], public_key_b: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;bool&gt; {
     <span class="kw">let </span>key_a = convert_raw_to_verifying_key(public_key_a)<span class="question-mark">?</span>;
     <span class="kw">let </span>key_b = convert_raw_to_verifying_key(public_key_b)<span class="question-mark">?</span>;

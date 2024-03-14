@@ -105,6 +105,8 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -160,13 +162,14 @@
     descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
     descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
 
-    <span class="comment">// Safety: descriptors are &#39;static, so this is safe to load, but unfortunately the fact isn&#39;t
-    // visible through the MutexGuard.
+    <span class="comment">// Safety: descriptors are &#39;static, so this is safe to load, but unfortunately
+    // the fact isn&#39;t visible through the MutexGuard.
     </span><span class="kw">unsafe </span>{
         descriptors.gdt.load_unsafe();
     }
 
-    <span class="comment">// Safety: it&#39;s safe to load these segments as we&#39;ve initialized the GDT just above.
+    <span class="comment">// Safety: it&#39;s safe to load these segments as we&#39;ve initialized the GDT just
+    // above.
     </span><span class="kw">unsafe </span>{
         CS::set_reg(descriptors.kernel_cs_selector);
         DS::set_reg(descriptors.kernel_ds_selector);
@@ -181,18 +184,19 @@
 </span><span class="kw">pub fn </span>init_gdt(double_fault_stack: VirtAddr, privileged_interrupt_stack: VirtAddr) -&gt; u16 {
     <span class="kw">let </span><span class="kw-2">mut </span>descriptors = DESCRIPTORS.lock();
 
-    <span class="comment">// If an interrupt triggers a switch to Ring 0, the CPU will switch to the privileged stack.
+    <span class="comment">// If an interrupt triggers a switch to Ring 0, the CPU will switch to the
+    // privileged stack.
     </span>descriptors.tss.privilege_stack_table[<span class="number">0</span>] = privileged_interrupt_stack;
-    <span class="comment">// If we double fault (which means something is _really_ wrong), the CPU will switch to this
-    // stack.
+    <span class="comment">// If we double fault (which means something is _really_ wrong), the CPU will
+    // switch to this stack.
     </span>descriptors.tss.interrupt_stack_table[DOUBLE_FAULT_STACK_INDEX <span class="kw">as </span>usize] = double_fault_stack;
 
     descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
     descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
-    <span class="comment">// Safety: we know that descriptors are &#39;static as they are stored in the static variable, but
-    // unfortunately that fact is not visible through the MutexGuard.
-    // Thus, we need to rely on `transmute()` to extend the lifetime and use `load_unsafe()` to
-    // actually load the GDT.
+    <span class="comment">// Safety: we know that descriptors are &#39;static as they are stored in the static
+    // variable, but unfortunately that fact is not visible through the
+    // MutexGuard. Thus, we need to rely on `transmute()` to extend the lifetime
+    // and use `load_unsafe()` to actually load the GDT.
     </span><span class="kw">let </span>tss_descriptor =
         Descriptor::tss_segment(<span class="kw">unsafe </span>{ core::intrinsics::transmute(<span class="kw-2">&amp;</span>descriptors.tss) });
     descriptors.tss_selector = descriptors.gdt.add_entry(tss_descriptor);

@@ -293,8 +293,8 @@
         <span class="prelude-val">Err</span>(Errno::from_repr(ret)
             .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;unexpected error from mmap syscall: {}&quot;</span>, ret)))
     } <span class="kw">else </span>{
-        <span class="comment">// Safety: if the syscall didn&#39;t return an error, then the kernel guarantees that the
-        // address is valid and there is enough memory allocated.
+        <span class="comment">// Safety: if the syscall didn&#39;t return an error, then the kernel guarantees
+        // that the address is valid and there is enough memory allocated.
         </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(ret <span class="kw">as </span><span class="kw-2">*mut </span>u8, size <span class="kw">as </span>usize) })
     }
 }
@@ -319,8 +319,8 @@
     <span class="macro">unreachable!</span>();
 }
 
-<span class="comment">// Note that these tests are not being executed against Restricted Kernel, but rather the Linux
-// kernel of the machine cargo is running on!
+<span class="comment">// Note that these tests are not being executed against Restricted Kernel, but
+// rather the Linux kernel of the machine cargo is running on!
 </span><span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">extern crate </span>std;

@@ -83,6 +83,8 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -115,11 +117,12 @@
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
 <span class="kw">pub use </span>oak_crypto::encryption_key::EncryptionKeyHandle;
 <span class="kw">use </span>oak_dice::evidence::Evidence;
-<span class="doccomment">/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
-/// allocator, logger, panic handler.
+<span class="doccomment">/// Marks a function as the entrypoint to an enclave app and sets up an
+/// conviences such an allocator, logger, panic handler.
 ///
-/// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`]
-/// attributes, and enabled the [`alloc_error_handler`] unstable feature of the rust compiler.
+/// This macro assumes that crates using it have declared the [`no_std`] and
+/// [`no_main`] attributes, and enabled the [`alloc_error_handler`] unstable
+/// feature of the rust compiler.
 ///
 /// [`no_std`]: &lt;https://github.com/rust-lang/rust/issues/51540&gt;
 /// [`no_main`]: &lt;https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code&gt;
@@ -146,18 +149,19 @@
 /// ```
 </span><span class="kw">pub use </span>oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
-<span class="doccomment">/// Exposes the ability to sign bytestrings using a private key that has been endorsed in
-/// the Attestation Evidence.
+<span class="doccomment">/// Exposes the ability to sign bytestrings using a private key that has been
+/// endorsed in the Attestation Evidence.
 </span><span class="kw">pub trait </span>Signer {
-    <span class="doccomment">/// Attempt to sign the provided message bytestring using a signing private key, a
-    /// corresponding public key of which is contained in the Attestation Evidence.
+    <span class="doccomment">/// Attempt to sign the provided message bytestring using a signing private
+    /// key, a corresponding public key of which is contained in the
+    /// Attestation Evidence.
     </span><span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt;;
 }
 
 <span class="doccomment">/// Exposes the ability to read the Attestation Evidence.
-/// Note: Applications should only use the evidence to initially send it to the host application
-/// once, which then sends it to the clients. It is discouraged for enclave applications to operate
-/// directly with evidences.
+/// Note: Applications should only use the evidence to initially send it to the
+/// host application once, which then sends it to the clients. It is discouraged
+/// for enclave applications to operate directly with evidences.
 </span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence;
 }

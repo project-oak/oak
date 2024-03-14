@@ -398,11 +398,6 @@
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -429,12 +424,12 @@
     frame::PhysFrameRange, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
 };
 
-<span class="doccomment">/// Basic frame allocator implementation that keeps track of PageSize-sized chunks of contiguous
-/// memory with a bitmap.
+<span class="doccomment">/// Basic frame allocator implementation that keeps track of PageSize-sized
+/// chunks of contiguous memory with a bitmap.
 ///
 /// This implementation tracks memory using two bitmaps:
-///   - `valid`, which tracks whether a frame can be allocated at all (not all physical frames are
-///     usable memory)
+///   - `valid`, which tracks whether a frame can be allocated at all (not all
+///     physical frames are usable memory)
 ///   - `allocated`, which tracks whether a frame is currently allocated or not.
 ///
 /// A frame can be in one of three states:
@@ -442,10 +437,11 @@
 ///  valid = 1, allocated = 0 -- the frame is eligible for allocation.
 ///  valid = 1, allocated = 1 -- the frame is currently in use.
 ///
-/// The BitmapAllocator itself does not use memory allocation (no heap is required), but rather
-/// expects that the const parameter N is set to the exact number of u64-s required to construct a
-/// bitmap covering the memory range.
-/// (In container-ish terms, N specifies the capacity of the allocator, which can not be resized.)
+/// The BitmapAllocator itself does not use memory allocation (no heap is
+/// required), but rather expects that the const parameter N is set to the exact
+/// number of u64-s required to construct a bitmap covering the memory range.
+/// (In container-ish terms, N specifies the capacity of the allocator, which
+/// can not be resized.)
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BitmapAllocator&lt;S: PageSize, <span class="kw">const </span>N: usize&gt; {
     allocated: BitArray&lt;[u64; N], Lsb0&gt;,
@@ -455,11 +451,13 @@
 
 <span class="kw">impl</span>&lt;S: PageSize, <span class="kw">const </span>N: usize&gt; BitmapAllocator&lt;S, N&gt; {
     <span class="doccomment">/// Creates a new bitmap allocator for a physical frame range.
-    /// Panics if N does not match the number of u64-s required to track all frames in that range.
-    /// Initially, the allocator will mark the whole range as invalid.
+    /// Panics if N does not match the number of u64-s required to track all
+    /// frames in that range. Initially, the allocator will mark the whole
+    /// range as invalid.
     </span><span class="kw">pub const fn </span>new(range: PhysFrameRange&lt;S&gt;) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Unfortunately there doesn&#39;t seem to be a way to hoist this to the type system.
-        // We also have to crudely reimplement `range.count()` here as `count()` is not a const fn.
+        <span class="comment">// Unfortunately there doesn&#39;t seem to be a way to hoist this to the type
+        // system. We also have to crudely reimplement `range.count()` here as
+        // `count()` is not a const fn.
         </span><span class="kw">let </span>num_frames =
             (range.end.start_address().as_u64() - range.start.start_address().as_u64()) / S::SIZE;
         <span class="kw">let </span>expected = bitvec::mem::elts::&lt;u64&gt;(num_frames <span class="kw">as </span>usize);
@@ -467,18 +465,15 @@
             <span class="macro">panic!</span>(<span class="string">&quot;BitmapAllocator bitmap size does not match FrameRange size&quot;</span>,);
         }
 
-        <span class="self">Self </span>{
-            allocated: BitArray::ZERO,
-            valid: BitArray::ZERO,
-            range,
-        }
+        <span class="self">Self </span>{ allocated: BitArray::ZERO, valid: BitArray::ZERO, range }
     }
 
     <span class="doccomment">/// Marks a region of memory as either valid or invalid.
     ///
-    /// Allocations can happen only from regions that are valid. This method does not check whether
-    /// any allocations have been made from regions to be marked as invalid, and panics if the range
-    /// is outside the range of the allocator.
+    /// Allocations can happen only from regions that are valid. This method
+    /// does not check whether any allocations have been made from regions
+    /// to be marked as invalid, and panics if the range is outside the
+    /// range of the allocator.
     </span><span class="kw">pub fn </span>mark_valid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: PhysFrameRange&lt;S&gt;, valid: bool) {
         <span class="kw">if let </span>(<span class="prelude-val">Some</span>(start), <span class="prelude-val">Some</span>(end)) = (<span class="self">self</span>.frame_idx(range.start), <span class="self">self</span>.frame_idx(range.end)) {
             <span class="self">self</span>.valid.get_mut(start..end).unwrap().fill(valid);
@@ -490,10 +485,11 @@
         }
     }
 
-    <span class="doccomment">/// Returns a BitArray where 1 denotes a frame that&#39;s eligible for allocation.
+    <span class="doccomment">/// Returns a BitArray where 1 denotes a frame that&#39;s eligible for
+    /// allocation.
     ///
-    /// This means that (a) the frame needs to be marked as valid and (b) the frame has not been
-    /// allocated yet.
+    /// This means that (a) the frame needs to be marked as valid and (b) the
+    /// frame has not been allocated yet.
     </span><span class="kw">fn </span>available(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; BitArray&lt;[u64; N]&gt; {
         <span class="self">self</span>.valid.bitand(<span class="self">self</span>.allocated.not())
     }
@@ -513,23 +509,22 @@
             })
             .max_by_key(|(start_idx, end_idx)| end_idx - start_idx)
             .map(|(start_idx, end_idx)| {
-                PhysFrame::range(
-                    <span class="self">self</span>.frame(start_idx).unwrap(),
-                    <span class="self">self</span>.frame(end_idx).unwrap() + <span class="number">1</span>,
-                )
+                PhysFrame::range(<span class="self">self</span>.frame(start_idx).unwrap(), <span class="self">self</span>.frame(end_idx).unwrap() + <span class="number">1</span>)
             })
     }
 
-    <span class="doccomment">/// Tries to allocate a specific frame range in the range managed by the allocator.
+    <span class="doccomment">/// Tries to allocate a specific frame range in the range managed by the
+    /// allocator.
     ///
-    /// Returns the same frame range if the allocation was successful; None, if not.
+    /// Returns the same frame range if the allocation was successful; None, if
+    /// not.
     ///
-    /// Panics if the frame is outside the bounds of memory that is managed by this allocator.
+    /// Panics if the frame is outside the bounds of memory that is managed by
+    /// this allocator.
     </span><span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame_range: PhysFrameRange&lt;S&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrameRange&lt;S&gt;&gt; {
-        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(start_idx), <span class="prelude-val">Some</span>(end_idx)) = (
-            <span class="self">self</span>.frame_idx(frame_range.start),
-            <span class="self">self</span>.frame_idx(frame_range.end),
-        ) {
+        <span class="kw">if let </span>(<span class="prelude-val">Some</span>(start_idx), <span class="prelude-val">Some</span>(end_idx)) =
+            (<span class="self">self</span>.frame_idx(frame_range.start), <span class="self">self</span>.frame_idx(frame_range.end))
+        {
             <span class="kw">if </span><span class="self">self</span>.available()[start_idx..end_idx].not_all() {
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
@@ -537,9 +532,9 @@
             <span class="prelude-val">Some</span>(frame_range)
         } <span class="kw">else </span>{
             <span class="macro">panic!</span>(
-                    <span class="string">&quot;Can&#39;t allocate frame range that&#39;s outside our range; our range: {:?}, frame range: {:?}&quot;</span>,
-                    <span class="self">self</span>.range, frame_range
-                );
+                <span class="string">&quot;Can&#39;t allocate frame range that&#39;s outside our range; our range: {:?}, frame range: {:?}&quot;</span>,
+                <span class="self">self</span>.range, frame_range
+            );
         }
     }
 
@@ -555,8 +550,8 @@
             </span>.find(|(<span class="kw">_</span>, window)| window.all())
             .map(|(idx, <span class="kw">_</span>)| (idx, idx + num))<span class="question-mark">?</span>;
 
-        <span class="comment">// Safety: unwrapping these indexes is safe as we obtained them by indexing valid entries in
-        // the map, so they shouldn&#39;t be outside the range.
+        <span class="comment">// Safety: unwrapping these indexes is safe as we obtained them by indexing
+        // valid entries in the map, so they shouldn&#39;t be outside the range.
         </span><span class="self">self</span>.allocate(PhysFrame::range(
             <span class="self">self</span>.frame(start_idx).unwrap(),
             <span class="self">self</span>.frame(end_idx).unwrap(),
@@ -680,16 +675,12 @@
             (<span class="number">0</span>..<span class="number">9</span>).map(|x| create_frame(x * <span class="number">0x1000</span>)).collect();
 
         <span class="kw">let </span><span class="kw-2">mut </span>alloc = create_allocator::&lt;<span class="number">1</span>&gt;(<span class="number">0x0000</span>, expected_frames.len() <span class="kw">as </span>u64 * <span class="number">0x1000</span>);
-        alloc.mark_valid(
-            create_frame_range(<span class="number">0x0000</span>, expected_frames.len() <span class="kw">as </span>u64 * <span class="number">0x1000</span>),
-            <span class="bool-val">true</span>,
-        );
+        alloc.mark_valid(create_frame_range(<span class="number">0x0000</span>, expected_frames.len() <span class="kw">as </span>u64 * <span class="number">0x1000</span>), <span class="bool-val">true</span>);
         <span class="macro">assert_eq!</span>(<span class="number">9</span>, alloc.num_valid());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, alloc.num_allocated());
 
-        <span class="kw">let </span>got_frames: Vec&lt;PhysFrame&lt;Size4KiB&gt;&gt; = (<span class="number">0</span>..expected_frames.len())
-            .map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap())
-            .collect();
+        <span class="kw">let </span>got_frames: Vec&lt;PhysFrame&lt;Size4KiB&gt;&gt; =
+            (<span class="number">0</span>..expected_frames.len()).map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap()).collect();
 
         <span class="macro">assert_set_eq!</span>(expected_frames, got_frames);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, alloc.allocate_frame());
@@ -757,9 +748,8 @@
         expected_frames
             .iter()
             .for_each(|frame| alloc.mark_valid(PhysFrame::range(<span class="kw-2">*</span>frame, <span class="kw-2">*</span>frame + <span class="number">1</span>), <span class="bool-val">true</span>));
-        <span class="kw">let </span>got_frames: Vec&lt;PhysFrame&lt;Size4KiB&gt;&gt; = (<span class="number">0</span>..expected_frames.len())
-            .map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap())
-            .collect();
+        <span class="kw">let </span>got_frames: Vec&lt;PhysFrame&lt;Size4KiB&gt;&gt; =
+            (<span class="number">0</span>..expected_frames.len()).map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap()).collect();
         <span class="macro">assert_set_eq!</span>(expected_frames, got_frames);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, alloc.allocate_frame());
     }

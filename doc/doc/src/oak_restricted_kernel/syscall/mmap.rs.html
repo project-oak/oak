@@ -195,12 +195,6 @@
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -255,9 +249,9 @@
         <span class="kw">return </span><span class="prelude-val">Err</span>(Errno::EINVAL);
     }
 
-    <span class="comment">// Don&#39;t touch anything below 2 MiB boundary (we don&#39;t want to make 0x0 a valid address).
-    // We also need to ensure the address is aligned to a 2 MiB boundary; adjust the address, if
-    // we&#39;re allowed to do so.
+    <span class="comment">// Don&#39;t touch anything below 2 MiB boundary (we don&#39;t want to make 0x0 a valid
+    // address). We also need to ensure the address is aligned to a 2 MiB
+    // boundary; adjust the address, if we&#39;re allowed to do so.
     </span><span class="kw">let </span>addr = <span class="kw">if </span>flags.contains(MmapFlags::MAP_FIXED) {
         <span class="kw">let </span>addr = addr.ok_or(Errno::EINVAL)<span class="question-mark">?</span>;
         <span class="kw">if </span>!addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() &lt; Size2MiB::SIZE {
@@ -266,14 +260,12 @@
         }
         addr
     } <span class="kw">else </span>{
-        max(
-            addr.unwrap_or(VirtAddr::zero()),
-            VirtAddr::new(Size2MiB::SIZE),
-        )
-        .align_up(Size2MiB::SIZE)
+        max(addr.unwrap_or(VirtAddr::zero()), VirtAddr::new(Size2MiB::SIZE))
+            .align_up(Size2MiB::SIZE)
     };
 
-    <span class="comment">// We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB boundary as well.
+    <span class="comment">// We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB
+    // boundary as well.
     </span><span class="kw">let </span>size = align_up(size <span class="kw">as </span>u64, Size2MiB::SIZE) <span class="kw">as </span>usize;
     <span class="kw">let </span>count = size / Size2MiB::SIZE <span class="kw">as </span>usize;
 
@@ -318,9 +310,9 @@
 
         <span class="comment">// For each page we also need a physical frame to back it to create a mapping.
         </span><span class="kw">for </span>(page, frame) <span class="kw">in </span>pages.zip(frames) {
-            <span class="comment">// Safety: find_unallocated_pages returns, well, unallocated pages and we&#39;ve held the
-            // lock all the time so we can be sure that nobody else has mapped those
-            // pages.
+            <span class="comment">// Safety: find_unallocated_pages returns, well, unallocated pages and we&#39;ve
+            // held the lock all the time so we can be sure that nobody else has
+            // mapped those pages.
             </span><span class="kw">unsafe </span>{
                 pt.map_to_with_table_flags(
                     page,
@@ -364,8 +356,8 @@
         pages
     };
 
-    <span class="comment">// Safety: we&#39;ve just allocated and mapped that chunk of memory, so (a) we know it&#39;s valid and
-    // (b) nobody else can have a reference to it yet.
+    <span class="comment">// Safety: we&#39;ve just allocated and mapped that chunk of memory, so (a) we know
+    // it&#39;s valid and (b) nobody else can have a reference to it yet.
     </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut(pages.start.start_address().as_mut_ptr(), size) };
     <span class="comment">// Zero out the memory, as required by mmap() semantics.
     </span>buf.fill(<span class="number">0u8</span>);
@@ -381,11 +373,7 @@
     offset: usize,
 ) -&gt; isize {
     <span class="kw">if </span>fd != -<span class="number">1 </span>|| offset != <span class="number">0 </span>{
-        <span class="macro">log::warn!</span>(
-            <span class="string">&quot;mmap syscall called with invalid fd: {} or offset: {}&quot;</span>,
-            fd,
-            offset
-        );
+        <span class="macro">log::warn!</span>(<span class="string">&quot;mmap syscall called with invalid fd: {} or offset: {}&quot;</span>, fd, offset);
     }
     <span class="kw">let </span>prot = <span class="kw">if let </span><span class="prelude-val">Some</span>(prot) = MmapProtection::from_bits(prot <span class="kw">as </span>i32) {
         prot

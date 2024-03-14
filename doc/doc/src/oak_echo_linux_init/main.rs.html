@@ -65,8 +65,6 @@
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -124,9 +122,7 @@
         <span class="kw">let </span>len = reader.read(<span class="kw-2">&amp;mut </span>buf[..]).expect(<span class="string">&quot;coulnd&#39;t read request&quot;</span>);
         <span class="kw">if </span>len &gt; <span class="number">0 </span>{
             <span class="macro">debug!</span>(<span class="string">&quot;Echoing {} bytes&quot;</span>, len);
-            writer
-                .write_all(<span class="kw-2">&amp;</span>buf[..len])
-                .expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
+            writer.write_all(<span class="kw-2">&amp;</span>buf[..len]).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
         }
     }
 }

@@ -347,6 +347,15 @@
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
 <a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -386,32 +395,31 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationReport, [u8; <span class="number">1184</span>]);
 
 <span class="kw">impl </span>AttestationReport {
-    <span class="doccomment">/// Creates a new AttestationReport with all zeros and the provided value on the
-    /// data.report_data field.
+    <span class="doccomment">/// Creates a new AttestationReport with all zeros and the provided value on
+    /// the data.report_data field.
     </span><span class="kw">pub fn </span>from_report_data(report_data: [u8; REPORT_DATA_SIZE]) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>result = AttestationReport::new_zeroed();
         result.data.report_data = report_data;
         result
     }
 
-    <span class="doccomment">/// Checks that the report data is valid and the signature has the expected format.
+    <span class="doccomment">/// Checks that the report data is valid and the signature has the expected
+    /// format.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="self">self</span>.data.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.signature.validate_format()
     }
 
     <span class="kw">pub fn </span>has_debug_flag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span>policy_flags: PolicyFlags = <span class="self">self
-            </span>.data
-            .policy
-            .get_flags()
-            .ok_or(<span class="string">&quot;Failed to parse flags&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>policy_flags: PolicyFlags =
+            <span class="self">self</span>.data.policy.get_flags().ok_or(<span class="string">&quot;Failed to parse flags&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(policy_flags.contains(PolicyFlags::DEBUG))
     }
 }
 
-<span class="doccomment">/// The number of bytes of custom data that can be included in the attestation report.
+<span class="doccomment">/// The number of bytes of custom data that can be included in the attestation
+/// report.
 ///
 /// See Table 22 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="kw">pub const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
@@ -438,47 +446,50 @@
     </span><span class="kw">pub </span>vmpl: u32,
     <span class="doccomment">/// The algorithm used to sign the report.
     ///
-    /// Use `AttestationReportData::get_signature_algo` to try to convert this to a
-    /// `SigningAlgorithm` enum.
+    /// Use `AttestationReportData::get_signature_algo` to try to convert this
+    /// to a `SigningAlgorithm` enum.
     </span><span class="kw">pub </span>signature_algo: u32,
-    <span class="doccomment">/// The current version of each of the components in the Trusted Computing Base (TCB). This
-    /// could be different from the committed value during provisional execution when firmware
-    /// is being updated.
+    <span class="doccomment">/// The current version of each of the components in the Trusted Computing
+    /// Base (TCB). This could be different from the committed value during
+    /// provisional execution when firmware is being updated.
     </span><span class="kw">pub </span>current_tcb: TcbVersion,
     <span class="doccomment">/// Information about the platform.
     ///
-    /// Use `AttestationReportData::get_platform_info` to try to convert this to a `PlatformInfo`
-    /// biflag representation.
+    /// Use `AttestationReportData::get_platform_info` to try to convert this to
+    /// a `PlatformInfo` biflag representation.
     </span><span class="kw">pub </span>platform_info: u64,
-    <span class="doccomment">/// The least significant bit indicates Whether the digest of the author key is included in the
-    /// report, all other bits are reserved and must be zero.
+    <span class="doccomment">/// The least significant bit indicates Whether the digest of the author key
+    /// is included in the report, all other bits are reserved and must be
+    /// zero.
     ///
-    /// Use `AttestationReportData::get_author_key_en` to try to convert this to an `AuthorKey`
-    /// enum.
+    /// Use `AttestationReportData::get_author_key_en` to try to convert this to
+    /// an `AuthorKey` enum.
     </span><span class="kw">pub </span>author_key_en: u64,
-    <span class="doccomment">/// Guest-provided data. The custom data provided in the attestation request.
+    <span class="doccomment">/// Guest-provided data. The custom data provided in the attestation
+    /// request.
     </span><span class="kw">pub </span>report_data: [u8; REPORT_DATA_SIZE],
     <span class="doccomment">/// The measurement of the VM memory calculated at launch.
     </span><span class="kw">pub </span>measurement: [u8; <span class="number">48</span>],
     <span class="doccomment">/// Custom data provided by the hypervisor at launch.
     </span><span class="kw">pub </span>host_data: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The SHA-384 digest of the ID public key used to sign the ID block that was provided in
-    /// SNP_LAUNCH_FINISH.
+    <span class="doccomment">/// The SHA-384 digest of the ID public key used to sign the ID block that
+    /// was provided in SNP_LAUNCH_FINISH.
     </span><span class="kw">pub </span>id_key_digest: [u8; <span class="number">48</span>],
-    <span class="doccomment">/// The SHA-384 digest of the author public key used to certify the ID key, if the least
-    /// significant bit of `author_key_en` is 1, or all zeroes otherwise.
+    <span class="doccomment">/// The SHA-384 digest of the author public key used to certify the ID key,
+    /// if the least significant bit of `author_key_en` is 1, or all zeroes
+    /// otherwise.
     </span><span class="kw">pub </span>author_key_digest: [u8; <span class="number">48</span>],
     <span class="doccomment">/// The report ID of this guest.
     </span><span class="kw">pub </span>report_id: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The report ID of this guest&#39;s migration agent.
     </span><span class="kw">pub </span>report_id_ma: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The reported TCB version that was used to generate the versioned chip endorsement key
-    /// (VCEK) used to sign this report.
+    <span class="doccomment">/// The reported TCB version that was used to generate the versioned chip
+    /// endorsement key (VCEK) used to sign this report.
     </span><span class="kw">pub </span>reported_tcb: TcbVersion,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved_0: [u8; <span class="number">24</span>],
-    <span class="doccomment">/// Identifier unique to the chip, unless the ID has been masked in configuration in which case
-    /// it is all zeroes.
+    <span class="doccomment">/// Identifier unique to the chip, unless the ID has been masked in
+    /// configuration in which case it is all zeroes.
     </span><span class="kw">pub </span>chip_id: [u8; <span class="number">64</span>],
     <span class="doccomment">/// The committed TCB version.
     </span><span class="kw">pub </span>committed_tcb: TcbVersion,
@@ -498,7 +509,8 @@
     </span><span class="kw">pub </span>committed_major: u8,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved_2: u8,
-    <span class="doccomment">/// The value of the current TCB version when the guest was launched or imported.
+    <span class="doccomment">/// The value of the current TCB version when the guest was launched or
+    /// imported.
     </span><span class="kw">pub </span>launch_tcb: TcbVersion,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved_3: [u8; <span class="number">168</span>],
@@ -507,7 +519,8 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationReportData, [u8; <span class="number">672</span>]);
 
 <span class="kw">impl </span>AttestationReportData {
-    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if possible.
+    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if
+    /// possible.
     </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PlatformInfo&gt; {
         PlatformInfo::from_bits(<span class="self">self</span>.platform_info)
     }
@@ -517,13 +530,14 @@
         AuthorKey::from_repr(<span class="self">self</span>.author_key_en)
     }
 
-    <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if
+    /// possible.
     </span><span class="kw">pub fn </span>get_signature_algo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningAlgorithm&gt; {
         SigningAlgorithm::from_repr(<span class="self">self</span>.signature_algo)
     }
 
-    <span class="doccomment">/// Checks that fields with specific expected values or ranges are valid and the reserved bytes
-    /// are all zero.
+    <span class="doccomment">/// Checks that fields with specific expected values or ranges are valid and
+    /// the reserved bytes are all zero.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="self">self</span>.policy.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.current_tcb.validate()<span class="question-mark">?</span>;
@@ -589,7 +603,8 @@
     </span><span class="kw">pub </span>abi_major: u8,
     <span class="doccomment">/// The allowed settings for the guest.
     ///
-    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags` enum.
+    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags`
+    /// enum.
     </span><span class="kw">pub </span>flags: u16,
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved: u32,
@@ -621,7 +636,8 @@
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>TcbVersion {
-    <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP) bootloader.
+    <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP)
+    /// bootloader.
     </span><span class="kw">pub </span>boot_loader: u8,
     <span class="doccomment">/// The current SVN of the PSP operating system.
     </span><span class="kw">pub </span>tee: u8,
@@ -678,9 +694,11 @@
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
-    <span class="doccomment">/// The R component of this signature. The value is zero-extended and little-endian encoded.
+    <span class="doccomment">/// The R component of this signature. The value is zero-extended and
+    /// little-endian encoded.
     </span><span class="kw">pub </span>r: [u8; <span class="number">72</span>],
-    <span class="doccomment">/// The S component of this signature. The value is zero-extended and little-endian encoded.
+    <span class="doccomment">/// The S component of this signature. The value is zero-extended and
+    /// little-endian encoded.
     </span><span class="kw">pub </span>s: [u8; <span class="number">72</span>],
     <span class="doccomment">/// Reserved, must be zero.
     </span>_reserved: [u8; <span class="number">368</span>],

@@ -114,13 +114,6 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -168,17 +161,11 @@
     <span class="kw">let </span>kernel_info = Kernel::load(cli.kernel_path()).context(<span class="string">&quot;couldn&#39;t load kernel file&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_hasher = Sha256::new();
     kernel_hasher.update(<span class="kw-2">&amp;</span>kernel_info.kernel_image);
-    <span class="macro">println!</span>(
-        <span class="string">&quot;Kernel Image Measurement: sha2-256:{}&quot;</span>,
-        hex::encode(kernel_hasher.finalize())
-    );
+    <span class="macro">println!</span>(<span class="string">&quot;Kernel Image Measurement: sha2-256:{}&quot;</span>, hex::encode(kernel_hasher.finalize()));
 
     <span class="kw">let </span><span class="kw-2">mut </span>setup_hasher = Sha256::new();
     setup_hasher.update(<span class="kw-2">&amp;</span>kernel_info.setup_data);
-    <span class="macro">println!</span>(
-        <span class="string">&quot;Kernel Setup Data Measurement: sha2-256:{}&quot;</span>,
-        hex::encode(setup_hasher.finalize())
-    );
+    <span class="macro">println!</span>(<span class="string">&quot;Kernel Setup Data Measurement: sha2-256:{}&quot;</span>, hex::encode(setup_hasher.finalize()));
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -189,11 +176,12 @@
 }
 
 <span class="kw">impl </span>Kernel {
-    <span class="doccomment">/// Parses a bzImage kernel file and extracts the kernel image and setup data.
+    <span class="doccomment">/// Parses a bzImage kernel file and extracts the kernel image and setup
+    /// data.
     ///
-    /// The VMM will parse the the bzImage file and split it into two parts: the setup data (which
-    /// includes the real-mode code) and the 64-bit kernel image. The VMM also updates some fields
-    /// in the setup data header.
+    /// The VMM will parse the the bzImage file and split it into two parts: the
+    /// setup data (which includes the real-mode code) and the 64-bit kernel
+    /// image. The VMM also updates some fields in the setup data header.
     ///
     /// See &lt;https://github.com/qemu/qemu/blob/6630bc04bccadcf868165ad6bca5a964bb69b067/hw/i386/x86.c#L795&gt;
     /// and &lt;https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html&gt;
@@ -221,17 +209,15 @@
         <span class="kw-2">*</span>u16::mut_from(<span class="kw-2">&amp;mut </span>setup_data[<span class="number">0x224</span>..<span class="number">0x226</span>]).expect(<span class="string">&quot;invalid slice for heap end ptr&quot;</span>) =
             (default_cmd_line - default_setup - <span class="number">0x200</span>) <span class="kw">as </span>u16;
 
-        <span class="comment">// The location and size of the initial RAM disk will depend on the actual initial RAM disk.
-        // To have stable measurements Stage 0 will overwrite these with zeros, before measuring and
-        // then overwrite these with the actual values before booting the kernel.
+        <span class="comment">// The location and size of the initial RAM disk will depend on the actual
+        // initial RAM disk. To have stable measurements Stage 0 will overwrite
+        // these with zeros, before measuring and then overwrite these with the
+        // actual values before booting the kernel.
         </span><span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>setup_data[<span class="number">0x218</span>..<span class="number">0x21C</span>]).expect(<span class="string">&quot;invalid slice for initrd location&quot;</span>) =
             <span class="number">0</span>;
         <span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>setup_data[<span class="number">0x21C</span>..<span class="number">0x220</span>]).expect(<span class="string">&quot;invalid slice for initrd size&quot;</span>) = <span class="number">0</span>;
 
-        <span class="self">Self </span>{
-            setup_data,
-            kernel_image,
-        }
+        <span class="self">Self </span>{ setup_data, kernel_image }
     }
 
     <span class="doccomment">/// Loads the bzImage-format kernel from the supplied path/

@@ -111,6 +111,7 @@
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -139,8 +140,8 @@
 
 <span class="doccomment">/// A synchronised implementation of a cell that can be initialized only once.
 ///
-/// This achieves the same goal as `std::sync::OnceLock`, but uses a spinlock to be compatible with
-/// `no_std`.
+/// This achieves the same goal as `std::sync::OnceLock`, but uses a spinlock to
+/// be compatible with `no_std`.
 </span><span class="kw">pub struct </span>OnceCell&lt;T&gt; {
     initialized: AtomicBool,
     lock: Spinlock&lt;()&gt;,
@@ -161,28 +162,29 @@
         <span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
-        <span class="comment">// Safety: there are no mutable references to the inner value if `initialized` is set to
-        // `true`, and the value has been initialized, so it is safe to create a new shared
-        // reference and assume it is initialized.
+        <span class="comment">// Safety: there are no mutable references to the inner value if `initialized`
+        // is set to `true`, and the value has been initialized, so it is safe
+        // to create a new shared reference and assume it is initialized.
         </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ (<span class="kw-2">*</span><span class="self">self</span>.value.get()).assume_init_ref() })
     }
 
     <span class="doccomment">/// Sets the inner value of the cell if it has not been initialized.
     ///
-    /// If it has been initialized the inner value is not updated and the passed-in value is
-    /// returned in the error.
+    /// If it has been initialized the inner value is not updated and the
+    /// passed-in value is returned in the error.
     </span><span class="kw">pub fn </span>set(<span class="kw-2">&amp;</span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), T&gt; {
         <span class="comment">// Do an initial check to see whether the value has been initialized.
         </span><span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
             <span class="comment">// Lock to make sure we have exclusive access.
             </span><span class="kw">let </span>_lock = <span class="self">self</span>.lock.lock();
-            <span class="comment">// Double check that someone else didn&#39;t initialize while we were waiting to get the
-            // lock. Relaxed ordering is sufficient since the lock acts as a memory barrier and also
-            // ensures no concurrent access to the code that stores the value.
+            <span class="comment">// Double check that someone else didn&#39;t initialize while we were waiting to get
+            // the lock. Relaxed ordering is sufficient since the lock acts as a
+            // memory barrier and also ensures no concurrent access to the code
+            // that stores the value.
             </span><span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Relaxed) {
-                <span class="comment">// Safety: the combination of the lock and the fact that `initialized` is `false`
-                // ensures that we have exclusive access to the inner value, so taking a mutable
-                // reference to it is safe.
+                <span class="comment">// Safety: the combination of the lock and the fact that `initialized` is
+                // `false` ensures that we have exclusive access to the inner
+                // value, so taking a mutable reference to it is safe.
                 </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span><span class="self">self</span>.value.get() }.write(value);
                 <span class="self">self</span>.initialized.store(<span class="bool-val">true</span>, Ordering::Release);
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -192,10 +194,10 @@
     }
 }
 
-<span class="comment">// Safety: It is safe to share references across threads since the inner value will only be set
-// while an exclusive lock is held and only once. Until it is set there can be no shared references
-// to it, and once it is set, and there are potential shared references to it, it will never be
-// modified again.
+<span class="comment">// Safety: It is safe to share references across threads since the inner value
+// will only be set while an exclusive lock is held and only once. Until it is
+// set there can be no shared references to it, and once it is set, and there
+// are potential shared references to it, it will never be modified again.
 </span><span class="kw">unsafe impl</span>&lt;T&gt; Sync <span class="kw">for </span>OnceCell&lt;T&gt; <span class="kw">where </span>T: Send + Sync {}
 
 <span class="attr">#[cfg(test)]

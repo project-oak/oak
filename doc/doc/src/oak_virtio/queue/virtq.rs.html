@@ -173,6 +173,9 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -225,8 +228,9 @@
     </span><span class="kw">pub </span>length: u32,
     <span class="doccomment">/// Flags providing more info about this descriptor.
     </span><span class="kw">pub </span>flags: DescFlags,
-    <span class="doccomment">/// The index of the next descriptor in the chain if this is not the end (i.e. flags contain
-    /// `DescFlags::VIRTQ_DESC_F_NEXT`), ignored otherwise.
+    <span class="doccomment">/// The index of the next descriptor in the chain if this is not the end
+    /// (i.e. flags contain `DescFlags::VIRTQ_DESC_F_NEXT`), ignored
+    /// otherwise.
     ///
     /// Not used for now, as we don&#39;t currently support chaining.
     </span><span class="kw">pub </span>next: u16,
@@ -238,10 +242,7 @@
             !flags.contains(DescFlags::VIRTQ_DESC_F_INDIRECT),
             <span class="string">&quot;indirect descriptors not supported&quot;
         </span>);
-        <span class="macro">assert!</span>(
-            !flags.contains(DescFlags::VIRTQ_DESC_F_NEXT),
-            <span class="string">&quot;chained descriptors not supported&quot;
-        </span>);
+        <span class="macro">assert!</span>(!flags.contains(DescFlags::VIRTQ_DESC_F_NEXT), <span class="string">&quot;chained descriptors not supported&quot;</span>);
         <span class="self">Self </span>{
             addr,
             length,
@@ -261,7 +262,8 @@
     }
 }
 
-<span class="doccomment">/// The ring buffer that indicates which descriptors have been made available by the driver.
+<span class="doccomment">/// The ring buffer that indicates which descriptors have been made available by
+/// the driver.
 ///
 /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-380006&gt;.
 </span><span class="attr">#[repr(C, align(<span class="number">2</span>))]
@@ -270,13 +272,15 @@
     </span><span class="kw">pub </span>flags: RingFlags,
     <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
-    /// maximum `u16` value.
+    /// Starts at 0 and always increments. Must never be decremented. Wraps
+    /// naturally when at the maximum `u16` value.
     </span><span class="kw">pub </span>idx: Wrapping&lt;u16&gt;,
-    <span class="doccomment">/// The ring-buffer containing indices of the heads of available descriptor chains.
+    <span class="doccomment">/// The ring-buffer containing indices of the heads of available descriptor
+    /// chains.
     </span><span class="kw">pub </span>ring: [u16; QUEUE_SIZE],
-    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t
-    /// currently support. The field is only added to act as padding for now.
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated,
+    /// which we don&#39;t currently support. The field is only added to act as
+    /// padding for now.
     </span><span class="kw">pub </span>used_event: u16,
 }
 
@@ -292,7 +296,8 @@
     }
 }
 
-<span class="doccomment">/// The ring buffer that indicates which available descriptors have been consumed by the device.
+<span class="doccomment">/// The ring buffer that indicates which available descriptors have been
+/// consumed by the device.
 ///
 /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-430008&gt;.
 </span><span class="attr">#[repr(C, align(<span class="number">4</span>))]
@@ -302,13 +307,14 @@
     </span><span class="kw">pub </span>flags: RingFlags,
     <span class="doccomment">/// The next index that will be used in the ring (modulo `QUEUE_SIZE`).
     ///
-    /// Starts at 0 and always increments. Must never be decremented. Wraps naturally when at the
-    /// maximum `u16` value.
+    /// Starts at 0 and always increments. Must never be decremented. Wraps
+    /// naturally when at the maximum `u16` value.
     </span><span class="kw">pub </span>idx: Wrapping&lt;u16&gt;,
     <span class="doccomment">/// The ring-buffer containing the used elements.
     </span><span class="kw">pub </span>ring: [UsedElem; QUEUE_SIZE],
-    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated, which we don&#39;t
-    /// currently support. The field is only added to act as padding for now.
+    <span class="doccomment">/// Event details. Only used if VIRTIO_F_EVENT_IDX has been negotiated,
+    /// which we don&#39;t currently support. The field is only added to act as
+    /// padding for now.
     </span><span class="kw">pub </span>avail_event: u16,
 }
 
@@ -331,8 +337,8 @@
 </span><span class="kw">pub struct </span>UsedElem {
     <span class="doccomment">/// The index of the head of the used descriptor chain.
     </span><span class="kw">pub </span>id: u32,
-    <span class="doccomment">/// Total length of the bytes that was written to the used descriptor chain (only used for
-    /// device-write-only descriptors).
+    <span class="doccomment">/// Total length of the bytes that was written to the used descriptor chain
+    /// (only used for device-write-only descriptors).
     </span><span class="kw">pub </span>len: u32,
 }
 

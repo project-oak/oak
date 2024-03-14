@@ -187,14 +187,6 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -268,7 +260,8 @@
         )]
     </span><span class="kw">pub </span>wasm: PathBuf,
 
-    <span class="doccomment">/// Path to a file containing key / value entries in protobuf binary format for lookup.
+    <span class="doccomment">/// Path to a file containing key / value entries in protobuf binary format
+    /// for lookup.
     </span><span class="attr">#[arg(
             long,
             value_parser = path_exists,
@@ -298,11 +291,7 @@
     wasm_path: PathBuf,
     constant_response_size: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
-    (
-        Box&lt;<span class="kw">dyn </span>launcher::GuestInstance&gt;,
-        channel::ConnectorHandle,
-        InitializeResponse,
-    ),
+    (Box&lt;<span class="kw">dyn </span>launcher::GuestInstance&gt;, channel::ConnectorHandle, InitializeResponse),
     Box&lt;<span class="kw">dyn </span>std::error::Error&gt;,
 &gt; {
     <span class="macro">log::info!</span>(<span class="string">&quot;creating Oak Functions guest instance&quot;</span>);
@@ -313,7 +302,8 @@
     <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialize_response))
 }
 
-<span class="comment">// Initially loads lookup data and spawns task to periodically refresh lookup data.
+<span class="comment">// Initially loads lookup data and spawns task to periodically refresh lookup
+// data.
 </span><span class="kw">async fn </span>setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
@@ -360,8 +350,8 @@
     result
 }
 
-<span class="comment">// Loads application config (including Wasm bytes) into the enclave and returns a remote attestation
-// evidence.
+<span class="comment">// Loads application config (including Wasm bytes) into the enclave and returns
+// a remote attestation evidence.
 </span><span class="kw">async fn </span>intialize_enclave(
     connector_handle: channel::ConnectorHandle,
     wasm: <span class="kw-2">&amp;</span>PathBuf,
@@ -376,18 +366,12 @@
         ubyte::ByteUnit::Byte(wasm_bytes.len() <span class="kw">as </span>u64)
     );
 
-    <span class="kw">let </span>request = InitializeRequest {
-        wasm_module: wasm_bytes,
-        constant_response_size,
-    };
+    <span class="kw">let </span>request = InitializeRequest { wasm_module: wasm_bytes, constant_response_size };
 
     <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsAsyncClient::new(connector_handle);
     <span class="macro">log::info!</span>(<span class="string">&quot;sending initialize request&quot;</span>);
-    <span class="kw">let </span>initialize_response = client
-        .initialize(<span class="kw-2">&amp;</span>request)
-        .<span class="kw">await
-        </span>.flatten()
-        .expect(<span class="string">&quot;couldn&#39;t initialize service&quot;</span>);
+    <span class="kw">let </span>initialize_response =
+        client.initialize(<span class="kw-2">&amp;</span>request).<span class="kw">await</span>.flatten().expect(<span class="string">&quot;couldn&#39;t initialize service&quot;</span>);
     <span class="macro">log::info!</span>(<span class="string">&quot;service initialized: {:?}&quot;</span>, initialize_response);
 
     <span class="prelude-val">Ok</span>(initialize_response)

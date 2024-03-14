@@ -142,9 +142,6 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -188,14 +185,15 @@
 /// See &lt;http://www.larvierinehart.com/serial/serialadc/serial.htm#17&gt;.
 </span><span class="kw">const </span>DISABLE_FIFO: u8 = <span class="number">0</span>;
 
-<span class="doccomment">/// Value of the line control register to set the number of data bits to 8, no parity bits, and the
-/// number of stop bits to 1.
+<span class="doccomment">/// Value of the line control register to set the number of data bits to 8, no
+/// parity bits, and the number of stop bits to 1.
 ///
 /// See &lt;https://en.wikipedia.org/wiki/8-N-1&gt;.
 /// Also see &lt;http://www.larvierinehart.com/serial/serialadc/serial.htm#18&gt;.
 </span><span class="kw">const </span>LINE_CONTROL_8N1: u8 = <span class="number">3</span>;
 
-<span class="doccomment">/// Value of the modem control register to mark the data terminal ready and request to send data.
+<span class="doccomment">/// Value of the modem control register to mark the data terminal ready and
+/// request to send data.
 ///
 /// See &lt;http://www.larvierinehart.com/serial/serialadc/serial.htm#19&gt;.
 </span><span class="kw">const </span>DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = <span class="number">3</span>;
@@ -205,9 +203,9 @@
 /// See &lt;https://wiki.osdev.org/Serial_Ports#Line_status_register&gt;.
 </span><span class="kw">const </span>OUTPUT_EMPTY: u8 = <span class="number">1 </span>&lt;&lt; <span class="number">5</span>;
 
-<span class="doccomment">/// Basic implementation that allows for writing to a serial port using the SEV-ES and SEV-SNP GHCB
-/// IOIO protocol, or using direct port-based IO, depending on which IO port factory is used in the
-/// wrapper enum.
+<span class="doccomment">/// Basic implementation that allows for writing to a serial port using the
+/// SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based IO,
+/// depending on which IO port factory is used in the wrapper enum.
 ///
 /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt; for more
 /// information on the GHCB IOIO protocol.
@@ -227,25 +225,21 @@
     ///
     /// # Safety
     ///
-    /// This function is unsafe as callers must make sure that the base address represents a
-    /// valid serial port device.
+    /// This function is unsafe as callers must make sure that the base address
+    /// represents a valid serial port device.
     </span><span class="kw">pub unsafe fn </span>new(base_address: u16, io_port_factory: PortFactoryWrapper) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>data = io_port_factory.new_writer(base_address);
         <span class="kw">let </span>line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
-        <span class="self">Self </span>{
-            base_address,
-            io_port_factory,
-            data,
-            line_status,
-        }
+        <span class="self">Self </span>{ base_address, io_port_factory, data, line_status }
     }
 
     <span class="doccomment">/// Initializes the serial port for writing.
     ///
-    /// We don&#39;t require interrupts or FIFO, and don&#39;t configure a maximum speed.
+    /// We don&#39;t require interrupts or FIFO, and don&#39;t configure a maximum
+    /// speed.
     </span><span class="kw">pub fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: writing to these ports is safe based on the requirement that a valid base address
-        // was provided when creating this instance.
+        <span class="comment">// Safety: writing to these ports is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.io_port_factory
                 .new_writer(<span class="self">self</span>.base_address + INTERRUPT_ENABLE)
@@ -265,8 +259,8 @@
 
     <span class="doccomment">/// Wait until the output buffer is empty.
     </span><span class="kw">pub fn </span>wait_for_empty_output(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: reading from this ports is safe based on the requirement that a valid base
-        // address was provided when creating this instance.
+        <span class="comment">// Safety: reading from this ports is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         </span><span class="kw">unsafe </span>{
             <span class="kw">while </span><span class="self">self</span>.line_status.try_read()<span class="question-mark">? </span>&amp; OUTPUT_EMPTY != OUTPUT_EMPTY {
                 core::hint::spin_loop();
@@ -278,8 +272,8 @@
     <span class="doccomment">/// Sends a byte of data via the serial port.
     </span><span class="kw">pub fn </span>send(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="self">self</span>.wait_for_empty_output()<span class="question-mark">?</span>;
-        <span class="comment">// Safety: writing to this port is safe based on the requirement that a valid base address
-        // was provided when creating this instance.
+        <span class="comment">// Safety: writing to this port is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.data.try_write(data) }
     }
 }

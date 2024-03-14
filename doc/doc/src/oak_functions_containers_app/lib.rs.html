@@ -423,24 +423,6 @@
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -522,17 +504,11 @@
         encryption_key_handle: Arc&lt;<span class="kw">dyn </span>AsyncEncryptionKeyHandle + Send + Sync&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            instance: OnceLock::new(),
-            encryption_key_handle,
-            observer,
-        }
+        <span class="self">Self </span>{ instance: OnceLock::new(), encryption_key_handle, observer }
     }
 
     <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; tonic::Result&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&lt;H&gt;&gt; {
-        <span class="self">self</span>.instance
-            .get()
-            .ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
+        <span class="self">self</span>.instance.get().ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
     }
 }
 
@@ -615,10 +591,7 @@
             },
         )
         .map_err(|err| {
-            tonic::Status::internal(<span class="macro">format!</span>(
-                <span class="string">&quot;couldn&#39;t call handle_user_request handler: {:?}&quot;</span>,
-                err
-            ))
+            tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t call handle_user_request handler: {:?}&quot;</span>, err))
         })
     }
 
@@ -660,9 +633,7 @@
 
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         <span class="kw">while let </span><span class="prelude-val">Some</span>(chunk) = request.next().<span class="kw">await </span>{
-            instance
-                .extend_lookup_data_chunk(chunk<span class="question-mark">?</span>)
-                .map_err(map_status)<span class="question-mark">?</span>;
+            instance.extend_lookup_data_chunk(chunk<span class="question-mark">?</span>).map_err(map_status)<span class="question-mark">?</span>;
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})
@@ -675,10 +646,7 @@
         request: tonic::Request&lt;ReserveRequest&gt;,
     ) -&gt; tonic::Result&lt;tonic::Response&lt;ReserveResponse&gt;&gt; {
         <span class="kw">let </span>request = request.into_inner();
-        <span class="self">self</span>.get_instance()<span class="question-mark">?
-            </span>.reserve(request)
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        <span class="self">self</span>.get_instance()<span class="question-mark">?</span>.reserve(request).map(tonic::Response::new).map_err(map_status)
     }
 }
 
@@ -743,8 +711,8 @@
             attributes.push(KeyValue::new(<span class="string">&quot;rpc_service_name&quot;</span>, service.to_string()));
         }
 
-        <span class="comment">// copied from the example in `tower::Service` to guarantee that `poll_ready` has been
-        // called on the proper instance (and not the clone!)
+        <span class="comment">// copied from the example in `tower::Service` to guarantee that `poll_ready`
+        // has been called on the proper instance (and not the clone!)
         </span><span class="kw">let </span>clone = <span class="self">self</span>.inner.clone();
         <span class="kw">let </span><span class="kw-2">mut </span>inner = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, clone);
 
@@ -753,10 +721,7 @@
         Box::pin(<span class="kw">async move </span>{
             <span class="kw">let </span>now = Instant::now();
             <span class="kw">let </span>resp = inner.call(req).<span class="kw">await</span>;
-            latencies.record(
-                now.elapsed().as_micros().try_into().unwrap_or(u64::MAX),
-                <span class="kw-2">&amp;</span>attributes,
-            );
+            latencies.record(now.elapsed().as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>attributes);
             resp
         })
     }
@@ -764,8 +729,8 @@
 
 <span class="doccomment">/// Creates a `trace::Span` for the currently active gRPC request.
 ///
-/// The fields of the Span are filled out according to the OpenTelemetry specifications, if
-/// possible.
+/// The fields of the Span are filled out according to the OpenTelemetry
+/// specifications, if possible.
 </span><span class="kw">fn </span>create_trace&lt;Body&gt;(request: <span class="kw-2">&amp;</span>http::Request&lt;Body&gt;) -&gt; Span {
     <span class="kw">let </span>uri = request.uri();
     <span class="comment">// The general format of a gRPC URI is `http://[::1]:1234/Foo/Bar``, where `Foo` is the service, and `Bar` is the method.
@@ -775,9 +740,10 @@
 
     <span class="comment">// See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-spans/ and
     // https://opentelemetry.io/docs/specs/semconv/rpc/grpc/ for specifications on what OpenTelemetry
-    // expects the traces to look like. Unfortunately the OTel conventions say that the span name
-    // must be the full RPC method name, but Rust tracing wants the name to be static, so we&#39;ll
-    // need to figure something out in the future.
+    // expects the traces to look like. Unfortunately the OTel conventions say that
+    // the span name must be the full RPC method name, but Rust tracing wants
+    // the name to be static, so we&#39;ll need to figure something out in the
+    // future.
     </span><span class="macro">tracing::info_span!</span>(
         <span class="string">&quot;request&quot;</span>,
         rpc.method = method,
@@ -812,13 +778,11 @@
 }
 <span class="kw">impl </span>Observer <span class="kw">for </span>OtelObserver {
     <span class="kw">fn </span>wasm_initialization(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
-        <span class="self">self</span>.wasm_initialization
-            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+        <span class="self">self</span>.wasm_initialization.record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
     }
 
     <span class="kw">fn </span>wasm_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
-        <span class="self">self</span>.wasm_invocation
-            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+        <span class="self">self</span>.wasm_invocation.record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
     }
 }
 
@@ -828,14 +792,14 @@
 <span class="comment">// Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
 </span><span class="kw">const </span>GRPC_STATUS_HEADER_CODE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;grpc-status&quot;</span>;
 
-<span class="comment">// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB. We&#39;re not sending
-// traffic over a &quot;real&quot; network anyway, after all.
+<span class="comment">// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB.
+// We&#39;re not sending traffic over a &quot;real&quot; network anyway, after all.
 </span><span class="kw">const </span>MAX_DECODING_MESSAGE_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
 
-<span class="doccomment">/// Starts up and serves an OakFunctionsContainersService instance from the provided stream of
-/// connections.
-</span><span class="comment">// The type of the stream is pretty horrible; we can define a slightly cleaner type aliases for it
-// when `type_alias_impl_trait` has been stabilized; see https://github.com/rust-lang/rust/issues/63063.
+<span class="doccomment">/// Starts up and serves an OakFunctionsContainersService instance from the
+/// provided stream of connections.
+</span><span class="comment">// The type of the stream is pretty horrible; we can define a slightly cleaner
+// type aliases for it when `type_alias_impl_trait` has been stabilized; see https://github.com/rust-lang/rust/issues/63063.
 </span><span class="kw">pub async fn </span>serve&lt;H&gt;(
     stream: Box&lt;
         <span class="kw">dyn </span>tokio_stream::Stream&lt;
@@ -855,9 +819,8 @@
 {
     tonic::transport::Server::builder()
         .layer(
-            tower_http::trace::TraceLayer::new_for_grpc()
-                .make_span_with(create_trace)
-                .on_response(|response: <span class="kw-2">&amp;</span>http::Response&lt;<span class="kw">_</span>&gt;, _latency, span: <span class="kw-2">&amp;</span>Span| {
+            tower_http::trace::TraceLayer::new_for_grpc().make_span_with(create_trace).on_response(
+                |response: <span class="kw-2">&amp;</span>http::Response&lt;<span class="kw">_</span>&gt;, _latency, span: <span class="kw-2">&amp;</span>Span| {
                     <span class="comment">// If the request is successful, there&#39;s no `grpc-status` header, thus we assume
                     // the request was successful.
                     </span><span class="kw">let </span>code = response
@@ -867,7 +830,8 @@
                         .to_str()
                         .ok();
                     span.record(<span class="string">&quot;rpc.grpc.status_code&quot;</span>, code);
-                }),
+                },
+            ),
         )
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))

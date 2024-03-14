@@ -524,13 +524,6 @@
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -606,27 +599,23 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid RSDP size&quot;</span>);
         }
 
-        <span class="kw">let </span>checksum = <span class="self">self</span>.as_bytes()[..<span class="number">20</span>]
-            .iter()
-            .fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
+        <span class="kw">let </span>checksum = <span class="self">self</span>.as_bytes()[..<span class="number">20</span>].iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
 
         <span class="kw">if </span>checksum != <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDP checksum&quot;</span>);
         }
 
         <span class="kw">if </span><span class="self">self</span>.revision &gt; <span class="number">2 </span>{
-            <span class="kw">let </span>checksum = <span class="self">self
-                </span>.as_bytes()
-                .iter()
-                .fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
+            <span class="kw">let </span>checksum = <span class="self">self</span>.as_bytes().iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
 
             <span class="kw">if </span>checksum != <span class="number">0 </span>{
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDP extended checksum&quot;</span>);
             }
         }
 
-        <span class="comment">// Check the pointer addresses; if they are valid, they should point within the EBDA.
-        // Safety: we will never dereference the pointer, we just need to know where it points to.
+        <span class="comment">// Check the pointer addresses; if they are valid, they should point within the
+        // EBDA. Safety: we will never dereference the pointer, we just need to
+        // know where it points to.
         </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
         <span class="kw">if </span><span class="self">self</span>.rsdt_address &gt; <span class="number">0
             </span>&amp;&amp; ((<span class="self">self</span>.rsdt_address <span class="kw">as </span>usize) &lt; ebda_base
@@ -663,7 +652,8 @@
 
 <span class="doccomment">/// Header common for all ACPI tables.
 ///
-/// See Section 5.2.6, System Description Table Header, in the ACPI specification for more details.
+/// See Section 5.2.6, System Description Table Header, in the ACPI
+/// specification for more details.
 </span><span class="attr">#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 </span><span class="kw">pub struct </span>DescriptionHeader {
@@ -673,16 +663,19 @@
     <span class="doccomment">/// Length of the table, in bytes, including the header.
     </span>length: u32,
 
-    <span class="doccomment">/// Revision of the struture corresponding to the signature field for this table.
+    <span class="doccomment">/// Revision of the struture corresponding to the signature field for this
+    /// table.
     </span>revision: u8,
 
-    <span class="doccomment">/// The entire table, including the checksum field, must add to zero to be considered valid.
+    <span class="doccomment">/// The entire table, including the checksum field, must add to zero to be
+    /// considered valid.
     </span>checksum: u8,
 
     <span class="doccomment">/// OEM-supplied string that identifies the OEM.
     </span>oem_id: [u8; <span class="number">6</span>],
 
-    <span class="doccomment">/// OEM-supplied string that the OEM uses to identify the particular data table.
+    <span class="doccomment">/// OEM-supplied string that the OEM uses to identify the particular data
+    /// table.
     </span>oem_table_id: [u8; <span class="number">8</span>],
 
     <span class="doccomment">/// OEM-supplied revision number.
@@ -691,7 +684,8 @@
     <span class="doccomment">/// Vendor ID of utility that created the table, e.g. the ASL Compiler.
     </span>creator_id: u32,
 
-    <span class="doccomment">/// Revision of the utility that created the table, e.g. revision of the ASL Compiler.
+    <span class="doccomment">/// Revision of the utility that created the table, e.g. revision of the ASL
+    /// Compiler.
     </span>creator_revision: u32,
 }
 
@@ -771,7 +765,8 @@
 
     <span class="kw">fn </span>entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u32] {
         <span class="kw">let </span>entries_base = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize + size_of::&lt;DescriptionHeader&gt;();
-        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in `validate()`.
+        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in
+        // `validate()`.
         </span><span class="kw">unsafe </span>{
             slice::from_raw_parts(
                 entries_base <span class="kw">as </span><span class="kw-2">*const </span>u32,
@@ -785,11 +780,7 @@
         <span class="self">self</span>.entries().iter().find_map(|<span class="kw-2">&amp;</span>entry| {
             <span class="kw">let </span>ptr = entry <span class="kw">as </span>usize;
             <span class="kw">let </span>entry: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>DescriptionHeader = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span>DescriptionHeader) };
-            <span class="kw">if </span>entry.signature == <span class="kw-2">*</span>table {
-                <span class="prelude-val">Some</span>(entry)
-            } <span class="kw">else </span>{
-                <span class="prelude-val">None
-            </span>}
+            <span class="kw">if </span>entry.signature == <span class="kw-2">*</span>table { <span class="prelude-val">Some</span>(entry) } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
         })
     }
 }
@@ -866,8 +857,8 @@
 
     <span class="kw">pub fn </span>entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[XsdtEntryPtr] {
         <span class="kw">let </span>entries_base = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize + size_of::&lt;DescriptionHeader&gt;();
-        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in `validate()`.
-        // XsdtEntryPtr is 1-byte aligned.
+        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in
+        // `validate()`. XsdtEntryPtr is 1-byte aligned.
         </span><span class="kw">unsafe </span>{
             slice::from_raw_parts(
                 entries_base <span class="kw">as </span><span class="kw-2">*const </span>XsdtEntryPtr,
@@ -879,10 +870,7 @@
 
     <span class="doccomment">/// Finds a table based on the signature, if it is present.
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="kw-2">&amp;</span>[u8; <span class="number">4</span>]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>DescriptionHeader&gt; {
-        <span class="self">self</span>.entries()
-            .iter()
-            .find(|entry| entry.signature == <span class="kw-2">*</span>table)
-            .map(|p| <span class="kw-2">&amp;**</span>p)
+        <span class="self">self</span>.entries().iter().find(|entry| entry.signature == <span class="kw-2">*</span>table).map(|p| <span class="kw-2">&amp;**</span>p)
     }
 }
 
@@ -989,9 +977,10 @@
     <span class="doccomment">/// Local APIC flags.
     </span><span class="kw">pub </span>flags: LocalApicFlags,
 
-    <span class="doccomment">/// OSPM associates the X2APIC Structure with a processor object declared in the namespace
-    /// using the Device statement, when the _UID child object of the processor device evaluates to
-    /// a numeric value, by matching the numeric value with this field.
+    <span class="doccomment">/// OSPM associates the X2APIC Structure with a processor object declared in
+    /// the namespace using the Device statement, when the _UID child object
+    /// of the processor device evaluates to a numeric value, by matching
+    /// the numeric value with this field.
     </span>processor_uid: u32,
 }
 
@@ -1030,10 +1019,7 @@
     }
 
     <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MadtIterator&lt;<span class="lifetime">&#39;_</span>&gt; {
-        MadtIterator {
-            madt: <span class="self">self</span>,
-            offset: size_of::&lt;Madt&gt;(),
-        }
+        MadtIterator { madt: <span class="self">self</span>, offset: size_of::&lt;Madt&gt;() }
     }
 }
 

@@ -86,6 +86,7 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -130,9 +131,10 @@
     ///
     /// # Safety
     ///
-    /// It&#39;s up to the caller to guarantee that there will be no other readers/writers to the CMOS
-    /// ports (0x70, 0x71) and that CMOS is actually available on those ports, otherwise the
-    /// behaviour is undefined.
+    /// It&#39;s up to the caller to guarantee that there will be no other
+    /// readers/writers to the CMOS ports (0x70, 0x71) and that CMOS is
+    /// actually available on those ports, otherwise the behaviour is
+    /// undefined.
     </span><span class="kw">pub unsafe fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             index_port: io_port_factory().new_writer(CMOS_INDEX_PORT),
@@ -166,8 +168,8 @@
     }
 
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: u8) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;ve asked the caller to guarantee that these ports are exclusively available
-        // when calling new(), so accessing them is safe.
+        <span class="comment">// Safety: we&#39;ve asked the caller to guarantee that these ports are exclusively
+        // available when calling new(), so accessing them is safe.
         </span><span class="kw">unsafe </span>{
             <span class="self">self</span>.index_port.try_write(index | NMI_DISABLE_BIT)<span class="question-mark">?</span>;
             <span class="self">self</span>.data_port.try_read()

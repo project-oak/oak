@@ -92,6 +92,9 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -112,10 +115,12 @@
 
 /// Read the timestamp counter register from the CPU.
 ///
-/// The timestamp counter is incremented once every CPU clock cycle, and how it behaves across power
-/// management events (e.g. change in P-state) is CPU-depdendent.
+/// The timestamp counter is incremented once every CPU clock cycle, and how it
+/// behaves across power management events (e.g. change in P-state) is
+/// CPU-depdendent.
 ///
-/// See RDTSC in AMD64 Architecture Programmer&#39;s Manual, Volume 3 for more details.
+/// See RDTSC in AMD64 Architecture Programmer&#39;s Manual, Volume 3 for more
+/// details.
 </span><span class="kw">pub fn </span>rdtsc() -&gt; u64 {
     <span class="kw">let </span><span class="kw-2">mut </span>edx: u64;
     <span class="kw">let </span><span class="kw-2">mut </span>eax: u64;
@@ -133,9 +138,9 @@
     edx &lt;&lt; <span class="number">32 </span>| eax
 }
 
-<span class="doccomment">/// Measures the number of clock cycles between `new()` and `elapsed()`. This measurement only makes
-/// sense if the process is running on the same CPU, as different CPUs will have different tick
-/// counter values.
+<span class="doccomment">/// Measures the number of clock cycles between `new()` and `elapsed()`. This
+/// measurement only makes sense if the process is running on the same CPU, as
+/// different CPUs will have different tick counter values.
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Timer {
     start: u64,
@@ -151,7 +156,8 @@
         <span class="self">Self</span>::new(rdtsc())
     }
 
-    <span class="doccomment">/// Returns the approximate number of clock cycles it took to execute `func`.
+    <span class="doccomment">/// Returns the approximate number of clock cycles it took to execute
+    /// `func`.
     </span><span class="kw">pub fn </span>timed&lt;F&gt;(func: F) -&gt; u64
     <span class="kw">where
         </span>F: FnOnce(),
@@ -161,8 +167,8 @@
         timer.elapsed()
     }
 
-    <span class="doccomment">/// Returns the approximate number of clock cycles elapsed since the construction of the
-    /// `Timer`.
+    <span class="doccomment">/// Returns the approximate number of clock cycles elapsed since the
+    /// construction of the `Timer`.
     </span><span class="kw">pub fn </span>elapsed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="kw">let </span>stop = rdtsc();
         stop - <span class="self">self</span>.start

@@ -141,13 +141,6 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -229,21 +222,18 @@
 
 <span class="kw">impl </span>InvocationChannel {
     <span class="kw">pub fn </span>new(socket: Box&lt;<span class="kw">dyn </span>Channel&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            inner: frame::Framed::new(socket),
-        }
+        <span class="self">Self </span>{ inner: frame::Framed::new(socket) }
     }
 
     <span class="kw">pub fn </span>read_message&lt;M: message::Message&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;(M, Timer)&gt; {
-        <span class="comment">// `message_buffer` will contain the full message we are going to read. Instead of
-        // allocating separate buffers and copying data into `message_buffer`, we will ensure that
-        // `message_buffer` has enough capacity. There will be at least one frame, so we start with
+        <span class="comment">// `message_buffer` will contain the full message we are going to read. Instead
+        // of allocating separate buffers and copying data into
+        // `message_buffer`, we will ensure that `message_buffer` has enough
+        // capacity. There will be at least one frame, so we start with
         // the maximum size of a single frame body as initial capacity.
         </span><span class="kw">let </span><span class="kw-2">mut </span>message_buffer = BytesMut::with_capacity(frame::MAX_BODY_SIZE);
-        <span class="kw">let </span>(first_frame, timer) = <span class="self">self
-            </span>.inner
-            .read_frame(<span class="kw-2">&amp;mut </span>message_buffer)
-            .context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(first_frame, timer) =
+            <span class="self">self</span>.inner.read_frame(<span class="kw-2">&amp;mut </span>message_buffer).context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>!first_frame.flags.contains(frame::Flags::START) {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a frame with the START flag set&quot;</span>);
@@ -253,9 +243,9 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>((M::decode(<span class="kw-2">&amp;</span>message_buffer[..]), timer));
         }
 
-        <span class="comment">// The length of the entire message is encoded in the body of the first frame. The
-        // length includes the first frame. Decode it so the buffer needs to be resized/copied
-        // at most once.
+        <span class="comment">// The length of the entire message is encoded in the body of the first frame.
+        // The length includes the first frame. Decode it so the buffer needs to
+        // be resized/copied at most once.
         </span><span class="kw">let </span>message_length: usize = {
             <span class="kw">let </span><span class="kw-2">mut </span>buffer = [<span class="number">0u8</span>; message::LENGTH_SIZE];
             <span class="kw">let </span>range = message::LENGTH_OFFSET..(message::LENGTH_OFFSET + message::LENGTH_SIZE);
@@ -264,16 +254,14 @@
                 .expect(<span class="string">&quot;couldn&#39;t convert message length to usize&quot;</span>)
         };
 
-        <span class="comment">// This likely causes a copy of the pre-existing data, but we needed to read the first
-        // frame to figure out how much space we need for the entire message. No more resizes
-        // are going to happen from here.
+        <span class="comment">// This likely causes a copy of the pre-existing data, but we needed to read the
+        // first frame to figure out how much space we need for the entire
+        // message. No more resizes are going to happen from here.
         </span>message_buffer.reserve(message_length - frame::MAX_BODY_SIZE);
 
         <span class="kw">loop </span>{
-            <span class="kw">let </span>(frame, <span class="kw">_</span>) = <span class="self">self
-                </span>.inner
-                .read_frame(<span class="kw-2">&amp;mut </span>message_buffer)
-                .context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>(frame, <span class="kw">_</span>) =
+                <span class="self">self</span>.inner.read_frame(<span class="kw-2">&amp;mut </span>message_buffer).context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
 
             <span class="kw">if </span>frame.flags.contains(frame::Flags::START) {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;received two frames with the START flag set&quot;</span>);
@@ -291,9 +279,7 @@
         <span class="kw">let </span>encoded_data = message.encode();
         <span class="kw">let </span>frames: Vec&lt;frame::Frame&gt; = frame::bytes_into_frames(<span class="kw-2">&amp;</span>encoded_data[..])<span class="question-mark">?</span>;
         <span class="kw">for </span>frame <span class="kw">in </span>frames.into_iter() {
-            <span class="self">self</span>.inner
-                .write_frame(frame)
-                .context(<span class="string">&quot;couldn&#39;t write frame&quot;</span>)<span class="question-mark">?
+            <span class="self">self</span>.inner.write_frame(frame).context(<span class="string">&quot;couldn&#39;t write frame&quot;</span>)<span class="question-mark">?
         </span>}
         <span class="prelude-val">Ok</span>(())
     }

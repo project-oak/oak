@@ -65,6 +65,7 @@
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -101,11 +102,12 @@
 
 <span class="doccomment">/// The guest-physical address of the VMSA page.
 ///
-/// The current implementation uses the same fixed address for all VMSA pages. It is calculated as
-/// the start-address of the last 4KiB page that can be addressed within the allowed physical bits.
+/// The current implementation uses the same fixed address for all VMSA pages.
+/// It is calculated as the start-address of the last 4KiB page that can be
+/// addressed within the allowed physical bits.
 ///
-/// For AMD &quot;Milan&quot; CPUs the maximum supported physical memory bit-width is 48 when SEV-SNP is
-/// enabled.
+/// For AMD &quot;Milan&quot; CPUs the maximum supported physical memory bit-width is 48
+/// when SEV-SNP is enabled.
 </span><span class="attr">#[allow(unused)]
 </span><span class="kw">pub const </span>VMSA_ADDRESS: PhysAddr = PhysAddr::new((<span class="number">1 </span>&lt;&lt; <span class="number">48</span>) - Size4KiB::SIZE);
 

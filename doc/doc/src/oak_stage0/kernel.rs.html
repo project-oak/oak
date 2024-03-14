@@ -226,27 +226,6 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -272,14 +251,15 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 
-<span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn&#39;t supplied via the
-/// QEMU fw_cfg device.
+<span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn&#39;t
+/// supplied via the QEMU fw_cfg device.
 </span><span class="kw">const </span>DEFAULT_KERNEL_START: u64 = <span class="number">0x200000</span>;
 
 <span class="doccomment">/// The default location for loading a compressed (bzImage format) kerne.
 </span><span class="kw">const </span>DEFAULT_BZIMAGE_SATRT: u64 = <span class="number">0x2000000</span>;
 
-<span class="doccomment">/// The default size for the kernel if a kernel wasn&#39;t supplied via the QEMU fw_cfg device.
+<span class="doccomment">/// The default size for the kernel if a kernel wasn&#39;t supplied via the QEMU
+/// fw_cfg device.
 ///
 /// This is an arbitrary value, just to ensure it is non-zero.
 </span><span class="kw">const </span>DEFAULT_KERNEL_SIZE: usize = <span class="number">0x100000</span>;
@@ -287,7 +267,8 @@
 <span class="doccomment">/// The file path used by Stage0 to read the kernel from the fw_cfg device.
 </span><span class="kw">const </span>KERNEL_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/elf_kernel\0&quot;</span>;
 
-<span class="doccomment">/// The file path used by Stage0 to read the kernel command-line from the fw_cfg device.
+<span class="doccomment">/// The file path used by Stage0 to read the kernel command-line from the fw_cfg
+/// device.
 </span><span class="kw">const </span>CMDLINE_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/cmdline\0&quot;</span>;
 
 <span class="doccomment">/// The type of kernel that was loaded.
@@ -329,8 +310,8 @@
 
 <span class="doccomment">/// Tries to load the kernel command-line from the fw_cfg device.
 ///
-/// We first try to read it using the traditional selector. If it is not available there we try to
-/// read it using a custom file path.
+/// We first try to read it using the traditional selector. If it is not
+/// available there we try to read it using a custom file path.
 </span><span class="kw">pub fn </span>try_load_cmdline(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="kw">let </span>(cmdline_file, buffer_size) = <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline_file) = fw_cfg.get_cmdline_file() {
         <span class="comment">// The provided value is already null-terminated.
@@ -339,21 +320,17 @@
     } <span class="kw">else </span>{
         <span class="kw">let </span>cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect(<span class="string">&quot;invalid c-string&quot;</span>);
         <span class="kw">let </span>cmdline_file = fw_cfg.find(cmdline_path)<span class="question-mark">?</span>;
-        <span class="comment">// Make the buffer one byte longer so that the kernel command-line is null-terminated.
+        <span class="comment">// Make the buffer one byte longer so that the kernel command-line is
+        // null-terminated.
         </span><span class="kw">let </span>size = cmdline_file.size() + <span class="number">1</span>;
         (cmdline_file, size)
     };
-    <span class="comment">// Safety: len will always be at least 1 byte, and we don&#39;t care about alignment. If the
-    // allocation fails, we won&#39;t try coercing it into a slice.
+    <span class="comment">// Safety: len will always be at least 1 byte, and we don&#39;t care about
+    // alignment. If the allocation fails, we won&#39;t try coercing it into a
+    // slice.
     </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_size];
-    <span class="kw">let </span>actual_size = fw_cfg
-        .read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf)
-        .expect(<span class="string">&quot;could not read cmdline&quot;</span>);
-    <span class="macro">assert_eq!</span>(
-        actual_size,
-        cmdline_file.size(),
-        <span class="string">&quot;cmdline size did not match expected size&quot;
-    </span>);
+    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf).expect(<span class="string">&quot;could not read cmdline&quot;</span>);
+    <span class="macro">assert_eq!</span>(actual_size, cmdline_file.size(), <span class="string">&quot;cmdline size did not match expected size&quot;</span>);
 
     <span class="kw">let </span>cmdline = CString::from_vec_with_nul(buf)
         .expect(<span class="string">&quot;invalid kernel command-line&quot;</span>)
@@ -365,11 +342,13 @@
 
 <span class="doccomment">/// Tries to load a kernel image from the QEMU fw_cfg device.
 ///
-/// We assume that a kernel file provided via the traditional selector is a compressed kernel using
-/// the bzImage format. We assume that a kernel file provided via the custom filename of
-/// &quot;opt/stage0/elf_kernel&quot; is an uncompressed ELF file.
+/// We assume that a kernel file provided via the traditional selector is a
+/// compressed kernel using the bzImage format. We assume that a kernel file
+/// provided via the custom filename of &quot;opt/stage0/elf_kernel&quot; is an
+/// uncompressed ELF file.
 ///
-/// If it finds a kernel it returns the information about the kernel, otherwise `None`.
+/// If it finds a kernel it returns the information about the kernel, otherwise
+/// `None`.
 </span><span class="kw">pub fn </span>try_load_kernel_image(
     fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
@@ -386,39 +365,28 @@
     <span class="kw">let </span>dma_address = <span class="kw">if </span>bzimage {
         PhysAddr::new(DEFAULT_BZIMAGE_SATRT)
     } <span class="kw">else </span>{
-        <span class="comment">// For an Elf kernel we copy the kernel image to a temporary location at the end of
-        // available mapped virtual memory where we can parse it.
+        <span class="comment">// For an Elf kernel we copy the kernel image to a temporary location at the end
+        // of available mapped virtual memory where we can parse it.
         </span>find_suitable_dma_address(size, e820_table).expect(<span class="string">&quot;no suitable DMA address available&quot;</span>)
     };
     <span class="kw">let </span>start_address = <span class="kw">crate</span>::phys_to_virt(dma_address);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image size {}&quot;</span>, size);
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Kernel image start address {:#018x}&quot;</span>,
-        start_address.as_u64()
-    );
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image start address {:#018x}&quot;</span>, start_address.as_u64());
     <span class="comment">// Safety: We checked that the DMA address is suitable and big enough.
     </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(start_address.as_mut_ptr(), size) };
 
-    <span class="kw">let </span>actual_size = fw_cfg
-        .read_file(<span class="kw-2">&amp;</span>file, buf)
-        .expect(<span class="string">&quot;could not read kernel file&quot;</span>);
+    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">&quot;could not read kernel file&quot;</span>);
     <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;kernel size did not match expected size&quot;</span>);
 
     <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
 
     <span class="kw">if </span>bzimage {
-        <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit
-        // kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
+        <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the
+        // 64-bit kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
         </span><span class="kw">let </span>entry = start_address + <span class="number">0x200usize</span>;
         <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
         <span class="kw">let </span>kernel_type = KernelType::BzImage;
-        <span class="prelude-val">Some</span>(KernelInfo {
-            start_address,
-            size,
-            entry,
-            measurement,
-            kernel_type,
-        })
+        <span class="prelude-val">Some</span>(KernelInfo { start_address, size, entry, measurement, kernel_type })
     } <span class="kw">else </span>{
         <span class="prelude-val">Some</span>(parse_elf_file(buf, e820_table, measurement))
     }
@@ -431,7 +399,8 @@
 ) -&gt; KernelInfo {
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_start = VirtAddr::new(<span class="kw">crate</span>::TOP_OF_VIRTUAL_MEMORY);
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_end = VirtAddr::new(<span class="number">0</span>);
-    <span class="comment">// We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
+    <span class="comment">// We expect an uncompressed ELF kernel, so we parse it and lay it out in
+    // memory.
     </span><span class="kw">let </span>file = ElfBytes::&lt;AnyEndian&gt;::minimal_parse(buf).expect(<span class="string">&quot;couldn&#39;t parse kernel header&quot;</span>);
 
     <span class="kw">for </span><span class="kw-2">ref </span>phdr <span class="kw">in </span>file
@@ -459,13 +428,7 @@
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel start address {:#018x}&quot;</span>, kernel_start.as_u64());
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
 
-    KernelInfo {
-        start_address: kernel_start,
-        size: kernel_size,
-        entry,
-        measurement,
-        kernel_type,
-    }
+    KernelInfo { start_address: kernel_start, size: kernel_size, entry, measurement, kernel_type }
 }
 
 <span class="doccomment">/// Loads a segment from an ELF file into memory.
@@ -480,14 +443,9 @@
     <span class="kw">let </span>start_address = <span class="kw">crate</span>::phys_to_virt(PhysAddr::new(phdr.p_paddr));
     <span class="kw">let </span>size = phdr.p_memsz <span class="kw">as </span>usize;
     check_memory(start_address, size, e820_table)<span class="question-mark">?</span>;
-    check_non_overlapping(
-        start_address,
-        size,
-        VirtAddr::from_ptr(buf.as_ptr()),
-        buf.len(),
-    )<span class="question-mark">?</span>;
-    <span class="comment">// Safety: we checked that the target memory is valid and that it does not overlap with the
-    // source buffer.
+    check_non_overlapping(start_address, size, VirtAddr::from_ptr(buf.as_ptr()), buf.len())<span class="question-mark">?</span>;
+    <span class="comment">// Safety: we checked that the target memory is valid and that it does not
+    // overlap with the source buffer.
     </span><span class="kw">let </span>target = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(start_address.as_mut_ptr(), size) };
 
     <span class="comment">// Zero out the target in case the file content is shorter than the target.

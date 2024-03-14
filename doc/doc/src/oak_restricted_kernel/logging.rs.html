@@ -68,11 +68,6 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -98,7 +93,8 @@
 
 <span class="kw">extern crate </span>log;
 
-<span class="comment">// Base I/O port for the first serial port in the system (colloquially known as COM1)
+<span class="comment">// Base I/O port for the first serial port in the system (colloquially known as
+// COM1)
 </span><span class="kw">const </span>COM1_BASE: u16 = <span class="number">0x3f8</span>;
 
 <span class="kw">pub static </span>SERIAL1: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;SerialPort&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
@@ -111,13 +107,8 @@
     </span>}
 
     <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>, record: <span class="kw-2">&amp;</span>log::Record) {
-        <span class="macro">writeln!</span>(
-            SERIAL1.lock().as_mut().unwrap(),
-            <span class="string">&quot;kernel {}: {}&quot;</span>,
-            record.level(),
-            record.args()
-        )
-        .unwrap();
+        <span class="macro">writeln!</span>(SERIAL1.lock().as_mut().unwrap(), <span class="string">&quot;kernel {}: {}&quot;</span>, record.level(), record.args())
+            .unwrap();
     }
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;</span><span class="self">self</span>) {
@@ -136,8 +127,7 @@
     <span class="comment">// Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
     </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(COM1_BASE, port_factory) };
-    port.init()
-        .expect(<span class="string">&quot;couldn&#39;t initialize logging serial port&quot;</span>);
+    port.init().expect(<span class="string">&quot;couldn&#39;t initialize logging serial port&quot;</span>);
 
     <span class="kw">if </span>SERIAL1.lock().replace(port).is_some() {
         <span class="macro">panic!</span>(<span class="string">&quot;serial port 1 is already initialized&quot;</span>);

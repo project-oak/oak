@@ -248,6 +248,18 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -264,8 +276,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! C-like structs for representing DICE data in environments where we don&#39;t have protocol buffer
-//! support.
+</span><span class="doccomment">//! C-like structs for representing DICE data in environments where we don&#39;t
+//! have protocol buffer support.
 
 </span><span class="kw">use </span>alloc::{format, string::String, vec::Vec};
 
@@ -299,14 +311,15 @@
 <span class="doccomment">/// The actual size used when encoding a X25519 private key.
 </span><span class="kw">pub const </span>X25519_PRIVATE_KEY_SIZE: usize = <span class="number">32</span>;
 
-<span class="doccomment">/// The maximum size of a serialized COSE Key object representing an ECDSA public key.
+<span class="doccomment">/// The maximum size of a serialized COSE Key object representing an ECDSA
+/// public key.
 </span><span class="kw">pub const </span>PUBLIC_KEY_SIZE: usize = <span class="number">256</span>;
 
 <span class="doccomment">/// The maximum size of a serialized CWT certificate.
 </span><span class="kw">pub const </span>CERTIFICATE_SIZE: usize = <span class="number">1024</span>;
 
-<span class="doccomment">/// The name of the kernel command-line parameter that is used to send the physical address of the
-/// Stage 0 DICE data struct.
+<span class="doccomment">/// The name of the kernel command-line parameter that is used to send the
+/// physical address of the Stage 0 DICE data struct.
 </span><span class="kw">pub const </span>DICE_DATA_CMDLINE_PARAM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;oak-dice&quot;</span>;
 
 <span class="doccomment">/// The magic number used to identify the Stage 0 DICE data in memory.
@@ -333,14 +346,16 @@
     <span class="doccomment">/// The hardware platform that generated the remote attestation report.
     </span><span class="kw">pub </span>tee_platform: u64,
     _padding: u64,
-    <span class="doccomment">/// Byte representation of the signed attestation report provided by the TEE platform.
+    <span class="doccomment">/// Byte representation of the signed attestation report provided by the TEE
+    /// platform.
     </span><span class="kw">pub </span>remote_attestation_report: [u8; REPORT_SIZE],
-    <span class="doccomment">/// Serialized COSE Key representation of the ECDSA public key that can be used to verify the
-    /// signature of the next layer&#39;s certificate.
+    <span class="doccomment">/// Serialized COSE Key representation of the ECDSA public key that can be
+    /// used to verify the signature of the next layer&#39;s certificate.
     ///
-    /// The SHA2-256 digest of this field must included as additional data in the signed remote
-    /// attestation report to bind the key to the report. This means that the attestation
-    /// report effectively acts as a non-standard certificate for this key.
+    /// The SHA2-256 digest of this field must included as additional data in
+    /// the signed remote attestation report to bind the key to the report.
+    /// This means that the attestation report effectively acts as a
+    /// non-standard certificate for this key.
     </span><span class="kw">pub </span>eca_public_key: [u8; PUBLIC_KEY_SIZE],
 }
 
@@ -383,8 +398,9 @@
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>LayerEvidence {
-    <span class="doccomment">/// Serialized CWT certificate for the ECA private key owned by the corresponding layer. The
-    /// certificate must include measurements of the layer that owns the private key.
+    <span class="doccomment">/// Serialized CWT certificate for the ECA private key owned by the
+    /// corresponding layer. The certificate must include measurements of
+    /// the layer that owns the private key.
     </span><span class="kw">pub </span>eca_certificate: [u8; CERTIFICATE_SIZE],
 }
 
@@ -398,7 +414,8 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; CERTIFICATE_SIZE], LayerEvidence);
 
-<span class="doccomment">/// Private key that can be used by a layer to sign a certificate for the next layer.
+<span class="doccomment">/// Private key that can be used by a layer to sign a certificate for the next
+/// layer.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>CertificateAuthority {
@@ -418,11 +435,13 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; CDI_SIZE], CompoundDeviceIdentifier);
 
-<span class="doccomment">/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
+<span class="doccomment">/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the
+/// Restricted Kernel).
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>Stage0DiceData {
-    <span class="doccomment">/// Magic number that is expected to always be set to the value of `STAGE0_MAGIC`.
+    <span class="doccomment">/// Magic number that is expected to always be set to the value of
+    /// `STAGE0_MAGIC`.
     </span><span class="kw">pub </span>magic: u64,
     _padding_0: u64,
     <span class="doccomment">/// The evidence about Stage 0 and the initial state of the VM.
@@ -438,15 +457,16 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">4096</span>], Stage0DiceData);
 
-<span class="doccomment">/// Certificates for the ECDSA keys that can be used for an application for signing or encryption.
+<span class="doccomment">/// Certificates for the ECDSA keys that can be used for an application for
+/// signing or encryption.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>ApplicationKeys {
-    <span class="doccomment">/// Serialized CWT certificate for the signing private key. The certificate must include
-    /// measurements of the application.
+    <span class="doccomment">/// Serialized CWT certificate for the signing private key. The certificate
+    /// must include measurements of the application.
     </span><span class="kw">pub </span>signing_public_key_certificate: [u8; CERTIFICATE_SIZE],
-    <span class="doccomment">/// Serialized CWT certificate for the encryption private key. The certificate must include
-    /// measurements of the application.
+    <span class="doccomment">/// Serialized CWT certificate for the encryption private key. The
+    /// certificate must include measurements of the application.
     </span><span class="kw">pub </span>encryption_public_key_certificate: [u8; CERTIFICATE_SIZE],
 }
 
@@ -461,19 +481,23 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">2048</span>], ApplicationKeys);
 
-<span class="doccomment">/// ECDSA private keys that can be used for an application for signing or encryption.
+<span class="doccomment">/// ECDSA private keys that can be used for an application for signing or
+/// encryption.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>ApplicationPrivateKeys {
-    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
+    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used to sign
+    /// arbitrary data.
     </span><span class="kw">pub </span>signing_private_key: [u8; PRIVATE_KEY_SIZE],
-    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
+    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used for
+    /// hybrid encryption.
     </span><span class="kw">pub </span>encryption_private_key: [u8; PRIVATE_KEY_SIZE],
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">128</span>], ApplicationPrivateKeys);
 
-<span class="doccomment">/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
+<span class="doccomment">/// Wrapper for passing the attestation evidence from the Restricted Kernel to
+/// the application.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>Evidence {
@@ -481,15 +505,15 @@
     </span><span class="kw">pub </span>root_layer_evidence: RootLayerEvidence,
     <span class="doccomment">/// The evidence about the Restricted Kernel.
     </span><span class="kw">pub </span>restricted_kernel_evidence: LayerEvidence,
-    <span class="doccomment">/// Keys (and associated certificates) that can be used by the application for encryption or
-    /// signing.
+    <span class="doccomment">/// Keys (and associated certificates) that can be used by the application
+    /// for encryption or signing.
     </span><span class="kw">pub </span>application_keys: ApplicationKeys,
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5392</span>], Evidence);
 
-<span class="doccomment">/// Wrapper for passing the attestation evidence and private keys from the Restricted Kernel to the
-/// application.
+<span class="doccomment">/// Wrapper for passing the attestation evidence and private keys from the
+/// Restricted Kernel to the application.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>RestrictedKernelDiceData {

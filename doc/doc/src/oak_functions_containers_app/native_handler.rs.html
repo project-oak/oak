@@ -249,6 +249,11 @@
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -333,8 +338,9 @@
         })
     }
 
-    <span class="doccomment">/// Safety: the caller needs to guarantee `key`, `len` and `item_len` are valid. The caller is
-    /// not allowed to mutate the data the returned pointer points to.
+    <span class="doccomment">/// Safety: the caller needs to guarantee `key`, `len` and `item_len` are
+    /// valid. The caller is not allowed to mutate the data the returned
+    /// pointer points to.
     </span><span class="kw">pub unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>storage_get_item(
         key: <span class="kw-2">*const </span>u8,
         len: c_size_t,
@@ -357,7 +363,8 @@
         })
     }
 
-    <span class="doccomment">/// Safety: the caller must guarantee that `status_code` and `len` are valid.
+    <span class="doccomment">/// Safety: the caller must guarantee that `status_code` and `len` are
+    /// valid.
     </span><span class="kw">pub unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>read_error(status_code: <span class="kw-2">*mut </span>u32, len: <span class="kw-2">*mut </span>c_size_t) -&gt; <span class="kw-2">*const </span>u8 {
         <span class="comment">// not entirely sure what to do here
         </span><span class="kw-2">*</span>status_code = micro_rpc::StatusCode::Unknown.into();
@@ -375,8 +382,8 @@
     </span>oak_main: Symbol&lt;<span class="lifetime">&#39;this</span>, <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>()&gt;,
 }
 
-<span class="doccomment">/// Variant of a Handler that dynamically loads a `.so` file and invokes native code to handle
-/// requests from there.
+<span class="doccomment">/// Variant of a Handler that dynamically loads a `.so` file and invokes native
+/// code to handle requests from there.
 </span><span class="kw">pub struct </span>NativeHandler {
     lookup_data_manager: Arc&lt;LookupDataManager&gt;,
 
@@ -385,8 +392,9 @@
 
     <span class="doccomment">/// Temporary directory containing the `.so` file.
     ///
-    /// This field is never read, but we need to keep it around so that the directory would be
-    /// property disposed of when `NativeHandler` goes out of scope.
+    /// This field is never read, but we need to keep it around so that the
+    /// directory would be property disposed of when `NativeHandler` goes
+    /// out of scope.
     </span><span class="attr">#[allow(dead_code)]
     </span>directory: TempDir,
 
@@ -397,10 +405,11 @@
 <span class="kw">impl </span>NativeHandler {
     <span class="doccomment">/// Registers our callback functions with the loaded library.
     ///
-    /// Safety: the library needs to export a `register_callback`` symbol with the expected
-    /// semantics.
+    /// Safety: the library needs to export a `register_callback`` symbol with
+    /// the expected semantics.
     </span><span class="kw">unsafe fn </span>register_callbacks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="comment">// These signatures should probably come via bindgen from the C header file in the future.
+        <span class="comment">// These signatures should probably come via bindgen from the C header file in
+        // the future.
         </span><span class="kw">let </span>register_callbacks =
             <span class="self">self</span>.library.borrow_lib().get::&lt;<span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(
                 <span class="kw">unsafe extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn</span>(<span class="kw-2">*mut </span>c_size_t) -&gt; <span class="kw-2">*const </span>u8,
@@ -423,7 +432,8 @@
 
     <span class="doccomment">/// Call the main `oak_main` function from the shared library.
     ///
-    /// Safety: the library needs to export a `oak_main` symbol with the expected semantics.
+    /// Safety: the library needs to export a `oak_main` symbol with the
+    /// expected semantics.
     </span><span class="kw">unsafe fn </span>oak_main(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.library.borrow_oak_main()()
     }
@@ -434,11 +444,12 @@
 
     <span class="doccomment">/// Creates a new native handler.
     ///
-    /// The module is expected to be a dynamically loadable shared object, which we load using
-    /// `dlopen()`.
+    /// The module is expected to be a dynamically loadable shared object, which
+    /// we load using `dlopen()`.
     ///
-    /// Safety: It&#39;s up to the caller to guarantee that said shared object adheres to the semantics
-    /// we require. This method should really be marked `unsafe` because of that.
+    /// Safety: It&#39;s up to the caller to guarantee that said shared object
+    /// adheres to the semantics we require. This method should really be
+    /// marked `unsafe` because of that.
     </span><span class="kw">fn </span>new_handler(
         module_bytes: <span class="kw-2">&amp;</span>[u8],
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
@@ -449,8 +460,7 @@
         {
             <span class="kw">let </span><span class="kw-2">mut </span>file =
                 File::create(<span class="kw-2">&amp;</span>filename).context(<span class="string">&quot;could not open module file for writing&quot;</span>)<span class="question-mark">?</span>;
-            file.write_all(module_bytes)
-                .context(<span class="string">&quot;could not write module contents&quot;</span>)<span class="question-mark">?</span>;
+            file.write_all(module_bytes).context(<span class="string">&quot;could not write module contents&quot;</span>)<span class="question-mark">?</span>;
         }
 
         <span class="comment">// Safety: this is safe as long as the library adheres to our contracts.
@@ -477,8 +487,8 @@
     }
 
     <span class="kw">fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
-        <span class="comment">// Populate a new RequestContext. The threadlocal should be empty at this point; if it is
-        // not, we&#39;ve somehow clashed with another thread.
+        <span class="comment">// Populate a new RequestContext. The threadlocal should be empty at this point;
+        // if it is not, we&#39;ve somehow clashed with another thread.
         </span><span class="macro">assert!</span>(
             CONTEXT
                 .replace(<span class="prelude-val">Some</span>(RequestContext {

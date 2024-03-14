@@ -400,22 +400,6 @@
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -445,19 +429,21 @@
 
 <span class="doccomment">/// The maximum buffer size used by the socket.
 ///
-/// This is used for flow-control calculations. Seeing that we don&#39;t use an actual streambuffer,
-/// this is currently an arbitrary value that seems to avoid stalling.
+/// This is used for flow-control calculations. Seeing that we don&#39;t use an
+/// actual streambuffer, this is currently an arbitrary value that seems to
+/// avoid stalling.
 </span><span class="kw">const </span>STREAM_BUFFER_LENGTH: Wrapping&lt;u32&gt; = Wrapping(<span class="number">64 </span>* <span class="number">1024</span>);
 
 <span class="doccomment">/// The limit that triggers a voluntary credit update message to avoid stalling.
 ///
-/// If the peer&#39;s calculation of our free buffer space falls below this point (e.g when we receive a
-/// lot of data without sending any packets back) we send a credit update packet to make sure the
-/// peer knows we have more space available.
+/// If the peer&#39;s calculation of our free buffer space falls below this point
+/// (e.g when we receive a lot of data without sending any packets back) we send
+/// a credit update packet to make sure the peer knows we have more space
+/// available.
 </span><span class="kw">const </span>CREDIT_UPDATE_LIMIT: Wrapping&lt;u32&gt; = Wrapping(<span class="number">32 </span>* <span class="number">1024</span>);
 
-<span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the
-/// queue.
+<span class="doccomment">/// The maximum size of the payload of a single packet to ensure it fits into a
+/// single buffer in the queue.
 </span><span class="kw">const </span>MAX_PAYLOAD_SIZE: usize = DATA_BUFFER_SIZE - HEADER_SIZE;
 
 <span class="doccomment">/// Connector to initiate a connection to a listener on the host.
@@ -471,21 +457,17 @@
     </span>T: VirtioTransport,
 {
     <span class="kw">pub fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, host_port: u32, local_port: u32) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            config: SocketConfiguration::new(vsock, local_port, host_port),
-        }
+        <span class="self">Self </span>{ config: SocketConfiguration::new(vsock, local_port, host_port) }
     }
 
     <span class="doccomment">/// Tries to connect to a listener on the host.
     ///
-    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a respone. If the
-    /// connection is refused, or it receives an unexpected packet, it will return an error.
+    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a
+    /// respone. If the connection is refused, or it receives an unexpected
+    /// packet, it will return an error.
     </span><span class="kw">pub fn </span>connect(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
-            <span class="self">self</span>.config.local_port,
-            <span class="self">self</span>.config.host_port,
-            VSockOp::Request,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>packet =
+            Packet::new_control(<span class="self">self</span>.config.local_port, <span class="self">self</span>.config.host_port, VSockOp::Request)<span class="question-mark">?</span>;
         <span class="comment">// Set credit info.
         </span>packet.set_buf_alloc(STREAM_BUFFER_LENGTH.<span class="number">0</span>);
         packet.set_fwd_cnt(<span class="number">0</span>);
@@ -502,10 +484,7 @@
                     peer_buffer_size = packet.get_buf_alloc();
                     <span class="kw">break</span>;
                 } <span class="kw">else </span>{
-                    <span class="macro">anyhow::bail!</span>(
-                        <span class="string">&quot;invalid response to connection request: {}&quot;</span>,
-                        packet.get_op()<span class="question-mark">?
-                    </span>);
+                    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;invalid response to connection request: {}&quot;</span>, packet.get_op()<span class="question-mark">?</span>);
                 }
             }
         }
@@ -524,16 +503,14 @@
     </span>T: VirtioTransport,
 {
     <span class="kw">pub fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, port: u32) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            config: SocketConfiguration::new(vsock, port, <span class="number">0</span>),
-        }
+        <span class="self">Self </span>{ config: SocketConfiguration::new(vsock, port, <span class="number">0</span>) }
     }
 
     <span class="doccomment">/// Listens for a connection from the host on the specified port.
     ///
-    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a connection request. If
-    /// it receives an unexpected packet (anything other than a connection request) it will return
-    /// an error.
+    /// Since we don&#39;t yet support timeouts it will wait indefinitely for a
+    /// connection request. If it receives an unexpected packet (anything
+    /// other than a connection request) it will return an error.
     </span><span class="kw">pub fn </span>accept(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;Socket&lt;<span class="lifetime">&#39;a</span>, T, A&gt;&gt; {
         <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
         <span class="kw">let </span>peer_buffer_size;
@@ -553,11 +530,8 @@
             }
         }
 
-        <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
-            <span class="self">self</span>.config.local_port,
-            <span class="self">self</span>.config.host_port,
-            VSockOp::Response,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>packet =
+            Packet::new_control(<span class="self">self</span>.config.local_port, <span class="self">self</span>.config.host_port, VSockOp::Response)<span class="question-mark">?</span>;
         <span class="comment">// Set credit info.
         </span>packet.set_buf_alloc(STREAM_BUFFER_LENGTH.<span class="number">0</span>);
         packet.set_fwd_cnt(<span class="number">0</span>);
@@ -577,19 +551,20 @@
     ///
     /// This is a free-running counter that wraps around.
     </span>processed_bytes: Wrapping&lt;u32&gt;,
-    <span class="doccomment">/// The previous value of `processed_bytes` that was sent to the peer in the most recent packet
-    /// header.
+    <span class="doccomment">/// The previous value of `processed_bytes` that was sent to the peer in the
+    /// most recent packet header.
     </span>previous_processed_bytes: Wrapping&lt;u32&gt;,
     <span class="doccomment">/// The number of payload bytes we have sent.
     ///
     /// This is a free-running counter that wraps around.
     </span>sent_bytes: Wrapping&lt;u32&gt;,
-    <span class="doccomment">/// The number of payload bytes the peer has processed according to the received packet
-    /// headers.
+    <span class="doccomment">/// The number of payload bytes the peer has processed according to the
+    /// received packet headers.
     </span>peer_processed_bytes: Wrapping&lt;u32&gt;,
     <span class="doccomment">/// The size of the peer&#39;s stream buffer.
     </span>peer_buffer_size: Wrapping&lt;u32&gt;,
-    <span class="doccomment">/// A temporary buffer to store extra data from a packet that was not fully read.
+    <span class="doccomment">/// A temporary buffer to store extra data from a packet that was not fully
+    /// read.
     </span>pending_data: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt;,
 }
 
@@ -612,9 +587,9 @@
 
     <span class="doccomment">/// Shuts the connection down.
     ///
-    /// At the moment this will cause the vsock driver to be dropped, which means that no future
-    /// connections will be possible. This should only be used if no further communications with the
-    /// host is expected.
+    /// At the moment this will cause the vsock driver to be dropped, which
+    /// means that no future connections will be possible. This should only
+    /// be used if no further communications with the host is expected.
     </span><span class="kw">pub fn </span>shutdown(<span class="kw-2">mut </span><span class="self">self</span>) {
         <span class="kw">if </span><span class="self">self</span>.connection_state == ConnectionState::Connected {
             <span class="kw">let </span><span class="kw-2">mut </span>packet = Packet::new_control(
@@ -648,10 +623,7 @@
     <span class="doccomment">/// Sends a data packet to the host.
     </span><span class="kw">fn </span>send_data_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// For now we panic if we are disconnected.
-        </span><span class="macro">assert!</span>(
-            <span class="self">self</span>.connection_state == ConnectionState::Connected,
-            <span class="string">&quot;stream disconnected&quot;
-        </span>);
+        </span><span class="macro">assert!</span>(<span class="self">self</span>.connection_state == ConnectionState::Connected, <span class="string">&quot;stream disconnected&quot;</span>);
         <span class="kw">let </span>data_len = data.len();
         <span class="macro">assert!</span>(
             data_len &lt;= MAX_PAYLOAD_SIZE,
@@ -679,13 +651,11 @@
         <span class="self">self</span>.previous_processed_bytes = <span class="self">self</span>.processed_bytes;
     }
 
-    <span class="doccomment">/// Reads the payload of the next available data packet, if any are available.
+    <span class="doccomment">/// Reads the payload of the next available data packet, if any are
+    /// available.
     </span><span class="kw">fn </span>read_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt; {
         <span class="comment">// For now we panic if we are disconnected.
-        </span><span class="macro">assert!</span>(
-            <span class="self">self</span>.connection_state == ConnectionState::Connected,
-            <span class="string">&quot;stream disconnected&quot;
-        </span>);
+        </span><span class="macro">assert!</span>(<span class="self">self</span>.connection_state == ConnectionState::Connected, <span class="string">&quot;stream disconnected&quot;</span>);
         <span class="kw">let </span>src_port = <span class="self">self</span>.config.host_port;
         <span class="kw">let </span>dst_port = <span class="self">self</span>.config.local_port;
         <span class="kw">loop </span>{
@@ -702,7 +672,8 @@
                         .expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
                 }
                 VSockOp::CreditUpdate =&gt; {
-                    <span class="comment">// We already updated our flow-control tracking data, so do nothing.
+                    <span class="comment">// We already updated our flow-control tracking data, so do
+                    // nothing.
                 </span>}
                 VSockOp::Request | VSockOp::Response =&gt; {
                     <span class="comment">// For now we panic if we receive an invalid op.
@@ -713,8 +684,7 @@
                     <span class="kw">return </span><span class="prelude-val">None</span>;
                 }
                 VSockOp::Shutdown =&gt; {
-                    <span class="self">self</span>.send_control_packet(VSockOp::Rst)
-                        .expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
+                    <span class="self">self</span>.send_control_packet(VSockOp::Rst).expect(<span class="string">&quot;couldn&#39;t create control packet&quot;</span>);
                     <span class="self">self</span>.connection_state = ConnectionState::Disconnected;
                     <span class="kw">return </span><span class="prelude-val">None</span>;
                 }
@@ -729,8 +699,9 @@
         }
     }
 
-    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer or from the next available data packet.
+    <span class="doccomment">/// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer or from the next available
+    /// data packet.
     ///
     /// Returns the number of bytes read if any data was available to read.
     </span><span class="kw">fn </span>read_partial(<span class="kw-2">&amp;mut </span><span class="self">self</span>, dest: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
@@ -794,8 +765,8 @@
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// We always flush on write, so do nothing.
-        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on write, and
-        // provide an actual flush implementation here.
+        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on
+        // write, and provide an actual flush implementation here.
         </span><span class="prelude-val">Ok</span>(())
     }
 }
@@ -811,7 +782,8 @@
 </span><span class="kw">struct </span>SocketConfiguration&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
     <span class="doccomment">/// The vsock device driver.
     ///
-    /// For now we only support one connection, so the driver is owned by this configuration.
+    /// For now we only support one connection, so the driver is owned by this
+    /// configuration.
     </span>vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;,
     <span class="doccomment">/// The local port for the connection.
     </span>local_port: u32,
@@ -824,11 +796,7 @@
     </span>T: VirtioTransport,
 {
     <span class="kw">fn </span>new(vsock: VSock&lt;<span class="lifetime">&#39;a</span>, T, A&gt;, local_port: u32, host_port: u32) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            vsock,
-            local_port,
-            host_port,
-        }
+        <span class="self">Self </span>{ vsock, local_port, host_port }
     }
 }
 

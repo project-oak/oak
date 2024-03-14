@@ -266,37 +266,6 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -347,7 +316,8 @@
     </span><span class="attr">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>kernel: PathBuf,
 
-    <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the enclave.
+    <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the
+    /// enclave.
     </span><span class="attr">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>app_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 
@@ -359,8 +329,8 @@
     </span><span class="attr">#[arg(long = <span class="string">&quot;gdb&quot;</span>)]
     </span><span class="kw">pub </span>gdb: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
-    <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for Megabyte, G for
-    /// Gigabyte).
+    <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for
+    /// Megabyte, G for Gigabyte).
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
@@ -387,7 +357,8 @@
 }
 
 <span class="kw">impl </span>Instance {
-    <span class="doccomment">/// Starts virtualized instance with given parameters and stream to write console logs to.
+    <span class="doccomment">/// Starts virtualized instance with given parameters and stream to write
+    /// console logs to.
     </span><span class="kw">pub fn </span>start(params: Params, guest_console: net::UnixStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>app_bytes = <span class="kw">if let </span><span class="prelude-val">Some</span>(app_binary) = params.app_binary {
             <span class="kw">let </span>bytes = fs::read(<span class="kw-2">&amp;</span>app_binary).with_context(|| {
@@ -406,12 +377,12 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
         <span class="kw">let </span>(guest_socket, <span class="kw-2">mut </span>host_socket) = net::UnixStream::pair()<span class="question-mark">?</span>;
 
-        <span class="comment">// Clone the console stream so we can use it in the child process and also return it from
-        // this method.
+        <span class="comment">// Clone the console stream so we can use it in the child process and also
+        // return it from this method.
         </span><span class="kw">let </span>guest_console_clone = guest_console.try_clone().unwrap();
 
-        <span class="comment">// Extract the raw file descriptor numbers from the streams before passing them to the child
-        // process, since that takes ownership of them.
+        <span class="comment">// Extract the raw file descriptor numbers from the streams before passing them
+        // to the child process, since that takes ownership of them.
         </span><span class="kw">let </span>guest_console_fd = guest_console.as_raw_fd();
         <span class="kw">let </span>guest_socket_fd = guest_socket.as_raw_fd();
 
@@ -422,8 +393,8 @@
 
         <span class="comment">// Construct the command-line arguments for `qemu`.
         </span>cmd.arg(<span class="string">&quot;-enable-kvm&quot;</span>);
-        <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
-        // attestation.
+        <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required
+        // for remote attestation.
         </span>cmd.args([<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;IvyBridge-IBRS,enforce&quot;</span>]);
         <span class="comment">// Set memory size if given.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory_size) = params.memory_size {
@@ -432,68 +403,39 @@
         <span class="comment">// Disable a bunch of hardware we don&#39;t need.
         </span>cmd.arg(<span class="string">&quot;-nodefaults&quot;</span>);
         cmd.arg(<span class="string">&quot;-nographic&quot;</span>);
-        <span class="comment">// If the VM restarts, don&#39;t restart it (we&#39;re not expecting any restarts so any restart
-        // should be treated as a failure)
+        <span class="comment">// If the VM restarts, don&#39;t restart it (we&#39;re not expecting any restarts so any
+        // restart should be treated as a failure)
         </span>cmd.arg(<span class="string">&quot;-no-reboot&quot;</span>);
         <span class="comment">// Use the `microvm` machine as the basis, and ensure ACPI is enabled.
         </span>cmd.args([<span class="string">&quot;-machine&quot;</span>, <span class="string">&quot;microvm,acpi=on&quot;</span>]);
         <span class="comment">// Route first serial port to console.
-        </span>cmd.args([
-            <span class="string">&quot;-chardev&quot;</span>,
-            <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_console_fd}&quot;</span>).as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-chardev&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_console_fd}&quot;</span>).as_str()]);
         cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
         <span class="comment">// Add the virtio device.
-        </span>cmd.args([
-            <span class="string">&quot;-chardev&quot;</span>,
-            <span class="macro">format!</span>(<span class="string">&quot;socket,id=commsock,fd={guest_socket_fd}&quot;</span>).as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-chardev&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;socket,id=commsock,fd={guest_socket_fd}&quot;</span>).as_str()]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-serial-device,max_ports=1&quot;</span>]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtconsole,chardev=commsock&quot;</span>]);
         <span class="comment">// Use stage0 as the BIOS.
-        </span>cmd.args([
-            <span class="string">&quot;-bios&quot;</span>,
-            params
-                .bios_binary
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-bios&quot;</span>, params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
         <span class="comment">// stage0 accoutrements: kernel that&#39;s compatible with the linux boot protocol
-        </span>cmd.args([
-            <span class="string">&quot;-kernel&quot;</span>,
-            params
-                .kernel
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        </span>cmd.args([<span class="string">&quot;-kernel&quot;</span>, params.kernel.into_os_string().into_string().unwrap().as_str()]);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gdb_port) = params.gdb {
-            <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting
+            <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before
+            // booting
             </span>cmd.args([<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{gdb_port}&quot;</span>).as_str()]);
             cmd.arg(<span class="string">&quot;-S&quot;</span>);
         }
 
-        cmd.args([
-            <span class="string">&quot;-initrd&quot;</span>,
-            params
-                .initrd
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args([<span class="string">&quot;-initrd&quot;</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
 
         <span class="macro">info!</span>(<span class="string">&quot;executing: {:?}&quot;</span>, cmd);
 
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(app_bytes) = app_bytes {
-            <span class="comment">// Loading the application binary needs to happen before we start using microrpc over
-            // the channel.
+            <span class="comment">// Loading the application binary needs to happen before we start using microrpc
+            // over the channel.
             </span>host_socket
                 .write_all(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_le_bytes())
                 .expect(<span class="string">&quot;failed to send application binary length to enclave&quot;</span>);
@@ -506,15 +448,11 @@
             <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunks.remainder())<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            guest_console: guest_console_clone,
-            host_socket,
-            instance,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ guest_console: guest_console_clone, host_socket, instance })
     }
 
-    <span class="doccomment">/// Writes a chunk to a channel, and expects an acknowledgement containing the length of the
-    /// chunk.
+    <span class="doccomment">/// Writes a chunk to a channel, and expects an acknowledgement containing
+    /// the length of the chunk.
     </span><span class="kw">fn </span>write_chunk(channel: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>oak_channel::Channel, chunk: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         channel.write_all(chunk)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>ack: [u8; <span class="number">4</span>] = Default::default();
@@ -546,9 +484,9 @@
     }
 }
 
-<span class="doccomment">/// Defines the interface of a launched guest instance. Standardizes the interface of different
-/// implementations, e.g. a VM in which the guest is running or the guest running directly as a
-/// unix binary.
+<span class="doccomment">/// Defines the interface of a launched guest instance. Standardizes the
+/// interface of different implementations, e.g. a VM in which the guest is
+/// running or the guest running directly as a unix binary.
 </span><span class="attr">#[async_trait]
 </span><span class="kw">pub trait </span>GuestInstance {
     <span class="doccomment">/// Wait for the guest instance process to finish.

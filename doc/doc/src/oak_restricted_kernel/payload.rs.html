@@ -224,10 +224,6 @@
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -261,14 +257,15 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
 
-<span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
-// Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack
-// pointer would need to be a noncanonical address, so let&#39;s avoid that whole mess
-// by moving down a bit.
+<span class="comment">// Set up the userspace stack at the end of the lower half of the virtual
+// address space. Well... almost. It&#39;s one page lower than the very end, as
+// otherwise the initial stack pointer would need to be a noncanonical address,
+// so let&#39;s avoid that whole mess by moving down a bit.
 </span><span class="kw">static </span>APPLICATION_STACK_VIRT_ADDR: u64 = <span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE;
 
 <span class="macro">self_cell!</span>(
-    <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
+    <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file
+    /// multiple times.
     </span><span class="kw">struct </span>Binary {
         owner: Box&lt;[u8]&gt;,
 
@@ -277,14 +274,15 @@
     }
 );
 
-<span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can run.
+<span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can
+/// run.
 </span><span class="kw">pub struct </span>Application {
     binary: Binary,
 }
 
 <span class="kw">impl </span>Application {
-    <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing an Restricted
-    /// Application.
+    <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing
+    /// an Restricted Application.
     </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="prelude-val">Ok</span>(Application {
             binary: Binary::try_new(blob, |boxed| {
@@ -307,15 +305,15 @@
     }
 
     <span class="kw">fn </span>load_segment(<span class="kw-2">&amp;</span><span class="self">self</span>, phdr: <span class="kw-2">&amp;</span>ProgramHeader) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="comment">// In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment address if it
-        // isn&#39;t aligned on a 2 MiB page boundary.
+        <span class="comment">// In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment
+        // address if it isn&#39;t aligned on a 2 MiB page boundary.
         </span><span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
-        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for the
-        // padding.
+        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for
+        // the padding.
         </span><span class="kw">let </span>size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) <span class="kw">as </span>usize;
 
-        <span class="comment">// PROT_READ is always implied; it&#39;s not possible to have a page that&#39;s, say, executable but
-        // not readable.
+        <span class="comment">// PROT_READ is always implied; it&#39;s not possible to have a page that&#39;s, say,
+        // executable but not readable.
         </span><span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
         <span class="kw">if </span>phdr.p_flags &amp; PF_W &gt; <span class="number">0 </span>{
             prot |= MmapProtection::PROT_WRITE;
@@ -324,10 +322,10 @@
             prot |= MmapProtection::PROT_EXEC;
         }
 
-        <span class="comment">// As we need memory in the user space anyway, use the `mmap()` syscall that will
-        // allocate physical frames and sets up user-accessible page tables for us.
-        // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
-        // otherwise the mmap() will fail.
+        <span class="comment">// As we need memory in the user space anyway, use the `mmap()` syscall that
+        // will allocate physical frames and sets up user-accessible page tables
+        // for us. Note that the expectation here is that all the sections are
+        // nicely 2 MiB-aligned, otherwise the mmap() will fail.
         </span>mmap(
             <span class="prelude-val">Some</span>(vaddr),
             size,
@@ -336,7 +334,8 @@
         )
         .expect(<span class="string">&quot;failed to allocate user memory&quot;</span>);
 
-        <span class="comment">// Safety: we know the target memory is valid as we&#39;ve just allocated it with mmap().
+        <span class="comment">// Safety: we know the target memory is valid as we&#39;ve just allocated it with
+        // mmap().
         </span><span class="kw">unsafe </span>{
             core::ptr::copy_nonoverlapping(
                 <span class="self">self</span>.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
@@ -352,14 +351,10 @@
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application.
+    /// The application must be built from a valid ELF file representing an Oak
+    /// Restricted Application.
     </span><span class="kw">pub</span>(<span class="self">self</span>) <span class="kw">unsafe fn </span>map_into_memory(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
-        <span class="kw">for </span>phdr <span class="kw">in </span><span class="self">self
-            </span>.program_headers()
-            .iter()
-            .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
-        {
+        <span class="kw">for </span>phdr <span class="kw">in </span><span class="self">self</span>.program_headers().iter().filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD) {
             <span class="self">self</span>.load_segment(phdr).unwrap();
         }
 
@@ -400,16 +395,13 @@
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application.
+    /// The application must be built from a valid ELF file representing an Oak
+    /// Restricted Application.
     </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
-        <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE
-            .get()
-            .context(<span class="string">&quot;base l4 table should be set&quot;</span>)<span class="question-mark">?
-            </span>.clone();
-        <span class="comment">// Load the process&#39;s page table, so the application can be loaded into its memory. Hold
-        // onto the previous PT, so we can revert to it once the application has been mapped
-        // into the process pt.
+        <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">&quot;base l4 table should be set&quot;</span>)<span class="question-mark">?</span>.clone();
+        <span class="comment">// Load the process&#39;s page table, so the application can be loaded into its
+        // memory. Hold onto the previous PT, so we can revert to it once the
+        // application has been mapped into the process pt.
         </span><span class="kw">let </span><span class="kw-2">mut </span>outer_prev_page_table = {
             <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span>pml4).context(<span class="string">&quot;could not get pml4 frame&quot;</span>)<span class="question-mark">?</span>;
             <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
@@ -418,12 +410,12 @@
                 </span>.into_inner()
         };
 
-        <span class="comment">// Safety: caller ensured the application is a valid ELF file representing an Oak Restricted
-        // Application.
+        <span class="comment">// Safety: caller ensured the application is a valid ELF file representing an
+        // Oak Restricted Application.
         </span><span class="kw">let </span>entry = <span class="kw">unsafe </span>{ application.map_into_memory() };
 
-        <span class="comment">// We&#39;ve mapped the memory into the process page tables. Let&#39;s revert to the previous page
-        // table.
+        <span class="comment">// We&#39;ve mapped the memory into the process page tables. Let&#39;s revert to the
+        // previous page table.
         </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>mapped_prev_pt = outer_prev_page_table.inner().lock();
             <span class="kw">let </span>prev_page_table = mapped_prev_pt.level_4_table();
@@ -444,8 +436,8 @@
         <span class="kw">let </span>entry = <span class="self">self</span>.entry;
         <span class="macro">log::info!</span>(<span class="string">&quot;Running application&quot;</span>);
         <span class="comment">// Enter Ring 3 and jump to user code.
-        // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
-        // guarantee that the file made sense.
+        // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the
+        // user to guarantee that the file made sense.
         </span><span class="kw">unsafe </span>{
             <span class="macro">asm! </span>{
                 <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack

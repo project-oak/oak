@@ -281,6 +281,10 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -297,8 +301,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
-//! verifying signatures in a Rekor LogEntry.
+</span><span class="doccomment">//! This module provides structs for representing a Rekor LogEntry, as well as
+//! logic for parsing and verifying signatures in a Rekor LogEntry.
 
 </span><span class="kw">use </span>alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
@@ -315,15 +319,16 @@
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntry {
-    <span class="doccomment">/// We cannot directly use the type `Body` here, since body is Base64-encoded.
+    <span class="doccomment">/// We cannot directly use the type `Body` here, since body is
+    /// Base64-encoded.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;body&quot;</span>)]
     </span><span class="kw">pub </span>body: String,
 
     <span class="attr">#[serde(rename = <span class="string">&quot;integratedTime&quot;</span>)]
     </span><span class="kw">pub </span>integrated_time: usize,
 
-    <span class="doccomment">/// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
-    /// included in the log
+    <span class="doccomment">/// This is the SHA256 hash of the DER-encoded public key for the log at the
+    /// time the entry was included in the log
     /// Pattern: ^[0-9a-fA-F]{64}$
     </span><span class="attr">#[serde(rename = <span class="string">&quot;logID&quot;</span>)]
     </span><span class="kw">pub </span>log_id: String,
@@ -395,9 +400,10 @@
     </span><span class="kw">pub </span>content: String,
 }
 
-<span class="doccomment">/// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
-/// also contains an inclusion proof. Since we currently don&#39;t verify the inclusion proof in the
-/// client, it is omitted from this struct.
+<span class="doccomment">/// Struct representing a verification object in a Rekor LogEntry. The
+/// verification object in Rekor also contains an inclusion proof. Since we
+/// currently don&#39;t verify the inclusion proof in the client, it is omitted from
+/// this struct.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntryVerification {
@@ -406,32 +412,35 @@
     </span><span class="kw">pub </span>signed_entry_timestamp: String,
 }
 
-<span class="doccomment">/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.
+<span class="doccomment">/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
+/// LogEntry.
 ///
-/// This bundle can be verified using the public key from Rekor. The public key can
-/// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded
-/// x509/PKIX public key.
+/// This bundle can be verified using the public key from Rekor. The public key
+/// can be obtained from the `/api/v1/log/publicKey` Rest API. For
+/// `sigstore.dev`, it is a PEM-encoded x509/PKIX public key.
 </span><span class="kw">pub struct </span>RekorSignatureBundle {
-    <span class="doccomment">/// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
-    /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
-    /// LogEntry). These fields include body, integratedTime, logID and logIndex.
+    <span class="doccomment">/// Canonicalized JSON representation, based on RFC 8785 rules, of a subset
+    /// of a Rekor LogEntry fields that are signed to generate
+    /// `signedEntryTimestamp` (also a field in the Rekor LogEntry). These
+    /// fields include body, integratedTime, logID and logIndex.
     </span><span class="kw">pub </span>canonicalized: Vec&lt;u8&gt;,
 
     <span class="doccomment">/// The signature over the canonicalized JSON document.
     </span><span class="kw">pub </span>signature: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
-/// &lt;https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476&gt;.
+<span class="doccomment">/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as
+/// described in &lt;https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476&gt;.
 </span><span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>LogEntry&gt; <span class="kw">for </span>RekorSignatureBundle {
     <span class="kw">type </span>Error = anyhow::Error;
 
     <span class="kw">fn </span>try_from(log_entry: <span class="kw-2">&amp;</span>LogEntry) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// Canonicalized JSON document that is signed; note that verification is omitted.
-        // Canonicalization should follow the RFC 8785 rules. We hardcode the canonical
-        // serialization because serialization with serde_json requires std; if we get the
-        // serialization wrong (e.g., because a string contain characters requiring special
-        // escaping), the signature will fail to match. Thus, this should result in incorrectly
+        <span class="comment">// Canonicalized JSON document that is signed; note that verification is
+        // omitted. Canonicalization should follow the RFC 8785 rules. We
+        // hardcode the canonical serialization because serialization with
+        // serde_json requires std; if we get the serialization wrong (e.g.,
+        // because a string contain characters requiring special escaping), the
+        // signature will fail to match. Thus, this should result in incorrectly
         // rejecting some valid signature bundles, not incorrectly accepting valid ones.
         </span><span class="macro">anyhow::ensure!</span>(!log_entry.body.contains(<span class="string">&#39;&quot;&#39;</span>));
         <span class="macro">anyhow::ensure!</span>(!log_entry.log_id.contains(<span class="string">&#39;&quot;&#39;</span>));
@@ -454,17 +463,15 @@
             .decode(sig_base64)
             .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode Base64 signature: {}&quot;</span>, error))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            canonicalized: canonicalized.as_bytes().to_vec(),
-            signature,
-        })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ canonicalized: canonicalized.as_bytes().to_vec(), signature })
     }
 }
 
 <span class="doccomment">/// Verifies a Rekor LogEntry. This includes verifying:
 ///
 /// 1. the signature in `signedEntryTimestamp` using Rekor&#39;s public key,
-/// 1. the signature in `body.RekordObj.signature` using the endorser&#39;s public key,
+/// 1. the signature in `body.RekordObj.signature` using the endorser&#39;s public
+///    key,
 /// 1. that the content of the body equals `endorsement`.
 </span><span class="kw">pub fn </span>verify_rekor_log_entry(
     log_entry: <span class="kw-2">&amp;</span>[u8],
@@ -481,8 +488,8 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
-/// instance of `Body`.
+<span class="doccomment">/// Parses the given bytes into a Rekor `LogEntry` object, and returns its
+/// `body` parsed into an instance of `Body`.
 </span><span class="kw">pub fn </span>get_rekor_log_entry_body(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Body&gt; {
     <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
         serde_json::from_slice(log_entry).map_err(|error| {
@@ -529,7 +536,8 @@
         )
     }
 
-    <span class="comment">// Check that hash of the endorsement statement matches the hash of the data in the Body.
+    <span class="comment">// Check that hash of the endorsement statement matches the hash of the data in
+    // the Body.
     </span><span class="kw">let </span>contents_hash = hash_sha2_256(contents_bytes);
     <span class="kw">let </span>contents_hash_hex = hex::encode(contents_hash);
     <span class="kw">if </span>contents_hash_hex != body.spec.data.hash.value {

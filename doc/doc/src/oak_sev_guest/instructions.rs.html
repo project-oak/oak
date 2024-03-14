@@ -267,6 +267,11 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -283,7 +288,8 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Rust instruction wrappers for managing page state and interacting with the hypervisor.
+</span><span class="doccomment">//! Rust instruction wrappers for managing page state and interacting with the
+//! hypervisor.
 
 </span><span class="kw">use </span>core::arch::asm;
 
@@ -320,8 +326,8 @@
     </span>FailPermission = <span class="number">2</span>,
     <span class="doccomment">/// The page size does not match the page size entry in the RMP.
     </span>FailSizeMismatch = <span class="number">6</span>,
-    <span class="doccomment">/// The page validation status was not updated. This value is software defined and will not be
-    /// returned by the hardware instruction.
+    <span class="doccomment">/// The page validation status was not updated. This value is software
+    /// defined and will not be returned by the hardware instruction.
     </span>ValidationStatusNotUpdated = <span class="number">255</span>,
 }
 
@@ -338,8 +344,8 @@
     <span class="kw">let </span>validated = validated <span class="kw">as </span>u32;
     <span class="kw">let </span>result: u32;
     <span class="kw">let </span>carry: u8;
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;pvalidate&quot;</span>,
@@ -356,7 +362,8 @@
         <span class="kw">if </span>carry == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
-            <span class="comment">// If the carry flag is not 0, it indicates that the validated state was not changed.
+            <span class="comment">// If the carry flag is not 0, it indicates that the validated state was not
+            // changed.
             </span><span class="prelude-val">Err</span>(InstructionError::ValidationStatusNotUpdated)
         }
     } <span class="kw">else </span>{
@@ -404,7 +411,8 @@
     </span><span class="kw">pub </span>vmsa: Vmsa,
     <span class="doccomment">/// Padding to extend struct to 4 bytes in size.
     </span>_reserved_0: u8,
-    <span class="doccomment">/// Padding to extend struct to 8 bytes in size to enable reinterpreting as a u64.
+    <span class="doccomment">/// Padding to extend struct to 8 bytes in size to enable reinterpreting as
+    /// a u64.
     </span>_reserved_1: u32,
 }
 
@@ -412,9 +420,9 @@
 
 <span class="kw">impl </span>From&lt;RmpPermission&gt; <span class="kw">for </span>u64 {
     <span class="kw">fn </span>from(permission: RmpPermission) -&gt; u64 {
-        <span class="comment">// Safety: reinterpreting the struct as a u64 is safe because the types are guaranteed to
-        // have the same size and the struct is 8-byte aligned. We are not making any assumptions
-        // about the individual bits.
+        <span class="comment">// Safety: reinterpreting the struct as a u64 is safe because the types are
+        // guaranteed to have the same size and the struct is 8-byte aligned. We
+        // are not making any assumptions about the individual bits.
         </span><span class="kw">unsafe </span>{ core::mem::transmute(permission) }
     }
 }
@@ -448,8 +456,8 @@
     <span class="kw">let </span>page_size = page_size <span class="kw">as </span>u64;
     <span class="kw">let </span>permission: u64 = permission.into();
     <span class="kw">let </span>result: u64;
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
             <span class="string">&quot;rmpadjust&quot;</span>,
@@ -474,7 +482,8 @@
 ///
 /// # Safety
 ///
-/// If the page is not in `VALIDATED` state, calling this will cause an `#VC` exception.
+/// If the page is not in `VALIDATED` state, calling this will cause an `#VC`
+/// exception.
 </span><span class="attr">#[inline]
 </span><span class="kw">pub unsafe fn </span>rmpquery(
     page_guest_physical_address: usize,
@@ -509,11 +518,12 @@
 ///
 /// See the VMGEXIT instruction in &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
 </span><span class="kw">pub fn </span>vmgexit() {
-    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    <span class="comment">// Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     </span><span class="kw">unsafe </span>{
-        <span class="comment">// The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
-        // VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.
+        <span class="comment">// The REP instruction modifier changes the VMMCALL instruction to be equivalent
+        // to the VMGEXIT call. This is used as the assembler does not recognise
+        // the VMGEXIT mnemonic.
         </span><span class="macro">asm!</span>(<span class="string">&quot;rep vmmcall&quot;</span>, options(nomem, nostack, preserves_flags));
     }
 }
