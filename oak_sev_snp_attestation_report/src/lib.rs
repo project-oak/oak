@@ -37,32 +37,31 @@ pub struct AttestationReport {
 static_assertions::assert_eq_size!(AttestationReport, [u8; 1184]);
 
 impl AttestationReport {
-    /// Creates a new AttestationReport with all zeros and the provided value on the
-    /// data.report_data field.
+    /// Creates a new AttestationReport with all zeros and the provided value on
+    /// the data.report_data field.
     pub fn from_report_data(report_data: [u8; REPORT_DATA_SIZE]) -> Self {
         let mut result = AttestationReport::new_zeroed();
         result.data.report_data = report_data;
         result
     }
 
-    /// Checks that the report data is valid and the signature has the expected format.
+    /// Checks that the report data is valid and the signature has the expected
+    /// format.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.data.validate()?;
         self.signature.validate_format()
     }
 
     pub fn has_debug_flag(&self) -> Result<bool, &'static str> {
-        let policy_flags: PolicyFlags = self
-            .data
-            .policy
-            .get_flags()
-            .ok_or("Failed to parse flags")?;
+        let policy_flags: PolicyFlags =
+            self.data.policy.get_flags().ok_or("Failed to parse flags")?;
 
         Ok(policy_flags.contains(PolicyFlags::DEBUG))
     }
 }
 
-/// The number of bytes of custom data that can be included in the attestation report.
+/// The number of bytes of custom data that can be included in the attestation
+/// report.
 ///
 /// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 pub const REPORT_DATA_SIZE: usize = 64;
@@ -89,47 +88,50 @@ pub struct AttestationReportData {
     pub vmpl: u32,
     /// The algorithm used to sign the report.
     ///
-    /// Use `AttestationReportData::get_signature_algo` to try to convert this to a
-    /// `SigningAlgorithm` enum.
+    /// Use `AttestationReportData::get_signature_algo` to try to convert this
+    /// to a `SigningAlgorithm` enum.
     pub signature_algo: u32,
-    /// The current version of each of the components in the Trusted Computing Base (TCB). This
-    /// could be different from the committed value during provisional execution when firmware
-    /// is being updated.
+    /// The current version of each of the components in the Trusted Computing
+    /// Base (TCB). This could be different from the committed value during
+    /// provisional execution when firmware is being updated.
     pub current_tcb: TcbVersion,
     /// Information about the platform.
     ///
-    /// Use `AttestationReportData::get_platform_info` to try to convert this to a `PlatformInfo`
-    /// biflag representation.
+    /// Use `AttestationReportData::get_platform_info` to try to convert this to
+    /// a `PlatformInfo` biflag representation.
     pub platform_info: u64,
-    /// The least significant bit indicates Whether the digest of the author key is included in the
-    /// report, all other bits are reserved and must be zero.
+    /// The least significant bit indicates Whether the digest of the author key
+    /// is included in the report, all other bits are reserved and must be
+    /// zero.
     ///
-    /// Use `AttestationReportData::get_author_key_en` to try to convert this to an `AuthorKey`
-    /// enum.
+    /// Use `AttestationReportData::get_author_key_en` to try to convert this to
+    /// an `AuthorKey` enum.
     pub author_key_en: u64,
-    /// Guest-provided data. The custom data provided in the attestation request.
+    /// Guest-provided data. The custom data provided in the attestation
+    /// request.
     pub report_data: [u8; REPORT_DATA_SIZE],
     /// The measurement of the VM memory calculated at launch.
     pub measurement: [u8; 48],
     /// Custom data provided by the hypervisor at launch.
     pub host_data: [u8; 32],
-    /// The SHA-384 digest of the ID public key used to sign the ID block that was provided in
-    /// SNP_LAUNCH_FINISH.
+    /// The SHA-384 digest of the ID public key used to sign the ID block that
+    /// was provided in SNP_LAUNCH_FINISH.
     pub id_key_digest: [u8; 48],
-    /// The SHA-384 digest of the author public key used to certify the ID key, if the least
-    /// significant bit of `author_key_en` is 1, or all zeroes otherwise.
+    /// The SHA-384 digest of the author public key used to certify the ID key,
+    /// if the least significant bit of `author_key_en` is 1, or all zeroes
+    /// otherwise.
     pub author_key_digest: [u8; 48],
     /// The report ID of this guest.
     pub report_id: [u8; 32],
     /// The report ID of this guest's migration agent.
     pub report_id_ma: [u8; 32],
-    /// The reported TCB version that was used to generate the versioned chip endorsement key
-    /// (VCEK) used to sign this report.
+    /// The reported TCB version that was used to generate the versioned chip
+    /// endorsement key (VCEK) used to sign this report.
     pub reported_tcb: TcbVersion,
     /// Reserved, must be zero.
     _reserved_0: [u8; 24],
-    /// Identifier unique to the chip, unless the ID has been masked in configuration in which case
-    /// it is all zeroes.
+    /// Identifier unique to the chip, unless the ID has been masked in
+    /// configuration in which case it is all zeroes.
     pub chip_id: [u8; 64],
     /// The committed TCB version.
     pub committed_tcb: TcbVersion,
@@ -149,7 +151,8 @@ pub struct AttestationReportData {
     pub committed_major: u8,
     /// Reserved, must be zero.
     _reserved_2: u8,
-    /// The value of the current TCB version when the guest was launched or imported.
+    /// The value of the current TCB version when the guest was launched or
+    /// imported.
     pub launch_tcb: TcbVersion,
     /// Reserved, must be zero.
     _reserved_3: [u8; 168],
@@ -158,7 +161,8 @@ pub struct AttestationReportData {
 static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
 
 impl AttestationReportData {
-    /// Gets the platform info field as a `PlatformInfo` representation if possible.
+    /// Gets the platform info field as a `PlatformInfo` representation if
+    /// possible.
     pub fn get_platform_info(&self) -> Option<PlatformInfo> {
         PlatformInfo::from_bits(self.platform_info)
     }
@@ -168,13 +172,14 @@ impl AttestationReportData {
         AuthorKey::from_repr(self.author_key_en)
     }
 
-    /// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    /// Gets the signing algorithm field as a `SigningAlgorithm` enum if
+    /// possible.
     pub fn get_signature_algo(&self) -> Option<SigningAlgorithm> {
         SigningAlgorithm::from_repr(self.signature_algo)
     }
 
-    /// Checks that fields with specific expected values or ranges are valid and the reserved bytes
-    /// are all zero.
+    /// Checks that fields with specific expected values or ranges are valid and
+    /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         self.policy.validate()?;
         self.current_tcb.validate()?;
@@ -240,7 +245,8 @@ pub struct GuestPolicy {
     pub abi_major: u8,
     /// The allowed settings for the guest.
     ///
-    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags` enum.
+    /// Use `GuestPolicy::get_flags` to try to convert this to a `PolicyFlags`
+    /// enum.
     pub flags: u16,
     /// Reserved, must be zero.
     _reserved: u32,
@@ -272,7 +278,8 @@ impl GuestPolicy {
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct TcbVersion {
-    /// The current security version number (SVN) of the secure processor (PSP) bootloader.
+    /// The current security version number (SVN) of the secure processor (PSP)
+    /// bootloader.
     pub boot_loader: u8,
     /// The current SVN of the PSP operating system.
     pub tee: u8,
@@ -329,9 +336,11 @@ pub enum AuthorKey {
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct EcdsaSignature {
-    /// The R component of this signature. The value is zero-extended and little-endian encoded.
+    /// The R component of this signature. The value is zero-extended and
+    /// little-endian encoded.
     pub r: [u8; 72],
-    /// The S component of this signature. The value is zero-extended and little-endian encoded.
+    /// The S component of this signature. The value is zero-extended and
+    /// little-endian encoded.
     pub s: [u8; 72],
     /// Reserved, must be zero.
     _reserved: [u8; 368],

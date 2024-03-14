@@ -47,10 +47,7 @@ use proto::oak::functions::wasm::v1::{
 
 /// See [`StdWasmApiClient::read_request`].
 pub fn read_request() -> Result<Vec<u8>, Status> {
-    client()
-        .read_request(&ReadRequestRequest {})
-        .flatten()
-        .map(|ReadRequestResponse { body }| body)
+    client().read_request(&ReadRequestRequest {}).flatten().map(|ReadRequestResponse { body }| body)
 }
 
 /// See [`StdWasmApiClient::write_response`].
@@ -87,19 +84,13 @@ where
 }
 
 fn bytes_value_to_option(b: BytesValue) -> Option<Vec<u8>> {
-    if b.found {
-        Some(b.value)
-    } else {
-        None
-    }
+    if b.found { Some(b.value) } else { None }
 }
 
 /// See [`StdWasmApiClient::log`].
 pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), Status> {
     client()
-        .log(&LogRequest {
-            message: message.as_ref().to_string(),
-        })
+        .log(&LogRequest { message: message.as_ref().to_string() })
         .flatten()
         .map(|LogResponse {}| ())
 }
@@ -107,10 +98,7 @@ pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), Status> {
 /// See [`StdWasmApiClient::test`].
 pub fn testing(request: &[u8], echo: bool) -> Result<Vec<u8>, Status> {
     client()
-        .test(&TestRequest {
-            body: request.to_vec(),
-            echo,
-        })
+        .test(&TestRequest { body: request.to_vec(), echo })
         .flatten()
         .map(|TestResponse { body }| body)
 }
@@ -139,8 +127,8 @@ fn invoke(request: &[u8]) -> Result<Vec<u8>, Status> {
 
 /// Logs a debug message.
 ///
-/// These log messages are considered sensitive, so will only be logged by the runtime if the
-/// `oak_unsafe` feature is enabled.
+/// These log messages are considered sensitive, so will only be logged by the
+/// runtime if the `oak_unsafe` feature is enabled.
 #[macro_export]
 macro_rules! log {
     ($($arg:tt)+) => {
@@ -148,9 +136,11 @@ macro_rules! log {
     }
 }
 
-/// A wrapper around the `invoke` function that implements the [`micro_rpc::Transport`] trait.
+/// A wrapper around the `invoke` function that implements the
+/// [`micro_rpc::Transport`] trait.
 ///
-/// This object is stateless, so it can be created and discarded for each invocation.
+/// This object is stateless, so it can be created and discarded for each
+/// invocation.
 struct Transport;
 
 impl micro_rpc::Transport for Transport {
@@ -171,15 +161,16 @@ pub extern "C" fn alloc(len: u32) -> *mut u8 {
     // Create a new mutable buffer with capacity `len`.
     let mut buf = Vec::with_capacity(len as usize);
     let ptr = buf.as_mut_ptr();
-    // Take ownership of the buffer and ensure that it is not freed at the end of this function.
+    // Take ownership of the buffer and ensure that it is not freed at the end of
+    // this function.
     core::mem::forget(buf);
     // Return the pointer so the runtime can write data at this address.
     ptr
 }
 
-/// Convenience method to reconstruct an owned `Vec<u8>` from the raw parts (address and size)
-/// returned as part of an ABI method invocation that relies on the `alloc` method to allocate the
-/// buffer.
+/// Convenience method to reconstruct an owned `Vec<u8>` from the raw parts
+/// (address and size) returned as part of an ABI method invocation that relies
+/// on the `alloc` method to allocate the buffer.
 fn from_alloc_buffer(buf_ptr: *mut u8, buf_len: usize) -> Vec<u8> {
     unsafe { Vec::from_raw_parts(buf_ptr, buf_len, buf_len) }
 }

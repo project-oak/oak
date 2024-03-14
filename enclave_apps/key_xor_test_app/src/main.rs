@@ -26,8 +26,8 @@ use oak_restricted_kernel_sdk::{
     entrypoint,
 };
 
-// Continuously reads single bytes from the communication channel, XORs them with a byte from the
-// derived key and sends them back.
+// Continuously reads single bytes from the communication channel, XORs them
+// with a byte from the derived key and sends them back.
 #[entrypoint]
 fn run_server() -> ! {
     let mut key = [0u8; 32];
@@ -36,9 +36,7 @@ fn run_server() -> ! {
     let mut iter = key.iter().cycle();
     let mut channel = FileDescriptorChannel::default();
     loop {
-        channel
-            .read_exact(&mut byte[..])
-            .expect("couldn't read bytes");
+        channel.read_exact(&mut byte[..]).expect("couldn't read bytes");
         byte[0] ^= iter.next().expect("iterator ran out");
         channel.write_all(&byte[..]).expect("couldn't write bytes");
     }

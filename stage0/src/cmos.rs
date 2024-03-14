@@ -42,9 +42,10 @@ impl Cmos {
     ///
     /// # Safety
     ///
-    /// It's up to the caller to guarantee that there will be no other readers/writers to the CMOS
-    /// ports (0x70, 0x71) and that CMOS is actually available on those ports, otherwise the
-    /// behaviour is undefined.
+    /// It's up to the caller to guarantee that there will be no other
+    /// readers/writers to the CMOS ports (0x70, 0x71) and that CMOS is
+    /// actually available on those ports, otherwise the behaviour is
+    /// undefined.
     pub unsafe fn new() -> Self {
         Self {
             index_port: io_port_factory().new_writer(CMOS_INDEX_PORT),
@@ -78,8 +79,8 @@ impl Cmos {
     }
 
     fn read(&mut self, index: u8) -> Result<u8, &'static str> {
-        // Safety: we've asked the caller to guarantee that these ports are exclusively available
-        // when calling new(), so accessing them is safe.
+        // Safety: we've asked the caller to guarantee that these ports are exclusively
+        // available when calling new(), so accessing them is safe.
         unsafe {
             self.index_port.try_write(index | NMI_DISABLE_BIT)?;
             self.data_port.try_read()

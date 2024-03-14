@@ -60,44 +60,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
     }
-    mount(
-        None::<&str>,
-        "/dev",
-        Some("devtmpfs"),
-        MsFlags::empty(),
-        None::<&str>,
-    )
-    .context("error mounting /dev")?;
+    mount(None::<&str>, "/dev", Some("devtmpfs"), MsFlags::empty(), None::<&str>)
+        .context("error mounting /dev")?;
 
-    Command::new("/mke2fs")
-        .args(["/dev/ram0"])
-        .spawn()?
-        .wait()
-        .await?;
+    Command::new("/mke2fs").args(["/dev/ram0"]).spawn()?.wait().await?;
     if !Path::new("/rootfs").try_exists()? {
         create_dir("/rootfs").context("error creating /rootfs")?;
     }
-    mount(
-        Some("/dev/ram0"),
-        "/rootfs",
-        Some("ext4"),
-        MsFlags::empty(),
-        None::<&str>,
-    )
-    .context("error mounting ramdrive to /rootfs")?;
+    mount(Some("/dev/ram0"), "/rootfs", Some("ext4"), MsFlags::empty(), None::<&str>)
+        .context("error mounting ramdrive to /rootfs")?;
 
     // Mount /sys so that we can read the memory map.
     if !Path::new("/sys").try_exists()? {
         create_dir("/sys").context("error creating /sys")?;
     }
-    mount(
-        None::<&str>,
-        "/sys",
-        Some("sysfs"),
-        MsFlags::empty(),
-        None::<&str>,
-    )
-    .context("error mounting /sys")?;
+    mount(None::<&str>, "/sys", Some("sysfs"), MsFlags::empty(), None::<&str>)
+        .context("error mounting /sys")?;
 
     let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr)?;
 
@@ -107,14 +85,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // switch_root(8) magic
     chdir("/rootfs").context("failed to chdir to /rootfs")?;
-    mount(
-        Some("/rootfs"),
-        "/",
-        None::<&str>,
-        MsFlags::MS_MOVE,
-        None::<&str>,
-    )
-    .context("failed to move /rootfs to /")?;
+    mount(Some("/rootfs"), "/", None::<&str>, MsFlags::MS_MOVE, None::<&str>)
+        .context("failed to move /rootfs to /")?;
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
 
@@ -122,37 +94,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .context("error creating the launcher client")?;
 
-    let buf = client
-        .get_oak_system_image()
-        .await
-        .context("error fetching system image")?;
+    let buf = client.get_oak_system_image().await.context("error fetching system image")?;
 
     let system_image_claims = dice::measure_system_image(&buf);
 
-    // For safety we generate the DICE data for the next layer before processing the compressed
-    // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided
-    // by Stage 0.
+    // For safety we generate the DICE data for the next layer before processing the
+    // compressed system image. This consumes the `DiceBuilder` which also
+    // clears the ECA private key provided by Stage 0.
     dice_builder.add_layer(system_image_claims)?;
     let dice_data: DiceData = dice_builder.serialize();
 
-    image::extract(&buf, Path::new("/"))
-        .await
-        .context("error loading the system image")?;
+    image::extract(&buf, Path::new("/")).await.context("error loading the system image")?;
 
-    // If the image didn't contain a `/etc/machine-id` file, create a placeholder one that systemd
-    // will replace during startup. If you don't have that file at all, `systemd-machine-id-setup`
-    // unit will fail.
+    // If the image didn't contain a `/etc/machine-id` file, create a placeholder
+    // one that systemd will replace during startup. If you don't have that file
+    // at all, `systemd-machine-id-setup` unit will fail.
     if !Path::new("/etc/machine-id").exists() {
         fs::write("/etc/machine-id", []).context("error writing placeholder /etc/machine-id")?;
     }
 
-    // Write the DICE data to a well-known location as a length-delimited protobuf file.
+    // Write the DICE data to a well-known location as a length-delimited protobuf
+    // file.
     create_dir("/oak").context("error creating `oak` directory")?;
     fs::write("/oak/dice", dice_data.encode_length_delimited_to_vec())
         .context("error writing DICE data")?;
 
-    // Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
-    // has an IP address.
+    // Configure eth0 down, as systemd will want to manage it itself and gets
+    // confused if it already has an IP address.
     {
         let (connection, handle, _) =
             rtnetlink::new_connection().context("error opening netlink connection")?;
@@ -163,27 +131,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         if let Some(link) = links.try_next().await? {
             // `ip link set dev $INDEX down`
-            handle
-                .link()
-                .set(link.header.index)
-                .down()
-                .execute()
-                .await?;
+            handle.link().set(link.header.index).down().execute().await?;
         } else {
             println!("warning: eth0 not found");
         }
     }
 
-    // We're not running under Docker, so if the system image has a lingering `/.dockerenv` in it,
-    // remove it.
+    // We're not running under Docker, so if the system image has a lingering
+    // `/.dockerenv` in it, remove it.
     fs::remove_file("/.dockerenv")
-        .or_else(|err| {
-            if err.kind() == ErrorKind::NotFound {
-                Ok(())
-            } else {
-                Err(err)
-            }
-        })
+        .or_else(|err| if err.kind() == ErrorKind::NotFound { Ok(()) } else { Err(err) })
         .context("error removing `/.dockerenv`")?;
 
     image::switch(&args.init).context("error switching to the system image")?
@@ -191,8 +148,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 /// Tries to parse a string slice as an address.
 ///
-/// Assumes that the address is a hexadecimal representation if it starts with "0x", or decimal
-/// otherwise.
+/// Assumes that the address is a hexadecimal representation if it starts with
+/// "0x", or decimal otherwise.
 fn try_parse_phys_addr(arg: &str) -> anyhow::Result<PhysAddr> {
     let address = if arg.starts_with("0x") {
         u64::from_str_radix(arg.strip_prefix("0x").unwrap(), 16)

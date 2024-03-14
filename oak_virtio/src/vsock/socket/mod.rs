@@ -27,19 +27,21 @@ use crate::{Read, Write};
 
 /// The maximum buffer size used by the socket.
 ///
-/// This is used for flow-control calculations. Seeing that we don't use an actual streambuffer,
-/// this is currently an arbitrary value that seems to avoid stalling.
+/// This is used for flow-control calculations. Seeing that we don't use an
+/// actual streambuffer, this is currently an arbitrary value that seems to
+/// avoid stalling.
 const STREAM_BUFFER_LENGTH: Wrapping<u32> = Wrapping(64 * 1024);
 
 /// The limit that triggers a voluntary credit update message to avoid stalling.
 ///
-/// If the peer's calculation of our free buffer space falls below this point (e.g when we receive a
-/// lot of data without sending any packets back) we send a credit update packet to make sure the
-/// peer knows we have more space available.
+/// If the peer's calculation of our free buffer space falls below this point
+/// (e.g when we receive a lot of data without sending any packets back) we send
+/// a credit update packet to make sure the peer knows we have more space
+/// available.
 const CREDIT_UPDATE_LIMIT: Wrapping<u32> = Wrapping(32 * 1024);
 
-/// The maximum size of the payload of a single packet to ensure it fits into a single buffer in the
-/// queue.
+/// The maximum size of the payload of a single packet to ensure it fits into a
+/// single buffer in the queue.
 const MAX_PAYLOAD_SIZE: usize = DATA_BUFFER_SIZE - HEADER_SIZE;
 
 /// Connector to initiate a connection to a listener on the host.
@@ -53,21 +55,17 @@ where
     T: VirtioTransport,
 {
     pub fn new(vsock: VSock<'a, T, A>, host_port: u32, local_port: u32) -> Self {
-        Self {
-            config: SocketConfiguration::new(vsock, local_port, host_port),
-        }
+        Self { config: SocketConfiguration::new(vsock, local_port, host_port) }
     }
 
     /// Tries to connect to a listener on the host.
     ///
-    /// Since we don't yet support timeouts it will wait indefinitely for a respone. If the
-    /// connection is refused, or it receives an unexpected packet, it will return an error.
+    /// Since we don't yet support timeouts it will wait indefinitely for a
+    /// respone. If the connection is refused, or it receives an unexpected
+    /// packet, it will return an error.
     pub fn connect(mut self) -> anyhow::Result<Socket<'a, T, A>> {
-        let mut packet = Packet::new_control(
-            self.config.local_port,
-            self.config.host_port,
-            VSockOp::Request,
-        )?;
+        let mut packet =
+            Packet::new_control(self.config.local_port, self.config.host_port, VSockOp::Request)?;
         // Set credit info.
         packet.set_buf_alloc(STREAM_BUFFER_LENGTH.0);
         packet.set_fwd_cnt(0);
@@ -84,10 +82,7 @@ where
                     peer_buffer_size = packet.get_buf_alloc();
                     break;
                 } else {
-                    anyhow::bail!(
-                        "invalid response to connection request: {}",
-                        packet.get_op()?
-                    );
+                    anyhow::bail!("invalid response to connection request: {}", packet.get_op()?);
                 }
             }
         }
@@ -106,16 +101,14 @@ where
     T: VirtioTransport,
 {
     pub fn new(vsock: VSock<'a, T, A>, port: u32) -> Self {
-        Self {
-            config: SocketConfiguration::new(vsock, port, 0),
-        }
+        Self { config: SocketConfiguration::new(vsock, port, 0) }
     }
 
     /// Listens for a connection from the host on the specified port.
     ///
-    /// Since we don't yet support timeouts it will wait indefinitely for a connection request. If
-    /// it receives an unexpected packet (anything other than a connection request) it will return
-    /// an error.
+    /// Since we don't yet support timeouts it will wait indefinitely for a
+    /// connection request. If it receives an unexpected packet (anything
+    /// other than a connection request) it will return an error.
     pub fn accept(mut self) -> anyhow::Result<Socket<'a, T, A>> {
         let dst_port = self.config.local_port;
         let peer_buffer_size;
@@ -135,11 +128,8 @@ where
             }
         }
 
-        let mut packet = Packet::new_control(
-            self.config.local_port,
-            self.config.host_port,
-            VSockOp::Response,
-        )?;
+        let mut packet =
+            Packet::new_control(self.config.local_port, self.config.host_port, VSockOp::Response)?;
         // Set credit info.
         packet.set_buf_alloc(STREAM_BUFFER_LENGTH.0);
         packet.set_fwd_cnt(0);
@@ -159,19 +149,20 @@ pub struct Socket<'a, T: VirtioTransport, A: Allocator> {
     ///
     /// This is a free-running counter that wraps around.
     processed_bytes: Wrapping<u32>,
-    /// The previous value of `processed_bytes` that was sent to the peer in the most recent packet
-    /// header.
+    /// The previous value of `processed_bytes` that was sent to the peer in the
+    /// most recent packet header.
     previous_processed_bytes: Wrapping<u32>,
     /// The number of payload bytes we have sent.
     ///
     /// This is a free-running counter that wraps around.
     sent_bytes: Wrapping<u32>,
-    /// The number of payload bytes the peer has processed according to the received packet
-    /// headers.
+    /// The number of payload bytes the peer has processed according to the
+    /// received packet headers.
     peer_processed_bytes: Wrapping<u32>,
     /// The size of the peer's stream buffer.
     peer_buffer_size: Wrapping<u32>,
-    /// A temporary buffer to store extra data from a packet that was not fully read.
+    /// A temporary buffer to store extra data from a packet that was not fully
+    /// read.
     pending_data: Option<VecDeque<u8>>,
 }
 
@@ -194,9 +185,9 @@ where
 
     /// Shuts the connection down.
     ///
-    /// At the moment this will cause the vsock driver to be dropped, which means that no future
-    /// connections will be possible. This should only be used if no further communications with the
-    /// host is expected.
+    /// At the moment this will cause the vsock driver to be dropped, which
+    /// means that no future connections will be possible. This should only
+    /// be used if no further communications with the host is expected.
     pub fn shutdown(mut self) {
         if self.connection_state == ConnectionState::Connected {
             let mut packet = Packet::new_control(
@@ -230,10 +221,7 @@ where
     /// Sends a data packet to the host.
     fn send_data_packet(&mut self, data: &[u8]) -> anyhow::Result<()> {
         // For now we panic if we are disconnected.
-        assert!(
-            self.connection_state == ConnectionState::Connected,
-            "stream disconnected"
-        );
+        assert!(self.connection_state == ConnectionState::Connected, "stream disconnected");
         let data_len = data.len();
         assert!(
             data_len <= MAX_PAYLOAD_SIZE,
@@ -261,13 +249,11 @@ where
         self.previous_processed_bytes = self.processed_bytes;
     }
 
-    /// Reads the payload of the next available data packet, if any are available.
+    /// Reads the payload of the next available data packet, if any are
+    /// available.
     fn read_data(&mut self) -> Option<VecDeque<u8>> {
         // For now we panic if we are disconnected.
-        assert!(
-            self.connection_state == ConnectionState::Connected,
-            "stream disconnected"
-        );
+        assert!(self.connection_state == ConnectionState::Connected, "stream disconnected");
         let src_port = self.config.host_port;
         let dst_port = self.config.local_port;
         loop {
@@ -284,7 +270,8 @@ where
                         .expect("couldn't create control packet");
                 }
                 VSockOp::CreditUpdate => {
-                    // We already updated our flow-control tracking data, so do nothing.
+                    // We already updated our flow-control tracking data, so do
+                    // nothing.
                 }
                 VSockOp::Request | VSockOp::Response => {
                     // For now we panic if we receive an invalid op.
@@ -295,8 +282,7 @@ where
                     return None;
                 }
                 VSockOp::Shutdown => {
-                    self.send_control_packet(VSockOp::Rst)
-                        .expect("couldn't create control packet");
+                    self.send_control_packet(VSockOp::Rst).expect("couldn't create control packet");
                     self.connection_state = ConnectionState::Disconnected;
                     return None;
                 }
@@ -311,8 +297,9 @@ where
         }
     }
 
-    /// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer or from the next available data packet.
+    /// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer or from the next available
+    /// data packet.
     ///
     /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
@@ -376,8 +363,8 @@ where
 
     fn flush(&mut self) -> anyhow::Result<()> {
         // We always flush on write, so do nothing.
-        // TODO(#2876): We should use a buffered writer so that we don't always flush on write, and
-        // provide an actual flush implementation here.
+        // TODO(#2876): We should use a buffered writer so that we don't always flush on
+        // write, and provide an actual flush implementation here.
         Ok(())
     }
 }
@@ -393,7 +380,8 @@ enum ConnectionState {
 struct SocketConfiguration<'a, T: VirtioTransport, A: Allocator> {
     /// The vsock device driver.
     ///
-    /// For now we only support one connection, so the driver is owned by this configuration.
+    /// For now we only support one connection, so the driver is owned by this
+    /// configuration.
     vsock: VSock<'a, T, A>,
     /// The local port for the connection.
     local_port: u32,
@@ -406,11 +394,7 @@ where
     T: VirtioTransport,
 {
     fn new(vsock: VSock<'a, T, A>, local_port: u32, host_port: u32) -> Self {
-        Self {
-            vsock,
-            local_port,
-            host_port,
-        }
+        Self { vsock, local_port, host_port }
     }
 }
 

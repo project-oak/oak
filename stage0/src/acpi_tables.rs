@@ -73,27 +73,23 @@ impl Rsdp {
             return Err("invalid RSDP size");
         }
 
-        let checksum = self.as_bytes()[..20]
-            .iter()
-            .fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+        let checksum = self.as_bytes()[..20].iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
 
         if checksum != 0 {
             return Err("Invalid RSDP checksum");
         }
 
         if self.revision > 2 {
-            let checksum = self
-                .as_bytes()
-                .iter()
-                .fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+            let checksum = self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
 
             if checksum != 0 {
                 return Err("Invalid RSDP extended checksum");
             }
         }
 
-        // Check the pointer addresses; if they are valid, they should point within the EBDA.
-        // Safety: we will never dereference the pointer, we just need to know where it points to.
+        // Check the pointer addresses; if they are valid, they should point within the
+        // EBDA. Safety: we will never dereference the pointer, we just need to
+        // know where it points to.
         let ebda_base = unsafe { EBDA.as_ptr() } as usize;
         if self.rsdt_address > 0
             && ((self.rsdt_address as usize) < ebda_base
@@ -130,7 +126,8 @@ impl Rsdp {
 
 /// Header common for all ACPI tables.
 ///
-/// See Section 5.2.6, System Description Table Header, in the ACPI specification for more details.
+/// See Section 5.2.6, System Description Table Header, in the ACPI
+/// specification for more details.
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct DescriptionHeader {
@@ -140,16 +137,19 @@ pub struct DescriptionHeader {
     /// Length of the table, in bytes, including the header.
     length: u32,
 
-    /// Revision of the struture corresponding to the signature field for this table.
+    /// Revision of the struture corresponding to the signature field for this
+    /// table.
     revision: u8,
 
-    /// The entire table, including the checksum field, must add to zero to be considered valid.
+    /// The entire table, including the checksum field, must add to zero to be
+    /// considered valid.
     checksum: u8,
 
     /// OEM-supplied string that identifies the OEM.
     oem_id: [u8; 6],
 
-    /// OEM-supplied string that the OEM uses to identify the particular data table.
+    /// OEM-supplied string that the OEM uses to identify the particular data
+    /// table.
     oem_table_id: [u8; 8],
 
     /// OEM-supplied revision number.
@@ -158,7 +158,8 @@ pub struct DescriptionHeader {
     /// Vendor ID of utility that created the table, e.g. the ASL Compiler.
     creator_id: u32,
 
-    /// Revision of the utility that created the table, e.g. revision of the ASL Compiler.
+    /// Revision of the utility that created the table, e.g. revision of the ASL
+    /// Compiler.
     creator_revision: u32,
 }
 
@@ -238,7 +239,8 @@ impl Rsdt {
 
     fn entries(&self) -> &[u32] {
         let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
-        // Safety: we've validated that the address and length makes sense in `validate()`.
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`.
         unsafe {
             slice::from_raw_parts(
                 entries_base as *const u32,
@@ -252,11 +254,7 @@ impl Rsdt {
         self.entries().iter().find_map(|&entry| {
             let ptr = entry as usize;
             let entry: &'static DescriptionHeader = unsafe { &*(ptr as *const DescriptionHeader) };
-            if entry.signature == *table {
-                Some(entry)
-            } else {
-                None
-            }
+            if entry.signature == *table { Some(entry) } else { None }
         })
     }
 }
@@ -333,8 +331,8 @@ impl Xsdt {
 
     pub fn entries(&self) -> &[XsdtEntryPtr] {
         let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
-        // Safety: we've validated that the address and length makes sense in `validate()`.
-        // XsdtEntryPtr is 1-byte aligned.
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`. XsdtEntryPtr is 1-byte aligned.
         unsafe {
             slice::from_raw_parts(
                 entries_base as *const XsdtEntryPtr,
@@ -346,10 +344,7 @@ impl Xsdt {
 
     /// Finds a table based on the signature, if it is present.
     pub fn get(&self, table: &[u8; 4]) -> Option<&DescriptionHeader> {
-        self.entries()
-            .iter()
-            .find(|entry| entry.signature == *table)
-            .map(|p| &**p)
+        self.entries().iter().find(|entry| entry.signature == *table).map(|p| &**p)
     }
 }
 
@@ -456,9 +451,10 @@ pub struct ProcessorLocalX2Apic {
     /// Local APIC flags.
     pub flags: LocalApicFlags,
 
-    /// OSPM associates the X2APIC Structure with a processor object declared in the namespace
-    /// using the Device statement, when the _UID child object of the processor device evaluates to
-    /// a numeric value, by matching the numeric value with this field.
+    /// OSPM associates the X2APIC Structure with a processor object declared in
+    /// the namespace using the Device statement, when the _UID child object
+    /// of the processor device evaluates to a numeric value, by matching
+    /// the numeric value with this field.
     processor_uid: u32,
 }
 
@@ -497,10 +493,7 @@ impl Madt {
     }
 
     pub fn iter(&self) -> MadtIterator<'_> {
-        MadtIterator {
-            madt: self,
-            offset: size_of::<Madt>(),
-        }
+        MadtIterator { madt: self, offset: size_of::<Madt>() }
     }
 }
 

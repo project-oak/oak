@@ -60,7 +60,8 @@ impl TestManager<'static> {
         assert_matches!(result, Ok(_));
     }
 
-    /// Tests that a second call to [`oak_functions_sdk::read_request`] returns the same value.
+    /// Tests that a second call to [`oak_functions_sdk::read_request`] returns
+    /// the same value.
     fn test_double_read(first_request_body: &str) {
         let second_read_request =
             oak_functions_sdk::read_request().expect("couldn't read second request");
@@ -69,8 +70,9 @@ impl TestManager<'static> {
         oak_functions_sdk::write_response(b"DoubleReadResponse").expect("couldn't write response")
     }
 
-    /// Tests that multiple calls to [`oak_functions_sdk::write_response`] will replace the earlier
-    /// responses. The response body has to be checked in the integration test.
+    /// Tests that multiple calls to [`oak_functions_sdk::write_response`] will
+    /// replace the earlier responses. The response body has to be checked
+    /// in the integration test.
     fn test_double_write(_request: &str) {
         // First response contains a different value.
         oak_functions_sdk::write_response(b"FirstResponseInDoubleWrite")
@@ -87,9 +89,9 @@ impl TestManager<'static> {
         assert_matches!(result, Ok(_));
     }
 
-    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is in the lookup data. The lookup
-    /// data is set in the integration test. The value has to be checked in the integration
-    /// test.
+    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is in the
+    /// lookup data. The lookup data is set in the integration test. The
+    /// value has to be checked in the integration test.
     fn test_storage_get(key: &str) {
         let value = oak_functions_sdk::storage_get_item(key.as_bytes());
         assert_matches!(value, Ok(_));
@@ -99,9 +101,10 @@ impl TestManager<'static> {
         oak_functions_sdk::write_response(&value.unwrap()).expect("couldn't write response");
     }
 
-    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is not in the lookup data. The
-    /// lookup data is set in the integration test. When no value is found,
-    /// [`oak_functions_sdk::storage_get_item`] returns None.
+    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is not in the
+    /// lookup data. The lookup data is set in the integration test. When no
+    /// value is found, [`oak_functions_sdk::storage_get_item`] returns
+    /// None.
     fn test_storage_get_item_not_found(key: &str) {
         let value = oak_functions_sdk::storage_get_item(key.as_bytes());
         let response_msg = match value {
@@ -116,10 +119,11 @@ impl TestManager<'static> {
         oak_functions_sdk::write_response(&response_msg).expect("couldn't write response")
     }
 
-    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is large. The lookup data is set
-    /// in the integration test.
+    /// Tests [`oak_functions_sdk::storage_get_item`] when the key is large. The
+    /// lookup data is set in the integration test.
     fn test_storage_get_item_huge_key(_key: &str) {
-        // Easier to ignore key from request, just create the same as in the integration test.
+        // Easier to ignore key from request, just create the same as in the integration
+        // test.
         let key: Vec<u8> = vec![42u8; 1 << 20];
         let value = oak_functions_sdk::storage_get_item(&key)
             .expect("couldn't receive response")

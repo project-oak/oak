@@ -62,10 +62,7 @@ extern "x86-interrupt" fn general_protection_fault_handler_inner(
     error_code: u64,
 ) {
     error!("KERNEL PANIC: GENERAL PROTECTION FAULT!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
@@ -79,10 +76,7 @@ extern "x86-interrupt" fn page_fault_handler(
     error_code: PageFaultErrorCode,
 ) {
     error!("KERNEL PANIC: PAGE FAULT");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Faulting virtual address: {:#018x}", Cr2::read());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
@@ -92,22 +86,16 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
-    // We're not calling `panic!` here because (a) the panic location would be all wrong (the error
-    // is not in the fault handler itself as the location would suggest), (b) in theory the
-    // panic handler itself could cause a double fault, and (c) we want to be sure that we shut
-    // down the machine after us.
-    // Note that for double fault handlers the error code will always be 0, so there's no point in
-    // logging that.
+    // We're not calling `panic!` here because (a) the panic location would be all
+    // wrong (the error is not in the fault handler itself as the location would
+    // suggest), (b) in theory the panic handler itself could cause a double
+    // fault, and (c) we want to be sure that we shut down the machine after us.
+    // Note that for double fault handlers the error code will always be 0, so
+    // there's no point in logging that.
     error!("KERNEL PANIC: DOUBLE FAULT");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Code segment: {:#x}", stack_frame.deref().code_segment);
-    error!(
-        "Stack pointer: {:#016x}",
-        stack_frame.deref().stack_pointer.as_u64()
-    );
+    error!("Stack pointer: {:#016x}", stack_frame.deref().stack_pointer.as_u64());
     error!("Stack segment: {:#x}", stack_frame.deref().stack_segment);
     error!("CPU flags: {:#x}", stack_frame.deref().cpu_flags);
     shutdown::shutdown();
@@ -123,9 +111,8 @@ mutable_interrupt_handler_with_error_code!(
                 if let Some(cpuid_page) = CPUID_PAGE.get() {
                     let target = stack_frame.into();
                     let count = cpuid_page.count as usize;
-                    if let Some(found) = cpuid_page.cpuid_data[0..count]
-                        .iter()
-                        .find(|item| item.input == target)
+                    if let Some(found) =
+                        cpuid_page.cpuid_data[0..count].iter().find(|item| item.input == target)
                     {
                         stack_frame.rax = found.output.eax as u64;
                         stack_frame.rbx = found.output.ebx as u64;
@@ -154,7 +141,8 @@ mutable_interrupt_handler_with_error_code!(
                     }
                     get_cpuid_for_vc_exception(leaf, stack_frame).expect("error reading CPUID");
                 }
-                // CPUID instruction is 2 bytes long, so we advance the instruction pointer by 2.
+                // CPUID instruction is 2 bytes long, so we advance the instruction pointer by
+                // 2.
                 stack_frame.rip += 2u64;
             }
             _ => {
@@ -169,64 +157,43 @@ mutable_interrupt_handler_with_error_code!(
 
 extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: DIVIDE BY ZERO!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn nmi_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: NON-MASKABLE INTERRUPT!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn overflow_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: OVERFLOW!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn bound_range_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: BOUND RANGE EXCEEDED!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: INVALID OPCODE!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn device_not_available_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: DEVICE NOT AVAILABLE!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
     error!("KERNEL PANIC: INVALID TSS!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
@@ -236,10 +203,7 @@ extern "x86-interrupt" fn segment_not_present_handler(
     error_code: u64,
 ) {
     error!("KERNEL PANIC: SEGMENT NOT PRESENT!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
@@ -249,20 +213,14 @@ extern "x86-interrupt" fn stack_exception_handler(
     error_code: u64,
 ) {
     error!("KERNEL PANIC: STACK EXCEPTION!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn x87_floating_point_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: X87 FLOATING POINT EXCEPTION!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
@@ -271,29 +229,20 @@ extern "x86-interrupt" fn alignment_check_handler(
     error_code: u64,
 ) {
     error!("KERNEL PANIC: ALIGNMENT CHECK EXCEPTION!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame) -> ! {
     error!("KERNEL PANIC: MACHINE CHECK EXCEPTION!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
 extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!");
-    error!(
-        "Instruction pointer: {:#016x}",
-        stack_frame.deref().instruction_pointer.as_u64()
-    );
+    error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
     let mxcsr = read();
     error!("MXCSR: {:?}", mxcsr);
 
@@ -302,46 +251,41 @@ extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
 
 pub fn init_idt_early() {
     // The full list if interrupts is processor-specific.
-    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual, Volume 2 for more
-    // details.
+    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual,
+    // Volume 2 for more details.
     let mut idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); // vector 0
-                                                           // skipping vector 1 (debug)
+    // skipping vector 1 (debug)
     idt.non_maskable_interrupt.set_handler_fn(nmi_handler); // vector 2
     idt.breakpoint.set_handler_fn(breakpoint_handler); // vector 3
     idt.overflow.set_handler_fn(overflow_handler); // vector 4
     idt.bound_range_exceeded.set_handler_fn(bound_range_handler); // vector 5
     idt.invalid_opcode.set_handler_fn(invalid_opcode_handler); // vector 6
-    idt.device_not_available
-        .set_handler_fn(device_not_available_handler); // vector 7
+    idt.device_not_available.set_handler_fn(device_not_available_handler); // vector 7
     idt.double_fault.set_handler_fn(double_fault_handler); // vector 8
-                                                           // vector 9 is reserved
+    // vector 9 is reserved
     idt.invalid_tss.set_handler_fn(invalid_tss_handler); // vector 10
-    idt.segment_not_present
-        .set_handler_fn(segment_not_present_handler); // vector 11
-    idt.stack_segment_fault
-        .set_handler_fn(stack_exception_handler); // vector 12
-    idt.general_protection_fault
-        .set_handler_fn(general_protection_fault_handler); // vector 13
+    idt.segment_not_present.set_handler_fn(segment_not_present_handler); // vector 11
+    idt.stack_segment_fault.set_handler_fn(stack_exception_handler); // vector 12
+    idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); // vector 13
     idt.page_fault.set_handler_fn(page_fault_handler); // vector 14
-                                                       // there is no vector 15
-    idt.x87_floating_point
-        .set_handler_fn(x87_floating_point_handler); // vector 16
+    // there is no vector 15
+    idt.x87_floating_point.set_handler_fn(x87_floating_point_handler); // vector 16
     idt.alignment_check.set_handler_fn(alignment_check_handler); // vector 17
     idt.machine_check.set_handler_fn(machine_check_handler); // vector 18
     idt.simd_floating_point.set_handler_fn(simd_fp_handler); // vector 19
-                                                             // there is no vector 20
+    // there is no vector 20
 
     let vc_handler_address = VirtAddr::new(vmm_communication_exception_handler as usize as u64);
-    // Safety: we are passing a valid address of a function with the correct signature.
+    // Safety: we are passing a valid address of a function with the correct
+    // signature.
     unsafe {
-        idt.vmm_communication_exception
-            .set_handler_addr(vc_handler_address); // vector 29
+        idt.vmm_communication_exception.set_handler_addr(vc_handler_address); // vector 29
     }
 
-    // Safety: unfortunately we have to escape from the borrow checker here, as we know the IDT is
-    // 'static but the `idt` variable (the mutex lock) is not 'static, so calling `idt.load()` will
-    // not work.
+    // Safety: unfortunately we have to escape from the borrow checker here, as we
+    // know the IDT is 'static but the `idt` variable (the mutex lock) is not
+    // 'static, so calling `idt.load()` will not work.
     unsafe { idt.load_unsafe() };
 }
 
@@ -364,10 +308,7 @@ struct Pic {
 
 impl Pic {
     pub fn new(factory: &PortFactoryWrapper, base: u16) -> Self {
-        Self {
-            command: factory.new_writer(base),
-            data: factory.new_writer(base + 1),
-        }
+        Self { command: factory.new_writer(base), data: factory.new_writer(base + 1) }
     }
 
     pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
@@ -383,8 +324,9 @@ impl Pic {
 ///
 /// # Safety
 ///
-/// This uses raw I/O port access to talk to the PIC; the caller has to guarantee there will not be
-/// any adverse effect if there's no PIC at those ports.
+/// This uses raw I/O port access to talk to the PIC; the caller has to
+/// guarantee there will not be any adverse effect if there's no PIC at those
+/// ports.
 pub unsafe fn init_pic8259(sev_status: SevStatus) -> Result<(), &'static str> {
     let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         crate::ghcb::get_ghcb_port_factory()

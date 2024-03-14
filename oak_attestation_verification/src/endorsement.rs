@@ -89,13 +89,9 @@ pub fn verify_endorser_public_key(
 
     let body = get_rekor_log_entry_body(log_entry)?;
 
-    let actual_pem_vec = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content)
-        .map_err(|error| {
-            anyhow::anyhow!(
-                "couldn't base64-decode public key bytes from server: {}",
-                error
-            )
+    let actual_pem_vec =
+        BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
+            anyhow::anyhow!("couldn't base64-decode public key bytes from server: {}", error)
         })?;
     let actual_pem =
         core::str::from_utf8(&actual_pem_vec).map_err(|error| anyhow::anyhow!(error))?;

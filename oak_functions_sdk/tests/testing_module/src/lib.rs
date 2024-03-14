@@ -39,9 +39,9 @@ pub extern "C" fn main() {
             // We expect an empty response, because blackhole does not give back a result.
             assert!(blackhole_response.is_empty());
 
-            // If we reached here, the assert did not fail and we send a response back. This helps
-            // us to distinguish from a failure in the Wasm module, where also an
-            // empty response would be sent.
+            // If we reached here, the assert did not fail and we send a response back. This
+            // helps us to distinguish from a failure in the Wasm module, where
+            // also an empty response would be sent.
             oak_functions_sdk::write_response("Blackholed".as_bytes())
                 .expect("couldn't write response body");
         }

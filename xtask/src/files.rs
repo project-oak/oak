@@ -22,19 +22,15 @@ use std::{
 pub fn read_file(path: &Path) -> String {
     let mut file = std::fs::File::open(path).expect("couldn't open file");
     let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("couldn't read file contents");
+    file.read_to_string(&mut contents).expect("couldn't read file contents");
     contents
 }
 
-/// Return an iterator of all the first-party and non-ignored files in the repository, which can be
-/// then additionally filtered by the caller.
+/// Return an iterator of all the first-party and non-ignored files in the
+/// repository, which can be then additionally filtered by the caller.
 pub fn source_files() -> impl Iterator<Item = PathBuf> {
     let walker = walkdir::WalkDir::new(".").into_iter();
-    walker
-        .filter_entry(|e| !is_ignored_entry(e))
-        .filter_map(Result::ok)
-        .map(|e| e.into_path())
+    walker.filter_entry(|e| !is_ignored_entry(e)).filter_map(Result::ok).map(|e| e.into_path())
 }
 
 pub fn file_contains(path: &Path, pattern: &str) -> bool {
@@ -42,11 +38,7 @@ pub fn file_contains(path: &Path, pattern: &str) -> bool {
         let mut file = std::fs::File::open(path).expect("couldn't open file");
         let mut contents = String::new();
         // Content may be non-UTF-8, in which case we just return false.
-        if file.read_to_string(&mut contents).is_ok() {
-            contents.contains(pattern)
-        } else {
-            false
-        }
+        if file.read_to_string(&mut contents).is_ok() { contents.contains(pattern) } else { false }
     } else {
         false
     }
@@ -62,12 +54,11 @@ pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
 pub fn workspace_manifest_files() -> impl Iterator<Item = PathBuf> {
-    source_files()
-        .filter(|p| is_cargo_toml_file(p))
-        .filter(|p| is_cargo_workspace_file(p))
+    source_files().filter(|p| is_cargo_toml_file(p)).filter(|p| is_cargo_workspace_file(p))
 }
 
-/// Return whether the provided path refers to a source file in a programming language.
+/// Return whether the provided path refers to a source file in a programming
+/// language.
 pub fn is_source_code_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".cc")
@@ -79,7 +70,8 @@ pub fn is_source_code_file(path: &Path) -> bool {
         || filename.ends_with(".java")
 }
 
-/// Return whether the provided path refers to a source file that can be formatted by clang-tidy.
+/// Return whether the provided path refers to a source file that can be
+/// formatted by clang-tidy.
 pub fn is_clang_format_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename.ends_with(".cc")
@@ -88,7 +80,8 @@ pub fn is_clang_format_file(path: &Path) -> bool {
         || filename.ends_with(".java")
 }
 
-/// Return whether the provided path refers to a Bazel file (`BUILD`, `WORKSPACE`, or `*.bzl`)
+/// Return whether the provided path refers to a Bazel file (`BUILD`,
+/// `WORKSPACE`, or `*.bzl`)
 pub fn is_bazel_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "BUILD" || filename == "WORKSPACE" || filename.ends_with(".bzl")
@@ -148,33 +141,36 @@ pub fn is_shell_script(path: &Path) -> bool {
     }
 }
 
-/// Return whether the provided path refers to a `fuzz` crate for fuzz testing with `cargo-fuzz`.
+/// Return whether the provided path refers to a `fuzz` crate for fuzz testing
+/// with `cargo-fuzz`.
 pub fn is_fuzzing_toml_file(path: &Path) -> bool {
     format!("{:?}", path).contains("/fuzz/")
 }
 
-/// Return whether the provided path refers to a `Cargo.toml` file. Note that it does not
-/// differentiate between workspace-level and crate-level files.
+/// Return whether the provided path refers to a `Cargo.toml` file. Note that it
+/// does not differentiate between workspace-level and crate-level files.
 fn is_cargo_toml_file(path: &Path) -> bool {
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     filename == "Cargo.toml"
 }
 
-/// Return whether the provided path refers to a workspace-level `Cargo.toml` file, by looking at
-/// the contents of the file.
+/// Return whether the provided path refers to a workspace-level `Cargo.toml`
+/// file, by looking at the contents of the file.
 fn is_cargo_workspace_file(path: &Path) -> bool {
-    // We naively look for the `[workspace]` string to appear in the contents of the file. A better
-    // alternative would be to actually parse the file as `toml` and figure out whether it has a
-    // `workspace` section, but it seems overkill for now.
+    // We naively look for the `[workspace]` string to appear in the contents of the
+    // file. A better alternative would be to actually parse the file as `toml`
+    // and figure out whether it has a `workspace` section, but it seems
+    // overkill for now.
     file_contains(path, "[workspace]")
 }
 
-/// Return whether the provided path refers to a `Cargo.toml` file that defines a crate, by looking
-/// at the contents of the file.
+/// Return whether the provided path refers to a `Cargo.toml` file that defines
+/// a crate, by looking at the contents of the file.
 fn is_cargo_package_file(path: &Path) -> bool {
-    // We naively look for the `[package]` string to appear in the contents of the file. A better
-    // alternative would be to actually parse the file as `toml` and figure out whether it has a
-    // `package` section, but it seems overkill for now.
+    // We naively look for the `[package]` string to appear in the contents of the
+    // file. A better alternative would be to actually parse the file as `toml`
+    // and figure out whether it has a `package` section, but it seems overkill
+    // for now.
     file_contains(path, "[package]")
 }
 
@@ -184,8 +180,8 @@ fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {
     is_ignored_path(&path) || file_contains(&path, &format!("DO NOT {}", "EDIT"))
 }
 
-/// Return whether to ignore the specified path. This is used by the `walker` package to efficiently
-/// avoid descending into blacklisted directories.
+/// Return whether to ignore the specified path. This is used by the `walker`
+/// package to efficiently avoid descending into blacklisted directories.
 fn is_ignored_path(path: &Path) -> bool {
     let components = path.components().collect::<std::collections::HashSet<_>>();
     components.contains(&std::path::Component::Normal(".git".as_ref()))

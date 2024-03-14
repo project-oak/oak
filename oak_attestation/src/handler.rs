@@ -25,8 +25,8 @@ use oak_crypto::{
     EMPTY_ASSOCIATED_DATA,
 };
 
-/// Wraps a closure to an underlying function with request encryption and response decryption logic,
-/// based on the provided encryption key.
+/// Wraps a closure to an underlying function with request encryption and
+/// response decryption logic, based on the provided encryption key.
 pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     request_handler: H,
@@ -34,10 +34,7 @@ pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
     pub fn create(encryption_key_handle: Arc<dyn EncryptionKeyHandle>, request_handler: H) -> Self {
-        Self {
-            encryption_key_handle,
-            request_handler,
-        }
+        Self { encryption_key_handle, request_handler }
     }
 }
 
@@ -52,17 +49,18 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
         let response = (self.request_handler)(request);
 
         // Encrypt and serialize response.
-        // The resulting decryptor for subsequent requests is discarded because we don't expect
-        // another message from the stream.
+        // The resulting decryptor for subsequent requests is discarded because we don't
+        // expect another message from the stream.
         server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt response")
     }
 }
 
-/// Wraps a closure to an underlying function with request encryption and response decryption logic,
-/// based on the provided encryption key.
-/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
+/// Wraps a closure to an underlying function with request encryption and
+/// response decryption logic, based on the provided encryption key.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`]
+/// is needed.
 pub struct AsyncEncryptionHandler<H, F>
 where
     H: FnOnce(Vec<u8>) -> F,
@@ -81,10 +79,7 @@ where
         encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         request_handler: H,
     ) -> Self {
-        Self {
-            encryption_key_handle,
-            request_handler,
-        }
+        Self { encryption_key_handle, request_handler }
     }
 
     pub async fn invoke(
@@ -101,8 +96,8 @@ where
         let response = (self.request_handler)(request).await;
 
         // Encrypt and serialize response.
-        // The resulting decryptor for consequent requests is discarded because we don't expect
-        // another message from the stream.
+        // The resulting decryptor for consequent requests is discarded because we don't
+        // expect another message from the stream.
         server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt response")

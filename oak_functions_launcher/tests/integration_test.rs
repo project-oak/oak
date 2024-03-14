@@ -185,27 +185,22 @@ async fn test_load_large_lookup_data() {
 
     // Write 2 chunks in lookup data.
     let enteries_two_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
-    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
-        enteries_two_chunks,
-    ));
+    let write_result = lookup_data_file
+        .write_all(&oak_functions_test_utils::serialize_entries(enteries_two_chunks));
     assert!(write_result.is_ok());
     let status_two_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
     assert!(status_two_chunks.is_ok());
 
     let enteries_four_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 4);
-    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
-        enteries_four_chunks,
-    ));
+    let write_result = lookup_data_file
+        .write_all(&oak_functions_test_utils::serialize_entries(enteries_four_chunks));
     assert!(write_result.is_ok());
 
     // Write 4 chunks in lookup data.
     let status_four_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
     assert!(status_four_chunks.is_ok());
 
-    launched_instance
-        .kill()
-        .await
-        .expect("Failed to stop launcher");
+    launched_instance.kill().await.expect("Failed to stop launcher");
 }
 
 #[ignore = "too expensive"]

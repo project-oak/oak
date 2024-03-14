@@ -50,10 +50,7 @@ impl UntrustedApp {
         let app_client =
             app_client::TrustedApplicationClient::create(format!("http://{trusted_app_address}"))
                 .await?;
-        Ok(Self {
-            launcher,
-            app_client,
-        })
+        Ok(Self { launcher, app_client })
     }
 
     pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {

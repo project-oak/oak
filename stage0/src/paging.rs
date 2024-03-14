@@ -31,15 +31,16 @@ pub static mut PDPT: PageTable = PageTable::new();
 pub static mut PD_0: PageTable = PageTable::new();
 pub static mut PD_3: PageTable = PageTable::new();
 
-/// Wrapper for the page table references so that we can access them via a mutex rather than
-/// directly via unsafe code.
+/// Wrapper for the page table references so that we can access them via a mutex
+/// rather than directly via unsafe code.
 #[repr(C, align(4096))]
 pub struct PageTableRefs {
-    /// The root page-map level 4 table coverting virtual memory ranges 0..128TiB and
-    /// (16EiB-128TiB)..16EiB.
+    /// The root page-map level 4 table coverting virtual memory ranges
+    /// 0..128TiB and (16EiB-128TiB)..16EiB.
     pub pml4: &'static mut PageTable,
 
-    /// The page-directory pointer table covering virtual memory range 0..512GiB.
+    /// The page-directory pointer table covering virtual memory range
+    /// 0..512GiB.
     pub pdpt: &'static mut PageTable,
 
     /// The page directory covering virtual memory range 0..1GiB.
@@ -48,7 +49,8 @@ pub struct PageTableRefs {
     /// The page directory covering virtual memory range 3..4GiB.
     pub pd_3: &'static mut PageTable,
 
-    /// The page table covering virtual memory range 0..2MiB where we want 4KiB pages.
+    /// The page table covering virtual memory range 0..2MiB where we want 4KiB
+    /// pages.
     pub pt_0: &'static mut PageTable,
 }
 
@@ -57,17 +59,17 @@ pub static PAGE_TABLE_REFS: OnceCell<Spinlock<PageTableRefs>> = OnceCell::new();
 
 /// Initialises the page table references.
 pub fn init_page_table_refs(encrypted: u64) {
-    // Safety: accessing the mutable statics here is safe since we only do it once and protect the
-    // mutable references with a mutex. This function can only be called once, since updating
-    // `PAGE_TABLE_REFS` twice will panic.
+    // Safety: accessing the mutable statics here is safe since we only do it once
+    // and protect the mutable references with a mutex. This function can only
+    // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
     let pml4 = unsafe { &mut PML4 };
     let pdpt = unsafe { &mut PDPT };
     let pd_0 = unsafe { &mut PD_0 };
     let pd_3 = unsafe { &mut PD_3 };
 
-    // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we can share
-    // individual 4KiB pages with the hypervisor as needed. We are using an identity mapping
-    // between virtual and physical addresses.
+    // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we
+    // can share individual 4KiB pages with the hypervisor as needed. We are
+    // using an identity mapping between virtual and physical addresses.
     let pt_0 = Box::leak(Box::new_in(PageTable::new(), &BOOT_ALLOC));
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
         entry.set_addr(
@@ -80,13 +82,7 @@ pub fn init_page_table_refs(encrypted: u64) {
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
 
-    let page_tables = PageTableRefs {
-        pml4,
-        pdpt,
-        pd_0,
-        pd_3,
-        pt_0,
-    };
+    let page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };
 
     if PAGE_TABLE_REFS.set(Spinlock::new(page_tables)).is_err() {
         panic!("page table wrapper already initialized");
@@ -95,14 +91,11 @@ pub fn init_page_table_refs(encrypted: u64) {
     flush_all();
 }
 
-/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first 2MiB that was already
-/// mapped as 512 4KiB pages.
+/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
+/// 2MiB that was already mapped as 512 4KiB pages.
 pub fn map_additional_memory(encrypted: u64) {
     {
-        let mut page_tables = PAGE_TABLE_REFS
-            .get()
-            .expect("page tables not initiallized")
-            .lock();
+        let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
         pd.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
             entry.set_addr(
@@ -115,17 +108,15 @@ pub fn map_additional_memory(encrypted: u64) {
     flush_all();
 }
 
-// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB pages, as a single 2MiB
-// huge page again.
+// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
+// pages, as a single 2MiB huge page again.
 pub fn remap_first_huge_page(encrypted: u64) {
     {
-        let mut page_tables = PAGE_TABLE_REFS
-            .get()
-            .expect("page tables not initiallized")
-            .lock();
+        let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
 
-        // Allow identity-op to keep the fact that the address we're talking about here is 0x00.
+        // Allow identity-op to keep the fact that the address we're talking about here
+        // is 0x00.
         #[allow(clippy::identity_op)]
         pd[0].set_addr(
             PhysAddr::new(0x0 | encrypted),

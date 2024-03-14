@@ -90,7 +90,9 @@ where
             if cfg!(feature = "native") {
                 app_serve::<NativeHandler>(stream, encryption_key_handle, meter).await
             } else {
-                panic!("Application config specified `native` handler type, but this binary does not support that feature");
+                panic!(
+                    "Application config specified `native` handler type, but this binary does not support that feature"
+                );
             }
         }
     }
@@ -106,8 +108,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
 
-    // Use eprintln here, as normal logging would go through the OTLP connection, which may no
-    // longer be valid.
+    // Use eprintln here, as normal logging would go through the OTLP connection,
+    // which may no longer be valid.
     set_error_handler(|err| eprintln!("oak_functions_containers_app: OTLP error: {}", err))?;
 
     let metrics = opentelemetry_otlp::new_pipeline()
@@ -131,10 +133,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .u64_observable_counter("tokio_blocking_threads_count")
             .with_description("Number of additional threads used by the runtime")
             .with_callback(|counter| {
-                if let Ok(num_blocking_threads) = Handle::current()
-                    .metrics()
-                    .num_blocking_threads()
-                    .try_into()
+                if let Ok(num_blocking_threads) =
+                    Handle::current().metrics().num_blocking_threads().try_into()
                 {
                     counter.observe(num_blocking_threads, &[]);
                 }
@@ -155,10 +155,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .u64_observable_counter("tokio_injection_queue_depth")
             .with_description("Number of tasks currently in the runtime's injection queue")
             .with_callback(|counter| {
-                if let Ok(injection_queue_depth) = Handle::current()
-                    .metrics()
-                    .injection_queue_depth()
-                    .try_into()
+                if let Ok(injection_queue_depth) =
+                    Handle::current().metrics().injection_queue_depth().try_into()
                 {
                     counter.observe(injection_queue_depth, &[]);
                 }
@@ -170,10 +168,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_callback(|counter| {
                 let metrics = Handle::current().metrics();
                 for worker in 0..metrics.num_workers() {
-                    if let (Ok(depth), Ok(worker)) = (
-                        metrics.worker_local_queue_depth(worker).try_into(),
-                        worker.try_into(),
-                    ) {
+                    if let (Ok(depth), Ok(worker)) =
+                        (metrics.worker_local_queue_depth(worker).try_into(), worker.try_into())
+                    {
                         counter.observe(depth, &[KeyValue::new::<&str, i64>("worker", worker)])
                     }
                 }
@@ -181,9 +178,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .try_init()?,
     ];
 
-    let mut client = OrchestratorClient::create()
-        .await
-        .context("couldn't create Orchestrator client")?;
+    let mut client =
+        OrchestratorClient::create().await.context("couldn't create Orchestrator client")?;
     let encryption_key_handle = Box::new(
         InstanceEncryptionKeyHandle::create()
             .await
@@ -192,13 +188,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // To be used when connecting trusted app to orchestrator.
     let application_config = {
-        let bytes = client
-            .get_application_config()
-            .await
-            .context("failed to get application config")?;
+        let bytes =
+            client.get_application_config().await.context("failed to get application config")?;
 
-        // If we don't get a config at all, treat it as if it had defaults. Otherwise, try parsing
-        // the message and fail if it doesn't make sense.
+        // If we don't get a config at all, treat it as if it had defaults. Otherwise,
+        // try parsing the message and fail if it doesn't make sense.
         if bytes.is_empty() {
             ApplicationConfig::default()
         } else {
@@ -208,10 +202,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let server_handle = tokio::spawn(async move {
         let default_channel = CommunicationChannel::TcpChannel(TcpCommunicationChannel::default());
-        let communication_config = application_config
-            .communication_channel
-            .as_ref()
-            .unwrap_or(&default_channel);
+        let communication_config =
+            application_config.communication_channel.as_ref().unwrap_or(&default_channel);
 
         match communication_config {
             CommunicationChannel::TcpChannel(config) => {
@@ -250,10 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    client
-        .notify_app_ready()
-        .await
-        .context("failed to notify that app is ready")?;
+    client.notify_app_ready().await.context("failed to notify that app is ready")?;
 
     Ok(server_handle.await??)
 }

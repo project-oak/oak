@@ -45,17 +45,11 @@ fn main() -> anyhow::Result<()> {
     let kernel_info = Kernel::load(cli.kernel_path()).context("couldn't load kernel file")?;
     let mut kernel_hasher = Sha256::new();
     kernel_hasher.update(&kernel_info.kernel_image);
-    println!(
-        "Kernel Image Measurement: sha2-256:{}",
-        hex::encode(kernel_hasher.finalize())
-    );
+    println!("Kernel Image Measurement: sha2-256:{}", hex::encode(kernel_hasher.finalize()));
 
     let mut setup_hasher = Sha256::new();
     setup_hasher.update(&kernel_info.setup_data);
-    println!(
-        "Kernel Setup Data Measurement: sha2-256:{}",
-        hex::encode(setup_hasher.finalize())
-    );
+    println!("Kernel Setup Data Measurement: sha2-256:{}", hex::encode(setup_hasher.finalize()));
 
     Ok(())
 }
@@ -66,11 +60,12 @@ struct Kernel {
 }
 
 impl Kernel {
-    /// Parses a bzImage kernel file and extracts the kernel image and setup data.
+    /// Parses a bzImage kernel file and extracts the kernel image and setup
+    /// data.
     ///
-    /// The VMM will parse the the bzImage file and split it into two parts: the setup data (which
-    /// includes the real-mode code) and the 64-bit kernel image. The VMM also updates some fields
-    /// in the setup data header.
+    /// The VMM will parse the the bzImage file and split it into two parts: the
+    /// setup data (which includes the real-mode code) and the 64-bit kernel
+    /// image. The VMM also updates some fields in the setup data header.
     ///
     /// See <https://github.com/qemu/qemu/blob/6630bc04bccadcf868165ad6bca5a964bb69b067/hw/i386/x86.c#L795>
     /// and <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html>
@@ -98,17 +93,15 @@ impl Kernel {
         *u16::mut_from(&mut setup_data[0x224..0x226]).expect("invalid slice for heap end ptr") =
             (default_cmd_line - default_setup - 0x200) as u16;
 
-        // The location and size of the initial RAM disk will depend on the actual initial RAM disk.
-        // To have stable measurements Stage 0 will overwrite these with zeros, before measuring and
-        // then overwrite these with the actual values before booting the kernel.
+        // The location and size of the initial RAM disk will depend on the actual
+        // initial RAM disk. To have stable measurements Stage 0 will overwrite
+        // these with zeros, before measuring and then overwrite these with the
+        // actual values before booting the kernel.
         *u32::mut_from(&mut setup_data[0x218..0x21C]).expect("invalid slice for initrd location") =
             0;
         *u32::mut_from(&mut setup_data[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
 
-        Self {
-            setup_data,
-            kernel_image,
-        }
+        Self { setup_data, kernel_image }
     }
 
     /// Loads the bzImage-format kernel from the supplied path/

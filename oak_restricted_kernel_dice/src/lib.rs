@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-//! This crate contains the logic used by oak_restricted_kernel to create attestations. It is broken
-//! out into a separate crate to allow this logic to be used independently used in tests to create
-//! mock attestations, without also pulling in oak_restricted_kernel's allocator, which breaks
-//! tests.
+//! This crate contains the logic used by oak_restricted_kernel to create
+//! attestations. It is broken out into a separate crate to allow this logic to
+//! be used independently used in tests to create mock attestations, without
+//! also pulling in oak_restricted_kernel's allocator, which breaks tests.
 
 #![no_std]
 
@@ -51,8 +51,7 @@ pub fn generate_derived_key(
     // Mix in the application digest when deriving CDI for Layer 2.
     let hkdf = Hkdf::<Sha256>::new(Some(app_digest), &stage0_dice_data.layer_1_cdi.cdi[..]);
     let mut derived_key = DerivedKey::default();
-    hkdf.expand(b"CDI_Seal", &mut derived_key)
-        .expect("invalid length for derived key");
+    hkdf.expand(b"CDI_Seal", &mut derived_key).expect("invalid length for derived key");
     derived_key
 }
 
@@ -73,9 +72,8 @@ pub fn generate_dice_data(
         oak_dice::evidence::ApplicationPrivateKeys,
     ) = {
         let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
-            &stage0_dice_data
-                .layer_1_certificate_authority
-                .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
+            &stage0_dice_data.layer_1_certificate_authority.eca_private_key
+                [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
         )
         .expect("failed to parse the layer1 ECDSA private key bytes");
 
@@ -175,8 +173,5 @@ pub fn generate_dice_data(
         application_keys,
     };
 
-    oak_dice::evidence::RestrictedKernelDiceData {
-        evidence,
-        application_private_keys,
-    }
+    oak_dice::evidence::RestrictedKernelDiceData { evidence, application_private_keys }
 }

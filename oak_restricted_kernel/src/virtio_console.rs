@@ -70,14 +70,11 @@ unsafe impl Hal for OakHal {
         pages: usize,
     ) -> i32 {
         let vaddr_check = Self::mmio_phys_to_virt(paddr, 0);
-        assert_eq!(
-            vaddr_check, vaddr,
-            "dma buffer physical and virtual addresses don't match",
-        );
-        GUEST_HOST_HEAP.get().unwrap().deallocate(
-            vaddr,
-            Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap(),
-        );
+        assert_eq!(vaddr_check, vaddr, "dma buffer physical and virtual addresses don't match",);
+        GUEST_HOST_HEAP
+            .get()
+            .unwrap()
+            .deallocate(vaddr, Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap());
 
         0
     }
@@ -99,8 +96,8 @@ unsafe impl Hal for OakHal {
         buffer: NonNull<[u8]>,
         _direction: BufferDirection,
     ) -> virtio_drivers::PhysAddr {
-        // No additional work needed for sharing as the buffer was allocated from the guest-host
-        // allocator.
+        // No additional work needed for sharing as the buffer was allocated from the
+        // guest-host allocator.
         PAGE_TABLES
             .lock()
             .get()
@@ -115,8 +112,8 @@ unsafe impl Hal for OakHal {
         _buffer: NonNull<[u8]>,
         _direction: BufferDirection,
     ) {
-        // No additional work needed for unsharing as the buffer was allocated from the guest-host
-        // allocator.
+        // No additional work needed for unsharing as the buffer was allocated
+        // from the guest-host allocator.
     }
 }
 
@@ -137,9 +134,8 @@ impl Read for MmioConsoleChannel {
         let len = data.len();
         let mut count = 0;
         while count < len {
-            if let Some(char) = console
-                .recv(true)
-                .map_err(|err| anyhow!("Virtio console read error: {:?}", err))?
+            if let Some(char) =
+                console.recv(true).map_err(|err| anyhow!("Virtio console read error: {:?}", err))?
             {
                 data[count] = char;
                 count += 1;
@@ -155,9 +151,7 @@ impl Write for MmioConsoleChannel {
         let mut console = self.inner.lock();
 
         for char in data {
-            console
-                .send(*char)
-                .map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
+            console.send(*char).map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
         }
 
         Ok(())
@@ -179,7 +173,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
                 return Some((
                     PhysAddr::new(base_address as u64),
                     PhysAddr::new((base_address + range_length) as u64),
-                ))
+                ));
             }
             _ => continue,
         }

@@ -40,7 +40,8 @@ bitflags! {
     }
 }
 
-/// A transport implementation that can be used for testing virtio device implementations.
+/// A transport implementation that can be used for testing virtio device
+/// implementations.
 #[derive(Default, Debug, Clone)]
 pub struct TestingTransport {
     pub config: Arc<Mutex<TestingConfig>>,
@@ -84,9 +85,10 @@ impl Default for QueueInfo {
 impl TestingTransport {
     /// Tries to read once from the specified queue as if it was a device.
     ///
-    /// Warning: we purposely use unsafe code to simulate the way the the device/VMM will interact
-    /// with the memory. Tests must ensure that valid memory and offset values are provided to
-    /// avoid memory safety issues.
+    /// Warning: we purposely use unsafe code to simulate the way the the
+    /// device/VMM will interact with the memory. Tests must ensure that
+    /// valid memory and offset values are provided to avoid memory safety
+    /// issues.
     pub fn device_read_once_from_queue<const QUEUE_SIZE: usize>(
         &self,
         queue_num: u16,
@@ -116,9 +118,10 @@ impl TestingTransport {
 
     /// Tries to write to the specified queue as if it was a device.
     ///
-    /// Warning: we purposely use unsafe code to simulate the way the the device/VMM will interact
-    /// with the memory. Tests must ensure that valid memory and offset values are provided to
-    /// avoid memory safety issues.
+    /// Warning: we purposely use unsafe code to simulate the way the the
+    /// device/VMM will interact with the memory. Tests must ensure that
+    /// valid memory and offset values are provided to avoid memory safety
+    /// issues.
     pub fn device_write_to_queue<const QUEUE_SIZE: usize>(
         &self,
         queue_num: u16,
@@ -232,11 +235,7 @@ impl VirtioTransport for TestingTransport {
     fn set_descriptors_address(&self, address: PhysAddr) {
         let mut config = self.config.lock().unwrap();
         let queue_num = config.queue_num;
-        config
-            .queues
-            .get_mut(&queue_num)
-            .unwrap()
-            .descriptor_address = address;
+        config.queues.get_mut(&queue_num).unwrap().descriptor_address = address;
     }
 
     fn set_avail_ring(&self, address: PhysAddr) {
@@ -258,13 +257,7 @@ impl VirtioTransport for TestingTransport {
     }
 
     fn notify_queue(&self, queue: u16) {
-        self.config
-            .lock()
-            .unwrap()
-            .queues
-            .get_mut(&queue)
-            .unwrap()
-            .notified = true;
+        self.config.lock().unwrap().queues.get_mut(&queue).unwrap().notified = true;
     }
 
     fn read_device_config(&self, offset: u64) -> u32 {
@@ -272,7 +265,8 @@ impl VirtioTransport for TestingTransport {
     }
 }
 
-/// Creates a new valid transport that is suitable for a basic device without configuration values.
+/// Creates a new valid transport that is suitable for a basic device without
+/// configuration values.
 pub fn new_valid_transport() -> TestingTransport {
     let transport = TestingTransport::default();
     {

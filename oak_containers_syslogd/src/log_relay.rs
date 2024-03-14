@@ -27,13 +27,14 @@ use tokio::sync::{mpsc, OnceCell};
 use crate::systemd_journal::{Journal, JournalOpenFlags};
 
 pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) -> Result<()> {
-    // Journal is not Send, because the underlying systemd journal can't be shared between threads
-    // (even with locking). Thus, let's wrap things in a channel.
+    // Journal is not Send, because the underlying systemd journal can't be shared
+    // between threads (even with locking). Thus, let's wrap things in a
+    // channel.
     let (send, mut recv) = mpsc::unbounded_channel();
 
     let reader = async move {
-        // Iterating over the journal can block (synchronously), so we need to wrap this in a
-        // `spawn_blocking` call so that we don't hog the thread.
+        // Iterating over the journal can block (synchronously), so we need to wrap this
+        // in a `spawn_blocking` call so that we don't hog the thread.
         let x = tokio::task::spawn_blocking(move || {
             let mut journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES, terminate)?;
             journal.seek_head()?;
@@ -41,12 +42,9 @@ pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) 
             // `(Journal as Iterator)::next()` will block if there is nothing to read
             for entry in journal {
                 let entry = entry.context("failed to read next journal entry")?;
-                // DEBUG will contain _tons_ of garbage; if you need that level of detail, you can
-                // enable debug mode and log in directly.
-                if entry
-                    .get("PRIORITY")
-                    .and_then(|val| val.parse::<i32>().ok())
-                    .unwrap_or_default()
+                // DEBUG will contain _tons_ of garbage; if you need that level of detail, you
+                // can enable debug mode and log in directly.
+                if entry.get("PRIORITY").and_then(|val| val.parse::<i32>().ok()).unwrap_or_default()
                     > 6
                 {
                     continue;
@@ -97,9 +95,7 @@ pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) 
                 builder = builder.with_body(AnyValue::String(val.into()));
             }
             builder = builder.with_attributes(
-                msg.into_iter()
-                    .map(|(k, v)| (k.into(), AnyValue::String(v.into())))
-                    .collect(),
+                msg.into_iter().map(|(k, v)| (k.into(), AnyValue::String(v.into()))).collect(),
             );
             logger.emit(builder.build());
         }

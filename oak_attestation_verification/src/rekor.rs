@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
-//! verifying signatures in a Rekor LogEntry.
+//! This module provides structs for representing a Rekor LogEntry, as well as
+//! logic for parsing and verifying signatures in a Rekor LogEntry.
 
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
@@ -32,15 +32,16 @@ use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntry {
-    /// We cannot directly use the type `Body` here, since body is Base64-encoded.
+    /// We cannot directly use the type `Body` here, since body is
+    /// Base64-encoded.
     #[serde(rename = "body")]
     pub body: String,
 
     #[serde(rename = "integratedTime")]
     pub integrated_time: usize,
 
-    /// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
-    /// included in the log
+    /// This is the SHA256 hash of the DER-encoded public key for the log at the
+    /// time the entry was included in the log
     /// Pattern: ^[0-9a-fA-F]{64}$
     #[serde(rename = "logID")]
     pub log_id: String,
@@ -112,9 +113,10 @@ pub struct PublicKey {
     pub content: String,
 }
 
-/// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
-/// also contains an inclusion proof. Since we currently don't verify the inclusion proof in the
-/// client, it is omitted from this struct.
+/// Struct representing a verification object in a Rekor LogEntry. The
+/// verification object in Rekor also contains an inclusion proof. Since we
+/// currently don't verify the inclusion proof in the client, it is omitted from
+/// this struct.
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntryVerification {
@@ -123,32 +125,35 @@ pub struct LogEntryVerification {
     pub signed_entry_timestamp: String,
 }
 
-/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.
+/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
+/// LogEntry.
 ///
-/// This bundle can be verified using the public key from Rekor. The public key can
-/// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded
-/// x509/PKIX public key.
+/// This bundle can be verified using the public key from Rekor. The public key
+/// can be obtained from the `/api/v1/log/publicKey` Rest API. For
+/// `sigstore.dev`, it is a PEM-encoded x509/PKIX public key.
 pub struct RekorSignatureBundle {
-    /// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
-    /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
-    /// LogEntry). These fields include body, integratedTime, logID and logIndex.
+    /// Canonicalized JSON representation, based on RFC 8785 rules, of a subset
+    /// of a Rekor LogEntry fields that are signed to generate
+    /// `signedEntryTimestamp` (also a field in the Rekor LogEntry). These
+    /// fields include body, integratedTime, logID and logIndex.
     pub canonicalized: Vec<u8>,
 
     /// The signature over the canonicalized JSON document.
     pub signature: Vec<u8>,
 }
 
-/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
-/// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>.
+/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as
+/// described in <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>.
 impl TryFrom<&LogEntry> for RekorSignatureBundle {
     type Error = anyhow::Error;
 
     fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
-        // Canonicalized JSON document that is signed; note that verification is omitted.
-        // Canonicalization should follow the RFC 8785 rules. We hardcode the canonical
-        // serialization because serialization with serde_json requires std; if we get the
-        // serialization wrong (e.g., because a string contain characters requiring special
-        // escaping), the signature will fail to match. Thus, this should result in incorrectly
+        // Canonicalized JSON document that is signed; note that verification is
+        // omitted. Canonicalization should follow the RFC 8785 rules. We
+        // hardcode the canonical serialization because serialization with
+        // serde_json requires std; if we get the serialization wrong (e.g.,
+        // because a string contain characters requiring special escaping), the
+        // signature will fail to match. Thus, this should result in incorrectly
         // rejecting some valid signature bundles, not incorrectly accepting valid ones.
         anyhow::ensure!(!log_entry.body.contains('"'));
         anyhow::ensure!(!log_entry.log_id.contains('"'));
@@ -171,17 +176,15 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
             .decode(sig_base64)
             .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {}", error))?;
 
-        Ok(Self {
-            canonicalized: canonicalized.as_bytes().to_vec(),
-            signature,
-        })
+        Ok(Self { canonicalized: canonicalized.as_bytes().to_vec(), signature })
     }
 }
 
 /// Verifies a Rekor LogEntry. This includes verifying:
 ///
 /// 1. the signature in `signedEntryTimestamp` using Rekor's public key,
-/// 1. the signature in `body.RekordObj.signature` using the endorser's public key,
+/// 1. the signature in `body.RekordObj.signature` using the endorser's public
+///    key,
 /// 1. that the content of the body equals `endorsement`.
 pub fn verify_rekor_log_entry(
     log_entry: &[u8],
@@ -198,8 +201,8 @@ pub fn verify_rekor_log_entry(
     Ok(())
 }
 
-/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
-/// instance of `Body`.
+/// Parses the given bytes into a Rekor `LogEntry` object, and returns its
+/// `body` parsed into an instance of `Body`.
 pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
     let parsed: BTreeMap<String, LogEntry> =
         serde_json::from_slice(log_entry).map_err(|error| {
@@ -246,7 +249,8 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
         )
     }
 
-    // Check that hash of the endorsement statement matches the hash of the data in the Body.
+    // Check that hash of the endorsement statement matches the hash of the data in
+    // the Body.
     let contents_hash = hash_sha2_256(contents_bytes);
     let contents_hash_hex = hex::encode(contents_hash);
     if contents_hash_hex != body.spec.data.hash.value {

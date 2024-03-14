@@ -23,9 +23,9 @@ use core::{
 use crate::payload::Process;
 
 pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! {
-    // We should validate that the pointer and count are valid, as these come from userspace and
-    // therefore are not to be trusted, but right now everything is in kernel space so there is
-    // nothing to check.
+    // We should validate that the pointer and count are valid, as these come from
+    // userspace and therefore are not to be trusted, but right now everything
+    // is in kernel space so there is nothing to check.
     let elf_binary_buffer = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
 
     // Copy the ELF file into kernel space.

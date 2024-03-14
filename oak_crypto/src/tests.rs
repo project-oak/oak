@@ -31,9 +31,8 @@ const TEST_AEAD_KEY: [u8; AEAD_ALGORITHM_KEY_SIZE_BYTES] = [
     76, 77, 89, 144, 223, 10, 112, 11, 149, 205, 199,
 ];
 /// Test AES-GCM nonce that is only used in tests.
-const TEST_NONCE: [u8; AEAD_NONCE_SIZE_BYTES] = [
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C,
-];
+const TEST_NONCE: [u8; AEAD_NONCE_SIZE_BYTES] =
+    [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C];
 const TEST_HPKE_INFO: &[u8] = b"Test HPKE info";
 const TEST_REQUEST_MESSAGE: &[u8] = b"Test request message";
 const TEST_REQUEST_ASSOCIATED_DATA: &[u8] = b"Test request associated data";
@@ -79,38 +78,22 @@ fn test_hpke() {
     let test_response_nonce = generate_random_nonce();
 
     let encrypted_request = sender_context
-        .seal(
-            &test_request_nonce,
-            TEST_REQUEST_MESSAGE,
-            TEST_REQUEST_ASSOCIATED_DATA,
-        )
+        .seal(&test_request_nonce, TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
         .expect("sender context couldn't seal request");
     // Check that the message was encrypted.
     assert_ne!(TEST_REQUEST_MESSAGE, encrypted_request);
     let decrypted_request = recipient_context
-        .open(
-            &test_request_nonce,
-            &encrypted_request,
-            TEST_REQUEST_ASSOCIATED_DATA,
-        )
+        .open(&test_request_nonce, &encrypted_request, TEST_REQUEST_ASSOCIATED_DATA)
         .expect("recipient context couldn't open request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);
 
     let encrypted_response = recipient_context
-        .seal(
-            &test_response_nonce,
-            TEST_RESPONSE_MESSAGE,
-            TEST_RESPONSE_ASSOCIATED_DATA,
-        )
+        .seal(&test_response_nonce, TEST_RESPONSE_MESSAGE, TEST_RESPONSE_ASSOCIATED_DATA)
         .expect("recipient context couldn't seal response");
     // Check that the message was encrypted.
     assert_ne!(TEST_RESPONSE_MESSAGE, encrypted_response);
     let decrypted_response = sender_context
-        .open(
-            &test_response_nonce,
-            &encrypted_response,
-            TEST_RESPONSE_ASSOCIATED_DATA,
-        )
+        .open(&test_response_nonce, &encrypted_response, TEST_RESPONSE_ASSOCIATED_DATA)
         .expect("sender couldn't open response");
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
 }
@@ -128,11 +111,7 @@ fn test_encryptor() {
     // Check that the message was encrypted.
     assert_ne!(
         TEST_REQUEST_MESSAGE,
-        encrypted_request
-            .encrypted_message
-            .clone()
-            .unwrap()
-            .ciphertext
+        encrypted_request.encrypted_message.clone().unwrap().ciphertext
     );
 
     // Initialize server encryptor.
@@ -148,15 +127,10 @@ fn test_encryptor() {
     // Check that the message was encrypted.
     assert_ne!(
         TEST_RESPONSE_MESSAGE,
-        encrypted_response
-            .encrypted_message
-            .clone()
-            .unwrap()
-            .ciphertext
+        encrypted_response.encrypted_message.clone().unwrap().ciphertext
     );
-    let (decrypted_response, response_associated_data) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("client couldn't decrypt response");
+    let (decrypted_response, response_associated_data) =
+        client_encryptor.decrypt(&encrypted_response).expect("client couldn't decrypt response");
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
@@ -174,11 +148,7 @@ async fn test_async_encryptor() {
     // Check that the message was encrypted.
     assert_ne!(
         TEST_REQUEST_MESSAGE,
-        encrypted_request
-            .encrypted_message
-            .clone()
-            .unwrap()
-            .ciphertext
+        encrypted_request.encrypted_message.clone().unwrap().ciphertext
     );
 
     // Initialize server encryptor.
@@ -195,15 +165,10 @@ async fn test_async_encryptor() {
     // Check that the message was encrypted.
     assert_ne!(
         TEST_RESPONSE_MESSAGE,
-        encrypted_response
-            .encrypted_message
-            .clone()
-            .unwrap()
-            .ciphertext
+        encrypted_response.encrypted_message.clone().unwrap().ciphertext
     );
-    let (decrypted_response, response_associated_data) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("client couldn't decrypt response");
+    let (decrypted_response, response_associated_data) =
+        client_encryptor.decrypt(&encrypted_response).expect("client couldn't decrypt response");
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
@@ -221,20 +186,14 @@ fn test_signer_and_verifier() {
 
     let verifying_key_one = p256::ecdsa::VerifyingKey::from(signing_key_one);
 
-    assert!(verifying_key_one
-        .verify(TEST_SIGNATURE_MESSAGE_ONE, &signature)
-        .is_ok());
+    assert!(verifying_key_one.verify(TEST_SIGNATURE_MESSAGE_ONE, &signature).is_ok());
 
-    assert!(verifying_key_one
-        .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)
-        .is_err());
+    assert!(verifying_key_one.verify(TEST_SIGNATURE_MESSAGE_TWO, &signature).is_err());
 
     let verifying_key_two = {
         let signing_key_two = p256::ecdsa::SigningKey::random(&mut rand_core::OsRng);
         p256::ecdsa::VerifyingKey::from(signing_key_two)
     };
 
-    assert!(verifying_key_two
-        .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)
-        .is_err());
+    assert!(verifying_key_two.verify(TEST_SIGNATURE_MESSAGE_TWO, &signature).is_err());
 }

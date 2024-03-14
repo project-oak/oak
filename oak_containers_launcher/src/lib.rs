@@ -73,7 +73,8 @@ const VM_LOCAL_PORT: u16 = 8080;
 /// The local port that the Orchestrator should be listening on.
 const VM_ORCHESTRATOR_LOCAL_PORT: u16 = 4000;
 
-/// The local address that will be forwarded by the VMM to the guest's IP adress.
+/// The local address that will be forwarded by the VMM to the guest's IP
+/// adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
 /// Number of seconds to wait for the VM to start up.
@@ -124,10 +125,7 @@ impl Args {
 
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     let path = std::path::PathBuf::from(s);
-    if !std::fs::metadata(s)
-        .map_err(|err| err.to_string())?
-        .is_file()
-    {
+    if !std::fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
         Err(String::from("path does not represent a file"))
     } else {
         Ok(path)
@@ -136,13 +134,8 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 
 #[derive(Clone)]
 pub enum Channel {
-    Network {
-        host_proxy_port: u16,
-        trusted_app_address: Option<SocketAddr>,
-    },
-    VirtioVsock {
-        trusted_app_address: Option<VsockAddr>,
-    },
+    Network { host_proxy_port: u16, trusted_app_address: Option<SocketAddr> },
+    VirtioVsock { trusted_app_address: Option<VsockAddr> },
 }
 
 /// Interface that is connected to the trusted application.
@@ -156,13 +149,12 @@ impl TryFrom<Channel> for TrustedApplicationAddress {
 
     fn try_from(channel: Channel) -> Result<TrustedApplicationAddress, Self::Error> {
         match channel {
-            Channel::Network {
-                host_proxy_port: _,
-                trusted_app_address,
-            } => trusted_app_address.map(TrustedApplicationAddress::Network),
-            Channel::VirtioVsock {
-                trusted_app_address,
-            } => trusted_app_address.map(TrustedApplicationAddress::VirtioVsock),
+            Channel::Network { host_proxy_port: _, trusted_app_address } => {
+                trusted_app_address.map(TrustedApplicationAddress::Network)
+            }
+            Channel::VirtioVsock { trusted_app_address } => {
+                trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
+            }
         }
         .ok_or_else(|| anyhow::anyhow!("trusted application address not set"))
     }
@@ -215,40 +207,28 @@ impl Launcher {
 
         let trusted_app_channel = match args.communication_channel {
             ChannelType::Network => {
-                // Also get an open port for that QEMU can use for proxying requests to the server.
-                // Since we don't have a mechanism to pass this port to QEMU we have
-                // to unbind it by dropping it. There is a small window for a race
-                // condition, but since the assigned port will be random
-                // the probability of another process grabbing the port before QEMU can should be
-                // very low.
+                // Also get an open port for that QEMU can use for proxying requests to the
+                // server. Since we don't have a mechanism to pass this port to
+                // QEMU we have to unbind it by dropping it. There is a small
+                // window for a race condition, but since the assigned port will
+                // be random the probability of another process grabbing the
+                // port before QEMU can should be very low.
                 let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address: None,
-                }
+                Channel::Network { host_proxy_port, trusted_app_address: None }
             }
-            ChannelType::VirtioVsock => Channel::VirtioVsock {
-                trusted_app_address: None,
-            },
+            ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
-        let host_orchestrator_proxy_port = {
-            TcpListener::bind(orchestrator_sockaddr)
-                .await?
-                .local_addr()?
-                .port()
-        };
+        let host_orchestrator_proxy_port =
+            { TcpListener::bind(orchestrator_sockaddr).await?.local_addr()?.port() };
         let vmm = qemu::Qemu::start(
             args.qemu_params,
             port,
             match trusted_app_channel {
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address: _,
-                } => Some(host_proxy_port),
-                Channel::VirtioVsock {
-                    trusted_app_address: _,
-                } => None,
+                Channel::Network { host_proxy_port, trusted_app_address: _ } => {
+                    Some(host_proxy_port)
+                }
+                Channel::VirtioVsock { trusted_app_address: _ } => None,
             },
             host_orchestrator_proxy_port,
         )?;
@@ -269,32 +249,28 @@ impl Launcher {
         })
     }
 
-    /// Gets the address that the untrusted application can use to connect to the trusted
-    /// application.
+    /// Gets the address that the untrusted application can use to connect to
+    /// the trusted application.
     ///
-    /// This is a host-visible address that the VMM will proxy to the trusted application's service
-    /// endpoint.
+    /// This is a host-visible address that the VMM will proxy to the trusted
+    /// application's service endpoint.
     ///
-    /// This call will wait until the trusted app has notifiied the launcher once that it is ready
-    /// via the orchestrator.
+    /// This call will wait until the trusted app has notifiied the launcher
+    /// once that it is ready via the orchestrator.
     pub async fn get_trusted_app_address(
         &mut self,
     ) -> Result<TrustedApplicationAddress, anyhow::Error> {
         // If we haven't received a ready notification, wait for it.
         if let Some(receiver) = self.app_ready_notifier.take() {
-            // Set a timeout since we don't want to wait forever if the VM didn't start properly.
+            // Set a timeout since we don't want to wait forever if the VM didn't start
+            // properly.
             timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).await??;
             match &mut self.trusted_app_channel {
-                Channel::Network {
-                    host_proxy_port,
-                    trusted_app_address,
-                } => {
+                Channel::Network { host_proxy_port, trusted_app_address } => {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), *host_proxy_port));
                 }
-                Channel::VirtioVsock {
-                    trusted_app_address,
-                } => {
+                Channel::VirtioVsock { trusted_app_address } => {
                     trusted_app_address.replace(VsockAddr::new(
                         self.vmm.guest_cid().expect("VMM does not have a guest CID"),
                         VM_LOCAL_PORT.into(),
@@ -305,13 +281,14 @@ impl Launcher {
         self.trusted_app_channel.clone().try_into()
     }
 
-    /// Gets the endorsed attestation evidence that the untrusted application can send to remote
-    /// clients, which will verify it before connecting.
+    /// Gets the endorsed attestation evidence that the untrusted application
+    /// can send to remote clients, which will verify it before connecting.
     pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         // If we haven't received an attestation evidence, wait for it.
         #[allow(deprecated)]
         if let Some(receiver) = self.evidence_receiver.take() {
-            // Set a timeout since we don't want to wait forever if the VM didn't start properly.
+            // Set a timeout since we don't want to wait forever if the VM didn't start
+            // properly.
             let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
                 .await
                 .context("couldn't get attestation evidence before timeout")?
@@ -330,10 +307,8 @@ impl Launcher {
                 )),
             };
 
-            let endorsed_evidence = EndorsedEvidence {
-                evidence: Some(evidence),
-                endorsements: Some(endorsements),
-            };
+            let endorsed_evidence =
+                EndorsedEvidence { evidence: Some(evidence), endorsements: Some(endorsements) };
             self.endorsed_evidence.replace(endorsed_evidence);
         }
         self.endorsed_evidence

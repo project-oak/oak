@@ -20,26 +20,26 @@ use anyhow::Result;
 
 use crate::Channel;
 
-/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
-/// read.
+/// Reads a chunk of data and acknowledges the transmission by writing back the
+/// number of bytes read.
 fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<()> {
-    let len: u32 = chunk
-        .len()
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("chunk too big"))?;
+    let len: u32 = chunk.len().try_into().map_err(|_| anyhow::anyhow!("chunk too big"))?;
     channel.read_exact(chunk)?;
     channel.write_all(&len.to_le_bytes())
 }
 
-/// Loads a Restricted Application over the given channel using a basic framed format.
+/// Loads a Restricted Application over the given channel using a basic framed
+/// format.
 ///
-/// This is intended for use after the kernel has started up to load the Restricted Application,
-/// before we start the application and hand off the channel to it.
+/// This is intended for use after the kernel has started up to load the
+/// Restricted Application, before we start the application and hand off the
+/// channel to it.
 ///
 /// The protocol to load the application is very simple:
 /// 1. loader sends the size of the application binary, as u32
 /// 2. loader sends MAX_SIZE of data and waits for the kernel to acknowledge
-/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the amount of data read
+/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the
+///    amount of data read
 /// 4. repeat (2) and (3) until all the data has been transmitted
 pub fn load_raw<C: Channel + ?Sized, const MAX_SIZE: usize>(
     channel: &mut C,

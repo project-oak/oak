@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-//! This module contains structs that can be used to interpret the contents of the CPUID page that
-//! is provisioned into the VM guest memory during SEV-SNP startup.
+//! This module contains structs that can be used to interpret the contents of
+//! the CPUID page that is provisioned into the VM guest memory during SEV-SNP
+//! startup.
 
 use zerocopy::{FromBytes, FromZeroes};
 
@@ -47,16 +48,18 @@ static_assertions::assert_eq_size!(CpuidFunction, [u8; 48]);
 pub struct CpuidInput {
     /// The input value of the EAX register, which represents the CPUID leaf.
     pub eax: u32,
-    /// The input value of the ECX register, which represents the CPUID sub-leaf.
+    /// The input value of the ECX register, which represents the CPUID
+    /// sub-leaf.
     pub ecx: u32,
     /// The input value of the XCR0 extended control register.
     ///
-    /// Only required when a request for CPUID 0x0000_000D is made. Must be zero otherwise.
+    /// Only required when a request for CPUID 0x0000_000D is made. Must be zero
+    /// otherwise.
     pub xcr0: u64,
     /// The value of the IA32_XSS model-specific register.
     ///
-    /// Only required when a request for CPUID 0x0000_000D is made and the guest supports the XSS
-    /// MSR. Must be zero otherwise.
+    /// Only required when a request for CPUID 0x0000_000D is made and the guest
+    /// supports the XSS MSR. Must be zero otherwise.
     pub xss: u64,
 }
 
@@ -66,22 +69,13 @@ impl From<&mut MutableInterruptStackFrame> for CpuidInput {
         let ecx = value.rcx as u32;
         // We only set the value of XCR0 for CPUID 0x0000_000D.
         // See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
-        let xcr0 = if eax == 0xD {
-            x86_64::registers::xcontrol::XCr0::read_raw()
-        } else {
-            0
-        };
-        // We ignore XSS for now and always set it to 0, as it is only relevant for CPUID
-        // 0x0000_000D, if the guest supports the IA32_XSS MSR and the guest uses XSAVES and
-        // XRSTORS.
+        let xcr0 = if eax == 0xD { x86_64::registers::xcontrol::XCr0::read_raw() } else { 0 };
+        // We ignore XSS for now and always set it to 0, as it is only relevant for
+        // CPUID 0x0000_000D, if the guest supports the IA32_XSS MSR and the
+        // guest uses XSAVES and XRSTORS.
         let xss = 0;
 
-        Self {
-            eax,
-            ecx,
-            xcr0,
-            xss,
-        }
+        Self { eax, ecx, xcr0, xss }
     }
 }
 
@@ -105,8 +99,8 @@ pub struct CpuidOutput {
 #[repr(C, align(4096))]
 #[derive(Debug, FromZeroes, FromBytes)]
 pub struct CpuidPage {
-    /// The number of CPUID function results included in the page. Must not be greater than
-    /// `CPUID_COUNT_MAX`.
+    /// The number of CPUID function results included in the page. Must not be
+    /// greater than `CPUID_COUNT_MAX`.
     pub count: u32,
     /// Reserved. Must be 0.
     _reserved: [u8; 12],
@@ -117,8 +111,8 @@ pub struct CpuidPage {
 static_assertions::assert_eq_size!(CpuidPage, [u8; CPUID_PAGE_SIZE]);
 
 impl CpuidPage {
-    /// Checks that the count is less than the maximum allowed count and that the reserved bytes are
-    /// all zero.
+    /// Checks that the count is less than the maximum allowed count and that
+    /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.count as usize > CPUID_COUNT_MAX {
             return Err("invalid count");

@@ -15,11 +15,7 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(
-        &["../proto/crypto/crypto.proto"],
-        &["../proto"],
-        Default::default(),
-    );
+    micro_rpc_build::compile(&["../proto/crypto/crypto.proto"], &["../proto"], Default::default());
 
     Ok(())
 }

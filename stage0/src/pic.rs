@@ -67,14 +67,15 @@ impl Pic {
 ///
 /// # Safety
 ///
-/// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known I/O ports of 0x20
-/// and 0xA0.
+/// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known
+/// I/O ports of 0x20 and 0xA0.
 pub unsafe fn disable_pic8259() -> Result<(), &'static str> {
     let mut pic0 = Pic::new(PIC0_BASE);
     let mut pic1 = Pic::new(PIC1_BASE);
 
     // PIC0 interrupts will start at 0x20 (32), PIC1 at IRQ2, disable all interrupts
     pic0.init(0x20, 4, 0xFF)?;
-    // PIC1 interrupts will start at 0x28 (40), cascade identity, and again disable all interrupts
+    // PIC1 interrupts will start at 0x28 (40), cascade identity, and again disable
+    // all interrupts
     pic1.init(0x28, 2, 0xFF)
 }

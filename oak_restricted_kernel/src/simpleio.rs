@@ -27,9 +27,9 @@ use crate::{mm::Translator, PAGE_TABLES};
 pub struct SimpleIoChannel<'a, A: Allocator> {
     /// The simple IO device.
     device: SimpleIo<'a, A>,
-    /// A buffer to temporarily store extra data from the device that was not fully read when using
-    /// `read`. This could happen if the device sent more bytes in a single buffer than was
-    /// expected by `read`.
+    /// A buffer to temporarily store extra data from the device that was not
+    /// fully read when using `read`. This could happen if the device sent
+    /// more bytes in a single buffer than was expected by `read`.
     pending_data: Option<VecDeque<u8>>,
 }
 
@@ -50,18 +50,16 @@ impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
             .expect("couldn't create IO device")
         };
         let pending_data = None;
-        Self {
-            device,
-            pending_data,
-        }
+        Self { device, pending_data }
     }
 
-    /// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer (if data was left over from the previous read), or from the next
-    /// available buffer in the device if there was no data in the pending buffer.
+    /// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer (if data was left over from
+    /// the previous read), or from the next available buffer in the device
+    /// if there was no data in the pending buffer.
     ///
-    /// If data is read from the device and not fully used the remainder is stored back into the
-    /// pending buffer.
+    /// If data is read from the device and not fully used the remainder is
+    /// stored back into the pending buffer.
     ///
     /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {

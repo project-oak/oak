@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-// These data structures (and constants) are derived from qemu/hw/acpi/bios-linker-loader.c that
-// defines the interface.
+// These data structures (and constants) are derived from
+// qemu/hw/acpi/bios-linker-loader.c that defines the interface.
 
 use core::{
     ffi::CStr,
@@ -29,15 +29,16 @@ use zerocopy::AsBytes;
 
 use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 
-// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The full size of EBDA
-// is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
+// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The
+// full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
 pub const EBDA_SIZE: usize = 127 * 1024;
 #[link_section = ".ebda.rsdp"]
 static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
 #[link_section = ".ebda"]
 pub static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
 
-// Safety: we include a nul byte at the end of the string, and that is the only nul byte.
+// Safety: we include a nul byte at the end of the string, and that is the only
+// nul byte.
 const TABLE_LOADER_FILE_NAME: &CStr =
     unsafe { CStr::from_bytes_with_nul_unchecked(b"etc/table-loader\0") };
 const RSDP_FILE_NAME_SUFFIX: &str = "acpi/rsdp";
@@ -48,8 +49,9 @@ const ROMFILE_LOADER_FILESZ: usize = 56;
 type RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
 fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
-    // Safety: we do not have concurrent threads so accessing the static is safe, and even if
-    // Allocate has not been called yet, all values are valid for an [u8].
+    // Safety: we do not have concurrent threads so accessing the static is safe,
+    // and even if Allocate has not been called yet, all values are valid for an
+    // [u8].
     let name = name.to_str().map_err(|_| "invalid file name")?;
     if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
         Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
@@ -73,7 +75,8 @@ enum CommandTag {
 }
 
 impl CommandTag {
-    /// VMM-specific commands that are not supported by QEMU should have the highest bit set.
+    /// VMM-specific commands that are not supported by QEMU should have the
+    /// highest bit set.
     const VMM_SPECIFIC: u32 = 0x80000000;
 }
 
@@ -84,10 +87,12 @@ enum Zone {
     FSeg = 2,
 }
 
-/// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment (must be power of
+/// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
+/// (must be power of
 /// 2) and `zone` (can be HIGH or FSEG) requirements.
 ///
-/// Must appear exactly once for each file, and before this file is referenced by any other command.
+/// Must appear exactly once for each file, and before this file is referenced
+/// by any other command.
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct Allocate {
@@ -113,8 +118,8 @@ impl Allocate {
 
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
-            // We don't really care which version we're dealing with, as long as the data structure
-            // is one of the two.
+            // We don't really care which version we're dealing with, as long as the data
+            // structure is one of the two.
             if file.size() > size_of::<Rsdp>() || (file.size() != 20 && file.size() != 36) {
                 return Err("RSDP doesn't match expected size");
             }
@@ -139,11 +144,7 @@ impl Allocate {
             let buf = unsafe { EBDA.write(zeroed()) };
 
             if (buf.as_ptr() as *const _ as u64) % self.align as u64 != 0 {
-                log::error!(
-                    "ACPI tables address: {:p}, required alignment: {}",
-                    buf,
-                    self.align
-                );
+                log::error!("ACPI tables address: {:p}, required alignment: {}", buf, self.align);
                 return Err("ACPI tables address not aligned properly");
             }
             fwcfg.read_file(&file, buf)?;
@@ -165,8 +166,8 @@ impl Debug for Allocate {
     }
 }
 
-/// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at `offset`, by adding a
-/// pointer to the table originating from `src_file`.
+/// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at
+/// `offset`, by adding a pointer to the table originating from `src_file`.
 ///
 /// 1,2,4 or 8 byte unsigned addition is used depending on `size`.
 #[repr(C)]
@@ -223,11 +224,11 @@ impl Debug for AddPointer {
     }
 }
 
-/// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start` and `length` fields,
-/// and then add the value at `offset`.
+/// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start`
+/// and `length` fields, and then add the value at `offset`.
 ///
-/// Checksum simply sums -X for each byte X in the range using 8-bit math (or in our case, we just
-/// sum together all the numbers and subtract in the end.)
+/// Checksum simply sums -X for each byte X in the range using 8-bit math (or in
+/// our case, we just sum together all the numbers and subtract in the end.)
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct AddChecksum {
@@ -277,8 +278,9 @@ impl Debug for AddChecksum {
     }
 }
 
-/// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`) at `offset`, by
-/// adding a pointer to `src_offset` within the table originating from `src_file`.
+/// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`)
+/// at `offset`, by adding a pointer to `src_offset` within the table
+/// originating from `src_file`.
 ///
 /// 1,2,4 or 8 byte unsigned addition is used depending on `size`.
 #[repr(C)]
@@ -350,18 +352,12 @@ struct FirmwareData {
 }
 
 fn populate_firmware_data() -> Result<FirmwareData, &'static str> {
-    // There may be a way how to dynamically determine these values, but for now, hard-code the
-    // expected values as it's unlikely they will ever change.
+    // There may be a way how to dynamically determine these values, but for now,
+    // hard-code the expected values as it's unlikely they will ever change.
 
     Ok(FirmwareData {
-        pci_window_32: Window {
-            base: 0xE0000000u32,
-            end: 0xFEBFF000u32,
-        },
-        pci_window_64: Window {
-            base: 0x8000000000u64,
-            end: 0x10000000000u64,
-        },
+        pci_window_32: Window { base: 0xE0000000u32, end: 0xFEBFF000u32 },
+        pci_window_64: Window { base: 0x8000000000u64, end: 0x10000000000u64 },
     })
 }
 
@@ -448,9 +444,7 @@ union Body {
 
 impl Default for Body {
     fn default() -> Self {
-        Body {
-            padding: [Default::default(); 124],
-        }
+        Body { padding: [Default::default(); 124] }
     }
 }
 
@@ -488,8 +482,8 @@ impl RomfileCommand {
     }
 
     fn extract(&self) -> Result<Command<'_>, &'static str> {
-        // Safety: we extract the value out of the union based on the tag value, which is safe to
-        // do.
+        // Safety: we extract the value out of the union based on the tag value, which
+        // is safe to do.
         match self.tag() {
             Some(CommandTag::Allocate) => Ok(Command::Allocate(unsafe { &self.body.allocate })),
             Some(CommandTag::AddPointer) => Ok(Command::AddPointer(unsafe { &self.body.pointer })),
@@ -508,19 +502,15 @@ impl RomfileCommand {
 
     fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
-            log::warn!(
-                "ignoring proprietary ACPI linker command with tag {:#x}",
-                self.tag
-            );
+            log::warn!("ignoring proprietary ACPI linker command with tag {:#x}", self.tag);
             return Ok(());
         }
         if self.tag == 0 {
-            // Safety: interpreting the union as a byte array is safe, as it makes no assumptions
-            // about the meaning of any of the bytes.
-            log::debug!(
-                "ignoring empty ACPI linker command with body {:?}",
-                unsafe { &self.body.padding }
-            );
+            // Safety: interpreting the union as a byte array is safe, as it makes no
+            // assumptions about the meaning of any of the bytes.
+            log::debug!("ignoring empty ACPI linker command with body {:?}", unsafe {
+                &self.body.padding
+            });
             return Ok(());
         }
         self.extract()?.invoke(fwcfg, acpi_digest)
@@ -534,9 +524,8 @@ pub fn build_acpi_tables(
     fwcfg: &mut FwCfg,
     acpi_digest: &mut Sha256,
 ) -> Result<&'static Rsdp, &'static str> {
-    let file = fwcfg
-        .find(TABLE_LOADER_FILE_NAME)
-        .ok_or("Could not find 'etc/table-loader' in fw_cfg")?;
+    let file =
+        fwcfg.find(TABLE_LOADER_FILE_NAME).ok_or("Could not find 'etc/table-loader' in fw_cfg")?;
 
     if file.size() % core::mem::size_of::<RomfileCommand>() != 0 {
         return Err("length of 'etc/table-loader' is not a multiple of command struct size");
@@ -545,10 +534,10 @@ pub fn build_acpi_tables(
     let buf = fwcfg.read_file_vec(&file)?;
     acpi_digest.update(&buf);
 
-    // We can't use zerocopy::FromBytes/AsBytes here, as the fields of the structs have padding that
-    // zerocopy doesn't support.
-    // Safety: we're using `size_of` here to ensure that we don't go over the boundaries of the
-    // original array.
+    // We can't use zerocopy::FromBytes/AsBytes here, as the fields of the structs
+    // have padding that zerocopy doesn't support.
+    // Safety: we're using `size_of` here to ensure that we don't go over the
+    // boundaries of the original array.
     let commands = unsafe {
         core::slice::from_raw_parts(
             buf.as_ptr() as *const _ as *const RomfileCommand,

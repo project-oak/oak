@@ -34,8 +34,8 @@ use oak_restricted_kernel_sdk::{
 fn main() -> ! {
     #[cfg(feature = "deny_sensitive_logging")]
     {
-        // Only log warnings and errors to reduce the risk of accidentally leaking execution
-        // information through debug logs.
+        // Only log warnings and errors to reduce the risk of accidentally leaking
+        // execution information through debug logs.
         log::set_max_level(log::LevelFilter::Warn);
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
@@ -50,10 +50,6 @@ fn main() -> ! {
     );
     let server =
         oak_functions_enclave_service::proto::oak::functions::OakFunctionsServer::new(service);
-    start_blocking_server(
-        Box::<FileDescriptorChannel>::default(),
-        server,
-        &mut invocation_stats,
-    )
-    .expect("server encountered an unrecoverable error");
+    start_blocking_server(Box::<FileDescriptorChannel>::default(), server, &mut invocation_stats)
+        .expect("server encountered an unrecoverable error");
 }

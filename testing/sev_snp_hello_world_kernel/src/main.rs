@@ -45,9 +45,11 @@ lazy_static! {
     };
 }
 
-/// Crude implementation of a #GP handler that emulates any `rdmsr` instructions that trigger #GP.
+/// Crude implementation of a #GP handler that emulates any `rdmsr` instructions
+/// that trigger #GP.
 ///
-/// This function emulates the `rdmsr` instruction by returning 0 in RAX and RDX.
+/// This function emulates the `rdmsr` instruction by returning 0 in RAX and
+/// RDX.
 #[naked]
 extern "x86-interrupt" fn gp_handler(_: InterruptStackFrame, _: u64) {
     unsafe {
@@ -87,9 +89,10 @@ pub extern "C" fn rust64_start(_: u64, boot_params: &BootParams) -> ! {
         // Walk the null-terminated setup_data list until we find the CC blob.
         let mut setup_data = boot_params.hdr.setup_data();
 
-        // Safety: there's a lot of dereferences of raw pointers here; unfortunately necessary as we
-        // need to access the C data structures set up by the bootloader. It is safe as long as the
-        // bootloader populated the zero page correctly.
+        // Safety: there's a lot of dereferences of raw pointers here; unfortunately
+        // necessary as we need to access the C data structures set up by the
+        // bootloader. It is safe as long as the bootloader populated the zero
+        // page correctly.
         while !setup_data.is_null() {
             let type_ = unsafe { (*setup_data).type_ };
             if type_ == SetupDataType::CCBlob {
@@ -122,12 +125,13 @@ fn panic(_info: &PanicInfo) -> ! {
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         let mut ghcb_protocol = crate::ghcb::init_ghcb(sev_status.contains(SevStatus::SNP_ACTIVE));
-        // Use the i8042 device to shut down the machine. Assumes the VMM exposes the device.
-        // This is safe as both qemu and crosvm expose the i8042 device by default.
+        // Use the i8042 device to shut down the machine. Assumes the VMM exposes the
+        // device. This is safe as both qemu and crosvm expose the i8042 device
+        // by default.
         let _ = ghcb_protocol.io_write_u8(0x64, 0xFE);
     } else {
-        // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault
-        // and terminate the program.
+        // Trigger a breakpoint exception. As we don't have a #BP handler, this will
+        // triple fault and terminate the program.
         int3();
     }
 

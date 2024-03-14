@@ -43,15 +43,17 @@ use crate::{
     Handler, Observer,
 };
 
-/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
+/// Fixed name of the function to start a Wasm. Every Oak Wasm module must
+/// provide this function.
 pub const MAIN_FUNCTION_NAME: &str = "main";
-/// Fixed name of the function to allocate memory. Every Oak Wasm module must provide this
-/// function.
+/// Fixed name of the function to allocate memory. Every Oak Wasm module must
+/// provide this function.
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
 /// The name of the memory every Oak Wasm module has.
 pub const MEMORY_NAME: &str = "memory";
 
-// Needs to be consistent with the definition of the Wasm import module in the Oak Functions ABI.
+// Needs to be consistent with the definition of the Wasm import module in the
+// Oak Functions ABI.
 const OAK_FUNCTIONS: &str = "oak_functions";
 
 /// Type aliases for positions in Wasm linear memory. Any future 64-bit version
@@ -60,8 +62,9 @@ pub type AbiPointer = u32;
 /// Type aliases for offsets in Wasm linear memory.
 pub type AbiPointerOffset = u32;
 
-/// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
-/// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
+/// `UserState` holds the user request bytes and response bytes for a particular
+/// execution of an Oak Wasm module. The `UserState` also holds a reference to
+/// the logger and the enabled extensions.
 pub struct UserState {
     wasm_api_transport: Box<dyn micro_rpc::Transport<Error = !>>,
     logger: Arc<dyn OakLogger>,
@@ -69,8 +72,8 @@ pub struct UserState {
 
 /// Stubs a Wasm imported function in the provided linker.
 ///
-/// The stubbed function logs an error and returns an error in the form of a Wasm trap (similar to
-/// an exception).
+/// The stubbed function logs an error and returns an error in the form of a
+/// Wasm trap (similar to an exception).
 macro_rules! stub_wasm_function {
     ($linker:ident, $function_mod:ident . $function_name:ident, ($($t:ty),*) -> $r:ty) => {
         $linker.func_wrap(
@@ -90,17 +93,15 @@ macro_rules! stub_wasm_function {
 }
 
 impl UserState {
-    /// Stores the user request bytes, extensions, and logger. The response bytes are initialized
-    /// with the empty response because every request needs to have a response and we fixed the
-    /// empty response as the default response.
+    /// Stores the user request bytes, extensions, and logger. The response
+    /// bytes are initialized with the empty response because every request
+    /// needs to have a response and we fixed the empty response as the
+    /// default response.
     fn new(
         wasm_api_transport: Box<dyn micro_rpc::Transport<Error = !>>,
         logger: Arc<dyn OakLogger>,
     ) -> Self {
-        UserState {
-            wasm_api_transport,
-            logger,
-        }
+        UserState { wasm_api_transport, logger }
     }
 
     // Use an `OakLogger` to log.
@@ -109,11 +110,12 @@ impl UserState {
     }
 }
 
-/// Exports the functions from the ABI of Oak Functions. These functions allow the Wasm module to
-/// exchange data with Oak Functions and need the Wasm module (or, more specifically,
-/// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
-/// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
-/// the memory which the [`OakCaller`] uses.
+/// Exports the functions from the ABI of Oak Functions. These functions allow
+/// the Wasm module to exchange data with Oak Functions and need the Wasm module
+/// (or, more specifically, the [`OakCaller`]) to provide `alloc` for allocating
+/// memory. The [`OakLinker`] checks that the Wasm module provides `alloc` and
+/// `main`, which every Oak Wasm module must provide, and defines the memory
+/// which the [`OakCaller`] uses.
 struct OakLinker {
     linker: wasmi::Linker<UserState>,
 }
@@ -158,9 +160,10 @@ impl OakLinker {
             )
             .expect("failed to define invoke in linker");
 
-        // TODO(#3929): One of our dependency requires various WASI functions to be linked, but, to
-        // the best of our knowledge, does not use them at run time. As a workaround, we stub
-        // them for now but we should remove them, if possible.
+        // TODO(#3929): One of our dependency requires various WASI functions to be
+        // linked, but, to the best of our knowledge, does not use them at run
+        // time. As a workaround, we stub them for now but we should remove
+        // them, if possible.
         stub_wasm_function!(
             linker,
             wasi_snapshot_preview1.clock_time_get,
@@ -205,8 +208,8 @@ impl OakLinker {
         OakLinker { linker }
     }
 
-    /// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
-    /// memory is attached.
+    /// Instantiates the Oak Linker and checks whether the instance exports
+    /// `main`, `alloc` and a memory is attached.
     fn instantiate(
         &self,
         mut store: &mut Store<UserState>,
@@ -231,9 +234,8 @@ impl OakLinker {
             })?;
 
         // Check that the instance exports "main".
-        let _ = &instance
-            .get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME)
-            .map_err(|err| {
+        let _ =
+            &instance.get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME).map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
                     format!("couldn't validate `main` export: {:?}", err),
@@ -263,9 +265,10 @@ impl OakLinker {
     }
 }
 
-/// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
-/// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
-/// relies on `alloc`, which every Oak Wasm module must provide.
+/// Provides functionality for reading from the Wasm memory, as well as
+/// allocating and writing to the Wasm memory. The Wasm memory is defined by the
+/// [`OakLinker`]. [`OakCaller`] relies on `alloc`, which every Oak Wasm module
+/// must provide.
 struct OakCaller<'a> {
     caller: wasmi::Caller<'a, UserState>,
     alloc: wasmi::TypedFunc<i32, AbiPointer>,
@@ -276,52 +279,40 @@ impl<'a> OakCaller<'a> {
     fn new(caller: wasmi::Caller<'a, UserState>) -> Result<Self, StatusCode> {
         // Get typed `alloc` to store.
         let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
-            caller
-                .data()
-                .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
+            caller.data().log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
             StatusCode::Internal
         })?;
 
         let alloc = ext.into_func().ok_or_else(|| {
-            caller
-                .data()
-                .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
+            caller.data().log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
             StatusCode::Internal
         })?;
 
         let typed_alloc = alloc.typed(&caller).ok().ok_or_else(|| {
-            caller.data().log_error(&format!(
-                "exported {} could not be typed",
-                ALLOC_FUNCTION_NAME
-            ));
+            caller
+                .data()
+                .log_error(&format!("exported {} could not be typed", ALLOC_FUNCTION_NAME));
             StatusCode::Internal
         })?;
 
         // Get memory to store.
         let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
-            caller
-                .data()
-                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
+            caller.data().log_error(&format!("failed to get exported {}", MEMORY_NAME));
             StatusCode::Internal
         })?;
 
         let memory = ext.into_memory().ok_or_else(|| {
-            caller
-                .data()
-                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+            caller.data().log_error(&format!("exported {} is not a memory", MEMORY_NAME));
             StatusCode::Internal
         })?;
 
-        let caller = OakCaller {
-            caller,
-            alloc: typed_alloc,
-            memory,
-        };
+        let caller = OakCaller { caller, alloc: typed_alloc, memory };
 
         Ok(caller)
     }
 
-    /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
+    /// Reads the buffer starting at address `buf_ptr` with length `buf_len`
+    /// from the Wasm memory.
     fn read_buffer(
         &mut self,
         buf_ptr: AbiPointer,
@@ -331,20 +322,16 @@ impl<'a> OakCaller<'a> {
         let buf_ptr = buf_ptr
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.memory
-            .read(&mut self.caller, buf_ptr, &mut buf)
-            .map_err(|err| {
-                self.data().log_error(&format!(
-                    "Unable to read buffer from guest memory: {:?}",
-                    err
-                ));
-                StatusCode::InvalidArgument
-            })?;
+        self.memory.read(&mut self.caller, buf_ptr, &mut buf).map_err(|err| {
+            self.data().log_error(&format!("Unable to read buffer from guest memory: {:?}", err));
+            StatusCode::InvalidArgument
+        })?;
         Ok(buf)
     }
 
-    /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
-    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+    /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and
+    /// writing the address of the allocated memory to `dest_ptr_ptr` and
+    /// the length to `dest_len_ptr`.
     fn alloc_and_write(
         &mut self,
         buf_ptr_ptr: AbiPointer,
@@ -355,10 +342,7 @@ impl<'a> OakCaller<'a> {
 
         // Allocate the memory from the Wasm module.
         // `address` will hold the address where memory of size len was allocated.
-        let dest_ptr = self
-            .alloc
-            .call(&mut self.caller, len)
-            .expect("`alloc` call failed");
+        let dest_ptr = self.alloc.call(&mut self.caller, len).expect("`alloc` call failed");
 
         // Write to the allocated memory.
         self.write_buffer(&buf, dest_ptr)?;
@@ -367,32 +351,26 @@ impl<'a> OakCaller<'a> {
         Ok(())
     }
 
-    /// Helper function to write the buffer `source` at the address `dest` of the Wasm memory, if
-    /// `source` fits in the allocated memory.
+    /// Helper function to write the buffer `source` at the address `dest` of
+    /// the Wasm memory, if `source` fits in the allocated memory.
     pub fn write_buffer(&mut self, source: &[u8], dest: AbiPointer) -> Result<(), StatusCode> {
         let dest = dest
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.memory
-            .write(&mut self.caller, dest, source)
-            .map_err(|err| {
-                self.data().log_error(&format!(
-                    "Unable to write buffer into guest memory: {:?}",
-                    err
-                ));
-                StatusCode::InvalidArgument
-            })
+        self.memory.write(&mut self.caller, dest, source).map_err(|err| {
+            self.data().log_error(&format!("Unable to write buffer into guest memory: {:?}", err));
+            StatusCode::InvalidArgument
+        })
     }
 
-    /// Helper function to write the u32 `value` at the `address` of the Wasm memory.
+    /// Helper function to write the u32 `value` at the `address` of the Wasm
+    /// memory.
     fn write_u32(&mut self, value: u32, address: AbiPointer) -> Result<(), StatusCode> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
         self.write_buffer(value_bytes, address).map_err(|err| {
-            self.data().log_error(&format!(
-                "Unable to write u32 value into guest memory: {:?}",
-                err
-            ));
+            self.data()
+                .log_error(&format!("Unable to write u32 value into guest memory: {:?}", err));
             StatusCode::InvalidArgument
         })
     }
@@ -418,9 +396,9 @@ pub struct WasmHandler {
 
 /// A trait for creating Wasm APIs that can be called from Wasm modules.
 ///
-/// An instance of [`WasmApiFactory`] is expected to live for the lifetime of the server, while
-/// each instance of the created [`WasmApi`] is expected to live for the lifetime of a single
-/// request.
+/// An instance of [`WasmApiFactory`] is expected to live for the lifetime of
+/// the server, while each instance of the created [`WasmApi`] is expected to
+/// live for the lifetime of a single request.
 pub trait WasmApiFactory {
     fn create_wasm_api(
         &self,
@@ -468,9 +446,7 @@ impl Handler for WasmHandler {
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<WasmHandler> {
         let logger = Arc::new(StandaloneLogger);
-        let wasm_api_factory = Arc::new(StdWasmApiFactory {
-            lookup_data_manager,
-        });
+        let wasm_api_factory = Arc::new(StdWasmApiFactory { lookup_data_manager });
 
         Self::create(wasm_module_bytes, wasm_api_factory, logger, observer)
     }
@@ -482,9 +458,7 @@ impl Handler for WasmHandler {
 
         let request = invoke_request.body;
         let response = Arc::new(Spinlock::new(Vec::new()));
-        let mut wasm_api = self
-            .wasm_api_factory
-            .create_wasm_api(request, response.clone());
+        let mut wasm_api = self.wasm_api_factory.create_wasm_api(request, response.clone());
         let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
@@ -507,8 +481,9 @@ impl Handler for WasmHandler {
             observer.wasm_initialization(now.elapsed());
         }
 
-        // Warning: if we implement constant-time execution policies, this metric can leak the real
-        // execution time, so be sure that any time padding is included in the metric.
+        // Warning: if we implement constant-time execution policies, this metric can
+        // leak the real execution time, so be sure that any time padding is
+        // included in the metric.
         #[cfg(feature = "std")]
         let now = Instant::now();
         let result = main.call(&mut store, ());
@@ -523,10 +498,10 @@ impl Handler for WasmHandler {
         );
 
         let response_bytes = response.lock().clone();
-        store.data().logger.log_sensitive(
-            Level::Info,
-            &format!("response bytes: {:?}", response_bytes),
-        );
+        store
+            .data()
+            .logger
+            .log_sensitive(Level::Info, &format!("response bytes: {:?}", response_bytes));
 
         let invoke_response =
             Response::create(oak_functions_abi::StatusCode::Success, response_bytes);
@@ -534,8 +509,9 @@ impl Handler for WasmHandler {
     }
 }
 
-/// A helper function to move between our specific result type `Result<(), StatusCode>` and the
-/// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
+/// A helper function to move between our specific result type `Result<(),
+/// StatusCode>` and the `wasmi` specific result type `Result<i32,
+/// wasmi::Trap>`.
 fn from_status_code(result: Result<(), StatusCode>) -> Result<i32, wasmi::core::Trap> {
     let status_code = result.err().unwrap_or(StatusCode::Ok);
     Ok(status_code as i32)

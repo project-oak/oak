@@ -35,16 +35,12 @@ fn init_logging() {
 static INIT_DEPENDENCIES: Lazy<anyhow::Result<()>> = Lazy::new(|| {
     // This takes a long time, but we want to make sure everything it up to date.
     // TODO(#4195): Stop dependencies from always being rebuilt.
-    duct::cmd!("just", "all_oak_containers_binaries",)
-        .dir(env!("WORKSPACE_ROOT"))
-        .run()?;
+    duct::cmd!("just", "all_oak_containers_binaries",).dir(env!("WORKSPACE_ROOT")).run()?;
     Ok(())
 });
 
 fn init_dependencies() {
-    INIT_DEPENDENCIES
-        .as_ref()
-        .expect("couldn't build dependencies");
+    INIT_DEPENDENCIES.as_ref().expect("couldn't build dependencies");
 }
 
 async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
@@ -57,10 +53,7 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
 
     init_dependencies();
 
-    let app_args = Args {
-        container_bundle,
-        ..Args::default_for_root(env!("WORKSPACE_ROOT"))
-    };
+    let app_args = Args { container_bundle, ..Args::default_for_root(env!("WORKSPACE_ROOT")) };
     let mut untrusted_app =
         oak_containers_hello_world_untrusted_app::UntrustedApp::create(app_args)
             .await
@@ -82,9 +75,7 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
         .expect("couldn't get group keys for key provisioning");
 
     let evidence = endorsed_evidence.evidence.expect("no evidence provided");
-    let endorsements = endorsed_evidence
-        .endorsements
-        .expect("no endorsements provided");
+    let endorsements = endorsed_evidence.endorsements.expect("no endorsements provided");
     let attestation_verifier = InsecureAttestationVerifier {};
     let attestation_results = attestation_verifier
         .verify(&evidence, &endorsements)
@@ -96,20 +87,20 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
         .encrypt("fancy test".as_bytes(), EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    let encrypted_response = untrusted_app
-        .hello(encrypted_request)
-        .await
-        .expect("couldn't get greeting");
+    let encrypted_response =
+        untrusted_app.hello(encrypted_request).await.expect("couldn't get greeting");
 
-    let (response, _) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("couldn't decrypt response");
+    let (response, _) =
+        client_encryptor.decrypt(&encrypted_response).expect("couldn't decrypt response");
     let greeting = String::from_utf8(response).expect("couldn't parse response");
 
     untrusted_app.kill().await;
 
     log::info!("Greeting: {}", greeting);
-    assert_eq!(greeting, "Hello from the trusted side, fancy test! Btw, the Trusted App has a config with a length of 0 bytes.");
+    assert_eq!(
+        greeting,
+        "Hello from the trusted side, fancy test! Btw, the Trusted App has a config with a length of 0 bytes."
+    );
 }
 
 async fn hello_world() {
@@ -130,10 +121,10 @@ async fn cc_hello_world() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn all_hello_world() {
     // Combine both test cases into one test to avoid running them in parallel.
-    // Nextest runs each test case in a separate process, which means that even though they appear
-    // to be sharing synchronized state, that state is not synchronized, and therefore they both end
-    // up rebuilding the dependencies through the Lazy cell above.
-    // See https://nexte.st/book/usage.html?highlight=process#limitations
+    // Nextest runs each test case in a separate process, which means that even
+    // though they appear to be sharing synchronized state, that state is not
+    // synchronized, and therefore they both end up rebuilding the dependencies
+    // through the Lazy cell above. See https://nexte.st/book/usage.html?highlight=process#limitations
     hello_world().await;
     cc_hello_world().await;
 }

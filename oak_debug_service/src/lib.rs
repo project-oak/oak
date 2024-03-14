@@ -54,16 +54,9 @@ impl DebugService for Service {
     ) -> tonic::Result<tonic::Response<CpuProfileResponse>> {
         let request = request.into_inner();
         let duration: Duration =
-            request
-                .duration
-                .unwrap_or_default()
-                .try_into()
-                .map_err(|err| {
-                    tonic::Status::invalid_argument(format!(
-                        "could not parse given duration: {}",
-                        err
-                    ))
-                })?;
+            request.duration.unwrap_or_default().try_into().map_err(|err| {
+                tonic::Status::invalid_argument(format!("could not parse given duration: {}", err))
+            })?;
 
         let profile = {
             let guard = pprof::ProfilerGuardBuilder::default()
@@ -84,17 +77,15 @@ impl DebugService for Service {
             })?
         };
 
-        // This is silly, but becauce of differing versions of Prost we have to serialize and
-        // deserialize the profile protobuf, although they are quite literally the same protobuf
-        // under the hood.
+        // This is silly, but becauce of differing versions of Prost we have to
+        // serialize and deserialize the profile protobuf, although they are
+        // quite literally the same protobuf under the hood.
         let encoded = profile.encode_to_vec();
         let profile = Profile::decode(&encoded[..]).map_err(|err| {
             tonic::Status::internal(format!("failed to deserialize profile proto: {}", err))
         })?;
 
-        Ok(tonic::Response::new(CpuProfileResponse {
-            profile: Some(profile),
-        }))
+        Ok(tonic::Response::new(CpuProfileResponse { profile: Some(profile) }))
     }
 }
 
@@ -111,8 +102,8 @@ mod tests {
                 duration: Some(Duration::from_secs(5).try_into().unwrap()),
             })),
             async {
-                // Burn some CPU doing something for the profiler to catch by computing some fake
-                // Fibonacci.
+                // Burn some CPU doing something for the profiler to catch by computing some
+                // fake Fibonacci.
                 let mut fib: Vec<u64> = Vec::with_capacity(1_000_000);
                 fib.push(0u64);
                 fib.push(1);
@@ -123,8 +114,8 @@ mod tests {
         );
         let resp = resp.unwrap().into_inner();
 
-        // What _exactly_ is in the profile is highly variable, but we should have _something_ in
-        // there.
+        // What _exactly_ is in the profile is highly variable, but we should have
+        // _something_ in there.
         assert!(!resp.profile.unwrap().sample.is_empty());
     }
 }

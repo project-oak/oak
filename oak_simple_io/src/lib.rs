@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Simple I/O driver for communication between the guest and the host via shared memory.
+//! Simple I/O driver for communication between the guest and the host via
+//! shared memory.
 
 #![no_std]
 #![feature(allocator_api)]
@@ -28,27 +29,23 @@ use x86_64::{PhysAddr, VirtAddr};
 
 /// I/O port descriptor for a buffer.
 pub struct BufferDescriptor {
-    /// I/O port to use for the most significant bytes of the buffer guest-physical address.
+    /// I/O port to use for the most significant bytes of the buffer
+    /// guest-physical address.
     buffer_msb_port: u16,
-    /// I/O port to use for the least significant bytes of the buffer guest-physical address.
+    /// I/O port to use for the least significant bytes of the buffer
+    /// guest-physical address.
     buffer_lsb_port: u16,
     /// I/O port to use for length of output messages.
     length_port: u16,
 }
 
 /// Default I/O ports for the output buffer.
-pub const DEFAULT_OUTPUT_BUFFER: BufferDescriptor = BufferDescriptor {
-    buffer_msb_port: 0x6421,
-    buffer_lsb_port: 0x6422,
-    length_port: 0x6423,
-};
+pub const DEFAULT_OUTPUT_BUFFER: BufferDescriptor =
+    BufferDescriptor { buffer_msb_port: 0x6421, buffer_lsb_port: 0x6422, length_port: 0x6423 };
 
 /// Default I/O ports for the input buffer.
-pub const DEFAULT_INPUT_BUFFER: BufferDescriptor = BufferDescriptor {
-    buffer_msb_port: 0x6424,
-    buffer_lsb_port: 0x6425,
-    length_port: 0x6426,
-};
+pub const DEFAULT_INPUT_BUFFER: BufferDescriptor =
+    BufferDescriptor { buffer_msb_port: 0x6424, buffer_lsb_port: 0x6425, length_port: 0x6426 };
 
 /// The length of the buffer that will be used for output messages.
 pub const OUTPUT_BUFFER_LENGTH: usize = 4096;
@@ -98,12 +95,7 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
             input.buffer_lsb_port,
         )?;
 
-        Ok(Self {
-            output_buffer,
-            input_buffer,
-            output_length_port,
-            input_length_port,
-        })
+        Ok(Self { output_buffer, input_buffer, output_length_port, input_length_port })
     }
 
     pub fn new_with_defaults<VP: Translator>(
@@ -120,25 +112,23 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
         )
     }
 
-    /// Reads the next available bytes from the input buffer, if any are available.
+    /// Reads the next available bytes from the input buffer, if any are
+    /// available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         // Safety: we read the value as a u32 and validate it before using it.
         let length = unsafe { self.input_length_port.try_read().ok()? } as usize;
 
-        // Use a memory fence to ensure the read from the device happens before the read from the
-        // buffer.
+        // Use a memory fence to ensure the read from the device happens before the read
+        // from the buffer.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
 
         if length == 0 {
             return None;
         }
 
-        // A length larger than the buffer size indicates a corrupt or malicious VMM device
-        // implementation. This is probably not recoverable, so panic.
-        assert!(
-            length <= INPUT_BUFFER_LENGTH,
-            "invalid simple IO input message length."
-        );
+        // A length larger than the buffer size indicates a corrupt or malicious VMM
+        // device implementation. This is probably not recoverable, so panic.
+        assert!(length <= INPUT_BUFFER_LENGTH, "invalid simple IO input message length.");
         let mut result = VecDeque::with_capacity(length);
         result.extend(&self.input_buffer[..length]);
 
@@ -156,16 +146,17 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
         let length = core::cmp::min(OUTPUT_BUFFER_LENGTH, data.len());
         self.output_buffer[..length].copy_from_slice(&data[..length]);
 
-        // Use a memory fence to ensure that the data is written to the buffer before we notify the
-        // VMM.
+        // Use a memory fence to ensure that the data is written to the buffer before we
+        // notify the VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
 
-        // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
+        // Safety: this usage is safe, as we as only write an uninterpreted u32 value to
+        // the port.
         unsafe {
             self.output_length_port.try_write(length as u32)?;
 
-            // Read back how much the host was able to consume from the buffer. If the count is less
-            // than 0, there was an error.
+            // Read back how much the host was able to consume from the buffer. If the count
+            // is less than 0, there was an error.
             self.output_length_port.try_read()
         }
         .and_then(|ret| {
@@ -188,11 +179,10 @@ fn write_address(
     let address = buffer_pointer.as_u64();
     let address_msb = (address >> 32) as u32;
     let address_lsb = address as u32;
-    // Safety: this usage is safe, as we as only write uninterpreted u32 values to the ports.
+    // Safety: this usage is safe, as we as only write uninterpreted u32 values to
+    // the ports.
     unsafe {
-        io_port_factory
-            .new_writer(msb_port)
-            .try_write(address_msb)?;
+        io_port_factory.new_writer(msb_port).try_write(address_msb)?;
         io_port_factory.new_writer(lsb_port).try_write(address_lsb)
     }
 }

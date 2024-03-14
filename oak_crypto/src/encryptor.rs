@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Implementation of the Bidirectional Hybrid Public Key Encryption (HPKE) scheme from RFC9180.
-//! <https://www.rfc-editor.org/rfc/rfc9180.html>
+//! Implementation of the Bidirectional Hybrid Public Key Encryption (HPKE)
+//! scheme from RFC9180. <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use alloc::vec::Vec;
@@ -31,12 +31,14 @@ use crate::{
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 
-/// Encryptor object for encrypting client requests that will be sent to the server and decrypting
-/// server responses that are received by the client. Each Encryptor object corresponds to a single
-/// crypto session between the client and the server.
+/// Encryptor object for encrypting client requests that will be sent to the
+/// server and decrypting server responses that are received by the client. Each
+/// Encryptor object corresponds to a single crypto session between the client
+/// and the server.
 ///
-/// Sequence numbers for requests and responses are incremented separately, meaning that there could
-/// be multiple responses per request and multiple requests per response.
+/// Sequence numbers for requests and responses are incremented separately,
+/// meaning that there could be multiple responses per request and multiple
+/// requests per response.
 pub struct ClientEncryptor {
     /// Encapsulated public key needed to establish a symmetric session key.
     /// Only sent in the initial request message of the session.
@@ -46,8 +48,8 @@ pub struct ClientEncryptor {
 
 impl ClientEncryptor {
     /// Creates an HPKE crypto context by generating an new ephemeral key pair.
-    /// The `serialized_server_public_key` must be a NIST P-256 SEC1 encoded point public key.
-    /// <https://secg.org/sec1-v2.pdf>
+    /// The `serialized_server_public_key` must be a NIST P-256 SEC1 encoded
+    /// point public key. <https://secg.org/sec1-v2.pdf>
     pub fn create(serialized_server_public_key: &[u8]) -> anyhow::Result<Self> {
         let (serialized_encapsulated_public_key, sender_context) =
             setup_base_sender(serialized_server_public_key, OAK_HPKE_INFO)
@@ -99,22 +101,20 @@ impl ClientEncryptor {
 
         let plaintext = self
             .sender_context
-            .open(
-                &nonce,
-                &encrypted_message.ciphertext,
-                &encrypted_message.associated_data,
-            )
+            .open(&nonce, &encrypted_message.ciphertext, &encrypted_message.associated_data)
             .context("couldn't decrypt response")?;
         Ok((plaintext, encrypted_message.associated_data.to_vec()))
     }
 }
 
-/// Encryptor object for decrypting client requests that are received by the server and encrypting
-/// server responses that will be sent back to the client. Each Encryptor object corresponds to a
-/// single crypto session between the client and the server.
+/// Encryptor object for decrypting client requests that are received by the
+/// server and encrypting server responses that will be sent back to the client.
+/// Each Encryptor object corresponds to a single crypto session between the
+/// client and the server.
 ///
-/// Sequence numbers for requests and responses are incremented separately, meaning that there could
-/// be multiple responses per request and multiple requests per response.
+/// Sequence numbers for requests and responses are incremented separately,
+/// meaning that there could be multiple responses per request and multiple
+/// requests per response.
 pub struct ServerEncryptor {
     recipient_context: RecipientContext,
 }
@@ -142,8 +142,8 @@ impl ServerEncryptor {
     /// Decrypts a [`EncryptedRequest`] proto message using AEAD.
     /// Returns a response encryptor, the message plaintext and associated data.
     /// <https://datatracker.ietf.org/doc/html/rfc5116>
-    // TODO(#4311): Merge `decrypt` and `decrypt_async` once there is `async` support in the
-    // Restricted Kernel.
+    // TODO(#4311): Merge `decrypt` and `decrypt_async` once there is `async`
+    // support in the Restricted Kernel.
     pub async fn decrypt_async<E: AsyncEncryptionKeyHandle + ?Sized>(
         encrypted_request: &EncryptedRequest,
         encryption_key_handle: &E,
@@ -178,11 +178,7 @@ impl ServerEncryptor {
 
         let plaintext = self
             .recipient_context
-            .open(
-                &nonce,
-                &encrypted_message.ciphertext,
-                &encrypted_message.associated_data,
-            )
+            .open(&nonce, &encrypted_message.ciphertext, &encrypted_message.associated_data)
             .context("couldn't decrypt request")?;
         Ok((plaintext, encrypted_message.associated_data.to_vec()))
     }

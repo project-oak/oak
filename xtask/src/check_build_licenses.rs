@@ -16,8 +16,8 @@
 
 use crate::internal::*;
 
-/// A [`Runnable`] command that checks for the existence of BUILD files without the necessary
-/// licenses declaration.
+/// A [`Runnable`] command that checks for the existence of BUILD files without
+/// the necessary licenses declaration.
 pub struct CheckBuildLicenses {
     path: String,
 }
@@ -40,9 +40,6 @@ impl Runnable for CheckBuildLicenses {
         } else {
             StatusResultValue::Error
         };
-        Box::new(SingleStatusResult {
-            value: result_value,
-            logs: String::new(),
-        })
+        Box::new(SingleStatusResult { value: result_value, logs: String::new() })
     }
 }

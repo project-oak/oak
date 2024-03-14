@@ -25,8 +25,9 @@ static mut ARGS: ArrayString<512> = ArrayString::new_const();
 
 /// Kernel arguments.
 ///
-/// The pattern for arguments is "key1 key2=val2 key3=val3". The tokenization is rather simple, so
-/// whitespace matters and there is no way to escape spaces right now.
+/// The pattern for arguments is "key1 key2=val2 key3=val3". The tokenization is
+/// rather simple, so whitespace matters and there is no way to escape spaces
+/// right now.
 pub struct Args {
     args: LazyCell<BTreeMap<&'static str, &'static str>>,
 }
@@ -34,8 +35,9 @@ pub struct Args {
 impl Args {
     /// Returns the full command line argument string.
     pub fn args(&self) -> &'static str {
-        // Safety: `Args::args()` can only be called after `init_args` is called. Ostensibly, we
-        // could cache this in a Lazy as well, but that's probably not worth it.
+        // Safety: `Args::args()` can only be called after `init_args` is called.
+        // Ostensibly, we could cache this in a Lazy as well, but that's
+        // probably not worth it.
         unsafe { ARGS.as_str() }
     }
 
@@ -47,30 +49,27 @@ impl Args {
 
 /// Buffers kernel arguments in a static variable.
 ///
-/// This function is intended to be called fairly early in the boot process, when we don't even
-/// have memory allocation available. This also means that we can't use anyhow::Result as the
-/// return value, as anyhow relies on allocation.
+/// This function is intended to be called fairly early in the boot process,
+/// when we don't even have memory allocation available. This also means that we
+/// can't use anyhow::Result as the return value, as anyhow relies on
+/// allocation.
 pub fn init_args(args: &CStr) -> core::result::Result<Args, &str> {
     let args = args
         .to_str()
         .map_err(|core::str::Utf8Error { .. }| "kernel arguments are not valid UTF-8")?;
-    // Safety: this is called once early in the initialization process from a single thread, so
-    // there will not be any concurrent writes.
+    // Safety: this is called once early in the initialization process from a single
+    // thread, so there will not be any concurrent writes.
     unsafe { ARGS.try_push_str(args) }
         .map_err(|arrayvec::CapacityError { .. }| "kernel arguments too long")?;
     // Safety: we've just populated ARGS, successfully, in the line just above.
-    Ok(Args {
-        args: LazyCell::new(|| split_args(unsafe { ARGS.as_str() })),
-    })
+    Ok(Args { args: LazyCell::new(|| split_args(unsafe { ARGS.as_str() })) })
 }
 
 fn split_args(args: &str) -> BTreeMap<&str, &str> {
     let mut m = BTreeMap::new();
-    args.split_whitespace()
-        .map(|x| x.split_once('=').unwrap_or((x, "")))
-        .for_each(|(k, v)| {
-            m.insert(k, v);
-        });
+    args.split_whitespace().map(|x| x.split_once('=').unwrap_or((x, ""))).for_each(|(k, v)| {
+        m.insert(k, v);
+    });
     m
 }
 

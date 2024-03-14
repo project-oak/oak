@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-/// Performs the minimum initialization required from the initial process on Linux to allow an
-/// application on an initial RAM disk to operate as expected.
+/// Performs the minimum initialization required from the initial process on
+/// Linux to allow an application on an initial RAM disk to operate as expected.
 ///
-/// This will eventually become a shared library to support more general workloads. For now we just
-/// do the minimum required to be able to run this Hello World application, which is nothing.
+/// This will eventually become a shared library to support more general
+/// workloads. For now we just do the minimum required to be able to run this
+/// Hello World application, which is nothing.
 pub fn init() -> anyhow::Result<()> {
-    // We don't need to do any initialization to just log to the console, so this is a placeholder
-    // for now. In future we will do basic initialization here:
+    // We don't need to do any initialization to just log to the console, so this is
+    // a placeholder for now. In future we will do basic initialization here:
     //
     // - Create mount points for pseudo file systems.
     // - Mount pseudo file systems.

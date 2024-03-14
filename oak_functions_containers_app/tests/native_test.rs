@@ -48,7 +48,8 @@ async fn test_native_handler() {
 
     lookup_data_manager.finish_next_lookup_data();
 
-    // This test fails right now because the library links in too many other libraries.
+    // This test fails right now because the library links in too many other
+    // libraries.
     /*
     let handler = NativeHandler::new_handler(&library, lookup_data_manager, None)
         .expect("failed to load test library");

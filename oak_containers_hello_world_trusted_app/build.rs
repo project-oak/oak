@@ -22,10 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/crypto/crypto.proto",
         ],
         "..",
-        CodegenOptions {
-            build_server: true,
-            ..Default::default()
-        },
+        CodegenOptions { build_server: true, ..Default::default() },
     )?;
 
     Ok(())

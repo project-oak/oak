@@ -27,9 +27,7 @@ pub fn shutdown() -> ! {
     // 1. Attempt the SEV-ES shutdown protocol, if we're under SEV-ES.
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
-        request_termination(TerminationRequest {
-            reason: TerminationReason::General,
-        });
+        request_termination(TerminationRequest { reason: TerminationReason::General });
     }
 
     // 2. If we're still here, attempt shutdown via i8042.
@@ -44,13 +42,11 @@ pub fn shutdown() -> ! {
         let _ = port.try_write(0xFE_u8);
     }
 
-    // 3. If we're still here, the gloves come off. Load a garbage IDT and cause #UD.
-    let idt = DescriptorTablePointer {
-        limit: 0,
-        base: VirtAddr::new(0x0),
-    };
-    // Safety: this is technically safe, as it will cause the machine to crash, and that's
-    // the intent.
+    // 3. If we're still here, the gloves come off. Load a garbage IDT and cause
+    //    #UD.
+    let idt = DescriptorTablePointer { limit: 0, base: VirtAddr::new(0x0) };
+    // Safety: this is technically safe, as it will cause the machine to crash, and
+    // that's the intent.
     unsafe {
         lidt(&idt);
         asm! {

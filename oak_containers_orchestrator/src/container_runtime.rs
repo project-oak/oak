@@ -38,12 +38,8 @@ pub async fn run(
 
     for entry in walkdir::WalkDir::new(container_dir) {
         let entry = entry?;
-        lchown(
-            entry.path(),
-            Some(runtime_uid.into()),
-            Some(runtime_gid.into()),
-        )
-        .context(format!("failed to chown path {:?}", entry.path()))?;
+        lchown(entry.path(), Some(runtime_uid.into()), Some(runtime_gid.into()))
+            .context(format!("failed to chown path {:?}", entry.path()))?;
     }
 
     log::info!("Setting up container");
@@ -92,10 +88,8 @@ pub async fn run(
 
     let mut start_trusted_app_cmd = {
         let mut cmd = tokio::process::Command::new("/bin/systemd-run");
-        let container_dir: &str = container_dir
-            .as_os_str()
-            .try_into()
-            .expect("invalid container path");
+        let container_dir: &str =
+            container_dir.as_os_str().try_into().expect("invalid container path");
         cmd.args([
             "--property=RuntimeDirectory=oakc",
             "--property=ProtectSystem=strict",
@@ -114,9 +108,10 @@ pub async fn run(
         cmd
     };
 
-    let status = start_trusted_app_cmd.status().await.context(format!(
-        "failed to run trusted app, cmd: {start_trusted_app_cmd:?}"
-    ))?;
+    let status = start_trusted_app_cmd
+        .status()
+        .await
+        .context(format!("failed to run trusted app, cmd: {start_trusted_app_cmd:?}"))?;
     log::info!("Container exited with status {status:?}");
 
     cancellation_token.cancel();

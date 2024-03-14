@@ -33,16 +33,18 @@ use crate::page::PageType;
 /// The firmware image gets loaded just below the 4GiB boundary.
 const FIRMWARE_TOP: PhysAddr = PhysAddr::new(0x1_0000_0000);
 
-/// The address of the first byte after the end of the legacy boot shadow firmware image.
+/// The address of the first byte after the end of the legacy boot shadow
+/// firmware image.
 ///
-/// To support legacy booting the last 128KiB of the firmware gets shadowed just below the end of
-/// 20-bit memory.
+/// To support legacy booting the last 128KiB of the firmware gets shadowed just
+/// below the end of 20-bit memory.
 const LEGACY_TOP: PhysAddr = PhysAddr::new(0x10_0000);
 
 /// The maximum size of the shadow firmware for legacy boot.
 const LEGACY_MAX_SIZE: usize = 128 * 1024;
 
-/// The reverse offset from the end of the firmware blob to the end of the GUID tables.
+/// The reverse offset from the end of the firmware blob to the end of the GUID
+/// tables.
 const GUID_TABLE_END_OFFSET: usize = 0x20;
 
 /// The size of the header of an entry in the GUID table.
@@ -58,7 +60,8 @@ const SEV_METADATA_ENTRY_SIZE: usize = 12;
 
 /// The footer GUID identifying the end of the GUID table.
 ///
-/// This matches the footer GUID used in OVMF (96b582de-1fb2-45f7-baea-a366c55a082d).
+/// This matches the footer GUID used in OVMF
+/// (96b582de-1fb2-45f7-baea-a366c55a082d).
 ///
 /// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm>.
 const GUID_TABLE_FOOTER_GUID: u128 = u128::from_le_bytes([
@@ -67,7 +70,8 @@ const GUID_TABLE_FOOTER_GUID: u128 = u128::from_le_bytes([
 
 /// The GUID identifying the SEV metadata GUID table entry.
 ///
-/// This matches the SEV metadata GUID used in OVMF (dc886566-984a-4798-A75e-5585a7bf67cc).
+/// This matches the SEV metadata GUID used in OVMF
+/// (dc886566-984a-4798-A75e-5585a7bf67cc).
 ///
 /// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm>.
 const SEV_MEATADATA_GUID: u128 = u128::from_le_bytes([
@@ -76,7 +80,8 @@ const SEV_MEATADATA_GUID: u128 = u128::from_le_bytes([
 
 /// The GUID identifying the SEV ES reset block GUID table entry.
 ///
-/// This matches the SEV ES reset block GUID used in OVMF (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
+/// This matches the SEV ES reset block GUID used in OVMF
+/// (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
 ///
 /// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm>.
 const SEV_ES_RESET_GUID: u128 = u128::from_le_bytes([
@@ -95,9 +100,11 @@ pub struct Stage0Info {
     bytes: Vec<u8>,
     /// The start address of the firmware ROM in guest memory.
     pub start_address: PhysAddr,
-    /// The start address of the legacy boot shadow of the firmware ROM in guest memory.
+    /// The start address of the legacy boot shadow of the firmware ROM in guest
+    /// memory.
     pub legacy_start_address: PhysAddr,
-    /// The offset into the firmware ROM image from where the legacy boot shadow starts.
+    /// The offset into the firmware ROM image from where the legacy boot shadow
+    /// starts.
     legacy_offset: usize,
 }
 
@@ -112,7 +119,8 @@ impl Stage0Info {
         &self.bytes[self.legacy_offset..]
     }
 
-    /// Gets the SEV-SNP specific pages defined in the firmware SEV metadata section entries.
+    /// Gets the SEV-SNP specific pages defined in the firmware SEV metadata
+    /// section entries.
     pub fn get_snp_pages(&self) -> Vec<SevMetadataPageInfo> {
         let sev_metadata_content = *self
             .parse_firmware_guid_table()
@@ -123,19 +131,15 @@ impl Stage0Info {
             size_of::<u32>(),
             "invalid length for SEV metadata entry"
         );
-        // We expect the SEV metadata entry in the GUID table to contain only 4 bytes that represent
-        // the 32-bit unsigned little-endian encoding of the reverse offset from the end of the
-        // firmware image to the start of the SEV metadata section.
+        // We expect the SEV metadata entry in the GUID table to contain only 4 bytes
+        // that represent the 32-bit unsigned little-endian encoding of the
+        // reverse offset from the end of the firmware image to the start of the
+        // SEV metadata section.
         let mut sev_metadata_offset: u32 = 0;
-        sev_metadata_offset
-            .as_bytes_mut()
-            .copy_from_slice(sev_metadata_content);
+        sev_metadata_offset.as_bytes_mut().copy_from_slice(sev_metadata_content);
         let sev_metadata_offset = sev_metadata_offset as usize;
         trace!("SEV metadata offset: {}", sev_metadata_offset);
-        assert!(
-            sev_metadata_offset < self.bytes.len(),
-            "invalid SEV metadata offset"
-        );
+        assert!(sev_metadata_offset < self.bytes.len(), "invalid SEV metadata offset");
         let sev_metadata_header_start = self.bytes.len() - sev_metadata_offset;
         let sev_metadata_header_end = sev_metadata_header_start + SEV_METADATA_HEADER_SIZE;
         let header = SevMetadataHeader::parse(
@@ -160,28 +164,25 @@ impl Stage0Info {
             size_of::<u32>(),
             "invalid length for SEV-ES reset block entry"
         );
-        // We expect the SEV-ES reset block entry in the GUID table to contain only 4 bytes that
-        // represent the 32-bit unsigned little-endian encoding of the reset address.
+        // We expect the SEV-ES reset block entry in the GUID table to contain only 4
+        // bytes that represent the 32-bit unsigned little-endian encoding of
+        // the reset address.
         let mut sev_es_reset_address: u32 = 0;
-        sev_es_reset_address
-            .as_bytes_mut()
-            .copy_from_slice(sev_es_reset_block_content);
+        sev_es_reset_address.as_bytes_mut().copy_from_slice(sev_es_reset_block_content);
         sev_es_reset_address.into()
     }
 
     /// Parses the GUID table from the firmware image as a map.
     ///
-    /// The GUID (represented as a u128) of each table entry is the key and the associated data of
-    /// the entry is the value.
+    /// The GUID (represented as a u128) of each table entry is the key and the
+    /// associated data of the entry is the value.
     fn parse_firmware_guid_table(&self) -> HashMap<u128, &[u8]> {
         let content = self.get_guid_table_content();
         let mut entry_end = content.len();
         let mut result = HashMap::new();
         while entry_end > GUID_TABLE_ENTRY_HEADER_SIZE {
-            let GuidTableEntryHeader {
-                guid: entry_guid,
-                size: entry_size,
-            } = GuidTableEntryHeader::parse(&content[..entry_end]);
+            let GuidTableEntryHeader { guid: entry_guid, size: entry_size } =
+                GuidTableEntryHeader::parse(&content[..entry_end]);
             assert!(entry_end >= entry_size as usize, "invalid entry size");
             let content_end = entry_end - GUID_TABLE_ENTRY_HEADER_SIZE;
             let content_start = entry_end - entry_size as usize;
@@ -204,10 +205,8 @@ impl Stage0Info {
         // We parse the GUID table from the end, starting at the footer.
         let table_end = self.bytes.len() - GUID_TABLE_END_OFFSET;
         trace!("GUID table end: {}", table_end);
-        let GuidTableEntryHeader {
-            guid: footer_guid,
-            size: table_size,
-        } = GuidTableEntryHeader::parse(&self.bytes[..table_end]);
+        let GuidTableEntryHeader { guid: footer_guid, size: table_size } =
+            GuidTableEntryHeader::parse(&self.bytes[..table_end]);
         assert_eq!(
             footer_guid, GUID_TABLE_FOOTER_GUID,
             "firmware image doesn't contain a valid GUID table"
@@ -228,12 +227,7 @@ impl Stage0Info {
         let legacy_size = size.min(LEGACY_MAX_SIZE);
         let legacy_start_address = LEGACY_TOP - legacy_size;
         let legacy_offset = size - legacy_size;
-        Self {
-            bytes,
-            start_address,
-            legacy_start_address,
-            legacy_offset,
-        }
+        Self { bytes, start_address, legacy_start_address, legacy_offset }
     }
 }
 
@@ -246,14 +240,12 @@ pub fn load_stage0(stage0_rom_path: PathBuf) -> anyhow::Result<Stage0Info> {
     let mut stage0_hasher = Sha256::new();
     stage0_hasher.update(&stage0_bytes);
     let stage0_sha256_digest = stage0_hasher.finalize();
-    info!(
-        "Stage0 digest: sha256:{}",
-        hex::encode(stage0_sha256_digest)
-    );
+    info!("Stage0 digest: sha256:{}", hex::encode(stage0_sha256_digest));
     Ok(Stage0Info::new(stage0_bytes))
 }
 
-/// Information about the pages specified in the firmware SEV metadata section entries.
+/// Information about the pages specified in the firmware SEV metadata section
+/// entries.
 ///
 /// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm>
 pub struct SevMetadataPageInfo {
@@ -276,30 +268,17 @@ impl SevMetadataPageInfo {
 
         let mut size: u32 = 0;
         size.as_bytes_mut().copy_from_slice(&bytes[4..8]);
-        assert_eq!(
-            (size as u64) % Size4KiB::SIZE,
-            0,
-            "invalid SEV metadata entry size"
-        );
+        assert_eq!((size as u64) % Size4KiB::SIZE, 0, "invalid SEV metadata entry size");
         let page_count = (size as usize) / (Size4KiB::SIZE as usize);
 
         let mut page_type: u32 = 0;
         page_type.as_bytes_mut().copy_from_slice(&bytes[8..12]);
-        trace!(
-            "Metadata page entry: base: {}, size: {}, page_type: {}",
-            base,
-            size,
-            page_type
-        );
+        trace!("Metadata page entry: base: {}, size: {}, page_type: {}", base, size, page_type);
         let page_type = SevMetadataPageType::from_repr(page_type)
             .expect("invalid SEV metadata page type")
             .into();
 
-        Self {
-            start_address,
-            page_count,
-            page_type,
-        }
+        Self { start_address, page_count, page_type }
     }
 }
 
@@ -326,7 +305,8 @@ impl From<SevMetadataPageType> for PageType {
     }
 }
 
-/// The instruction pointer and code segment base that will be set when a non-boot vCPU is reset.
+/// The instruction pointer and code segment base that will be set when a
+/// non-boot vCPU is reset.
 pub struct SevEsResetBlock {
     pub rip: u64,
     pub segment_base: u64,
@@ -336,7 +316,8 @@ impl From<u32> for SevEsResetBlock {
     fn from(value: u32) -> Self {
         // The instruction pointer is the two least significant bytes of the address.
         let rip = (value & 0x0000ffff) as u64;
-        // The code segment base is the address with the two least significant bytes zeroed out.
+        // The code segment base is the address with the two least significant bytes
+        // zeroed out.
         let segment_base = (value & 0xffff0000) as u64;
         Self { rip, segment_base }
     }
@@ -356,20 +337,18 @@ impl GuidTableEntryHeader {
         let mut guid: u128 = 0;
         let guid_end = bytes.len();
         let guid_start = guid_end - size_of::<u128>();
-        guid.as_bytes_mut()
-            .copy_from_slice(&bytes[guid_start..guid_end]);
+        guid.as_bytes_mut().copy_from_slice(&bytes[guid_start..guid_end]);
         let mut size: u16 = 0;
         let size_start = guid_start - size_of::<u16>();
-        size.as_bytes_mut()
-            .copy_from_slice(&bytes[size_start..guid_start]);
+        size.as_bytes_mut().copy_from_slice(&bytes[size_start..guid_start]);
         Self { guid, size }
     }
 }
 
 /// The header of the SEV metadata section.
 ///
-/// We validate the signature and version, but don't use it for anything else, so we don't need to
-/// store their values in the struct.
+/// We validate the signature and version, but don't use it for anything else,
+/// so we don't need to store their values in the struct.
 ///
 /// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm>
 struct SevMetadataHeader {
@@ -382,16 +361,10 @@ impl SevMetadataHeader {
         assert!(bytes.len() == SEV_METADATA_HEADER_SIZE);
         let mut signature: [u8; 4] = [0; 4];
         signature[..].copy_from_slice(&bytes[..4]);
-        assert_eq!(
-            signature, SEV_SECTION_SIGNATURE,
-            "invalid signature for SEV metadata section"
-        );
+        assert_eq!(signature, SEV_SECTION_SIGNATURE, "invalid signature for SEV metadata section");
         let mut version: u32 = 0;
         version.as_bytes_mut().copy_from_slice(&bytes[8..12]);
-        assert_eq!(
-            version, SEV_METADATA_VERSION,
-            "invalid version for SEV metadata section"
-        );
+        assert_eq!(version, SEV_METADATA_VERSION, "invalid version for SEV metadata section");
 
         let mut length: u32 = 0;
         length.as_bytes_mut().copy_from_slice(&bytes[4..8]);

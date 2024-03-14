@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Rust instruction wrappers for managing page state and interacting with the hypervisor.
+//! Rust instruction wrappers for managing page state and interacting with the
+//! hypervisor.
 
 use core::arch::asm;
 
@@ -51,8 +52,8 @@ pub enum InstructionError {
     FailPermission = 2,
     /// The page size does not match the page size entry in the RMP.
     FailSizeMismatch = 6,
-    /// The page validation status was not updated. This value is software defined and will not be
-    /// returned by the hardware instruction.
+    /// The page validation status was not updated. This value is software
+    /// defined and will not be returned by the hardware instruction.
     ValidationStatusNotUpdated = 255,
 }
 
@@ -69,8 +70,8 @@ pub fn pvalidate(
     let validated = validated as u32;
     let result: u32;
     let carry: u8;
-    // Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    // Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     unsafe {
         asm!(
             "pvalidate",
@@ -87,7 +88,8 @@ pub fn pvalidate(
         if carry == 0 {
             Ok(())
         } else {
-            // If the carry flag is not 0, it indicates that the validated state was not changed.
+            // If the carry flag is not 0, it indicates that the validated state was not
+            // changed.
             Err(InstructionError::ValidationStatusNotUpdated)
         }
     } else {
@@ -135,7 +137,8 @@ pub struct RmpPermission {
     pub vmsa: Vmsa,
     /// Padding to extend struct to 4 bytes in size.
     _reserved_0: u8,
-    /// Padding to extend struct to 8 bytes in size to enable reinterpreting as a u64.
+    /// Padding to extend struct to 8 bytes in size to enable reinterpreting as
+    /// a u64.
     _reserved_1: u32,
 }
 
@@ -143,9 +146,9 @@ static_assertions::assert_eq_size!(RmpPermission, u64);
 
 impl From<RmpPermission> for u64 {
     fn from(permission: RmpPermission) -> u64 {
-        // Safety: reinterpreting the struct as a u64 is safe because the types are guaranteed to
-        // have the same size and the struct is 8-byte aligned. We are not making any assumptions
-        // about the individual bits.
+        // Safety: reinterpreting the struct as a u64 is safe because the types are
+        // guaranteed to have the same size and the struct is 8-byte aligned. We
+        // are not making any assumptions about the individual bits.
         unsafe { core::mem::transmute(permission) }
     }
 }
@@ -179,8 +182,8 @@ pub fn rmpadjust(
     let page_size = page_size as u64;
     let permission: u64 = permission.into();
     let result: u64;
-    // Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    // Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     unsafe {
         asm!(
             "rmpadjust",
@@ -205,7 +208,8 @@ pub fn rmpadjust(
 ///
 /// # Safety
 ///
-/// If the page is not in `VALIDATED` state, calling this will cause an `#VC` exception.
+/// If the page is not in `VALIDATED` state, calling this will cause an `#VC`
+/// exception.
 #[inline]
 pub unsafe fn rmpquery(
     page_guest_physical_address: usize,
@@ -240,11 +244,12 @@ pub unsafe fn rmpquery(
 ///
 /// See the VMGEXIT instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
 pub fn vmgexit() {
-    // Safety: this call does not modify the guest memory contents, so does not violate memory
-    // safety.
+    // Safety: this call does not modify the guest memory contents, so does not
+    // violate memory safety.
     unsafe {
-        // The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
-        // VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.
+        // The REP instruction modifier changes the VMMCALL instruction to be equivalent
+        // to the VMGEXIT call. This is used as the assembler does not recognise
+        // the VMGEXIT mnemonic.
         asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
     }
 }

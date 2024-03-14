@@ -18,12 +18,12 @@ use x86_64::structures::paging::{page::PageRange, Page, PageSize};
 
 /// Extremely simple virtual memory address allocator using the bump algorithm.
 ///
-/// The main goal for this allocator is to provide pages for things like the kernel heap and kernel
-/// stack(s). As these data structures should live for the entire lifetime of the kernel, we don't
-/// implement deallocation.
+/// The main goal for this allocator is to provide pages for things like the
+/// kernel heap and kernel stack(s). As these data structures should live for
+/// the entire lifetime of the kernel, we don't implement deallocation.
 ///
-/// This allocator only hands out pages; mapping the pages to frames, as necessary, is for the
-/// caller.
+/// This allocator only hands out pages; mapping the pages to frames, as
+/// necessary, is for the caller.
 pub struct VirtualAddressAllocator<S: PageSize> {
     range: PageRange<S>,
     cursor: Page<S>,
@@ -31,10 +31,7 @@ pub struct VirtualAddressAllocator<S: PageSize> {
 
 impl<S: PageSize> VirtualAddressAllocator<S> {
     pub const fn new(range: PageRange<S>) -> Self {
-        Self {
-            range,
-            cursor: range.start,
-        }
+        Self { range, cursor: range.start }
     }
 
     pub fn allocate(&mut self, count: u64) -> Option<PageRange<S>> {

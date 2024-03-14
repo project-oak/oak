@@ -48,17 +48,12 @@ pub(crate) fn encrypt(
 
     // Encrypt message.
     cipher
-        .encrypt(
-            nonce.into(),
-            Payload {
-                msg: plaintext,
-                aad: associated_data,
-            },
-        )
+        .encrypt(nonce.into(), Payload { msg: plaintext, aad: associated_data })
         .map_err(|error| anyhow!("couldn't encrypt data: {}", error))
 }
 
-/// Decrypts `ciphertext` and authenticates `associated_data` using AES-GCM encryption scheme.
+/// Decrypts `ciphertext` and authenticates `associated_data` using AES-GCM
+/// encryption scheme.
 pub(crate) fn decrypt(
     secret_key: &AeadKey,
     nonce: &AeadNonce,
@@ -69,12 +64,6 @@ pub(crate) fn decrypt(
 
     // Decrypt message.
     cipher
-        .decrypt(
-            nonce.into(),
-            Payload {
-                msg: ciphertext,
-                aad: associated_data,
-            },
-        )
+        .decrypt(nonce.into(), Payload { msg: ciphertext, aad: associated_data })
         .map_err(|error| anyhow!("couldn't decrypt data: {}", error))
 }

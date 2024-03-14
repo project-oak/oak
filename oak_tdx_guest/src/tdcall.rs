@@ -54,8 +54,8 @@ bitflags! {
 
 /// Information about the TD's execution environment.
 ///
-/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub struct TdInfo {
     /// The effective GPA width. The "shared" bit is at position gpa_width - 1.
@@ -70,11 +70,11 @@ pub struct TdInfo {
     pub max_vcpus: u32,
 }
 
-/// Gets information about the TD's execution environment by calling the TDCALL[TDG.VP.INFO]
-/// leaf.
+/// Gets information about the TD's execution environment by calling the
+/// TDCALL[TDG.VP.INFO] leaf.
 ///
-/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub fn get_td_info() -> TdInfo {
     // The TDCALL leaf for TDG.VP.INFO.
@@ -84,14 +84,16 @@ pub fn get_td_info() -> TdInfo {
     let mut gpa_width: usize;
     let mut attributes: u64;
     let mut vcpu_info: u64;
-    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the GPA
-    // width in the first 6 bits. RDX returns the TD attributes. R8 contains the number of active or
-    // ready vCPUs in bits 0..32 and the maximum number of vCPUs in bits 32..64. R9, R10 and R11 are
-    // reserved for future use. We zero out all output registers in the input to make sure old
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX
+    // returns the GPA width in the first 6 bits. RDX returns the TD attributes.
+    // R8 contains the number of active or ready vCPUs in bits 0..32 and the
+    // maximum number of vCPUs in bits 32..64. R9, R10 and R11 are reserved for
+    // future use. We zero out all output registers in the input to make sure old
     // register values don't accidentally leak to the hypervisor.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     unsafe {
         asm!(
             "tdcall",
@@ -107,24 +109,16 @@ pub fn get_td_info() -> TdInfo {
         );
     }
     // According to the spec this instruction will always return 0 in RAX.
-    assert_eq!(
-        result, SUCCESS as i64,
-        "TDCALL[TDG.VP.INFO] returned an invalid result"
-    );
+    assert_eq!(result, SUCCESS as i64, "TDCALL[TDG.VP.INFO] returned an invalid result");
     let attributes = Attributes::from_bits(attributes).expect("invalid TD attributes");
     let (num_vcpus, max_vcpus) = split_u64(vcpu_info);
-    TdInfo {
-        gpa_width,
-        attributes,
-        num_vcpus,
-        max_vcpus,
-    }
+    TdInfo { gpa_width, attributes, num_vcpus, max_vcpus }
 }
 
 /// Information about a virtualization exception (#VE).
 ///
-/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub struct VeInfo {
     /// The exit reason.
@@ -141,11 +135,11 @@ pub struct VeInfo {
     pub instruction_info: u32,
 }
 
-/// Gets information about the recent virtualization exception (#VE) by calling the
-/// TDCALL[TDG.VP.VEINFO.GET] leaf.
+/// Gets information about the recent virtualization exception (#VE) by calling
+/// the TDCALL[TDG.VP.VEINFO.GET] leaf.
 ///
-/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)]( https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)]( https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub fn get_ve_info() -> Option<VeInfo> {
     // The TDCALL leaf for TDG.VP.VEINFO.GET.
@@ -160,14 +154,17 @@ pub fn get_ve_info() -> Option<VeInfo> {
     let mut guest_physical_address: u64;
     let mut instruction: u64;
 
-    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the exit
-    // reason. RDX returns the exit qualification. R8 returns the guest-linear address. R9 returns
-    // the guest-physical address. R10 returns the instructions length in bits 0..32 and the
-    // additional instruction info in bits 32..64. We zero out all output registers in the input to
-    // make sure old register values don't accidentally leak to the hypervisor.
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX
+    // returns the exit reason. RDX returns the exit qualification. R8 returns
+    // the guest-linear address. R9 returns the guest-physical address. R10
+    // returns the instructions length in bits 0..32 and the additional
+    // instruction info in bits 32..64. We zero out all output registers in the
+    // input to make sure old register values don't accidentally leak to the
+    // hypervisor.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
     unsafe {
         asm!(
             "tdcall",
@@ -186,11 +183,9 @@ pub fn get_ve_info() -> Option<VeInfo> {
         // No recent #VE.
         return None;
     }
-    // According to the spec this instruction will always return either 0 or NO_VE_INFO in RAX.
-    assert_eq!(
-        result, SUCCESS,
-        "TDCALL[TDG.VP.VEINFO.GET] returned an invalid result"
-    );
+    // According to the spec this instruction will always return either 0 or
+    // NO_VE_INFO in RAX.
+    assert_eq!(result, SUCCESS, "TDCALL[TDG.VP.VEINFO.GET] returned an invalid result");
 
     let exit_reason: u32 = exit_reason.try_into().expect("invalid exit reason");
     let (instruction_length, instruction_info) = split_u64(instruction);
@@ -225,7 +220,8 @@ pub enum TdxPageSize {
     Size1GiB = 2,
 }
 
-/// Trait for getting the associated `TdxPageSize` enum for a memory page of the given size.
+/// Trait for getting the associated `TdxPageSize` enum for a memory page of the
+/// given size.
 pub trait TdxSize {
     fn tdx_size() -> TdxPageSize;
 }
@@ -248,13 +244,13 @@ impl TdxSize for Size1GiB {
     }
 }
 
-/// Accepts a pending private memory page to make it usable in the guest, by calling the TDCALL
-/// [TDG.MEM.PAGE.ACCEPT] leaf.
+/// Accepts a pending private memory page to make it usable in the guest, by
+/// calling the TDCALL [TDG.MEM.PAGE.ACCEPT] leaf.
 ///
 /// This call also zeros the memory in the page.
 ///
-/// See section 2.4.7 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// See section 2.4.7 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), AcceptMemoryError> {
     // The TDCALL leaf for TDG.MEM.PAGE.ACCEPT.
@@ -264,12 +260,14 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
     let gpa = frame.start_address().as_u64();
     let page_size = S::tdx_size() as u64;
 
-    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The guest-physical
-    // address of the start of the memory page goes into RCX. The size of the page goes into RDX.
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The
+    // guest-physical address of the start of the memory page goes into RCX. The
+    // size of the page goes into RDX.
     //
-    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
-    // registers are specified, so no unspecified registers will be clobbered. The newly added page
-    // cannot be a previously accepted page, so it will not affect memory that is already in use.
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered. The newly added page cannot be a previously accepted page, so
+    // it will not affect memory that is already in use.
     unsafe {
         asm!(
             "tdcall",
@@ -282,8 +280,8 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
     }
 
     if result > 0 {
-        // According to the spec the result will either be 0 (Success) or one of the defined error
-        // values.
+        // According to the spec the result will either be 0 (Success) or one of the
+        // defined error values.
         return Err(AcceptMemoryError::from_repr(result)
             .expect("TDCALL[TDG.MEM.PAGE.ACCEPT] returned an invalid result"));
     }
@@ -291,15 +289,13 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
     Ok(())
 }
 
-/// Splits a 64-bit little-endian unsigned integer into two 32-bit little-endian unsigned integers.
+/// Splits a 64-bit little-endian unsigned integer into two 32-bit little-endian
+/// unsigned integers.
 ///
 /// The first value represents the lower 32-bits and the second the higher bits.
 fn split_u64(value: u64) -> (u32, u32) {
     const SIZE: usize = size_of::<u32>();
     let bytes = value.to_le_bytes();
     let (lower, higher) = bytes.split_array_ref::<SIZE>();
-    (
-        u32::from_le_bytes(*lower),
-        u32::from_le_bytes(higher.try_into().unwrap()),
-    )
+    (u32::from_le_bytes(*lower), u32::from_le_bytes(higher.try_into().unwrap()))
 }

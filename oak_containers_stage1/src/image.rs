@@ -29,12 +29,11 @@ pub async fn extract(buf: &[u8], dst: &Path) -> Result<()> {
 
 pub fn switch(init: &str) -> Result<!> {
     // On one hand, I feel like this function should be marked `unsafe` as this will
-    // unconditionally switch over to the new executable (if it succeeds) without any
-    // more Rust code executing. On the other hand, the return type is `!`, so you
-    // shouldn't expect the control to return.
-    let args: Vec<CString> = std::env::args_os()
-        .map(|arg| CString::new(arg.as_bytes()).unwrap())
-        .collect();
+    // unconditionally switch over to the new executable (if it succeeds) without
+    // any more Rust code executing. On the other hand, the return type is `!`,
+    // so you shouldn't expect the control to return.
+    let args: Vec<CString> =
+        std::env::args_os().map(|arg| CString::new(arg.as_bytes()).unwrap()).collect();
     execv(CString::new(init).unwrap().as_c_str(), &args[..])?;
     unreachable!()
 }

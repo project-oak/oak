@@ -212,9 +212,9 @@ fn device_read_once<const QUEUE_SIZE: usize>(
     used_elem.id = index as u32;
     used_elem.len = 0;
     virt_queue.used.idx += 1;
-    // Safety: we purposely use unsafe code to simulate the way the the device/VMM will interact
-    // with the memory. We treat the contents of the slice as data only and ensure we only pass
-    // valid addresses and sizes from the tests.
+    // Safety: we purposely use unsafe code to simulate the way the the device/VMM
+    // will interact with the memory. We treat the contents of the slice as data
+    // only and ensure we only pass valid addresses and sizes from the tests.
     let buffer = unsafe {
         let ptr = desc.addr.as_u64() as usize as *const u8;
         let len = desc.length as usize;
@@ -240,9 +240,9 @@ fn device_write<const QUEUE_SIZE: usize>(
     used_elem.id = index as u32;
     used_elem.len = len as u32;
     virt_queue.used.idx += 1;
-    // Safety: we purposely use unsafe code to simulate the way the the device/VMM will interact
-    // with the memory. We treat the contents of the slice as data only and ensure we only pass
-    // valid addresses and lengths from the tests.
+    // Safety: we purposely use unsafe code to simulate the way the the device/VMM
+    // will interact with the memory. We treat the contents of the slice as data
+    // only and ensure we only pass valid addresses and lengths from the tests.
     let buffer = unsafe {
         let ptr = desc.addr.as_u64() as usize as *mut u8;
         alloc::slice::from_raw_parts_mut(ptr, len)

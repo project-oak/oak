@@ -46,10 +46,8 @@ impl LauncherClient {
             .into_inner();
 
         let mut image_buf: Vec<u8> = Vec::new();
-        while let Some(mut load_response) = stream
-            .message()
-            .await
-            .context("couldn't load message from stream")?
+        while let Some(mut load_response) =
+            stream.message().await.context("couldn't load message from stream")?
         {
             image_buf.append(&mut load_response.image_chunk);
         }

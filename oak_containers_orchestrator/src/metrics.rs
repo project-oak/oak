@@ -132,12 +132,8 @@ impl SystemMetrics {
         let stats = procfs::KernelStats::current().unwrap();
 
         for (cpu, stats) in stats.cpu_time.iter().enumerate() {
-            let attributes = |mode| {
-                [
-                    KeyValue::new("cpu", cpu.to_string()),
-                    KeyValue::new("mode", mode),
-                ]
-            };
+            let attributes =
+                |mode| [KeyValue::new("cpu", cpu.to_string()), KeyValue::new("mode", mode)];
 
             counter.observe(stats.user, &attributes("user"));
             counter.observe(stats.idle, &attributes("idle"));
