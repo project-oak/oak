@@ -37,7 +37,6 @@ lazy_static::lazy_static! {
   };
 }
 
-#[cfg(feature = "mock_sdk")]
 fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),

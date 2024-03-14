@@ -32,7 +32,7 @@ const NOW_UTC_MILLIS: i64 = 1698829200000;
 #[test]
 fn verify_mock_dice_chain() {
     let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
             .expect("failed to create mock provider");
     let mock_evidence = mock_evidence_provider.get_evidence();
 
@@ -49,7 +49,7 @@ fn verify_mock_dice_chain() {
 #[test]
 fn verify_mock_evidence() {
     let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
             .expect("failed to create mock provider");
     let evidence = evidence_to_proto(mock_evidence_provider.get_evidence().clone())
         .expect("failed to convert evidence to proto");
