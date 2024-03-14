@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Synchronization utils.
+
 use core::{
     cell::UnsafeCell,
     mem::MaybeUninit,

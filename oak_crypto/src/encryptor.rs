@@ -18,130 +18,18 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::vec::Vec;
 
 use anyhow::Context;
-use async_trait::async_trait;
-use hpke::Deserializable;
 
 use crate::{
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
     hpke::{
-        deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
-        PrivateKey, PublicKey, RecipientContext, SenderContext,
+        deserialize_nonce, generate_random_nonce, setup_base_sender, RecipientContext,
+        SenderContext, OAK_HPKE_INFO,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
-
-/// Info string used by Hybrid Public Key Encryption;
-pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
-
-pub struct EncryptionKeyProvider {
-    key_pair: KeyPair,
-}
-
-impl Default for EncryptionKeyProvider {
-    fn default() -> Self {
-        Self::generate()
-    }
-}
-
-impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for EncryptionKeyProvider {
-    type Error = anyhow::Error;
-    fn try_from(
-        dice_data: &oak_dice::evidence::RestrictedKernelDiceData,
-    ) -> Result<Self, Self::Error> {
-        let claims = dice_data
-            .evidence
-            .application_keys
-            .claims()
-            .map_err(|err| {
-                anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
-            })?;
-        let private_key = PrivateKey::from_bytes(
-            &dice_data.application_private_keys.encryption_private_key
-                [..oak_dice::evidence::X25519_PRIVATE_KEY_SIZE],
-        )
-        .map_err(|error| anyhow::anyhow!("couldn't deserialize private key: {}", error))?;
-        let public_key = {
-            let cose_key =
-                oak_dice::cert::get_public_key_from_claims_set(&claims).map_err(|err| {
-                    anyhow::anyhow!("couldn't get public key from certificate: {err}")
-                })?;
-            oak_dice::cert::cose_key_to_hpke_public_key(&cose_key)
-                .map_err(|err| anyhow::anyhow!("couldn't extract public key: {err}"))?
-        };
-        let encryption_key_provider = EncryptionKeyProvider::new(
-            private_key,
-            PublicKey::from_bytes(&public_key)
-                .map_err(|err| anyhow::anyhow!("couldn't decode public key: {err}"))?,
-        );
-        Ok(encryption_key_provider)
-    }
-}
-
-// TODO(#4513): Merge `EncryptionKeyProvider` and `hpke::KeyPair` into `EncryptionKey`.
-impl EncryptionKeyProvider {
-    /// Creates a crypto provider with a newly generated key pair.
-    pub fn generate() -> Self {
-        Self {
-            key_pair: KeyPair::generate(),
-        }
-    }
-
-    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
-        Self {
-            key_pair: KeyPair::new(private_key, public_key),
-        }
-    }
-
-    pub fn get_private_key(&self) -> Vec<u8> {
-        // TODO(#4513): Implement Rust protections for the private key.
-        self.key_pair.get_private_key()
-    }
-
-    /// Returns a NIST P-256 SEC1 encoded point public key.
-    /// <https://secg.org/sec1-v2.pdf>
-    pub fn get_serialized_public_key(&self) -> Vec<u8> {
-        self.key_pair.get_serialized_public_key()
-    }
-}
-
-/// Exposes the ability to derive a session key from the provided encapsulated private key,
-/// using a private key that has been endorsed in the Attestation Evidence.
-pub trait EncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext>;
-}
-
-impl EncryptionKeyHandle for EncryptionKeyProvider {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
-            .context("couldn't generate recipient crypto context")
-    }
-}
-
-#[async_trait]
-pub trait AsyncEncryptionKeyHandle {
-    async fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext>;
-}
-
-#[async_trait]
-impl AsyncEncryptionKeyHandle for EncryptionKeyProvider {
-    async fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        (self as &dyn EncryptionKeyHandle).generate_recipient_context(encapsulated_public_key)
-    }
-}
 
 /// Encryptor object for encrypting client requests that will be sent to the server and decrypting
 /// server responses that are received by the client. Each Encryptor object corresponds to a single

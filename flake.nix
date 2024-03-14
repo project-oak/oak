@@ -25,6 +25,36 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
+          linux_kernel_upstream = builtins.fetchurl {
+            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.6.tar.xz";
+            sha256 = "1lrp7pwnxnqyy8c2l4n4nz997039gbnssrfm8ss8kl3h2c7fr2g4";
+          };
+          # TODO: b/328294742 - This derivation does not currently compile correctly, but it is a starting point.
+          oak_containers_kernel = pkgs.stdenv.mkDerivation {
+            name = "oak_containers_kernel";
+            src = ./oak_containers_kernel;
+            buildInputs = with pkgs; [
+              cowsay
+              curl
+              flex
+              bison
+              bc
+              libelf
+              elfutils
+              glibc
+              glibc.static
+              cpio
+            ];
+            baseInputs = [
+              linux_kernel_upstream
+            ];
+            buildPhase = ''
+              make target/vmlinux
+              cp target/vmlinux $out
+            '';
+            installPhase = ''
+              '';
+          };
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -115,7 +145,7 @@
             # manually specify its fully qualified path.
             prettier = with pkgs; writeShellScriptBin "prettier" ''
               ${nodePackages.prettier}/bin/prettier \
-              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/api.js" \
+              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/index.js" \
               "$@"
             '';
             # Minimal shell with only the dependencies needed to run the format and check-format
@@ -150,6 +180,9 @@
             # Shell for building Oak Containers kernel and system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
+              shellHook = ''
+                export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+              '';
               inputsFrom = [
                 base
                 bazelShell

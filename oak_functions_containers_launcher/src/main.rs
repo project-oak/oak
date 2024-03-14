@@ -17,8 +17,15 @@ use std::net::{Ipv6Addr, SocketAddr};
 
 use anyhow::Context;
 use clap::Parser;
-use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
+use oak_containers_launcher::ChannelType;
+use oak_functions_containers_launcher::proto::oak::functions::{
+    config::{
+        application_config::CommunicationChannel, ApplicationConfig, VsockCommunicationChannel,
+    },
+    InitializeRequest,
+};
 use oak_functions_launcher::LookupDataConfig;
+use prost::Message;
 use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]
@@ -33,7 +40,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
-    let args = Args::parse();
+    let mut args = Args::parse();
 
     let lookup_data_config = LookupDataConfig {
         lookup_data_path: args.functions_args.lookup_data,
@@ -43,10 +50,24 @@ async fn main() -> Result<(), anyhow::Error> {
         max_chunk_size: ByteUnit::Mebibyte(4),
     };
 
+    let mut config = ApplicationConfig::default();
+    if args.containers_args.communication_channel == ChannelType::VirtioVsock {
+        config.communication_channel = Some(CommunicationChannel::VsockChannel(
+            VsockCommunicationChannel::default(),
+        ));
+
+        // If no explicit CID was specified, override it to be the current process ID.
+        args.containers_args
+            .qemu_params
+            .virtio_guest_cid
+            .get_or_insert_with(std::process::id);
+    }
+    args.containers_args.application_config = config.encode_to_vec();
+
     let mut untrusted_app =
         oak_functions_containers_launcher::UntrustedApp::create(args.containers_args)
             .await
-            .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
+            .context("couldn't create untrusted launcher")?;
 
     let wasm_bytes = tokio::fs::read(&args.functions_args.wasm)
         .await
@@ -81,15 +102,6 @@ async fn main() -> Result<(), anyhow::Error> {
         .endorsements
         .context("endorsed evidence message doesn't contain endorsements")?;
 
-    // TODO(#4627): Remove deprecated attestation evidence.
-    #[allow(deprecated)]
-    let deprecated_evidence = endorsed_evidence.attestation_evidence.unwrap();
-
-    log::info!(
-        "obtained public key ({} bytes)",
-        deprecated_evidence.encryption_public_key.len()
-    );
-
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
 
     let server_future = oak_functions_containers_launcher::server::new(
@@ -97,8 +109,6 @@ async fn main() -> Result<(), anyhow::Error> {
         untrusted_app.oak_functions_client.clone(),
         evidence,
         endorsements,
-        deprecated_evidence.encryption_public_key.clone(),
-        deprecated_evidence.attestation.clone(),
     );
 
     // Wait until something dies or we get a signal to terminate.

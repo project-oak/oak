@@ -28,15 +28,15 @@ use crate::{
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
     },
-    wasm, Observer,
+    Handler, Observer,
 };
 
-pub struct OakFunctionsInstance {
+pub struct OakFunctionsInstance<H: Handler> {
     lookup_data_manager: Arc<LookupDataManager>,
-    wasm_handler: wasm::WasmHandler,
+    wasm_handler: H::HandlerType,
 }
 
-impl OakFunctionsInstance {
+impl<H: Handler> OakFunctionsInstance<H> {
     /// See [`crate::proto::oak::functions::OakFunctions::initialize`].
     pub fn new(
         request: &InitializeRequest,
@@ -45,13 +45,14 @@ impl OakFunctionsInstance {
         let lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         let wasm_handler =
-            wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone(), observer)
-                .map_err(|err| {
+            H::new_handler(&request.wasm_module, lookup_data_manager.clone(), observer).map_err(
+                |err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         format!("couldn't initialize Wasm handler: {:?}", err),
                     )
-                })?;
+                },
+            )?;
         Ok(Self {
             lookup_data_manager,
             wasm_handler,
@@ -79,9 +80,13 @@ impl OakFunctionsInstance {
         Ok(ExtendNextLookupDataResponse {})
     }
 
-    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+    pub fn extend_lookup_data_chunk(
+        &self,
+        chunk: LookupDataChunk,
+    ) -> Result<(), micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(chunk))
+            .extend_next_lookup_data(to_data(chunk));
+        Ok(())
     }
 
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].

@@ -78,22 +78,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )),
     };
 
-    #[allow(deprecated)]
-    let public_key_info = initialize_response
-        .public_key_info
-        .expect("no public key info returned");
-    log::info!(
-        "obtained public key ({} bytes)",
-        public_key_info.public_key.len()
-    );
-
     let server_future = oak_functions_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.functions_params.port)),
         connector_handle,
         evidence,
         endorsements,
-        public_key_info.public_key,
-        public_key_info.attestation,
     );
 
     // Wait until something dies or we get a signal to terminate.

@@ -58,12 +58,7 @@ impl AttestationReport {
             .get_flags()
             .ok_or("Failed to parse flags")?;
 
-        Ok(policy_flags.bits() & PolicyFlags::DEBUG.bits() != 0)
-    }
-
-    /// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
-    pub fn get_signature_algo(&self) -> Option<SigningAlgorithm> {
-        SigningAlgorithm::from_repr(self.data.signature_algo)
+        Ok(policy_flags.contains(PolicyFlags::DEBUG))
     }
 }
 
@@ -173,6 +168,11 @@ impl AttestationReportData {
         AuthorKey::from_repr(self.author_key_en)
     }
 
+    /// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    pub fn get_signature_algo(&self) -> Option<SigningAlgorithm> {
+        SigningAlgorithm::from_repr(self.signature_algo)
+    }
+
     /// Checks that fields with specific expected values or ranges are valid and the reserved bytes
     /// are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
@@ -192,7 +192,7 @@ impl AttestationReportData {
         if self._reserved_3.iter().any(|&value| value != 0) {
             return Err("nonzero value in _reserved_3");
         }
-        if self.signature_algo != SigningAlgorithm::EcdsaP384Sha384 as u32 {
+        if self.get_signature_algo().is_none() {
             return Err("invalid signature algorithm");
         }
         if self.get_platform_info().is_none() {
@@ -219,7 +219,7 @@ bitflags! {
 /// The signing algorithm used for the report signature.
 ///
 /// See Table 117 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningAlgorithm {
     /// Invalid.

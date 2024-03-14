@@ -31,6 +31,5 @@ pub mod proto {
     }
 }
 
-pub mod attester;
 pub mod dice;
 pub mod handler;

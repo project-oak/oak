@@ -210,9 +210,10 @@ pub fn stage0_dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceDa
 
 fn tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -> TeePlatform {
     match src {
+        oak_dice::evidence::TeePlatform::Unspecified => TeePlatform::Unspecified,
         oak_dice::evidence::TeePlatform::AmdSevSnp => TeePlatform::AmdSevSnp,
         oak_dice::evidence::TeePlatform::IntelTdx => TeePlatform::IntelTdx,
-        oak_dice::evidence::TeePlatform::Unspecified => TeePlatform::Unspecified,
+        oak_dice::evidence::TeePlatform::None => TeePlatform::None,
     }
 }
 

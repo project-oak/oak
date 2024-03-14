@@ -18,11 +18,10 @@ package com.google.oak.transport;
 
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
-import com.google.oak.session.v1.AttestationBundle;
-import com.google.oak.session.v1.GetPublicKeyRequest;
-import com.google.oak.session.v1.GetPublicKeyResponse;
+import com.google.oak.session.v1.EndorsedEvidence;
+import com.google.oak.session.v1.GetEndorsedEvidenceRequest;
+import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.InvokeRequest;
-import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
@@ -61,14 +60,15 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   /**
    * Returns evidence about the trustworthiness of a remote server.
    *
-   * @return {@code AttestationBundle} wrapped in a {@code Result}
+   * @return {@code EndorsedEvidence} wrapped in a {@code Result}
    */
   @Override
-  public Result<AttestationBundle, String> getEvidence() {
-    RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-                                        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
-                                        .build();
-    logger.log(Level.INFO, "sending get public key request: " + requestWrapper);
+  public Result<EndorsedEvidence, String> getEndorsedEvidence() {
+    RequestWrapper requestWrapper =
+        RequestWrapper.newBuilder()
+            .setGetEndorsedEvidenceRequest(GetEndorsedEvidenceRequest.newBuilder())
+            .build();
+    logger.log(Level.INFO, "sending get endorsed evidence request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
@@ -83,10 +83,10 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       return Result.error("No response message received");
     }
 
-    logger.log(Level.INFO, "received get public key response: " + responseWrapper);
-    GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
+    logger.log(Level.INFO, "received get endorsed evidence response: " + responseWrapper);
+    GetEndorsedEvidenceResponse response = responseWrapper.getGetEndorsedEvidenceResponse();
 
-    return Result.success(response.getAttestationBundle());
+    return Result.success(response.getEndorsedEvidence());
   }
 
   /**

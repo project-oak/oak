@@ -20,17 +20,36 @@
 
 extern crate alloc;
 
-use oak_channel::basic_framed::load_raw;
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_dice::evidence::Stage0DiceData;
+use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD};
+use oak_restricted_kernel_orchestrator::AttestedApp;
+use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
+use zerocopy::{AsBytes, FromZeroes};
+use zeroize::Zeroize;
+
+fn read_stage0_dice_data() -> Stage0DiceData {
+    let mut result = Stage0DiceData::new_zeroed();
+    let buffer = result.as_bytes_mut();
+    let len = syscall::read(DICE_DATA_FD, buffer).expect("failed to read dice data");
+    assert!(len == buffer.len(), "invalid dice data size");
+    result
+}
 
 #[entrypoint]
 fn start() -> ! {
-    log::info!("Orchestrator will load enclave app binary",);
-    let mut channel = FileDescriptorChannel::default();
-    let app = load_raw::<FileDescriptorChannel, 4096>(&mut channel).expect("failed to load");
-    log::info!(
-        "Orchestrator loaded enclave app binary, size: {}",
-        app.len()
-    );
-    unimplemented!();
+    let mut attested_app = {
+        let stage0_dice_data = read_stage0_dice_data();
+        let channel = FileDescriptorChannel::default();
+        AttestedApp::load_and_attest(channel, stage0_dice_data)
+    };
+
+    syscall::write(DERIVED_KEY_FD, attested_app.derived_key.as_bytes())
+        .expect("failed to write derived key");
+    attested_app.derived_key.as_bytes_mut().zeroize();
+    syscall::write(DICE_DATA_FD, attested_app.dice_data.as_bytes())
+        .expect("failed to write dice data");
+    attested_app.dice_data.as_bytes_mut().zeroize();
+
+    log::info!("Exiting and launching application.");
+    syscall::unstable_switch_proccess(attested_app.elf_binary.as_slice())
 }

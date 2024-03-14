@@ -42,18 +42,13 @@ use tokio::{
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
-use crate::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        v1::{
-            hostlib_key_provisioning_server::{
-                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
-            },
-            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-        },
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+use crate::proto::oak::containers::{
+    launcher_server::{Launcher, LauncherServer},
+    v1::{
+        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
+        GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
     },
-    session::v1::AttestationEvidence,
+    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
 };
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
@@ -66,10 +61,9 @@ type GetImageResponseStream = Pin<Box<dyn Stream<Item = Result<GetImageResponse,
 struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: Option<std::path::PathBuf>,
+    application_config: Vec<u8>,
     // Will be used to send the Attestation Evidence to the Launcher.
-    // TODO(#4627): Remove old `AttestationEvidence` message.
-    attestation_evidence_sender: Mutex<Option<Sender<(AttestationEvidence, Evidence)>>>,
+    evidence_sender: Mutex<Option<Sender<Evidence>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     app_ready_notifier: Mutex<Option<Sender<()>>>,
@@ -144,18 +138,9 @@ impl Launcher for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
-        match &self.application_config {
-            Some(config_path) => {
-                let application_config_file = tokio::fs::File::open(&config_path).await?;
-                let mut buffer = Vec::new();
-                let mut reader = BufReader::new(application_config_file);
-                reader.read_to_end(&mut buffer).await?;
-                Ok(tonic::Response::new(GetApplicationConfigResponse {
-                    config: buffer,
-                }))
-            }
-            None => Ok(tonic::Response::new(GetApplicationConfigResponse::default())),
-        }
+        Ok(tonic::Response::new(GetApplicationConfigResponse {
+            config: self.application_config.clone(),
+        }))
     }
 
     async fn send_attestation_evidence(
@@ -166,15 +151,8 @@ impl Launcher for LauncherServerImplementation {
         let evidence = request.dice_evidence.ok_or_else(|| {
             tonic::Status::internal("send_attestation_evidence_request doesn't have evidence")
         })?;
-        // TODO(#4627): Remove old `AttestationEvidence` message.
-        #[allow(deprecated)]
-        let deprecated_evidence = request.evidence.ok_or_else(|| {
-            tonic::Status::internal(
-                "send_attestation_evidence_request doesn't have deprecated evidence",
-            )
-        })?;
 
-        self.attestation_evidence_sender
+        self.evidence_sender
             .lock()
             .map_err(|err| {
                 tonic::Status::internal(format!(
@@ -185,7 +163,7 @@ impl Launcher for LauncherServerImplementation {
             .ok_or_else(|| {
                 tonic::Status::invalid_argument("app has already sent an attestation evidence")
             })?
-            .send((deprecated_evidence, evidence))
+            .send(evidence)
             .map_err(|_err| {
                 tonic::Status::internal("couldn't send attestation evidence".to_string())
             })?;
@@ -297,8 +275,8 @@ pub async fn new(
     listener: TcpListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    application_config: Option<std::path::PathBuf>,
-    attestation_evidence_sender: Sender<(AttestationEvidence, Evidence)>,
+    application_config: Vec<u8>,
+    evidence_sender: Sender<Evidence>,
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
@@ -306,7 +284,7 @@ pub async fn new(
         system_image,
         container_bundle,
         application_config,
-        attestation_evidence_sender: Mutex::new(Some(attestation_evidence_sender)),
+        evidence_sender: Mutex::new(Some(evidence_sender)),
         app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
     });
     Server::builder()

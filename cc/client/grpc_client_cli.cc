@@ -19,8 +19,8 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/log/log.h"
+#include "cc/attestation/verification/insecure_attestation_verifier.h"
 #include "cc/client/client.h"
-#include "cc/remote_attestation/insecure_attestation_verifier.h"
 #include "cc/transport/grpc_streaming_transport.h"
 #include "grpcpp/channel.h"
 #include "grpcpp/client_context.h"
@@ -34,8 +34,8 @@ using ::grpc::ClientContext;
 using ::grpc::ClientReaderWriter;
 using ::grpc::CreateChannel;
 using ::grpc::InsecureChannelCredentials;
+using ::oak::attestation::verification::InsecureAttestationVerifier;
 using ::oak::client::OakClient;
-using ::oak::remote_attestation::InsecureAttestationVerifier;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 using ::oak::session::v1::StreamingSession;

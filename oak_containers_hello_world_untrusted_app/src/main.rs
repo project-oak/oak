@@ -15,6 +15,7 @@
 
 use anyhow::Context;
 use clap::Parser;
+use oak_client::verifier::{AttestationVerifier, InsecureAttestationVerifier};
 use oak_crypto::encryptor::ClientEncryptor;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
@@ -32,13 +33,17 @@ async fn main() -> Result<(), anyhow::Error> {
         .get_endorsed_evidence()
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get endorsed evidence: {}", error))?;
-    #[allow(deprecated)]
-    let encryption_public_key = endorsed_evidence
-        .attestation_evidence
-        .context("no attestation evidence provided")?
-        .encryption_public_key;
+    let evidence = endorsed_evidence.evidence.context("no evidence provided")?;
+    let endorsements = endorsed_evidence
+        .endorsements
+        .context("no endorsements provided")?;
 
-    let mut client_encryptor = ClientEncryptor::create(&encryption_public_key)
+    let attestation_verifier = InsecureAttestationVerifier {};
+    let attestation_results = attestation_verifier
+        .verify(&evidence, &endorsements)
+        .context("couldn't verify endorsed evidence")?;
+
+    let mut client_encryptor = ClientEncryptor::create(&attestation_results.encryption_public_key)
         .context("couldn't create client encryptor")?;
     let encrypted_request = client_encryptor
         .encrypt("Untrusted App".as_bytes(), EMPTY_ASSOCIATED_DATA)

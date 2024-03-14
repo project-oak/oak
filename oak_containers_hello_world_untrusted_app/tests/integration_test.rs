@@ -17,7 +17,8 @@
 
 use std::sync::Once;
 
-use oak_containers_launcher::Args;
+use oak_client::verifier::{AttestationVerifier, InsecureAttestationVerifier};
+use oak_containers_launcher::{proto::oak::key_provisioning::v1::GetGroupKeysRequest, Args};
 use oak_crypto::encryptor::ClientEncryptor;
 use once_cell::sync::Lazy;
 
@@ -68,14 +69,29 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     let get_endorsed_evidence_result = untrusted_app.get_endorsed_evidence().await;
     assert!(get_endorsed_evidence_result.is_ok());
     let endorsed_evidence = get_endorsed_evidence_result.unwrap();
-    #[allow(deprecated)]
-    let encryption_public_key = endorsed_evidence
-        .attestation_evidence
-        .expect("no attestation evidence provided")
-        .encryption_public_key;
 
-    let mut client_encryptor =
-        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
+    // Use enclave's own endorsed evidence to verify that Key Provisioning works
+    // and returns an encrypted key.
+    let get_group_keys_request = GetGroupKeysRequest {
+        evidence: endorsed_evidence.evidence.clone(),
+        endorsements: endorsed_evidence.endorsements.clone(),
+    };
+    untrusted_app
+        .get_group_keys(get_group_keys_request)
+        .await
+        .expect("couldn't get group keys for key provisioning");
+
+    let evidence = endorsed_evidence.evidence.expect("no evidence provided");
+    let endorsements = endorsed_evidence
+        .endorsements
+        .expect("no endorsements provided");
+    let attestation_verifier = InsecureAttestationVerifier {};
+    let attestation_results = attestation_verifier
+        .verify(&evidence, &endorsements)
+        .expect("couldn't verify endorsed evidence");
+
+    let mut client_encryptor = ClientEncryptor::create(&attestation_results.encryption_public_key)
+        .expect("couldn't create client encryptor");
     let encrypted_request = client_encryptor
         .encrypt("fancy test".as_bytes(), EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");

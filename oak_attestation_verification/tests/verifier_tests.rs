@@ -21,10 +21,13 @@ use oak_attestation_verification::{
     verifier::{to_attestation_results, verify},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
-    ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
-    Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
-    OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+    attestation_results::Status, binary_reference_value, kernel_binary_reference_value,
+    reference_values, AmdSevReferenceValues, ApplicationLayerEndorsements,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+    ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements, Evidence,
+    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+    KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
     RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringReferenceValue,
     SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
 };
@@ -33,30 +36,46 @@ use prost::Message;
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
-const VCEK_MILAN_CERT_DER: &str = "testdata/vcek_milan.der";
+const CONTAINERS_VCEK_MILAN_CERT_DER: &str = "testdata/oc_vcek_milan.der";
+const RK_VCEK_MILAN_CERT_DER: &str = "testdata/rk_vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
-const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
+const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
+const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
+const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
-// Creates a valid evidence instance.
-fn create_evidence() -> Evidence {
-    let serialized = fs::read(EVIDENCE_PATH).expect("could not read evidence");
+// Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
+fn create_containers_evidence() -> Evidence {
+    let serialized = fs::read(CONTAINERS_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
+// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel application.
+fn create_rk_evidence() -> Evidence {
+    let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Creates a valid fake evidence instance.
+fn create_fake_evidence() -> Evidence {
+    let serialized = fs::read(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
+}
+
 // Creates valid endorsements for an Oak Containers chain.
-fn create_endorsements() -> Endorsements {
+fn create_containers_endorsements() -> Endorsements {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
     let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
-    let vcek_milan_cert = fs::read(VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
+    let vcek_milan_cert = fs::read(CONTAINERS_VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
 
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
         endorsement,
+        subject: vec![],
         endorsement_signature: signature,
         rekor_log_entry: log_entry,
     };
@@ -65,10 +84,11 @@ fn create_endorsements() -> Endorsements {
         tee_certificate: vcek_milan_cert,
         stage0: Some(tre.clone()),
     };
+    #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
+        kernel: Some(tre.clone()),
         kernel_image: Some(tre.clone()),
         kernel_cmd_line: Some(tre.clone()),
-        kernel_setup_data: Some(tre.clone()),
         init_ram_fs: Some(tre.clone()),
         memory_map: Some(tre.clone()),
         acpi: Some(tre.clone()),
@@ -92,53 +112,67 @@ fn create_endorsements() -> Endorsements {
     }
 }
 
+// Creates valid endorsements for a restricted kernel application.
+fn create_rk_endorsements() -> Endorsements {
+    let vcek_milan_cert = fs::read(RK_VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
+
+    let root_layer = RootLayerEndorsements {
+        tee_certificate: vcek_milan_cert,
+        stage0: None,
+    };
+    #[allow(deprecated)]
+    let kernel_layer = KernelLayerEndorsements {
+        kernel: None,
+        kernel_image: None,
+        kernel_cmd_line: None,
+        init_ram_fs: None,
+        memory_map: None,
+        acpi: None,
+    };
+    let application_layer = ApplicationLayerEndorsements {
+        binary: None,
+        configuration: None,
+    };
+
+    let ends = OakRestrictedKernelEndorsements {
+        root_layer: Some(root_layer),
+        kernel_layer: Some(kernel_layer),
+        application_layer: Some(application_layer),
+    };
+    Endorsements {
+        r#type: Some(
+            oak_proto_rust::oak::attestation::v1::endorsements::Type::OakRestrictedKernel(ends),
+        ),
+    }
+}
+
 // Creates valid reference values for an Oak Containers chain.
-fn create_reference_values() -> ReferenceValues {
-    let endorser_public_key_pem =
-        fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
-    let rekor_public_key_pem =
-        fs::read_to_string(REKOR_PUBLIC_KEY_PATH).expect("couldn't read rekor public key");
-
-    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
-        .expect("failed to convert endorser key");
-    let rekor_public_key =
-        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-
-    let erv = EndorsementReferenceValue {
-        endorser_public_key,
-        rekor_public_key,
-    };
+fn create_containers_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Skip(
-                SkipVerification {},
-            ),
-        ),
-    };
-    let brv = BinaryReferenceValue {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
-        ),
-    };
-    let srv = StringReferenceValue {
-        values: ["whatever".to_owned()].to_vec(),
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
 
     let amd_sev = AmdSevReferenceValues {
-        amd_root_public_key: b"".to_vec(),
-        firmware_version: Some(srv.clone()),
+        firmware_version: None,
         allow_debug: false,
-        stage0: Some(brv.clone()),
+        // See b/327069120: Do not skip over stage0.
+        stage0: Some(skip.clone()),
     };
 
     let root_layer = RootLayerReferenceValues {
         amd_sev: Some(amd_sev),
-        intel_tdx: None,
+        ..Default::default()
     };
+    #[allow(deprecated)]
     let kernel_layer = KernelLayerReferenceValues {
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(
+                SkipVerification {},
+            )),
+        }),
         kernel_image: Some(skip.clone()),
-        kernel_cmd_line: Some(skip.clone()),
         kernel_setup_data: Some(skip.clone()),
+        kernel_cmd_line: Some(skip.clone()),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),
@@ -157,17 +191,60 @@ fn create_reference_values() -> ReferenceValues {
         container_layer: Some(container_layer),
     };
     ReferenceValues {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::reference_values::Type::OakContainers(vs),
-        ),
+        r#type: Some(reference_values::Type::OakContainers(vs)),
+    }
+}
+
+// Creates valid reference values for a restricted kernel application.
+fn create_rk_reference_values() -> ReferenceValues {
+    let skip = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+
+    let amd_sev = AmdSevReferenceValues {
+        firmware_version: None,
+        allow_debug: false,
+        // See b/327069120: Do not skip over stage0.
+        stage0: Some(skip.clone()),
+    };
+
+    let root_layer = RootLayerReferenceValues {
+        amd_sev: Some(amd_sev),
+        ..Default::default()
+    };
+    #[allow(deprecated)]
+    let kernel_layer = KernelLayerReferenceValues {
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(
+                SkipVerification {},
+            )),
+        }),
+        kernel_image: Some(skip.clone()),
+        kernel_setup_data: Some(skip.clone()),
+        kernel_cmd_line: Some(skip.clone()),
+        init_ram_fs: Some(skip.clone()),
+        memory_map: Some(skip.clone()),
+        acpi: Some(skip.clone()),
+    };
+    let application_layer = ApplicationLayerReferenceValues {
+        binary: Some(skip.clone()),
+        configuration: Some(skip.clone()),
+    };
+    let vs = OakRestrictedKernelReferenceValues {
+        root_layer: Some(root_layer),
+        kernel_layer: Some(kernel_layer),
+        application_layer: Some(application_layer),
+    };
+    ReferenceValues {
+        r#type: Some(reference_values::Type::OakRestrictedKernel(vs)),
     }
 }
 
 #[test]
-fn verify_succeeds() {
-    let evidence = create_evidence();
-    let endorsements = create_endorsements();
-    let reference_values = create_reference_values();
+fn verify_containers_succeeds() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let reference_values = create_containers_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
@@ -180,11 +257,135 @@ fn verify_succeeds() {
 }
 
 #[test]
+fn verify_rk_succeeds() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let reference_values = create_rk_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fake_evidence() {
+    let evidence = create_fake_evidence();
+    let endorsements = create_containers_endorsements();
+    let mut reference_values = create_containers_reference_values();
+    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    {
+        reference.root_layer = Some(RootLayerReferenceValues {
+            insecure: Some(InsecureReferenceValues {}),
+            ..Default::default()
+        });
+    } else {
+        panic!("invalid reference value type");
+    }
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+// See b/327069120: This test can go once we properly endorse stage0.
+#[test]
+fn verify_fails_with_stage0_reference_value_set() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+
+    // Set the stage0 field to something.
+    let mut reference_values = create_containers_reference_values();
+    let endorser_public_key_pem =
+        fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
+    let rekor_public_key_pem =
+        fs::read_to_string(REKOR_PUBLIC_KEY_PATH).expect("couldn't read rekor public key");
+
+    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
+        .expect("failed to convert endorser key");
+    let rekor_public_key =
+        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
+    let erv = EndorsementReferenceValue {
+        endorser_public_key,
+        rekor_public_key,
+    };
+    let brv = BinaryReferenceValue {
+        r#type: Some(
+            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
+        ),
+    };
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer
+                .as_mut()
+                .unwrap()
+                .amd_sev
+                .as_mut()
+                .unwrap()
+                .stage0 = Some(brv);
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_fails_with_firmware_reference_value_set() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let mut reference_values = create_containers_reference_values();
+    // Set the firmware version to something.
+    let srv = StringReferenceValue {
+        values: ["whatever".to_owned()].to_vec(),
+    };
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer
+                .as_mut()
+                .unwrap()
+                .amd_sev
+                .as_mut()
+                .unwrap()
+                .firmware_version = Some(srv);
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
 fn verify_fails_with_manipulated_root_public_key() {
-    let mut evidence = create_evidence();
+    let mut evidence = create_containers_evidence();
     evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
-    let endorsements = create_endorsements();
-    let reference_values = create_reference_values();
+    let endorsements = create_containers_endorsements();
+    let reference_values = create_containers_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);

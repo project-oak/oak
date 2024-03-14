@@ -22,7 +22,7 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
 use oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
 use oak_core::sync::OnceCell;
-use oak_crypto::encryptor::EncryptionKeyHandle;
+use oak_crypto::encryption_key::EncryptionKeyHandle;
 pub use oak_functions_service::proto;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -30,24 +30,29 @@ use oak_functions_service::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
-        OakFunctions, PublicKeyInfo, ReserveRequest, ReserveResponse,
+        OakFunctions, ReserveRequest, ReserveResponse,
     },
-    Observer,
+    Handler, Observer,
 };
 use prost::Message;
 
-pub struct OakFunctionsService<
+pub struct OakFunctionsService<EKH, EP, H>
+where
     EKH: EncryptionKeyHandle + 'static,
     EP: oak_restricted_kernel_sdk::EvidenceProvider,
-> {
+    H: Handler,
+{
     evidence_provider: EP,
     encryption_key_handle: Arc<EKH>,
-    instance: OnceCell<OakFunctionsInstance>,
+    instance: OnceCell<OakFunctionsInstance<H>>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::EvidenceProvider>
-    OakFunctionsService<EKH, EP>
+impl<EKH, EP, H> OakFunctionsService<EKH, EP, H>
+where
+    EKH: EncryptionKeyHandle + 'static,
+    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    H: Handler,
 {
     pub fn new(
         evidence_provider: EP,
@@ -61,7 +66,7 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
             observer,
         }
     }
-    fn get_instance(&self) -> Result<&OakFunctionsInstance, micro_rpc::Status> {
+    fn get_instance(&self) -> Result<&OakFunctionsInstance<H>, micro_rpc::Status> {
         self.instance.get().ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -69,31 +74,13 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
             )
         })
     }
-    /// Extract the public key without verifying. This function is intended as a temporary
-    /// fix to allow the application to start using the oak SDK, while it still
-    /// requires the ability to extract the attestation public key, and to send it
-    /// directly to the client.
-    // TODO(#4571): Remove this function once the client has been updated to use
-    // the verification library. At this point the evidence will just be directly
-    // sent to the client, which extracts the public key from it upon succesful
-    // verification.
-    fn get_encryption_public_key(&self) -> Result<Vec<u8>, anyhow::Error> {
-        let encryption_claims = self
-            .evidence_provider
-            .get_evidence()
-            .application_keys
-            .claims()
-            .map_err(anyhow::Error::msg)?;
-        let encryption_cose_key =
-            oak_dice::cert::get_public_key_from_claims_set(&encryption_claims)
-                .map_err(anyhow::Error::msg)?;
-        oak_dice::cert::cose_key_to_hpke_public_key(&encryption_cose_key)
-            .map_err(anyhow::Error::msg)
-    }
 }
 
-impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::EvidenceProvider>
-    OakFunctions for OakFunctionsService<EKH, EP>
+impl<EKH, EP, H> OakFunctions for OakFunctionsService<EKH, EP, H>
+where
+    EKH: EncryptionKeyHandle + 'static,
+    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    H: Handler,
 {
     fn initialize(
         &self,
@@ -116,12 +103,6 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
                         "already initialized",
                     ));
                 }
-                let public_key = self.get_encryption_public_key().map_err(|err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        format!("failed to get encryption public key: {err}"),
-                    )
-                })?;
                 let evidence = evidence_to_proto(self.evidence_provider.get_evidence().clone())
                     .map_err(|err| {
                         micro_rpc::Status::new_with_message(
@@ -129,12 +110,7 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
                             format!("failed to convert evidence to proto: {err}"),
                         )
                     })?;
-                #[allow(deprecated)]
                 Ok(InitializeResponse {
-                    public_key_info: Some(PublicKeyInfo {
-                        attestation: Vec::new(),
-                        public_key,
-                    }),
                     evidence: Some(evidence),
                 })
             }
@@ -212,7 +188,7 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
         request: LookupDataChunk,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         let instance = self.get_instance()?;
-        instance.extend_lookup_data_chunk(request);
+        instance.extend_lookup_data_chunk(request)?;
         instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
     }
 

@@ -14,6 +14,8 @@
 // limitations under the License.
 
 use std::{
+    error::Error,
+    fmt::Display,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
     time::Duration,
@@ -23,9 +25,31 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
-use oak_functions_containers_app::serve;
-use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
-use tokio::{net::TcpListener, runtime::Handle};
+use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
+#[cfg(feature = "native")]
+use oak_functions_containers_app::native_handler::NativeHandler;
+use oak_functions_containers_app::serve as app_serve;
+use oak_functions_service::{
+    proto::oak::functions::config::{
+        application_config::CommunicationChannel, ApplicationConfig, HandlerType,
+        TcpCommunicationChannel,
+    },
+    wasm::wasmtime::WasmtimeHandler,
+};
+use opentelemetry::{
+    global::set_error_handler,
+    metrics::{Meter, MeterProvider},
+    KeyValue,
+};
+use prost::Message;
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    net::TcpListener,
+    runtime::Handle,
+};
+use tokio_stream::wrappers::TcpListenerStream;
+use tokio_vsock::{VsockAddr, VsockListener};
+use tonic::transport::server::Connected;
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 
@@ -36,6 +60,40 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
+}
+
+async fn serve<S>(
+    addr: S,
+    handler_type: HandlerType,
+    stream: Box<
+        dyn tokio_stream::Stream<
+                Item = Result<
+                    impl Connected + AsyncRead + AsyncWrite + Send + Unpin + 'static,
+                    impl Error + Send + Sync + 'static,
+                >,
+            > + Send
+            + Unpin,
+    >,
+    encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
+    meter: Meter,
+) -> anyhow::Result<()>
+where
+    S: Display,
+{
+    eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
+
+    match handler_type {
+        HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
+            app_serve::<WasmtimeHandler>(stream, encryption_key_handle, meter).await
+        }
+        HandlerType::HandlerNative => {
+            if cfg!(feature = "native") {
+                app_serve::<NativeHandler>(stream, encryption_key_handle, meter).await
+            } else {
+                panic!("Application config specified `native` handler type, but this binary does not support that feature");
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -126,24 +184,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
         .context("couldn't create Orchestrator client")?;
-    let encryption_key_handle = InstanceEncryptionKeyHandle::create()
-        .await
-        .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
+    let encryption_key_handle = Box::new(
+        InstanceEncryptionKeyHandle::create()
+            .await
+            .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?,
+    );
 
     // To be used when connecting trusted app to orchestrator.
-    let _application_config = client
-        .get_application_config()
-        .await
-        .context("failed to get application config")?;
+    let application_config = {
+        let bytes = client
+            .get_application_config()
+            .await
+            .context("failed to get application config")?;
 
-    let addr = SocketAddr::new(
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-        OAK_FUNCTIONS_CONTAINERS_APP_PORT,
-    );
-    let listener = TcpListener::bind(addr).await?;
-    let server_handle = tokio::spawn(serve(listener, Arc::new(encryption_key_handle), meter));
+        // If we don't get a config at all, treat it as if it had defaults. Otherwise, try parsing
+        // the message and fail if it doesn't make sense.
+        if bytes.is_empty() {
+            ApplicationConfig::default()
+        } else {
+            ApplicationConfig::decode(&bytes[..])?
+        }
+    };
 
-    eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
+    let server_handle = tokio::spawn(async move {
+        let default_channel = CommunicationChannel::TcpChannel(TcpCommunicationChannel::default());
+        let communication_config = application_config
+            .communication_channel
+            .as_ref()
+            .unwrap_or(&default_channel);
+
+        match communication_config {
+            CommunicationChannel::TcpChannel(config) => {
+                let mut config = config.clone();
+                if config.port == 0 {
+                    config.port = OAK_FUNCTIONS_CONTAINERS_APP_PORT.into();
+                }
+                let addr =
+                    SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port.try_into()?);
+                let listener = TcpListener::bind(addr).await?;
+                serve(
+                    addr,
+                    application_config.handler_type(),
+                    Box::new(TcpListenerStream::new(listener)),
+                    encryption_key_handle,
+                    meter,
+                )
+                .await
+            }
+            CommunicationChannel::VsockChannel(config) => {
+                let mut config = config.clone();
+                if config.port == 0 {
+                    config.port = OAK_FUNCTIONS_CONTAINERS_APP_PORT.into();
+                }
+                let addr = VsockAddr::new(tokio_vsock::VMADDR_CID_ANY, config.port);
+                let listener = VsockListener::bind(addr)?;
+                serve(
+                    addr,
+                    application_config.handler_type(),
+                    Box::new(listener.incoming()),
+                    encryption_key_handle,
+                    meter,
+                )
+                .await
+            }
+        }
+    });
+
     client
         .notify_app_ready()
         .await

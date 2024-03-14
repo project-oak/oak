@@ -18,9 +18,9 @@ use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 
 use log::Level;
 use oak_functions_sdk::proto::oak::functions::wasm::v1::{
-    LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
-    ReadRequestResponse, StdWasmApi, StdWasmApiServer, TestRequest, TestResponse,
-    WriteResponseRequest, WriteResponseResponse,
+    BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
+    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, StdWasmApi,
+    StdWasmApiServer, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
 use spinning_top::Spinlock;
 
@@ -98,14 +98,12 @@ impl StdWasmApi for StdWasmApiImpl {
         &mut self,
         request: LookupDataRequest,
     ) -> Result<LookupDataResponse, ::micro_rpc::Status> {
-        self.logger
-            .log_sensitive(Level::Debug, "invoked lookup_data");
         // The request is the key to lookup.
         let key = request.key;
         let key_to_log = limit(&key, 512);
         self.logger.log_sensitive(
             Level::Debug,
-            &format!("storage_get_item(): key: {}", format_bytes(key_to_log)),
+            &format!("lookup_data(): key: {}", format_bytes(key_to_log)),
         );
         let value = self.lookup_data.get(&key);
 
@@ -125,7 +123,38 @@ impl StdWasmApi for StdWasmApiImpl {
             },
         );
 
-        Ok(LookupDataResponse { value })
+        Ok(LookupDataResponse {
+            value: value.map(Into::into),
+        })
+    }
+
+    fn lookup_data_multi(
+        &mut self,
+        request: LookupDataMultiRequest,
+    ) -> Result<LookupDataMultiResponse, ::micro_rpc::Status> {
+        // The request contains the keys to lookup.
+        let keys = request.keys;
+
+        self.logger.log_sensitive(
+            Level::Debug,
+            &format!("lookup_data_multi(): {} keys", keys.len()),
+        );
+
+        let values: Vec<BytesValue> = keys
+            .iter()
+            .map(|key| match self.lookup_data.get(key) {
+                Some(value) => BytesValue {
+                    found: true,
+                    value: value.into(),
+                },
+                None => BytesValue {
+                    found: false,
+                    value: Vec::new(),
+                },
+            })
+            .collect();
+
+        Ok(LookupDataMultiResponse { values })
     }
 
     fn test(&mut self, req: TestRequest) -> Result<TestResponse, micro_rpc::Status> {

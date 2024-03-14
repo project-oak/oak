@@ -15,15 +15,15 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification::verifier::{verify_dice_chain, DiceChainResult};
-use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+use oak_attestation_verification::verifier::verify_dice_chain;
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ExtractedEvidence};
 
 pub trait AttestationVerifier {
     fn verify(
         &self,
         evidence: &Evidence,
         endorsements: &Endorsements,
-    ) -> anyhow::Result<DiceChainResult>;
+    ) -> anyhow::Result<ExtractedEvidence>;
 }
 
 /// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
@@ -32,7 +32,13 @@ pub trait AttestationVerifier {
 pub struct InsecureAttestationVerifier;
 
 impl AttestationVerifier for InsecureAttestationVerifier {
-    fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<DiceChainResult> {
+    fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<ExtractedEvidence> {
         verify_dice_chain(evidence).context("couldn't verify the DICE chain")
     }
+}
+
+pub fn extract_encryption_public_key(evidence: &Evidence) -> anyhow::Result<Vec<u8>> {
+    let attestation_results =
+        verify_dice_chain(evidence).context("couldn't verify the DICE chain")?;
+    Ok(attestation_results.encryption_public_key)
 }

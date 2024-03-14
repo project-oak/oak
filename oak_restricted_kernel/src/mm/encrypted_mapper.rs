@@ -32,7 +32,7 @@ use x86_64::{
 use super::{Mapper, PageTableFlags, Translator};
 use crate::FRAME_ALLOCATOR;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum MemoryEncryption {
     /// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it is ignored.
     NoEncryption,
@@ -132,6 +132,12 @@ pub struct EncryptedPageTable<N: MapperAllSizes> {
     encryption: MemoryEncryption,
     offset: VirtAddr,
     inner: Spinlock<N>,
+}
+
+impl<N: MapperAllSizes> EncryptedPageTable<N> {
+    pub fn inner(&mut self) -> &mut Spinlock<N> {
+        &mut self.inner
+    }
 }
 
 impl<'a> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {

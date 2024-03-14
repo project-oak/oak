@@ -50,7 +50,7 @@ java_test(
     data = [
         "//oak_attestation_verification/testdata:endorsement.json",
         "//oak_attestation_verification/testdata:endorsement.json.sig",
-        "//oak_attestation_verification/testdata:oak-development.pem",
+        "//oak_attestation_verification/testdata:oak_containers_stage1.pem",
     ],
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [

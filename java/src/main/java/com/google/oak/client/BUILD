@@ -31,11 +31,12 @@ java_library(
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
 # Clients are responsible for bundling in "libhpke-jni.so".
-java_library(
+android_library(
     name = "client_android",
     srcs = [
         "OakClient.java",
@@ -45,5 +46,6 @@ java_library(
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
         "//java/src/main/java/com/google/oak/transport:transport_android",
         "//java/src/main/java/com/google/oak/util",
+        "//proto/attestation:verification_java_proto",
     ],
 )

@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-use alloc::sync::Arc;
-
 use crate::{
-    encryptor::{ClientEncryptor, EncryptionKeyProvider, ServerEncryptor},
+    encryption_key::generate_encryption_key_pair,
+    encryptor::{ClientEncryptor, ServerEncryptor},
     hpke::{
         aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-        generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
+        generate_kem_key_pair, generate_random_nonce, setup_base_recipient, setup_base_sender,
+        Serializable,
     },
 };
 
@@ -64,15 +64,13 @@ fn test_aead() {
 
 #[test]
 fn test_hpke() {
-    let recipient_key_pair = KeyPair::generate();
-    let (serialized_encapsulated_public_key, sender_context) = setup_base_sender(
-        &recipient_key_pair.get_serialized_public_key(),
-        TEST_HPKE_INFO,
-    )
-    .expect("couldn't setup base sender");
+    let (recipient_private_key, recipient_public_key) = generate_kem_key_pair();
+    let (serialized_encapsulated_public_key, sender_context) =
+        setup_base_sender(&recipient_public_key.to_bytes(), TEST_HPKE_INFO)
+            .expect("couldn't setup base sender");
     let recipient_context = setup_base_recipient(
         &serialized_encapsulated_public_key,
-        &recipient_key_pair,
+        &recipient_private_key,
         TEST_HPKE_INFO,
     )
     .expect("couldn't setup base recipient");
@@ -119,11 +117,10 @@ fn test_hpke() {
 
 #[test]
 fn test_encryptor() {
-    let encryption_key = Arc::new(EncryptionKeyProvider::generate());
-    let serialized_server_public_key = encryption_key.get_serialized_public_key();
+    let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
 
-    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
-        .expect("couldn't create client encryptor");
+    let mut client_encryptor =
+        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
 
     let encrypted_request = client_encryptor
         .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
@@ -140,7 +137,7 @@ fn test_encryptor() {
 
     // Initialize server encryptor.
     let (server_encryptor, decrypted_request, request_associated_data) =
-        ServerEncryptor::decrypt(&encrypted_request, encryption_key.as_ref())
+        ServerEncryptor::decrypt(&encrypted_request, &encryption_key)
             .expect("server couldn't decrypt request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);
     assert_eq!(TEST_REQUEST_ASSOCIATED_DATA, request_associated_data);
@@ -166,11 +163,10 @@ fn test_encryptor() {
 
 #[tokio::test]
 async fn test_async_encryptor() {
-    let encryption_key = Arc::new(EncryptionKeyProvider::generate());
-    let serialized_server_public_key = encryption_key.get_serialized_public_key();
+    let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
 
-    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
-        .expect("couldn't create client encryptor");
+    let mut client_encryptor =
+        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
 
     let encrypted_request = client_encryptor
         .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
@@ -187,7 +183,7 @@ async fn test_async_encryptor() {
 
     // Initialize server encryptor.
     let (server_encryptor, decrypted_request, request_associated_data) =
-        ServerEncryptor::decrypt_async(&encrypted_request, encryption_key.as_ref())
+        ServerEncryptor::decrypt_async(&encrypted_request, &encryption_key)
             .await
             .expect("server couldn't decrypt request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);

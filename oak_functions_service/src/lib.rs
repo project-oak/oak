@@ -16,11 +16,18 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
+#![feature(new_uninit)]
 #![feature(unwrap_infallible)]
 // Required for enabling benchmark tests.
 #![feature(test)]
 
+use alloc::sync::Arc;
+
+use lookup::LookupDataManager;
+use oak_functions_abi::{Request, Response};
+
 extern crate alloc;
+extern crate rand_core;
 
 #[cfg(test)]
 extern crate std;
@@ -28,7 +35,9 @@ extern crate std;
 pub mod proto {
     pub mod oak {
         pub mod functions {
-            #![allow(dead_code)]
+            pub mod config {
+                include!(concat!(env!("OUT_DIR"), "/oak.functions.config.rs"));
+            }
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }
@@ -40,9 +49,24 @@ pub mod proto {
 pub mod instance;
 pub mod logger;
 pub mod lookup;
+pub mod lookup_htbl;
 pub mod wasm;
 
 pub trait Observer {
     fn wasm_initialization(&self, duration: core::time::Duration);
     fn wasm_invocation(&self, duration: core::time::Duration);
+}
+
+pub trait Handler {
+    type HandlerType: Handler;
+
+    fn new_handler(
+        wasm_module_bytes: &[u8],
+        lookup_data_manager: Arc<LookupDataManager>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> anyhow::Result<Self::HandlerType>;
+
+    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
+    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status>;
 }

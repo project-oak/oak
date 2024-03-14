@@ -3,7 +3,7 @@ name = "oak_docker_linux_init"
 version = "0.1.0"
 authors = [
   "Gogul Balakrishnan <bgogul@google.com>",
-  "Conrad Grobler <grobler@google.com>"
+  "Conrad Grobler <grobler@google.com>",
 ]
 edition = "2021"
 license = "Apache-2.0"

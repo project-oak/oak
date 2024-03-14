@@ -1,0 +1,17 @@
+[package]
+name = "oak_functions_test_module"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+micro_rpc = { workspace = true }
+oak_functions_sdk = { workspace = true }
+oak_proto_rust = { workspace = true }
+prost = { workspace = true }
+
+[build-dependencies]
+micro_rpc_build = { workspace = true }

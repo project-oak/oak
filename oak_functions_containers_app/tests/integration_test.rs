@@ -25,15 +25,17 @@ pub mod proto {
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
     time::Duration,
 };
 
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_containers_app::serve;
-use oak_functions_service::proto::oak::functions::InitializeRequest;
+use oak_functions_service::{
+    proto::oak::functions::InitializeRequest, wasm::wasmtime::WasmtimeHandler,
+};
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
@@ -43,13 +45,18 @@ async fn test_lookup() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let listener = TcpListener::bind(addr).await.unwrap();
-    let addr = listener.local_addr().unwrap();
+    let (addr, stream) = {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let listener = TcpListener::bind(addr).await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        (addr, Box::new(TcpListenerStream::new(listener)))
+    };
 
-    let server_handle = tokio::spawn(serve(
-        listener,
-        Arc::new(EncryptionKeyProvider::generate()),
+    let (encryption_key, _) = generate_encryption_key_pair();
+
+    let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
+        stream,
+        Box::new(encryption_key),
         NoopMeterProvider::new().meter(""),
     ));
 

@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "proto/digest.proto";
+
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
@@ -46,4 +48,149 @@ message AttestationResults {
   // indicates success. The key is serialized using the SEC 1
   // Elliptic-Curve-Point-to-Octet-String conversion.
   bytes signing_public_key = 4;
+}
+
+// Evidence values extracted from attestation evidence during verification.
+message ExtractedEvidence {
+  oneof evidence_values {
+    OakRestrictedKernelData oak_restricted_kernel = 1;
+    OakContainersData oak_containers = 2;
+    CbData cb = 3;
+  }
+
+  // Contains the public key for encryption. The key is serialized as an X25519
+  // octet string.
+  bytes encryption_public_key = 4;
+
+  // Contains the public key for signing. The key is serialized using the SEC 1
+  // Elliptic-Curve-Point-to-Octet-String conversion.
+  bytes signing_public_key = 5;
+}
+
+// Values extracted from the root layer evidence.
+message RootLayerData {
+  oneof report {
+    // Values extracted from an AMD SEV-SNP attestation report.
+    AmdAttestationReport sev_snp = 1;
+    // Values extracted from an Intel TDX attestation report.
+    IntelTdxAttestationReport tdx = 2;
+    // Values extracted from a fake report when not running in a TEE.
+    FakeAttestationReport fake = 3;
+  }
+}
+
+// Values extracted from an AMD SEV-SNP attestation report.
+message AmdAttestationReport {
+  // The custom bytes that were passed to the report when it was requested.
+  bytes report_data = 1;
+
+  // Current TCB Version.
+  TcbVersion current_tcb = 2;
+
+  // Whether the VM was booted in debug mode.
+  bool debug = 3;
+
+  // The measurement of the initial memory and CPU state of the VM before
+  // startup. This implicitly includes the measurement of the Stage 0 firmware
+  // binary.
+  bytes initial_measurement = 4;
+
+  // The hardware ID of the AMD SEV-SNP platform that generated the atttestation
+  // report.
+  bytes hardware_id = 5;
+}
+
+// Values extracted from an Intel TDX attestation report.
+message IntelTdxAttestationReport {
+  // The custom bytes that were passed to the report when it was requested.
+  bytes report_data = 1;
+}
+
+// Values extracted from a fake attestation report when not running in a TEE.
+message FakeAttestationReport {
+  // The custom bytes that were passed to the report when it was requested.
+  bytes report_data = 1;
+}
+
+// The versions of the components in the AMD SEV-SNP platform Trusted Compute
+// Base (TCB).
+message TcbVersion {
+  // The current security version number (SVN) of the secure processor (PSP)
+  // bootloader.
+  uint32 boot_loader = 1;
+  // The current SVN of the PSP operating system.
+  uint32 tee = 2;
+  // The current SVN of the SNP firmware.
+  uint32 snp = 3;
+  // The lowest current patch level of all the CPU cores.
+  uint32 microcode = 4;
+}
+
+// Values extracted from the the kernel layer evidence, as measured by stage0.
+message KernelLayerData {
+  // Measured digests of the image part of the kernel.
+  RawDigest kernel_image = 1;
+
+  // Measured digests of the setup data part of the kernel.
+  RawDigest kernel_setup_data = 3;
+
+  // Measured digests of the command-line that was passed to the kernel
+  // during startup.
+  RawDigest kernel_cmd_line = 2;
+
+  // Measured digests of the initial RAM disk.
+  RawDigest init_ram_fs = 4;
+
+  // Measured digests of the physical memory map.
+  RawDigest memory_map = 5;
+
+  // Measured digests of the commands for building the ACPI tables.
+  RawDigest acpi = 6;
+}
+
+// Values extracted from the evidence that represents an application running
+// under the Oak Restricted Kernel.
+message ApplicationLayerData {
+  // Measurement RawDigest of the application binary.
+  RawDigest binary = 1;
+
+  // Measurement RawDigest of the application configuration.
+  RawDigest config = 2;
+}
+
+// Values extracted from the evidence that represents the Oak Containers system
+// image.
+message SystemLayerData {
+  // Measurement RawDigest of the system image.
+  RawDigest system_image = 1;
+}
+
+// Values extracted from the evidence that represents the Container Runtime
+// Bundle used in Oak Containers.
+message ContainerLayerData {
+  // Measurement RawDigest of the container bundle.
+  RawDigest bundle = 1;
+
+  // Measurement RawDigest of the configuration used by the container.
+  RawDigest config = 2;
+}
+
+// Values extracted from the evidence for a restricted kernel application.
+message OakRestrictedKernelData {
+  RootLayerData root_layer = 1;
+  KernelLayerData kernel_layer = 2;
+  ApplicationLayerData application_layer = 3;
+}
+
+// Values extracted from the evidence for an Oak Containers instance.
+message OakContainersData {
+  RootLayerData root_layer = 1;
+  KernelLayerData kernel_layer = 2;
+  SystemLayerData system_layer = 3;
+  ContainerLayerData container_layer = 4;
+}
+
+// Reserved for future use.
+message CbData {
+  RootLayerData root_layer = 1;
 }

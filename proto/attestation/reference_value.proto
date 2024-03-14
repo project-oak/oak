@@ -53,6 +53,26 @@ message BinaryReferenceValue {
   }
 }
 
+// Similar to the `Digests` message, but allows to specify digests for the
+// split components of the bzImage separately.
+message KernelDigests {
+  // Contains admissible digests for the kernel image part of the kernel.
+  Digests image = 2;
+
+  // Contains admissible digests for the setup data part of the kernel.
+  Digests setup_data = 3;
+}
+
+// Follows the lines of `BinaryReferenceValue`, but provides a custom proto
+// to facilitate the digest matching.
+message KernelBinaryReferenceValue {
+  oneof type {
+    SkipVerification skip = 1;
+    EndorsementReferenceValue endorsement = 2;
+    KernelDigests digests = 3;
+  }
+}
+
 // Reference value for a file including its digests.
 message FileReferenceValue {
   // Allowable digests for the file.
@@ -70,14 +90,17 @@ message StringReferenceValue {
 }
 
 message RootLayerReferenceValues {
-  // Switches between AMD and Intel based on TeePlatform value.
+  // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+  // Verification is skipped when not running in a TEE.
   AmdSevReferenceValues amd_sev = 1;
   IntelTdxReferenceValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This can
+  // be used when not running in a TEE or when the client is agnostic about the
+  // platform and doesn't care about the hardware verification.
+  InsecureReferenceValues insecure = 3;
 }
 
 message AmdSevReferenceValues {
-  bytes amd_root_public_key = 1;
-
   // TBD: Add conditions on all kinds of fields contained in the
   // attestation report.
   StringReferenceValue firmware_version = 2;
@@ -89,9 +112,9 @@ message AmdSevReferenceValues {
   BinaryReferenceValue stage0 = 4;
 }
 
-message IntelTdxReferenceValues {
-  // TBD
-}
+message IntelTdxReferenceValues {}
+
+message InsecureReferenceValues {}
 
 // Verifies that the field contains at least one of the given digests.
 // No checks are performed if this is empty. A match in at least one
@@ -102,17 +125,19 @@ message Digests {
 
 // Reference values of the kernel layer, as measured by stage0.
 message KernelLayerReferenceValues {
-  // Verifies the kernel binary based on endorsement.
-  BinaryReferenceValue kernel_image = 1;
+  // Verifies the kernel based on endorsement.
+  KernelBinaryReferenceValue kernel = 1;
 
   // Verifies the command line by which the kernel was built. The command
   // line is treated as a binary blob, as if it were a binary.
   BinaryReferenceValue kernel_cmd_line = 2;
 
-  // One part of the kernel is modified by the system after loading. Verifies
-  // that part after these modifications.
-  BinaryReferenceValue kernel_setup_data = 3;
+  // Fields are deprecated and kept only for backwards compatibility.
+  // Remove ASAP.
+  BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
+  BinaryReferenceValue kernel_image = 7 [deprecated = true];
 
+  // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;
 
   BinaryReferenceValue memory_map = 5;
@@ -125,6 +150,13 @@ message SystemLayerReferenceValues {
   BinaryReferenceValue system_image = 1;
 }
 
+message CBSystemLayerReferenceValues {
+  // Verifies the system image binary.
+  BinaryReferenceValue system_image = 1;
+  // Verifies the command line by which the system image was built.
+  StringReferenceValue system_cmd_line = 2;
+}
+
 // Represents an application running under Oak Restricted Kernel.
 message ApplicationLayerReferenceValues {
   // Verifies the application binary based on endorsement.
@@ -132,6 +164,12 @@ message ApplicationLayerReferenceValues {
 
   // Verifies configuration with respect to the application binary.
   BinaryReferenceValue configuration = 2;
+}
+
+// Represents digest of application task config.
+message CBApplicationLayerReferenceValues {
+  // Verifies the application task config.
+  BinaryReferenceValue binary = 1;
 }
 
 message ContainerLayerReferenceValues {
@@ -155,18 +193,11 @@ message OakContainersReferenceValues {
   ContainerLayerReferenceValues container_layer = 4;
 }
 
-message CBLayerReferenceValues {
-  string layer_name = 1;
-  repeated FileReferenceValue files = 2;
-  StringReferenceValue config = 3;
-  StringReferenceValue command_line = 4;
-}
-
 message CBReferenceValues {
   RootLayerReferenceValues root_layer = 1;
-
-  // Generic reference values starting from the second layer.
-  repeated CBLayerReferenceValues layers = 2;
+  KernelLayerReferenceValues kernel_layer = 2;
+  CBSystemLayerReferenceValues system_layer = 3;
+  CBApplicationLayerReferenceValues application_layer = 4;
 }
 
 message ReferenceValues {

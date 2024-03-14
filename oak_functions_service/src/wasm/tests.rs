@@ -19,7 +19,6 @@ extern crate test;
 use alloc::{sync::Arc, vec::Vec};
 
 use byteorder::{ByteOrder, LittleEndian};
-use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use spinning_top::Spinlock;
 
@@ -31,6 +30,7 @@ use crate::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     wasm::{AbiPointer, AbiPointerOffset},
+    Handler,
 };
 
 #[test]
@@ -150,7 +150,7 @@ struct TestState {
 
 fn create_test_state() -> TestState {
     let logger = Arc::new(StandaloneLogger);
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(Vec::default(), logger.clone()));
     let api_factory = Arc::new(StdWasmApiFactory {
         lookup_data_manager: lookup_data_manager.clone(),
     });

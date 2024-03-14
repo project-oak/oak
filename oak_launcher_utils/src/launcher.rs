@@ -45,12 +45,8 @@ pub struct Params {
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists, conflicts_with_all = &["kernel", "initrd"])]
-    pub enclave_binary: Option<PathBuf>,
-
-    /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists, conflicts_with_all = &["enclave_binary"])]
-    pub kernel: Option<PathBuf>,
+    #[arg(long, value_parser = path_exists)]
+    pub kernel: PathBuf,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
     #[arg(long, value_parser = path_exists)]
@@ -71,7 +67,7 @@ pub struct Params {
 
     /// Path to the initrd image to use.
     #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
-    pub initrd: Option<PathBuf>,
+    pub initrd: PathBuf,
 }
 
 /// Checks if file with a given path exists.
@@ -165,20 +161,16 @@ impl Instance {
                 .unwrap()
                 .as_str(),
         ]);
-        if let Some(enclave_binary) = params.enclave_binary {
-            // Load the kernel ELF via the loader device.
-            cmd.args([
-                "-device",
-                format!("loader,file={}", enclave_binary.display()).as_str(),
-            ]);
-        }
-        if let Some(kernel) = params.kernel {
-            // stage0 accoutrements: kernel that's compatible with the linux boot protocol
-            cmd.args([
-                "-kernel",
-                kernel.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        // stage0 accoutrements: kernel that's compatible with the linux boot protocol
+        cmd.args([
+            "-kernel",
+            params
+                .kernel
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
@@ -186,12 +178,15 @@ impl Instance {
             cmd.arg("-S");
         }
 
-        if let Some(initrd) = params.initrd {
-            cmd.args([
-                "-initrd",
-                initrd.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        cmd.args([
+            "-initrd",
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         info!("executing: {:?}", cmd);
 
@@ -283,6 +278,8 @@ pub async fn launch(
 
             let mut line = String::new();
             while reader.read_line(&mut line).expect("couldn't read line") > 0 {
+                // remove the new line character
+                line.pop();
                 log::info!("console: {:?}", line);
                 line.clear();
             }

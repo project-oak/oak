@@ -23,7 +23,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use oak_restricted_kernel_sdk::{
-    entrypoint, start_blocking_server, utils::samplestore::StaticSampleStore, FileDescriptorChannel,
+    channel::{start_blocking_server, FileDescriptorChannel},
+    entrypoint,
+    instance_attestation::InstanceEvidenceProvider,
+    utils::samplestore::StaticSampleStore,
 };
 
 // Starts an echo server that uses the Oak communication channel:
@@ -31,8 +34,10 @@ use oak_restricted_kernel_sdk::{
 #[entrypoint]
 fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let service = oak_echo_service::EchoService;
-    let server = oak_echo_service::proto::EchoServer::new(service);
+    let evidence_provider = InstanceEvidenceProvider::create().expect("couldn't get evidence");
+
+    let service = oak_echo_service::EchoService { evidence_provider };
+    let server = oak_echo_service::proto::oak::echo::EchoServer::new(service);
     start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,

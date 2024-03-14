@@ -64,12 +64,12 @@ mod virtio_console;
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
@@ -81,7 +81,7 @@ use strum::{EnumIter, EnumString, IntoEnumIterator};
 #[cfg(not(feature = "initrd"))]
 use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
@@ -90,6 +90,7 @@ use zeroize::Zeroize;
 use crate::{
     acpi::Acpi,
     mm::Translator,
+    payload::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -102,7 +103,13 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<RootPageTable> = OnceCell::new();
+pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
+    Spinlock::new(CurrentRootPageTable::empty());
+
+/// Level 4 page table that is free in application space, but has all entries for kernel space
+/// populated. It can be used to create free page tables for applications, that maintain correct
+/// mapping in kernel space.
+pub static BASE_L4_PAGE_TABLE: OnceCell<PageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -170,11 +177,41 @@ pub fn start_kernel(info: &BootParams) -> ! {
     );
 
     // Note: `info` will not be valid after calling this!
-    if PAGE_TABLES
-        .set(mm::init_paging(program_headers).unwrap())
-        .is_err()
     {
-        panic!("couldn't initialize page tables");
+        let pml4_frame = mm::initial_pml4(program_headers).unwrap();
+        // Prevent execution code in data only memory pages.
+        // Safety: executeable memory is assumed to be appropiately marked in the page table.
+        unsafe {
+            x86_64::registers::model_specific::Efer::update(|flags| {
+                flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
+            });
+        };
+        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
+        // load the new page tables.
+        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
+        assert!(
+            prev_page_table.is_none(),
+            "there should be no previous page table during initialization"
+        );
+
+        // Safety: We just created a page table at this location.
+        let pml4: PageTable = unsafe {
+            *Box::from_raw(
+                (PAGE_TABLES
+                    .lock()
+                    .get()
+                    .unwrap()
+                    .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                    .expect("page table must map to virtual address"))
+                // Safety: We get a mut pointer here to satisfy the type system. However, the pml4
+                // will not be mutated. This is since while using this pml4 the kernel will not
+                // allocate memory in application space, and since all the kernel space entries of
+                // this pml4 are already populated with existing pointers to pml3 page tables. Only
+                // those pml3 tables will be modified when allocating kernel space memory.
+                .as_mut_ptr(),
+            )
+        };
+        BASE_L4_PAGE_TABLE.set(pml4).expect("base pml4 not unset");
     };
 
     // Re-map boot params to the new virtual address.
@@ -183,6 +220,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let info = unsafe {
         #[allow(clippy::unnecessary_cast)]
         (PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
@@ -193,7 +231,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     if sev_es_enabled {
-        let mapper = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let mapper = pt_guard.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         ghcb::reshare_ghcb(mapper);
@@ -213,7 +252,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
-        let pt = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -236,8 +276,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
         .set(
-            unsafe { memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
-                .unwrap(),
+            unsafe {
+                memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+            }
+            .unwrap(),
         )
         .is_err()
     {
@@ -288,7 +330,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
             }));
 
             let dice_data_virt_addr = {
-                let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                let pt_guard = PAGE_TABLES.lock();
+                let pt = pt_guard.get().expect("failed to get page tables");
                 pt.translate_physical(dice_data_phys_addr)
                     .expect("failed to translate physical dice address")
             };
@@ -356,7 +399,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     #[cfg(feature = "initrd")]
     let application_bytes: Box<[u8]> = {
         let virt_addr = {
-            let pt = PAGE_TABLES.get().expect("failed to get page tables");
+            let pt_guard = PAGE_TABLES.lock();
+            let pt = pt_guard.get().expect("failed to get page tables");
             pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
                 .expect("failed to translate physical dice address")
         };
@@ -405,8 +449,21 @@ pub fn start_kernel(info: &BootParams) -> ! {
     log::info!("Binary loaded, size: {}", application_bytes.len());
 
     #[cfg(not(feature = "initrd"))]
-    let (derived_key, restricted_kernel_dice_data) =
-        oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
+    let (derived_key, restricted_kernel_dice_data) = {
+        let app_digest =
+            oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
+        log::info!(
+            "Application digest (sha2-256): {}",
+            app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
+        );
+
+        let derived_key =
+            oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
+        let restricted_kernel_dice_data =
+            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+
+        (derived_key, restricted_kernel_dice_data)
+    };
 
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
@@ -414,16 +471,20 @@ pub fn start_kernel(info: &BootParams) -> ! {
     syscall::enable_syscalls(
         channel,
         #[cfg(feature = "initrd")]
-        stage0_dice_data,
+        syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
         #[cfg(not(feature = "initrd"))]
-        restricted_kernel_dice_data,
+        syscall::dice_data::DiceData::Layer1(Box::new(restricted_kernel_dice_data)),
         #[cfg(not(feature = "initrd"))]
         derived_key,
     );
 
-    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
-    // under the kernel's control.
-    unsafe { application.run() }
+    // Ensure new process is not dropped.
+    // Safety: The application is assumed to be a valid ELF file.
+    let process = Box::leak(Box::new(unsafe {
+        Process::from_application(&application).expect("failed to create process")
+    }));
+
+    process.execute()
 }
 
 #[derive(EnumIter, EnumString)]

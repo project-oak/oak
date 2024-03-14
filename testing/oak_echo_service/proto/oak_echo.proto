@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package oak.echo;
 
+import "google/protobuf/empty.proto";
+import "proto/attestation/evidence.proto";
+
 message EchoRequest {
   bytes body = 1;
 }
@@ -26,7 +29,14 @@ message EchoResponse {
   bytes body = 1;
 }
 
+message GetEvidenceResponse {
+  oak.attestation.v1.Evidence evidence = 1;
+}
+
 service Echo {
   // method_id: 1988
   rpc Echo(EchoRequest) returns (EchoResponse);
+
+  // method_id: 1771
+  rpc GetEvidence(google.protobuf.Empty) returns (GetEvidenceResponse);
 }

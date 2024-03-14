@@ -16,6 +16,7 @@
 
 workspace(name = "oak")
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # The `name` argument in all `http_archive` rules should be equal to the
@@ -93,22 +94,21 @@ load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO
 
 grpc_java_repositories()
 
-# Google Protocol Buffers.
-# https://github.com/protocolbuffers/protobuf
+### --- Base Proto Support --- ###
 http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
-    strip_prefix = "protobuf-23.3",
+    name = "rules_proto",
+    sha256 = "dc3fb206a2cb3441b485eb1e423165b231235a1ea9b031b4433cf7bc1fa460dd",
+    strip_prefix = "rules_proto-5.3.0-21.7",
     urls = [
-        # Protocol Buffers v23.3 (2023-06-14).
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/5.3.0-21.7.tar.gz",
     ],
 )
 
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
 
-# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
-protobuf_deps()
+rules_proto_dependencies()
+
+rules_proto_toolchains()
 
 # External Java rules.
 # https://github.com/bazelbuild/rules_jvm_external
@@ -135,8 +135,12 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
-        "org.mockito:mockito-core:3.3.3",
+        "co.nstant.in:cbor:0.9",
+        "com.google.crypto.tink:tink:1.12.0",
         "org.assertj:assertj-core:3.12.1",
+        "org.bouncycastle:bcpkix-jdk18on:1.77",
+        "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.mockito:mockito-core:3.3.3",
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
     generate_compat_repositories = True,
     override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
@@ -180,9 +184,25 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
 
-load(
-    "@bazel_tools//tools/build_defs/repo:git.bzl",
-    "git_repository",
+# C++ CBOR support.
+# https://android.googlesource.com/platform/external/libcppbor
+git_repository(
+    name = "libcppbor",
+    build_file = "@//:third_party/google/libcppbor/BUILD",
+    # Head commit on 2023-12-04.
+    commit = "20d2be8672d24bfb441d075f82cc317d17d601f8",
+    patches = [
+        "@//:third_party/google/libcppbor/remove_macro.patch",
+    ],
+    remote = "https://android.googlesource.com/platform/external/libcppbor",
+)
+
+http_archive(
+    name = "cose_lib",
+    build_file = "@//:third_party/BUILD.cose_lib",
+    sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
+    strip_prefix = "cose-lib-2023.09.08",
+    url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
 )
 
 # Run clang-tidy on C++ code with the following command:

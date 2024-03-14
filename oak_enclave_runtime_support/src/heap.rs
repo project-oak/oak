@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! no_std compatible allocators.
+
 use core::{
     alloc::{GlobalAlloc, Layout},
     ops::Deref,

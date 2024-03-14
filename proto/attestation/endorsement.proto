@@ -30,6 +30,11 @@ message TransparentReleaseEndorsement {
   // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
+  // The data hashed as endorsement subject can be inlined here when needed.
+  // Can be the binary or the attachment, depending on the usage specified
+  // in the endorsement.
+  bytes subject = 4;
+
   // The signature for the endorsement.
   bytes endorsement_signature = 2;
 
@@ -42,7 +47,9 @@ message RootLayerEndorsements {
   // certificate(s) are encoded into this byte array are implementation
   // specific. In case of AMD-SEV-SNP, as described in
   // https://www.amd.com/system/files/TechDocs/57230.pdf, there are three
-  // different certificates packaged in two different files.
+  // different certificates packaged in two different files. We only include
+  // the machine-specific VCEK certificate since the AMD Root Key (ARK) and
+  // AMD SEV Key (ASK) are long-lived.
   bytes tee_certificate = 1;
 
   // Endorsement of the Stage0 binary.
@@ -50,12 +57,14 @@ message RootLayerEndorsements {
 }
 
 message KernelLayerEndorsements {
-  TransparentReleaseEndorsement kernel_image = 1;
+  TransparentReleaseEndorsement kernel = 1;
   TransparentReleaseEndorsement kernel_cmd_line = 2;
-  TransparentReleaseEndorsement kernel_setup_data = 3;
   TransparentReleaseEndorsement init_ram_fs = 4;
   TransparentReleaseEndorsement memory_map = 5;
   TransparentReleaseEndorsement acpi = 6;
+
+  // Field is deprecated and kept only for backwards compatibility. Remove ASAP.
+  TransparentReleaseEndorsement kernel_image = 7 [deprecated = true];
 }
 
 message SystemLayerEndorsements {

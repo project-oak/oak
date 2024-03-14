@@ -21,7 +21,7 @@
 extern crate alloc;
 
 use oak_echo_service::{
-    proto::{EchoClient, EchoRequest, EchoServer},
+    proto::oak::echo::{EchoClient, EchoRequest, EchoServer},
     EchoService,
 };
 
@@ -29,7 +29,10 @@ const TEST_DATA: &[u8] = b"test_data";
 
 #[test]
 fn it_should_handle_echo_requests() {
-    let service = EchoService;
+    let evidence_provider =
+        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+            .expect("couldn't create evidence provider");
+    let service = EchoService { evidence_provider };
     let mut client = EchoClient::new(EchoServer::new(service));
 
     let request = EchoRequest {
@@ -39,4 +42,18 @@ fn it_should_handle_echo_requests() {
 
     assert!(response.is_ok());
     assert_eq!(response.unwrap().body, TEST_DATA);
+}
+
+#[test]
+fn it_should_provide_evidence() {
+    let evidence_provider =
+        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+            .expect("couldn't create evidence provider");
+    let service = EchoService { evidence_provider };
+    let mut client = EchoClient::new(EchoServer::new(service));
+
+    let response = client.get_evidence(&()).into_ok();
+
+    assert!(response.is_ok());
+    assert!(response.unwrap().evidence.is_some());
 }

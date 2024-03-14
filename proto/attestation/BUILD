@@ -15,13 +15,26 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
+)
+
+proto_library(
+    name = "attachment_proto",
+    srcs = ["attachment.proto"],
+    deps = ["//proto:digest_proto"],
+)
+
+cc_proto_library(
+    name = "attachment_cc_proto",
+    deps = [":attachment_proto"],
+)
+
+java_proto_library(
+    name = "attachment_java_proto",
+    deps = [":attachment_proto"],
 )
 
 proto_library(
@@ -89,6 +102,7 @@ java_proto_library(
 proto_library(
     name = "verification_proto",
     srcs = ["verification.proto"],
+    deps = ["//proto:digest_proto"],
 )
 
 cc_proto_library(
@@ -104,6 +118,9 @@ java_proto_library(
 build_test(
     name = "build_test",
     targets = [
+        ":attachment_proto",
+        ":attachment_cc_proto",
+        ":attachment_java_proto",
         ":dice_proto",
         ":dice_cc_proto",
         ":dice_java_proto",

@@ -22,7 +22,7 @@ use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
 use crate::{
-    crypto::{CryptoService, KeyStore},
+    crypto::{CryptoService, GroupKeys, InstanceKeys},
     launcher_client::LauncherClient,
     proto::oak::containers::{
         orchestrator_server::{Orchestrator, OrchestratorServer},
@@ -58,7 +58,8 @@ impl Orchestrator for ServiceImplementation {
 
 pub async fn create<P>(
     socket_address: P,
-    key_store: Arc<KeyStore>,
+    instance_keys: InstanceKeys,
+    group_keys: Arc<GroupKeys>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
     cancellation_token: CancellationToken,
@@ -71,7 +72,7 @@ where
         application_config,
         launcher_client,
     };
-    let crypto_service_instance = CryptoService::new(key_store);
+    let crypto_service_instance = CryptoService::new(instance_keys, group_keys);
 
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;

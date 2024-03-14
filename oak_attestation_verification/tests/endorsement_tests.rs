@@ -30,33 +30,24 @@ use oak_attestation_verification::{
 };
 use oak_proto_rust::oak::HexDigest;
 
-const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
+// The digest of the endorsement under ENDORSEMENT_PATH.
+const BINARY_DIGEST: &str = "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc";
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
-// Public key fetched from Google Cloud KMS, associated with the signing key that was used for
-// signing the endorsement statement.
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
-
-// LogEntry downloaded from
-// https://rekor.sigstore.dev/api/v1/log/entries/24296fb24b8ad77a51d549703a3a1c2dd2639ba49617fc563854031cb93e6d354e7b005065c334a8.
-// This LogEntry was created by signing the example endorsement file above, using google-cloud
-// KMS, and uploading it to Rekor (https://rekor.sigstore.dev) using `rekor-cli`, as described
-// in https://github.com/sigstore/rekor/blob/main/types.md#pkixx509.
-// The resulting entry in Rekor has UUID
-// `24296fb24b8ad77a51d549703a3a1c2dd2639ba49617fc563854031cb93e6d354e7b005065c334a8` and
-// logIndex 30891523. The body of LogEntry can be fetched using `rekor-cli get --log-index
-// 30891523`.
+const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 
 // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded from
 // https://rekor.sigstore.dev/api/v1/log/publicKey.
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
-// Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
-const NOW_UTC_MILLIS: i64 = 1698829200000;
+// Pretend the tests run at this time: 1 March 2024, 12:00 UTC
+const NOW_UTC_MILLIS: i64 = 1709294400000;
 
 struct TestData {
     endorsement: Vec<u8>,
+    signature: Vec<u8>,
     log_entry: Vec<u8>,
     endorser_public_key: Vec<u8>,
     rekor_public_key: Vec<u8>,
@@ -71,6 +62,7 @@ fn create_hex_digest() -> HexDigest {
 
 fn load_testdata() -> TestData {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
+    let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
     let endorser_public_key_pem =
         fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
@@ -84,6 +76,7 @@ fn load_testdata() -> TestData {
 
     TestData {
         endorsement,
+        signature,
         log_entry,
         endorser_public_key,
         rekor_public_key,
@@ -119,19 +112,10 @@ fn test_verify_binary_digest_different() {
 #[test]
 fn test_verify_binary_digest_undecidable() {
     let testdata = load_testdata();
-    // Fill all hashes with something (whatever) but leave sha2_256 empty.
-    let expected = HexDigest {
-        psha2: BINARY_DIGEST.to_owned(),
-        sha1: BINARY_DIGEST.to_owned(),
-        sha2_256: "".to_owned(),
-        sha2_512: BINARY_DIGEST.to_owned(),
-        sha3_512: BINARY_DIGEST.to_owned(),
-        sha3_384: BINARY_DIGEST.to_owned(),
-        sha3_256: BINARY_DIGEST.to_owned(),
-        sha3_224: BINARY_DIGEST.to_owned(),
-        sha2_384: BINARY_DIGEST.to_owned(),
+    let empty = HexDigest {
+        ..Default::default()
     };
-    let result = verify_binary_digest(&testdata.endorsement, &expected);
+    let result = verify_binary_digest(&testdata.endorsement, &empty);
     assert!(result.is_ok_and(|m| m == MatchResult::UNDECIDABLE));
 }
 
@@ -178,11 +162,28 @@ fn test_verify_binary_endorsement() {
     let result = verify_binary_endorsement(
         NOW_UTC_MILLIS,
         &testdata.endorsement,
+        &testdata.signature,
         &testdata.log_entry,
         &testdata.endorser_public_key,
         &testdata.rekor_public_key,
     );
     assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_binary_endorsement_fails_with_invalid_endorser_public_key() {
+    let testdata = load_testdata();
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &testdata.log_entry,
+        // NB: We use the wrong key deliberately.
+        &testdata.rekor_public_key,
+        &testdata.rekor_public_key,
+    );
+    assert!(result.is_err(), "{:?}", result);
 }
 
 #[test]
@@ -192,6 +193,7 @@ fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
     let result = verify_binary_endorsement(
         NOW_UTC_MILLIS,
         &testdata.endorsement,
+        &testdata.signature,
         &testdata.log_entry,
         &testdata.endorser_public_key,
         // NB: We use the wrong key deliberately.
@@ -201,15 +203,16 @@ fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
 }
 
 #[test]
-fn test_verify_binary_endorsement_fails_when_missing_rekor_entry() {
+fn test_verify_binary_endorsement_fails_with_rekor_key_but_no_log_entry() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
         NOW_UTC_MILLIS,
         &testdata.endorsement,
+        &testdata.signature,
         &Vec::new(),
         &testdata.endorser_public_key,
-        &Vec::new(),
+        &testdata.rekor_public_key,
     );
     assert!(result.is_err(), "{:?}", result);
 }

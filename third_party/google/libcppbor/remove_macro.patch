@@ -1,0 +1,83 @@
+diff --git src/cppbor.cpp src/cppbor.cpp
+index d916ce4..f4bbcd8 100644
+--- src/cppbor.cpp
++++ src/cppbor.cpp
+@@ -14,23 +14,18 @@
+  * limitations under the License.
+  */
+
+-#include "cppbor.h"
++#include "include/cppbor/cppbor.h"
+
+ #include <inttypes.h>
+ #include <openssl/sha.h>
+ #include <cstdint>
+
+-#include "cppbor_parse.h"
++#include "include/cppbor/cppbor_parse.h"
+
+ using std::string;
+ using std::vector;
+
+-#ifndef __TRUSTY__
+-#include <android-base/logging.h>
+-#define LOG_TAG "CppBor"
+-#else
+ #define CHECK(x) (void)(x)
+-#endif
+
+ namespace cppbor {
+
+@@ -244,9 +239,6 @@ bool prettyPrintInternal(const Item* item, string& out, size_t indent, size_t ma
+             } else if (asNull != nullptr) {
+                 out.append("null");
+             } else {
+-#ifndef __TRUSTY__
+-                LOG(ERROR) << "Only boolean/null is implemented for SIMPLE";
+-#endif  // __TRUSTY__
+                 return false;
+             }
+             break;
+@@ -608,9 +600,6 @@ string prettyPrint(const vector<uint8_t>& encodedCbor, size_t maxBStrSize,
+                    const vector<string>& mapKeysToNotPrint) {
+     auto [item, _, message] = parse(encodedCbor);
+     if (item == nullptr) {
+-#ifndef __TRUSTY__
+-        LOG(ERROR) << "Data to pretty print is not valid CBOR: " << message;
+-#endif  // __TRUSTY__
+         return "";
+     }
+
+diff --git src/cppbor_parse.cpp src/cppbor_parse.cpp
+index a221cf4..ead76d5 100644
+--- src/cppbor_parse.cpp
++++ src/cppbor_parse.cpp
+@@ -14,17 +14,12 @@
+  * limitations under the License.
+  */
+
+-#include "cppbor_parse.h"
++#include "include/cppbor/cppbor_parse.h"
+
+ #include <sstream>
+ #include <stack>
+
+-#ifndef __TRUSTY__
+-#include <android-base/logging.h>
+-#define LOG_TAG "CppBor"
+-#else
+ #define CHECK(x) (void)(x)
+-#endif
+
+ namespace cppbor {
+
+@@ -346,9 +341,7 @@ class FullParseClient : public ParseClient {
+   private:
+     void appendToLastParent(std::unique_ptr<Item> item) {
+         auto parent = mParentStack.top();
+-#if __has_feature(cxx_rtti)
+         assert(dynamic_cast<IncompleteItem*>(parent));
+-#endif
+
+         IncompleteItem* parentItem{};
+         if (parent->type() == ARRAY) {

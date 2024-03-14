@@ -16,26 +16,35 @@
 
 #include "cc/client/client.h"
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "cc/attestation/verification/attestation_verifier.h"
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/common.h"
+#include "proto/attestation/endorsement.pb.h"
+#include "proto/attestation/evidence.pb.h"
+#include "proto/attestation/verification.pb.h"
 #include "proto/crypto/crypto.pb.h"
 #include "proto/session/messages.pb.h"
 
 namespace oak::client {
 
 namespace {
+using ::oak::attestation::v1::AttestationResults;
+using ::oak::attestation::verification::AttestationVerifier;
 using ::oak::crypto::ClientEncryptor;
 using ::oak::crypto::DecryptionResult;
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
-using ::oak::remote_attestation::AttestationVerifier;
-using ::oak::session::v1::AttestationBundle;
+using ::oak::session::v1::EndorsedEvidence;
 using ::oak::transport::TransportWrapper;
 }  // namespace
 
@@ -43,19 +52,29 @@ constexpr absl::string_view kEmptyAssociatedData = "";
 
 absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
-  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
+  absl::StatusOr<EndorsedEvidence> endorsed_evidence = transport->GetEndorsedEvidence();
   if (!endorsed_evidence.ok()) {
     return endorsed_evidence.status();
   }
 
-  absl::Status verification_status = verifier.Verify(endorsed_evidence->attestation_evidence(),
-                                                     endorsed_evidence->attestation_endorsement());
-  if (!verification_status.ok()) {
-    return verification_status;
+  absl::StatusOr<AttestationResults> attestation_results =
+      verifier.Verify(std::chrono::system_clock::now(), endorsed_evidence->evidence(),
+                      endorsed_evidence->endorsements());
+  if (!attestation_results.ok()) {
+    return attestation_results.status();
   }
 
-  return absl::WrapUnique(new OakClient(
-      std::move(transport), endorsed_evidence->attestation_evidence().encryption_public_key()));
+  switch (attestation_results->status()) {
+    case AttestationResults::STATUS_SUCCESS:
+      return absl::WrapUnique(
+          new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+    case AttestationResults::STATUS_GENERIC_FAILURE:
+      return absl::FailedPreconditionError(
+          absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
+    case AttestationResults::STATUS_UNSPECIFIED:
+    default:
+      return absl::InternalError("illegal status code in attestation results");
+  }
 }
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {

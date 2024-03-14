@@ -22,20 +22,20 @@ use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
 use crate::{
-    crypto::KeyStore,
+    crypto::GroupKeys,
     proto::oak::key_provisioning::v1::{
         key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
-        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys,
+        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys as GroupKeysProto,
     },
 };
 
 struct KeyProvisioningService {
-    key_store: Arc<KeyStore>,
+    group_keys: Arc<GroupKeys>,
 }
 
 impl KeyProvisioningService {
-    pub fn new(key_store: Arc<KeyStore>) -> Self {
-        Self { key_store }
+    pub fn new(group_keys: Arc<GroupKeys>) -> Self {
+        Self { group_keys }
     }
 }
 
@@ -62,26 +62,25 @@ impl KeyProvisioning for KeyProvisioningService {
 
         // Encrypt group keys.
         let encrypted_encryption_private_key = self
-            .key_store
+            .group_keys
             .encrypted_group_encryption_key(&attestation_results.encryption_public_key)
             .map_err(|err| {
                 tonic::Status::internal(format!("couldn't encrypt encryption private key: {err}"))
             })?;
-        let group_keys = GroupKeys {
-            encrypted_encryption_private_key: Some(encrypted_encryption_private_key),
-        };
         Ok(tonic::Response::new(GetGroupKeysResponse {
-            group_keys: Some(group_keys),
+            group_keys: Some(GroupKeysProto {
+                encrypted_encryption_private_key: Some(encrypted_encryption_private_key),
+            }),
         }))
     }
 }
 
 pub async fn create(
     address: &str,
-    key_store: Arc<KeyStore>,
+    group_keys: Arc<GroupKeys>,
     cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error> {
-    let key_provisioning_service_instance = KeyProvisioningService::new(key_store);
+    let key_provisioning_service_instance = KeyProvisioningService::new(group_keys);
 
     let listener = TcpListener::bind(address).await?;
 

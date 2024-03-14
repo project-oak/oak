@@ -9,10 +9,6 @@ license = "Apache-2.0"
 anyhow = "*"
 bytes = "*"
 clap = { version = "*", features = ["derive"] }
-location_utils = { workspace = true }
-multimap = "*"
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }
 rand = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"

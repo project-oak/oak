@@ -20,13 +20,13 @@
 #include "absl/status/statusor.h"
 #include "app_service.h"
 #include "cc/containers/hello_world_trusted_app/app_service.h"
-#include "cc/containers/hello_world_trusted_app/orchestrator_client.h"
+#include "cc/containers/sdk/encryption_key_handle.h"
+#include "cc/containers/sdk/orchestrator_client.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
-#include "orchestrator_client.h"
 
-using ::oak::oak_containers_hello_world_trusted_app::OrchestratorClient;
+using ::oak::containers::sdk::OrchestratorClient;
 using ::oak::oak_containers_hello_world_trusted_app::TrustedApplicationImpl;
 
 int main(int argc, char* argv[]) {
@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
   OrchestratorClient client;
   absl::StatusOr<std::string> application_config = client.GetApplicationConfig();
   QCHECK_OK(application_config);
-  TrustedApplicationImpl service(&client, *application_config);
+  TrustedApplicationImpl service(
+      std::make_unique<::oak::containers::sdk::InstanceEncryptionKeyHandle>(), *application_config);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());

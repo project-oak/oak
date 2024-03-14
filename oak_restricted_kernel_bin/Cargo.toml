@@ -6,11 +6,12 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["virtio_console_channel"]
+default = ["virtio_console_channel", "initrd"]
 virtio_console_channel = ["oak_restricted_kernel/virtio_console_channel"]
 vsock_channel = ["oak_restricted_kernel/vsock_channel"]
 simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 serial_channel = ["oak_restricted_kernel/serial_channel"]
+initrd = ["oak_restricted_kernel/initrd"]
 
 [workspace]
 resolver = "2"
@@ -26,6 +27,13 @@ name = "oak_restricted_kernel_bin"
 test = false
 bench = false
 required-features = ["virtio_console_channel"]
+
+[[bin]]
+path = "src/main.rs"
+name = "oak_restricted_kernel_initrd_bin"
+test = false
+bench = false
+required-features = ["initrd"]
 
 [[bin]]
 path = "src/main.rs"

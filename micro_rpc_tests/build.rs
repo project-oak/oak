@@ -15,6 +15,7 @@
 //
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=WORKSPACE_ROOT");
     micro_rpc_build::compile(
         &[format!(
             "{}micro_rpc_tests/proto/test_schema.proto",

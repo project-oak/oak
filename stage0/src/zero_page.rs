@@ -19,7 +19,7 @@ use core::{ffi::CStr, mem::size_of, slice};
 
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
-use zerocopy::AsBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 use crate::{
     cmos::Cmos,
@@ -75,11 +75,21 @@ impl ZeroPage {
                 .expect("no suitable DMA address available");
             let address = crate::phys_to_virt(start);
 
+            // Safety: we have confirmed that the memory is backed by physical RAM and not currently
+            // used for anything else. We will overwrite all of it, so it does not have to be
+            // initialized.
             let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
             let actual_size = fw_cfg
                 .read_file(&file, buf)
                 .expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
+            // The initial ram disk location and size are not constant. We will overwrite it later
+            // anyway, so we overwrite it with zeros before measuring so we can get consistent
+            // measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
+            // information on the  field offsets.
+            *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
+            *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
+
             let measurement = crate::measure_byte_slice(buf);
 
             // The header information starts at offset 0x01F1 from the start of the setup data.
@@ -299,12 +309,6 @@ impl ZeroPage {
         // The size of the RAM disk will always fit into 32 bits since we only map a maximum of 1GiB
         // of RAM.
         self.inner.hdr.ramdisk_size = ram_disk.len() as u32;
-    }
-
-    /// Sets the address of the EFI system table.
-    pub fn set_efi_system_table(&mut self, efi_info: PhysAddr) {
-        self.inner.efi_info.efi_systab = efi_info.as_u64() as u32;
-        self.inner.efi_info.efi_systab_hi = (efi_info.as_u64() >> 32) as u32;
     }
 }
 

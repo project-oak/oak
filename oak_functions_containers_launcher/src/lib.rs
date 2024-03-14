@@ -17,6 +17,9 @@ pub mod proto {
     pub mod oak {
         pub mod functions {
             tonic::include_proto!("oak.functions");
+            pub mod config {
+                tonic::include_proto!("oak.functions.config");
+            }
         }
         pub use oak_crypto::proto::oak::crypto;
         pub use oak_proto_rust::oak::attestation;
@@ -27,10 +30,12 @@ mod lookup;
 pub mod server;
 
 use anyhow::Context;
-use oak_containers_launcher::Launcher;
+use oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 use oak_functions_launcher::LookupDataConfig;
 use tokio::time::Duration;
+use tokio_vsock::VsockStream;
 use tonic::transport::Endpoint;
+use tower::service_fn;
 
 use crate::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
@@ -45,15 +50,36 @@ pub struct UntrustedApp {
 impl UntrustedApp {
     pub async fn create(launcher_args: oak_containers_launcher::Args) -> anyhow::Result<Self> {
         let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
-        let trusted_app_address = launcher.get_trusted_app_address().await?;
 
         let oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::from_shared(format!("http://{trusted_app_address}"))
-                .context("couldn't form channel")?
-                .connect_timeout(Duration::from_secs(120))
-                .connect()
-                .await
-                .context("couldn't connect to trusted app")?;
+            let channel = match launcher.get_trusted_app_address().await? {
+                TrustedApplicationAddress::Network(trusted_app_address) => {
+                    Endpoint::from_shared(format!("http://{trusted_app_address}"))
+                        .context("couldn't form channel")?
+                        .connect_timeout(Duration::from_secs(120))
+                        .connect()
+                        .await
+                        .context("couldn't connect to trusted app")?
+                }
+                TrustedApplicationAddress::VirtioVsock(trusted_app_address) => {
+                    // The common URI scheme would be `vsock:cid:port` (see
+                    // https://grpc.github.io/grpc/cpp/md_doc_naming.html), but this is not palatable
+                    // to the URI class in Rust. The URL is ignored anyway as we're going to
+                    // override the connector so it doesn't matter what we pass in there.
+                    Endpoint::from_shared(format!(
+                        "vsock://{}:{}",
+                        trusted_app_address.cid(),
+                        trusted_app_address.port()
+                    ))
+                    .context("couldn't form channel")?
+                    .connect_timeout(Duration::from_secs(120))
+                    .connect_with_connector(service_fn(move |_| {
+                        VsockStream::connect(trusted_app_address)
+                    }))
+                    .await
+                    .context("couldn't connect to trusted app")?
+                }
+            };
             GrpcOakFunctionsClient::new(channel)
         };
 

@@ -19,26 +19,15 @@ use core::future::Future;
 
 use anyhow::Context;
 use oak_crypto::{
-    encryptor::{AsyncEncryptionKeyHandle, EncryptionKeyHandle, ServerEncryptor},
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
+    EMPTY_ASSOCIATED_DATA,
 };
-
-const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
-
-/// Information about a public key.
-#[derive(Debug, Clone)]
-pub struct PublicKeyInfo {
-    /// The serialized public key.
-    pub public_key: Vec<u8>,
-    /// The serialized attestation report that binds the public key to the specific version of the
-    /// code running in a TEE.
-    pub attestation: Vec<u8>,
-}
 
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
-    // TODO(#3442): Use attester to attest to the public key.
     encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     request_handler: H,
 }
@@ -74,24 +63,24 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 /// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
-pub struct AsyncEncryptionHandler<G, H, F>
+pub struct AsyncEncryptionHandler<H, F>
 where
-    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
-    // TODO(#3442): Use attester to attest to the public key.
-    encryption_key_handle: Arc<G>,
+    encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     request_handler: H,
 }
 
-impl<G, H, F> AsyncEncryptionHandler<G, H, F>
+impl<H, F> AsyncEncryptionHandler<H, F>
 where
-    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
-    pub fn create(encryption_key_handle: Arc<G>, request_handler: H) -> Self {
+    pub fn create(
+        encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
+        request_handler: H,
+    ) -> Self {
         Self {
             encryption_key_handle,
             request_handler,

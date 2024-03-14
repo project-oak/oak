@@ -1,0 +1,55 @@
+//
+// Copyright 2024 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.functions.config;
+
+enum HandlerType {
+  // Defaults to WASM.
+  HANDLER_UNSPECIFIED = 0;
+
+  // Use a wasm interpreter to load the module.
+  HANDLER_WASM = 1;
+
+  // Interpret the module as a native .so file. Only supported when running on Oak Containers.
+  HANDLER_NATIVE = 2;
+}
+
+message TcpCommunicationChannel {
+  // Port to listen on. If not specified, defaults to 8080.
+  uint32 port = 1;
+}
+
+message VsockCommunicationChannel {
+  // Port to listen on. If not specified, defaults to 8080.
+  uint32 port = 1;
+}
+
+message ApplicationConfig {
+  // How to load the provided module.
+  HandlerType handler_type = 1;
+
+  // Communication channel parameters.
+  // The default behaviour depends on the flavour of Oak Functions:
+  //   - when running on Restricted Kernel this setting is ignored completely as the communication
+  //     channel is abstracted away by Restricted Kernel itself.
+  //   - on Oak Containers, if not specified, the default communication channel is TCP.
+  oneof communication_channel {
+    TcpCommunicationChannel tcp_channel = 2;
+    VsockCommunicationChannel vsock_channel = 3;
+  }
+}

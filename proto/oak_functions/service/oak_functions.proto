@@ -73,14 +73,7 @@ message InitializeRequest {
 }
 
 message InitializeResponse {
-  PublicKeyInfo public_key_info = 1 [deprecated = true];
   oak.attestation.v1.Evidence evidence = 2;
-}
-
-message PublicKeyInfo {
-  option deprecated = true;
-  bytes public_key = 1;
-  bytes attestation = 2;
 }
 
 message InvokeRequest {

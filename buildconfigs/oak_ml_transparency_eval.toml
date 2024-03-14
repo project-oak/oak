@@ -5,6 +5,6 @@ command = [
   "--model=/project/mnist_model.tar.gz",
   "--model-name=mnist",
   "--eval-script=/project/eval.py",
-  "--output=claim.json"
+  "--output=claim.json",
 ]
 artifact_path = "./oak_ml_transparency/mnist/claim.json"

@@ -186,7 +186,7 @@ enum ImiPage {
 /// The type of page being measured.
 ///
 /// See table 65 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
-#[derive(Debug, FromRepr, AsBytes)]
+#[derive(Debug, FromRepr, AsBytes, Clone)]
 #[repr(u8)]
 #[allow(unused)]
 pub enum PageType {

@@ -13,6 +13,6 @@ command = [
   "--release",
   "--",
   "--output-target=binary",
-  "target/x86_64-unknown-none/release/stage0_bin"
+  "target/x86_64-unknown-none/release/stage0_bin",
 ]
 artifact_path = "./stage0_bin/target/x86_64-unknown-none/release/stage0_bin"

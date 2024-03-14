@@ -137,6 +137,7 @@ pub fn generate_dice_data<
     measurements: &Measurements,
     get_attestation: F,
     get_derived_key: G,
+    tee_platform: TeePlatform,
 ) -> Stage0DiceData {
     let mut result = Stage0DiceData::new_zeroed();
     // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
@@ -182,7 +183,7 @@ pub fn generate_dice_data<
     let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);
 
     result.magic = STAGE0_MAGIC;
-    result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp as u64;
+    result.root_layer_evidence.tee_platform = tee_platform as u64;
     result
         .root_layer_evidence
         .set_remote_attestation_report(report_bytes)

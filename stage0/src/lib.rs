@@ -26,7 +26,7 @@ use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
-use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
+use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
@@ -50,8 +50,6 @@ mod allocator;
 mod apic;
 mod cmos;
 mod dice_attestation;
-#[cfg(feature = "efi")]
-mod efi;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
@@ -335,11 +333,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
         memory_map_sha2_256_digest,
     };
 
+    let tee_platform = if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        TeePlatform::AmdSevSnp
+    } else {
+        TeePlatform::None
+    };
+
     let dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             &measurements,
             dice_attestation::get_attestation,
             dice_attestation::get_derived_key,
+            tee_platform,
         ),
         &crate::BOOT_ALLOC,
     ));
@@ -364,14 +369,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
         format!("{} -- {}", cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
-
-    // If required, create a fake EFI system table.
-    if cfg!(feature = "efi") {
-        let system_table = efi::create_efi_skeleton();
-        zero_page.set_efi_system_table(PhysAddr::new(
-            VirtAddr::from_ptr(Box::leak(system_table)).as_u64(),
-        ))
-    }
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

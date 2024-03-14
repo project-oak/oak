@@ -33,7 +33,6 @@ java_test(
         "//proto/session:messages_java_proto",
         "//proto/session:service_streaming_java_grpc",
         "//proto/session:service_streaming_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//core:inprocess",
         "@io_grpc_grpc_java//stub",

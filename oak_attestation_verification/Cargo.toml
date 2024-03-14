@@ -16,7 +16,7 @@ coset = { version = "*", default-features = false }
 ecdsa = { version = "*", default-features = false, features = ["pkcs8", "pem"] }
 getrandom = { version = "*", default-features = false, features = [
   # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
-  "rdrand"
+  "rdrand",
 ] }
 hex = { version = "*", default-features = false }
 oak_dice = { workspace = true }
@@ -26,11 +26,14 @@ p256 = { version = "*", default-features = false, features = [
   "alloc",
   "ecdsa-core",
   "ecdsa",
-  "pem"
+  "pem",
 ] }
 p384 = { version = "0.13.0", default-features = false, features = [
   "ecdsa",
-  "pem"
+  "pem",
+] }
+prost = { workspace = true, default-features = false, features = [
+  "prost-derive",
 ] }
 rsa = { version = "0.9.6", default-features = false }
 serde = { version = "*", default-features = false, features = ["derive"] }
@@ -38,10 +41,7 @@ serde_json = { version = "*", default-features = false, features = ["alloc"] }
 sha2 = { version = "*", default-features = false }
 time = { version = "0.3.28", default-features = false, features = [
   "serde",
-  "parsing"
+  "parsing",
 ] }
 x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 zerocopy = "*"
-
-[dev-dependencies]
-prost = { workspace = true }

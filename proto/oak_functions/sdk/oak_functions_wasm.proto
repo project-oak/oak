@@ -54,6 +54,11 @@ service StdWasmApi {
   // method_id: 3
   rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {}
 
+  // Looks up multiple items from the in-memory key/value lookup store.
+  //
+  // method_id: 4
+  rpc LookupDataMulti(LookupDataMultiRequest) returns (LookupDataMultiResponse) {}
+
   // Test method only.
   //
   // method_id: 128
@@ -86,6 +91,14 @@ message LookupDataResponse {
   google.protobuf.BytesValue value = 1;
 }
 
+message LookupDataMultiRequest {
+  repeated bytes keys = 1;
+}
+
+message LookupDataMultiResponse {
+  repeated BytesValue values = 1;
+}
+
 message TestRequest {
   bytes body = 1;
   // Whether to echo the message back. If false, the response will be empty.
@@ -94,4 +107,11 @@ message TestRequest {
 
 message TestResponse {
   bytes body = 1;
+}
+
+message BytesValue {
+  bytes value = 1;
+  // If true, the value was found in the store. This is useful to distinguish between a value that
+  // was not found and a value that was found and is empty.
+  bool found = 2;
 }

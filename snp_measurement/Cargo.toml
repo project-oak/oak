@@ -9,7 +9,6 @@ license = "Apache-2.0"
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
-goblin = "*"
 hex = "*"
 oak_sev_guest = { workspace = true }
 log = "*"

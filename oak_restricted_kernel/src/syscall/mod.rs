@@ -15,13 +15,15 @@
 //
 
 mod channel;
-mod dice_data;
+pub mod dice_data;
 mod fd;
-#[cfg(not(feature = "initrd"))]
 mod key;
 pub mod mmap;
 mod process;
 mod stdio;
+
+#[cfg(feature = "initrd")]
+mod switch_process;
 
 #[cfg(test)]
 mod tests;
@@ -30,10 +32,6 @@ use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 
 use oak_channel::Channel;
-#[cfg(not(feature = "initrd"))]
-use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
-#[cfg(feature = "initrd")]
-use oak_dice::evidence::Stage0DiceData as DiceData;
 #[cfg(not(feature = "initrd"))]
 use oak_restricted_kernel_dice::DerivedKey;
 use oak_restricted_kernel_interface::{Errno, Syscall};
@@ -45,6 +43,8 @@ use x86_64::{
     VirtAddr,
 };
 
+#[cfg(feature = "initrd")]
+use self::switch_process::syscall_unstable_switch_proccess;
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
@@ -73,13 +73,15 @@ struct GsData {
 
 pub fn enable_syscalls(
     channel: Box<dyn Channel>,
-    dice_data: DiceData,
+    dice_data: dice_data::DiceData,
     #[cfg(not(feature = "initrd"))] derived_key: DerivedKey,
 ) {
     channel::register(channel);
     stdio::register();
-    #[cfg(not(feature = "initrd"))]
-    key::register(derived_key);
+    key::register(
+        #[cfg(not(feature = "initrd"))]
+        derived_key,
+    );
     dice_data::register(dice_data);
 
     // Allocate a stack for the system call handler.
@@ -126,6 +128,12 @@ extern "sysv64" fn syscall_handler(
             syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
         }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
+        #[cfg(feature = "initrd")]
+        Some(Syscall::UnstableSwitchProcess) => {
+            syscall_unstable_switch_proccess(arg1 as *mut c_void, arg2)
+        }
+        #[cfg(not(feature = "initrd"))]
+        Some(Syscall::UnstableSwitchProcess) => Errno::ENOSYS as isize,
         None => Errno::ENOSYS as isize,
     }
 }

@@ -21,7 +21,7 @@ use opentelemetry::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };
-use procfs::CurrentSI;
+use procfs::{Current, CurrentSI};
 
 use crate::launcher_client::LauncherClient;
 
@@ -41,6 +41,14 @@ pub struct SystemMetrics {
     net_sent_bytes: ObservableCounter<u64>,
     net_sent_packets: ObservableCounter<u64>,
     net_sent_errs: ObservableCounter<u64>,
+
+    // Memory-related metrics
+    mem_total: ObservableGauge<u64>,
+    mem_free: ObservableGauge<u64>,
+    mem_available: ObservableGauge<u64>,
+    mem_buffers: ObservableGauge<u64>,
+    mem_cached: ObservableGauge<u64>,
+    mem_slab: ObservableGauge<u64>,
 }
 
 impl SystemMetrics {
@@ -92,6 +100,30 @@ impl SystemMetrics {
             net_sent_errs: meter
                 .u64_observable_counter("network_transmit_errors")
                 .with_callback(Self::net_sent_errs)
+                .try_init()?,
+            mem_total: meter
+                .u64_observable_gauge("mem_total")
+                .with_callback(Self::mem_total)
+                .try_init()?,
+            mem_free: meter
+                .u64_observable_gauge("mem_free")
+                .with_callback(Self::mem_free)
+                .try_init()?,
+            mem_available: meter
+                .u64_observable_gauge("mem_available")
+                .with_callback(Self::mem_available)
+                .try_init()?,
+            mem_buffers: meter
+                .u64_observable_gauge("mem_buffers")
+                .with_callback(Self::mem_buffers)
+                .try_init()?,
+            mem_cached: meter
+                .u64_observable_gauge("mem_cached")
+                .with_callback(Self::mem_cached)
+                .try_init()?,
+            mem_slab: meter
+                .u64_observable_gauge("mem_slab")
+                .with_callback(Self::mem_slab)
                 .try_init()?,
         })
     }
@@ -196,6 +228,38 @@ impl SystemMetrics {
         for (interface, stats) in stats {
             counter.observe(stats.sent_errs, &[KeyValue::new("device", interface)]);
         }
+    }
+
+    fn mem_total(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        gauge.observe(stats.mem_total, &[]);
+    }
+
+    fn mem_free(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        gauge.observe(stats.mem_free, &[]);
+    }
+
+    fn mem_available(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        if let Some(mem_available) = stats.mem_available {
+            gauge.observe(mem_available, &[]);
+        }
+    }
+
+    fn mem_buffers(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        gauge.observe(stats.buffers, &[]);
+    }
+
+    fn mem_cached(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        gauge.observe(stats.cached, &[]);
+    }
+
+    fn mem_slab(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::Meminfo::current().unwrap();
+        gauge.observe(stats.slab, &[]);
     }
 }
 
