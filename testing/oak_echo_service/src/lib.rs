@@ -23,7 +23,7 @@ use alloc::format;
 
 use log::info;
 use oak_attestation::dice::evidence_to_proto;
-use oak_restricted_kernel_sdk::EvidenceProvider;
+use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
 pub mod proto {
     pub mod oak {

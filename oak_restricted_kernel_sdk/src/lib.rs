@@ -21,15 +21,15 @@
 
 extern crate alloc;
 
+pub mod attestation;
 pub mod channel;
-pub mod instance_attestation;
-#[cfg(any(feature = "mock_attestation", doc))]
-#[doc(cfg(feature = "mock_attestation"))]
-pub mod mock_attestation;
+pub mod crypto;
+#[cfg(any(feature = "mock_sdk", doc))]
+#[doc(cfg(feature = "mock_sdk"))]
+pub mod mock_sdk;
 pub mod utils;
-use oak_crypto::encryption_key::EncryptionKey;
 pub use oak_crypto::encryption_key::EncryptionKeyHandle;
-use oak_dice::evidence::Evidence;
+
 /// Marks a function as the entrypoint to an enclave app and sets up an
 /// conviences such an allocator, logger, panic handler.
 ///
@@ -61,27 +61,3 @@ use oak_dice::evidence::Evidence;
 /// }
 /// ```
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
-
-/// Exposes the ability to sign bytestrings using a private key that has been
-/// endorsed in the Attestation Evidence.
-pub trait Signer {
-    /// Attempt to sign the provided message bytestring using a signing private
-    /// key, a corresponding public key of which is contained in the
-    /// Attestation Evidence.
-    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
-}
-
-/// Exposes the ability to read the Attestation Evidence.
-/// Note: Applications should only use the evidence to initially send it to the
-/// host application once, which then sends it to the clients. It is discouraged
-/// for enclave applications to operate directly with evidences.
-pub trait EvidenceProvider {
-    fn get_evidence(&self) -> &Evidence;
-}
-
-/// Wrapper for DICE evidence and application private keys.
-pub(crate) struct DiceWrapper {
-    pub evidence: Evidence,
-    pub encryption_key: EncryptionKey,
-    pub signing_key: p256::ecdsa::SigningKey,
-}

@@ -6,8 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-# Functionality to create and use mock attestations. Helpful for tests.
-mock_attestation = ["oak_stage0_dice", "oak_restricted_kernel_dice"]
+# Functionality to create and use mock attestation evidence and crypto logic.
+mock_sdk = ["oak_stage0_dice", "oak_restricted_kernel_dice"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }

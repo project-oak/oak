@@ -46,15 +46,15 @@ fn init() {
 }
 
 fn new_service_for_testing() -> OakFunctionsService<
-    oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
-    oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+    oak_restricted_kernel_sdk::mock_sdk::MockEncryptionKeyHandle,
+    oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider,
     oak_functions_service::wasm::WasmHandler,
 > {
     OakFunctionsService::new(
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider::create()
             .expect("failed to create EvidenceProvidder"),
         Arc::new(
-            oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle::create()
+            oak_restricted_kernel_sdk::mock_sdk::MockEncryptionKeyHandle::create()
                 .expect("failed to create EncryptionKeyHandle"),
         ),
         None,
@@ -297,8 +297,8 @@ fn it_should_handle_wasm_panic() {
         oak_functions_client: &'a mut OakFunctionsClient<
             OakFunctionsServer<
                 OakFunctionsService<
-                    oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
-                    oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+                    oak_restricted_kernel_sdk::mock_sdk::MockEncryptionKeyHandle,
+                    oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider,
                     oak_functions_service::wasm::WasmHandler,
                 >,
             >,

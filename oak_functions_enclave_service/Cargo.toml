@@ -29,5 +29,5 @@ oak_attestation = { workspace = true }
 oak_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true, features = [
-  "mock_attestation",
+  "mock_sdk",
 ] }

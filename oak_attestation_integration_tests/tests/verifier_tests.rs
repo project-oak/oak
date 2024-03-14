@@ -24,7 +24,7 @@ use oak_proto_rust::oak::attestation::v1::{
     OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
     RootLayerReferenceValues, SkipVerification,
 };
-use oak_restricted_kernel_sdk::EvidenceProvider;
+use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -32,7 +32,7 @@ const NOW_UTC_MILLIS: i64 = 1698829200000;
 #[test]
 fn verify_mock_dice_chain() {
     let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider::create()
             .expect("failed to create mock provider");
     let mock_evidence = mock_evidence_provider.get_evidence();
 
@@ -49,7 +49,7 @@ fn verify_mock_dice_chain() {
 #[test]
 fn verify_mock_evidence() {
     let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::mock_sdk::MockEvidenceProvider::create()
             .expect("failed to create mock provider");
     let evidence = evidence_to_proto(mock_evidence_provider.get_evidence().clone())
         .expect("failed to convert evidence to proto");

@@ -39,7 +39,7 @@ use prost::Message;
 pub struct OakFunctionsService<EKH, EP, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     evidence_provider: EP,
@@ -51,7 +51,7 @@ where
 impl<EKH, EP, H> OakFunctionsService<EKH, EP, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     pub fn new(
@@ -74,7 +74,7 @@ where
 impl<EKH, EP, H> OakFunctions for OakFunctionsService<EKH, EP, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     fn initialize(
