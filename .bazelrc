@@ -15,3 +15,6 @@ build:clang-tidy --output_groups=report
 
 # Optionally override the .clang-tidy config file target
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
+
+# Use nightly rustc by default
+build --@rules_rust//rust/toolchain/channel=nightly
