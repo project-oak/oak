@@ -31,7 +31,6 @@ pub const P256_SCALAR_LENGTH: usize = 32;
 
 use crate::noise_nk::rustcrypto::ecdsa::signature::Verifier;
 
-
 extern crate aes_gcm;
 extern crate ecdsa;
 extern crate hkdf;
@@ -39,17 +38,19 @@ extern crate pkcs8;
 extern crate primeorder;
 extern crate sha2;
 
+use alloc::vec::Vec;
+
 use aes_gcm::{AeadInPlace, KeyInit};
 use p256::ecdsa::signature::Signer;
 use pkcs8::{DecodePrivateKey, EncodePrivateKey};
-use primeorder::PrimeField;
+use primeorder::{
+    elliptic_curve::{
+        ops::{Mul, MulByGenerator},
+        sec1::{FromEncodedPoint, ToEncodedPoint},
+    },
+    Field, PrimeField,
+};
 use sha2::Digest;
-
-use primeorder::elliptic_curve::ops::{Mul, MulByGenerator};
-use primeorder::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
-use primeorder::Field;
-
-use alloc::vec::Vec;
 
 pub fn rand_bytes(_output: &mut [u8]) {
     panic!("unimplemented");
@@ -57,7 +58,9 @@ pub fn rand_bytes(_output: &mut [u8]) {
 
 /// Perform the HKDF operation from https://datatracker.ietf.org/doc/html/rfc5869
 pub fn hkdf_sha256(ikm: &[u8], salt: &[u8], info: &[u8], output: &mut [u8]) -> Result<(), ()> {
-    hkdf::Hkdf::<sha2::Sha256>::new(Some(salt), ikm).expand(info, output).map_err(|_| ())
+    hkdf::Hkdf::<sha2::Sha256>::new(Some(salt), ikm)
+        .expand(info, output)
+        .map_err(|_| ())
 }
 
 pub fn aes_256_gcm_seal_in_place(
@@ -108,7 +111,9 @@ impl P256Scalar {
         let mut ret = [0u8; P256_SCALAR_LENGTH];
         // Warning: not very random.
         ret[0] = 1;
-        P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
+        P256Scalar {
+            v: p256::Scalar::from_repr(ret.into()).unwrap(),
+        }
     }
 
     pub fn compute_public_key(&self) -> [u8; P256_X962_LENGTH] {

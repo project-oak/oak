@@ -22,14 +22,16 @@ mod error;
 mod noise;
 mod rustcrypto;
 
-use crate::noise_nk::error::Error;
-use crate::noise_nk::noise::{HandshakeType, Noise, NONCE_LEN};
 use alloc::vec::Vec;
 use core::result::Result;
 
 pub use crate::noise_nk::rustcrypto::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar,
+};
+use crate::noise_nk::{
+    error::Error,
+    noise::{HandshakeType, Noise, NONCE_LEN},
 };
 
 // This is assumed to be vastly larger than any connection will ever reach.
@@ -51,7 +53,12 @@ pub struct Crypter {
 /// direction.
 impl Crypter {
     fn new(read_key: &[u8; 32], write_key: &[u8; 32]) -> Self {
-        Self { read_key: *read_key, write_key: *write_key, read_nonce: 0, write_nonce: 0 }
+        Self {
+            read_key: *read_key,
+            write_key: *write_key,
+            read_nonce: 0,
+            write_nonce: 0,
+        }
     }
 
     fn next_nonce(nonce: &mut u32) -> Result<[u8; NONCE_LEN], Error> {
@@ -133,8 +140,9 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
     let mut noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(&[0; 1]); // Prologue
 
-    let identity_scalar: P256Scalar =
-        identity_private_key_bytes.try_into().map_err(|_| Error::InvalidPrivateKey)?;
+    let identity_scalar: P256Scalar = identity_private_key_bytes
+        .try_into()
+        .map_err(|_| Error::InvalidPrivateKey)?;
     let identity_pub = identity_scalar.compute_public_key();
 
     noise.mix_hash_point(identity_pub.as_slice());
@@ -199,7 +207,8 @@ pub mod test_client {
             self.noise.mix_hash(ephemeral_pub_key_bytes);
             self.noise.mix_key(ephemeral_pub_key_bytes);
             let es_ecdh_bytes =
-                rustcrypto::p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key).unwrap();
+                rustcrypto::p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key)
+                    .unwrap();
             self.noise.mix_key(&es_ecdh_bytes);
 
             let ciphertext = self.noise.encrypt_and_hash(&[]);
@@ -222,16 +231,19 @@ pub mod test_client {
             let plaintext = self.noise.decrypt_and_hash(ciphertext).unwrap();
             assert_eq!(plaintext.len(), 0);
             let (write_key, read_key) = self.noise.traffic_keys();
-            (self.noise.handshake_hash(), Crypter::new(&read_key, &write_key))
+            (
+                self.noise.handshake_hash(),
+                Crypter::new(&read_key, &write_key),
+            )
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::test_client::HandshakeInitiator;
-    use super::*;
     use alloc::vec;
+
+    use super::{test_client::HandshakeInitiator, *};
 
     #[test]
     fn process_handshake() {

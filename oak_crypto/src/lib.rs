@@ -35,8 +35,8 @@ pub mod proto {
 
 pub mod encryption_key;
 pub mod encryptor;
-pub mod noise_nk;
 pub mod hpke;
+pub mod noise_nk;
 pub mod signer;
 #[cfg(test)]
 mod tests;
