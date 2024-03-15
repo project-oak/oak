@@ -13,7 +13,14 @@ aes-gcm = { version = "*", default-features = false, features = [
 anyhow = { version = "*", default-features = false }
 async-trait = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
-ecdsa = { version = "0.16.6", default-features = false, features = ["der", "pkcs8", "signing", "der", "pem", "pkcs8"] }
+ecdsa = { version = "0.16.6", default-features = false, features = [
+  "der",
+  "pkcs8",
+  "signing",
+  "der",
+  "pem",
+  "pkcs8",
+] }
 hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = { version = "*", default-features = false }
 hpke = { version = "*", default-features = false, features = [
@@ -25,8 +32,8 @@ p256 = { version = "*", default-features = false, features = [
   "ecdsa",
   "pem",
 ] }
-pkcs8 = { version = "0.10.2", default-features = false, features = ["alloc"]}
-primeorder = { version = "0.13.2", default-features = false}
+pkcs8 = { version = "0.10.2", default-features = false, features = ["alloc"] }
+primeorder = { version = "0.13.2", default-features = false }
 prost = { version = "*", default-features = false, features = ["prost-derive"] }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
