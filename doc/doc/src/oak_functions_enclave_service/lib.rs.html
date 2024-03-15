@@ -227,7 +227,7 @@
 <span class="kw">pub struct </span>OakFunctionsService&lt;EKH, EP, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     evidence_provider: EP,
@@ -239,7 +239,7 @@
 <span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctionsService&lt;EKH, EP, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     <span class="kw">pub fn </span>new(
@@ -262,7 +262,7 @@
 <span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctions <span class="kw">for </span>OakFunctionsService&lt;EKH, EP, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
-    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
     H: Handler,
 {
     <span class="kw">fn </span>initialize(
