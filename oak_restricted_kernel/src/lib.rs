@@ -79,8 +79,6 @@ use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
-#[cfg(not(feature = "initrd"))]
-use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{
     structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
@@ -434,11 +432,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
         // We need to load the application binary before we hand the channel over to the
         // syscalls, which expose it to the user space.
         info!("Loading application binary...");
-        oak_channel::basic_framed::load_raw::<dyn Channel, { Size4KiB::SIZE as usize }>(
-            &mut *channel,
-        )
-        .expect("failed to load application binary from channel")
-        .into_boxed_slice()
+        oak_channel::basic_framed::receive_raw::<dyn Channel>(&mut *channel)
+            .expect("failed to load application binary from channel")
+            .into_boxed_slice()
     };
 
     log::info!("Binary loaded, size: {}", application_bytes.len());

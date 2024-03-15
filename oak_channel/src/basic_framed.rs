@@ -14,11 +14,27 @@
 // limitations under the License.
 //
 
+//! Basic framed format for use before the channel is handed of to the
+//! application.
+//!
+//! This protocol is used once.
+//! 1. To load the application. Here the host is the sender, enclave is the
+//!    recipient.
+//!
+//! The protocol is very simple:
+//! 1. sender sends the size of the payload, as u32
+//! 2. sender sends MAX_SIZE of data and waits for the recipient to acknowledge
+//! 3. recipient reads up to MAX_SIZE of data and acks by responding with the
+//!    amount of data read
+//! 4. repeat (2) and (3) until all the data has been transmitted
+
 use alloc::vec;
 
 use anyhow::Result;
 
 use crate::Channel;
+
+const MAX_SIZE: usize = 4096;
 
 /// Reads a chunk of data and acknowledges the transmission by writing back the
 /// number of bytes read.
@@ -28,22 +44,7 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
     channel.write_all(&len.to_le_bytes())
 }
 
-/// Loads a Restricted Application over the given channel using a basic framed
-/// format.
-///
-/// This is intended for use after the kernel has started up to load the
-/// Restricted Application, before we start the application and hand off the
-/// channel to it.
-///
-/// The protocol to load the application is very simple:
-/// 1. loader sends the size of the application binary, as u32
-/// 2. loader sends MAX_SIZE of data and waits for the kernel to acknowledge
-/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the
-///    amount of data read
-/// 4. repeat (2) and (3) until all the data has been transmitted
-pub fn load_raw<C: Channel + ?Sized, const MAX_SIZE: usize>(
-    channel: &mut C,
-) -> Result<vec::Vec<u8>> {
+pub fn receive_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<vec::Vec<u8>> {
     let payload_len = {
         let mut buf: [u8; 4] = Default::default();
         channel.read_exact(&mut buf)?;
@@ -58,4 +59,30 @@ pub fn load_raw<C: Channel + ?Sized, const MAX_SIZE: usize>(
     read_chunk(channel, chunks_mut.into_remainder())?;
 
     Ok(payload)
+}
+
+pub fn send_raw<C: Channel + ?Sized>(channel: &mut C, payload: &[u8]) -> Result<()> {
+    channel
+        .write_all(&(payload.len() as u32).to_le_bytes())
+        .expect("failed to send application binary length to enclave");
+
+    // Write a chunk of data and await the recipients acknowledgement.
+    let mut write_chunk = move |chunk| {
+        channel.write_all(chunk)?;
+        let mut ack: [u8; 4] = Default::default();
+        channel.read_exact(&mut ack)?;
+        if u32::from_le_bytes(ack) as usize != chunk.len() {
+            anyhow::bail!("ack wasn't of correct length");
+        }
+        Ok(())
+    };
+
+    // The kernel expects data to be transmitted in chunks of one page.
+    let mut chunks = payload.array_chunks::<MAX_SIZE>();
+    for chunk in chunks.by_ref() {
+        write_chunk(chunk)?;
+    }
+    write_chunk(chunks.remainder())?;
+
+    Ok(())
 }

@@ -18,7 +18,7 @@
 
 extern crate alloc;
 
-use oak_channel::basic_framed::load_raw;
+use oak_channel::basic_framed::receive_raw;
 use oak_dice::evidence::Stage0DiceData;
 
 pub struct AttestedApp {
@@ -32,7 +32,7 @@ impl AttestedApp {
         mut channel: C,
         stage0_dice_data: Stage0DiceData,
     ) -> Self {
-        let elf_binary = load_raw::<C, 4096>(&mut channel).expect("failed to load");
+        let elf_binary = receive_raw::<C>(&mut channel).expect("failed to load");
         log::info!("Binary loaded, size: {}", elf_binary.len());
         let app_digest = oak_restricted_kernel_dice::measure_app_digest_sha2_256(&elf_binary);
         log::info!(

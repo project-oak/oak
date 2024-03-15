@@ -31,11 +31,8 @@ use async_trait::async_trait;
 use clap::Parser;
 use command_fds::CommandFdExt;
 use log::info;
-use oak_channel::Write;
 
 use crate::channel::{Connector, ConnectorHandle};
-
-const PAGE_SIZE: usize = 4096;
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -166,33 +163,11 @@ impl Instance {
         let instance = cmd.spawn()?;
 
         if let Some(app_bytes) = app_bytes {
-            // Loading the application binary needs to happen before we start using microrpc
-            // over the channel.
-            host_socket
-                .write_all(&(app_bytes.len() as u32).to_le_bytes())
-                .expect("failed to send application binary length to enclave");
-
-            // The kernel expects data to be transmitted in chunks of one page.
-            let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
-            for chunk in chunks.by_ref() {
-                Self::write_chunk(&mut host_socket, chunk)?;
-            }
-            Self::write_chunk(&mut host_socket, chunks.remainder())?;
+            oak_channel::basic_framed::send_raw(&mut host_socket, &app_bytes)
+                .context("failed to send application")?;
         }
 
         Ok(Self { guest_console: guest_console_clone, host_socket, instance })
-    }
-
-    /// Writes a chunk to a channel, and expects an acknowledgement containing
-    /// the length of the chunk.
-    fn write_chunk(channel: &mut dyn oak_channel::Channel, chunk: &[u8]) -> Result<()> {
-        channel.write_all(chunk)?;
-        let mut ack: [u8; 4] = Default::default();
-        channel.read_exact(&mut ack)?;
-        if u32::from_le_bytes(ack) as usize != chunk.len() {
-            anyhow::bail!("ack wasn't of correct length");
-        }
-        Ok(())
     }
 }
 
