@@ -17,7 +17,7 @@
 //! Basic framed format for use before the channel is handed off to the
 //! application.
 //!
-//! This protocol is used once.
+//! This protocol is used twice.
 //! 1. To load the application. Here the host is the sender, enclave is the
 //!    recipient.
 //! 2. To return the attestation evidence. Here the host is the recipient,
