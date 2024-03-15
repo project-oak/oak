@@ -81,7 +81,7 @@ impl Noise {
         let mut output = [0; SYMMETRIC_KEY_SIZE * 3];
         // unwrap: only fails if the output size is too large, but the output
         // size is small and fixed here.
-        rustcrypto::hkdf_sha256(&ikm, &self.chaining_key, &[], &mut output).unwrap();
+        rustcrypto::hkdf_sha256(ikm, &self.chaining_key, &[], &mut output).unwrap();
         self.chaining_key
             .copy_from_slice(&output[..SYMMETRIC_KEY_SIZE]);
         self.mix_hash(&output[SYMMETRIC_KEY_SIZE..SYMMETRIC_KEY_SIZE * 2]);
@@ -221,7 +221,7 @@ mod tests {
                 &hex::decode("fdf1564256dcee03b5babe81df599ec4273c95e4269d747764").unwrap(),
             )
             .unwrap();
-        assert_eq!(hex::encode(&plaintext), "706c61696e74657874");
+        assert_eq!(hex::encode(plaintext), "706c61696e74657874");
         assert_eq!(
             hex::encode(noise.handshake_hash()),
             "1cf5b0af5f3365d715e9137382a5fd139a56e25bea8ecdbf3018f42af7432a75"
