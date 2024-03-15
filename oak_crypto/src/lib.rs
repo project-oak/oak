@@ -17,6 +17,7 @@
 #![no_std]
 
 extern crate alloc;
+extern crate static_assertions;
 
 #[cfg(test)]
 extern crate std;
@@ -34,6 +35,7 @@ pub mod proto {
 
 pub mod encryption_key;
 pub mod encryptor;
+pub mod noise_nk;
 pub mod hpke;
 pub mod signer;
 #[cfg(test)]

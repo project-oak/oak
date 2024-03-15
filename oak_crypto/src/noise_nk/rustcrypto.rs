@@ -1,0 +1,212 @@
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! The `crypto` crate abstracts over various crypto implementations.
+//!
+//! The ring implementation is the default and is used in production. The
+//! BoringSSL implementation avoids needing to build ring in Chromium when
+//! the enclave code is used with unit tests. The rustcrypto implementation
+//! isn't fully complete, but can be used to compile to wasm, which we might
+//! use in the future.
+
+#![allow(clippy::result_unit_err)]
+
+pub const NONCE_LEN: usize = 12;
+pub const SHA256_OUTPUT_LEN: usize = 32;
+
+/// The length of an uncompressed, X9.62 encoding of a P-256 point.
+pub const P256_X962_LENGTH: usize = 65;
+
+/// The length of a P-256 scalar value.
+pub const P256_SCALAR_LENGTH: usize = 32;
+
+use crate::noise_nk::rustcrypto::ecdsa::signature::Verifier;
+
+
+extern crate aes_gcm;
+extern crate ecdsa;
+extern crate hkdf;
+extern crate pkcs8;
+extern crate primeorder;
+extern crate sha2;
+
+use aes_gcm::{AeadInPlace, KeyInit};
+use p256::ecdsa::signature::Signer;
+use pkcs8::{DecodePrivateKey, EncodePrivateKey};
+use primeorder::PrimeField;
+use sha2::Digest;
+
+use primeorder::elliptic_curve::ops::{Mul, MulByGenerator};
+use primeorder::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use primeorder::Field;
+
+use alloc::vec::Vec;
+
+pub fn rand_bytes(_output: &mut [u8]) {
+    panic!("unimplemented");
+}
+
+/// Perform the HKDF operation from https://datatracker.ietf.org/doc/html/rfc5869
+pub fn hkdf_sha256(ikm: &[u8], salt: &[u8], info: &[u8], output: &mut [u8]) -> Result<(), ()> {
+    hkdf::Hkdf::<sha2::Sha256>::new(Some(salt), ikm).expand(info, output).map_err(|_| ())
+}
+
+pub fn aes_256_gcm_seal_in_place(
+    key: &[u8; 32],
+    nonce: &[u8; NONCE_LEN],
+    aad: &[u8],
+    plaintext: &mut Vec<u8>,
+) {
+    aes_gcm::Aes256Gcm::new_from_slice(key.as_slice())
+        .unwrap()
+        .encrypt_in_place(nonce.into(), aad, plaintext)
+        .unwrap();
+}
+
+pub fn aes_256_gcm_open_in_place(
+    key: &[u8; 32],
+    nonce: &[u8; NONCE_LEN],
+    aad: &[u8],
+    mut ciphertext: Vec<u8>,
+) -> Result<Vec<u8>, ()> {
+    aes_gcm::Aes256Gcm::new_from_slice(key.as_slice())
+        .unwrap()
+        .decrypt_in_place(nonce.into(), aad, &mut ciphertext)
+        .map_err(|_| ())?;
+    Ok(ciphertext)
+}
+
+pub fn sha256(input: &[u8]) -> [u8; SHA256_OUTPUT_LEN] {
+    let mut ctx = sha2::Sha256::new();
+    ctx.update(input);
+    ctx.finalize().into()
+}
+
+/// Compute the SHA-256 hash of the concatenation of two inputs.
+pub fn sha256_two_part(input1: &[u8], input2: &[u8]) -> [u8; SHA256_OUTPUT_LEN] {
+    let mut ctx = sha2::Sha256::new();
+    ctx.update(input1);
+    ctx.update(input2);
+    ctx.finalize().into()
+}
+
+pub struct P256Scalar {
+    v: p256::Scalar,
+}
+
+impl P256Scalar {
+    pub fn generate() -> P256Scalar {
+        let mut ret = [0u8; P256_SCALAR_LENGTH];
+        // Warning: not very random.
+        ret[0] = 1;
+        P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
+    }
+
+    pub fn compute_public_key(&self) -> [u8; P256_X962_LENGTH] {
+        p256::ProjectivePoint::mul_by_generator(&self.v)
+            .to_encoded_point(false)
+            .as_bytes()
+            .try_into()
+            .unwrap()
+    }
+
+    pub fn bytes(&self) -> [u8; P256_SCALAR_LENGTH] {
+        self.v.to_repr().as_slice().try_into().unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for P256Scalar {
+    type Error = ();
+
+    fn try_from(bytes: &[u8]) -> Result<Self, ()> {
+        let array: [u8; P256_SCALAR_LENGTH] = bytes.try_into().map_err(|_| ())?;
+        (&array).try_into()
+    }
+}
+
+impl TryFrom<&[u8; P256_SCALAR_LENGTH]> for P256Scalar {
+    type Error = ();
+
+    fn try_from(bytes: &[u8; P256_SCALAR_LENGTH]) -> Result<Self, ()> {
+        let scalar = p256::Scalar::from_repr((*bytes).into());
+        if !bool::from(scalar.is_some()) {
+            return Err(());
+        }
+        let scalar = scalar.unwrap();
+        if scalar.is_zero_vartime() {
+            return Err(());
+        }
+        Ok(P256Scalar { v: scalar })
+    }
+}
+
+pub fn p256_scalar_mult(
+    scalar: &P256Scalar,
+    point: &[u8; P256_X962_LENGTH],
+) -> Result<[u8; 32], ()> {
+    let point = p256::EncodedPoint::from_bytes(point).map_err(|_| ())?;
+    let affine_point = p256::AffinePoint::from_encoded_point(&point);
+    if !bool::from(affine_point.is_some()) {
+        // The peer's point is considered public input and so we don't need to work in
+        // constant time.
+        return Err(());
+    }
+    // unwrap: `is_some` checked just above.
+    let result = affine_point.unwrap().mul(scalar.v).to_encoded_point(false);
+    let x = result.x().ok_or(())?;
+    // unwrap: the length of a P256 field-element had better be 32 bytes.
+    Ok(x.as_slice().try_into().unwrap())
+}
+
+pub struct EcdsaKeyPair {
+    key_pair: p256::ecdsa::SigningKey,
+}
+
+impl EcdsaKeyPair {
+    pub fn from_pkcs8(pkcs8: &[u8]) -> Result<EcdsaKeyPair, ()> {
+        let key_pair: p256::ecdsa::SigningKey =
+            p256::ecdsa::SigningKey::from_pkcs8_der(pkcs8).map_err(|_| ())?;
+        Ok(EcdsaKeyPair { key_pair })
+    }
+
+    pub fn generate_pkcs8() -> Result<impl AsRef<[u8]>, ()> {
+        // WARNING: not actually a random scalar
+        let mut scalar = [0u8; P256_SCALAR_LENGTH];
+        scalar[0] = 42;
+        let non_zero_scalar = p256::NonZeroScalar::from_repr(scalar.into()).unwrap();
+        let key = p256::ecdsa::SigningKey::from(non_zero_scalar);
+        Ok(key.to_pkcs8_der().map_err(|_| ())?.to_bytes())
+    }
+
+    pub fn public_key(&self) -> impl AsRef<[u8]> + '_ {
+        p256::ecdsa::VerifyingKey::from(&self.key_pair).to_sec1_bytes()
+    }
+
+    pub fn sign(&self, signed_data: &[u8]) -> Result<impl AsRef<[u8]>, ()> {
+        let sig: ecdsa::Signature<p256::NistP256> = self.key_pair.sign(signed_data);
+        Ok(sig.to_der())
+    }
+}
+
+pub fn ecdsa_verify(pub_key: &[u8], signed_data: &[u8], signature: &[u8]) -> bool {
+    let signature = match ecdsa::der::Signature::from_bytes(signature) {
+        Ok(signature) => signature,
+        Err(_) => return false,
+    };
+    let key = match p256::ecdsa::VerifyingKey::from_sec1_bytes(pub_key) {
+        Ok(key) => key,
+        Err(_) => return false,
+    };
+    key.verify(signed_data, &signature).is_ok()
+}
