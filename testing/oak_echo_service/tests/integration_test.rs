@@ -29,9 +29,8 @@ const TEST_DATA: &[u8] = b"test_data";
 
 #[test]
 fn it_should_handle_echo_requests() {
-    let evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
-            .expect("couldn't create evidence provider");
+    let evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        .expect("couldn't create evidence provider");
     let service = EchoService { evidence_provider };
     let mut client = EchoClient::new(EchoServer::new(service));
 
@@ -44,9 +43,8 @@ fn it_should_handle_echo_requests() {
 
 #[test]
 fn it_should_provide_evidence() {
-    let evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
-            .expect("couldn't create evidence provider");
+    let evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        .expect("couldn't create evidence provider");
     let service = EchoService { evidence_provider };
     let mut client = EchoClient::new(EchoServer::new(service));
 

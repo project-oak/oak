@@ -23,9 +23,9 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use oak_restricted_kernel_sdk::{
+    attestation::InstanceEvidenceProvider,
     channel::{start_blocking_server, FileDescriptorChannel},
     entrypoint,
-    instance_attestation::InstanceEvidenceProvider,
     utils::samplestore::StaticSampleStore,
 };
 

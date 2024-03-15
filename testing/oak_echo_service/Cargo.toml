@@ -19,6 +19,4 @@ micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 async-trait = "*"
-oak_restricted_kernel_sdk = { workspace = true, features = [
-  "mock_attestation",
-] }
+oak_restricted_kernel_sdk = { workspace = true, features = ["testing"] }

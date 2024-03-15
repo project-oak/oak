@@ -24,9 +24,10 @@ use alloc::{boxed::Box, sync::Arc};
 
 use oak_functions_service::wasm::WasmHandler;
 use oak_restricted_kernel_sdk::{
+    attestation::InstanceEvidenceProvider,
     channel::{start_blocking_server, FileDescriptorChannel},
+    crypto::InstanceEncryptionKeyHandle,
     entrypoint,
-    instance_attestation::{InstanceEncryptionKeyHandle, InstanceEvidenceProvider},
     utils::samplestore::StaticSampleStore,
 };
 

@@ -14,23 +14,16 @@
 // limitations under the License.
 //
 
-//! Structs for signing and encryption using keys attested in the instance's
-//! attestation evidence.
+//! Structs for providing attestation related logic such as getting an evidence.
 
-use anyhow::Ok;
-use oak_crypto::{
-    encryption_key::{EncryptionKey, EncryptionKeyHandle},
-    hpke::RecipientContext,
-};
+use oak_crypto::encryption_key::EncryptionKey;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
-use crate::{DiceWrapper, EvidenceProvider, Signer};
-
 lazy_static::lazy_static! {
-    static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
+    pub(crate) static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
         let dice_data = get_restricted_kernel_dice_data()?;
         let dice_wrapper = dice_data.try_into()?;
         Ok(dice_wrapper)
@@ -45,6 +38,13 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
         anyhow::bail!("invalid dice data size");
     }
     Ok(result)
+}
+
+/// Wrapper for DICE evidence and application private keys.
+pub(crate) struct DiceWrapper {
+    pub evidence: Evidence,
+    pub encryption_key: EncryptionKey,
+    pub signing_key: p256::ecdsa::SigningKey,
 }
 
 impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
@@ -63,51 +63,12 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
     }
 }
 
-/// [`Signer`] implementation that using the instance's evidence and
-/// corresponding private keys.
-#[derive(Clone)]
-pub struct InstanceSigner {
-    key: &'static SigningKey,
-}
-
-impl InstanceSigner {
-    pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .and_then(|d| Ok(InstanceSigner { key: &d.signing_key }))
-    }
-}
-
-impl Signer for InstanceSigner {
-    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
-        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
-    }
-}
-
-/// [`EncryptionKeyHandle`] implementation that using the instance's evidence
-/// and corresponding private keys.
-#[derive(Clone)]
-pub struct InstanceEncryptionKeyHandle {
-    key: &'static EncryptionKey,
-}
-
-impl InstanceEncryptionKeyHandle {
-    pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .and_then(|d| Ok(InstanceEncryptionKeyHandle { key: &d.encryption_key }))
-    }
-}
-
-impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        self.key.generate_recipient_context(encapsulated_public_key)
-    }
+/// Exposes the ability to read the Attestation Evidence.
+/// Note: Applications should only use the evidence to initially send it to the
+/// host application once, which then sends it to the clients. It is discouraged
+/// for enclave applications to operate directly with evidences.
+pub trait EvidenceProvider {
+    fn get_evidence(&self) -> &Evidence;
 }
 
 /// [`EvidenceProvider`] implementation that exposes the instance's evidence.
@@ -120,7 +81,7 @@ impl InstanceEvidenceProvider {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| Ok(InstanceEvidenceProvider { evidence: &d.evidence }))
+            .map(|d| InstanceEvidenceProvider { evidence: &d.evidence })
     }
 }
 
