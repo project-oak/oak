@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_raw"]};
+window.SIDEBAR_ITEMS = {"fn":["receive_raw","send_raw"]};

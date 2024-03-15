@@ -527,10 +527,6 @@
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
 <a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -612,8 +608,6 @@
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-</span><span class="kw">use </span>x86_64::structures::paging::{PageSize, Size4KiB};
 <span class="kw">use </span>x86_64::{
     structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
@@ -967,11 +961,9 @@
         <span class="comment">// We need to load the application binary before we hand the channel over to the
         // syscalls, which expose it to the user space.
         </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
-        oak_channel::basic_framed::load_raw::&lt;<span class="kw">dyn </span>Channel, { Size4KiB::SIZE <span class="kw">as </span>usize }&gt;(
-            <span class="kw-2">&amp;mut *</span>channel,
-        )
-        .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>)
-        .into_boxed_slice()
+        oak_channel::basic_framed::receive_raw::&lt;<span class="kw">dyn </span>Channel&gt;(<span class="kw-2">&amp;mut *</span>channel)
+            .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>)
+            .into_boxed_slice()
     };
 
     <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, application_bytes.len());
