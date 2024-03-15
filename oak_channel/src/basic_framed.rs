@@ -17,11 +17,11 @@
 //! Basic framed format for use before the channel is handed off to the
 //! application.
 //!
-//! This protocol is used twice.
+//! Depending on configuration, this protocol is used twice.
 //! 1. To load the application. Here the host is the sender, enclave is the
 //!    recipient.
-//! 2. To return the attestation evidence. Here the host is the recipient,
-//!    enclave is the sender.
+//! 2. [Optional]: to return the attestation evidence. Here the host is the
+//!    recipient, enclave is the sender.
 //!
 //! The protocol is very simple:
 //! 1. sender sends the size of the payload, as u32
