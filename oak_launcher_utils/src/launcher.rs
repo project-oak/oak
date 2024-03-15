@@ -165,6 +165,9 @@ impl Instance {
         if let Some(app_bytes) = app_bytes {
             oak_channel::basic_framed::send_raw(&mut host_socket, &app_bytes)
                 .context("failed to send application")?;
+            #[cfg(feature = "exchange_evidence")]
+            let _evidence = oak_channel::basic_framed::receive_raw(&mut host_socket)
+                .context("failed to receive attestion evidence")?;
         }
 
         Ok(Self { guest_console: guest_console_clone, host_socket, instance })

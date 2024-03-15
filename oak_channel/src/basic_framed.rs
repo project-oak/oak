@@ -20,6 +20,8 @@
 //! This protocol is used once.
 //! 1. To load the application. Here the host is the sender, enclave is the
 //!    recipient.
+//! 2. To return the attestation evidence. Here the host is the recipient,
+//!    enclave is the sender.
 //!
 //! The protocol is very simple:
 //! 1. sender sends the size of the payload, as u32

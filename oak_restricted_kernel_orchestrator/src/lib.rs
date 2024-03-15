@@ -18,8 +18,14 @@
 
 extern crate alloc;
 
+#[cfg(feature = "exchange_evidence")]
+use oak_attestation::dice::evidence_to_proto;
 use oak_channel::basic_framed::receive_raw;
+#[cfg(feature = "exchange_evidence")]
+use oak_channel::basic_framed::send_raw;
 use oak_dice::evidence::Stage0DiceData;
+#[cfg(feature = "exchange_evidence")]
+use prost::Message;
 
 pub struct AttestedApp {
     pub elf_binary: alloc::vec::Vec<u8>,
@@ -43,6 +49,13 @@ impl AttestedApp {
             oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
         let dice_data =
             oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+        #[cfg(feature = "exchange_evidence")]
+        {
+            let evidence = evidence_to_proto(dice_data.evidence.clone())
+                .expect("failed to convert evidence to proto");
+            send_raw(&mut channel, &evidence.encode_to_vec()).expect("failed to return evidence");
+        }
+
         Self { elf_binary, derived_key, dice_data }
     }
 }
