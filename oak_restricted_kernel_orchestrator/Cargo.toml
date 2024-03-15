@@ -6,6 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
+default = ["exchange_evidence"]
 exchange_evidence = ["oak_attestation", "prost"]
 
 [dependencies]
