@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The `crypto` crate abstracts over various crypto implementations.
+//! This was copied from Chromium's third_party/cloud_authenticator, which has compatible copyright
+//! and ownership (Apache 2.0, Google).
 //!
-//! The ring implementation is the default and is used in production. The
-//! BoringSSL implementation avoids needing to build ring in Chromium when
-//! the enclave code is used with unit tests. The rustcrypto implementation
-//! isn't fully complete, but can be used to compile to wasm, which we might
-//! use in the future.
+//! The original code supported multiple back-end crypto libraries, but was heavily influenced by
+//! the first: Ring.  The result was a bit hackish, and should be cleaned up.
 
 #![allow(clippy::result_unit_err)]
 

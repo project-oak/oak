@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This was copied from Chromium's third_party/cloud_authenticator, which has compatible copyright
+//! and ownership (Apache 2.0, Google).
+
 use alloc::vec::Vec;
 
 use crate::noise_nk::error::Error;
