@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Basic framed format for use before the channel is handed of to the
+//! Basic framed format for use before the channel is handed off to the
 //! application.
 //!
 //! This protocol is used once.
