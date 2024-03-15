@@ -41,3 +41,10 @@ name = "oak_restricted_kernel_simple_io_bin"
 test = false
 bench = false
 required-features = ["simple_io_channel"]
+
+[[bin]]
+path = "src/main.rs"
+name = "oak_restricted_kernel_simple_io_init_rd_bin"
+test = false
+bench = false
+required-features = ["simple_io_channel", "initrd"]
