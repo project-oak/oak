@@ -103,7 +103,7 @@ impl Crypter {
         // Plaintext must have a padding byte, and the unpadded length must be
         // at least one.
         if plaintext.is_empty() || (plaintext[plaintext.len() - 1] as usize) >= plaintext.len() {
-            return Err(Error::DecryptionPaddingError);
+            return Err(Error::DecryptionPadding);
         }
         let unpadded_length = plaintext.len() - (plaintext[plaintext.len() - 1] as usize);
         Ok(Vec::from(&plaintext[0..unpadded_length - 1]))

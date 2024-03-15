@@ -16,10 +16,10 @@
 pub enum Error {
     DataTooLarge(usize),
     DecryptFailed,
-    DecryptionPaddingError,
+    DecryptionPadding,
     EcdhFailed,
     EmptyPlaintext,
     InvalidHandshake,
     InvalidPrivateKey,
-    UnknownError(&'static str),
+    Unknown(&'static str),
 }
