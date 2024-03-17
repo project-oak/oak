@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! This module provides an optional implementation for encrypting and decrypting guest requests
-//! using the RustCrypto `aes-gcm` crate.
+//! This module provides an optional implementation for encrypting and
+//! decrypting guest requests using the RustCrypto `aes-gcm` crate.
 
 use core::mem::size_of;
 
@@ -29,17 +29,19 @@ const IV_SIZE: usize = 12;
 
 /// Wrapper for encrypting and decrypting guest messages.
 ///
-/// The sequence number is used as an initialization vector/nonce for AES-GCM. The sequence number
-/// is internally incremented on every encryption to avoid reuse. It is also incremented on every
-/// decryption to synchronize it with the sequence number used by the Platform Secure Processor
-/// (PSP).
+/// The sequence number is used as an initialization vector/nonce for AES-GCM.
+/// The sequence number is internally incremented on every encryption to avoid
+/// reuse. It is also incremented on every decryption to synchronize it with the
+/// sequence number used by the Platform Secure Processor (PSP).
 ///
-/// To make sure that the same sequence number is never reused with the same key, the same key must
-/// never be used to instantiate more than one instance of this struct.
+/// To make sure that the same sequence number is never reused with the same
+/// key, the same key must never be used to instantiate more than one instance
+/// of this struct.
 ///
-/// If a request fails the PSP will not increment the sequence number. This means that we will be
-/// out of sync with its sequence number. There is no safe way to recover from that, so the best
-/// course of action is to delete the key or shut down the VM.
+/// If a request fails the PSP will not increment the sequence number. This
+/// means that we will be out of sync with its sequence number. There is no safe
+/// way to recover from that, so the best course of action is to delete the key
+/// or shut down the VM.
 ///
 /// See Chapter 7 and Section 8.26.2 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 pub struct GuestMessageEncryptor {
@@ -57,9 +59,10 @@ impl GuestMessageEncryptor {
 
     /// Creates a new instance with a specific sequence number.
     ///
-    /// This function should only be used if the sequence number was incremented previously to a
-    /// known value but can not be incremented further outside of this struct, e.g. use this in the
-    /// kernel if the firmware used the same key to encrypt and decrypt guest messages.
+    /// This function should only be used if the sequence number was incremented
+    /// previously to a known value but can not be incremented further
+    /// outside of this struct, e.g. use this in the kernel if the firmware
+    /// used the same key to encrypt and decrypt guest messages.
     pub fn new_with_sequence_number(
         key: &[u8],
         initial_sequence_number: u64,
@@ -70,14 +73,17 @@ impl GuestMessageEncryptor {
         })
     }
 
-    /// Creates an encrypted payload from the provided message and writes that to the target's
-    /// payload field. It also updates the target's header with the appropriate information:
-    /// message type, message size and sequence number.
+    /// Creates an encrypted payload from the provided message and writes that
+    /// to the target's payload field. It also updates the target's header
+    /// with the appropriate information: message type, message size and
+    /// sequence number.
     ///
-    /// The sequence number is incremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is
+    /// successful.
     ///
-    /// We consume the input message because we encrypt its memory in place before copying it to the
-    /// payload buffer that is shared with the hypervisor.
+    /// We consume the input message because we encrypt its memory in place
+    /// before copying it to the payload buffer that is shared with the
+    /// hypervisor.
     pub fn encrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
         mut message: M,
@@ -107,7 +113,8 @@ impl GuestMessageEncryptor {
 
     /// Extracts a decrypted message from an encrypted `GuestMessage`.
     ///
-    /// The sequence number is incremented automatically if the operation is successful.
+    /// The sequence number is incremented automatically if the operation is
+    /// successful.
     pub fn decrypt_message<M: AsBytes + FromBytes + Message>(
         &mut self,
         source: &GuestMessage,
@@ -129,9 +136,9 @@ impl GuestMessageEncryptor {
         if buffer.len() != source.header.auth_header.message_size as usize {
             return Err("invalid message length");
         }
-        // The source message is in memory that is shared with the hypervisor, so we must not
-        // decrypt the payload in place. Copy the encrypted payload into the buffer and
-        // decrypt it there.
+        // The source message is in memory that is shared with the hypervisor, so we
+        // must not decrypt the payload in place. Copy the encrypted payload
+        // into the buffer and decrypt it there.
         buffer.copy_from_slice(&source.payload[0..buffer.len()]);
         let tag = Tag::from_slice(&source.header.auth_tag[0..size_of::<Tag>()]);
         self.cipher

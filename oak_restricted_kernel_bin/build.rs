@@ -16,10 +16,7 @@
 
 fn main() {
     println!("cargo:rerun-if-env-changed=WORKSPACE_ROOT");
-    println!(
-        "cargo:rerun-if-changed={}/oak_restricted_kernel/layout.ld",
-        env!("WORKSPACE_ROOT")
-    );
+    println!("cargo:rerun-if-changed={}/oak_restricted_kernel/layout.ld", env!("WORKSPACE_ROOT"));
     println!(
         "cargo:rustc-link-arg=--script={}/oak_restricted_kernel/layout.ld",
         env!("WORKSPACE_ROOT")

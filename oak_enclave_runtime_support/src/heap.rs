@@ -29,7 +29,8 @@ use spinning_top::Spinlock;
 struct Source {}
 
 impl Source {
-    // Restricted Kernel deals in 2 MiB pages, so that's what we use to request memory.
+    // Restricted Kernel deals in 2 MiB pages, so that's what we use to request
+    // memory.
     const PAGE_SIZE: usize = 0x20_0000usize;
 }
 
@@ -62,13 +63,15 @@ unsafe impl FlexSource for Source {
     }
 }
 
-/// Heap implementation that asks Restricted Kernel for more memory when allocations fail.
+/// Heap implementation that asks Restricted Kernel for more memory when
+/// allocations fail.
 ///
-/// We don't implement a heap allocation algorithm ourselves, but rather wrap a real heap
-/// implementation; all allocations (and deallocations) are delegated to the real heap
-/// implementation. When an allocation fails, we ask Restricted Kernel for more memory and increase
-/// the size of the underlying heap, hoping that eventually the allocation will succeed (or the
-/// machine runs out memory).
+/// We don't implement a heap allocation algorithm ourselves, but rather wrap a
+/// real heap implementation; all allocations (and deallocations) are delegated
+/// to the real heap implementation. When an allocation fails, we ask Restricted
+/// Kernel for more memory and increase the size of the underlying heap, hoping
+/// that eventually the allocation will succeed (or the machine runs out
+/// memory).
 pub struct GrowableHeap {
     /// Underlying heap implementation.
     heap: FlexTlsf<Source, usize, usize, { usize::BITS as usize }, { usize::BITS as usize }>,
@@ -76,9 +79,7 @@ pub struct GrowableHeap {
 
 impl GrowableHeap {
     pub const fn empty() -> Self {
-        Self {
-            heap: FlexTlsf::new(Source {}),
-        }
+        Self { heap: FlexTlsf::new(Source {}) }
     }
 
     #[allow(clippy::result_unit_err)]
@@ -91,8 +92,8 @@ impl GrowableHeap {
     /// # Safety
     ///
     ///  - `ptr` must denote a memory block previously allocated via `self`.
-    ///  - The memory block must have been allocated with the same alignment ([`Layout::align`]) as
-    ///    `align`.
+    ///  - The memory block must have been allocated with the same alignment
+    ///    ([`Layout::align`]) as `align`.
     pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, align: usize) {
         self.heap.deallocate(ptr, align)
     }
@@ -117,16 +118,10 @@ impl Deref for LockedGrowableHeap {
 
 unsafe impl GlobalAlloc for LockedGrowableHeap {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
-        self.0
-            .lock()
-            .allocate(layout)
-            .map(NonNull::as_ptr)
-            .unwrap_or(core::ptr::null_mut())
+        self.0.lock().allocate(layout).map(NonNull::as_ptr).unwrap_or(core::ptr::null_mut())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
-        self.0
-            .lock()
-            .deallocate(NonNull::new_unchecked(ptr), layout.align())
+        self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout.align())
     }
 }

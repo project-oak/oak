@@ -47,15 +47,16 @@ impl KeyProvisioning for KeyProvisioningService {
     ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        // Verify attestation evidence and get encryption public key, which will be used to encrypt
-        // group keys.
-        let evidence = request.evidence.ok_or(tonic::Status::invalid_argument(
-            "request message doesn't contain evidence",
-        ))?;
+        // Verify attestation evidence and get encryption public key, which will be used
+        // to encrypt group keys.
+        let evidence = request
+            .evidence
+            .ok_or(tonic::Status::invalid_argument("request message doesn't contain evidence"))?;
         let _endorsements = request.endorsements.ok_or(tonic::Status::invalid_argument(
             "request message doesn't contain endorsements",
         ))?;
-        // TODO(#4442): Provide reference values by the hostlib and use `verify` function.
+        // TODO(#4442): Provide reference values by the hostlib and use `verify`
+        // function.
         let attestation_results = verify_dice_chain(&evidence).map_err(|err| {
             tonic::Status::invalid_argument(format!("couldn't verify endorsed evidence: {err}"))
         })?;
@@ -85,9 +86,7 @@ pub async fn create(
     let listener = TcpListener::bind(address).await?;
 
     Server::builder()
-        .add_service(KeyProvisioningServer::new(
-            key_provisioning_service_instance,
-        ))
+        .add_service(KeyProvisioningServer::new(key_provisioning_service_instance))
         .serve_with_incoming_shutdown(
             TcpListenerStream::new(listener),
             cancellation_token.cancelled(),

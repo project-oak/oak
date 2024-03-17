@@ -27,7 +27,8 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
             "the correct env variable OAK_RESTRICTED_KERNEL_FILE_NAME must be set with the file name of the kernel build."
     })?;
 
-    // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
+    // The source file is the output from building "../oak_restricted_kernel_bin" in
+    // release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     source_path.pop();
     source_path.push(kernel_directory);
@@ -51,22 +52,13 @@ fn main() {
             copy(&source_path, &destination_path).unwrap();
         }
         Err(msg) => {
-            let msg = format!(
-                "Kernel could not be built! An error occured when building: {}",
-                msg
-            );
+            let msg = format!("Kernel could not be built! An error occured when building: {}", msg);
             println!("cargo:warning={}", msg.as_str());
             // Create a fake file so cargo clippy doesn't break if the kernel was not built.
             destination_path.push("invalid_build");
-            File::create(&destination_path)
-                .unwrap()
-                .write_all(msg.as_bytes())
-                .unwrap();
+            File::create(&destination_path).unwrap().write_all(msg.as_bytes()).unwrap();
         }
     }
 
-    println!(
-        "cargo:rustc-env=PAYLOAD_PATH={}",
-        destination_path.to_str().unwrap()
-    );
+    println!("cargo:rustc-env=PAYLOAD_PATH={}", destination_path.to_str().unwrap());
 }

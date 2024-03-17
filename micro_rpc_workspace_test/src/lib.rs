@@ -22,21 +22,21 @@ mod proto {
     }
 }
 
-// Test to confirm that the dependency on micro_rpc and its own protobuf types works correctly.
+// Test to confirm that the dependency on micro_rpc and its own protobuf types
+// works correctly.
 #[test]
 fn micro_rpc_dep_test() {
-    let response_wrapper: micro_rpc::ResponseWrapper = Err(micro_rpc::Status::new_with_message(
-        micro_rpc::StatusCode::InvalidArgument,
-        "error",
-    ))
-    .into();
+    let response_wrapper: micro_rpc::ResponseWrapper =
+        Err(micro_rpc::Status::new_with_message(micro_rpc::StatusCode::InvalidArgument, "error"))
+            .into();
     assert_eq!(
         format!("{response_wrapper:?}"),
         r##"ResponseWrapper { response: Some(Error(Status { code: 3, message: "error" })) }"##
     );
 }
 
-// Test to confirm that the dependency on oak_crypto and its own protobuf types works correctly.
+// Test to confirm that the dependency on oak_crypto and its own protobuf types
+// works correctly.
 #[test]
 fn oak_crypto_dep_test() {
     let request_wrapper = proto::oak::test::TestRequestWrapper {

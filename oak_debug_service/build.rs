@@ -21,10 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         &["../proto/oak_debug/service/oak_debug.proto"],
         "..",
-        CodegenOptions {
-            build_server: true,
-            ..Default::default()
-        },
+        CodegenOptions { build_server: true, ..Default::default() },
     )?;
 
     Ok(())

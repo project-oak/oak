@@ -29,7 +29,8 @@ static_assertions::assert_eq_size!(ApResetAddress, [u8; 4]);
 /// See: Section 4.3.1.1 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>
 #[repr(C, align(4096))]
 pub struct ApJumpTable {
-    /// Reset address where the AP should jump when handing over control to the OS.
+    /// Reset address where the AP should jump when handing over control to the
+    /// OS.
     reset_address: ApResetAddress,
     _padding: [u8; 4092],
 }

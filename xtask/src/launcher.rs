@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Functionality for testing variants of the enclave binary exposed by the launcher.
+//! Functionality for testing variants of the enclave binary exposed by the
+//! launcher.
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
@@ -22,12 +23,7 @@ static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"])
 static OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
-    workspace_path(&[
-        "target",
-        "x86_64-unknown-linux-gnu",
-        "debug",
-        "oak_functions_launcher",
-    ])
+    workspace_path(&["target", "x86_64-unknown-linux-gnu", "debug", "oak_functions_launcher"])
 });
 pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     workspace_path(&[
@@ -62,9 +58,7 @@ pub struct App {
 
 impl App {
     pub fn from_crate_name(crate_name: &str) -> Self {
-        Self {
-            crate_name: crate_name.to_string(),
-        }
+        Self { crate_name: crate_name.to_string() }
     }
 
     /// Get the crate name of respective enclave binary variant
@@ -72,15 +66,14 @@ impl App {
         self.crate_name.clone()
     }
 
-    /// Get the path to the respective enclave binary variant that should be launched
+    /// Get the path to the respective enclave binary variant that should be
+    /// launched
     pub fn enclave_crate_path(&self) -> String {
-        workspace_path(&["enclave_apps", &self.enclave_crate_name()])
-            .to_str()
-            .unwrap()
-            .to_string()
+        workspace_path(&["enclave_apps", &self.enclave_crate_name()]).to_str().unwrap().to_string()
     }
 
-    /// Get the path to the respective enclave binary variant that should be launched
+    /// Get the path to the respective enclave binary variant that should be
+    /// launched
     pub fn enclave_binary_path(&self) -> String {
         workspace_path(&[
             "enclave_apps",
@@ -97,23 +90,14 @@ impl App {
     /// Get the subcommand for launching in this mode
     pub fn subcommand(&self) -> Vec<String> {
         vec![
-            format!(
-                "--kernel={}",
-                OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()
-            ),
+            format!("--kernel={}", OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()),
             format!(
                 "--vmm-binary={}",
-                which::which("qemu-system-x86_64")
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
+                which::which("qemu-system-x86_64").unwrap().to_str().unwrap()
             ),
             "--memory-size=256M".to_string(),
             format!("--app-binary={}", &self.enclave_binary_path()),
-            format!(
-                "--initrd={}",
-                OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()
-            ),
+            format!("--initrd={}", OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()),
             format!(
                 "--bios-binary={}",
                 workspace_path(&[
@@ -173,8 +157,8 @@ pub fn just_build(just_command: &str) -> Step {
     }
 }
 
-/// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
-/// and mock lookup data.
+/// Runs the Oak Functions launcher configured with a default Wasm module for
+/// key / value lookups and mock lookup data.
 pub fn run_oak_functions_launcher_example(
     app: &App,
     wasm_path: &str,
@@ -209,8 +193,8 @@ pub fn run_launcher(launcher_bin: &str, app: &App) -> Box<dyn Runnable> {
     Cmd::new(launcher_bin, args)
 }
 
-/// Runs the specified example as a background task. Returns a reference to the running server and
-/// the port on which the server is listening.
+/// Runs the specified example as a background task. Returns a reference to the
+/// running server and the port on which the server is listening.
 pub async fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
@@ -220,9 +204,7 @@ pub async fn run_oak_functions_example_in_background(
     crate::testing::run_step(crate::launcher::just_build("oak_orchestrator")).await;
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions Launcher binary",
-        crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR
-            .to_str()
-            .unwrap(),
+        crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR.to_str().unwrap(),
     ))
     .await;
     let variant = crate::launcher::App::from_crate_name("oak_functions_enclave_app");

@@ -5,6 +5,10 @@ authors = ["Dzmitry Huba <huba@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["exchange_evidence"]
+exchange_evidence = []
+
 [dependencies]
 anyhow = "*"
 async-trait = "*"

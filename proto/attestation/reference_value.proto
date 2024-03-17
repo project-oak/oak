@@ -94,6 +94,9 @@ message RootLayerReferenceValues {
   // Verification is skipped when not running in a TEE.
   AmdSevReferenceValues amd_sev = 1;
   IntelTdxReferenceValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This can
+  // be used when not running in a TEE or when the client is agnostic about the
+  // platform and doesn't care about the hardware verification.
   InsecureReferenceValues insecure = 3;
 }
 
@@ -147,6 +150,13 @@ message SystemLayerReferenceValues {
   BinaryReferenceValue system_image = 1;
 }
 
+message CBSystemLayerReferenceValues {
+  // Verifies the system image binary.
+  BinaryReferenceValue system_image = 1;
+  // Verifies the command line by which the system image was built.
+  StringReferenceValue system_cmd_line = 2;
+}
+
 // Represents an application running under Oak Restricted Kernel.
 message ApplicationLayerReferenceValues {
   // Verifies the application binary based on endorsement.
@@ -154,6 +164,12 @@ message ApplicationLayerReferenceValues {
 
   // Verifies configuration with respect to the application binary.
   BinaryReferenceValue configuration = 2;
+}
+
+// Represents digest of application task config.
+message CBApplicationLayerReferenceValues {
+  // Verifies the application task config.
+  BinaryReferenceValue binary = 1;
 }
 
 message ContainerLayerReferenceValues {
@@ -177,18 +193,11 @@ message OakContainersReferenceValues {
   ContainerLayerReferenceValues container_layer = 4;
 }
 
-message CBLayerReferenceValues {
-  string layer_name = 1;
-  repeated FileReferenceValue files = 2;
-  StringReferenceValue config = 3;
-  StringReferenceValue command_line = 4;
-}
-
 message CBReferenceValues {
   RootLayerReferenceValues root_layer = 1;
-
-  // Generic reference values starting from the second layer.
-  repeated CBLayerReferenceValues layers = 2;
+  KernelLayerReferenceValues kernel_layer = 2;
+  CBSystemLayerReferenceValues system_layer = 3;
+  CBApplicationLayerReferenceValues application_layer = 4;
 }
 
 message ReferenceValues {

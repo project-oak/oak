@@ -29,8 +29,9 @@ use crate::{
 
 /// Boot metadata for the Linux kernel.
 ///
-/// This wraps one 4K page that contains the memory map and pointers to other information needed for
-/// the kernel to boot (e.g. the command line, or SEV metadata).
+/// This wraps one 4K page that contains the memory map and pointers to other
+/// information needed for the kernel to boot (e.g. the command line, or SEV
+/// metadata).
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ZeroPage {
@@ -44,7 +45,8 @@ impl Default for ZeroPage {
 }
 
 impl ZeroPage {
-    /// Constructs a empty zero page, filling in some magic values needed by the kernel.
+    /// Constructs a empty zero page, filling in some magic values needed by the
+    /// kernel.
     pub fn new() -> Self {
         let mut zero_page = BootParams::zeroed();
         // Magic constants.
@@ -57,65 +59,67 @@ impl ZeroPage {
         ZeroPage { inner: zero_page }
     }
 
-    /// Fills the setup header fields with information from the kernel setup data if it is available
-    /// on the fw_cfg device.
+    /// Fills the setup header fields with information from the kernel setup
+    /// data if it is available on the fw_cfg device.
     ///
-    /// The fw_cfg device will only provide this data when booting a compressed bzImage kernel, as
-    /// it is split off from start of the bzImage file.
+    /// The fw_cfg device will only provide this data when booting a compressed
+    /// bzImage kernel, as it is split off from start of the bzImage file.
     ///
     /// See <https://www.kernel.org/doc/html/v6.3/x86/boot.html> for more information.
     ///
-    /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
-    /// measurement is all zeros.
+    /// Returns the measurement (SHA2-384 digest) of the setup data if it was
+    /// found, otherwise the measurement is all zeros.
     pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> Option<[u8; 32]> {
         fw_cfg.get_setup_file().map(|file| {
             let size = file.size();
-            // We temporarily copy the setup data to the end of available mapped virtual memory.
+            // We temporarily copy the setup data to the end of available mapped virtual
+            // memory.
             let start = find_suitable_dma_address(size, self.inner.e820_table())
                 .expect("no suitable DMA address available");
             let address = crate::phys_to_virt(start);
 
-            // Safety: we have confirmed that the memory is backed by physical RAM and not currently
-            // used for anything else. We will overwrite all of it, so it does not have to be
-            // initialized.
+            // Safety: we have confirmed that the memory is backed by physical RAM and not
+            // currently used for anything else. We will overwrite all of it, so
+            // it does not have to be initialized.
             let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
-            let actual_size = fw_cfg
-                .read_file(&file, buf)
-                .expect("could not read setup data");
+            let actual_size = fw_cfg.read_file(&file, buf).expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
-            // The initial ram disk location and size are not constant. We will overwrite it later
-            // anyway, so we overwrite it with zeros before measuring so we can get consistent
-            // measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
+            // The initial ram disk location and size are not constant. We will overwrite it
+            // later anyway, so we overwrite it with zeros before measuring so
+            // we can get consistent measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
             // information on the  field offsets.
             *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
             *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
 
             let measurement = crate::measure_byte_slice(buf);
 
-            // The header information starts at offset 0x01F1 from the start of the setup data.
+            // The header information starts at offset 0x01F1 from the start of the setup
+            // data.
             let hdr_start = 0x1F1usize;
-            // We can determine the end of the setup header information by adding the value of
-            // the byte as offset 0x201 to the value 0x202.
+            // We can determine the end of the setup header information by adding the value
+            // of the byte as offset 0x201 to the value 0x202.
             let hdr_end = 0x202usize + (buf[0x201] as usize);
             let src = &buf[hdr_start..hdr_end];
-            // If we are loading an older kernel, the setup header might be a bit shorter. New
-            // fields for more recent versions of the boot protocol are added to the end of the
-            // setup header and there is padding after header, so the resulting data stucture
-            // should still be understood correctly by the kernel.
+            // If we are loading an older kernel, the setup header might be a bit shorter.
+            // New fields for more recent versions of the boot protocol are
+            // added to the end of the setup header and there is padding after
+            // header, so the resulting data stucture should still be understood
+            // correctly by the kernel.
             let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
             measurement
         })
     }
 
-    /// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.
+    /// Fills the E820 memory map (layout of the physical memory of the machine)
+    /// in the zero page.
     ///
-    /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if that is not available,
-    /// fall back to querying RTC NVRAM.
+    /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
+    /// that is not available, fall back to querying RTC NVRAM.
     pub fn fill_e820_table(&mut self, fw_cfg: &mut FwCfg) {
         // Try to load the E820 table from fw_cfg.
-        // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
-        // ourselves to up to 128 entries.
+        // Safety: BootE820Entry has the same structure as what qemu uses, and we're
+        // limiting ourselves to up to 128 entries.
         let len_bytes = unsafe {
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
@@ -144,25 +148,19 @@ impl ZeroPage {
         self.inner.e820_entries = e820_entries as u8;
         self.validate_e820_table();
 
-        // Carve out a chunk of memory out for the ACPI area and reserved memory just below 1 MiB.
-        // The ACPI area is from 0x80000-0x9FFFF. We also reserve the region from 0xA0000-0xEFFFF
-        // since historically this contained hardware-related regions such as the VGA bios rom.
+        // Carve out a chunk of memory out for the ACPI area and reserved memory just
+        // below 1 MiB. The ACPI area is from 0x80000-0x9FFFF. We also reserve
+        // the region from 0xA0000-0xEFFFF since historically this contained
+        // hardware-related regions such as the VGA bios rom.
         self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
-        self.insert_e820_entry(BootE820Entry::new(
-            0xA_0000,
-            0x5_0000,
-            E820EntryType::RESERVED,
-        ));
-        // Mark the memory range for the SMBIOS entry point table as disabled since we don't support
-        // DMI or SMBIOS tables. If this memory range is enabled (even it if is reserved) and the
-        // Linux kernel has CONFIG_DMI enabled it will try to scan this memory range to find the
-        // SMBIOS entry point table. On AMD SEV-SNP scanning of this memory range causes #VC
+        self.insert_e820_entry(BootE820Entry::new(0xA_0000, 0x5_0000, E820EntryType::RESERVED));
+        // Mark the memory range for the SMBIOS entry point table as disabled since we
+        // don't support DMI or SMBIOS tables. If this memory range is enabled
+        // (even it if is reserved) and the Linux kernel has CONFIG_DMI enabled
+        // it will try to scan this memory range to find the SMBIOS entry point
+        // table. On AMD SEV-SNP scanning of this memory range causes #VC
         // exceptions, so we don't want the kernel to try to scan it.
-        self.insert_e820_entry(BootE820Entry::new(
-            0xF_0000,
-            0x1_0000,
-            E820EntryType::DISABLED,
-        ));
+        self.insert_e820_entry(BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::DISABLED));
 
         for entry in self.inner.e820_table() {
             log::debug!(
@@ -180,16 +178,18 @@ impl ZeroPage {
         self.inner.e820_table()
     }
 
-    /// Inserts a new entry into the E820 table in the appropriate position (sorted by start
-    /// address).
+    /// Inserts a new entry into the E820 table in the appropriate position
+    /// (sorted by start address).
     ///
-    /// If the new entry overlaps with one or more existing entries in the table, the effect depends
-    /// on the entry type:
+    /// If the new entry overlaps with one or more existing entries in the
+    /// table, the effect depends on the entry type:
     ///
-    /// - If the new entry has the same type as the existing entry the entries will be merged into a
-    ///   single entry. Two adjacent entries of the same type will also be merged.
-    /// - If the new entry has a different type the new entry will be inserted as is and the
-    ///   existing entry will be modified (trimmed or split into two entries) to avoid the overlap.
+    /// - If the new entry has the same type as the existing entry the entries
+    ///   will be merged into a single entry. Two adjacent entries of the same
+    ///   type will also be merged.
+    /// - If the new entry has a different type the new entry will be inserted
+    ///   as is and the existing entry will be modified (trimmed or split into
+    ///   two entries) to avoid the overlap.
     pub fn insert_e820_entry(&mut self, entry: BootE820Entry) {
         // Find the index where the entry must be inserted.
         let mut index = (0..(self.inner.e820_entries as usize))
@@ -273,26 +273,29 @@ impl ZeroPage {
         self.inner.acpi_rsdp_addr = addr.as_u64();
     }
 
-    /// Updates the pointer to the command line parameter string in the zero page.
+    /// Updates the pointer to the command line parameter string in the zero
+    /// page.
     pub fn set_cmdline<T: AsRef<str>>(&mut self, cmdline: T) {
         let cmdline =
             CString::new(cmdline.as_ref().as_bytes()).expect("invalid kernel command-line");
         let source = cmdline.as_bytes_with_nul();
-        // Create and leak a buffer in the boot allocator so that it can outlive Stage 0.
+        // Create and leak a buffer in the boot allocator so that it can outlive Stage
+        // 0.
         let mut buf = Vec::with_capacity_in(source.len(), &BOOT_ALLOC);
         buf.resize(buf.capacity(), 0u8);
         buf.copy_from_slice(source);
         let buf = buf.leak();
         self.inner.hdr.cmd_line_ptr = buf.as_ptr() as u32;
-        // As per the Linux boot protocol `cmdline_size` does not include the trailing \0.
+        // As per the Linux boot protocol `cmdline_size` does not include the trailing
+        // \0.
         self.inner.hdr.cmdline_size = cmdline.as_bytes().len() as u32;
     }
 
     /// Adds a header to the list of setup headers.
     ///
-    /// `setup_data` needs to be mutable because underneath the covers it's a C-style linked list,
-    /// and we need to assign the pointer to the next value in the list to the `next` field in its
-    /// header.
+    /// `setup_data` needs to be mutable because underneath the covers it's a
+    /// C-style linked list, and we need to assign the pointer to the next
+    /// value in the list to the `next` field in its header.
     pub fn add_setup_data(&mut self, setup_data: &mut oak_linux_boot_params::CCSetupData) {
         // Put our header as the first element in the linked list.
         setup_data.header.next = self.inner.hdr.setup_data();
@@ -302,25 +305,26 @@ impl ZeroPage {
 
     /// Sets the address and size of the initial RAM disk.
     pub fn set_initial_ram_disk(&mut self, ram_disk: &[u8]) {
-        // The address of the RAM disk will always be in the lower 32-bit range of virtual memory
-        // since we only identity-map the first 1GiB of RAM and QEMU only provides 32-bit addresses
-        // via the fw_cfg device.
+        // The address of the RAM disk will always be in the lower 32-bit range of
+        // virtual memory since we only identity-map the first 1GiB of RAM and
+        // QEMU only provides 32-bit addresses via the fw_cfg device.
         self.inner.hdr.ramdisk_image = ram_disk.as_ptr() as u64 as u32;
-        // The size of the RAM disk will always fit into 32 bits since we only map a maximum of 1GiB
-        // of RAM.
+        // The size of the RAM disk will always fit into 32 bits since we only map a
+        // maximum of 1GiB of RAM.
         self.inner.hdr.ramdisk_size = ram_disk.len() as u32;
     }
 }
 
 /// Builds an E820 table by reading the low and high memory amount from CMOS.
 ///
-/// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and `qemu_cfg_e820()`
-/// in <https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c>),
+/// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and
+/// `qemu_cfg_e820()` in <https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c>),
 /// but <https://wiki.osdev.org/Detecting_Memory_%28x86%29> is also a good read on the topic.
 fn build_e820_from_nvram(e820_table: &mut [BootE820Entry]) -> Result<usize, &'static str> {
-    // Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b) there was no
-    // pre-built E820 table in fw_cfg; thus, we can reasonably expect CMOS to available, as that's
-    // what SeaBIOS would use in that situation to build the E820 table.
+    // Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b)
+    // there was no pre-built E820 table in fw_cfg; thus, we can reasonably
+    // expect CMOS to available, as that's what SeaBIOS would use in that
+    // situation to build the E820 table.
     let mut cmos = unsafe { Cmos::new() };
     let mut rs = cmos.low_ram_size()?;
     let high = cmos.high_ram_size()?;
@@ -330,20 +334,18 @@ fn build_e820_from_nvram(e820_table: &mut [BootE820Entry]) -> Result<usize, &'st
     }
 
     // Time to put all that we know together.
-    // First, we'll leave the top 256K just below the 4G mark reserved for the BIOS itself.
-    // Second, leave the last 4 pages of low memory as reserved just below the BIOS area as
-    // reserved; according to SeaBIOS, KVM stores some data structures there.
-    // Thus, the maximum memory we can have under 4G is 0x1_0000_0000 - (44 * 0x1000) = 0xFFFB_C000.
+    // First, we'll leave the top 256K just below the 4G mark reserved for the BIOS
+    // itself. Second, leave the last 4 pages of low memory as reserved just
+    // below the BIOS area as reserved; according to SeaBIOS, KVM stores some
+    // data structures there. Thus, the maximum memory we can have under 4G is
+    // 0x1_0000_0000 - (44 * 0x1000) = 0xFFFB_C000.
     if rs > 0xFFFB_C000 {
         rs = 0xFFFB_C000;
     };
     let mut e820_entries = 2;
     e820_table[0] = BootE820Entry::new(0, rs as usize, E820EntryType::RAM);
-    e820_table[1] = BootE820Entry::new(
-        0xFFFB_C000,
-        0x1_0000_0000 - 0xFFFB_C000,
-        E820EntryType::RESERVED,
-    );
+    e820_table[1] =
+        BootE820Entry::new(0xFFFB_C000, 0x1_0000_0000 - 0xFFFB_C000, E820EntryType::RESERVED);
 
     if high > 0 {
         e820_entries += 1;
@@ -371,12 +373,8 @@ mod tests {
     pub fn insert_e820_entry_fill_gap() {
         let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(40, 20, E820EntryType::RAM));
 
@@ -387,12 +385,8 @@ mod tests {
     pub fn insert_e820_entry_fill_gap_overlapping() {
         let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(20, 60, E820EntryType::RAM));
 
@@ -407,9 +401,7 @@ mod tests {
             BootE820Entry::new(200, 100, E820EntryType::RAM),
         ];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
 
@@ -420,9 +412,7 @@ mod tests {
     pub fn insert_e820_entry_disappear() {
         let expected = [BootE820Entry::new(0, 300, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RAM));
 
@@ -437,12 +427,8 @@ mod tests {
             BootE820Entry::new(200, 100, E820EntryType::RAM),
         ];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(150, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(150, 150, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
 
@@ -457,15 +443,9 @@ mod tests {
             BootE820Entry::new(200, 100, E820EntryType::RAM),
         ];
         let mut zero_page = ZeroPage::new();
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(150, 10, E820EntryType::RAM));
-        zero_page
-            .inner
-            .append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(150, 10, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
 

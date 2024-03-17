@@ -17,8 +17,12 @@ use std::net::{Ipv6Addr, SocketAddr};
 
 use anyhow::Context;
 use clap::Parser;
+use oak_containers_launcher::ChannelType;
 use oak_functions_containers_launcher::proto::oak::functions::{
-    config::ApplicationConfig, InitializeRequest,
+    config::{
+        application_config::CommunicationChannel, ApplicationConfig, VsockCommunicationChannel,
+    },
+    InitializeRequest,
 };
 use oak_functions_launcher::LookupDataConfig;
 use prost::Message;
@@ -46,22 +50,24 @@ async fn main() -> Result<(), anyhow::Error> {
         max_chunk_size: ByteUnit::Mebibyte(4),
     };
 
-    let config = ApplicationConfig::default();
+    let mut config = ApplicationConfig::default();
+    if args.containers_args.communication_channel == ChannelType::VirtioVsock {
+        config.communication_channel =
+            Some(CommunicationChannel::VsockChannel(VsockCommunicationChannel::default()));
+
+        // If no explicit CID was specified, override it to be the current process ID.
+        args.containers_args.qemu_params.virtio_guest_cid.get_or_insert_with(std::process::id);
+    }
     args.containers_args.application_config = config.encode_to_vec();
 
     let mut untrusted_app =
         oak_functions_containers_launcher::UntrustedApp::create(args.containers_args)
             .await
-            .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
+            .context("couldn't create untrusted launcher")?;
 
     let wasm_bytes = tokio::fs::read(&args.functions_args.wasm)
         .await
-        .with_context(|| {
-            format!(
-                "couldn't read Wasm file {}",
-                args.functions_args.wasm.display()
-            )
-        })
+        .with_context(|| format!("couldn't read Wasm file {}", args.functions_args.wasm.display()))
         .unwrap();
 
     let _ = untrusted_app
@@ -80,9 +86,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .get_endorsed_evidence()
         .await
         .context("couldn't get endorsed evidence")?;
-    let evidence = endorsed_evidence
-        .evidence
-        .context("endorsed evidence message doesn't contain evidence")?;
+    let evidence =
+        endorsed_evidence.evidence.context("endorsed evidence message doesn't contain evidence")?;
     let endorsements = endorsed_evidence
         .endorsements
         .context("endorsed evidence message doesn't contain endorsements")?;

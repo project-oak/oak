@@ -23,7 +23,8 @@ use crate::io_port_factory;
 
 extern crate log;
 
-// Base I/O port for the first serial port in the system (colloquially known as COM1)
+// Base I/O port for the first serial port in the system (colloquially known as
+// COM1)
 static SERIAL_BASE: u16 = 0x3f8;
 static SERIAL_PORT: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
@@ -53,8 +54,7 @@ pub fn init_logging() {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
     let mut port = unsafe { SerialPort::new(SERIAL_BASE, io_port_factory()) };
-    port.init()
-        .expect("couldn't initialize logging serial port");
+    port.init().expect("couldn't initialize logging serial port");
     {
         let mut lock = SERIAL_PORT.lock();
         *lock.deref_mut() = Some(port);

@@ -43,10 +43,7 @@ fn build_system_image() -> Step {
 fn build_oak_functions_bundle() -> Step {
     Step::Single {
         name: "build Oak Functions bundle".to_string(),
-        command: Cmd::new(
-            "just",
-            vec!["oak_functions_containers_container_bundle_tar"],
-        ),
+        command: Cmd::new("just", vec!["oak_functions_containers_container_bundle_tar"]),
     }
 }
 
@@ -58,8 +55,8 @@ fn build_oak_functions_launcher() -> Step {
 }
 
 async fn build_prerequisites() {
-    // `just` steps can clash with each other, so ensure that we're not trying to build things like
-    // the system image concurrently.
+    // `just` steps can clash with each other, so ensure that we're not trying to
+    // build things like the system image concurrently.
     static BUILD: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
     BUILD
         .get_or_init(async || {
@@ -79,15 +76,10 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
     wasm_path: &str,
     port: u16,
     lookup_data_path: &str,
+    communication_channel: &str,
 ) -> Box<dyn Runnable> {
     let args = vec![
-        format!(
-            "--vmm-binary={}",
-            which::which("qemu-system-x86_64")
-                .unwrap()
-                .to_str()
-                .unwrap()
-        ),
+        format!("--vmm-binary={}", which::which("qemu-system-x86_64").unwrap().to_str().unwrap()),
         format!(
             "--stage0-binary={}",
             workspace_path(&[
@@ -102,14 +94,9 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
         ),
         format!(
             "--kernel={}",
-            workspace_path(&["oak_containers_kernel", "target", "bzImage"])
-                .to_str()
-                .unwrap()
+            workspace_path(&["oak_containers_kernel", "target", "bzImage"]).to_str().unwrap()
         ),
-        format!(
-            "--initrd={}",
-            workspace_path(&["target", "stage1.cpio"]).to_str().unwrap()
-        ),
+        format!("--initrd={}", workspace_path(&["target", "stage1.cpio"]).to_str().unwrap()),
         format!(
             "--system-image={}",
             workspace_path(&["oak_containers_system_image", "target", "image.tar.xz"])
@@ -131,6 +118,10 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
         format!("--wasm={}", wasm_path),
         format!("--port={}", port),
         format!("--lookup-data={}", lookup_data_path),
+        // Use the current thread ID as the CID, as we may have tests that start multiple QEMUs in
+        // parallel. Starting multiple QEMUs in one thread will fail.
+        format!("--virtio-guest-cid={}", nix::unistd::gettid()),
+        format!("--communication-channel={}", communication_channel),
     ];
     Cmd::new(
         workspace_path(&[
@@ -145,11 +136,12 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
     )
 }
 
-/// Runs the specified example as a background task. Returns a reference to the running server and
-/// the port on which the server is listening.
+/// Runs the specified example as a background task. Returns a reference to the
+/// running server and the port on which the server is listening.
 pub async fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
+    communication_channel: &str,
 ) -> (crate::testing::BackgroundStep, u16) {
     build_prerequisites().await;
 
@@ -158,10 +150,14 @@ pub async fn run_oak_functions_example_in_background(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
-    let background = crate::testing::run_background(
-        run_oak_functions_launcher_example_with_lookup_data(wasm_path, port, lookup_data_path),
-    )
-    .await;
+    let background =
+        crate::testing::run_background(run_oak_functions_launcher_example_with_lookup_data(
+            wasm_path,
+            port,
+            lookup_data_path,
+            communication_channel,
+        ))
+        .await;
 
     (background, port)
 }

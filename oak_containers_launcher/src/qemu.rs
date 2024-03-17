@@ -47,8 +47,8 @@ pub struct Params {
     #[arg(long, value_parser = path_exists)]
     pub initrd: PathBuf,
 
-    /// How much memory to give to the enclave binary, e.g., 256M (M stands for Megabyte, G for
-    /// Gigabyte).
+    /// How much memory to give to the enclave binary, e.g., 256M (M stands for
+    /// Megabyte, G for Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
 
@@ -60,8 +60,8 @@ pub struct Params {
     #[arg(long)]
     pub ramdrive_size: u32,
 
-    /// Optional port where QEMU will start a telnet server for the serial console; useful for
-    /// interactive debugging.
+    /// Optional port where QEMU will start a telnet server for the serial
+    /// console; useful for interactive debugging.
     #[arg(long)]
     pub telnet_console: Option<u16>,
 
@@ -111,16 +111,16 @@ impl Qemu {
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
 
-        // Extract the raw file descriptor numbers from the streams before passing them to the child
-        // process, since that takes ownership of them.
+        // Extract the raw file descriptor numbers from the streams before passing them
+        // to the child process, since that takes ownership of them.
         let guest_socket_fd = guest_socket.as_raw_fd();
 
         cmd.preserved_fds(vec![guest_socket.into()]);
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
-        // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
-        // attestation.
+        // Needed to expose advanced CPU features. Specifically RDRAND which is required
+        // for remote attestation.
         cmd.args(["-cpu", "host"]);
         // Set memory size if given.
         if let Some(memory_size) = params.memory_size {
@@ -131,49 +131,39 @@ impl Qemu {
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");
-        // If the VM restarts, don't restart it (we're not expecting any restarts so any restart
-        // should be treated as a failure)
+        // If the VM restarts, don't restart it (we're not expecting any restarts so any
+        // restart should be treated as a failure)
         cmd.arg("-no-reboot");
         // Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
         cmd.args(["-machine", "microvm,acpi=on,pcie=on"]);
         // Route first serial port to console.
         if let Some(port) = params.telnet_console {
-            cmd.args([
-                "-serial",
-                format!("telnet:localhost:{port},server").as_str(),
-            ]);
+            cmd.args(["-serial", format!("telnet:localhost:{port},server").as_str()]);
         } else {
-            cmd.args([
-                "-chardev",
-                format!("socket,id=consock,fd={guest_socket_fd}").as_str(),
-            ]);
+            cmd.args(["-chardev", format!("socket,id=consock,fd={guest_socket_fd}").as_str()]);
             cmd.args(["-serial", "chardev:consock"]);
         }
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
         let vm_address = crate::VM_LOCAL_ADDRESS;
-        let vm_port = crate::VM_LOCAL_PORT;
         let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
-        let host_proxy_rule = if let Some(host_proxy_port) = host_proxy_port {
-            format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}")
-        } else {
-            String::new()
+
+        let mut netdev_rules = vec![
+            "user".to_string(),
+            "id=netdev".to_string(),
+            format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
+            format!(
+                "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
+            ),
+        ];
+        if let Some(host_proxy_port) = host_proxy_port {
+            let vm_port = crate::VM_LOCAL_PORT;
+            netdev_rules.push(format!(
+                "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
+            ));
         };
-        cmd.args([
-            "-netdev",
-            [
-                "user",
-                "id=netdev",
-                &format!(
-                    "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
-                ),
-                &host_proxy_rule,
-                &format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
-            ]
-            .join(",")
-            .as_str(),
-        ]);
+        cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         if let Some(virtio_guest_cid) = params.virtio_guest_cid {
             cmd.args([
@@ -182,34 +172,10 @@ impl Qemu {
             ]);
         }
         // And yes, use stage0 as the BIOS.
-        cmd.args([
-            "-bios",
-            params
-                .stage0_binary
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args(["-bios", params.stage0_binary.into_os_string().into_string().unwrap().as_str()]);
         // stage0 accoutrements: the kernel, initrd and inital kernel cmdline.
-        cmd.args([
-            "-kernel",
-            params
-                .kernel
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
-        cmd.args([
-            "-initrd",
-            params
-                .initrd
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args(["-kernel", params.kernel.into_os_string().into_string().unwrap().as_str()]);
+        cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
         cmd.args([
             "-append",
@@ -244,10 +210,7 @@ impl Qemu {
 
         let instance = cmd.spawn()?;
 
-        Ok(Self {
-            instance,
-            guest_cid: params.virtio_guest_cid,
-        })
+        Ok(Self { instance, guest_cid: params.virtio_guest_cid })
     }
 
     pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
@@ -259,7 +222,6 @@ impl Qemu {
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
 
-    #[allow(unused)]
     pub fn guest_cid(&self) -> Option<u32> {
         self.guest_cid
     }

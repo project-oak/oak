@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! A utility binary to run tests and orchestrate examples and other tools within the repository,
-//! for local development and CI.
+//! A utility binary to run tests and orchestrate examples and other tools
+//! within the repository, for local development and CI.
 //!
 //! To invoke, run the following command from the root of the repository:
 //!
@@ -59,19 +59,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let run = async move || {
         let steps = match_cmd(&opt);
-        // TODO(#396): Add support for running individual commands via command line flags.
+        // TODO(#396): Add support for running individual commands via command line
+        // flags.
         let remaining_steps = steps.len();
         run_step(&Context::root(&opt), steps, Status::new(remaining_steps)).await
     };
 
-    // This is a crude way of killing any potentially running process when receiving a Ctrl-C
-    // signal. We collect all process IDs in the `PROCESSES` variable, regardless of whether
-    // they have already been terminated, and we try to kill all of them when receiving the
-    // signal.
+    // This is a crude way of killing any potentially running process when receiving
+    // a Ctrl-C signal. We collect all process IDs in the `PROCESSES` variable,
+    // regardless of whether they have already been terminated, and we try to
+    // kill all of them when receiving the signal.
     tokio::spawn(async {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("couldn't wait for signal");
+        tokio::signal::ctrl_c().await.expect("couldn't wait for signal");
         cleanup();
         std::process::exit(-1);
     });
@@ -115,15 +114,9 @@ fn cleanup() {
     eprintln!();
     eprintln!(
         "{}",
-        "signal or panic received, killing outstanding processes"
-            .bright_white()
-            .on_red()
+        "signal or panic received, killing outstanding processes".bright_white().on_red()
     );
-    for pid in xtask::PROCESSES
-        .lock()
-        .expect("couldn't acquire processes lock")
-        .iter()
-    {
+    for pid in xtask::PROCESSES.lock().expect("couldn't acquire processes lock").iter() {
         // We intentionally don't print anything here as it may obscure more interesting
         // results from the current execution.
         internal::kill_process(*pid);
@@ -133,10 +126,7 @@ fn cleanup() {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![
-            run_cargo_tests(&RunTestsOpt { cleanup: false }),
-            run_bazel_tests(),
-        ],
+        steps: vec![run_cargo_tests(&RunTestsOpt { cleanup: false }), run_bazel_tests()],
     }
 }
 
@@ -155,16 +145,12 @@ fn run_bazel_tests() -> Step {
 }
 
 pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
-    let cargo_manifests: Vec<PathBuf> = crate_manifest_files()
-        .filter(|path| is_fuzzing_toml_file(path))
-        .collect();
+    let cargo_manifests: Vec<PathBuf> =
+        crate_manifest_files().filter(|path| is_fuzzing_toml_file(path)).collect();
 
     Step::Multiple {
         name: "fuzzing".to_string(),
-        steps: cargo_manifests
-            .iter()
-            .map(|path| run_fuzz_targets_in_crate(path, opt))
-            .collect(),
+        steps: cargo_manifests.iter().map(|path| run_fuzz_targets_in_crate(path, opt)).collect(),
     }
 }
 
@@ -238,18 +224,10 @@ fn check_format() -> Step {
 
 fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
-    clap_complete::generate(
-        clap_complete::Shell::Bash,
-        &mut Opt::command(),
-        "xtask",
-        &mut file,
-    );
+    clap_complete::generate(clap_complete::Shell::Bash, &mut Opt::command(), "xtask", &mut file);
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
-    Step::Multiple {
-        name: "cargo completion".to_string(),
-        steps: vec![],
-    }
+    Step::Multiple { name: "cargo completion".to_string(), steps: vec![] }
 }
 
 fn run_ci() -> Step {
@@ -309,9 +287,10 @@ fn run_buildifier(mode: FormatMode) -> Step {
 }
 
 fn run_prettier(mode: FormatMode) -> Step {
-    // We run prettier as a single command on all the files at once instead of once per file,
-    // because it takes a considerable time to start up for each invocation. See #1680.
-    // We also filter out `supply-chain/{config,audits}.toml` as `cargo vet` insists on its own
+    // We run prettier as a single command on all the files at once instead of once
+    // per file, because it takes a considerable time to start up for each
+    // invocation. See #1680. We also filter out
+    // `supply-chain/{config,audits}.toml` as `cargo vet` insists on its own
     // formatting of the files that is incompatible with Prettier's opinions.
     let files = source_files()
         .filter(|path| {
@@ -410,10 +389,7 @@ fn run_shellcheck() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new(
-                    "shellcheck",
-                    ["--exclude=SC2155", "--external-sources", &entry],
-                ),
+                command: Cmd::new("shellcheck", ["--exclude=SC2155", "--external-sources", &entry]),
             })
             .collect(),
     }
@@ -429,10 +405,9 @@ fn run_clang_format(mode: FormatMode) -> Step {
                 name: entry.clone(),
                 command: match mode {
                     // Uses Google style with minor adaptions from oak/.clang-format.
-                    FormatMode::Check => Cmd::new(
-                        "clang-format",
-                        ["--dry-run", "--Werror", "--style=file", &entry],
-                    ),
+                    FormatMode::Check => {
+                        Cmd::new("clang-format", ["--dry-run", "--Werror", "--style=file", &entry])
+                    }
                     FormatMode::Fix => Cmd::new("clang-format", ["-i", "--style=file", &entry]),
                 },
             })
@@ -446,10 +421,7 @@ fn run_check_license() -> Step {
         steps: source_files()
             .filter(|p| is_source_code_file(p))
             .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: CheckLicense::new(entry),
-            })
+            .map(|entry| Step::Single { name: entry.clone(), command: CheckLicense::new(entry) })
             .collect(),
     }
 }
@@ -474,10 +446,7 @@ fn run_check_todo() -> Step {
         steps: source_files()
             .filter(|p| is_source_code_file(p))
             .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: CheckTodo::new(entry),
-            })
+            .map(|entry| Step::Single { name: entry.clone(), command: CheckTodo::new(entry) })
             .collect(),
     }
 }
@@ -513,9 +482,10 @@ fn run_cargo_test(opt: &RunTestsOpt) -> Step {
             .filter(|path| !is_fuzzing_toml_file(path))
             .map(|entry| {
                 // Run `cargo test` in the directory of the crate, not the top-level directory.
-                // This is needed as otherwise any crate-specific `.cargo/config.toml` files would
-                // be ignored. If a crate does not have a config file, Cargo will just backtrack
-                // up the tree and pick up the `.cargo/config.toml` file from the root directory.
+                // This is needed as otherwise any crate-specific `.cargo/config.toml` files
+                // would be ignored. If a crate does not have a config file,
+                // Cargo will just backtrack up the tree and pick up the
+                // `.cargo/config.toml` file from the root directory.
                 let test_run_step = |name| Step::Single {
                     name,
                     command: Cmd::new_in_dir(
@@ -668,13 +638,7 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            [
-                "build",
-                "--",
-                "//java/...:all",
-                "//cc/...:all",
-                "//proto/...:all",
-            ],
+            ["build", "--", "//java/...:all", "//cc/...:all", "//proto/...:all"],
         ),
     }
 }
@@ -684,13 +648,7 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         command: Cmd::new(
             "bazel",
-            [
-                "test",
-                "--",
-                "//java/...:all",
-                "//cc/...:all",
-                "//proto/...:all",
-            ],
+            ["test", "--", "//java/...:all", "//cc/...:all", "//proto/...:all"],
         ),
     }
 }

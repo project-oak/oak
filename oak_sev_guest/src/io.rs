@@ -27,8 +27,8 @@ use crate::ghcb::{Ghcb, GhcbProtocol};
 
 /// Factory for instantiating IO port readers and writers.
 ///
-/// The typical usage is to either create raw instances that peform direct IO on the ports, or
-/// instances that use the GHCB IOIO protocol.
+/// The typical usage is to either create raw instances that peform direct IO on
+/// the ports, or instances that use the GHCB IOIO protocol.
 pub trait IoPortFactory<'a, T, R: PortReader<T> + 'a, W: PortWriter<T> + 'a> {
     /// Creates a new IO port reader instance.
     fn new_reader(&self, port: u16) -> R;
@@ -42,7 +42,8 @@ pub trait PortReader<T> {
     ///
     /// # Safety
     ///
-    /// This function is unsafe because port access could have unsafe side-effects.
+    /// This function is unsafe because port access could have unsafe
+    /// side-effects.
     unsafe fn try_read(&mut self) -> Result<T, &'static str>;
 }
 
@@ -52,11 +53,13 @@ pub trait PortWriter<T> {
     ///
     /// # Safety
     ///
-    /// This function is unsafe because port access could have unsafe side-effects.
+    /// This function is unsafe because port access could have unsafe
+    /// side-effects.
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str>;
 }
 
-/// A factory for creating port readers and writers that use the GHCB IOIO protocol.
+/// A factory for creating port readers and writers that use the GHCB IOIO
+/// protocol.
 pub struct GhcbIoFactory<
     'a,
     R: RawMutex + 'a,
@@ -74,10 +77,7 @@ where
     G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     pub fn new(ghcb_protocol: &'a Mutex<R, P>) -> Self {
-        GhcbIoFactory {
-            ghcb_protocol,
-            _phantom: PhantomData,
-        }
+        GhcbIoFactory { ghcb_protocol, _phantom: PhantomData }
     }
 }
 
@@ -90,19 +90,11 @@ where
     GhcbIoPort<'a, R, P, G>: PortReader<T> + PortWriter<T>,
 {
     fn new_reader(&self, port: u16) -> GhcbIoPort<'a, R, P, G> {
-        GhcbIoPort {
-            ghcb_protocol: self.ghcb_protocol,
-            port,
-            _phantom: PhantomData,
-        }
+        GhcbIoPort { ghcb_protocol: self.ghcb_protocol, port, _phantom: PhantomData }
     }
 
     fn new_writer(&self, port: u16) -> GhcbIoPort<'a, R, P, G> {
-        GhcbIoPort {
-            ghcb_protocol: self.ghcb_protocol,
-            port,
-            _phantom: PhantomData,
-        }
+        GhcbIoPort { ghcb_protocol: self.ghcb_protocol, port, _phantom: PhantomData }
     }
 }
 
@@ -158,10 +150,7 @@ where
     G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_write(&mut self, value: u8) -> Result<(), &'static str> {
-        self.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u8(self.port, value)
+        self.ghcb_protocol.lock().as_mut().io_write_u8(self.port, value)
     }
 }
 
@@ -172,10 +161,7 @@ where
     G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_write(&mut self, value: u16) -> Result<(), &'static str> {
-        self.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u16(self.port, value)
+        self.ghcb_protocol.lock().as_mut().io_write_u16(self.port, value)
     }
 }
 
@@ -186,14 +172,12 @@ where
     G: AsMut<Ghcb> + AsRef<Ghcb> + ?Sized + 'a,
 {
     unsafe fn try_write(&mut self, value: u32) -> Result<(), &'static str> {
-        self.ghcb_protocol
-            .lock()
-            .as_mut()
-            .io_write_u32(self.port, value)
+        self.ghcb_protocol.lock().as_mut().io_write_u32(self.port, value)
     }
 }
 
-/// Factory for creating port reader and writers that perform direct IO operations.
+/// Factory for creating port reader and writers that perform direct IO
+/// operations.
 pub struct RawIoPortFactory;
 
 impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for RawIoPortFactory
@@ -230,12 +214,12 @@ where
     }
 }
 
-/// An IO port reader and writer implementation that uses the GHCB IOIO protocol, static references
-/// and a spinlock for synchronisation.
+/// An IO port reader and writer implementation that uses the GHCB IOIO
+/// protocol, static references and a spinlock for synchronisation.
 pub type StaticGhcbIoPort = GhcbIoPort<'static, RawSpinlock, GhcbProtocol<'static, Ghcb>, Ghcb>;
 
-/// Wrapper implementation that can either create IO ports that perform direct IO or IO ports that
-/// use the GHCB IOIO protocol.
+/// Wrapper implementation that can either create IO ports that perform direct
+/// IO or IO ports that use the GHCB IOIO protocol.
 pub enum PortFactoryWrapper {
     Raw(RawIoPortFactory),
     Ghcb(GhcbIoFactory<'static, RawSpinlock, GhcbProtocol<'static, Ghcb>, Ghcb>),
@@ -272,8 +256,8 @@ where
     }
 }
 
-// Wrapper implementation of an IO port that either performs direct IO or uses the GHCB IOIO
-// protocol.
+// Wrapper implementation of an IO port that either performs direct IO or uses
+// the GHCB IOIO protocol.
 pub enum PortWrapper<T> {
     Raw(Port<T>),
     Ghcb(StaticGhcbIoPort),

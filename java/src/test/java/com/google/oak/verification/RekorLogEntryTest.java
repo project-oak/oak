@@ -34,7 +34,7 @@ public class RekorLogEntryTest {
     RekorLogEntry r = RekorLogEntry.createFromJson(json);
     Assert.assertTrue(r.hasVerification());
     Assert.assertTrue(r.logEntry.body.length() > 0);
-    Assert.assertEquals(30891523, r.logEntry.logIndex);
+    Assert.assertEquals(74497915, r.logEntry.logIndex);
     Assert.assertEquals("rekord", r.logEntry.bodyObject.kind);
     Assert.assertEquals("sha256", r.logEntry.bodyObject.spec.data.hash.algorithm);
     Assert.assertEquals("x509", r.logEntry.bodyObject.spec.signature.format);

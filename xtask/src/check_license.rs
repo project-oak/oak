@@ -18,8 +18,8 @@ use std::path::Path;
 
 use crate::{files::file_contains, internal::*};
 
-/// A [`Runnable`] command that checks for the existence of source files without the necessary
-/// license header.
+/// A [`Runnable`] command that checks for the existence of source files without
+/// the necessary license header.
 pub struct CheckLicense {
     path: String,
 }
@@ -41,9 +41,6 @@ impl Runnable for CheckLicense {
         } else {
             StatusResultValue::Error
         };
-        Box::new(SingleStatusResult {
-            value: result_value,
-            logs: String::new(),
-        })
+        Box::new(SingleStatusResult { value: result_value, logs: String::new() })
     }
 }

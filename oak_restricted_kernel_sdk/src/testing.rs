@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Mock attestation evidence and structs. Useful for testing where an attestation rooted in a real
-//! TEE may not be available.
+//! Mock attestation evidence and crypto logic. Useful for testing where an
+//! attestation rooted in a real TEE may not be available.
 
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
@@ -24,7 +24,10 @@ use oak_crypto::{
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
 use p256::ecdsa::SigningKey;
 
-use crate::{DiceWrapper, EvidenceProvider, Signer};
+use crate::{
+    attestation::{DiceWrapper, EvidenceProvider},
+    crypto::Signer,
+};
 
 lazy_static::lazy_static! {
   static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
@@ -34,7 +37,6 @@ lazy_static::lazy_static! {
   };
 }
 
-#[cfg(feature = "mock_attestation")]
 fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),
@@ -49,7 +51,8 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
     )
 }
 
-/// [`Signer`] implementation that using mock evidence and corresponding mock private keys.
+/// [`Signer`] implementation that using mock evidence and corresponding mock
+/// private keys.
 #[derive(Clone)]
 pub struct MockSigner {
     key: &'static SigningKey,
@@ -60,22 +63,18 @@ impl MockSigner {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .map(|d| MockSigner {
-                key: &d.signing_key,
-            })
+            .map(|d| MockSigner { key: &d.signing_key })
     }
 }
 
 impl Signer for MockSigner {
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
-        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(
-            self.key, message,
-        ))
+        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
     }
 }
 
-/// [`EncryptionKeyHandle`] implementation that using mock evidence and corresponding mock
-/// private keys.
+/// [`EncryptionKeyHandle`] implementation that using mock evidence and
+/// corresponding mock private keys.
 #[derive(Clone)]
 pub struct MockEncryptionKeyHandle {
     key: &'static EncryptionKey,
@@ -86,9 +85,7 @@ impl MockEncryptionKeyHandle {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .map(|d| MockEncryptionKeyHandle {
-                key: &d.encryption_key,
-            })
+            .map(|d| MockEncryptionKeyHandle { key: &d.encryption_key })
     }
 }
 
@@ -111,9 +108,7 @@ impl MockEvidenceProvider {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .map(|d| MockEvidenceProvider {
-                evidence: &d.evidence,
-            })
+            .map(|d| MockEvidenceProvider { evidence: &d.evidence })
     }
 }
 

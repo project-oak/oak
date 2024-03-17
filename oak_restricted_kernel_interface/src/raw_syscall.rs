@@ -21,8 +21,8 @@ use crate::Syscall;
 /// Invoke system calls based on the Linux calling convention using `SYSCALL`.
 ///
 /// See <https://github.com/torvalds/linux/blob/master/arch/x86/entry/calling.h> for the definition
-/// of the calling convention, and the AMD64 Architecture Programmer's Manual, Volume 3 for the
-/// semantics of `SYSCALL`/`SYSRET`.
+/// of the calling convention, and the AMD64 Architecture Programmer's Manual,
+/// Volume 3 for the semantics of `SYSCALL`/`SYSRET`.
 #[macro_export]
 macro_rules! syscall {
     ($syscall:expr) => {

@@ -36,10 +36,7 @@ enum DerivedKeyDescriptor {
 impl DerivedKeyDescriptor {
     #[cfg(not(feature = "initrd"))]
     fn new(key: DerivedKey) -> Self {
-        Self::Readable(DerivedKeyState {
-            index: 0,
-            data: key,
-        })
+        Self::Readable(DerivedKeyState { index: 0, data: key })
     }
 
     #[cfg(feature = "initrd")]
@@ -85,10 +82,7 @@ impl FileDescriptor for DerivedKeyDescriptor {
                         <DerivedKey as zerocopy::FromBytes>::read_from(data_as_slice).unwrap();
                     let _ = core::mem::replace(
                         self,
-                        Self::Readable(DerivedKeyState {
-                            index: 0,
-                            data: derived_key,
-                        }),
+                        Self::Readable(DerivedKeyState { index: 0, data: derived_key }),
                     );
                 }
 

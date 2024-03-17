@@ -31,11 +31,8 @@ use async_trait::async_trait;
 use clap::Parser;
 use command_fds::CommandFdExt;
 use log::info;
-use oak_channel::Write;
 
 use crate::channel::{Connector, ConnectorHandle};
-
-const PAGE_SIZE: usize = 4096;
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -48,7 +45,8 @@ pub struct Params {
     #[arg(long, value_parser = path_exists)]
     pub kernel: PathBuf,
 
-    /// Path to the Oak Functions application binary to be loaded into the enclave.
+    /// Path to the Oak Functions application binary to be loaded into the
+    /// enclave.
     #[arg(long, value_parser = path_exists)]
     pub app_binary: Option<PathBuf>,
 
@@ -60,8 +58,8 @@ pub struct Params {
     #[arg(long = "gdb")]
     pub gdb: Option<u16>,
 
-    /// How much memory to give to the enclave binary, e.g., 256M (M stands for Megabyte, G for
-    /// Gigabyte).
+    /// How much memory to give to the enclave binary, e.g., 256M (M stands for
+    /// Megabyte, G for Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
 
@@ -88,7 +86,8 @@ pub struct Instance {
 }
 
 impl Instance {
-    /// Starts virtualized instance with given parameters and stream to write console logs to.
+    /// Starts virtualized instance with given parameters and stream to write
+    /// console logs to.
     pub fn start(params: Params, guest_console: net::UnixStream) -> Result<Self> {
         let app_bytes = if let Some(app_binary) = params.app_binary {
             let bytes = fs::read(&app_binary).with_context(|| {
@@ -107,12 +106,12 @@ impl Instance {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, mut host_socket) = net::UnixStream::pair()?;
 
-        // Clone the console stream so we can use it in the child process and also return it from
-        // this method.
+        // Clone the console stream so we can use it in the child process and also
+        // return it from this method.
         let guest_console_clone = guest_console.try_clone().unwrap();
 
-        // Extract the raw file descriptor numbers from the streams before passing them to the child
-        // process, since that takes ownership of them.
+        // Extract the raw file descriptor numbers from the streams before passing them
+        // to the child process, since that takes ownership of them.
         let guest_console_fd = guest_console.as_raw_fd();
         let guest_socket_fd = guest_socket.as_raw_fd();
 
@@ -123,8 +122,8 @@ impl Instance {
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
-        // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
-        // attestation.
+        // Needed to expose advanced CPU features. Specifically RDRAND which is required
+        // for remote attestation.
         cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
         // Set memory size if given.
         if let Some(memory_size) = params.memory_size {
@@ -133,97 +132,45 @@ impl Instance {
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");
-        // If the VM restarts, don't restart it (we're not expecting any restarts so any restart
-        // should be treated as a failure)
+        // If the VM restarts, don't restart it (we're not expecting any restarts so any
+        // restart should be treated as a failure)
         cmd.arg("-no-reboot");
         // Use the `microvm` machine as the basis, and ensure ACPI is enabled.
         cmd.args(["-machine", "microvm,acpi=on"]);
         // Route first serial port to console.
-        cmd.args([
-            "-chardev",
-            format!("socket,id=consock,fd={guest_console_fd}").as_str(),
-        ]);
+        cmd.args(["-chardev", format!("socket,id=consock,fd={guest_console_fd}").as_str()]);
         cmd.args(["-serial", "chardev:consock"]);
         // Add the virtio device.
-        cmd.args([
-            "-chardev",
-            format!("socket,id=commsock,fd={guest_socket_fd}").as_str(),
-        ]);
+        cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
         // Use stage0 as the BIOS.
-        cmd.args([
-            "-bios",
-            params
-                .bios_binary
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args(["-bios", params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
         // stage0 accoutrements: kernel that's compatible with the linux boot protocol
-        cmd.args([
-            "-kernel",
-            params
-                .kernel
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args(["-kernel", params.kernel.into_os_string().into_string().unwrap().as_str()]);
 
         if let Some(gdb_port) = params.gdb {
-            // Listen for a gdb connection on the provided port and wait for debugger before booting
+            // Listen for a gdb connection on the provided port and wait for debugger before
+            // booting
             cmd.args(["-gdb", format!("tcp::{gdb_port}").as_str()]);
             cmd.arg("-S");
         }
 
-        cmd.args([
-            "-initrd",
-            params
-                .initrd
-                .into_os_string()
-                .into_string()
-                .unwrap()
-                .as_str(),
-        ]);
+        cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
 
         info!("executing: {:?}", cmd);
 
         let instance = cmd.spawn()?;
 
         if let Some(app_bytes) = app_bytes {
-            // Loading the application binary needs to happen before we start using microrpc over
-            // the channel.
-            host_socket
-                .write_all(&(app_bytes.len() as u32).to_le_bytes())
-                .expect("failed to send application binary length to enclave");
-
-            // The kernel expects data to be transmitted in chunks of one page.
-            let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
-            for chunk in chunks.by_ref() {
-                Self::write_chunk(&mut host_socket, chunk)?;
-            }
-            Self::write_chunk(&mut host_socket, chunks.remainder())?;
+            oak_channel::basic_framed::send_raw(&mut host_socket, &app_bytes)
+                .context("failed to send application")?;
+            #[cfg(feature = "exchange_evidence")]
+            let _evidence = oak_channel::basic_framed::receive_raw(&mut host_socket)
+                .context("failed to receive attestion evidence")?;
         }
 
-        Ok(Self {
-            guest_console: guest_console_clone,
-            host_socket,
-            instance,
-        })
-    }
-
-    /// Writes a chunk to a channel, and expects an acknowledgement containing the length of the
-    /// chunk.
-    fn write_chunk(channel: &mut dyn oak_channel::Channel, chunk: &[u8]) -> Result<()> {
-        channel.write_all(chunk)?;
-        let mut ack: [u8; 4] = Default::default();
-        channel.read_exact(&mut ack)?;
-        if u32::from_le_bytes(ack) as usize != chunk.len() {
-            anyhow::bail!("ack wasn't of correct length");
-        }
-        Ok(())
+        Ok(Self { guest_console: guest_console_clone, host_socket, instance })
     }
 }
 
@@ -247,9 +194,9 @@ impl GuestInstance for Instance {
     }
 }
 
-/// Defines the interface of a launched guest instance. Standardizes the interface of different
-/// implementations, e.g. a VM in which the guest is running or the guest running directly as a
-/// unix binary.
+/// Defines the interface of a launched guest instance. Standardizes the
+/// interface of different implementations, e.g. a VM in which the guest is
+/// running or the guest running directly as a unix binary.
 #[async_trait]
 pub trait GuestInstance {
     /// Wait for the guest instance process to finish.

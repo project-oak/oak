@@ -59,10 +59,7 @@ static_assertions::assert_eq_size!(GuestMessage, [u8; GUEST_MESSAGE_SIZE]);
 
 impl GuestMessage {
     pub const fn new() -> Self {
-        GuestMessage {
-            header: GuestMessageHeader::new(),
-            payload: [0; MAX_PAYLOAD_SIZE],
-        }
+        GuestMessage { header: GuestMessageHeader::new(), payload: [0; MAX_PAYLOAD_SIZE] }
     }
 
     /// Checks that header is valid.
@@ -71,7 +68,8 @@ impl GuestMessage {
     }
 }
 
-/// The authenticated subsection of the header used for an encrypted guest request message.
+/// The authenticated subsection of the header used for an encrypted guest
+/// request message.
 ///
 /// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
@@ -79,7 +77,8 @@ impl GuestMessage {
 pub struct AuthenticatedHeader {
     /// The algorithm used to encrypt the payload.
     ///
-    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an `AeadAlgorithm` enum.
+    /// Use `GuestMessageHeader::get_algorithm` to try to convert this to an
+    /// `AeadAlgorithm` enum.
     pub algorithm: u8,
     /// The header version. Currently only version 1 is supported.
     pub header_version: u8,
@@ -87,9 +86,11 @@ pub struct AuthenticatedHeader {
     pub header_size: u16,
     /// The type of message that the payload represents.
     ///
-    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a `MessageType` enum.
+    /// Use `GuestMessageHeader::get_message_type` to try to convert this to a
+    /// `MessageType` enum.
     pub message_type: u8,
-    /// The version of the message. Currently only version 1 is supported for all message types.
+    /// The version of the message. Currently only version 1 is supported for
+    /// all message types.
     pub message_version: u8,
     /// The size of the encrypted message payload in bytes.
     pub message_size: u16,
@@ -117,7 +118,8 @@ pub struct GuestMessageHeader {
     pub sequence_number: u64,
     /// Reserved. Must be zero.
     _reserved_0: u64,
-    /// The the sub-section of the header that is treated as additional data in the AEAD.
+    /// The the sub-section of the header that is treated as additional data in
+    /// the AEAD.
     pub auth_header: AuthenticatedHeader,
 }
 
@@ -155,8 +157,9 @@ impl GuestMessageHeader {
 
     /// Checks that the authenticated header subsection is valid.
     ///
-    /// The reserved fields do not have zero values in the guest messages returned from the Platform
-    /// Secure Processor, so we don't validate these.
+    /// The reserved fields do not have zero values in the guest messages
+    /// returned from the Platform Secure Processor, so we don't validate
+    /// these.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.get_algorithm().is_none()
             || self.auth_header.algorithm == AeadAlgorithm::Invalid as u8
@@ -224,7 +227,8 @@ pub enum MessageType {
     ExportRequest = 7,
     /// VM export response. Used for VM migration.
     ExportResponse = 8,
-    /// VM import request. Used during VM migration, typically by a migration agent.
+    /// VM import request. Used during VM migration, typically by a migration
+    /// agent.
     ImportRequest = 9,
     /// VM import response. Used during VM migration.
     ImportResponse = 10,
@@ -254,16 +258,17 @@ pub enum MessageType {
 pub struct KeyRequest {
     /// Selects which key will be used to derive the key.
     ///
-    /// This contains the ROOT_KEY_SELECT and KEY_SEL bit-fields. To interact with the individual
-    /// bit-fields use `KeyRequest::get_key_select`, `KeyRequest::get_root_key_select`,
-    /// `KeyRequest::set_key_select` or `KeyRequest::set_root_key_select`
+    /// This contains the ROOT_KEY_SELECT and KEY_SEL bit-fields. To interact
+    /// with the individual bit-fields use `KeyRequest::get_key_select`,
+    /// `KeyRequest::get_root_key_select`, `KeyRequest::set_key_select` or
+    /// `KeyRequest::set_root_key_select`
     key_select: u32,
     /// Reserved, must be zero.
     _reserved: u32,
     /// Mask indicating which guest data will be mixed into the derived key.
     ///
-    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to a
-    /// `GuestFieldFlags` enum.
+    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to
+    /// a `GuestFieldFlags` enum.
     pub guest_field_select: u64,
     /// The VM Protection Level (VMPL) to mix into the derived key.
     ///
@@ -299,7 +304,8 @@ impl KeyRequest {
         }
     }
 
-    /// Gets the `guest_field_select` field as a `GuestFieldFlags` representation if possible.
+    /// Gets the `guest_field_select` field as a `GuestFieldFlags`
+    /// representation if possible.
     pub fn get_guest_field_select_flags(&self) -> Option<GuestFieldFlags> {
         GuestFieldFlags::from_bits(self.guest_field_select)
     }
@@ -341,7 +347,8 @@ impl Message for KeyRequest {
 pub struct KeyResponse {
     /// The status of the operation.
     ///
-    /// Use `KeyResponse::get_status` to try to convert this to a `KeyStatus` enum.
+    /// Use `KeyResponse::get_status` to try to convert this to a `KeyStatus`
+    /// enum.
     pub status: u32,
     /// Reserved. Must be 0.
     _reserved: [u8; 28],
@@ -363,8 +370,8 @@ impl KeyResponse {
         KeyStatus::from_repr(self.status)
     }
 
-    /// Checks that all reserved bytes are zero and that the status field, the report size and the
-    /// report format are all valid.
+    /// Checks that all reserved bytes are zero and that the status field, the
+    /// report size and the report format are all valid.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self._reserved.iter().any(|&value| value != 0) {
             return Err("nonzero value in _reserved");
@@ -451,11 +458,7 @@ static_assertions::assert_eq_size!(AttestationRequest, [u8; 96]);
 
 impl AttestationRequest {
     pub const fn new() -> Self {
-        AttestationRequest {
-            report_data: [0; 64],
-            vmpl: 0,
-            _reserved: [0; 28],
-        }
+        AttestationRequest { report_data: [0; 64], vmpl: 0, _reserved: [0; 28] }
     }
 }
 
@@ -473,7 +476,8 @@ impl Message for AttestationRequest {
 pub struct AttestationResponse {
     /// The status of the operation.
     ///
-    /// Use `AttestationResponse::get_status` to try to convert this to a `ReportStatus` enum.
+    /// Use `AttestationResponse::get_status` to try to convert this to a
+    /// `ReportStatus` enum.
     pub status: u32,
     /// The size of the report.
     pub report_size: u32,
@@ -497,8 +501,8 @@ impl AttestationResponse {
         ReportStatus::from_repr(self.status)
     }
 
-    /// Checks that all reserved bytes are zero and that the status field, the report size and the
-    /// report format are all valid.
+    /// Checks that all reserved bytes are zero and that the status field, the
+    /// report size and the report format are all valid.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self._reserved.iter().any(|&value| value != 0) {
             return Err("nonzero value in _reserved");
@@ -531,9 +535,11 @@ pub enum ReportStatus {
 pub struct EcdsaPublicKey {
     /// The curve for this public key.
     pub curve: EccCurve,
-    /// The R component of this public. The value is zero-extended and little-endian encoded.
+    /// The R component of this public. The value is zero-extended and
+    /// little-endian encoded.
     pub r: [u8; 72],
-    /// The S component of this public key. The value is zero-extended and little-endian encoded.
+    /// The S component of this public key. The value is zero-extended and
+    /// little-endian encoded.
     pub s: [u8; 72],
     /// Reserved, must be zero.
     _reserved: [u8; 880],
@@ -559,8 +565,8 @@ pub trait Message {
 
 #[cfg(test)]
 mod tests {
-    //! Test to check the getters and setters for the bit fields of the `key_select` field in the
-    //! `KeyRequest` struct.
+    //! Test to check the getters and setters for the bit fields of the
+    //! `key_select` field in the `KeyRequest` struct.
 
     use strum::IntoEnumIterator;
 

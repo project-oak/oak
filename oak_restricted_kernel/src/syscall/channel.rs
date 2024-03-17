@@ -35,18 +35,12 @@ impl ChannelDescriptor {
 impl FileDescriptor for ChannelDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, Errno> {
         let size: isize = buf.len().try_into().map_err(|_| Errno::EINVAL)?;
-        self.channel
-            .read_exact(buf)
-            .map_err(|_| Errno::EIO)
-            .map(|_| size)
+        self.channel.read_exact(buf).map_err(|_| Errno::EIO).map(|_| size)
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<isize, Errno> {
         let size: isize = buf.len().try_into().map_err(|_| Errno::EINVAL)?;
-        self.channel
-            .write_all(buf)
-            .map_err(|_| Errno::EIO)
-            .map(|_| size)
+        self.channel.write_all(buf).map_err(|_| Errno::EIO).map(|_| size)
     }
 
     fn sync(&mut self) -> Result<(), Errno> {
@@ -54,7 +48,8 @@ impl FileDescriptor for ChannelDescriptor {
     }
 }
 
-/// Registers a handler for the Oak communication channel file descriptor [`OAK_CHANNEL_FD`]
+/// Registers a handler for the Oak communication channel file descriptor
+/// [`OAK_CHANNEL_FD`]
 pub fn register(channel: Box<dyn Channel>) {
     super::fd::register(OAK_CHANNEL_FD, Box::new(ChannelDescriptor::new(channel)))
         .map_err(|_| ()) // throw away the box we get back

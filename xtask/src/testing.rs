@@ -17,12 +17,7 @@
 use crate::internal::{read_to_end, Command, Context, Opt, Runnable, Running, Status, Step};
 
 fn opt_for_test() -> Opt {
-    Opt {
-        dry_run: false,
-        logs: true,
-        keep_going: false,
-        cmd: Command::RunTests,
-    }
+    Opt { dry_run: false, logs: true, keep_going: false, cmd: Command::RunTests }
 }
 
 /// Runs a step, and asserts that it succeeds.
@@ -33,7 +28,8 @@ pub async fn run_step(step: Step) {
     assert!(result.success());
 }
 
-/// Thin wrapper around an inner `Running` that kills the inner `Running` when dropped.
+/// Thin wrapper around an inner `Running` that kills the inner `Running` when
+/// dropped.
 pub struct BackgroundStep {
     pub inner: Box<dyn Running>,
 }
@@ -44,7 +40,8 @@ impl std::ops::Drop for BackgroundStep {
     }
 }
 
-/// Runs a step in the background, and returns a reference to the running process.
+/// Runs a step in the background, and returns a reference to the running
+/// process.
 ///
 /// The running process is killed when the returned `BackgroundStep` is dropped.
 pub async fn run_background(step: Box<dyn Runnable>) -> BackgroundStep {
@@ -54,11 +51,8 @@ pub async fn run_background(step: Box<dyn Runnable>) -> BackgroundStep {
     BackgroundStep { inner: running }
 }
 
-/// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run
-/// tests that require nested virtualization.
+/// Whether to skip the test. For instance, GitHub Actions does not support KVM,
+/// so we cannot run tests that require nested virtualization.
 pub fn skip_test() -> bool {
-    std::env::var("OAK_KVM_TESTS")
-        .unwrap_or_default()
-        .to_lowercase()
-        == "skip"
+    std::env::var("OAK_KVM_TESTS").unwrap_or_default().to_lowercase() == "skip"
 }

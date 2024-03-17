@@ -36,10 +36,7 @@ impl TrustedApplicationImplementation {
         application_config: Vec<u8>,
         encryption_key_handle: InstanceEncryptionKeyHandle,
     ) -> Self {
-        Self {
-            application_config,
-            encryption_key_handle,
-        }
+        Self { application_config, encryption_key_handle }
     }
 }
 
@@ -59,21 +56,22 @@ impl TrustedApplication for TrustedApplicationImplementation {
             ServerEncryptor::decrypt_async(&encrypted_request, &self.encryption_key_handle)
                 .await
                 .map_err(|error| {
-                    tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
-                })?;
+                tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
+            })?;
 
         let name = String::from_utf8(name_bytes)
             .map_err(|error| tonic::Status::internal(format!("name is not UTF-8: {:?}", error)))?;
-        let greeting: String = format!("Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.", name, self.application_config.len());
-        let response = server_encryptor
-            .encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA)
-            .map_err(|error| {
-                tonic::Status::internal(format!("couldn't encrypt response: {:?}", error))
-            })?;
+        let greeting: String = format!(
+            "Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.",
+            name,
+            self.application_config.len()
+        );
+        let response =
+            server_encryptor.encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA).map_err(
+                |error| tonic::Status::internal(format!("couldn't encrypt response: {:?}", error)),
+            )?;
 
-        Ok(tonic::Response::new(HelloResponse {
-            encrypted_response: Some(response),
-        }))
+        Ok(tonic::Response::new(HelloResponse { encrypted_response: Some(response) }))
     }
 }
 
@@ -83,9 +81,10 @@ pub async fn create(
     encryption_key_handle: InstanceEncryptionKeyHandle,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
-        .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation::new(application_config, encryption_key_handle),
-        ))
+        .add_service(TrustedApplicationServer::new(TrustedApplicationImplementation::new(
+            application_config,
+            encryption_key_handle,
+        )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

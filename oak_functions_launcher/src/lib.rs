@@ -71,7 +71,8 @@ pub struct Args {
         )]
     pub wasm: PathBuf,
 
-    /// Path to a file containing key / value entries in protobuf binary format for lookup.
+    /// Path to a file containing key / value entries in protobuf binary format
+    /// for lookup.
     #[arg(
             long,
             value_parser = path_exists,
@@ -101,11 +102,7 @@ pub async fn create(
     wasm_path: PathBuf,
     constant_response_size: u32,
 ) -> Result<
-    (
-        Box<dyn launcher::GuestInstance>,
-        channel::ConnectorHandle,
-        InitializeResponse,
-    ),
+    (Box<dyn launcher::GuestInstance>, channel::ConnectorHandle, InitializeResponse),
     Box<dyn std::error::Error>,
 > {
     log::info!("creating Oak Functions guest instance");
@@ -116,7 +113,8 @@ pub async fn create(
     Ok((launched_instance, connector_handle, intialize_response))
 }
 
-// Initially loads lookup data and spawns task to periodically refresh lookup data.
+// Initially loads lookup data and spawns task to periodically refresh lookup
+// data.
 async fn setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
@@ -163,8 +161,8 @@ pub async fn update_lookup_data(
     result
 }
 
-// Loads application config (including Wasm bytes) into the enclave and returns a remote attestation
-// evidence.
+// Loads application config (including Wasm bytes) into the enclave and returns
+// a remote attestation evidence.
 async fn intialize_enclave(
     connector_handle: channel::ConnectorHandle,
     wasm: &PathBuf,
@@ -179,18 +177,12 @@ async fn intialize_enclave(
         ubyte::ByteUnit::Byte(wasm_bytes.len() as u64)
     );
 
-    let request = InitializeRequest {
-        wasm_module: wasm_bytes,
-        constant_response_size,
-    };
+    let request = InitializeRequest { wasm_module: wasm_bytes, constant_response_size };
 
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
     log::info!("sending initialize request");
-    let initialize_response = client
-        .initialize(&request)
-        .await
-        .flatten()
-        .expect("couldn't initialize service");
+    let initialize_response =
+        client.initialize(&request).await.flatten().expect("couldn't initialize service");
     log::info!("service initialized: {:?}", initialize_response);
 
     Ok(initialize_response)

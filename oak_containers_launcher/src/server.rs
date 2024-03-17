@@ -99,9 +99,7 @@ impl Launcher for LauncherServerImplementation {
             }
         };
 
-        Ok(Response::new(
-            Box::pin(response_stream) as Self::GetOakSystemImageStream
-        ))
+        Ok(Response::new(Box::pin(response_stream) as Self::GetOakSystemImageStream))
     }
 
     async fn get_container_bundle(
@@ -129,9 +127,7 @@ impl Launcher for LauncherServerImplementation {
             }
         };
 
-        Ok(Response::new(
-            Box::pin(response_stream) as Self::GetContainerBundleStream
-        ))
+        Ok(Response::new(Box::pin(response_stream) as Self::GetContainerBundleStream))
     }
 
     async fn get_application_config(
@@ -194,7 +190,8 @@ impl HostlibKeyProvisioning for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<GetKeyProvisioningRoleResponse>, tonic::Status> {
-        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input argument.
+        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input
+        // argument.
         Ok(tonic::Response::new(GetKeyProvisioningRoleResponse {
             role: KeyProvisioningRole::Leader.into(),
         }))
@@ -205,9 +202,7 @@ impl HostlibKeyProvisioning for LauncherServerImplementation {
         _request: Request<()>,
     ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
         // TODO(#4442): Implement sending group keys to the orchestrator.
-        Err(tonic::Status::unimplemented(
-            "Key Provisioning is not implemented",
-        ))
+        Err(tonic::Status::unimplemented("Key Provisioning is not implemented"))
     }
 }
 
@@ -219,9 +214,7 @@ impl MetricsService for LauncherServerImplementation {
     ) -> Result<Response<ExportMetricsServiceResponse>, tonic::Status> {
         let request = request.into_inner();
         log::debug!("metrics: {:?}", request);
-        Ok(Response::new(ExportMetricsServiceResponse {
-            partial_success: None,
-        }))
+        Ok(Response::new(ExportMetricsServiceResponse { partial_success: None }))
     }
 }
 
@@ -235,22 +228,19 @@ impl LogsService for LauncherServerImplementation {
         for resource_log in &request.resource_logs {
             for scope_log in &resource_log.scope_logs {
                 for log_record in &scope_log.log_records {
-                    let unit = log_record
-                        .attributes
-                        .iter()
-                        .find_map(|x| {
-                            if x.key == "_SYSTEMD_UNIT" {
-                                x.value.as_ref()
-                            } else {
-                                None
-                            }
-                        })
-                        .and_then(|value| value.value.as_ref())
-                        .and_then(|value| match value {
-                            Value::StringValue(x) => Some(x.as_str()),
-                            _ => None,
-                        })
-                        .unwrap_or_default();
+                    let unit =
+                        log_record
+                            .attributes
+                            .iter()
+                            .find_map(|x| {
+                                if x.key == "_SYSTEMD_UNIT" { x.value.as_ref() } else { None }
+                            })
+                            .and_then(|value| value.value.as_ref())
+                            .and_then(|value| match value {
+                                Value::StringValue(x) => Some(x.as_str()),
+                                _ => None,
+                            })
+                            .unwrap_or_default();
                     let body = log_record
                         .body
                         .as_ref()
@@ -265,9 +255,7 @@ impl LogsService for LauncherServerImplementation {
             }
         }
 
-        Ok(Response::new(ExportLogsServiceResponse {
-            partial_success: None,
-        }))
+        Ok(Response::new(ExportLogsServiceResponse { partial_success: None }))
     }
 }
 

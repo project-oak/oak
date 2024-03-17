@@ -48,7 +48,8 @@ const MEMMAP_PATH: &str = "/sys/firmware/memmap";
 /// The path for reading the physical memory from the mem device.
 const PHYS_MEM_PATH: &str = "/dev/mem";
 
-/// Measures the downloaded system image bytes and returns it as a vector of additional CWT claims.
+/// Measures the downloaded system image bytes and returns it as a vector of
+/// additional CWT claims.
 pub fn measure_system_image(system_image_bytes: &[u8]) -> Vec<(ClaimName, Value)> {
     let mut digest = Sha256::default();
     digest.update(system_image_bytes);
@@ -81,15 +82,16 @@ impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
     }
 }
 
-/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
-/// address.
+/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at
+/// the given physical address.
 pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> {
     let stage0_dice_data = read_stage0_dice_data(start)?;
     let dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)?;
     dice_data.try_into()
 }
 
-/// Reads the DICE data from the physical memory range starting at the given address.
+/// Reads the DICE data from the physical memory range starting at the given
+/// address.
 ///
 /// Zeroes out the source physical memory after copying it.
 fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
@@ -98,11 +100,9 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let end = start + (length as u64 - 1);
     // Ensure that the memory range is in reserved memory.
     anyhow::ensure!(
-        read_memory_ranges()?
-            .iter()
-            .any(|range| range.type_description == RESERVED_E820_TYPE
-                && range.contains(&start)
-                && range.contains(&end)),
+        read_memory_ranges()?.iter().any(|range| range.type_description == RESERVED_E820_TYPE
+            && range.contains(&start)
+            && range.contains(&end)),
         "DICE data range is not in reserved memory"
     );
 
@@ -113,8 +113,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
         .open(PHYS_MEM_PATH)
         .context("couldn't open DICE memory device for reading")?;
 
-    // Safety: we have checked that the exact memory range is marked as reserved so the Linux kernel
-    // will not use it for anything else.
+    // Safety: we have checked that the exact memory range is marked as reserved so
+    // the Linux kernel will not use it for anything else.
     let start_ptr = unsafe {
         mmap(
             None,
@@ -128,7 +128,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     };
 
     let result = {
-        // Safety: we have checked the length, know it is backed by physical memory and is reserved.
+        // Safety: we have checked the length, know it is backed by physical memory and
+        // is reserved.
         let source = unsafe { std::slice::from_raw_parts_mut(start_ptr as *mut u8, length) };
 
         let result = Stage0DiceData::read_from(source)
@@ -143,7 +144,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
         anyhow::bail!("invalid DICE data");
     }
 
-    // Safety: we have just mapped this memory, and the slice over it has been dropped.
+    // Safety: we have just mapped this memory, and the slice over it has been
+    // dropped.
     unsafe { munmap(start_ptr, length)? };
     Ok(result)
 }
@@ -159,11 +161,7 @@ fn read_memory_ranges() -> anyhow::Result<Vec<MemoryRange>> {
             let end = try_parse_phys_addr(read_to_string(path.join("end"))?.trim())
                 .context("couldn't parse end")?;
             let type_description = read_to_string(path.join("type"))?.trim().to_string();
-            Ok(MemoryRange {
-                start,
-                end,
-                type_description,
-            })
+            Ok(MemoryRange { start, end, type_description })
         })
         .try_collect()
 }

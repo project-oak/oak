@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Prost generated code cannot build on its own: it needs a manually crafted module
-// structure to include! it.
+// Prost generated code cannot build on its own: it needs a manually crafted
+// module structure to include! it.
 
 #![no_std]
 #![feature(never_type)]

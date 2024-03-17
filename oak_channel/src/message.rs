@@ -30,7 +30,8 @@ static_assertions::assert_eq_size!([u8; INVOCATION_ID_SIZE], InvocationId);
 
 pub const BODY_OFFSET: usize = 8;
 
-// messages never have a length of zero, since it always includes a fixed size header.
+// messages never have a length of zero, since it always includes a fixed size
+// header.
 #[allow(clippy::len_without_is_empty)]
 pub trait Message {
     fn len(&self) -> usize;
@@ -55,9 +56,8 @@ impl Message for RequestMessage {
         let len = self.len();
         let mut message_bytes: Vec<u8> = Vec::with_capacity(len);
 
-        let length: Length = len
-            .try_into()
-            .expect("couldn't convert the message length usize to u32");
+        let length: Length =
+            len.try_into().expect("couldn't convert the message length usize to u32");
 
         message_bytes.extend_from_slice(&length.to_le_bytes());
         message_bytes.extend_from_slice(&self.invocation_id.to_le_bytes());
@@ -78,10 +78,7 @@ impl Message for RequestMessage {
         // reference counting.
         let body: Vec<u8> = encoded_message[BODY_OFFSET..].into();
 
-        Self {
-            invocation_id,
-            body,
-        }
+        Self { invocation_id, body }
     }
 }
 
@@ -102,9 +99,8 @@ impl Message for ResponseMessage {
         let len = self.len();
         let mut message_bytes: Vec<u8> = Vec::with_capacity(len);
 
-        let length: Length = len
-            .try_into()
-            .expect("couldn't convert the message length usize to u32");
+        let length: Length =
+            len.try_into().expect("couldn't convert the message length usize to u32");
 
         message_bytes.extend_from_slice(&length.to_le_bytes());
         message_bytes.extend_from_slice(&self.invocation_id.to_le_bytes());
@@ -125,9 +121,6 @@ impl Message for ResponseMessage {
         // reference counting.
         let body: Vec<u8> = encoded_message[BODY_OFFSET..].into();
 
-        Self {
-            invocation_id,
-            body,
-        }
+        Self { invocation_id, body }
     }
 }

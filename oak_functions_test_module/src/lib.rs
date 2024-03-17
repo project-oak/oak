@@ -32,9 +32,7 @@ use oak_proto_rust::oak::oak_functions::testing::{
 pub extern "C" fn main() {
     let should_panic_afterwards = Arc::new(AtomicBool::new(false));
 
-    let service = Service {
-        should_panic_afterwards: should_panic_afterwards.clone(),
-    };
+    let service = Service { should_panic_afterwards: should_panic_afterwards.clone() };
     let mut trasport = TestModuleServer::new(service);
     let request_bytes = oak_functions_sdk::read_request().expect("couldn't read request body");
     let response_bytes = trasport.invoke(&request_bytes).into_ok();

@@ -31,16 +31,17 @@ impl FileDescriptor for Stderr {
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        // buf may be up to usize, but we need to return the number of bytes as isize. Let's follow
-        // the Linux example of only writing up to isize::MAX bytes.
+        // buf may be up to usize, but we need to return the number of bytes as isize.
+        // Let's follow the Linux example of only writing up to isize::MAX
+        // bytes.
         let buf = &buf[..min(buf.len(), isize::MAX as usize)];
         let mut lock = SERIAL1.lock();
         let port = lock.as_mut().unwrap();
         for &byte in buf {
-            // We don't log the error, as (a) we're holding the mutex on the serial port so logging
-            // wouldn't work, and (b) it's the write to the serial port that failed, and our
-            // logs would go over the exact same serial port so writing the log would likely fail as
-            // well.
+            // We don't log the error, as (a) we're holding the mutex on the serial port so
+            // logging wouldn't work, and (b) it's the write to the serial port
+            // that failed, and our logs would go over the exact same serial
+            // port so writing the log would likely fail as well.
             port.send(byte).map_err(|_| Errno::EIO)?;
         }
         Ok(buf.len() as isize)

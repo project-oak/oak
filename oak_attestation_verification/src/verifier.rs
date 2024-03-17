@@ -91,15 +91,16 @@ pub fn to_attestation_results(
 }
 
 /// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work progresses.
+/// The `now_utc_millis` argument will be changed to a time type as work
+/// progresses.
 pub fn verify(
     now_utc_millis: i64,
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> anyhow::Result<ExtractedEvidence> {
-    // Ensure the Attestation report is properly signed by the platform and that it includes the
-    // root public key used in the DICE chain.
+    // Ensure the Attestation report is properly signed by the platform and that it
+    // includes the root public key used in the DICE chain.
     {
         let tee_certificate = match endorsements.r#type.as_ref().context("no endorsements")? {
             endorsements::Type::OakRestrictedKernel(endorsements) => endorsements
@@ -121,15 +122,12 @@ pub fn verify(
                 .tee_certificate
                 .as_ref(),
         };
-        let root_layer = evidence
-            .root_layer
-            .as_ref()
-            .context("no root layer evidence")?;
+        let root_layer = evidence.root_layer.as_ref().context("no root layer evidence")?;
         verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)?;
     };
 
-    // Ensure the DICE chain signatures are valid and extract the measurements, public keys and
-    // other attestation-related data from the DICE chain.
+    // Ensure the DICE chain signatures are valid and extract the measurements,
+    // public keys and other attestation-related data from the DICE chain.
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
 
     // Ensure the extracted measurements match the endorsements.
@@ -165,8 +163,8 @@ pub fn verify(
     Ok(extracted_evidence)
 }
 
-/// Verifies signatures of the certificates in the DICE chain and extracts the evidence values from
-/// the certificates if the verification is successful.
+/// Verifies signatures of the certificates in the DICE chain and extracts the
+/// evidence values from the certificates if the verification is successful.
 pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let root_layer_verifying_key = {
         let cose_key = {
@@ -181,7 +179,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
         cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?
     };
 
-    // Sequentially verify the layers, eventually retrieving the verifying key of the last layer.
+    // Sequentially verify the layers, eventually retrieving the verifying key of
+    // the last layer.
     let last_layer_verifying_key = evidence.layers.iter().try_fold(
         root_layer_verifying_key,
         |previous_layer_verifying_key, current_layer| {
@@ -192,9 +191,7 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
                 previous_layer_verifying_key.verify(contents, &sig)
             })
             .map_err(|error| anyhow::anyhow!(error))?;
-            let payload = cert
-                .payload
-                .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
+            let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
             let claims = ClaimsSet::from_slice(&payload)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
             let cose_key =
@@ -203,7 +200,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
         },
     )?;
 
-    // Finally, use the last layer's verification key to verify the application keys.
+    // Finally, use the last layer's verification key to verify the application
+    // keys.
     {
         let appl_keys = evidence
             .application_keys
@@ -235,8 +233,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
     extract_evidence(evidence)
 }
 
-/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for Oak Restricted Kernel applications.
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Kernel applications.
 fn verify_oak_restricted_kernel(
     now_utc_millis: i64,
     values: &OakRestrictedKernelData,
@@ -245,38 +243,23 @@ fn verify_oak_restricted_kernel(
 ) -> anyhow::Result<()> {
     verify_root_layer(
         now_utc_millis,
-        values
-            .root_layer
-            .as_ref()
-            .context("no root layer evidence values")?,
+        values.root_layer.as_ref().context("no root layer evidence values")?,
         endorsements.root_layer.as_ref(),
-        reference_values
-            .root_layer
-            .as_ref()
-            .context("no root layer reference values")?,
+        reference_values.root_layer.as_ref().context("no root layer reference values")?,
     )
     .context("root layer verification failed")?;
 
     verify_kernel_layer(
         now_utc_millis,
-        values
-            .kernel_layer
-            .as_ref()
-            .context("no kernel layer evidence values")?,
+        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         endorsements.kernel_layer.as_ref(),
-        reference_values
-            .kernel_layer
-            .as_ref()
-            .context("no kernel layer reference values")?,
+        reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
     )
     .context("kernel layer verification failed")?;
 
     verify_application_layer(
         now_utc_millis,
-        values
-            .application_layer
-            .as_ref()
-            .context("no applications layer evidence values")?,
+        values.application_layer.as_ref().context("no applications layer evidence values")?,
         endorsements.application_layer.as_ref(),
         reference_values
             .application_layer
@@ -286,8 +269,8 @@ fn verify_oak_restricted_kernel(
     .context("application layer verification failed")
 }
 
-/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for Oak Restricted Containers applications.
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Containers applications.
 fn verify_oak_containers(
     now_utc_millis: i64,
     values: &OakContainersData,
@@ -296,63 +279,39 @@ fn verify_oak_containers(
 ) -> anyhow::Result<()> {
     verify_root_layer(
         now_utc_millis,
-        values
-            .root_layer
-            .as_ref()
-            .context("no root layer evidence values")?,
+        values.root_layer.as_ref().context("no root layer evidence values")?,
         endorsements.root_layer.as_ref(),
-        reference_values
-            .root_layer
-            .as_ref()
-            .context("no root layer reference values")?,
+        reference_values.root_layer.as_ref().context("no root layer reference values")?,
     )
     .context("root layer verification failed")?;
 
     verify_kernel_layer(
         now_utc_millis,
-        values
-            .kernel_layer
-            .as_ref()
-            .context("no kernel layer evidence values")?,
+        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         endorsements.kernel_layer.as_ref(),
-        reference_values
-            .kernel_layer
-            .as_ref()
-            .context("no kernel layer reference values")?,
+        reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
     )
     .context("kernel layer verification failed")?;
 
     verify_system_layer(
         now_utc_millis,
-        values
-            .system_layer
-            .as_ref()
-            .context("no system layer evidence values")?,
+        values.system_layer.as_ref().context("no system layer evidence values")?,
         endorsements.system_layer.as_ref(),
-        reference_values
-            .system_layer
-            .as_ref()
-            .context("no system layer reference values")?,
+        reference_values.system_layer.as_ref().context("no system layer reference values")?,
     )
     .context("system layer verification failed")?;
 
     verify_container_layer(
         now_utc_millis,
-        values
-            .container_layer
-            .as_ref()
-            .context("no container layer evidence values")?,
+        values.container_layer.as_ref().context("no container layer evidence values")?,
         endorsements.container_layer.as_ref(),
-        reference_values
-            .container_layer
-            .as_ref()
-            .context("no container layer reference values")?,
+        reference_values.container_layer.as_ref().context("no container layer reference values")?,
     )
     .context("container layer verification failed")
 }
 
-/// Validates the values extracted from the evidence against the reference values and endorsements
-/// for CB workloads.
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for CB workloads.
 fn verify_cb(
     now_utc_millis: i64,
     values: &CbData,
@@ -361,15 +320,9 @@ fn verify_cb(
 ) -> anyhow::Result<()> {
     verify_root_layer(
         now_utc_millis,
-        values
-            .root_layer
-            .as_ref()
-            .context("no root layer evidence values")?,
+        values.root_layer.as_ref().context("no root layer evidence values")?,
         endorsements.root_layer.as_ref(),
-        reference_values
-            .root_layer
-            .as_ref()
-            .context("no root layer reference values")?,
+        reference_values.root_layer.as_ref().context("no root layer reference values")?,
     )
     .context("root layer verification failed")?;
 
@@ -385,11 +338,7 @@ fn verify_amd_sev_attestation_report(
         anyhow::bail!("debug mode not allowed");
     }
 
-    if reference_values
-        .firmware_version
-        .as_ref()
-        .is_some_and(|a| !a.values.is_empty())
-    {
+    if reference_values.firmware_version.as_ref().is_some_and(|a| !a.values.is_empty()) {
         anyhow::bail!("firmware version check needs implementation");
     }
 
@@ -404,15 +353,13 @@ fn verify_intel_tdx_attestation_report(
     anyhow::bail!("needs implementation")
 }
 
-/// Verifies a fake attestation report.
-fn verify_fake_attestation_report(
-    _attestation_report_values: &FakeAttestationReport,
-    _reference_values: &InsecureReferenceValues,
-) -> anyhow::Result<()> {
+/// Verifies insecure attestation.
+fn verify_insecure(_reference_values: &InsecureReferenceValues) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Verifies the signature chain for the attestation report included in the root.
+/// Verifies the signature chain for the attestation report included in the
+/// root.
 fn verify_root_attestation_signature(
     _now_utc_millis: i64,
     root_layer: &RootLayerEvidence,
@@ -439,8 +386,8 @@ fn verify_root_attestation_signature(
             // Ensure that the attestation report is signed by the VCEK public key.
             verify_attestation_report_signature(&vcek, report)?;
 
-            // Check that the root ECA public key for the DICE chain is bound to the attestation
-            // report to ensure that the entire chain is valid.
+            // Check that the root ECA public key for the DICE chain is bound to the
+            // attestation report to ensure that the entire chain is valid.
             let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
             let actual = report.data.report_data;
 
@@ -458,15 +405,21 @@ fn verify_root_attestation_signature(
     }
 }
 
-/// Verifies the measurement values of the root layer containing the attestation report.
+/// Verifies the measurement values of the root layer containing the attestation
+/// report.
 fn verify_root_layer(
     now_utc_millis: i64,
     values: &RootLayerData,
     endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    match values.report.as_ref() {
-        Some(Report::SevSnp(report_values)) => {
+    match (
+        values.report.as_ref(),
+        reference_values.amd_sev.as_ref(),
+        reference_values.intel_tdx.as_ref(),
+        reference_values.insecure.as_ref(),
+    ) {
+        (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
             // See b/327069120: We don't have the correct digest in the endorsement
             // to compare the stage0 measurement yet. This will fail UNLESS the stage0
             // reference value is set to `skip {}`.
@@ -478,42 +431,31 @@ fn verify_root_layer(
                 &measurement,
                 now_utc_millis,
                 endorsements.and_then(|value| value.stage0.as_ref()),
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context("AMD SEV-SNP reference values not found")?
+                amd_sev_values
                     .stage0
                     .as_ref()
                     .context("stage0 binary reference values not found")?,
             )?;
-            verify_amd_sev_attestation_report(
-                report_values,
-                reference_values
-                    .amd_sev
-                    .as_ref()
-                    .context("AMD SEV-SNP reference values not found")?,
-            )
+            verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
-        Some(Report::Tdx(report_values)) => verify_intel_tdx_attestation_report(
-            report_values,
-            reference_values
-                .intel_tdx
-                .as_ref()
-                .context("Intel TDX reference values not found")?,
-        ),
-        Some(Report::Fake(report_values)) => verify_fake_attestation_report(
-            report_values,
-            reference_values
-                .insecure
-                .as_ref()
-                .context("insecure reference values not found")?,
-        ),
-        None => Err(anyhow::anyhow!("no attestation report")),
+        (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
+            verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
+        }
+        (_, _, _, Some(insecure_values)) => {
+            verify_insecure(insecure_values).context("insecure root layer verification failed")
+        }
+        (Some(Report::Fake(_)), _, _, None) => {
+            Err(anyhow::anyhow!("unexpected insecure attestation report"))
+        }
+        (None, _, _, _) => Err(anyhow::anyhow!("no attestation report")),
+        (_, _, _, _) => Err(anyhow::anyhow!(
+            "invalid combination of root layer reference values and endorsed evidence"
+        )),
     }
 }
 
-/// Verifies the measurement values of the kernel layer, which is common to both the Oak Restricted
-/// Kernel and Oak Containers setups.
+/// Verifies the measurement values of the kernel layer, which is common to both
+/// the Oak Restricted Kernel and Oak Containers setups.
 fn verify_kernel_layer(
     now_utc_millis: i64,
     values: &KernelLayerData,
@@ -521,28 +463,16 @@ fn verify_kernel_layer(
     reference_values: &KernelLayerReferenceValues,
 ) -> anyhow::Result<()> {
     verify_kernel_measurement_digest(
-        values
-            .kernel_image
-            .as_ref()
-            .context("no kernel evidence value")?,
-        values
-            .kernel_setup_data
-            .as_ref()
-            .context("no kernel setup data evidence value")?,
+        values.kernel_image.as_ref().context("no kernel evidence value")?,
+        values.kernel_setup_data.as_ref().context("no kernel setup data evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.kernel.as_ref()),
-        reference_values
-            .kernel
-            .as_ref()
-            .context("no kernel reference value")?,
+        reference_values.kernel.as_ref().context("no kernel reference value")?,
     )
     .context("kernel failed verification")?;
 
     verify_measurement_digest(
-        values
-            .kernel_cmd_line
-            .as_ref()
-            .context("no kernel command-line evidence value")?,
+        values.kernel_cmd_line.as_ref().context("no kernel command-line evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
         reference_values
@@ -553,30 +483,18 @@ fn verify_kernel_layer(
     .context("kernel command-line failed verification")?;
 
     verify_measurement_digest(
-        values
-            .init_ram_fs
-            .as_ref()
-            .context("no initial RAM disk evidence value")?,
+        values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.init_ram_fs.as_ref()),
-        reference_values
-            .init_ram_fs
-            .as_ref()
-            .context("no initial RAM disk reference value")?,
+        reference_values.init_ram_fs.as_ref().context("no initial RAM disk reference value")?,
     )
     .context("initial RAM disk failed verification")?;
 
     verify_measurement_digest(
-        values
-            .memory_map
-            .as_ref()
-            .context("no memory map evidence value")?,
+        values.memory_map.as_ref().context("no memory map evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.memory_map.as_ref()),
-        reference_values
-            .memory_map
-            .as_ref()
-            .context("no memory map reference value")?,
+        reference_values.memory_map.as_ref().context("no memory map reference value")?,
     )
     .context("memory map failed verification")?;
 
@@ -584,15 +502,13 @@ fn verify_kernel_layer(
         values.acpi.as_ref().context("no ACPI evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.acpi.as_ref()),
-        reference_values
-            .acpi
-            .as_ref()
-            .context("no ACPI reference value")?,
+        reference_values.acpi.as_ref().context("no ACPI reference value")?,
     )
     .context("ACPI table building commands failed verification")
 }
 
-/// Verifies the measurement values of the system image layer for Oak Containers.
+/// Verifies the measurement values of the system image layer for Oak
+/// Containers.
 fn verify_system_layer(
     now_utc_millis: i64,
     values: &SystemLayerData,
@@ -600,21 +516,16 @@ fn verify_system_layer(
     reference_values: &SystemLayerReferenceValues,
 ) -> anyhow::Result<()> {
     verify_measurement_digest(
-        values
-            .system_image
-            .as_ref()
-            .context("no system image evidence value")?,
+        values.system_image.as_ref().context("no system image evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values
-            .system_image
-            .as_ref()
-            .context("no system image reference value")?,
+        reference_values.system_image.as_ref().context("no system image reference value")?,
     )
     .context("system image failed verification")
 }
 
-/// Verifies the measurement values of the application layer for Oak Restricted Kernel.
+/// Verifies the measurement values of the application layer for Oak Restricted
+/// Kernel.
 fn verify_application_layer(
     now_utc_millis: i64,
     values: &ApplicationLayerData,
@@ -625,10 +536,7 @@ fn verify_application_layer(
         values.binary.as_ref().context("no binary evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values
-            .binary
-            .as_ref()
-            .context("application binary reference value")?,
+        reference_values.binary.as_ref().context("application binary reference value")?,
     )
     .context("application binary failed verification")?;
 
@@ -636,10 +544,7 @@ fn verify_application_layer(
         values.config.as_ref().context("no config evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values
-            .configuration
-            .as_ref()
-            .context("no configuration reference value")?,
+        reference_values.configuration.as_ref().context("no configuration reference value")?,
     )
     .context("configuration failed verification")
 }
@@ -655,10 +560,7 @@ fn verify_container_layer(
         values.bundle.as_ref().context("no bundle evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values
-            .binary
-            .as_ref()
-            .context("container bundle reference value")?,
+        reference_values.binary.as_ref().context("container bundle reference value")?,
     )
     .context("container bundle failed verification")?;
 
@@ -666,16 +568,13 @@ fn verify_container_layer(
         values.config.as_ref().context("no config evidence value")?,
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values
-            .configuration
-            .as_ref()
-            .context("no configuration reference value")?,
+        reference_values.configuration.as_ref().context("no configuration reference value")?,
     )
     .context("configuration failed verification")
 }
 
-/// Verifies the measurement digest value against a reference value and an optional transparent
-/// release endorsement.
+/// Verifies the measurement digest value against a reference value and an
+/// optional transparent release endorsement.
 fn verify_measurement_digest(
     measurement: &RawDigest,
     now_utc_millis: i64,
@@ -691,6 +590,7 @@ fn verify_measurement_digest(
             verify_binary_endorsement(
                 now_utc_millis,
                 &endorsement.endorsement,
+                &endorsement.endorsement_signature,
                 &endorsement.rekor_log_entry,
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
@@ -705,9 +605,7 @@ fn verify_measurement_digest(
             }) {
                 Ok(())
             } else {
-                Err(anyhow::anyhow!(
-                    "measurement digest does not match any reference values"
-                ))
+                Err(anyhow::anyhow!("measurement digest does not match any reference values"))
             }
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
@@ -732,6 +630,7 @@ fn verify_kernel_measurement_digest(
             verify_binary_endorsement(
                 now_utc_millis,
                 &endorsement.endorsement,
+                &endorsement.endorsement_signature,
                 &endorsement.rekor_log_entry,
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
@@ -792,9 +691,9 @@ fn verify_kernel_measurement_digest(
 fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Result<()> {
     match is_hex_digest_match(actual, expected) {
         MatchResult::SAME => Ok(()),
-        MatchResult::DIFFERENT => Err(anyhow::anyhow!(
-            "mismatched digests: expected={expected:?} actual={actual:?}",
-        )),
+        MatchResult::DIFFERENT => {
+            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
+        }
         MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
     }
 }
@@ -804,36 +703,25 @@ struct ApplicationKeyValues {
     signing_public_key: Vec<u8>,
 }
 
-/// Extracts measurements, public keys and other attestation-related values from the evidence.
+/// Extracts measurements, public keys and other attestation-related values from
+/// the evidence.
 fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let evidence_values =
         Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
-    let ApplicationKeyValues {
-        encryption_public_key,
-        signing_public_key,
-    } = extract_application_key_values(
-        evidence
-            .application_keys
-            .as_ref()
-            .context("no application keys")?,
-    )
-    .context("couldn't extract application key values")?;
+    let ApplicationKeyValues { encryption_public_key, signing_public_key } =
+        extract_application_key_values(
+            evidence.application_keys.as_ref().context("no application keys")?,
+        )
+        .context("couldn't extract application key values")?;
 
-    Ok(ExtractedEvidence {
-        evidence_values,
-        encryption_public_key,
-        signing_public_key,
-    })
+    Ok(ExtractedEvidence { evidence_values, encryption_public_key, signing_public_key })
 }
 
-/// Extracts the measurements and other attestation-related values from the evidence.
+/// Extracts the measurements and other attestation-related values from the
+/// evidence.
 fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues> {
-    let root_layer = Some(extract_root_values(
-        evidence
-            .root_layer
-            .as_ref()
-            .context("no root layer evidence")?,
-    )?);
+    let root_layer =
+        Some(extract_root_values(evidence.root_layer.as_ref().context("no root layer evidence")?)?);
 
     let final_layer_claims = &claims_set_from_serialized_cert(
         &evidence
@@ -844,7 +732,8 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
     )
     .context("couldn't parse final DICE layer certificate")?;
 
-    // Determine the type of evidence from the claims in the certificate for the final.
+    // Determine the type of evidence from the claims in the certificate for the
+    // final.
     if let Ok(container_layer_data) = extract_container_layer_data(final_layer_claims) {
         match &evidence.layers[..] {
             [kernel_layer, system_layer] => {
@@ -871,9 +760,7 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
                     container_layer,
                 }))
             }
-            _ => Err(anyhow::anyhow!(
-                "incorrect number of DICE layers for Oak Containers"
-            )),
+            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
         }
     } else if let Ok(application_layer_data) = extract_application_layer_data(final_layer_claims) {
         match &evidence.layers[..] {
@@ -887,17 +774,13 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
                 );
 
                 let application_layer = Some(application_layer_data);
-                Ok(EvidenceValues::OakRestrictedKernel(
-                    OakRestrictedKernelData {
-                        root_layer,
-                        kernel_layer,
-                        application_layer,
-                    },
-                ))
+                Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
+                    root_layer,
+                    kernel_layer,
+                    application_layer,
+                }))
             }
-            _ => Err(anyhow::anyhow!(
-                "incorrect number of DICE layers for Oak Containers"
-            )),
+            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
         }
     } else {
         // Assume for now this is CB evidence until the CB fields are better defined.
@@ -921,9 +804,7 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
                 snp: report.data.current_tcb.snp.into(),
                 microcode: report.data.current_tcb.microcode.into(),
             });
-            let debug = report
-                .has_debug_flag()
-                .map_err(|error| anyhow::anyhow!(error))?;
+            let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
             let hardware_id = report.data.chip_id.as_ref().to_vec();
             let initial_measurement = report.data.measurement.as_ref().to_vec();
             let report_data = report.data.report_data.as_ref().to_vec();
@@ -940,8 +821,8 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
         }
         TeePlatform::IntelTdx => Err(anyhow::anyhow!("not supported")),
         TeePlatform::None => {
-            // We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake when not
-            // running in a TEE.
+            // We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake
+            // when not running in a TEE.
             let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
                 .context("invalid fake attestation report")?;
 
@@ -949,9 +830,7 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
 
             let report_data = report.data.report_data.as_ref().to_vec();
 
-            Ok(RootLayerData {
-                report: Some(Report::Fake(FakeAttestationReport { report_data })),
-            })
+            Ok(RootLayerData { report: Some(Report::Fake(FakeAttestationReport { report_data })) })
         }
     }
 }
@@ -975,40 +854,21 @@ fn extract_application_key_values(
         cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
     let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
-    Ok(ApplicationKeyValues {
-        encryption_public_key,
-        signing_public_key,
-    })
+    Ok(ApplicationKeyValues { encryption_public_key, signing_public_key })
 }
 
 /// Extracts the measurement values for the kernel layer.
 fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> {
     let values =
         extract_layer_data(claims, KERNEL_LAYER_ID).context("kernel layer ID not found")?;
-    let kernel_image = Some(value_to_raw_digest(extract_value(
-        values,
-        KERNEL_MEASUREMENT_ID,
-    )?)?);
-    let kernel_setup_data = Some(value_to_raw_digest(extract_value(
-        values,
-        SETUP_DATA_MEASUREMENT_ID,
-    )?)?);
-    let kernel_cmd_line = Some(value_to_raw_digest(extract_value(
-        values,
-        KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    )?)?);
-    let init_ram_fs = Some(value_to_raw_digest(extract_value(
-        values,
-        INITRD_MEASUREMENT_ID,
-    )?)?);
-    let memory_map = Some(value_to_raw_digest(extract_value(
-        values,
-        MEMORY_MAP_MEASUREMENT_ID,
-    )?)?);
-    let acpi = Some(value_to_raw_digest(extract_value(
-        values,
-        ACPI_MEASUREMENT_ID,
-    )?)?);
+    let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
+    let kernel_setup_data =
+        Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
+    let kernel_cmd_line =
+        Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
+    let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
+    let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
+    let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
@@ -1023,10 +883,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
 fn extract_system_layer_data(claims: &ClaimsSet) -> anyhow::Result<SystemLayerData> {
     let values =
         extract_layer_data(claims, SYSTEM_IMAGE_LAYER_ID).context("system layer ID not found")?;
-    let system_image = Some(value_to_raw_digest(extract_value(
-        values,
-        LAYER_2_CODE_MEASUREMENT_ID,
-    )?)?);
+    let system_image =
+        Some(value_to_raw_digest(extract_value(values, LAYER_2_CODE_MEASUREMENT_ID)?)?);
     Ok(SystemLayerData { system_image })
 }
 
@@ -1034,14 +892,9 @@ fn extract_system_layer_data(claims: &ClaimsSet) -> anyhow::Result<SystemLayerDa
 fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerLayerData> {
     let values = extract_layer_data(claims, CONTAINER_IMAGE_LAYER_ID)
         .context("system layer ID not found")?;
-    let bundle = Some(value_to_raw_digest(extract_value(
-        values,
-        LAYER_3_CODE_MEASUREMENT_ID,
-    )?)?);
-    let config = Some(value_to_raw_digest(extract_value(
-        values,
-        FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    )?)?);
+    let bundle = Some(value_to_raw_digest(extract_value(values, LAYER_3_CODE_MEASUREMENT_ID)?)?);
+    let config =
+        Some(value_to_raw_digest(extract_value(values, FINAL_LAYER_CONFIG_MEASUREMENT_ID)?)?);
     Ok(ContainerLayerData { bundle, config })
 }
 
@@ -1049,14 +902,9 @@ fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerL
 fn extract_application_layer_data(claims: &ClaimsSet) -> anyhow::Result<ApplicationLayerData> {
     let values = extract_layer_data(claims, ENCLAVE_APPLICATION_LAYER_ID)
         .context("system layer ID not found")?;
-    let binary = Some(value_to_raw_digest(extract_value(
-        values,
-        LAYER_2_CODE_MEASUREMENT_ID,
-    )?)?);
-    let config = Some(value_to_raw_digest(extract_value(
-        values,
-        FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    )?)?);
+    let binary = Some(value_to_raw_digest(extract_value(values, LAYER_2_CODE_MEASUREMENT_ID)?)?);
+    let config =
+        Some(value_to_raw_digest(extract_value(values, FINAL_LAYER_CONFIG_MEASUREMENT_ID)?)?);
     Ok(ApplicationLayerData { binary, config })
 }
 
@@ -1064,9 +912,7 @@ fn extract_application_layer_data(claims: &ClaimsSet) -> anyhow::Result<Applicat
 fn claims_set_from_serialized_cert(slice: &[u8]) -> anyhow::Result<ClaimsSet> {
     let cert = coset::CoseSign1::from_slice(slice)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
-    let payload = cert
-        .payload
-        .ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
+    let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
     ClaimsSet::from_slice(&payload)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))
 }
@@ -1089,22 +935,18 @@ fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<
         .context("couldn't find layer values")
 }
 
-/// Extracts a value for the label from the layer's mapping between labels and values.
+/// Extracts a value for the label from the layer's mapping between labels and
+/// values.
 fn extract_value(values: &[(Value, Value)], label_id: i64) -> anyhow::Result<&Value> {
     let target_key = Value::Integer(label_id.into());
     values
         .iter()
-        .find_map(|(key, value)| {
-            if key == &target_key {
-                Some(value)
-            } else {
-                None
-            }
-        })
+        .find_map(|(key, value)| if key == &target_key { Some(value) } else { None })
         .context("couldn't find measurement")
 }
 
-/// Extracts the individual digests from a value that represents a set of digests.
+/// Extracts the individual digests from a value that represents a set of
+/// digests.
 fn value_to_raw_digest(value: &Value) -> anyhow::Result<RawDigest> {
     if let Value::Map(map) = value {
         let mut result = RawDigest::default();

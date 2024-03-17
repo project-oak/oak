@@ -26,8 +26,8 @@ use spinning_top::Spinlock;
 
 /// A synchronised implementation of a cell that can be initialized only once.
 ///
-/// This achieves the same goal as `std::sync::OnceLock`, but uses a spinlock to be compatible with
-/// `no_std`.
+/// This achieves the same goal as `std::sync::OnceLock`, but uses a spinlock to
+/// be compatible with `no_std`.
 pub struct OnceCell<T> {
     initialized: AtomicBool,
     lock: Spinlock<()>,
@@ -48,28 +48,29 @@ impl<T> OnceCell<T> {
         if !self.initialized.load(Ordering::Acquire) {
             return None;
         }
-        // Safety: there are no mutable references to the inner value if `initialized` is set to
-        // `true`, and the value has been initialized, so it is safe to create a new shared
-        // reference and assume it is initialized.
+        // Safety: there are no mutable references to the inner value if `initialized`
+        // is set to `true`, and the value has been initialized, so it is safe
+        // to create a new shared reference and assume it is initialized.
         Some(unsafe { (*self.value.get()).assume_init_ref() })
     }
 
     /// Sets the inner value of the cell if it has not been initialized.
     ///
-    /// If it has been initialized the inner value is not updated and the passed-in value is
-    /// returned in the error.
+    /// If it has been initialized the inner value is not updated and the
+    /// passed-in value is returned in the error.
     pub fn set(&self, value: T) -> Result<(), T> {
         // Do an initial check to see whether the value has been initialized.
         if !self.initialized.load(Ordering::Acquire) {
             // Lock to make sure we have exclusive access.
             let _lock = self.lock.lock();
-            // Double check that someone else didn't initialize while we were waiting to get the
-            // lock. Relaxed ordering is sufficient since the lock acts as a memory barrier and also
-            // ensures no concurrent access to the code that stores the value.
+            // Double check that someone else didn't initialize while we were waiting to get
+            // the lock. Relaxed ordering is sufficient since the lock acts as a
+            // memory barrier and also ensures no concurrent access to the code
+            // that stores the value.
             if !self.initialized.load(Ordering::Relaxed) {
-                // Safety: the combination of the lock and the fact that `initialized` is `false`
-                // ensures that we have exclusive access to the inner value, so taking a mutable
-                // reference to it is safe.
+                // Safety: the combination of the lock and the fact that `initialized` is
+                // `false` ensures that we have exclusive access to the inner
+                // value, so taking a mutable reference to it is safe.
                 unsafe { &mut *self.value.get() }.write(value);
                 self.initialized.store(true, Ordering::Release);
                 return Ok(());
@@ -79,10 +80,10 @@ impl<T> OnceCell<T> {
     }
 }
 
-// Safety: It is safe to share references across threads since the inner value will only be set
-// while an exclusive lock is held and only once. Until it is set there can be no shared references
-// to it, and once it is set, and there are potential shared references to it, it will never be
-// modified again.
+// Safety: It is safe to share references across threads since the inner value
+// will only be set while an exclusive lock is held and only once. Until it is
+// set there can be no shared references to it, and once it is set, and there
+// are potential shared references to it, it will never be modified again.
 unsafe impl<T> Sync for OnceCell<T> where T: Send + Sync {}
 
 #[cfg(test)]

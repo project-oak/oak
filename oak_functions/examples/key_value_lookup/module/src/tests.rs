@@ -76,11 +76,8 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         return;
     }
 
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap();
+    let runtime =
+        tokio::runtime::Builder::new_current_thread().enable_io().enable_time().build().unwrap();
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
@@ -115,18 +112,15 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         Ok(())
     });
 
-    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
-    // in that case. So, here we first check that `summary` is not empty.
+    // When running `cargo test` this benchmark test gets executed too, but
+    // `summary` will be `None` in that case. So, here we first check that
+    // `summary` is not empty.
     if let Ok(Some(summary)) = summary {
-        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
-        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        // `summary.mean` is in nanoseconds, even though it is not explicitly documented
+        // in https://doc.rust-lang.org/test/stats/struct.Summary.html.
         let elapsed = Duration::from_nanos(summary.mean as u64);
-        // We expect the `mean` time for loading the test Wasm module and running its main function
-        // to be less than a fixed threshold.
-        assert!(
-            elapsed < Duration::from_millis(5),
-            "elapsed time: {:.0?}",
-            elapsed
-        );
+        // We expect the `mean` time for loading the test Wasm module and running its
+        // main function to be less than a fixed threshold.
+        assert!(elapsed < Duration::from_millis(5), "elapsed time: {:.0?}", elapsed);
     }
 }

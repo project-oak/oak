@@ -23,12 +23,14 @@ use crate::{
     kernel::KernelInfo,
 };
 
-/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg device.
+/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg
+/// device.
 const INITIAL_RAM_DISK_FILE_PATH: &[u8] = b"opt/stage0/initramfs\0";
 
 /// Tries to load an initial RAM disk from the QEMU FW_CFG device.
 ///
-/// If it finds a RAM disk it returns the byte slice where it is loaded. If not it returns `None`.
+/// If it finds a RAM disk it returns the byte slice where it is loaded. If not
+/// it returns `None`.
 pub fn try_load_initial_ram_disk(
     fw_cfg: &mut FwCfg,
     e820_table: &[BootE820Entry],
@@ -50,16 +52,11 @@ pub fn try_load_initial_ram_disk(
     check_non_overlapping(address, size, kernel_info.start_address, kernel_info.size)
         .expect("initial RAM disk location overlaps with the kernel");
 
-    // Safety: We already checked that the slice falls in a suitable memory range and does not
-    // overlap with the kernel. We only write to the slice and don't assume anything about its
-    // layout or alignment.
+    // Safety: We already checked that the slice falls in a suitable memory range
+    // and does not overlap with the kernel. We only write to the slice and
+    // don't assume anything about its layout or alignment.
     let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
-    let actual_size = fw_cfg
-        .read_file(&file, buf)
-        .expect("could not read initial RAM disk");
-    assert_eq!(
-        actual_size, size,
-        "initial RAM disk size did not match expected size"
-    );
+    let actual_size = fw_cfg.read_file(&file, buf).expect("could not read initial RAM disk");
+    assert_eq!(actual_size, size, "initial RAM disk size did not match expected size");
     Some(buf)
 }

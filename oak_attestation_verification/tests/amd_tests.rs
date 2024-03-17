@@ -21,7 +21,7 @@ const ARK_MILAN_CERT_PEM: &str = include_str!("../data/ark_milan.pem");
 const ARK_GENOA_CERT_PEM: &str = include_str!("../data/ark_genoa.pem");
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
-const VCEK_MILAN_CERT_PEM: &str = include_str!("../testdata/vcek_milan.pem");
+const VCEK_MILAN_CERT_PEM: &str = include_str!("../testdata/oc_vcek_milan.pem");
 
 // Utility to print all extension in a certificate.
 fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
@@ -31,11 +31,7 @@ fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?
     {
-        eprintln!(
-            "cert ext id={} val={}",
-            ext.extn_id,
-            hex::encode(ext.extn_value.as_bytes())
-        );
+        eprintln!("cert ext id={} val={}", ext.extn_id, hex::encode(ext.extn_value.as_bytes()));
     }
     Ok(())
 }

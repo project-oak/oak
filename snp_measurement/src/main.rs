@@ -40,11 +40,7 @@ struct Cli {
     stage0_rom: Option<PathBuf>,
     #[arg(long, help = "Whether the firwmare is shadowed to support legacy boot")]
     legacy_boot: bool,
-    #[arg(
-        long,
-        help = "The number of vCPUs available to the VM at boot",
-        default_value_t = 1
-    )]
+    #[arg(long, help = "The number of vCPUs available to the VM at boot", default_value_t = 1)]
     vcpu_count: usize,
 }
 
@@ -83,8 +79,8 @@ fn main() -> anyhow::Result<()> {
     // The boot vCPU has the default VMSA configured.
     page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
 
-    // Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset block table in the
-    // firmware.
+    // Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset
+    // block table in the firmware.
     let sev_es_reset_block = stage0.get_sev_es_reset_block();
     let ap_vmsa = get_ap_vmsa(&sev_es_reset_block);
     for _ in 1..cli.vcpu_count {
@@ -93,9 +89,6 @@ fn main() -> anyhow::Result<()> {
 
     trace!("raw measurement: {:?}", page_info.digest_cur);
 
-    println!(
-        "Attestation Measurement: {}",
-        hex::encode(page_info.digest_cur)
-    );
+    println!("Attestation Measurement: {}", hex::encode(page_info.digest_cur));
     Ok(())
 }

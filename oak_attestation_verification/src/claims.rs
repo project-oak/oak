@@ -29,17 +29,16 @@ use serde::Deserialize;
 use serde::Serialize;
 use time::OffsetDateTime;
 
-/// PredicateType which identifies a V1 Claim, for in-toto statements.
-pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
+/// Admissible predicate type of in-toto endorsement statements.
+const PREDICATE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
+pub const PREDICATE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
 
 /// ClaimType for endorsements. Expected to be used together with `ClaimV1` as
 /// the predicate type in an in-toto statement.
-pub const ENDORSEMENT_V2: &str =
-    "https://github.com/project-oak/transparent-release/endorsement/v2";
+const ENDORSEMENT_V2: &str = "https://github.com/project-oak/transparent-release/endorsement/v2";
 
-/// URI representing in-toto v01 statements. This is constant for all predicate
-/// types.
-pub const STATEMENT_INTOTO_V01: &str = "https://in-toto.io/Statement/v0.1";
+/// URI representing in-toto statements. We only use V1.
+pub const STATEMENT_V1: &str = "https://in-toto.io/Statement/v1";
 
 // A map from algorithm name to lowercase hex-encoded value.
 pub type DigestSet = BTreeMap<String, String>;
@@ -117,7 +116,8 @@ pub struct ClaimValidity {
     pub not_after: OffsetDateTime,
 }
 
-/// Metadata about an artifact that serves as the evidence for the truth of a claim.
+/// Metadata about an artifact that serves as the evidence for the truth of a
+/// claim.
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct ClaimEvidence {
@@ -146,22 +146,18 @@ pub fn parse_endorsement_statement(bytes: &[u8]) -> anyhow::Result<EndorsementSt
 /// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
 pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), InvalidClaimData> {
-    if claim._type != STATEMENT_INTOTO_V01 {
+    if claim._type != STATEMENT_V1 {
         return Err(InvalidClaimData::StatementType);
     }
-    if claim.predicate_type != CLAIM_V1 {
+    if claim.predicate_type != PREDICATE_V1 && claim.predicate_type != PREDICATE_V2 {
         return Err(InvalidClaimData::PredicateType);
     }
     if let Some(validity) = &claim.predicate.validity {
         if validity.not_before < claim.predicate.issued_on {
-            return Err(InvalidClaimData::Validity(String::from(
-                "notBefore before issuedOn",
-            )));
+            return Err(InvalidClaimData::Validity(String::from("notBefore before issuedOn")));
         }
         if validity.not_before > validity.not_after {
-            return Err(InvalidClaimData::Validity(String::from(
-                "notBefore after notAfter",
-            )));
+            return Err(InvalidClaimData::Validity(String::from("notBefore after notAfter")));
         }
     }
 
@@ -216,19 +212,13 @@ fn set_digest_field_from_map_entry(
             }
             digest.sha1.push_str(value);
         }
-        "sha256" => {
+        "sha256" | "sha2_256" => {
             if !digest.sha2_256.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
             digest.sha2_256.push_str(value);
         }
-        "sha2_256" => {
-            if !digest.sha2_256.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_256.push_str(value);
-        }
-        "sha2_512" => {
+        "sha512" | "sha2_512" => {
             if !digest.sha2_512.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
@@ -258,7 +248,7 @@ fn set_digest_field_from_map_entry(
             }
             digest.sha3_224.push_str(value);
         }
-        "sha2_384" => {
+        "sha384" | "sha2_384" => {
             if !digest.sha2_384.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
@@ -274,20 +264,14 @@ fn set_digest_field_from_map_entry(
 /// be from the binary or from the attachment.
 pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
     if claim.subject.len() != 1 {
-        anyhow::bail!(
-            "expected a single endorsement subject, found {}",
-            claim.subject.len()
-        );
+        anyhow::bail!("expected a single endorsement subject, found {}", claim.subject.len());
     }
 
     let mut digest = HexDigest::default();
-    claim.subject[0]
-        .digest
-        .iter()
-        .try_fold(&mut digest, |acc, (key, value)| {
-            set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
-            Ok::<&mut HexDigest, anyhow::Error>(acc)
-        })?;
+    claim.subject[0].digest.iter().try_fold(&mut digest, |acc, (key, value)| {
+        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+        Ok::<&mut HexDigest, anyhow::Error>(acc)
+    })?;
 
     Ok(digest)
 }
@@ -319,7 +303,7 @@ mod tests {
 
         assert_eq!(
             digest.sha2_256,
-            "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6"
+            "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc"
         );
     }
 }

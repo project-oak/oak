@@ -31,14 +31,11 @@ fn create_random_entry<R: Rng>(
     key_size_bytes: usize,
     value_size_bytes: usize,
 ) -> Entry {
-    Entry {
-        key: create_bytes(rng, key_size_bytes),
-        value: create_bytes(rng, value_size_bytes),
-    }
+    Entry { key: create_bytes(rng, key_size_bytes), value: create_bytes(rng, value_size_bytes) }
 }
 
-/// Generates random lookup entries with the specified sizes for keys and values and serializes it
-/// to bytes.
+/// Generates random lookup entries with the specified sizes for keys and values
+/// and serializes it to bytes.
 pub fn generate_and_serialize_random_entries<R: Rng>(
     rng: &mut R,
     key_size_bytes: usize,

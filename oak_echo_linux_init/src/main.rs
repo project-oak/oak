@@ -55,9 +55,7 @@ fn main() -> ! {
         let len = reader.read(&mut buf[..]).expect("coulnd't read request");
         if len > 0 {
             debug!("Echoing {} bytes", len);
-            writer
-                .write_all(&buf[..len])
-                .expect("couldn't write response");
+            writer.write_all(&buf[..len]).expect("couldn't write response");
         }
     }
 }

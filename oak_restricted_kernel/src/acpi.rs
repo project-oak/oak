@@ -141,7 +141,14 @@ impl aml::Handler for Handler {
     }
 
     fn read_pci_u8(&self, segment: u16, bus: u8, device: u8, function: u8, offset: u16) -> u8 {
-        log::error!("unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}", segment, bus, device, function, offset);
+        log::error!(
+            "unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}",
+            segment,
+            bus,
+            device,
+            function,
+            offset
+        );
         0
     }
 
@@ -215,25 +222,29 @@ impl<'a> TableContents<'a> for AmlTable {
             .unwrap()
             .translate_physical(PhysAddr::new(self.address as u64))
             .unwrap();
-        // Safety: this address was specified in the ACPI tables by the firmware, so if the tables
-        // are correct, this is safe.
+        // Safety: this address was specified in the ACPI tables by the firmware, so if
+        // the tables are correct, this is safe.
         unsafe { core::slice::from_raw_parts(virt_addr.as_ptr(), self.length as usize) }
     }
 }
 
-/// Translates an EISA ID (a compressed 32-bit identifier) to its string representation.
+/// Translates an EISA ID (a compressed 32-bit identifier) to its string
+/// representation.
 ///
-/// For the full specification, see the Plug and Play BIOS Specification (the latest of which seems
-/// to be v1.0a from 1994), but in short:
-/// The EISA ID is a 32-bit identifier that encodes a 8-character ASCII string as follows:
-/// 0b0_AAAAA_BBBBB_CCCCC_1111_2222_3333_4444
+/// For the full specification, see the Plug and Play BIOS Specification (the
+/// latest of which seems to be v1.0a from 1994), but in short:
+/// The EISA ID is a 32-bit identifier that encodes a 8-character ASCII string
+/// as follows: 0b0_AAAAA_BBBBB_CCCCC_1111_2222_3333_4444
 ///   - The 31th bit is always 0.
-///   - Bits 30..26, 25..21, 20..16 (five bits each) encode the compressed three-letter manufacturer
-///     ID; the compression algorithm is the lowest 5 bits of (character - 0x40).
-///   - Bits 15..12, 11..8, 7..4, 3..0 (four bits each) encode a hexadecimal digit.
+///   - Bits 30..26, 25..21, 20..16 (five bits each) encode the compressed
+///     three-letter manufacturer ID; the compression algorithm is the lowest 5
+///     bits of (character - 0x40).
+///   - Bits 15..12, 11..8, 7..4, 3..0 (four bits each) encode a hexadecimal
+///     digit.
 ///
-/// As to what the IDs map to, as the specfication says, look for "Device Identifier Reference Table
-/// & Device Type Code Table" on the PlugPlay forum on CompuServe.
+/// As to what the IDs map to, as the specfication says, look for "Device
+/// Identifier Reference Table & Device Type Code Table" on the PlugPlay forum
+/// on CompuServe.
 fn name_from_eisa_id(eisa_id: u64) -> Result<String, AmlError> {
     let eisa_id: u32 = u32::from_be(eisa_id.try_into().map_err(|_| AmlError::InvalidNameSeg)?);
     let mut str = String::with_capacity(7);
@@ -283,11 +294,10 @@ impl AcpiDevice {
 
     /// Return the valuie of the `_CRS` object, if present.
     ///
-    /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI spec for more details.
+    /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI
+    /// spec for more details.
     pub fn crs(&self, ctx: &mut AmlContext) -> Result<Option<Vec<Resource>>> {
-        let crs = self
-            .invoke("_CRS", ctx)
-            .map_err(|err| anyhow!("error resolving CRS: {:?}", err));
+        let crs = self.invoke("_CRS", ctx).map_err(|err| anyhow!("error resolving CRS: {:?}", err));
 
         if let Ok(crs) = crs {
             let resources = resource_descriptor_list(&crs)
@@ -327,11 +337,7 @@ impl Acpi {
 
         for ssdt in acpi.tables.ssdts() {
             acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
-                anyhow!(
-                    "failed to parse ACPI SSDT at address {}: {:?}",
-                    ssdt.address,
-                    err
-                )
+                anyhow!("failed to parse ACPI SSDT at address {}: {:?}", ssdt.address, err)
             })?;
         }
 
@@ -371,12 +377,7 @@ impl Acpi {
     pub fn print_devices(&mut self) -> Result<()> {
         for device in self.devices()? {
             if let Some(hid) = device.hid(&mut self.aml)? {
-                log::info!(
-                    "ACPI device: {} {:7} {}",
-                    device.name,
-                    hid,
-                    description(hid.as_str())
-                );
+                log::info!("ACPI device: {} {:7} {}", device.name, hid, description(hid.as_str()));
             } else {
                 log::info!("ACPI device: {} (no HID)", device.name);
             }
@@ -421,9 +422,9 @@ fn find_acpi_tables(params: &BootParams) -> Result<AcpiTables<Handler>> {
             });
     }
 
-    // Safety: the EBDA area will be mapped and valid, so this is memory-safe, but we're still
-    // searching 1 KiB of memory for the signature that may not be there or match some random
-    // garbage.
+    // Safety: the EBDA area will be mapped and valid, so this is memory-safe, but
+    // we're still searching 1 KiB of memory for the signature that may not be
+    // there or match some random garbage.
     unsafe { AcpiTables::search_for_rsdp_bios(Handler {}) }
         .map_err(|err| anyhow!("failed to load ACPI tables from EBDA: {:?}", err))
 }

@@ -18,10 +18,12 @@
 
 /// Read the timestamp counter register from the CPU.
 ///
-/// The timestamp counter is incremented once every CPU clock cycle, and how it behaves across power
-/// management events (e.g. change in P-state) is CPU-depdendent.
+/// The timestamp counter is incremented once every CPU clock cycle, and how it
+/// behaves across power management events (e.g. change in P-state) is
+/// CPU-depdendent.
 ///
-/// See RDTSC in AMD64 Architecture Programmer's Manual, Volume 3 for more details.
+/// See RDTSC in AMD64 Architecture Programmer's Manual, Volume 3 for more
+/// details.
 pub fn rdtsc() -> u64 {
     let mut edx: u64;
     let mut eax: u64;
@@ -39,9 +41,9 @@ pub fn rdtsc() -> u64 {
     edx << 32 | eax
 }
 
-/// Measures the number of clock cycles between `new()` and `elapsed()`. This measurement only makes
-/// sense if the process is running on the same CPU, as different CPUs will have different tick
-/// counter values.
+/// Measures the number of clock cycles between `new()` and `elapsed()`. This
+/// measurement only makes sense if the process is running on the same CPU, as
+/// different CPUs will have different tick counter values.
 #[derive(Debug)]
 pub struct Timer {
     start: u64,
@@ -57,7 +59,8 @@ impl Timer {
         Self::new(rdtsc())
     }
 
-    /// Returns the approximate number of clock cycles it took to execute `func`.
+    /// Returns the approximate number of clock cycles it took to execute
+    /// `func`.
     pub fn timed<F>(func: F) -> u64
     where
         F: FnOnce(),
@@ -67,8 +70,8 @@ impl Timer {
         timer.elapsed()
     }
 
-    /// Returns the approximate number of clock cycles elapsed since the construction of the
-    /// `Timer`.
+    /// Returns the approximate number of clock cycles elapsed since the
+    /// construction of the `Timer`.
     pub fn elapsed(&self) -> u64 {
         let stop = rdtsc();
         stop - self.start

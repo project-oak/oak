@@ -59,15 +59,14 @@ static_assertions::assert_eq_size!(DmaBuffer, [u8; Size4KiB::SIZE as usize]);
 
 impl Default for DmaBuffer {
     fn default() -> Self {
-        DmaBuffer {
-            data: [0u8; Size4KiB::SIZE as usize],
-        }
+        DmaBuffer { data: [0u8; Size4KiB::SIZE as usize] }
     }
 }
 
 /// Selector keys for "well-known" fw_cfg entries.
 ///
-/// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative list.
+/// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative
+/// list.
 #[allow(dead_code)]
 #[repr(u16)]
 enum FwCfgItems {
@@ -106,22 +105,13 @@ static_assertions::assert_eq_size!(DirEntry, [u8; 64usize]);
 
 impl Default for DirEntry {
     fn default() -> Self {
-        Self {
-            size: 0,
-            select: 0,
-            _reserved: 0,
-            name: [0; 56],
-        }
+        Self { size: 0, select: 0, _reserved: 0, name: [0; 56] }
     }
 }
 
 impl DirEntry {
     fn new_for_selector(size: u32, selector: FwCfgItems) -> Self {
-        Self {
-            size: size.to_be(),
-            select: (selector as u16).to_be(),
-            ..Default::default()
-        }
+        Self { size: size.to_be(), select: (selector as u16).to_be(), ..Default::default() }
     }
 
     pub fn name(&self) -> &CStr {
@@ -163,12 +153,13 @@ pub struct FwCfg {
 impl FwCfg {
     /// # Safety
     ///
-    /// While we do probe for the existence of the QEMU fw_cfg device, reading or writing to I/O
-    /// ports that are not in use is inherently undefined behaviour. What's worse, if there happens
-    /// to be some other device using those I/O ports, the results are completely unknowable.
+    /// While we do probe for the existence of the QEMU fw_cfg device, reading
+    /// or writing to I/O ports that are not in use is inherently undefined
+    /// behaviour. What's worse, if there happens to be some other device
+    /// using those I/O ports, the results are completely unknowable.
     ///
-    /// The caller has to guarantee that at least doing the probe will not cause any adverse
-    /// effects.
+    /// The caller has to guarantee that at least doing the probe will not cause
+    /// any adverse effects.
     pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
@@ -182,8 +173,8 @@ impl FwCfg {
             dma_enabled: false,
         };
 
-        // Make sure the fw_cfg device is available. If the device is not available, writing and
-        // reading to I/O ports is undefined behaviour.
+        // Make sure the fw_cfg device is available. If the device is not available,
+        // writing and reading to I/O ports is undefined behaviour.
         fwcfg.write_selector(FwCfgItems::Signature as u16)?;
         let mut signature = [0u8; SIGNATURE.len()];
         fwcfg.read(&mut signature)?;
@@ -199,28 +190,25 @@ impl FwCfg {
             fwcfg.dma_enabled = true;
         }
 
-        if signature == SIGNATURE {
-            Ok(fwcfg)
-        } else {
-            Err("QEMU fw_cfg device not available")
-        }
+        if signature == SIGNATURE { Ok(fwcfg) } else { Err("QEMU fw_cfg device not available") }
     }
 
     /// Returns an iterator over the files in the fw_cfg system.
     ///
     /// # Safety
     ///
-    /// You should consume the iterator fully before calling any other methods of this struct, or at
-    /// the very least don't use the iterator after calling some other function.
-    /// (This means that, for example, you shouldn't try to read the files while iterating over the
+    /// You should consume the iterator fully before calling any other methods
+    /// of this struct, or at the very least don't use the iterator after
+    /// calling some other function. (This means that, for example, you
+    /// shouldn't try to read the files while iterating over the
     /// directory contents.)
-    /// If you call any other methods, the iterator will be in an undefined state and unsafe to read
-    /// from.
+    /// If you call any other methods, the iterator will be in an undefined
+    /// state and unsafe to read from.
     pub unsafe fn dir(&mut self) -> impl Iterator<Item = DirEntry> + '_ {
         self.write_selector(FwCfgItems::FileDir as u16).unwrap();
 
-        // We don't represent FwCfgFiles as a struct, as you can't do that in safe Rust. Therefore,
-        // read fields individually.
+        // We don't represent FwCfgFiles as a struct, as you can't do that in safe Rust.
+        // Therefore, read fields individually.
         let count = {
             let mut buf = [0u8; 4];
             self.read(&mut buf).unwrap();
@@ -244,9 +232,10 @@ impl FwCfg {
     ///
     /// # Safety
     ///
-    /// While we will never write beyond the memory allocated to `object`, it is up to the caller to
-    /// ensure that the type of `object` is a faithful representation of the contents of the file;
-    /// otherwise, `object` may be left in an invalid state.
+    /// While we will never write beyond the memory allocated to `object`, it is
+    /// up to the caller to ensure that the type of `object` is a faithful
+    /// representation of the contents of the file; otherwise, `object` may
+    /// be left in an invalid state.
     pub unsafe fn read_file_by_name<T: AsBytes + FromBytes>(
         &mut self,
         name: &CStr,
@@ -272,8 +261,8 @@ impl FwCfg {
 
     /// Reads contents of a file; returns the number of bytes actually read.
     ///
-    /// If reading files via DMA is supported, it will use DMA. If not it will fall back to reading
-    /// byte by byte.
+    /// If reading files via DMA is supported, it will use DMA. If not it will
+    /// fall back to reading byte by byte.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
@@ -312,13 +301,12 @@ impl FwCfg {
         Ok(cmdline_size)
     }
 
-    /// Gets an unnamed file representation of the kernel command-line using the dedicated selector.
+    /// Gets an unnamed file representation of the kernel command-line using the
+    /// dedicated selector.
     ///
     /// Returns `None` if the kernel command-line size is 0.
     pub fn get_cmdline_file(&mut self) -> Option<DirEntry> {
-        let size = self
-            .read_cmdline_size()
-            .expect("couldn't read cmdline size");
+        let size = self.read_cmdline_size().expect("couldn't read cmdline size");
         if size == 0 {
             None
         } else {
@@ -334,7 +322,8 @@ impl FwCfg {
         Ok(initrd_size)
     }
 
-    /// Gets an unnamed file representation of the initial RAM disk using the dedicated selector.
+    /// Gets an unnamed file representation of the initial RAM disk using the
+    /// dedicated selector.
     ///
     /// Returns `None` if the initial RAM disk size is 0.
     pub fn get_initrd_file(&mut self) -> Option<DirEntry> {
@@ -354,7 +343,8 @@ impl FwCfg {
         Ok(kernel_size)
     }
 
-    /// Gets an unnamed file representation of the kernel using the dedicated selector.
+    /// Gets an unnamed file representation of the kernel using the dedicated
+    /// selector.
     ///
     /// Returns `None` if the kernel size is 0.
     pub fn get_kernel_file(&mut self) -> Option<DirEntry> {
@@ -374,17 +364,13 @@ impl FwCfg {
         Ok(setup_size)
     }
 
-    /// Gets an unnamed file representation of the kernel's setup information using the dedicated
-    /// selector.
+    /// Gets an unnamed file representation of the kernel's setup information
+    /// using the dedicated selector.
     ///
     /// Returns `None` if the kernel size is 0.
     pub fn get_setup_file(&mut self) -> Option<DirEntry> {
         let size = self.read_setup_size().expect("couldn't read setup size");
-        if size == 0 {
-            None
-        } else {
-            Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
-        }
+        if size == 0 { None } else { Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData)) }
     }
 
     fn write_selector(&mut self, selector: u16) -> Result<(), &'static str> {
@@ -398,8 +384,8 @@ impl FwCfg {
 
     fn read_buf(&mut self, buf: &mut [u8]) -> Result<(), &'static str> {
         for i in buf {
-            // Safety: We make sure that the device is available in `new()`, so reading from the
-            // port is safe.
+            // Safety: We make sure that the device is available in `new()`, so reading from
+            // the port is safe.
             *i = unsafe { self.data.try_read() }?;
         }
         Ok(())
@@ -419,29 +405,31 @@ impl FwCfg {
             return Err("chunk is larger than the DMA buffer");
         }
 
-        // We always use an identity mapping. We use the shared DMA buffer as a bounce-buffer to
-        // account for potential memory encryption.
+        // We always use an identity mapping. We use the shared DMA buffer as a
+        // bounce-buffer to account for potential memory encryption.
         let address = PhysAddr::new(self.dma_buf.data.as_ptr() as usize as u64);
-        // The length of the buffer will always fit in 32 bits, since we only map the first 1GiB of
-        // physical memory to virtual memory.
+        // The length of the buffer will always fit in 32 bits, since we only map the
+        // first 1GiB of physical memory to virtual memory.
         let length = chunk.len() as u32;
         *self.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
         let dma_access_address = self.dma_access.as_ref() as *const _ as usize as u64;
         let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
         let dma_high = (dma_access_address >> 32) as u32;
-        // The DMA address halves must be written in big endian format, and the high half must be
-        // written before the low half.
-        // Safety: We make sure that the device is available in `new()`, so writing to the ports is
-        // safe.
+        // The DMA address halves must be written in big endian format, and the high
+        // half must be written before the low half.
+        // Safety: We make sure that the device is available in `new()`, so writing to
+        // the ports is safe.
         unsafe {
             self.dma_high.try_write(dma_high.to_be())?;
             self.dma_low.try_write(dma_low.to_be())?;
         }
 
-        // Memory fence to make sure that the DMA operation is complete before we read the result.
+        // Memory fence to make sure that the DMA operation is complete before we read
+        // the result.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-        // The control field will be cleared if the DMA operation is complete and successful.
+        // The control field will be cleared if the DMA operation is complete and
+        // successful.
         if self.dma_access.control != 0 {
             Err("fw_cfg DMA failed")
         } else {
@@ -461,14 +449,13 @@ bitflags! {
     }
 }
 
-// Finds the highest section of RAM that is big enough to hold the DMA buffer, and falls below 1GiB.
+// Finds the highest section of RAM that is big enough to hold the DMA buffer,
+// and falls below 1GiB.
 pub fn find_suitable_dma_address(
     size: usize,
     e820_table: &[BootE820Entry],
 ) -> Result<PhysAddr, &'static str> {
-    let padded_size = (size as u64)
-        .checked_next_multiple_of(Size4KiB::SIZE)
-        .unwrap();
+    let padded_size = (size as u64).checked_next_multiple_of(Size4KiB::SIZE).unwrap();
     e820_table
         .iter()
         .filter_map(|entry| {
@@ -528,7 +515,8 @@ pub fn check_non_overlapping(
 }
 
 /// Definition for a DMA access request.
-/// We also force it to be on a page boundary as we need to share it with the host.
+/// We also force it to be on a page boundary as we need to share it with the
+/// host.
 #[repr(C, align(4096))]
 #[derive(Debug)]
 pub struct FwCfgDmaAccess {
@@ -542,12 +530,7 @@ static_assertions::assert_eq_size!(FwCfgDmaAccess, [u8; Size4KiB::SIZE as usize]
 
 impl Default for FwCfgDmaAccess {
     fn default() -> Self {
-        FwCfgDmaAccess {
-            control: 0,
-            length: 0,
-            address: 0,
-            padding: [0u8; 4080],
-        }
+        FwCfgDmaAccess { control: 0, length: 0, address: 0, padding: [0u8; 4080] }
     }
 }
 

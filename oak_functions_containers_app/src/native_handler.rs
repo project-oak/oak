@@ -82,8 +82,9 @@ mod callbacks {
         })
     }
 
-    /// Safety: the caller needs to guarantee `key`, `len` and `item_len` are valid. The caller is
-    /// not allowed to mutate the data the returned pointer points to.
+    /// Safety: the caller needs to guarantee `key`, `len` and `item_len` are
+    /// valid. The caller is not allowed to mutate the data the returned
+    /// pointer points to.
     pub unsafe extern "C" fn storage_get_item(
         key: *const u8,
         len: c_size_t,
@@ -106,7 +107,8 @@ mod callbacks {
         })
     }
 
-    /// Safety: the caller must guarantee that `status_code` and `len` are valid.
+    /// Safety: the caller must guarantee that `status_code` and `len` are
+    /// valid.
     pub unsafe extern "C" fn read_error(status_code: *mut u32, len: *mut c_size_t) -> *const u8 {
         // not entirely sure what to do here
         *status_code = micro_rpc::StatusCode::Unknown.into();
@@ -124,8 +126,8 @@ struct SharedLibrary {
     oak_main: Symbol<'this, unsafe extern "C" fn()>,
 }
 
-/// Variant of a Handler that dynamically loads a `.so` file and invokes native code to handle
-/// requests from there.
+/// Variant of a Handler that dynamically loads a `.so` file and invokes native
+/// code to handle requests from there.
 pub struct NativeHandler {
     lookup_data_manager: Arc<LookupDataManager>,
 
@@ -134,8 +136,9 @@ pub struct NativeHandler {
 
     /// Temporary directory containing the `.so` file.
     ///
-    /// This field is never read, but we need to keep it around so that the directory would be
-    /// property disposed of when `NativeHandler` goes out of scope.
+    /// This field is never read, but we need to keep it around so that the
+    /// directory would be property disposed of when `NativeHandler` goes
+    /// out of scope.
     #[allow(dead_code)]
     directory: TempDir,
 
@@ -146,10 +149,11 @@ pub struct NativeHandler {
 impl NativeHandler {
     /// Registers our callback functions with the loaded library.
     ///
-    /// Safety: the library needs to export a `register_callback`` symbol with the expected
-    /// semantics.
+    /// Safety: the library needs to export a `register_callback`` symbol with
+    /// the expected semantics.
     unsafe fn register_callbacks(&self) -> anyhow::Result<()> {
-        // These signatures should probably come via bindgen from the C header file in the future.
+        // These signatures should probably come via bindgen from the C header file in
+        // the future.
         let register_callbacks =
             self.library.borrow_lib().get::<unsafe extern "C" fn(
                 unsafe extern "C" fn(*mut c_size_t) -> *const u8,
@@ -172,7 +176,8 @@ impl NativeHandler {
 
     /// Call the main `oak_main` function from the shared library.
     ///
-    /// Safety: the library needs to export a `oak_main` symbol with the expected semantics.
+    /// Safety: the library needs to export a `oak_main` symbol with the
+    /// expected semantics.
     unsafe fn oak_main(&self) {
         self.library.borrow_oak_main()()
     }
@@ -183,11 +188,12 @@ impl Handler for NativeHandler {
 
     /// Creates a new native handler.
     ///
-    /// The module is expected to be a dynamically loadable shared object, which we load using
-    /// `dlopen()`.
+    /// The module is expected to be a dynamically loadable shared object, which
+    /// we load using `dlopen()`.
     ///
-    /// Safety: It's up to the caller to guarantee that said shared object adheres to the semantics
-    /// we require. This method should really be marked `unsafe` because of that.
+    /// Safety: It's up to the caller to guarantee that said shared object
+    /// adheres to the semantics we require. This method should really be
+    /// marked `unsafe` because of that.
     fn new_handler(
         module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
@@ -198,8 +204,7 @@ impl Handler for NativeHandler {
         {
             let mut file =
                 File::create(&filename).context("could not open module file for writing")?;
-            file.write_all(module_bytes)
-                .context("could not write module contents")?;
+            file.write_all(module_bytes).context("could not write module contents")?;
         }
 
         // Safety: this is safe as long as the library adheres to our contracts.
@@ -226,8 +231,8 @@ impl Handler for NativeHandler {
     }
 
     fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
-        // Populate a new RequestContext. The threadlocal should be empty at this point; if it is
-        // not, we've somehow clashed with another thread.
+        // Populate a new RequestContext. The threadlocal should be empty at this point;
+        // if it is not, we've somehow clashed with another thread.
         assert!(
             CONTEXT
                 .replace(Some(RequestContext {

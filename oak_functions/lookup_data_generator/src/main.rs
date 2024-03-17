@@ -46,17 +46,15 @@ fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
     let mut rng = rand::thread_rng();
     let buf = match opt.cmd {
-        Command::Random {
-            key_size_bytes,
-            value_size_bytes,
-            entries,
-        } => generate_and_serialize_random_entries(
-            &mut rng,
-            key_size_bytes,
-            value_size_bytes,
-            entries,
-        )
-        .context("couldn't generate random entries")?,
+        Command::Random { key_size_bytes, value_size_bytes, entries } => {
+            generate_and_serialize_random_entries(
+                &mut rng,
+                key_size_bytes,
+                value_size_bytes,
+                entries,
+            )
+            .context("couldn't generate random entries")?
+        }
     };
     let mut file = File::create(opt.out_file_path).context("couldn't create out file")?;
     file.write_all(&buf).context("couldn't write to file")?;

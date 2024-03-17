@@ -22,7 +22,8 @@ use x86_64::registers::{
     xcontrol::{XCr0, XCr0Flags},
 };
 
-/// Enables Streaming SIMD Extensions (SEE) and Advanced Vector Extensions (AVX).
+/// Enables Streaming SIMD Extensions (SEE) and Advanced Vector Extensions
+/// (AVX).
 ///
 /// Also sets the FPU to a known state and masks SIMD floating-point exceptions.
 ///

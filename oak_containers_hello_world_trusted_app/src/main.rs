@@ -23,14 +23,11 @@ const TRUSTED_APP_PORT: u16 = 8080;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = OrchestratorClient::create()
-        .await
-        .context("Could't create orchestrator client")?;
+    let mut client =
+        OrchestratorClient::create().await.context("Could't create orchestrator client")?;
 
-    let application_config = client
-        .get_application_config()
-        .await
-        .context("failed to get application config")?;
+    let application_config =
+        client.get_application_config().await.context("failed to get application config")?;
 
     let encryption_key_handle = InstanceEncryptionKeyHandle::create()
         .await
@@ -42,10 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_config,
         encryption_key_handle,
     ));
-    client
-        .notify_app_ready()
-        .await
-        .context("failed to notify that app is ready")?;
+    client.notify_app_ready().await.context("failed to notify that app is ready")?;
     join_handle.await??;
     Ok(())
 }

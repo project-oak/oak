@@ -63,7 +63,7 @@ cc_test(
     size = "small",
     srcs = ["cwt_test.cc"],
     data = [
-        "//oak_attestation_verification/testdata:evidence.textproto",
+        "//oak_attestation_verification/testdata:oc_evidence.textproto",
     ],
     deps = [
         ":cwt",

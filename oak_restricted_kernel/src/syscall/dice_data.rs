@@ -162,11 +162,7 @@ fn fd_permits_one_full_write() {
         assert!(buf[0] == 0);
     }
 
-    assert!(fd
-        .write(<RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(
-            &layer1
-        ))
-        .is_ok());
+    assert!(fd.write(<RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(&layer1)).is_ok());
 
     {
         let mut buf: [u8; 1] = [5; 1];
@@ -174,11 +170,7 @@ fn fd_permits_one_full_write() {
         assert!(buf[0] == 0);
     }
 
-    assert!(fd
-        .write(<RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(
-            &layer1
-        ))
-        .is_err());
+    assert!(fd.write(<RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(&layer1)).is_err());
 }
 
 #[cfg(feature = "initrd")]

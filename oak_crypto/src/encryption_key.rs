@@ -30,15 +30,12 @@ use crate::{
     EMPTY_ASSOCIATED_DATA,
 };
 
-/// Generates a random encryption key pair and returns an instance of the `EncryptionKey` and a
-/// NIST P-256 SEC1 encoded point public key.
+/// Generates a random encryption key pair and returns an instance of the
+/// `EncryptionKey` and a NIST P-256 SEC1 encoded point public key.
 /// <https://secg.org/sec1-v2.pdf>
 pub fn generate_encryption_key_pair() -> (EncryptionKey, Vec<u8>) {
     let (private_key, public_key) = generate_kem_key_pair();
-    (
-        EncryptionKey::new(private_key),
-        public_key.to_bytes().to_vec(),
-    )
+    (EncryptionKey::new(private_key), public_key.to_bytes().to_vec())
 }
 
 pub struct EncryptionKey {
@@ -68,15 +65,14 @@ impl EncryptionKey {
     ) -> anyhow::Result<EncryptedRequest> {
         let mut client_encryptor =
             ClientEncryptor::create(peer_public_key).context("couldn't create client encryptor")?;
-        client_encryptor.encrypt(
-            &Zeroizing::new(self.private_key.to_bytes()),
-            EMPTY_ASSOCIATED_DATA,
-        )
+        client_encryptor
+            .encrypt(&Zeroizing::new(self.private_key.to_bytes()), EMPTY_ASSOCIATED_DATA)
     }
 }
 
-/// Exposes the ability to derive a session key from the provided encapsulated private key,
-/// using a private key that has been endorsed in the Attestation Evidence.
+/// Exposes the ability to derive a session key from the provided encapsulated
+/// private key, using a private key that has been endorsed in the Attestation
+/// Evidence.
 pub trait EncryptionKeyHandle {
     fn generate_recipient_context(
         &self,

@@ -2419,6 +2419,7 @@ dependencies = [
  "prost-types",
  "tokio",
  "tokio-stream",
+ "tokio-vsock",
  "tonic",
  "which 5.0.0",
 ]
@@ -2724,7 +2725,9 @@ dependencies = [
  "oak_proto_rust",
  "prost",
  "tokio",
+ "tokio-vsock",
  "tonic",
+ "tower",
  "ubyte",
  "xtask",
 ]
@@ -3032,9 +3035,11 @@ name = "oak_restricted_kernel_orchestrator"
 version = "0.1.0"
 dependencies = [
  "log",
+ "oak_attestation",
  "oak_channel",
  "oak_dice",
  "oak_restricted_kernel_dice",
+ "prost",
 ]
 
 [[package]]

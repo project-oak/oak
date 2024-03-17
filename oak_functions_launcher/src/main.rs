@@ -61,9 +61,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-    let evidence = initialize_response
-        .evidence
-        .expect("no evidence provided in the initialize response");
+    let evidence =
+        initialize_response.evidence.expect("no evidence provided in the initialize response");
 
     // Initialize attestation endorsements.
     // TODO(#4074): Add layer endorsements.
@@ -73,9 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_layer: None,
     };
     let endorsements = Endorsements {
-        r#type: Some(endorsements::Type::OakRestrictedKernel(
-            oak_restricted_kernel_endorsements,
-        )),
+        r#type: Some(endorsements::Type::OakRestrictedKernel(oak_restricted_kernel_endorsements)),
     };
 
     let server_future = oak_functions_launcher::server::new(
