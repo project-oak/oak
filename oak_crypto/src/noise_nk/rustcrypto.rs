@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This was copied from Chromium's third_party/cloud_authenticator, which has compatible copyright
-//! and ownership (Apache 2.0, Google).
+//! This was copied from Chromium's third_party/cloud_authenticator, which has
+//! compatible copyright and ownership (Apache 2.0, Google).
 //!
-//! The original code supported multiple back-end crypto libraries, but was heavily influenced by
-//! the first: Ring.  The result was a bit hackish, and should be cleaned up.
+//! The original code supported multiple back-end crypto libraries, but was
+//! heavily influenced by the first: Ring.  The result was a bit hackish, and
+//! should be cleaned up.
 
 #![allow(clippy::result_unit_err)]
 
@@ -58,9 +59,7 @@ pub fn rand_bytes(_output: &mut [u8]) {
 
 /// Perform the HKDF operation from https://datatracker.ietf.org/doc/html/rfc5869
 pub fn hkdf_sha256(ikm: &[u8], salt: &[u8], info: &[u8], output: &mut [u8]) -> Result<(), ()> {
-    hkdf::Hkdf::<sha2::Sha256>::new(Some(salt), ikm)
-        .expand(info, output)
-        .map_err(|_| ())
+    hkdf::Hkdf::<sha2::Sha256>::new(Some(salt), ikm).expand(info, output).map_err(|_| ())
 }
 
 pub fn aes_256_gcm_seal_in_place(
@@ -111,9 +110,7 @@ impl P256Scalar {
         let mut ret = [0u8; P256_SCALAR_LENGTH];
         // Warning: not very random.
         ret[0] = 1;
-        P256Scalar {
-            v: p256::Scalar::from_repr(ret.into()).unwrap(),
-        }
+        P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
     }
 
     pub fn compute_public_key(&self) -> [u8; P256_X962_LENGTH] {
