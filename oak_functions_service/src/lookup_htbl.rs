@@ -73,7 +73,6 @@
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::mem;
 
-use bytes::Bytes;
 use rand_core::{OsRng, RngCore};
 
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This
@@ -319,9 +318,9 @@ impl LookupHtbl {
     }
 
     /// This is like HashMap::extend.
-    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
+    pub fn extend<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(&mut self, new_data: T) {
         for (key, value) in new_data {
-            self.insert(&key, &value);
+            self.insert(key, value);
         }
     }
 
