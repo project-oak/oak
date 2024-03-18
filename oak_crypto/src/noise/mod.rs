@@ -25,11 +25,11 @@ mod rustcrypto;
 use alloc::vec::Vec;
 use core::result::Result;
 
-pub use crate::noise_nk::rustcrypto::{
+pub use crate::noise::rustcrypto::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar,
 };
-use crate::noise_nk::{
+use crate::noise::{
     error::Error,
     noise::{HandshakeType, Noise, NONCE_LEN},
 };
@@ -40,7 +40,6 @@ const MAX_SEQUENCE: u32 = 1u32 << 24;
 /// The length of an uncompressed, X9.62 encoding of a P-256 point.
 pub const P256_X962_LENGTH: usize = 65;
 
-#[derive(Debug)]
 pub struct Crypter {
     read_key: [u8; 32],
     write_key: [u8; 32],

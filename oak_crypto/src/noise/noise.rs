@@ -17,7 +17,7 @@
 
 use alloc::vec::Vec;
 
-use crate::noise_nk::{error::Error, rustcrypto};
+use crate::noise::{error::Error, rustcrypto};
 
 const SYMMETRIC_KEY_SIZE: usize = 32;
 pub const NONCE_LEN: usize = 12;
