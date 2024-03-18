@@ -81,7 +81,8 @@ exclude = [
 # See https://doc.rust-lang.org/cargo/reference/profiles.html for more details.
 [profile.release-lto]
 inherits = "release"
-debug = 0
+# Limited debug info. Note that for this flag, `1` != `true`.
+debug = 1
 lto = true
 panic = "abort"
 codegen-units = 1
