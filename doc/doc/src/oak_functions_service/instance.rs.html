@@ -115,7 +115,6 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -134,7 +133,6 @@
 
 </span><span class="kw">use </span>alloc::{format, sync::Arc};
 
-<span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>micro_rpc::{Status, Vec};
 <span class="kw">use </span>oak_functions_abi::Request;
 
@@ -183,7 +181,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
-        <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.ok_or(
+        <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.as_ref().ok_or(
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::InvalidArgument,
                 <span class="string">&quot;no chunk in extend request&quot;</span>,
@@ -196,7 +194,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         chunk: LookupDataChunk,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), micro_rpc::Status&gt; {
-        <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(chunk));
+        <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(<span class="kw-2">&amp;</span>chunk));
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -231,7 +229,7 @@
 }
 
 <span class="comment">// Helper function to convert [`LookupDataChunk`] to [`Data`].
-</span><span class="kw">fn </span>to_data(chunk: LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (Bytes, Bytes)&gt; {
-    chunk.items.into_iter().map(|entry| (entry.key, entry.value))
+</span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span>LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8])&gt; {
+    chunk.items.iter().map(|entry| (entry.key.as_ref(), entry.value.as_ref()))
 }
 </code></pre></div></section></main></body></html>
