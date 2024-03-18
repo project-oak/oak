@@ -16,7 +16,6 @@
 
 use alloc::{format, sync::Arc};
 
-use bytes::Bytes;
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 
@@ -65,7 +64,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
         &self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.ok_or(
+        self.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.as_ref().ok_or(
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::InvalidArgument,
                 "no chunk in extend request",
@@ -78,7 +77,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
         &self,
         chunk: LookupDataChunk,
     ) -> Result<(), micro_rpc::Status> {
-        self.lookup_data_manager.extend_next_lookup_data(to_data(chunk));
+        self.lookup_data_manager.extend_next_lookup_data(to_data(&chunk));
         Ok(())
     }
 
@@ -113,6 +112,6 @@ impl<H: Handler> OakFunctionsInstance<H> {
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Bytes, Bytes)> {
-    chunk.items.into_iter().map(|entry| (entry.key, entry.value))
+fn to_data(chunk: &LookupDataChunk) -> impl Iterator<Item = (&[u8], &[u8])> {
+    chunk.items.iter().map(|entry| (entry.key.as_ref(), entry.value.as_ref()))
 }
