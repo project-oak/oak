@@ -34,6 +34,16 @@ java_proto_library(
     deps = [":abi_proto"],
 )
 
+proto_library(
+    name = "lookup_data_proto",
+    srcs = ["lookup_data.proto"],
+)
+
+proto_library(
+    name = "testing_proto",
+    srcs = ["testing.proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
