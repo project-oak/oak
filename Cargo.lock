@@ -2834,6 +2834,7 @@ dependencies = [
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "oak_proto_rust",
+ "parking_lot",
  "pprof",
  "prost",
  "rand",
