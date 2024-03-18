@@ -21,7 +21,6 @@ use alloc::{
     vec::Vec,
 };
 
-use bytes::Bytes;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
 
@@ -57,7 +56,7 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data,
     /// calling extend overwrites the value.
-    fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
+    fn extend<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data)
     }
@@ -104,10 +103,10 @@ impl LookupDataManager {
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
+    pub fn for_test(data: Vec<(Vec<u8>, Vec<u8>)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
         test_manager.reserve(data.len() as u64).unwrap();
-        test_manager.extend_next_lookup_data(data);
+        test_manager.extend_next_lookup_data(data.iter().map(|(k, v)| (k.as_ref(), v.as_ref())));
         test_manager.finish_next_lookup_data();
         test_manager
     }
@@ -118,7 +117,10 @@ impl LookupDataManager {
         Ok(())
     }
 
-    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
+    pub fn extend_next_lookup_data<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(
+        &self,
+        new_data: T,
+    ) {
         info!("Start extending next lookup data");
         {
             let mut data_builder = self.data_builder.lock();
@@ -227,7 +229,7 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{vec, vec::Vec};
+    use alloc::vec::Vec;
 
     use super::*;
 
@@ -275,10 +277,14 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(4).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.extend_next_lookup_data(
+            create_test_data(0, 2).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         let lookup_data_1 = manager.create_lookup_data();
 
-        manager.extend_next_lookup_data(create_test_data(2, 4));
+        manager.extend_next_lookup_data(
+            create_test_data(2, 4).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
@@ -292,11 +298,19 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
         manager.reserve(7).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.extend_next_lookup_data(create_test_data(2, 3));
+        manager.extend_next_lookup_data(
+            create_test_data(0, 2).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
+        manager.extend_next_lookup_data(
+            create_test_data(2, 3).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         // Note the overlap which results in a bit of wasted space.
-        manager.extend_next_lookup_data(create_test_data(2, 6));
-        manager.extend_next_lookup_data(create_test_data(6, 7));
+        manager.extend_next_lookup_data(
+            create_test_data(2, 6).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
+        manager.extend_next_lookup_data(
+            create_test_data(6, 7).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         manager.finish_next_lookup_data();
 
         let lookup_data = manager.create_lookup_data();
@@ -310,12 +324,16 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(2).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.extend_next_lookup_data(
+            create_test_data(0, 2).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
         manager.reserve(1).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 1));
+        manager.extend_next_lookup_data(
+            create_test_data(0, 1).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
@@ -334,20 +352,20 @@ mod tests {
 
     // Create test data with size distinct keys between inclusive start and
     // exclusive end.
-    fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
-        let mut vec: Vec<(Bytes, Bytes)> = vec![];
+    fn create_test_data(start: i32, end: i32) -> Vec<(Vec<u8>, Vec<u8>)> {
+        let mut vec: Vec<(Vec<u8>, Vec<u8>)> =
+            Vec::with_capacity((end - start).try_into().unwrap());
         for i in start..end {
-            vec.push((
-                format!("key{}", i).into_bytes().into(),
-                format!("value{}", i).into_bytes().into(),
-            ));
+            vec.push((format!("key{}", i).into_bytes(), format!("value{}", i).into_bytes()));
         }
         vec
     }
 
     fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
         manager.reserve((end - start) as u64).unwrap();
-        manager.extend_next_lookup_data(create_test_data(start, end));
+        manager.extend_next_lookup_data(
+            create_test_data(start, end).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),
+        );
         manager.finish_next_lookup_data();
     }
 }

@@ -18,7 +18,6 @@ required-features = ["wasmtime"]
 [dependencies]
 anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }
-bytes = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 prost = { workspace = true }
