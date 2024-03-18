@@ -9,7 +9,7 @@ license = "Apache-2.0"
 default = ["deny_sensitive_logging"]
 # Disable sensitive logging.
 deny_sensitive_logging = []
-std = ["anyhow/std", "wasmi/std", "wasmtime"]
+std = ["anyhow/std", "wasmi/std", "wasmtime", "dep:parking_lot"]
 
 [[bench]]
 name = "wasm_benchmark"
@@ -28,6 +28,7 @@ oak_dice = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
 oak_proto_rust = { workspace = true }
+parking_lot = { version = "*", optional = true }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }

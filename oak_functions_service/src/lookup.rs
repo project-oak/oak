@@ -23,7 +23,6 @@ use alloc::{
 
 use bytes::Bytes;
 use log::{info, Level};
-use spinning_top::{RwSpinlock, Spinlock};
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
@@ -84,10 +83,16 @@ impl DataBuilder {
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
 pub struct LookupDataManager {
-    data: RwSpinlock<Arc<Data>>,
+    #[cfg(feature = "std")]
+    data: parking_lot::RwLock<Arc<Data>>,
+    #[cfg(not(feature = "std"))]
+    data: spinning_top::RwSpinlock<Arc<Data>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
-    data_builder: Spinlock<DataBuilder>,
+    #[cfg(feature = "std")]
+    data_builder: parking_lot::Mutex<DataBuilder>,
+    #[cfg(not(feature = "std"))]
+    data_builder: spinning_top::Spinlock<DataBuilder>,
     logger: Arc<dyn OakLogger>,
 }
 
@@ -95,10 +100,16 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: RwSpinlock::new(Arc::new(Data::default())),
+            #[cfg(feature = "std")]
+            data: parking_lot::RwLock::new(Arc::new(Data::default())),
+            #[cfg(not(feature = "std"))]
+            data: spinning_top::RwSpinlock::new(Arc::new(Data::default())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            data_builder: Spinlock::new(DataBuilder::default()),
+            #[cfg(feature = "std")]
+            data_builder: parking_lot::Mutex::new(DataBuilder::default()),
+            #[cfg(not(feature = "std"))]
+            data_builder: spinning_top::Spinlock::new(DataBuilder::default()),
             logger,
         }
     }
