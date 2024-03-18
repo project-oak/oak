@@ -30,7 +30,7 @@ pub const P256_X962_LENGTH: usize = 65;
 /// The length of a P-256 scalar value.
 pub const P256_SCALAR_LENGTH: usize = 32;
 
-use crate::noise::rustcrypto::ecdsa::signature::Verifier;
+use crate::noise::crypto_wrapper::ecdsa::signature::Verifier;
 
 extern crate aes_gcm;
 extern crate ecdsa;

@@ -17,7 +17,7 @@
 
 use alloc::vec::Vec;
 
-use crate::noise::{error::Error, rustcrypto};
+use crate::noise::{error::Error, crypto_wrapper};
 
 const SYMMETRIC_KEY_SIZE: usize = 32;
 pub const NONCE_LEN: usize = 12;
@@ -32,10 +32,10 @@ fn hkdf2(
     ck: &[u8; SYMMETRIC_KEY_SIZE],
     ikm: &[u8],
 ) -> ([u8; SYMMETRIC_KEY_SIZE], [u8; SYMMETRIC_KEY_SIZE]) {
-    let mut output = [0; rustcrypto::SHA256_OUTPUT_LEN * 2];
+    let mut output = [0; crypto_wrapper::SHA256_OUTPUT_LEN * 2];
     // unwrap: only fails if the output size is too large, but the output
     // size is small and fixed here.
-    rustcrypto::hkdf_sha256(ikm, ck, &[], &mut output).unwrap();
+    crypto_wrapper::hkdf_sha256(ikm, ck, &[], &mut output).unwrap();
     let key1: [u8; SYMMETRIC_KEY_SIZE] = output[..SYMMETRIC_KEY_SIZE].try_into().unwrap();
     let key2: [u8; SYMMETRIC_KEY_SIZE] = output[SYMMETRIC_KEY_SIZE..].try_into().unwrap();
     (key1, key2)
@@ -65,7 +65,7 @@ impl Noise {
 
     pub fn mix_hash(&mut self, in_data: &[u8]) {
         // See https://www.noiseprotocol.org/noise.html#the-symmetricstate-object
-        self.h = rustcrypto::sha256_two_part(&self.h, in_data);
+        self.h = crypto_wrapper::sha256_two_part(&self.h, in_data);
     }
 
     pub fn mix_key(&mut self, ikm: &[u8]) {
@@ -81,7 +81,7 @@ impl Noise {
         let mut output = [0; SYMMETRIC_KEY_SIZE * 3];
         // unwrap: only fails if the output size is too large, but the output
         // size is small and fixed here.
-        rustcrypto::hkdf_sha256(ikm, &self.chaining_key, &[], &mut output).unwrap();
+        crypto_wrapper::hkdf_sha256(ikm, &self.chaining_key, &[], &mut output).unwrap();
         self.chaining_key.copy_from_slice(&output[..SYMMETRIC_KEY_SIZE]);
         self.mix_hash(&output[SYMMETRIC_KEY_SIZE..SYMMETRIC_KEY_SIZE * 2]);
         self.initialize_key(&output[SYMMETRIC_KEY_SIZE * 2..].try_into().unwrap());
@@ -100,7 +100,7 @@ impl Noise {
     pub fn encrypt_and_hash(&mut self, plaintext: &[u8]) -> Vec<u8> {
         let mut encrypted_data = Vec::from(plaintext);
         let nonce = self.next_nonce();
-        rustcrypto::aes_256_gcm_seal_in_place(
+        crypto_wrapper::aes_256_gcm_seal_in_place(
             &self.symmetric_key,
             &nonce,
             &self.h,
@@ -117,7 +117,7 @@ impl Noise {
         let ciphertext = Vec::from(ciphertext);
         let nonce = self.next_nonce();
         let plaintext =
-            rustcrypto::aes_256_gcm_open_in_place(&self.symmetric_key, &nonce, &h, ciphertext)
+            crypto_wrapper::aes_256_gcm_open_in_place(&self.symmetric_key, &nonce, &h, ciphertext)
                 .map_err(|_| Error::DecryptFailed)?;
         Ok(plaintext)
     }

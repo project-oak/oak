@@ -20,12 +20,12 @@
 
 mod error;
 mod noise;
-mod rustcrypto;
+mod crypto_wrapper;
 
 use alloc::vec::Vec;
 use core::result::Result;
 
-pub use crate::noise::rustcrypto::{
+pub use crate::noise::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar,
 };
@@ -83,7 +83,7 @@ impl Crypter {
         let num_zeros = padded_size - plaintext.len() - 1;
         padded_encrypt_data[padded_size - 1] = num_zeros as u8;
 
-        rustcrypto::aes_256_gcm_seal_in_place(
+        crypto_wrapper::aes_256_gcm_seal_in_place(
             &self.write_key,
             &Self::next_nonce(&mut self.write_nonce)?,
             &[],
@@ -93,7 +93,7 @@ impl Crypter {
     }
 
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
-        let plaintext = rustcrypto::aes_256_gcm_open_in_place(
+        let plaintext = crypto_wrapper::aes_256_gcm_open_in_place(
             &self.read_key,
             &Self::next_nonce(&mut self.read_nonce)?,
             &[],
@@ -145,7 +145,7 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
     noise.mix_hash(peer_pub.as_slice());
     noise.mix_key(peer_pub.as_slice());
 
-    let es_ecdh_bytes = rustcrypto::p256_scalar_mult(&identity_scalar, &peer_pub)
+    let es_ecdh_bytes = crypto_wrapper::p256_scalar_mult(&identity_scalar, &peer_pub)
         .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(es_ecdh_bytes.as_slice());
 
@@ -159,7 +159,7 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
     let ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
     noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
     noise.mix_key(ephemeral_pub_key_bytes.as_slice());
-    let ee_ecdh_bytes = rustcrypto::p256_scalar_mult(&ephemeral_priv, &peer_pub)
+    let ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(&ephemeral_priv, &peer_pub)
         .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(ee_ecdh_bytes.as_slice());
 
@@ -200,7 +200,7 @@ pub mod test_client {
             self.noise.mix_hash(ephemeral_pub_key_bytes);
             self.noise.mix_key(ephemeral_pub_key_bytes);
             let es_ecdh_bytes =
-                rustcrypto::p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key)
+                crypto_wrapper::p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key)
                     .unwrap();
             self.noise.mix_key(&es_ecdh_bytes);
 
@@ -212,7 +212,7 @@ pub mod test_client {
             let peer_public_key_bytes = &handshake_response[..P256_X962_LENGTH];
             let ciphertext = &handshake_response[P256_X962_LENGTH..];
 
-            let ee_ecdh_bytes = rustcrypto::p256_scalar_mult(
+            let ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(
                 &self.ephemeral_priv_key,
                 peer_public_key_bytes.try_into().unwrap(),
             )
