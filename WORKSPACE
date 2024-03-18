@@ -302,6 +302,19 @@ crates_repository(
     cargo_lockfile = "//:Cargo.bazel.lock",  # In Cargo-free mode this is used as output, not input.
     lockfile = "//:cargo-bazel-lock.json",  # Shares most contents with cargo_lockfile.
     packages = {
+        "anyhow": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "async-trait": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "base64": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "0.21",
+        ),
         "bitflags": crate.spec(version = "*"),
         "ciborium": crate.spec(
             default_features = False,
@@ -309,6 +322,20 @@ crates_repository(
         ),
         "coset": crate.spec(
             default_features = False,
+            version = "*",
+        ),
+        "ecdsa": crate.spec(
+            default_features = False,
+            features = [
+                "pkcs8",
+                "pem",
+            ],
+            version = "*",
+        ),
+        "getrandom": crate.spec(
+            default_features = False,
+            # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
+            features = ["rdrand"],
             version = "*",
         ),
         "hex": crate.spec(
@@ -322,12 +349,47 @@ crates_repository(
         ),
         "p256": crate.spec(
             default_features = False,
-            features = ["ecdsa"],
+            features = [
+                "alloc",
+                "ecdsa-core",
+                "ecdsa",
+                "pem",
+            ],
+            version = "*",
+        ),
+        "p384": crate.spec(
+            default_features = False,
+            features = [
+                "ecdsa",
+                "pem",
+            ],
+            version = "0.13.0",
+        ),
+        "prost": crate.spec(
+            default_features = False,
+            features = ["prost-derive"],
+            version = "*",
+        ),
+        "prost-build": crate.spec(
             version = "*",
         ),
         "rand_core": crate.spec(
             default_features = False,
             features = ["getrandom"],
+            version = "*",
+        ),
+        "rsa": crate.spec(
+            default_features = False,
+            version = "0.9.6",
+        ),
+        "serde": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "*",
+        ),
+        "serde_json": crate.spec(
+            default_features = False,
+            features = ["alloc"],
             version = "*",
         ),
         "sha2": crate.spec(
@@ -339,6 +401,19 @@ crates_repository(
             default_features = False,
             features = ["derive"],
             version = "*",
+        ),
+        "time": crate.spec(
+            default_features = False,
+            features = [
+                "serde",
+                "parsing",
+            ],
+            version = "0.3.28",
+        ),
+        "x509-cert": crate.spec(
+            default_features = False,
+            features = ["pem"],
+            version = "0.2.5",
         ),
         "zerocopy": crate.spec(
             default_features = False,

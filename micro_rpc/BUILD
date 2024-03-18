@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
@@ -22,20 +23,30 @@ package(
 )
 
 rust_library(
-    name = "oak_dice",
+    name = "micro_rpc",
     srcs = glob(["src/**"]),
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
     deps = [
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:ciborium",
-        "@oak_crates_index//:coset",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:hkdf",
-        "@oak_crates_index//:p256",
-        "@oak_crates_index//:rand_core",
-        "@oak_crates_index//:sha2",
-        "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
-        "@oak_crates_index//:zerocopy",
-        "@oak_crates_index//:zeroize",
+        ":build",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+cargo_build_script(
+    name = "build",
+    srcs = [
+        "build.rs",
+    ],
+    build_script_env = {
+        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+    },
+    data = [
+        "//proto/micro_rpc:messages_proto",
+        "@com_google_protobuf//:protoc",
+    ],
+    deps = [
+        "//micro_rpc_build",
     ],
 )
