@@ -27,6 +27,10 @@ rustflags = [
   "link-args=-Xlinker --build-id=none",
   "-C",
   "target-cpu=x86-64-v3",
+  # Force generation of frame pointers so that we can get better profiling information with
+  # `oak_debug_service`.
+  "-C",
+  "force-frame-pointers=true",
   # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
   "--cfg",
   "tokio_unstable",
