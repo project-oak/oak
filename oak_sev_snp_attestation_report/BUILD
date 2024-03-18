@@ -22,20 +22,12 @@ package(
 )
 
 rust_library(
-    name = "oak_dice",
+    name = "oak_sev_snp_attestation_report",
     srcs = glob(["src/**"]),
     deps = [
         "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:ciborium",
-        "@oak_crates_index//:coset",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:hkdf",
-        "@oak_crates_index//:p256",
-        "@oak_crates_index//:rand_core",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
         "@oak_crates_index//:zerocopy",
-        "@oak_crates_index//:zeroize",
     ],
 )

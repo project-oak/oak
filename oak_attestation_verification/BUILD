@@ -17,25 +17,34 @@
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
-    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 rust_library(
-    name = "oak_dice",
+    name = "oak_attestation_verification",
     srcs = glob(["src/**"]),
+    compile_data = [
+        "//oak_attestation_verification/data:ask_milan.pem",
+    ],
     deps = [
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:ciborium",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_sev_snp_attestation_report",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:coset",
+        "@oak_crates_index//:ecdsa",
+        "@oak_crates_index//:getrandom",
         "@oak_crates_index//:hex",
-        "@oak_crates_index//:hkdf",
         "@oak_crates_index//:p256",
-        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:p384",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rsa",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
-        "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
+        "@oak_crates_index//:time",
+        "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
-        "@oak_crates_index//:zeroize",
     ],
 )
