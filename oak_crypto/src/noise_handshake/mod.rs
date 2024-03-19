@@ -71,7 +71,12 @@ pub struct Crypter {
 /// direction.
 impl Crypter {
     fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
-        Self { read_key: *read_key, write_key: *write_key, read_nonce: Nonce{nonce: 0}, write_nonce: Nonce{nonce: 0} }
+        Self {
+            read_key: *read_key,
+            write_key: *write_key,
+            read_nonce: Nonce { nonce: 0 },
+            write_nonce: Nonce { nonce: 0 },
+        }
     }
 
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, Error> {
@@ -81,9 +86,10 @@ impl Crypter {
 
         let mut padded_size: usize = plaintext.len();
         // AES GCM is limited to encrypting 64GiB of data with the same key.
-        // TODO: in a follow-on CL, track total data per key and drop the connection after 64 GiB.
-        // 256MiB is just a sane upper limit on  message size, which greatly exceeds the noise
-        // specified 64KiB, which will be too restrictive for our use cases.
+        // TODO: in a follow-on CL, track total data per key and drop the connection
+        // after 64 GiB. 256MiB is just a sane upper limit on  message size,
+        // which greatly exceeds the noise specified 64KiB, which will be too
+        // restrictive for our use cases.
         if padded_size > (1usize << 28) {
             return Err(Error::DataTooLarge(padded_size));
         }
