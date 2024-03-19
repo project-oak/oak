@@ -43,11 +43,27 @@ const MAX_SEQUENCE: u32 = 1u32 << 24;
 /// The length of an uncompressed, X9.62 encoding of a P-256 point.
 pub const P256_X962_LENGTH: usize = 65;
 
+pub struct Nonce {
+    nonce: u32,
+}
+
+impl Nonce {
+    fn next(&mut self) -> Result<[u8; NONCE_LEN], Error> {
+        if self.nonce > MAX_SEQUENCE {
+            return Err(Error::DecryptFailed);
+        }
+        let mut ret = [0u8; NONCE_LEN];
+        ret[NONCE_LEN - 4..].copy_from_slice(self.nonce.to_be_bytes().as_slice());
+        self.nonce += 1;
+        Ok(ret)
+    }
+}
+
 pub struct Crypter {
     read_key: [u8; SYMMETRIC_KEY_LEN],
     write_key: [u8; SYMMETRIC_KEY_LEN],
-    read_nonce: u32,
-    write_nonce: u32,
+    read_nonce: Nonce,
+    write_nonce: Nonce,
 }
 
 /// Utility for encrypting and decrypting traffic between the Noise endpoints.
@@ -55,17 +71,7 @@ pub struct Crypter {
 /// direction.
 impl Crypter {
     fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
-        Self { read_key: *read_key, write_key: *write_key, read_nonce: 0, write_nonce: 0 }
-    }
-
-    fn next_nonce(nonce: &mut u32) -> Result<[u8; NONCE_LEN], Error> {
-        if *nonce > MAX_SEQUENCE {
-            return Err(Error::DecryptFailed);
-        }
-        let mut ret = [0u8; NONCE_LEN];
-        ret[NONCE_LEN - 4..].copy_from_slice(nonce.to_be_bytes().as_slice());
-        *nonce += 1;
-        Ok(ret)
+        Self { read_key: *read_key, write_key: *write_key, read_nonce: Nonce{nonce: 0}, write_nonce: Nonce{nonce: 0} }
     }
 
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, Error> {
@@ -88,7 +94,7 @@ impl Crypter {
 
         crypto_wrapper::aes_256_gcm_seal_in_place(
             &self.write_key,
-            &Self::next_nonce(&mut self.write_nonce)?,
+            &self.write_nonce.next()?,
             &[],
             &mut padded_encrypt_data,
         );
@@ -98,7 +104,7 @@ impl Crypter {
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
         let plaintext = crypto_wrapper::aes_256_gcm_open_in_place(
             &self.read_key,
-            &Self::next_nonce(&mut self.read_nonce)?,
+            &self.read_nonce.next()?,
             &[],
             Vec::from(ciphertext),
         )
