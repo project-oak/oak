@@ -193,6 +193,7 @@ impl EcdsaKeyPair {
     }
 }
 
+#[must_use]
 pub fn ecdsa_verify(pub_key: &[u8], signed_data: &[u8], signature: &[u8]) -> bool {
     let signature = match ecdsa::der::Signature::from_bytes(signature) {
         Ok(signature) => signature,

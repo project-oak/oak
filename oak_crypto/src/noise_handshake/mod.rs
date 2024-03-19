@@ -80,6 +80,10 @@ impl Crypter {
         static_assertions::const_assert!((PADDING_GRANULARITY & (PADDING_GRANULARITY - 1)) == 0);
 
         let mut padded_size: usize = plaintext.len();
+        // AES GCM is limited to encrypting 64GiB of data with the same key.
+        // TODO: in a follow-on CL, track total data per key and drop the connection after 64 GiB.
+        // 256MiB is just a sane upper limit on  message size, which greatly exceeds the noise
+        // specified 64KiB, which will be too restrictive for our use cases.
         if padded_size > (1usize << 28) {
             return Err(Error::DataTooLarge(padded_size));
         }
