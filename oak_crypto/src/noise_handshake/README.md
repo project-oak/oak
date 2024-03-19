@@ -1,4 +1,4 @@
-# Noise protocol handshake.
+# Noise protocol handshake
 
 This is a port from Google's internal enclave app repo, which was approved for
 open sourcing.
