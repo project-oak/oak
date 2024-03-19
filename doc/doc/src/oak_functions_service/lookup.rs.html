@@ -369,6 +369,17 @@
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -393,7 +404,6 @@
 };
 
 <span class="kw">use </span>log::{info, Level};
-<span class="kw">use </span>spinning_top::{RwSpinlock, Spinlock};
 
 <span class="kw">use crate</span>::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
@@ -454,10 +464,16 @@
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
 </span><span class="kw">pub struct </span>LookupDataManager {
-    data: RwSpinlock&lt;Arc&lt;Data&gt;&gt;,
+    <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+    </span>data: parking_lot::RwLock&lt;Arc&lt;Data&gt;&gt;,
+    <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+    </span>data: spinning_top::RwSpinlock&lt;Arc&lt;Data&gt;&gt;,
     <span class="comment">// Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
-    </span>data_builder: Spinlock&lt;DataBuilder&gt;,
+    </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+    </span>data_builder: parking_lot::Mutex&lt;DataBuilder&gt;,
+    <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+    </span>data_builder: spinning_top::Spinlock&lt;DataBuilder&gt;,
     logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
 }
 
@@ -465,10 +481,16 @@
     <span class="doccomment">/// Creates a new instance with empty backing data.
     </span><span class="kw">pub fn </span>new_empty(logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            data: RwSpinlock::new(Arc::new(Data::default())),
+            <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+            </span>data: parking_lot::RwLock::new(Arc::new(Data::default())),
+            <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+            </span>data: spinning_top::RwSpinlock::new(Arc::new(Data::default())),
             <span class="comment">// Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            </span>data_builder: Spinlock::new(DataBuilder::default()),
+            </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+            </span>data_builder: parking_lot::Mutex::new(DataBuilder::default()),
+            <span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+            </span>data_builder: spinning_top::Spinlock::new(DataBuilder::default()),
             logger,
         }
     }
