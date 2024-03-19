@@ -20,35 +20,32 @@
 
 pub const NONCE_LEN: usize = 12;
 pub const SHA256_OUTPUT_LEN: usize = 32;
+pub const SYMMETRIC_KEY_LEN: usize = 32;
 
 /// The length of an uncompressed, X9.62 encoding of a P-256 point.
-pub const P256_X962_LENGTH: usize = 65;
+pub const P256_X962_LEN: usize = 65;
 
 /// The length of a P-256 scalar value.
-pub const P256_SCALAR_LENGTH: usize = 32;
-
-use crate::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
-
-use aes_gcm;
-use ecdsa;
-use hkdf;
-use pkcs8;
-use primeorder;
-use sha2;
+pub const P256_SCALAR_LEN: usize = 32;
 
 use alloc::vec::Vec;
 
-use aes_gcm::{AeadInPlace, KeyInit};
+use aes_gcm::{self, AeadInPlace, KeyInit};
+use ecdsa;
+use hkdf;
 use p256::ecdsa::signature::Signer;
-use pkcs8::{DecodePrivateKey, EncodePrivateKey};
+use pkcs8::{self, DecodePrivateKey, EncodePrivateKey};
 use primeorder::{
+    self,
     elliptic_curve::{
         ops::{Mul, MulByGenerator},
         sec1::{FromEncodedPoint, ToEncodedPoint},
     },
     Field, PrimeField,
 };
-use sha2::Digest;
+use sha2::{self, Digest};
+
+use crate::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 
 pub fn rand_bytes(_output: &mut [u8]) {
     panic!("unimplemented");
@@ -60,7 +57,7 @@ pub fn hkdf_sha256(ikm: &[u8], salt: &[u8], info: &[u8], output: &mut [u8]) -> R
 }
 
 pub fn aes_256_gcm_seal_in_place(
-    key: &[u8; 32],
+    key: &[u8; SYMMETRIC_KEY_LEN],
     nonce: &[u8; NONCE_LEN],
     aad: &[u8],
     plaintext: &mut Vec<u8>,
@@ -72,7 +69,7 @@ pub fn aes_256_gcm_seal_in_place(
 }
 
 pub fn aes_256_gcm_open_in_place(
-    key: &[u8; 32],
+    key: &[u8; SYMMETRIC_KEY_LEN],
     nonce: &[u8; NONCE_LEN],
     aad: &[u8],
     mut ciphertext: Vec<u8>,
@@ -104,13 +101,13 @@ pub struct P256Scalar {
 
 impl P256Scalar {
     pub fn generate() -> P256Scalar {
-        let mut ret = [0u8; P256_SCALAR_LENGTH];
+        let mut ret = [0u8; P256_SCALAR_LEN];
         // Warning: not very random.
         ret[0] = 1;
         P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
     }
 
-    pub fn compute_public_key(&self) -> [u8; P256_X962_LENGTH] {
+    pub fn compute_public_key(&self) -> [u8; P256_X962_LEN] {
         p256::ProjectivePoint::mul_by_generator(&self.v)
             .to_encoded_point(false)
             .as_bytes()
@@ -118,7 +115,7 @@ impl P256Scalar {
             .unwrap()
     }
 
-    pub fn bytes(&self) -> [u8; P256_SCALAR_LENGTH] {
+    pub fn bytes(&self) -> [u8; P256_SCALAR_LEN] {
         self.v.to_repr().as_slice().try_into().unwrap()
     }
 }
@@ -127,15 +124,15 @@ impl TryFrom<&[u8]> for P256Scalar {
     type Error = ();
 
     fn try_from(bytes: &[u8]) -> Result<Self, ()> {
-        let array: [u8; P256_SCALAR_LENGTH] = bytes.try_into().map_err(|_| ())?;
+        let array: [u8; P256_SCALAR_LEN] = bytes.try_into().map_err(|_| ())?;
         (&array).try_into()
     }
 }
 
-impl TryFrom<&[u8; P256_SCALAR_LENGTH]> for P256Scalar {
+impl TryFrom<&[u8; P256_SCALAR_LEN]> for P256Scalar {
     type Error = ();
 
-    fn try_from(bytes: &[u8; P256_SCALAR_LENGTH]) -> Result<Self, ()> {
+    fn try_from(bytes: &[u8; P256_SCALAR_LEN]) -> Result<Self, ()> {
         let scalar = p256::Scalar::from_repr((*bytes).into());
         if !bool::from(scalar.is_some()) {
             return Err(());
@@ -150,8 +147,8 @@ impl TryFrom<&[u8; P256_SCALAR_LENGTH]> for P256Scalar {
 
 pub fn p256_scalar_mult(
     scalar: &P256Scalar,
-    point: &[u8; P256_X962_LENGTH],
-) -> Result<[u8; 32], ()> {
+    point: &[u8; P256_X962_LEN],
+) -> Result<[u8; P256_SCALAR_LEN], ()> {
     let point = p256::EncodedPoint::from_bytes(point).map_err(|_| ())?;
     let affine_point = p256::AffinePoint::from_encoded_point(&point);
     if !bool::from(affine_point.is_some()) {
@@ -179,7 +176,7 @@ impl EcdsaKeyPair {
 
     pub fn generate_pkcs8() -> Result<impl AsRef<[u8]>, ()> {
         // WARNING: not actually a random scalar
-        let mut scalar = [0u8; P256_SCALAR_LENGTH];
+        let mut scalar = [0u8; P256_SCALAR_LEN];
         scalar[0] = 42;
         let non_zero_scalar = p256::NonZeroScalar::from_repr(scalar.into()).unwrap();
         let key = p256::ecdsa::SigningKey::from(non_zero_scalar);

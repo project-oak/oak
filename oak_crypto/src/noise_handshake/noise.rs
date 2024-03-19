@@ -14,10 +14,9 @@
 
 use alloc::vec::Vec;
 
-use crate::noise_handshake::{error::Error, crypto_wrapper};
+use crypto_wrapper::{NONCE_LEN, SYMMETRIC_KEY_LEN};
 
-const SYMMETRIC_KEY_SIZE: usize = 32;
-pub const NONCE_LEN: usize = 12;
+use crate::noise_handshake::{crypto_wrapper, error::Error};
 
 #[derive(Debug, PartialEq)]
 pub enum HandshakeType {
@@ -26,36 +25,36 @@ pub enum HandshakeType {
 
 // Helper to generate 2 keys.
 fn hkdf2(
-    ck: &[u8; SYMMETRIC_KEY_SIZE],
+    ck: &[u8; SYMMETRIC_KEY_LEN],
     ikm: &[u8],
-) -> ([u8; SYMMETRIC_KEY_SIZE], [u8; SYMMETRIC_KEY_SIZE]) {
+) -> ([u8; SYMMETRIC_KEY_LEN], [u8; SYMMETRIC_KEY_LEN]) {
     let mut output = [0; crypto_wrapper::SHA256_OUTPUT_LEN * 2];
     // unwrap: only fails if the output size is too large, but the output
     // size is small and fixed here.
     crypto_wrapper::hkdf_sha256(ikm, ck, &[], &mut output).unwrap();
-    let key1: [u8; SYMMETRIC_KEY_SIZE] = output[..SYMMETRIC_KEY_SIZE].try_into().unwrap();
-    let key2: [u8; SYMMETRIC_KEY_SIZE] = output[SYMMETRIC_KEY_SIZE..].try_into().unwrap();
+    let key1: [u8; SYMMETRIC_KEY_LEN] = output[..SYMMETRIC_KEY_LEN].try_into().unwrap();
+    let key2: [u8; SYMMETRIC_KEY_LEN] = output[SYMMETRIC_KEY_LEN..].try_into().unwrap();
     (key1, key2)
 }
 
 #[derive(PartialEq)]
 pub struct Noise {
-    chaining_key: [u8; SYMMETRIC_KEY_SIZE],
-    h: [u8; SYMMETRIC_KEY_SIZE],
-    symmetric_key: [u8; SYMMETRIC_KEY_SIZE],
+    chaining_key: [u8; SYMMETRIC_KEY_LEN],
+    h: [u8; SYMMETRIC_KEY_LEN],
+    symmetric_key: [u8; SYMMETRIC_KEY_LEN],
     symmetric_nonce: u32,
 }
 
 impl Noise {
     pub fn new(handshake_type: HandshakeType) -> Self {
         assert_eq!(handshake_type, HandshakeType::Nk);
-        let mut chaining_key_in = [0; SYMMETRIC_KEY_SIZE];
+        let mut chaining_key_in = [0; SYMMETRIC_KEY_LEN];
         let nk_protocol_name = b"Noise_NK_P256_AESGCM_SHA256";
         chaining_key_in[..nk_protocol_name.len()].copy_from_slice(nk_protocol_name);
         Noise {
             chaining_key: chaining_key_in,
             h: chaining_key_in,
-            symmetric_key: [0; SYMMETRIC_KEY_SIZE],
+            symmetric_key: [0; SYMMETRIC_KEY_LEN],
             symmetric_nonce: 0,
         }
     }
@@ -75,13 +74,13 @@ impl Noise {
     #[cfg(test)]
     pub fn mix_key_and_hash(&mut self, ikm: &[u8]) {
         // See https://www.noiseprotocol.org/noise.html#the-symmetricstate-object
-        let mut output = [0; SYMMETRIC_KEY_SIZE * 3];
+        let mut output = [0; SYMMETRIC_KEY_LEN * 3];
         // unwrap: only fails if the output size is too large, but the output
         // size is small and fixed here.
         crypto_wrapper::hkdf_sha256(ikm, &self.chaining_key, &[], &mut output).unwrap();
-        self.chaining_key.copy_from_slice(&output[..SYMMETRIC_KEY_SIZE]);
-        self.mix_hash(&output[SYMMETRIC_KEY_SIZE..SYMMETRIC_KEY_SIZE * 2]);
-        self.initialize_key(&output[SYMMETRIC_KEY_SIZE * 2..].try_into().unwrap());
+        self.chaining_key.copy_from_slice(&output[..SYMMETRIC_KEY_LEN]);
+        self.mix_hash(&output[SYMMETRIC_KEY_LEN..SYMMETRIC_KEY_LEN * 2]);
+        self.initialize_key(&output[SYMMETRIC_KEY_LEN * 2..].try_into().unwrap());
     }
 
     fn next_nonce(&mut self) -> [u8; NONCE_LEN] {
@@ -119,7 +118,7 @@ impl Noise {
         Ok(plaintext)
     }
 
-    pub fn handshake_hash(&self) -> [u8; SYMMETRIC_KEY_SIZE] {
+    pub fn handshake_hash(&self) -> [u8; SYMMETRIC_KEY_LEN] {
         self.h
     }
 
@@ -129,11 +128,11 @@ impl Noise {
         self.mix_hash(point);
     }
 
-    pub fn traffic_keys(&self) -> ([u8; SYMMETRIC_KEY_SIZE], [u8; SYMMETRIC_KEY_SIZE]) {
+    pub fn traffic_keys(&self) -> ([u8; SYMMETRIC_KEY_LEN], [u8; SYMMETRIC_KEY_LEN]) {
         hkdf2(&self.chaining_key, &[])
     }
 
-    fn initialize_key(&mut self, key: &[u8; SYMMETRIC_KEY_SIZE]) {
+    fn initialize_key(&mut self, key: &[u8; SYMMETRIC_KEY_LEN]) {
         // See https://www.noiseprotocol.org/noise.html#the-cipherstate-object
         self.symmetric_key.copy_from_slice(key);
         self.symmetric_nonce = 0;

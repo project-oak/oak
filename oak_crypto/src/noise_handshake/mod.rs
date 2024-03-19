@@ -29,11 +29,12 @@ use core::result::Result;
 
 pub use crate::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
-    p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar,
+    p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
+    SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
 };
 use crate::noise_handshake::{
     error::Error,
-    noise::{HandshakeType, Noise, NONCE_LEN},
+    noise::{HandshakeType, Noise},
 };
 
 // This is assumed to be vastly larger than any connection will ever reach.
@@ -43,8 +44,8 @@ const MAX_SEQUENCE: u32 = 1u32 << 24;
 pub const P256_X962_LENGTH: usize = 65;
 
 pub struct Crypter {
-    read_key: [u8; 32],
-    write_key: [u8; 32],
+    read_key: [u8; SYMMETRIC_KEY_LEN],
+    write_key: [u8; SYMMETRIC_KEY_LEN],
     read_nonce: u32,
     write_nonce: u32,
 }
@@ -53,7 +54,7 @@ pub struct Crypter {
 /// It is created by |respond| and configured with a key for each traffic
 /// direction.
 impl Crypter {
-    fn new(read_key: &[u8; 32], write_key: &[u8; 32]) -> Self {
+    fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
         Self { read_key: *read_key, write_key: *write_key, read_nonce: 0, write_nonce: 0 }
     }
 
@@ -115,7 +116,7 @@ impl Crypter {
 
 pub struct Response {
     pub crypter: Crypter,
-    pub handshake_hash: [u8; 32],
+    pub handshake_hash: [u8; SHA256_OUTPUT_LEN],
     pub response: Vec<u8>,
 }
 
@@ -210,7 +211,10 @@ pub mod test_client {
             [ephemeral_pub_key_bytes, &ciphertext].concat()
         }
 
-        pub fn process_response(&mut self, handshake_response: &[u8]) -> ([u8; 32], Crypter) {
+        pub fn process_response(
+            &mut self,
+            handshake_response: &[u8],
+        ) -> ([u8; SHA256_OUTPUT_LEN], Crypter) {
             let peer_public_key_bytes = &handshake_response[..P256_X962_LENGTH];
             let ciphertext = &handshake_response[P256_X962_LENGTH..];
 
