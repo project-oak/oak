@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,18 +18,20 @@
 #[allow(unused_imports)] // Macros only used in tests.
 #[macro_use]
 
+mod crypto_wrapper;
 mod error;
 mod noise;
-mod crypto_wrapper;
+#[cfg(test)]
+mod tests;
 
 use alloc::vec::Vec;
 use core::result::Result;
 
-pub use crate::noise::crypto_wrapper::{
+pub use crate::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar,
 };
-use crate::noise::{
+use crate::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise, NONCE_LEN},
 };
@@ -225,42 +227,6 @@ pub mod test_client {
             assert_eq!(plaintext.len(), 0);
             let (write_key, read_key) = self.noise.traffic_keys();
             (self.noise.handshake_hash(), Crypter::new(&read_key, &write_key))
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use alloc::vec;
-
-    use super::{test_client::HandshakeInitiator, *};
-
-    #[test]
-    fn process_handshake() {
-        let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
-        let identity_priv = P256Scalar::generate();
-        let identity_pub_bytes = identity_priv.compute_public_key();
-        let mut initiator = HandshakeInitiator::new(&identity_pub_bytes);
-        let message = initiator.build_initial_message();
-        let handshake_response = respond(identity_priv.bytes().as_slice(), &message).unwrap();
-        let mut enclave_crypter = handshake_response.crypter;
-
-        let (client_hash, mut client_crypter) =
-            initiator.process_response(&handshake_response.response);
-        assert_eq!(&client_hash, &handshake_response.handshake_hash);
-
-        // Client -> Enclave encrypt+decrypt
-        for message in &test_messages {
-            let ciphertext = client_crypter.encrypt(message).unwrap();
-            let plaintext = enclave_crypter.decrypt(&ciphertext).unwrap();
-            assert_eq!(message, &plaintext);
-        }
-
-        // Enclave -> Client encrypt+decrypt
-        for message in &test_messages {
-            let ciphertext = enclave_crypter.encrypt(message).unwrap();
-            let plaintext = client_crypter.decrypt(&ciphertext).unwrap();
-            assert_eq!(message, &plaintext);
         }
     }
 }

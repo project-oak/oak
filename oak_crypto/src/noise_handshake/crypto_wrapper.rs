@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This was copied from Chromium's third_party/cloud_authenticator, which has
-//! compatible copyright and ownership (Apache 2.0, Google).
-//!
 //! The original code supported multiple back-end crypto libraries, but was
 //! heavily influenced by the first: Ring.  The result was a bit hackish, and
 //! should be cleaned up.
@@ -30,14 +27,14 @@ pub const P256_X962_LENGTH: usize = 65;
 /// The length of a P-256 scalar value.
 pub const P256_SCALAR_LENGTH: usize = 32;
 
-use crate::noise::crypto_wrapper::ecdsa::signature::Verifier;
+use crate::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 
-extern crate aes_gcm;
-extern crate ecdsa;
-extern crate hkdf;
-extern crate pkcs8;
-extern crate primeorder;
-extern crate sha2;
+use aes_gcm;
+use ecdsa;
+use hkdf;
+use pkcs8;
+use primeorder;
+use sha2;
 
 use alloc::vec::Vec;
 

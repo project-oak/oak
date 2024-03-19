@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This was copied from Chromium's third_party/cloud_authenticator, which has
-//! compatible copyright and ownership (Apache 2.0, Google).
-
 use alloc::vec::Vec;
 
-use crate::noise::{error::Error, crypto_wrapper};
+use crate::noise_handshake::{error::Error, crypto_wrapper};
 
 const SYMMETRIC_KEY_SIZE: usize = 32;
 pub const NONCE_LEN: usize = 12;
@@ -41,7 +38,7 @@ fn hkdf2(
     (key1, key2)
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct Noise {
     chaining_key: [u8; SYMMETRIC_KEY_SIZE],
     h: [u8; SYMMETRIC_KEY_SIZE],
