@@ -26,8 +26,8 @@
             };
           };
           linux_kernel_upstream = builtins.fetchurl {
-            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.6.tar.xz";
-            sha256 = "1lrp7pwnxnqyy8c2l4n4nz997039gbnssrfm8ss8kl3h2c7fr2g4";
+            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.33.tar.xz";
+            sha256 = "1kfj7mi3n2lfaw4spz5cbvcl1md038figabyg80fha3kxal6nzdq";
           };
           # TODO: b/328294742 - This derivation does not currently compile correctly, but it is a starting point.
           oak_containers_kernel = pkgs.stdenv.mkDerivation {
