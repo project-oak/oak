@@ -94,6 +94,11 @@ impl Crypter {
             return Err(Error::DataTooLarge(padded_size));
         }
         padded_size += 1; // padding-length byte
+        // This is standard low-level bit manipulation to round up to the nearest multiple of
+        // PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a power of 2, so we compute the
+        // mask with !(PADDING_GRANULARITY - 1).  If padded_size is not already a multiple of
+        // PADDING_GRANULARITY, then padded_size will not change.  Otherwise, it is rounded up to
+        // the next multiple of PADDED_GRANULARITY.
         padded_size = (padded_size + PADDING_GRANULARITY - 1) & !(PADDING_GRANULARITY - 1);
 
         let mut padded_encrypt_data = Vec::with_capacity(padded_size);
