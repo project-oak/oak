@@ -44,7 +44,7 @@ vc_handler:
     pop %ebx              # get the error code
     cmp $0x72, %ebx       # is this about CPUID?
     jne 2f                # if not, skip ahead and crash
-    pop %ebx              # get the instruction pointer
+    mov (%esp), %ebx      # get the instruction pointer
     cmpw $0xa20f, (%ebx)  # was this really a CPUID instruction?
     jne 2f                # if not it might be injected by the hypervisor, skip ahead and crash
     cmp $0x0, %ecx        # are we asked for a CPUID subleaf?
