@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["EMPTY_ASSOCIATED_DATA"],"mod":["encryption_key","encryptor","hpke","proto","signer","verifier"]};
+window.SIDEBAR_ITEMS = {"constant":["EMPTY_ASSOCIATED_DATA"],"mod":["encryption_key","encryptor","hpke","noise_handshake","proto","signer","verifier"]};
