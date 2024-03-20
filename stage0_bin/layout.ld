@@ -86,14 +86,14 @@ SECTIONS {
 
     .bss (NOLOAD) : {
         bss_start = .;
-        *(.bss .bss.*)
+        *(.bss .bss.* .lbss.*)
         bss_size = . - bss_start;
     } > ram_low
 
     .data : 
     AT ( ADDR (.text) + SIZEOF (.text) ) {
         data_start = .;
-        *(.data .data.*)
+        *(.data .data.* .ldata.*)
         data_size = . - data_start;
     } > ram_low
 
@@ -118,11 +118,11 @@ SECTIONS {
     . = ORIGIN(bios);
 
     .rodata : {
-        KEEP(*(.rodata .rodata.*))
+        KEEP(*(.rodata .rodata.* .lrodata.*))
     } > bios
 
     .text : {
-        *(.text .text.*)
+        *(.text .text.* .ltext.*)
         text_end = .;
     } > bios
 
