@@ -109,3 +109,6 @@ toolchain/toolchain.tar.bz2
 
 # Python environment
 **/.venv/
+
+# Nix outputs
+result
