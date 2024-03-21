@@ -42,12 +42,22 @@ message AttestationResults {
 
   // Contains the verified public key for encryption whenever the status
   // indicates success. The key is serialized as an X25519 octet string.
-  bytes encryption_public_key = 3;
+  //
+  // Deprecated: will be replaced by the
+  // `extracted_evidence.encryption_public_key` field. For now both are
+  // populated.
+  bytes encryption_public_key = 3 [deprecated = true];
 
   // Contains the verified public key for signing whenever the status
   // indicates success. The key is serialized using the SEC 1
   // Elliptic-Curve-Point-to-Octet-String conversion.
-  bytes signing_public_key = 4;
+  //
+  // Deprecated: will be replaced by the `extracted_evidence.signing_public_key`
+  // field. For now both are populated.
+  bytes signing_public_key = 4 [deprecated = true];
+
+  // Contains the evidence values whenever the status indicates success.
+  ExtractedEvidence extracted_evidence = 5;
 }
 
 // Evidence values extracted from attestation evidence during verification.

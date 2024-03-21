@@ -76,10 +76,12 @@ pub fn to_attestation_results(
     verify_result: &anyhow::Result<ExtractedEvidence>,
 ) -> AttestationResults {
     match verify_result {
+        #[allow(deprecated)]
         Ok(extracted_evidence) => AttestationResults {
             status: Status::Success.into(),
             encryption_public_key: extracted_evidence.encryption_public_key.clone(),
             signing_public_key: extracted_evidence.signing_public_key.clone(),
+            extracted_evidence: Some(extracted_evidence.clone()),
             ..Default::default()
         },
         Err(err) => AttestationResults {
