@@ -208,6 +208,9 @@
             };
             # Shell for container kernel image provenance workflow.
             bzImageProvenance = with pkgs; mkShell {
+              shellHook = ''
+                export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+              '';
               inputsFrom = [
                 rust
               ];
