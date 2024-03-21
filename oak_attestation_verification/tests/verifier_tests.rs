@@ -142,7 +142,6 @@ fn create_containers_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        firmware_version: None,
         min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
@@ -183,7 +182,6 @@ fn create_rk_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        firmware_version: None,
         min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
@@ -319,6 +317,32 @@ fn verify_fails_with_manipulated_root_public_key() {
     evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
     let endorsements = create_containers_endorsements();
     let reference_values = create_containers_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_fails_with_unsupported_tcb_version() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let mut reference_values = create_containers_reference_values();
+
+    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0 };
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
+                Some(tcb_version);
+        }
+        Some(_) => {}
+        None => {}
+    };
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
