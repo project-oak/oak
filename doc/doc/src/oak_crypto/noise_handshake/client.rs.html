@@ -76,6 +76,18 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -105,30 +117,42 @@
 
 <span class="kw">pub struct </span>HandshakeInitiator {
     noise: Noise,
-    identity_pub_key: [u8; P256_X962_LEN],
+    identity_pub_key: <span class="prelude-ty">Option</span>&lt;[u8; P256_X962_LEN]&gt;,
     ephemeral_priv_key: P256Scalar,
 }
 
 <span class="kw">impl </span>HandshakeInitiator {
-    <span class="kw">pub fn </span>new(peer_public_key: <span class="kw-2">&amp;</span>[u8; P256_X962_LEN]) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new_nk(peer_public_key: <span class="kw-2">&amp;</span>[u8; P256_X962_LEN]) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             noise: Noise::new(HandshakeType::Nk),
-            identity_pub_key: <span class="kw-2">*</span>peer_public_key,
+            identity_pub_key: <span class="prelude-val">Some</span>(<span class="kw-2">*</span>peer_public_key),
+            ephemeral_priv_key: P256Scalar::generate(),
+        }
+    }
+
+    <span class="kw">pub fn </span>new_nn() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            noise: Noise::new(HandshakeType::Nn),
+            identity_pub_key: <span class="prelude-val">None</span>,
             ephemeral_priv_key: P256Scalar::generate(),
         }
     }
 
     <span class="kw">pub fn </span>build_initial_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
         <span class="self">self</span>.noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]);
-        <span class="self">self</span>.noise.mix_hash_point(<span class="self">self</span>.identity_pub_key.as_slice());
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(identity_pub_key) = <span class="self">self</span>.identity_pub_key {
+            <span class="self">self</span>.noise.mix_hash_point(identity_pub_key.as_slice());
+        }
         <span class="kw">let </span>ephemeral_pub_key = <span class="self">self</span>.ephemeral_priv_key.compute_public_key();
         <span class="kw">let </span>ephemeral_pub_key_bytes = ephemeral_pub_key.as_ref();
 
         <span class="self">self</span>.noise.mix_hash(ephemeral_pub_key_bytes);
         <span class="self">self</span>.noise.mix_key(ephemeral_pub_key_bytes);
-        <span class="kw">let </span>es_ecdh_bytes =
-            p256_scalar_mult(<span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key, <span class="kw-2">&amp;</span><span class="self">self</span>.identity_pub_key).unwrap();
-        <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>es_ecdh_bytes);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(identity_pub_key) = <span class="self">self</span>.identity_pub_key {
+            <span class="kw">let </span>es_ecdh_bytes =
+                p256_scalar_mult(<span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key, <span class="kw-2">&amp;</span>identity_pub_key).unwrap();
+            <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>es_ecdh_bytes);
+        }
 
         <span class="kw">let </span>ciphertext = <span class="self">self</span>.noise.encrypt_and_hash(<span class="kw-2">&amp;</span>[]);
         [ephemeral_pub_key_bytes, <span class="kw-2">&amp;</span>ciphertext].concat()

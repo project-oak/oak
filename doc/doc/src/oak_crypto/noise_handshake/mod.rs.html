@@ -195,6 +195,28 @@
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -337,7 +359,7 @@
     <span class="kw">pub </span>response: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Performs the Responder side of the Noise protocol with the NK pattern.
+<span class="doccomment">/// Performs the Responder side of the Noise protocol with the NK or NN pattern.
 /// |identity_private_key_bytes| contains the private key scalar for the
 /// service&#39;s provisioned identity. |in_data| is provided by the Initiator and
 /// contains its ephemeral public key and encrypted payload.
@@ -346,7 +368,7 @@
 /// alternatively be stored separately to reduce computation if needed to
 /// reduce per-transaction computation.
 /// See https://noiseexplorer.com/patterns/NK/
-</span><span class="kw">pub fn </span>respond(identity_private_key_bytes: <span class="kw-2">&amp;</span>[u8], in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
+</span><span class="kw">pub fn </span>respond_nk(identity_private_key_bytes: <span class="kw-2">&amp;</span>[u8], in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
     <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
     }
@@ -354,10 +376,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
 
+    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
     </span><span class="kw">let </span>identity_scalar: P256Scalar =
         identity_private_key_bytes.try_into().map_err(|<span class="kw">_</span>| Error::InvalidPrivateKey)<span class="question-mark">?</span>;
     <span class="kw">let </span>identity_pub = identity_scalar.compute_public_key();
-
     noise.mix_hash_point(identity_pub.as_slice());
 
     <span class="comment">// unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
@@ -368,7 +390,29 @@
     <span class="kw">let </span>es_ecdh_bytes = crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span>identity_scalar, <span class="kw-2">&amp;</span>peer_pub)
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(es_ecdh_bytes.as_slice());
+    finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>peer_pub)
+}
 
+<span class="kw">pub fn </span>respond_nn(in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
+    <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
+    }
+
+    <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nn);
+    noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
+
+    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
+    </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
+    noise.mix_hash(peer_pub.as_slice());
+    noise.mix_key(peer_pub.as_slice());
+    finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>peer_pub)
+}
+
+<span class="kw">fn </span>finish_response(
+    noise: <span class="kw-2">&amp;mut </span>Noise,
+    in_data: <span class="kw-2">&amp;</span>[u8],
+    peer_pub: <span class="kw-2">&amp;</span>[u8; P256_X962_LEN],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
     <span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>in_data[P256_X962_LEN..])<span class="question-mark">?</span>;
     <span class="kw">if </span>!plaintext.is_empty() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
@@ -379,7 +423,7 @@
     <span class="kw">let </span>ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
     noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
     noise.mix_key(ephemeral_pub_key_bytes.as_slice());
-    <span class="kw">let </span>ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span>ephemeral_priv, <span class="kw-2">&amp;</span>peer_pub)
+    <span class="kw">let </span>ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span>ephemeral_priv, peer_pub)
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(ee_ecdh_bytes.as_slice());
 
