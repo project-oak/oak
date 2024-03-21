@@ -83,7 +83,7 @@ pub fn to_attestation_results(
         },
         Err(err) => AttestationResults {
             status: Status::GenericFailure.into(),
-            reason: format!("{:#}?", err),
+            reason: format!("{:#?}", err),
             ..Default::default()
         },
     }
