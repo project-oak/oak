@@ -406,7 +406,6 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -645,7 +644,6 @@
     }
 
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
-    <span class="kw">let </span>cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
 
     <span class="kw">let </span>kernel_info =
         kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -712,7 +710,7 @@
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: sha2-256:{}&quot;</span>, hex::encode(setup_data_sha2_256_digest));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>, hex::encode(cmdline_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel command-line: {}&quot;</span>, cmdline);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: sha2-256:{}&quot;</span>, hex::encode(ram_disk_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: sha2-256:{}&quot;</span>, hex::encode(acpi_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: sha2-256:{}&quot;</span>, hex::encode(memory_map_sha2_256_digest));
@@ -720,7 +718,7 @@
     <span class="kw">let </span>measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
         kernel_sha2_256_digest: kernel_info.measurement,
-        cmdline_sha2_256_digest,
+        cmdline: cmdline.clone(),
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,

@@ -825,6 +825,9 @@
 <a href="#825" id="825">825</a>
 <a href="#826" id="826">826</a>
 <a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1260,9 +1263,10 @@
     <span class="doccomment">/// Verifies the kernel based on endorsement.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;KernelBinaryReferenceValue&gt;,
-    <span class="doccomment">/// Verifies the command line by which the kernel was built. The command
-    /// line is treated as a binary blob, as if it were a binary.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="doccomment">/// No longer used. Will be removed.
+    /// TODO: b/325979696 - Validate the kernel command-line using a regex.
+    </span><span class="attr">#[deprecated]
+    #[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;BinaryReferenceValue&gt;,
     <span class="doccomment">/// Fields are deprecated and kept only for backwards compatibility.
     /// Remove ASAP.
@@ -1576,7 +1580,9 @@
     </span><span class="kw">pub </span>kernel_setup_data: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
     <span class="doccomment">/// Measured digests of the command-line that was passed to the kernel
     /// during startup.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    /// TODO: b/325979696 - Validate the kernel command-line using a regex.
+    </span><span class="attr">#[deprecated]
+    #[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
     <span class="doccomment">/// Measured digests of the initial RAM disk.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]

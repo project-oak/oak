@@ -957,16 +957,6 @@
 <a href="#957" id="957">957</a>
 <a href="#958" id="958">958</a>
 <a href="#959" id="959">959</a>
-<a href="#960" id="960">960</a>
-<a href="#961" id="961">961</a>
-<a href="#962" id="962">962</a>
-<a href="#963" id="963">963</a>
-<a href="#964" id="964">964</a>
-<a href="#965" id="965">965</a>
-<a href="#966" id="966">966</a>
-<a href="#967" id="967">967</a>
-<a href="#968" id="968">968</a>
-<a href="#969" id="969">969</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -993,10 +983,9 @@
 <span class="kw">use </span>oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    SYSTEM_IMAGE_LAYER_ID,
+    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_LAYER_ID,
+    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
@@ -1442,18 +1431,9 @@
     )
     .context(<span class="string">&quot;kernel failed verification&quot;</span>)<span class="question-mark">?</span>;
 
-    verify_measurement_digest(
-        values.kernel_cmd_line.as_ref().context(<span class="string">&quot;no kernel command-line evidence value&quot;</span>)<span class="question-mark">?</span>,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
-        reference_values
-            .kernel_cmd_line
-            .as_ref()
-            .context(<span class="string">&quot;no kernel command-line reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;kernel command-line failed verification&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// TODO: b/325979696 - Validate the kernel command-line using a regex.
 
-    verify_measurement_digest(
+    </span>verify_measurement_digest(
         values.init_ram_fs.as_ref().context(<span class="string">&quot;no initial RAM disk evidence value&quot;</span>)<span class="question-mark">?</span>,
         now_utc_millis,
         endorsements.and_then(|value| value.init_ram_fs.as_ref()),
@@ -1835,15 +1815,15 @@
     <span class="kw">let </span>kernel_image = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>kernel_setup_data =
         <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="kw">let </span>kernel_cmd_line =
-        <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
+    <span class="comment">// TODO: b/325979696 - Extract raw kernel command-line.
+    </span><span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>memory_map = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>acpi = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(KernelLayerData {
+    <span class="attr">#[allow(deprecated)]
+    </span><span class="prelude-val">Ok</span>(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
+        kernel_cmd_line: <span class="prelude-val">None</span>,
         init_ram_fs,
         memory_map,
         acpi,
