@@ -24,10 +24,9 @@ use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    SYSTEM_IMAGE_LAYER_ID,
+    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_LAYER_ID,
+    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -473,16 +472,7 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    verify_measurement_digest(
-        values.kernel_cmd_line.as_ref().context("no kernel command-line evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
-        reference_values
-            .kernel_cmd_line
-            .as_ref()
-            .context("no kernel command-line reference value")?,
-    )
-    .context("kernel command-line failed verification")?;
+    // TODO: b/325979696 - Validate the kernel command-line using a regex.
 
     verify_measurement_digest(
         values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
@@ -866,15 +856,15 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
-    let kernel_cmd_line =
-        Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
+    // TODO: b/325979696 - Extract raw kernel command-line.
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
+    #[allow(deprecated)]
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
+        kernel_cmd_line: None,
         init_ram_fs,
         memory_map,
         acpi,
