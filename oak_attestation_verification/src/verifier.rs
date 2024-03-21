@@ -340,7 +340,8 @@ fn verify_amd_sev_attestation_report(
     // generated in VMPL0.
     anyhow::ensure!(
         attestation_report_values.vmpl == 0,
-        "attestation report was not generated from VMPL 0"
+        "attestation report was not generated from VMPL {}, not VMPL 0",
+        attestation_report_values.vmpl
     );
 
     if !reference_values.allow_debug && attestation_report_values.debug {
