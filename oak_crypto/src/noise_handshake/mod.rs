@@ -18,6 +18,7 @@
 #[allow(unused_imports)] // Macros only used in tests.
 #[macro_use]
 
+pub mod client;
 mod crypto_wrapper;
 mod error;
 mod noise;
@@ -30,7 +31,7 @@ use core::result::Result;
 pub use crate::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
-    SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
+    P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
 };
 use crate::noise_handshake::{
     error::Error,
@@ -39,9 +40,6 @@ use crate::noise_handshake::{
 
 // This is assumed to be vastly larger than any connection will ever reach.
 const MAX_SEQUENCE: u32 = 1u32 << 24;
-
-/// The length of an uncompressed, X9.62 encoding of a P-256 point.
-pub const P256_X962_LENGTH: usize = 65;
 
 pub struct Nonce {
     nonce: u32,
@@ -152,7 +150,7 @@ pub struct Response {
 /// reduce per-transaction computation.
 /// See https://noiseexplorer.com/patterns/NK/
 pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Response, Error> {
-    if in_data.len() < P256_X962_LENGTH {
+    if in_data.len() < P256_X962_LEN {
         return Err(Error::InvalidHandshake);
     }
 
@@ -166,7 +164,7 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
     noise.mix_hash_point(identity_pub.as_slice());
 
     // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    let peer_pub: [u8; P256_X962_LENGTH] = (&in_data[..P256_X962_LENGTH]).try_into().unwrap();
+    let peer_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
     noise.mix_hash(peer_pub.as_slice());
     noise.mix_key(peer_pub.as_slice());
 
@@ -174,7 +172,7 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
         .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(es_ecdh_bytes.as_slice());
 
-    let plaintext = noise.decrypt_and_hash(&in_data[P256_X962_LENGTH..])?;
+    let plaintext = noise.decrypt_and_hash(&in_data[P256_X962_LEN..])?;
     if !plaintext.is_empty() {
         return Err(Error::InvalidHandshake);
     }
@@ -196,63 +194,4 @@ pub fn respond(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Resp
         handshake_hash: noise.handshake_hash(),
         response: [ephemeral_pub_key_bytes.as_slice(), &response_ciphertext].concat(),
     })
-}
-
-pub mod test_client {
-    use super::*;
-
-    pub struct HandshakeInitiator {
-        noise: Noise,
-        identity_pub_key: [u8; P256_X962_LENGTH],
-        ephemeral_priv_key: P256Scalar,
-    }
-
-    impl HandshakeInitiator {
-        pub fn new(peer_public_key: &[u8; P256_X962_LENGTH]) -> Self {
-            Self {
-                noise: Noise::new(HandshakeType::Nk),
-                identity_pub_key: *peer_public_key,
-                ephemeral_priv_key: P256Scalar::generate(),
-            }
-        }
-
-        pub fn build_initial_message(&mut self) -> Vec<u8> {
-            self.noise.mix_hash(&[0; 1]);
-            self.noise.mix_hash_point(self.identity_pub_key.as_slice());
-            let ephemeral_pub_key = self.ephemeral_priv_key.compute_public_key();
-            let ephemeral_pub_key_bytes = ephemeral_pub_key.as_ref();
-
-            self.noise.mix_hash(ephemeral_pub_key_bytes);
-            self.noise.mix_key(ephemeral_pub_key_bytes);
-            let es_ecdh_bytes =
-                crypto_wrapper::p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key)
-                    .unwrap();
-            self.noise.mix_key(&es_ecdh_bytes);
-
-            let ciphertext = self.noise.encrypt_and_hash(&[]);
-            [ephemeral_pub_key_bytes, &ciphertext].concat()
-        }
-
-        pub fn process_response(
-            &mut self,
-            handshake_response: &[u8],
-        ) -> ([u8; SHA256_OUTPUT_LEN], Crypter) {
-            let peer_public_key_bytes = &handshake_response[..P256_X962_LENGTH];
-            let ciphertext = &handshake_response[P256_X962_LENGTH..];
-
-            let ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(
-                &self.ephemeral_priv_key,
-                peer_public_key_bytes.try_into().unwrap(),
-            )
-            .unwrap();
-            self.noise.mix_hash(peer_public_key_bytes);
-            self.noise.mix_key(peer_public_key_bytes);
-            self.noise.mix_key(&ee_ecdh_bytes);
-
-            let plaintext = self.noise.decrypt_and_hash(ciphertext).unwrap();
-            assert_eq!(plaintext.len(), 0);
-            let (write_key, read_key) = self.noise.traffic_keys();
-            (self.noise.handshake_hash(), Crypter::new(&read_key, &write_key))
-        }
-    }
 }
