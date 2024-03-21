@@ -32,8 +32,8 @@ use oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
         verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
-        KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
-        MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
+        KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+        SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
@@ -49,8 +49,8 @@ type DerivedKey = [u8; 32];
 pub struct Measurements {
     /// The measurement of the kernel image.
     pub kernel_sha2_256_digest: [u8; 32],
-    /// The measurement of the kernel command-line.
-    pub cmdline_sha2_256_digest: [u8; 32],
+    /// The raw kernel command-line.
+    pub cmdline: String,
     /// The measurement of the kernel setup data.
     pub setup_data_sha2_256_digest: [u8; 32],
     /// The measurement of the initial RAM disk.
@@ -81,10 +81,10 @@ fn generate_stage1_certificate(
                 )]),
             ),
             (
-                Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                Value::Integer(KERNEL_COMMANDLINE_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
+                    Value::Text(measurements.cmdline.clone()),
                 )]),
             ),
             (
@@ -182,7 +182,7 @@ pub fn generate_dice_data<
     // setup data and the initial RAM disk when deriving the CDI for Layer 1.
     let mut salt: Vec<u8> = Vec::with_capacity(128);
     salt.extend_from_slice(&measurements.kernel_sha2_256_digest[..]);
-    salt.extend_from_slice(&measurements.cmdline_sha2_256_digest[..]);
+    salt.extend_from_slice(measurements.cmdline.as_bytes());
     salt.extend_from_slice(&measurements.setup_data_sha2_256_digest[..]);
     salt.extend_from_slice(&measurements.ram_disk_sha2_256_digest[..]);
     let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);

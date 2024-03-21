@@ -128,9 +128,10 @@ message KernelLayerReferenceValues {
   // Verifies the kernel based on endorsement.
   KernelBinaryReferenceValue kernel = 1;
 
-  // Verifies the command line by which the kernel was built. The command
-  // line is treated as a binary blob, as if it were a binary.
-  BinaryReferenceValue kernel_cmd_line = 2;
+  // No longer used. Will be removed.
+  // TODO: b/325979696 - Validate the kernel command-line using a regular
+  // expression.
+  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
 
   // Fields are deprecated and kept only for backwards compatibility.
   // Remove ASAP.
