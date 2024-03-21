@@ -43,7 +43,10 @@ gp_handler:
 vc_handler:
     pop %ebx              # get the error code
     cmp $0x72, %ebx       # is this about CPUID?
-    jne 2f                # if not, skip ahead
+    jne 2f                # if not, skip ahead and crash
+    mov (%esp), %ebx      # get the instruction pointer
+    cmpw $0xa20f, (%ebx)  # was this really a CPUID instruction?
+    jne 2f                # if not it might be injected by the hypervisor, skip ahead and crash
     cmp $0x0, %ecx        # are we asked for a CPUID subleaf?
     jne 2f                # if yes, skip ahead, as we don't support subleaves
     # Use the GHCB MSR protocol to request one page of CPUID information. The protocol itself is

@@ -236,7 +236,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
-    let cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
 
     let kernel_info =
         kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -303,7 +302,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
-    log::debug!("Kernel image digest: sha2-256:{}", hex::encode(cmdline_sha2_256_digest));
+    log::debug!("Kernel command-line: {}", cmdline);
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
@@ -311,7 +310,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
         kernel_sha2_256_digest: kernel_info.measurement,
-        cmdline_sha2_256_digest,
+        cmdline: cmdline.clone(),
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,

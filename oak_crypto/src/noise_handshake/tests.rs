@@ -15,7 +15,7 @@
 #[cfg(test)]
 use alloc::vec;
 
-use crate::noise_handshake::{respond, test_client::HandshakeInitiator, P256Scalar};
+use crate::noise_handshake::{client::HandshakeInitiator, respond, P256Scalar};
 
 #[test]
 fn process_handshake() {
