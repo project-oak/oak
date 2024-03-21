@@ -813,6 +813,18 @@
 <a href="#813" id="813">813</a>
 <a href="#814" id="814">814</a>
 <a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1381,13 +1393,25 @@
     </span><span class="kw">pub </span>reason: ::prost::alloc::string::String,
     <span class="doccomment">/// Contains the verified public key for encryption whenever the status
     /// indicates success. The key is serialized as an X25519 octet string.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
+    ///
+    /// Deprecated: will be replaced by the
+    /// `extracted_evidence.encryption_public_key` field. For now both are
+    /// populated.
+    </span><span class="attr">#[deprecated]
+    #[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>encryption_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="doccomment">/// Contains the verified public key for signing whenever the status
     /// indicates success. The key is serialized using the SEC 1
     /// Elliptic-Curve-Point-to-Octet-String conversion.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    ///
+    /// Deprecated: will be replaced by the `extracted_evidence.signing_public_key`
+    /// field. For now both are populated.
+    </span><span class="attr">#[deprecated]
+    #[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>signing_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Contains the evidence values whenever the status indicates success.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    </span><span class="kw">pub </span>extracted_evidence: ::core::option::Option&lt;ExtractedEvidence&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `AttestationResults`.
 </span><span class="kw">pub mod </span>attestation_results {
