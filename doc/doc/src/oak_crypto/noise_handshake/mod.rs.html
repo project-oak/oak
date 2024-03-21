@@ -195,67 +195,6 @@
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
@@ -276,7 +215,8 @@
 </span><span class="attr">#[allow(unused_imports)] </span><span class="comment">// Macros only used in tests.
 </span><span class="attr">#[macro_use]
 
-</span><span class="kw">mod </span>crypto_wrapper;
+</span><span class="kw">pub mod </span>client;
+<span class="kw">mod </span>crypto_wrapper;
 <span class="kw">mod </span>error;
 <span class="kw">mod </span>noise;
 <span class="attr">#[cfg(test)]
@@ -288,7 +228,7 @@
 <span class="kw">pub use </span><span class="kw">crate</span>::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
-    SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
+    P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
 };
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
     error::Error,
@@ -297,9 +237,6 @@
 
 <span class="comment">// This is assumed to be vastly larger than any connection will ever reach.
 </span><span class="kw">const </span>MAX_SEQUENCE: u32 = <span class="number">1u32 </span>&lt;&lt; <span class="number">24</span>;
-
-<span class="doccomment">/// The length of an uncompressed, X9.62 encoding of a P-256 point.
-</span><span class="kw">pub const </span>P256_X962_LENGTH: usize = <span class="number">65</span>;
 
 <span class="kw">pub struct </span>Nonce {
     nonce: u32,
@@ -410,7 +347,7 @@
 /// reduce per-transaction computation.
 /// See https://noiseexplorer.com/patterns/NK/
 </span><span class="kw">pub fn </span>respond(identity_private_key_bytes: <span class="kw-2">&amp;</span>[u8], in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
-    <span class="kw">if </span>in_data.len() &lt; P256_X962_LENGTH {
+    <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
     }
 
@@ -424,7 +361,7 @@
     noise.mix_hash_point(identity_pub.as_slice());
 
     <span class="comment">// unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LENGTH] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LENGTH]).try_into().unwrap();
+    </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
     noise.mix_hash(peer_pub.as_slice());
     noise.mix_key(peer_pub.as_slice());
 
@@ -432,7 +369,7 @@
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(es_ecdh_bytes.as_slice());
 
-    <span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>in_data[P256_X962_LENGTH..])<span class="question-mark">?</span>;
+    <span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>in_data[P256_X962_LEN..])<span class="question-mark">?</span>;
     <span class="kw">if </span>!plaintext.is_empty() {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
     }
@@ -454,64 +391,5 @@
         handshake_hash: noise.handshake_hash(),
         response: [ephemeral_pub_key_bytes.as_slice(), <span class="kw-2">&amp;</span>response_ciphertext].concat(),
     })
-}
-
-<span class="kw">pub mod </span>test_client {
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
-
-    <span class="kw">pub struct </span>HandshakeInitiator {
-        noise: Noise,
-        identity_pub_key: [u8; P256_X962_LENGTH],
-        ephemeral_priv_key: P256Scalar,
-    }
-
-    <span class="kw">impl </span>HandshakeInitiator {
-        <span class="kw">pub fn </span>new(peer_public_key: <span class="kw-2">&amp;</span>[u8; P256_X962_LENGTH]) -&gt; <span class="self">Self </span>{
-            <span class="self">Self </span>{
-                noise: Noise::new(HandshakeType::Nk),
-                identity_pub_key: <span class="kw-2">*</span>peer_public_key,
-                ephemeral_priv_key: P256Scalar::generate(),
-            }
-        }
-
-        <span class="kw">pub fn </span>build_initial_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-            <span class="self">self</span>.noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]);
-            <span class="self">self</span>.noise.mix_hash_point(<span class="self">self</span>.identity_pub_key.as_slice());
-            <span class="kw">let </span>ephemeral_pub_key = <span class="self">self</span>.ephemeral_priv_key.compute_public_key();
-            <span class="kw">let </span>ephemeral_pub_key_bytes = ephemeral_pub_key.as_ref();
-
-            <span class="self">self</span>.noise.mix_hash(ephemeral_pub_key_bytes);
-            <span class="self">self</span>.noise.mix_key(ephemeral_pub_key_bytes);
-            <span class="kw">let </span>es_ecdh_bytes =
-                crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key, <span class="kw-2">&amp;</span><span class="self">self</span>.identity_pub_key)
-                    .unwrap();
-            <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>es_ecdh_bytes);
-
-            <span class="kw">let </span>ciphertext = <span class="self">self</span>.noise.encrypt_and_hash(<span class="kw-2">&amp;</span>[]);
-            [ephemeral_pub_key_bytes, <span class="kw-2">&amp;</span>ciphertext].concat()
-        }
-
-        <span class="kw">pub fn </span>process_response(
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            handshake_response: <span class="kw-2">&amp;</span>[u8],
-        ) -&gt; ([u8; SHA256_OUTPUT_LEN], Crypter) {
-            <span class="kw">let </span>peer_public_key_bytes = <span class="kw-2">&amp;</span>handshake_response[..P256_X962_LENGTH];
-            <span class="kw">let </span>ciphertext = <span class="kw-2">&amp;</span>handshake_response[P256_X962_LENGTH..];
-
-            <span class="kw">let </span>ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(
-                <span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key,
-                peer_public_key_bytes.try_into().unwrap(),
-            )
-            .unwrap();
-            <span class="self">self</span>.noise.mix_hash(peer_public_key_bytes);
-            <span class="self">self</span>.noise.mix_key(peer_public_key_bytes);
-            <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>ee_ecdh_bytes);
-
-            <span class="kw">let </span>plaintext = <span class="self">self</span>.noise.decrypt_and_hash(ciphertext).unwrap();
-            <span class="macro">assert_eq!</span>(plaintext.len(), <span class="number">0</span>);
-            <span class="kw">let </span>(write_key, read_key) = <span class="self">self</span>.noise.traffic_keys();
-            (<span class="self">self</span>.noise.handshake_hash(), Crypter::new(<span class="kw-2">&amp;</span>read_key, <span class="kw-2">&amp;</span>write_key))
-        }
-    }
 }
 </code></pre></div></section></main></body></html>
