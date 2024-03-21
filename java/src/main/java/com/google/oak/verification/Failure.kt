@@ -18,14 +18,4 @@
 package com.google.oak.verification;
 
 /** Signals verification failure and provides a human-readable cause. */
-public class Failure {
-  public Failure(String message) {
-    this.message = message;
-  }
-
-  public String getMessage() {
-    return message;
-  }
-
-  private final String message;
-}
+data class Failure(val message: String)
