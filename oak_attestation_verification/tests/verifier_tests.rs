@@ -28,8 +28,8 @@ use oak_proto_rust::oak::attestation::v1::{
     InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
     KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
     OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringReferenceValue,
-    SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TransparentReleaseEndorsement,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
+    SystemLayerReferenceValues, TcbVersion, TransparentReleaseEndorsement,
 };
 use prost::Message;
 

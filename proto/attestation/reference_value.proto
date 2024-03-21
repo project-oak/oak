@@ -102,10 +102,6 @@ message RootLayerReferenceValues {
 }
 
 message AmdSevReferenceValues {
-  // TBD: Add conditions on all kinds of fields contained in the
-  // attestation report.
-  StringReferenceValue firmware_version = 2;
-
   // Minimum accepted versions of all TCB components.
   TcbVersion min_tcb_version = 5;
 
