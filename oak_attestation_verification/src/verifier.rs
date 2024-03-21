@@ -472,8 +472,7 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    // TODO: b/325979696 - Validate the kernel command-line using a regular
-    // expression.
+    // TODO: b/325979696 - Validate the kernel command-line using a regex.
 
     verify_measurement_digest(
         values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
