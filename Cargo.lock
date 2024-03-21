@@ -2323,6 +2323,7 @@ dependencies = [
  "p256",
  "p384",
  "prost",
+ "regex",
  "rsa",
  "serde",
  "serde_json",
