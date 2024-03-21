@@ -86,7 +86,10 @@ java_proto_library(
 proto_library(
     name = "reference_value_proto",
     srcs = ["reference_value.proto"],
-    deps = ["//proto:digest_proto"],
+    deps = [
+        ":tcb_version_proto",
+        "//proto:digest_proto",
+    ],
 )
 
 cc_proto_library(
@@ -100,9 +103,27 @@ java_proto_library(
 )
 
 proto_library(
+    name = "tcb_version_proto",
+    srcs = ["tcb_version.proto"],
+)
+
+cc_proto_library(
+    name = "tcb_version_cc_proto",
+    deps = [":tcb_version_proto"],
+)
+
+java_proto_library(
+    name = "tcb_version_java_proto",
+    deps = [":tcb_version_proto"],
+)
+
+proto_library(
     name = "verification_proto",
     srcs = ["verification.proto"],
-    deps = ["//proto:digest_proto"],
+    deps = [
+        ":tcb_version_proto",
+        "//proto:digest_proto",
+    ],
 )
 
 cc_proto_library(
@@ -133,6 +154,9 @@ build_test(
         ":reference_value_proto",
         ":reference_value_cc_proto",
         ":reference_value_java_proto",
+        ":tcb_version_proto",
+        ":tcb_version_cc_proto",
+        ":tcb_version_java_proto",
         ":verification_proto",
         ":verification_cc_proto",
         ":verification_java_proto",

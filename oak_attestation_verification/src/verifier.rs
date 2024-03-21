@@ -16,7 +16,7 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -57,7 +57,6 @@ use x509_cert::{
 use zerocopy::FromBytes;
 
 use crate::{
-    alloc::string::ToString,
     amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
@@ -84,7 +83,7 @@ pub fn to_attestation_results(
         },
         Err(err) => AttestationResults {
             status: Status::GenericFailure.into(),
-            reason: err.to_string(),
+            reason: format!("{:#}?", err),
             ..Default::default()
         },
     }
@@ -338,8 +337,38 @@ fn verify_amd_sev_attestation_report(
         anyhow::bail!("debug mode not allowed");
     }
 
-    if reference_values.firmware_version.as_ref().is_some_and(|a| !a.values.is_empty()) {
-        anyhow::bail!("firmware version check needs implementation");
+    match (
+        reference_values.min_tcb_version.as_ref(),
+        attestation_report_values.reported_tcb.as_ref(),
+    ) {
+        (Some(min_tcb_version), Some(reported_tcb_version)) => {
+            if reported_tcb_version.boot_loader < min_tcb_version.boot_loader {
+                anyhow::bail!(format!(
+                    "unsupported boot loader version in the reported TCB: {}",
+                    reported_tcb_version.boot_loader
+                ));
+            }
+            if reported_tcb_version.tee < min_tcb_version.tee {
+                anyhow::bail!(format!(
+                    "unsupported tee version in the reported TCB: {}",
+                    reported_tcb_version.tee
+                ));
+            }
+            if reported_tcb_version.snp < min_tcb_version.snp {
+                anyhow::bail!(format!(
+                    "unsupported snp version in the reported TCB: {}",
+                    reported_tcb_version.snp
+                ));
+            }
+            if reported_tcb_version.microcode < min_tcb_version.microcode {
+                anyhow::bail!(format!(
+                    "unsupported microcode version in the reported TCB: {}",
+                    reported_tcb_version.microcode
+                ));
+            }
+        }
+        (Some(_), None) => anyhow::bail!("no reported TCB version in the attestation report"),
+        (None, _) => {} // Skip, as no min TCB is specified in the reference values
     }
 
     Ok(())
@@ -804,6 +833,12 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
                 snp: report.data.current_tcb.snp.into(),
                 microcode: report.data.current_tcb.microcode.into(),
             });
+            let reported_tcb = Some(TcbVersion {
+                boot_loader: report.data.reported_tcb.boot_loader.into(),
+                tee: report.data.reported_tcb.tee.into(),
+                snp: report.data.reported_tcb.snp.into(),
+                microcode: report.data.reported_tcb.microcode.into(),
+            });
             let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
             let hardware_id = report.data.chip_id.as_ref().to_vec();
             let initial_measurement = report.data.measurement.as_ref().to_vec();
@@ -812,6 +847,7 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             Ok(RootLayerData {
                 report: Some(Report::SevSnp(AmdAttestationReport {
                     current_tcb,
+                    reported_tcb,
                     debug,
                     initial_measurement,
                     hardware_id,
