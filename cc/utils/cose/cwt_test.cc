@@ -38,9 +38,9 @@ using ::testing::ElementsAreArray;
 constexpr absl::string_view kTestEvidencePath =
     "oak_attestation_verification/testdata/oc_evidence.textproto";
 // Public key extracted from the `kTestEvidencePath` `encryption_public_key_certificate`.
-constexpr uint8_t kTestPublicKey[] = {102, 36,  30,  234, 24,  48,  67,  138, 137, 9,   53,
-                                      100, 55,  218, 150, 158, 162, 153, 102, 50,  122, 221,
-                                      158, 192, 60,  160, 145, 168, 196, 66,  81,  90};
+constexpr uint8_t kTestPublicKey[] = {169, 153, 134, 149, 237, 126, 255, 33,  224, 237, 186,
+                                      74,  214, 193, 103, 57,  197, 109, 186, 1,   225, 116,
+                                      71,  4,   227, 236, 105, 90,  14,  138, 10,  91};
 
 class CertificateTest : public testing::Test {
  protected:
