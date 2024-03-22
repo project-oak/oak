@@ -1000,8 +1000,8 @@ fn value_to_string(value: &Value) -> anyhow::Result<String> {
     if let Value::Map(map) = value {
         for (key, measurement) in map.iter() {
             if key == &Value::Integer(SHA2_256_ID.into()) {
-                if let Value::Bytes(text) = measurement {
-                    return Ok(String::from("Weird..."));
+                if let Value::Text(text) = measurement {
+                    return Ok(text.clone());
                 } else {
                     anyhow::bail!("measurement is not a string");
                 }
