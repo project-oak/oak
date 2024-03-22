@@ -1008,6 +1008,42 @@
 <a href="#1008" id="1008">1008</a>
 <a href="#1009" id="1009">1009</a>
 <a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
+<a href="#1020" id="1020">1020</a>
+<a href="#1021" id="1021">1021</a>
+<a href="#1022" id="1022">1022</a>
+<a href="#1023" id="1023">1023</a>
+<a href="#1024" id="1024">1024</a>
+<a href="#1025" id="1025">1025</a>
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1026,7 +1062,7 @@
 
 </span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
-</span><span class="kw">use </span>alloc::{format, vec::Vec};
+</span><span class="kw">use </span>alloc::{format, string::String, vec::Vec};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -1034,31 +1070,34 @@
 <span class="kw">use </span>oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_LAYER_ID,
-    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        root_layer_data::Report, AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys,
-        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-        AttestationResults, BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues,
-        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        Endorsements, Evidence, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
-        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
-        RootLayerEvidence, RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        regex_reference_value, root_layer_data::Report, AmdAttestationReport,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
+        CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
+        FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
+        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RegexReferenceValue, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
         SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>prost::Message;
+<span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -1524,9 +1563,16 @@
     )
     .context(<span class="string">&quot;kernel failed verification&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// TODO: b/325979696 - Validate the kernel command-line using a regex.
+    verify_regex(
+        values.kernel_raw_cmd_line.as_str(),
+        reference_values
+            .kernel_cmd_line_regex
+            .as_ref()
+            .context(<span class="string">&quot;no kernel command line regex reference values&quot;</span>)<span class="question-mark">?</span>,
+    )
+    .context(<span class="string">&quot;kernel command line failed verification&quot;</span>)<span class="question-mark">?</span>;
 
-    </span>verify_measurement_digest(
+    verify_measurement_digest(
         values.init_ram_fs.as_ref().context(<span class="string">&quot;no initial RAM disk evidence value&quot;</span>)<span class="question-mark">?</span>,
         now_utc_millis,
         endorsements.and_then(|value| value.init_ram_fs.as_ref()),
@@ -1742,6 +1788,25 @@
     }
 }
 
+<span class="kw">fn </span>verify_regex(actual: <span class="kw-2">&amp;</span>str, expected: <span class="kw-2">&amp;</span>RegexReferenceValue) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">match </span>expected.r#type.as_ref() {
+        <span class="prelude-val">Some</span>(regex_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(regex_reference_value::Type::Regex(regex)) =&gt; {
+            <span class="kw">let </span>re = Regex::new(regex.value.as_str()).map_err(|msg| {
+                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse regex in the reference value: {msg}&quot;</span>)
+            })<span class="question-mark">?</span>;
+            <span class="kw">if </span>re.is_match(actual) {
+                <span class="prelude-val">Ok</span>(())
+            } <span class="kw">else </span>{
+                <span class="macro">anyhow::bail!</span>(<span class="macro">format!</span>(
+                    <span class="string">&quot;kernel cmd line doesn&#39;t match the reference value: {actual}&quot;
+                </span>))
+            }
+        }
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;missing skip or value in the regex reference value&quot;</span>)),
+    }
+}
+
 <span class="kw">struct </span>ApplicationKeyValues {
     encryption_public_key: Vec&lt;u8&gt;,
     signing_public_key: Vec&lt;u8&gt;,
@@ -1917,15 +1982,22 @@
     <span class="kw">let </span>kernel_image = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>kernel_setup_data =
         <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="comment">// TODO: b/325979696 - Extract raw kernel command-line.
-    </span><span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
+    <span class="kw">let </span>kernel_cmd_line =
+        <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
+    <span class="kw">let </span>kernel_raw_cmd_line = String::from(
+        extract_value(values, KERNEL_COMMANDLINE_ID)<span class="question-mark">?
+            </span>.as_text()
+            .expect(<span class="string">&quot;kernel cmd line CWT value is not a text&quot;</span>),
+    );
+    <span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>memory_map = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>acpi = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="attr">#[allow(deprecated)]
     </span><span class="prelude-val">Ok</span>(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line: <span class="prelude-val">None</span>,
+        kernel_cmd_line,
+        kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
         acpi,
@@ -1995,7 +2067,7 @@
     values
         .iter()
         .find_map(|(key, value)| <span class="kw">if </span>key == <span class="kw-2">&amp;</span>target_key { <span class="prelude-val">Some</span>(value) } <span class="kw">else </span>{ <span class="prelude-val">None </span>})
-        .context(<span class="string">&quot;couldn&#39;t find measurement&quot;</span>)
+        .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t find measurement {label_id}&quot;</span>))
 }
 
 <span class="doccomment">/// Extracts the individual digests from a value that represents a set of
