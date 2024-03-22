@@ -381,7 +381,7 @@ fn verify_amd_sev_attestation_report(
             );
         }
         (Some(_), None) => anyhow::bail!("no reported TCB version in the attestation report"),
-        // TODO(b/330845085): stop accepting missing reference values when all clients are updated.
+        // TODO: b/330845085 - stop accepting missing reference values when all clients are updated.
         (None, _) => {}
     }
 
