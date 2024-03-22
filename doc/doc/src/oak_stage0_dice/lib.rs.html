@@ -224,6 +224,15 @@
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -258,8 +267,8 @@
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
         verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
-        KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
-        SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
+        KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
+        KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
@@ -275,6 +284,8 @@
 </span><span class="kw">pub struct </span>Measurements {
     <span class="doccomment">/// The measurement of the kernel image.
     </span><span class="kw">pub </span>kernel_sha2_256_digest: [u8; <span class="number">32</span>],
+    <span class="doccomment">/// The measurement of the kernel command-line.
+    </span><span class="kw">pub </span>cmdline_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The raw kernel command-line.
     </span><span class="kw">pub </span>cmdline: String,
     <span class="doccomment">/// The measurement of the kernel setup data.
@@ -304,6 +315,13 @@
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
                     Value::Bytes(measurements.kernel_sha2_256_digest.into()),
+                )]),
+            ),
+            (
+                Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                Value::Map(<span class="macro">alloc::vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
                 )]),
             ),
             (
