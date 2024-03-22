@@ -23,14 +23,15 @@ use oak_attestation_verification::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
-        kernel_binary_reference_value, reference_values, regex_reference_value, root_layer_data::Report,
-        AmdSevReferenceValues, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
-        EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, Regex, RegexReferenceValue, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringReferenceValue, SystemLayerEndorsements,
+        kernel_binary_reference_value, reference_values, regex_reference_value,
+        root_layer_data::Report, AmdSevReferenceValues, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Digests, EndorsementReferenceValue, Endorsements, Evidence,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Regex, RegexReferenceValue, RootLayerEndorsements, RootLayerReferenceValues,
+        SkipVerification, StringReferenceValue, SystemLayerEndorsements,
         SystemLayerReferenceValues, TransparentReleaseEndorsement,
     },
     RawDigest,
@@ -162,9 +163,7 @@ fn create_containers_reference_values() -> ReferenceValues {
         kernel_setup_data: Some(skip.clone()),
         kernel_cmd_line: Some(skip.clone()),
         kernel_cmd_line_regex: Some(RegexReferenceValue {
-            r#type: Some(regex_reference_value::Type::Regex(Regex {
-                value: String::from("this will fail"),
-            })),
+            r#type: Some(regex_reference_value::Type::Regex(Regex { value: String::from("^.*$") })),
         }),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
@@ -207,9 +206,7 @@ fn create_rk_reference_values() -> ReferenceValues {
         kernel_setup_data: Some(skip.clone()),
         kernel_cmd_line: Some(skip.clone()),
         kernel_cmd_line_regex: Some(RegexReferenceValue {
-            r#type: Some(regex_reference_value::Type::Regex(Regex {
-                value: String::from("this will fail"),
-            })),
+            r#type: Some(regex_reference_value::Type::Regex(Regex { value: String::from("^.*$") })),
         }),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
@@ -481,6 +478,33 @@ fn verify_fails_with_empty_args() {
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
 
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_fails_with_command_line_reference_value_set() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let mut reference_values = create_rk_reference_values();
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex =
+                Some(RegexReferenceValue {
+                    r#type: Some(regex_reference_value::Type::Regex(Regex {
+                        value: String::from("this will fail"),
+                    })),
+                });
+        }
+        Some(_) => {}
+        None => {}
+    };
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
     assert!(r.is_err());
     assert!(p.status() == Status::GenericFailure);
 }
