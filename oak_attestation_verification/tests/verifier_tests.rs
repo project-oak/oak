@@ -30,8 +30,8 @@ use oak_proto_rust::oak::{
         KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringReferenceValue, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TransparentReleaseEndorsement,
+        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TransparentReleaseEndorsement,
     },
     RawDigest,
 };
@@ -146,7 +146,7 @@ fn create_containers_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        firmware_version: None,
+        min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
         stage0: Some(skip.clone()),
@@ -186,7 +186,7 @@ fn create_rk_reference_values() -> ReferenceValues {
     };
 
     let amd_sev = AmdSevReferenceValues {
-        firmware_version: None,
+        min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
         allow_debug: false,
         // See b/327069120: Do not skip over stage0.
         stage0: Some(skip.clone()),
@@ -316,19 +316,11 @@ fn verify_fails_with_stage0_reference_value_set() {
 }
 
 #[test]
-fn verify_fails_with_firmware_reference_value_set() {
-    let evidence = create_containers_evidence();
+fn verify_fails_with_manipulated_root_public_key() {
+    let mut evidence = create_containers_evidence();
+    evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
     let endorsements = create_containers_endorsements();
-    let mut reference_values = create_containers_reference_values();
-    // Set the firmware version to something.
-    let srv = StringReferenceValue { values: ["whatever".to_owned()].to_vec() };
-    match reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().firmware_version = Some(srv);
-        }
-        Some(_) => {}
-        None => {}
-    };
+    let reference_values = create_containers_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
@@ -341,11 +333,20 @@ fn verify_fails_with_firmware_reference_value_set() {
 }
 
 #[test]
-fn verify_fails_with_manipulated_root_public_key() {
-    let mut evidence = create_containers_evidence();
-    evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+fn verify_fails_with_unsupported_tcb_version() {
+    let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
-    let reference_values = create_containers_reference_values();
+    let mut reference_values = create_containers_reference_values();
+
+    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0 };
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
+                Some(tcb_version);
+        }
+        Some(_) => {}
+        None => {}
+    };
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);

@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -97,6 +98,12 @@ message AmdAttestationReport {
   // Current TCB Version.
   TcbVersion current_tcb = 2;
 
+  // Reported TCB version (the version can be lower than current_tcb in case of
+  // a provisional update. See
+  // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
+  // (Section 3.4) for more detail).
+  TcbVersion reported_tcb = 7;
+
   // Whether the VM was booted in debug mode.
   bool debug = 3;
 
@@ -105,7 +112,7 @@ message AmdAttestationReport {
   // binary.
   bytes initial_measurement = 4;
 
-  // The hardware ID of the AMD SEV-SNP platform that generated the atttestation
+  // The hardware ID of the AMD SEV-SNP platform that generated the attestation
   // report.
   bytes hardware_id = 5;
 
@@ -124,20 +131,6 @@ message IntelTdxAttestationReport {
 message FakeAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
-}
-
-// The versions of the components in the AMD SEV-SNP platform Trusted Compute
-// Base (TCB).
-message TcbVersion {
-  // The current security version number (SVN) of the secure processor (PSP)
-  // bootloader.
-  uint32 boot_loader = 1;
-  // The current SVN of the PSP operating system.
-  uint32 tee = 2;
-  // The current SVN of the SNP firmware.
-  uint32 snp = 3;
-  // The lowest current patch level of all the CPU cores.
-  uint32 microcode = 4;
 }
 
 // Values extracted from the the kernel layer evidence, as measured by stage0.

@@ -47,6 +47,7 @@ cargo_build_script(
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
         "//proto/attestation:reference_value_proto",
+        "//proto/attestation:tcb_version_proto",
         "//proto/attestation:verification_proto",
         "//proto/oak_functions:abi_proto",
         "//proto/oak_functions:lookup_data_proto",

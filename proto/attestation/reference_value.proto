@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -101,9 +102,8 @@ message RootLayerReferenceValues {
 }
 
 message AmdSevReferenceValues {
-  // TBD: Add conditions on all kinds of fields contained in the
-  // attestation report.
-  StringReferenceValue firmware_version = 2;
+  // Minimum accepted versions of all TCB components.
+  TcbVersion min_tcb_version = 5;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
