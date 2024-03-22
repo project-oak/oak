@@ -60,3 +60,6 @@ for i in "${!binary_names[@]}"; do
 done
 
 ls -alsR "${KOKORO_ARTIFACTS_DIR}/binaries"
+
+# Print binary digests (ignore failures, e.g. for directories).
+sha256sum "${KOKORO_ARTIFACTS_DIR}"/binaries/* || true

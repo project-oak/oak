@@ -27,30 +27,42 @@ use crate::noise_handshake::{
 
 pub struct HandshakeInitiator {
     noise: Noise,
-    identity_pub_key: [u8; P256_X962_LEN],
+    identity_pub_key: Option<[u8; P256_X962_LEN]>,
     ephemeral_priv_key: P256Scalar,
 }
 
 impl HandshakeInitiator {
-    pub fn new(peer_public_key: &[u8; P256_X962_LEN]) -> Self {
+    pub fn new_nk(peer_public_key: &[u8; P256_X962_LEN]) -> Self {
         Self {
             noise: Noise::new(HandshakeType::Nk),
-            identity_pub_key: *peer_public_key,
+            identity_pub_key: Some(*peer_public_key),
+            ephemeral_priv_key: P256Scalar::generate(),
+        }
+    }
+
+    pub fn new_nn() -> Self {
+        Self {
+            noise: Noise::new(HandshakeType::Nn),
+            identity_pub_key: None,
             ephemeral_priv_key: P256Scalar::generate(),
         }
     }
 
     pub fn build_initial_message(&mut self) -> Vec<u8> {
         self.noise.mix_hash(&[0; 1]);
-        self.noise.mix_hash_point(self.identity_pub_key.as_slice());
+        if let Some(identity_pub_key) = self.identity_pub_key {
+            self.noise.mix_hash_point(identity_pub_key.as_slice());
+        }
         let ephemeral_pub_key = self.ephemeral_priv_key.compute_public_key();
         let ephemeral_pub_key_bytes = ephemeral_pub_key.as_ref();
 
         self.noise.mix_hash(ephemeral_pub_key_bytes);
         self.noise.mix_key(ephemeral_pub_key_bytes);
-        let es_ecdh_bytes =
-            p256_scalar_mult(&self.ephemeral_priv_key, &self.identity_pub_key).unwrap();
-        self.noise.mix_key(&es_ecdh_bytes);
+        if let Some(identity_pub_key) = self.identity_pub_key {
+            let es_ecdh_bytes =
+                p256_scalar_mult(&self.ephemeral_priv_key, &identity_pub_key).unwrap();
+            self.noise.mix_key(&es_ecdh_bytes);
+        }
 
         let ciphertext = self.noise.encrypt_and_hash(&[]);
         [ephemeral_pub_key_bytes, &ciphertext].concat()

@@ -18,19 +18,22 @@ use std::{fs, string::String};
 
 use oak_attestation_verification::{
     util::convert_pem_to_raw,
-    verifier::{to_attestation_results, verify},
+    verifier::{to_attestation_results, verify, verify_dice_chain},
 };
-use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, kernel_binary_reference_value,
-    reference_values, regex_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
-    ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements, Evidence,
-    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
-    KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues, Regex,
-    RegexReferenceValue, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
-    StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
-    TransparentReleaseEndorsement,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
+        kernel_binary_reference_value, reference_values, regex_reference_value, root_layer_data::Report,
+        AmdSevReferenceValues, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
+        EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, Regex, RegexReferenceValue, RootLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, StringReferenceValue, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TransparentReleaseEndorsement,
+    },
+    RawDigest,
 };
 use prost::Message;
 
@@ -353,6 +356,111 @@ fn verify_fails_with_manipulated_root_public_key() {
     evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
     let endorsements = create_containers_endorsements();
     let reference_values = create_containers_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_succeeds_with_right_initial_measurement() {
+    let evidence = create_containers_evidence();
+    let actual = if let Some(EvidenceValues::OakContainers(values)) =
+        verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
+    {
+        if let Some(Report::SevSnp(report)) =
+            values.root_layer.as_ref().expect("no root layer").report.as_ref()
+        {
+            Some(report.initial_measurement.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+    .expect("invalid DICE evidence");
+
+    let endorsements = create_containers_endorsements();
+    let mut reference_values = create_containers_reference_values();
+    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    {
+        let digests =
+            Digests { digests: vec![RawDigest { sha2_384: actual, ..Default::default() }] };
+        reference
+            .root_layer
+            .as_mut()
+            .expect("no root layer reference values")
+            .amd_sev
+            .as_mut()
+            .expect("no AMD SEV-SNP reference values")
+            .stage0 = Some(BinaryReferenceValue {
+            r#type: Some(
+                oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
+                    digests,
+                ),
+            ),
+        });
+    } else {
+        panic!("invalid reference value type");
+    }
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fails_with_wrong_initial_measurement() {
+    let evidence = create_containers_evidence();
+    let mut wrong = if let Some(EvidenceValues::OakContainers(values)) =
+        verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
+    {
+        if let Some(Report::SevSnp(report)) =
+            values.root_layer.as_ref().expect("no root layer").report.as_ref()
+        {
+            Some(report.initial_measurement.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+    .expect("invalid DICE evidence");
+    wrong[0] ^= 1;
+
+    let endorsements = create_containers_endorsements();
+    let mut reference_values = create_containers_reference_values();
+    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    {
+        let digests =
+            Digests { digests: vec![RawDigest { sha2_384: wrong, ..Default::default() }] };
+        reference
+            .root_layer
+            .as_mut()
+            .expect("no root layer reference values")
+            .amd_sev
+            .as_mut()
+            .expect("no AMD SEV-SNP reference values")
+            .stage0 = Some(BinaryReferenceValue {
+            r#type: Some(
+                oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
+                    digests,
+                ),
+            ),
+        });
+    } else {
+        panic!("invalid reference value type");
+    }
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
