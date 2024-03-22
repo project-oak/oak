@@ -832,6 +832,11 @@
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
 <a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1123,6 +1128,25 @@
         </span>Cb(<span class="kw">super</span>::CbEndorsements),
     }
 }
+<span class="doccomment">/// The versions of the components in the AMD SEV-SNP platform Trusted Compute
+/// Base (TCB).
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>TcbVersion {
+    <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP)
+    /// bootloader.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>boot_loader: u32,
+    <span class="doccomment">/// The current SVN of the PSP operating system.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>tee: u32,
+    <span class="doccomment">/// The current SVN of the SNP firmware.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;3&quot;</span>)]
+    </span><span class="kw">pub </span>snp: u32,
+    <span class="doccomment">/// The lowest current patch level of all the CPU cores.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="kw">pub </span>microcode: u32,
+}
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SkipVerification {}
@@ -1234,10 +1258,9 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AmdSevReferenceValues {
-    <span class="doccomment">/// TBD: Add conditions on all kinds of fields contained in the
-    /// attestation report.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>firmware_version: ::core::option::Option&lt;StringReferenceValue&gt;,
+    <span class="doccomment">/// Minimum accepted versions of all TCB components.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    </span><span class="kw">pub </span>min_tcb_version: ::core::option::Option&lt;TcbVersion&gt;,
     <span class="doccomment">/// If true, will skip the check that the TEE is not in debug mode.
     </span><span class="attr">#[prost(bool, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>allow_debug: bool,
@@ -1524,6 +1547,12 @@
     <span class="doccomment">/// Current TCB Version.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>current_tcb: ::core::option::Option&lt;TcbVersion&gt;,
+    <span class="doccomment">/// Reported TCB version (the version can be lower than current_tcb in case of
+    /// a provisional update. See
+    /// &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf&gt;
+    /// (Section 3.4) for more detail).
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;7&quot;</span>)]
+    </span><span class="kw">pub </span>reported_tcb: ::core::option::Option&lt;TcbVersion&gt;,
     <span class="doccomment">/// Whether the VM was booted in debug mode.
     </span><span class="attr">#[prost(bool, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>debug: bool,
@@ -1532,7 +1561,7 @@
     /// binary.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>initial_measurement: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The hardware ID of the AMD SEV-SNP platform that generated the atttestation
+    <span class="doccomment">/// The hardware ID of the AMD SEV-SNP platform that generated the attestation
     /// report.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;5&quot;</span>)]
     </span><span class="kw">pub </span>hardware_id: ::prost::alloc::vec::Vec&lt;u8&gt;,
@@ -1556,25 +1585,6 @@
     <span class="doccomment">/// The custom bytes that were passed to the report when it was requested.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>report_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="doccomment">/// The versions of the components in the AMD SEV-SNP platform Trusted Compute
-/// Base (TCB).
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>TcbVersion {
-    <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP)
-    /// bootloader.
-    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>boot_loader: u32,
-    <span class="doccomment">/// The current SVN of the PSP operating system.
-    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>tee: u32,
-    <span class="doccomment">/// The current SVN of the SNP firmware.
-    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>snp: u32,
-    <span class="doccomment">/// The lowest current patch level of all the CPU cores.
-    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;4&quot;</span>)]
-    </span><span class="kw">pub </span>microcode: u32,
 }
 <span class="doccomment">/// Values extracted from the the kernel layer evidence, as measured by stage0.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
