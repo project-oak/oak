@@ -148,9 +148,10 @@ impl ZeroPage {
         self.inner.e820_entries = e820_entries as u8;
         self.validate_e820_table();
 
-        // Carve out a chunk of memory out for the ACPI area from 0x80000-0x9FFFF. We
-        // also remove the region from 0xA0000-0xFFFFF since historically this contained
-        // hardware-related regions such as the VGA bios rom.
+        // Carve out a chunk of memory for the ACPI area in the range
+        // [0x80000-0xA0000). We also remove the region [0xA0000,0x100000)
+        // since historically this contained hardware-related regions such as
+        // the VGA bios rom.
         self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
         self.ensure_e820_gap(0xA_0000, 0x6_0000);
 
@@ -259,12 +260,26 @@ impl ZeroPage {
             end > entry.addr() && start < entry.end()
         }) {
             let mut entry = self.inner.e820_table[index];
-            if entry.addr() >= start && entry.end() <= end {
+            if entry.addr() < start && entry.end() > end {
+                // The entry extends past the gap on both sides, split it.
+                let new_entry = BootE820Entry::new(
+                    end,
+                    entry.end() - end,
+                    entry.entry_type().expect("invalid entry type"),
+                );
+                entry.set_size(start - entry.addr());
+                self.inner.e820_table[index] = entry;
+                self.insert_e820_entry(new_entry)
+            } else if entry.addr() >= start && entry.end() <= end {
+                // The entry fits in the gap.
                 self.inner.delete_e820_entry(index as u8);
             } else if entry.addr() < start {
+                // The entry overlaps with the start of the gap.
                 entry.set_size(start - entry.addr());
                 self.inner.e820_table[index] = entry;
             } else {
+                // The entry overlaps with the end of the gap.
+                entry.set_size(entry.end() - end);
                 entry.set_addr(end);
                 self.inner.e820_table[index] = entry;
             }
@@ -541,6 +556,20 @@ mod tests {
         zero_page.inner.append_e820_entry(BootE820Entry::new(170, 130, E820EntryType::RAM));
 
         zero_page.ensure_e820_gap(150, 10);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_split() {
+        let expected = [
+            BootE820Entry::new(0, 140, E820EntryType::RAM),
+            BootE820Entry::new(170, 130, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(140, 30);
 
         assert_eq!(zero_page.e820_table(), &expected[..]);
     }
