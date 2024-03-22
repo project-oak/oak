@@ -25,9 +25,9 @@ use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
     FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID,
-    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    SYSTEM_IMAGE_LAYER_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -936,6 +936,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
+    let kernel_cmd_line =
+        Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
     let kernel_raw_cmd_line = String::from(
         extract_value(values, KERNEL_COMMANDLINE_ID)?
             .as_text()
@@ -948,7 +950,7 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line: None,
+        kernel_cmd_line,
         kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
@@ -1019,7 +1021,7 @@ fn extract_value(values: &[(Value, Value)], label_id: i64) -> anyhow::Result<&Va
     values
         .iter()
         .find_map(|(key, value)| if key == &target_key { Some(value) } else { None })
-        .context("couldn't find measurement")
+        .context(format!("couldn't find measurement {label_id}"))
 }
 
 /// Extracts the individual digests from a value that represents a set of
