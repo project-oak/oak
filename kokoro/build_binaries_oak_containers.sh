@@ -36,6 +36,12 @@ readonly generated_binaries=(
     ./oak_containers_system_image/target/image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
+
+    # We track these binaries so that we can monitor their reproducibility, while b/311651716 is completed.
+    # We do not expect to import them in google3, since they are part of the system image, which is
+    # not reproducibly buildable yet.
+    ./oak_containers_system_image/target/oak_containers_orchestrator
+    ./oak_containers_system_image/target/oak_containers_syslogd
 )
 readonly binary_names=(
     oak_containers_stage1
@@ -44,6 +50,9 @@ readonly binary_names=(
     oak_containers_system_image
     oak_containers_hello_world_container
     oak_functions_container
+
+    oak_containers_orchestrator
+    oak_containers_syslogd
 )
 for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
