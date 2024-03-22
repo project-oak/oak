@@ -828,6 +828,10 @@
 <a href="#828" id="828">828</a>
 <a href="#829" id="829">829</a>
 <a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1532,6 +1536,10 @@
     /// report.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;5&quot;</span>)]
     </span><span class="kw">pub </span>hardware_id: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The VM Protection Leve (VMPL) that was active when the attestation report
+    /// was generated.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;6&quot;</span>)]
+    </span><span class="kw">pub </span>vmpl: u32,
 }
 <span class="doccomment">/// Values extracted from an Intel TDX attestation report.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]

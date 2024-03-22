@@ -957,6 +957,16 @@
 <a href="#957" id="957">957</a>
 <a href="#958" id="958">958</a>
 <a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1294,6 +1304,14 @@
     attestation_report_values: <span class="kw-2">&amp;</span>AmdAttestationReport,
     reference_values: <span class="kw-2">&amp;</span>AmdSevReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="comment">// Stage 0 only destroys VMPCK0, so we only trust attestation reports that were
+    // generated in VMPL0.
+    </span><span class="macro">anyhow::ensure!</span>(
+        attestation_report_values.vmpl == <span class="number">0</span>,
+        <span class="string">&quot;attestation report was not generated from VMPL {}, not VMPL 0&quot;</span>,
+        attestation_report_values.vmpl
+    );
+
     <span class="kw">if </span>!reference_values.allow_debug &amp;&amp; attestation_report_values.debug {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;debug mode not allowed&quot;</span>);
     }
@@ -1759,6 +1777,7 @@
             <span class="kw">let </span>hardware_id = report.data.chip_id.as_ref().to_vec();
             <span class="kw">let </span>initial_measurement = report.data.measurement.as_ref().to_vec();
             <span class="kw">let </span>report_data = report.data.report_data.as_ref().to_vec();
+            <span class="kw">let </span>vmpl = report.data.vmpl;
 
             <span class="prelude-val">Ok</span>(RootLayerData {
                 report: <span class="prelude-val">Some</span>(Report::SevSnp(AmdAttestationReport {
@@ -1767,6 +1786,7 @@
                     initial_measurement,
                     hardware_id,
                     report_data,
+                    vmpl,
                 })),
             })
         }
