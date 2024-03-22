@@ -20,6 +20,7 @@ package oak.echo;
 
 import "google/protobuf/empty.proto";
 import "proto/attestation/evidence.proto";
+import "proto/micro_rpc/options.proto";
 
 message EchoRequest {
   bytes body = 1;
@@ -35,8 +36,12 @@ message GetEvidenceResponse {
 
 service Echo {
   // method_id: 1988
-  rpc Echo(EchoRequest) returns (EchoResponse);
+  rpc Echo(EchoRequest) returns (EchoResponse) {
+    option (.oak.micro_rpc.method_id) = 1988;
+  }
 
   // method_id: 1771
-  rpc GetEvidence(google.protobuf.Empty) returns (GetEvidenceResponse);
+  rpc GetEvidence(google.protobuf.Empty) returns (GetEvidenceResponse) {
+    option (.oak.micro_rpc.method_id) = 1771;
+  }
 }
