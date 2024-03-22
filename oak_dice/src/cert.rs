@@ -50,7 +50,9 @@ pub const CONTAINER_IMAGE_LAYER_ID: i64 = -4670559;
 /// The CWT private claim ID for the kernel measurement.
 pub const KERNEL_MEASUREMENT_ID: i64 = -4670561;
 /// The CWT private claim ID for the kernel command-line measurement.
-pub const KERNEL_COMMANDLINE_ID: i64 = -4670562;
+pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670562;
+/// The CWT private claim ID for the raw kernel command-line.
+pub const KERNEL_COMMANDLINE_ID: i64 = -4670573;
 /// The CWT private claim ID for the kernel setup data measurement.
 pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670563;
 /// The CWT private claim ID for the initial RAM file system measurement.
