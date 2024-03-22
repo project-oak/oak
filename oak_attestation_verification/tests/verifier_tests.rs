@@ -483,7 +483,7 @@ fn verify_fails_with_empty_args() {
 }
 
 #[test]
-fn verify_fails_with_command_line_reference_value_set() {
+fn verify_fails_with_non_matching_command_line_reference_value_set() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
     let mut reference_values = create_rk_reference_values();
@@ -499,6 +499,7 @@ fn verify_fails_with_command_line_reference_value_set() {
         Some(_) => {}
         None => {}
     };
+
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
 
@@ -507,4 +508,32 @@ fn verify_fails_with_command_line_reference_value_set() {
     eprintln!("======================================");
     assert!(r.is_err());
     assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_succeeds_with_matching_command_line_reference_value_set() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let mut reference_values = create_rk_reference_values();
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex =
+                Some(RegexReferenceValue {
+                    r#type: Some(regex_reference_value::Type::Regex(Regex {
+                        value: String::from("^console=[a-zA-Z0-9]+$"),
+                    })),
+                });
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
 }

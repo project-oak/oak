@@ -483,7 +483,7 @@ fn verify_kernel_layer(
     .context("kernel failed verification")?;
 
     verify_regex(
-        values.kernel_cmd_line.as_str(),
+        values.kernel_raw_cmd_line.as_str(),
         reference_values
             .kernel_cmd_line_regex
             .as_ref()
@@ -894,7 +894,7 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
-    let kernel_cmd_line = String::from(
+    let kernel_raw_cmd_line = String::from(
         extract_value(values, KERNEL_COMMANDLINE_ID)?
             .as_text()
             .expect("kernel cmd line CWT value is not a text"),
@@ -906,7 +906,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
+        kernel_cmd_line: None,
+        kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
         acpi,
