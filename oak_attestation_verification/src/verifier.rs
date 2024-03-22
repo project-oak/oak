@@ -894,7 +894,11 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
-    let kernel_cmd_line = value_to_string(extract_value(values, KERNEL_COMMANDLINE_ID)?)?;
+    let kernel_cmd_line = String::from(
+        extract_value(values, KERNEL_COMMANDLINE_ID)?
+            .as_text()
+            .expect("kernel cmd line CWT value is not a text"),
+    );
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
@@ -994,19 +998,4 @@ fn value_to_raw_digest(value: &Value) -> anyhow::Result<RawDigest> {
         return Ok(result);
     }
     Err(anyhow::anyhow!("value is not a map of digests"))
-}
-
-fn value_to_string(value: &Value) -> anyhow::Result<String> {
-    if let Value::Map(map) = value {
-        for (key, measurement) in map.iter() {
-            if key == &Value::Integer(SHA2_256_ID.into()) {
-                if let Value::Text(text) = measurement {
-                    return Ok(text.clone());
-                } else {
-                    anyhow::bail!("measurement is not a string");
-                }
-            }
-        }
-    }
-    Err(anyhow::anyhow!("value is not a map"))
 }
