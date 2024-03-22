@@ -260,6 +260,9 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -315,7 +318,10 @@
 /// public key.
 </span><span class="kw">pub const </span>PUBLIC_KEY_SIZE: usize = <span class="number">256</span>;
 
-<span class="doccomment">/// The maximum size of a serialized CWT certificate.
+<span class="doccomment">/// The maximum size of a larger serialized CWT certificate.
+</span><span class="kw">pub const </span>LARGE_CERTIFICATE_SIZE: usize = <span class="number">1536</span>;
+
+<span class="doccomment">/// The maximum size of a standard serialized CWT certificate.
 </span><span class="kw">pub const </span>CERTIFICATE_SIZE: usize = <span class="number">1024</span>;
 
 <span class="doccomment">/// The name of the kernel command-line parameter that is used to send the
@@ -401,7 +407,7 @@
     <span class="doccomment">/// Serialized CWT certificate for the ECA private key owned by the
     /// corresponding layer. The certificate must include measurements of
     /// the layer that owns the private key.
-    </span><span class="kw">pub </span>eca_certificate: [u8; CERTIFICATE_SIZE],
+    </span><span class="kw">pub </span>eca_certificate: [u8; LARGE_CERTIFICATE_SIZE],
 }
 
 <span class="kw">impl </span>LayerEvidence {
@@ -412,7 +418,7 @@
     }
 }
 
-<span class="macro">static_assertions::assert_eq_size!</span>([u8; CERTIFICATE_SIZE], LayerEvidence);
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; LARGE_CERTIFICATE_SIZE], LayerEvidence);
 
 <span class="doccomment">/// Private key that can be used by a layer to sign a certificate for the next
 /// layer.
@@ -452,7 +458,7 @@
     </span><span class="kw">pub </span>layer_1_certificate_authority: CertificateAuthority,
     <span class="doccomment">/// The compound device identifier for Layer 1.
     </span><span class="kw">pub </span>layer_1_cdi: CompoundDeviceIdentifier,
-    _padding_1: [u8; <span class="number">640</span>],
+    _padding_1: [u8; <span class="number">128</span>],
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">4096</span>], Stage0DiceData);
@@ -510,7 +516,7 @@
     </span><span class="kw">pub </span>application_keys: ApplicationKeys,
 }
 
-<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5392</span>], Evidence);
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5904</span>], Evidence);
 
 <span class="doccomment">/// Wrapper for passing the attestation evidence and private keys from the
 /// Restricted Kernel to the application.
@@ -521,5 +527,5 @@
     <span class="kw">pub </span>application_private_keys: ApplicationPrivateKeys,
 }
 
-<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5520</span>], RestrictedKernelDiceData);
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">6032</span>], RestrictedKernelDiceData);
 </code></pre></div></section></main></body></html>
