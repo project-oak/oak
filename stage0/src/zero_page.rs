@@ -148,19 +148,11 @@ impl ZeroPage {
         self.inner.e820_entries = e820_entries as u8;
         self.validate_e820_table();
 
-        // Carve out a chunk of memory out for the ACPI area and reserved memory just
-        // below 1 MiB. The ACPI area is from 0x80000-0x9FFFF. We also reserve
-        // the region from 0xA0000-0xEFFFF since historically this contained
+        // Carve out a chunk of memory out for the ACPI area from 0x80000-0x9FFFF. We
+        // also remove the region from 0xA0000-0xFFFFF since historically this contained
         // hardware-related regions such as the VGA bios rom.
         self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
-        self.insert_e820_entry(BootE820Entry::new(0xA_0000, 0x5_0000, E820EntryType::RESERVED));
-        // Mark the memory range for the SMBIOS entry point table as disabled since we
-        // don't support DMI or SMBIOS tables. If this memory range is enabled
-        // (even it if is reserved) and the Linux kernel has CONFIG_DMI enabled
-        // it will try to scan this memory range to find the SMBIOS entry point
-        // table. On AMD SEV-SNP scanning of this memory range causes #VC
-        // exceptions, so we don't want the kernel to try to scan it.
-        self.insert_e820_entry(BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::DISABLED));
+        self.ensure_e820_gap(0xA_0000, 0x6_0000);
 
         for entry in self.inner.e820_table() {
             log::debug!(
@@ -253,6 +245,30 @@ impl ZeroPage {
 
         // Copy the modified entry back.
         self.inner.e820_table[index] = entry;
+    }
+
+    /// Ensures that there are no E820 entries in a range.
+    ///
+    /// If the gap overlaps with one or more existing entries in the table, they
+    /// will be either trimmed or deleted to ensure that there are no entries
+    /// covering the gap.
+    pub fn ensure_e820_gap(&mut self, start: usize, size: usize) {
+        let end = start + size;
+        while let Some(index) = (0..(self.inner.e820_entries as usize)).find(|i| {
+            let entry = self.inner.e820_table[*i];
+            end > entry.addr() && start < entry.end()
+        }) {
+            let mut entry = self.inner.e820_table[index];
+            if entry.addr() >= start && entry.end() <= end {
+                self.inner.delete_e820_entry(index as u8);
+            } else if entry.addr() < start {
+                entry.set_size(start - entry.addr());
+                self.inner.e820_table[index] = entry;
+            } else {
+                entry.set_addr(end);
+                self.inner.e820_table[index] = entry;
+            }
+        }
     }
 
     fn validate_e820_table(&self) {
@@ -448,6 +464,83 @@ mod tests {
         zero_page.inner.append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
 
         zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_no_op() {
+        let expected = [
+            BootE820Entry::new(0, 150, E820EntryType::RAM),
+            BootE820Entry::new(160, 140, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(150, 10);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_overlap_1() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(160, 140, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(100, 55);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_overlap_2() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(180, 120, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(100, 80);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_overlap_3() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(180, 120, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 140, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(150, 10, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(170, 130, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(100, 80);
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn gap_e820_cover_1() {
+        let expected = [
+            BootE820Entry::new(0, 140, E820EntryType::RAM),
+            BootE820Entry::new(170, 130, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 140, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(150, 10, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(170, 130, E820EntryType::RAM));
+
+        zero_page.ensure_e820_gap(150, 10);
 
         assert_eq!(zero_page.e820_table(), &expected[..]);
     }
