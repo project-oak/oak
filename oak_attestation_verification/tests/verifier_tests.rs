@@ -23,15 +23,16 @@ use oak_attestation_verification::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
-        kernel_binary_reference_value, reference_values, regex_reference_value, root_layer_data::Report,
-        AmdSevReferenceValues, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
-        EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, Regex, RegexReferenceValue, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TransparentReleaseEndorsement,
+        kernel_binary_reference_value, reference_values, regex_reference_value,
+        root_layer_data::Report, AmdSevReferenceValues, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Digests, EndorsementReferenceValue, Endorsements, Evidence,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Regex, RegexReferenceValue, RootLayerEndorsements, RootLayerReferenceValues,
+        SkipVerification, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        TransparentReleaseEndorsement,
     },
     RawDigest,
 };
@@ -489,12 +490,11 @@ fn verify_fails_with_non_matching_command_line_reference_value_set() {
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex =
-                Some(RegexReferenceValue {
-                    r#type: Some(regex_reference_value::Type::Regex(Regex {
-                        value: String::from("this will fail"),
-                    })),
-                });
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
+                r#type: Some(regex_reference_value::Type::Regex(Regex {
+                    value: String::from("this will fail"),
+                })),
+            });
         }
         Some(_) => {}
         None => {}
@@ -517,12 +517,11 @@ fn verify_succeeds_with_matching_command_line_reference_value_set() {
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex =
-                Some(RegexReferenceValue {
-                    r#type: Some(regex_reference_value::Type::Regex(Regex {
-                        value: String::from("^console=[a-zA-Z0-9]+$"),
-                    })),
-                });
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
+                r#type: Some(regex_reference_value::Type::Regex(Regex {
+                    value: String::from("^console=[a-zA-Z0-9]+$"),
+                })),
+            });
         }
         Some(_) => {}
         None => {}
