@@ -102,7 +102,7 @@ message AmdAttestationReport {
   // a provisional update. See
   // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
   // (Section 3.4) for more detail).
-  TcbVersion reported_tcb = 6;
+  TcbVersion reported_tcb = 7;
 
   // Whether the VM was booted in debug mode.
   bool debug = 3;
