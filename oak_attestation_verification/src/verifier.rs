@@ -343,33 +343,38 @@ fn verify_amd_sev_attestation_report(
         attestation_report_values.reported_tcb.as_ref(),
     ) {
         (Some(min_tcb_version), Some(reported_tcb_version)) => {
-            if reported_tcb_version.boot_loader < min_tcb_version.boot_loader {
-                anyhow::bail!(format!(
+            anyhow::ensure!(
+                reported_tcb_version.boot_loader >= min_tcb_version.boot_loader,
+                format!(
                     "unsupported boot loader version in the reported TCB: {}",
                     reported_tcb_version.boot_loader
-                ));
-            }
-            if reported_tcb_version.tee < min_tcb_version.tee {
-                anyhow::bail!(format!(
+                )
+            );
+            anyhow::ensure!(
+                reported_tcb_version.tee >= min_tcb_version.tee,
+                format!(
                     "unsupported tee version in the reported TCB: {}",
                     reported_tcb_version.tee
-                ));
-            }
-            if reported_tcb_version.snp < min_tcb_version.snp {
-                anyhow::bail!(format!(
+                )
+            );
+            anyhow::ensure!(
+                reported_tcb_version.snp >= min_tcb_version.snp,
+                format!(
                     "unsupported snp version in the reported TCB: {}",
                     reported_tcb_version.snp
-                ));
-            }
-            if reported_tcb_version.microcode < min_tcb_version.microcode {
-                anyhow::bail!(format!(
+                )
+            );
+            anyhow::ensure!(
+                reported_tcb_version.microcode >= min_tcb_version.microcode,
+                format!(
                     "unsupported microcode version in the reported TCB: {}",
                     reported_tcb_version.microcode
-                ));
-            }
+                )
+            );
         }
+        // TODO(b/330845085): stop accepting missing reference values when all clients are updated.
         (Some(_), None) => anyhow::bail!("no reported TCB version in the attestation report"),
-        (None, _) => {} // Skip, as no min TCB is specified in the reference values
+        (None, _) => {}
     }
 
     Ok(())

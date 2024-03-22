@@ -99,7 +99,9 @@ message AmdAttestationReport {
   TcbVersion current_tcb = 2;
 
   // Reported TCB version (the version can be lower than current_tcb in case of
-  // a provisional update).
+  // a provisional update. See
+  // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
+  // (Section 3.4) for more detail).
   TcbVersion reported_tcb = 6;
 
   // Whether the VM was booted in debug mode.
