@@ -143,8 +143,10 @@ message KernelLayerData {
 
   // Measured digests of the command-line that was passed to the kernel
   // during startup.
-  // TODO: b/325979696 - Validate the kernel command-line using a regex.
   RawDigest kernel_cmd_line = 2 [deprecated = true];
+
+  // Command-line that was passed to the kernel during startup.
+  string kernel_raw_cmd_line = 7;
 
   // Measured digests of the initial RAM disk.
   RawDigest init_ram_fs = 4;

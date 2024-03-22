@@ -39,6 +39,7 @@ rust_library(
         "@oak_crates_index//:p256",
         "@oak_crates_index//:p384",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:regex",
         "@oak_crates_index//:rsa",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",

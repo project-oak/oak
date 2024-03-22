@@ -16,7 +16,7 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::{format, vec::Vec};
+use alloc::{format, string::String, vec::Vec};
 
 use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -24,31 +24,34 @@ use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_LAYER_ID,
-    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        root_layer_data::Report, AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys,
-        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-        AttestationResults, BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues,
-        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        Endorsements, Evidence, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
-        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
-        RootLayerEvidence, RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        regex_reference_value, root_layer_data::Report, AmdAttestationReport,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
+        CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
+        FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
+        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RegexReferenceValue, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
         SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
+use regex::Regex;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -514,7 +517,14 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    // TODO: b/325979696 - Validate the kernel command-line using a regex.
+    verify_regex(
+        values.kernel_raw_cmd_line.as_str(),
+        reference_values
+            .kernel_cmd_line_regex
+            .as_ref()
+            .context("no kernel command line regex reference values")?,
+    )
+    .context("kernel command line failed verification")?;
 
     verify_measurement_digest(
         values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
@@ -732,6 +742,25 @@ fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Resul
     }
 }
 
+fn verify_regex(actual: &str, expected: &RegexReferenceValue) -> anyhow::Result<()> {
+    match expected.r#type.as_ref() {
+        Some(regex_reference_value::Type::Skip(_)) => Ok(()),
+        Some(regex_reference_value::Type::Regex(regex)) => {
+            let re = Regex::new(regex.value.as_str()).map_err(|msg| {
+                anyhow::anyhow!("Couldn't parse regex in the reference value: {msg}")
+            })?;
+            if re.is_match(actual) {
+                Ok(())
+            } else {
+                anyhow::bail!(format!(
+                    "kernel cmd line doesn't match the reference value: {actual}"
+                ))
+            }
+        }
+        None => Err(anyhow::anyhow!("missing skip or value in the regex reference value")),
+    }
+}
+
 struct ApplicationKeyValues {
     encryption_public_key: Vec<u8>,
     signing_public_key: Vec<u8>,
@@ -907,7 +936,13 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
-    // TODO: b/325979696 - Extract raw kernel command-line.
+    let kernel_cmd_line =
+        Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
+    let kernel_raw_cmd_line = String::from(
+        extract_value(values, KERNEL_COMMANDLINE_ID)?
+            .as_text()
+            .expect("kernel cmd line CWT value is not a text"),
+    );
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
@@ -915,7 +950,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line: None,
+        kernel_cmd_line,
+        kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
         acpi,
@@ -985,7 +1021,7 @@ fn extract_value(values: &[(Value, Value)], label_id: i64) -> anyhow::Result<&Va
     values
         .iter()
         .find_map(|(key, value)| if key == &target_key { Some(value) } else { None })
-        .context("couldn't find measurement")
+        .context(format!("couldn't find measurement {label_id}"))
 }
 
 /// Extracts the individual digests from a value that represents a set of
