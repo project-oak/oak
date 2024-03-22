@@ -54,7 +54,7 @@ pub const X25519_PRIVATE_KEY_SIZE: usize = 32;
 pub const PUBLIC_KEY_SIZE: usize = 256;
 
 /// The maximum size of a serialized CWT certificate.
-pub const CERTIFICATE_SIZE: usize = 1024;
+pub const CERTIFICATE_SIZE: usize = 1536;
 
 /// The name of the kernel command-line parameter that is used to send the
 /// physical address of the Stage 0 DICE data struct.
@@ -190,7 +190,7 @@ pub struct Stage0DiceData {
     pub layer_1_certificate_authority: CertificateAuthority,
     /// The compound device identifier for Layer 1.
     pub layer_1_cdi: CompoundDeviceIdentifier,
-    _padding_1: [u8; 640],
+    _padding_1: [u8; 128],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);
