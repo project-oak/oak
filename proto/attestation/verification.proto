@@ -108,6 +108,10 @@ message AmdAttestationReport {
   // The hardware ID of the AMD SEV-SNP platform that generated the atttestation
   // report.
   bytes hardware_id = 5;
+
+  // The VM Protection Leve (VMPL) that was active when the attestation report
+  // was generated.
+  uint32 vmpl = 6;
 }
 
 // Values extracted from an Intel TDX attestation report.

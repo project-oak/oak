@@ -335,6 +335,14 @@ fn verify_amd_sev_attestation_report(
     attestation_report_values: &AmdAttestationReport,
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<()> {
+    // Stage 0 only destroys VMPCK0, so we only trust attestation reports that were
+    // generated in VMPL0.
+    anyhow::ensure!(
+        attestation_report_values.vmpl == 0,
+        "attestation report was not generated from VMPL {}, not VMPL 0",
+        attestation_report_values.vmpl
+    );
+
     if !reference_values.allow_debug && attestation_report_values.debug {
         anyhow::bail!("debug mode not allowed");
     }
@@ -800,6 +808,7 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             let hardware_id = report.data.chip_id.as_ref().to_vec();
             let initial_measurement = report.data.measurement.as_ref().to_vec();
             let report_data = report.data.report_data.as_ref().to_vec();
+            let vmpl = report.data.vmpl;
 
             Ok(RootLayerData {
                 report: Some(Report::SevSnp(AmdAttestationReport {
@@ -808,6 +817,7 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
                     initial_measurement,
                     hardware_id,
                     report_data,
+                    vmpl,
                 })),
             })
         }
