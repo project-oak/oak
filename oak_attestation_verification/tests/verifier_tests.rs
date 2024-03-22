@@ -30,7 +30,7 @@ use oak_proto_rust::oak::{
         KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringReferenceValue, SystemLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
         SystemLayerReferenceValues, TcbVersion, TransparentReleaseEndorsement,
     },
     RawDigest,
