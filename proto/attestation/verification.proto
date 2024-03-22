@@ -144,7 +144,7 @@ message KernelLayerData {
   // Measured digests of the command-line that was passed to the kernel
   // during startup.
   RawDigest kernel_cmd_line = 2 [deprecated = true];
-  
+
   // Command-line that was passed to the kernel during startup.
   string kernel_raw_cmd_line = 7;
 
