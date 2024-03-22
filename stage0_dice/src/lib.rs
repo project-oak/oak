@@ -82,10 +82,7 @@ fn generate_stage1_certificate(
             ),
             (
                 Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Text(measurements.cmdline.clone()),
-                )]),
+                Value::Text(measurements.cmdline.clone()),
             ),
             (
                 Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
