@@ -170,7 +170,6 @@
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
               shellHook = ''
-                export LINUX_KERNEL_SRC="${linux_kernel_src}"
                 export LINUX_KERNEL="${linux_kernel}"
               '';
               inputsFrom = [
@@ -199,7 +198,6 @@
             # Shell for container kernel image provenance workflow.
             bzImageProvenance = with pkgs; mkShell {
               shellHook = ''
-                export LINUX_KERNEL_SRC="${linux_kernel_src}"
                 export LINUX_KERNEL="${linux_kernel}"
               '';
               inputsFrom = [
