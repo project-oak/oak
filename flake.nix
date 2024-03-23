@@ -35,6 +35,10 @@
           # Note that building a package via nix is not by itself a guarantee of
           # reproducibility; see https://reproducible.nixos.org.
           linux_kernel = pkgs.linuxManualConfig {
+            # To allow reproducibility, the following options need to be configured:
+            # - CONFIG_MODULE_SIG is not set
+            # - CONFIG_MODULE_SIG_ALL is not set
+            # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
             configfile = ./oak_containers_kernel/configs/6.1.33/minimal.config;
             version = linux_kernel_version;
             src = linux_kernel_src;
