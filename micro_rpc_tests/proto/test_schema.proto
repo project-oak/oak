@@ -22,7 +22,6 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
-import "proto/micro_rpc/options.proto";
 
 message LookupDataRequest {
   bytes key = 1;
@@ -38,27 +37,15 @@ message LogResponse {}
 
 service TestService {
   // method_id: 15
-  rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {
-    option (.oak.micro_rpc.method_id) = 15;
-  }
+  rpc LookupData(LookupDataRequest) returns (LookupDataResponse);
   // method_id: 16
-  rpc Log(LogRequest) returns (LogResponse) {
-    option (.oak.micro_rpc.method_id) = 16;
-  }
+  rpc Log(LogRequest) returns (LogResponse);
   // method_id: 17
-  rpc Empty(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (.oak.micro_rpc.method_id) = 17;
-  }
+  rpc Empty(google.protobuf.Empty) returns (google.protobuf.Empty);
   // method_id: 18
-  rpc Duration(google.protobuf.Duration) returns (google.protobuf.Duration) {
-    option (.oak.micro_rpc.method_id) = 18;
-  }
+  rpc Duration(google.protobuf.Duration) returns (google.protobuf.Duration);
   // method_id: 19
-  rpc Timestamp(google.protobuf.Timestamp) returns (google.protobuf.Timestamp) {
-    option (.oak.micro_rpc.method_id) = 19;
-  }
+  rpc Timestamp(google.protobuf.Timestamp) returns (google.protobuf.Timestamp);
   // method_id: 20
-  rpc Any(google.protobuf.Any) returns (google.protobuf.Any) {
-    option (.oak.micro_rpc.method_id) = 20;
-  }
+  rpc Any(google.protobuf.Any) returns (google.protobuf.Any);
 }
