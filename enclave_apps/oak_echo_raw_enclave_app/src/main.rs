@@ -36,7 +36,9 @@ fn start_echo_server() -> ! {
     let mut channel = FileDescriptorChannel::default();
     loop {
         let bytes = {
+            log::info!("about to allocate bytes");
             let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
+            log::info!("allocated bytes");
             channel.read_exact(&mut bytes).expect("couldn't read bytes");
             bytes
         };
