@@ -47,6 +47,7 @@ const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
+const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
 const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
@@ -62,6 +63,13 @@ fn create_containers_evidence() -> Evidence {
 // application.
 fn create_rk_evidence() -> Evidence {
     let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
+// application but with obsolete DICE data that is still used by some clients.
+fn create_rk_obsolete_evidence() -> Evidence {
+    let serialized = fs::read(RK_OBSOLETE_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
@@ -521,6 +529,47 @@ fn verify_succeeds_with_matching_command_line_reference_value_set() {
                 r#type: Some(regex_reference_value::Type::Regex(Regex {
                     value: String::from("^console=[a-zA-Z0-9]+$"),
                 })),
+            });
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fails_with_command_line_reference_value_set_and_obsolete_evidence() {
+    let evidence = create_rk_obsolete_evidence();
+    let endorsements = create_rk_endorsements();
+    let reference_values = create_rk_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evidence() {
+    let evidence = create_rk_obsolete_evidence();
+    let endorsements = create_rk_endorsements();
+    let mut reference_values = create_rk_reference_values();
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
+                r#type: Some(regex_reference_value::Type::Skip(SkipVerification {})),
             });
         }
         Some(_) => {}

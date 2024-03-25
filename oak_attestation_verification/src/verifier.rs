@@ -517,14 +517,32 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    verify_regex(
-        values.kernel_raw_cmd_line.as_str(),
-        reference_values
-            .kernel_cmd_line_regex
-            .as_ref()
-            .context("no kernel command line regex reference values")?,
-    )
-    .context("kernel command line failed verification")?;
+    if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
+        verify_regex(
+            kernel_raw_cmd_line.as_str(),
+            reference_values
+                .kernel_cmd_line_regex
+                .as_ref()
+                .context("no kernel command line regex reference values")?,
+        )
+        .context("kernel command line failed verification")?;
+    } else {
+        // Support missing kernel_cmd_line_regex but only if the corresponding reference
+        // value is set to skip. This is a temporary workaround until all clients are
+        // migrated.
+        anyhow::ensure!(
+            matches!(
+                reference_values
+                    .kernel_cmd_line_regex
+                    .as_ref()
+                    .expect("no kernel command line regex reference values")
+                    .r#type
+                    .as_ref(),
+                Some(regex_reference_value::Type::Skip(_))
+            ),
+            "No kernel_raw_cmd_line provided"
+        )
+    }
 
     verify_measurement_digest(
         values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
@@ -938,11 +956,9 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
     let kernel_cmd_line =
         Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
-    let kernel_raw_cmd_line = String::from(
-        extract_value(values, KERNEL_COMMANDLINE_ID)?
-            .as_text()
-            .expect("kernel cmd line CWT value is not a text"),
-    );
+    let kernel_raw_cmd_line = extract_value(values, KERNEL_COMMANDLINE_ID)
+        .ok()
+        .map(|v| String::from(v.as_text().expect("kernel_raw_cmd_line found but is not a string")));
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
