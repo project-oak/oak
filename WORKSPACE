@@ -285,7 +285,6 @@ rules_rust_dependencies()
 rust_register_toolchains(
     edition = "2021",
     versions = [
-        # TODO(b/309612743) Can we automatically sync this with flake.nix?
         "1.76.0",
         "nightly/2023-11-15",
     ],
