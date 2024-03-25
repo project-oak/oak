@@ -41,14 +41,15 @@ const DISABLE_ALL_INTERRUPTS: u8 = 0;
 /// See <http://www.larvierinehart.com/serial/serialadc/serial.htm#17>.
 const DISABLE_FIFO: u8 = 0;
 
-/// Value of the line control register to set the number of data bits to 8, no parity bits, and the
-/// number of stop bits to 1.
+/// Value of the line control register to set the number of data bits to 8, no
+/// parity bits, and the number of stop bits to 1.
 ///
 /// See <https://en.wikipedia.org/wiki/8-N-1>.
 /// Also see <http://www.larvierinehart.com/serial/serialadc/serial.htm#18>.
 const LINE_CONTROL_8N1: u8 = 3;
 
-/// Value of the modem control register to mark the data terminal ready and request to send data.
+/// Value of the modem control register to mark the data terminal ready and
+/// request to send data.
 ///
 /// See <http://www.larvierinehart.com/serial/serialadc/serial.htm#19>.
 const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
@@ -58,9 +59,9 @@ const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
 /// See <https://wiki.osdev.org/Serial_Ports#Line_status_register>.
 const OUTPUT_EMPTY: u8 = 1 << 5;
 
-/// Basic implementation that allows for writing to a serial port using the SEV-ES and SEV-SNP GHCB
-/// IOIO protocol, or using direct port-based IO, depending on which IO port factory is used in the
-/// wrapper enum.
+/// Basic implementation that allows for writing to a serial port using the
+/// SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based IO,
+/// depending on which IO port factory is used in the wrapper enum.
 ///
 /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more
 /// information on the GHCB IOIO protocol.
@@ -80,25 +81,21 @@ impl SerialPort {
     ///
     /// # Safety
     ///
-    /// This function is unsafe as callers must make sure that the base address represents a
-    /// valid serial port device.
+    /// This function is unsafe as callers must make sure that the base address
+    /// represents a valid serial port device.
     pub unsafe fn new(base_address: u16, io_port_factory: PortFactoryWrapper) -> Self {
         let data = io_port_factory.new_writer(base_address);
         let line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
-        Self {
-            base_address,
-            io_port_factory,
-            data,
-            line_status,
-        }
+        Self { base_address, io_port_factory, data, line_status }
     }
 
     /// Initializes the serial port for writing.
     ///
-    /// We don't require interrupts or FIFO, and don't configure a maximum speed.
+    /// We don't require interrupts or FIFO, and don't configure a maximum
+    /// speed.
     pub fn init(&mut self) -> Result<(), &'static str> {
-        // Safety: writing to these ports is safe based on the requirement that a valid base address
-        // was provided when creating this instance.
+        // Safety: writing to these ports is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         unsafe {
             self.io_port_factory
                 .new_writer(self.base_address + INTERRUPT_ENABLE)
@@ -118,8 +115,8 @@ impl SerialPort {
 
     /// Wait until the output buffer is empty.
     pub fn wait_for_empty_output(&mut self) -> Result<(), &'static str> {
-        // Safety: reading from this ports is safe based on the requirement that a valid base
-        // address was provided when creating this instance.
+        // Safety: reading from this ports is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         unsafe {
             while self.line_status.try_read()? & OUTPUT_EMPTY != OUTPUT_EMPTY {
                 core::hint::spin_loop();
@@ -131,8 +128,8 @@ impl SerialPort {
     /// Sends a byte of data via the serial port.
     pub fn send(&mut self, data: u8) -> Result<(), &'static str> {
         self.wait_for_empty_output()?;
-        // Safety: writing to this port is safe based on the requirement that a valid base address
-        // was provided when creating this instance.
+        // Safety: writing to this port is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
         unsafe { self.data.try_write(data) }
     }
 }

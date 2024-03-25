@@ -14,29 +14,30 @@
 // limitations under the License.
 //
 
-//! This is a key/value hash table optimized for large numbers of small k/v pairs.  We assume we
-//! bust out of on-chip cache, so speed is limited by cache misses, not the actual operations such
-//! as hashing and bit manipulation.
+//! This is a key/value hash table optimized for large numbers of small k/v
+//! pairs.  We assume we bust out of on-chip cache, so speed is limited by cache
+//! misses, not the actual operations such as hashing and bit manipulation.
 //!
-//! The k/v pairs are loaded before any are read, and once they are loaded cannot be modified.  We
-//! take advantage of these restrictions to build a hash table with far less memory overhead per
-//! k/v pair (21 bytes vs ~128 bytes for hashbrown<Bytes, Bytes>).  Speed for k/v lookups is ~90ns
-//! on manual tests.
+//! The k/v pairs are loaded before any are read, and once they are loaded
+//! cannot be modified.  We take advantage of these restrictions to build a hash
+//! table with far less memory overhead per k/v pair (21 bytes vs ~128 bytes for
+//! hashbrown<Bytes, Bytes>).  Speed for k/v lookups is ~90ns on manual tests.
 //!
-//! The hash table consists of 2 vectors.  The first is a table of "entries", which is a packed
-//! array of entries with the following layout:
+//! The hash table consists of 2 vectors.  The first is a table of "entries",
+//! which is a packed array of entries with the following layout:
 //!
 //! ```ignore
 //!    hash_byte: u8,
 //!    data_index: u40,  // A 5-byte index, so we support up to 1TiB of data.
 //! ```
 //!
-//! This is a "swiss" table meaning that instead of the usual "buckets" of entries, the entries are
-//! collapsed into the hash table itself.  By adding a 1-byte hash, we can eliminate 99.6% of key
-//! comparisons to the wrong keys.  This is important for speed because comparing keys causes a
-//! page fault usually, while comparing the 1-byte hash is usually an L1 cache hit.  The number of
-//! cache misses per lookup should be close to 2 for values found in the table, and 1 for values
-//! not in the table.
+//! This is a "swiss" table meaning that instead of the usual "buckets" of
+//! entries, the entries are collapsed into the hash table itself.  By adding a
+//! 1-byte hash, we can eliminate 99.6% of key comparisons to the wrong keys.
+//! This is important for speed because comparing keys causes a page fault
+//! usually, while comparing the 1-byte hash is usually an L1 cache hit.  The
+//! number of cache misses per lookup should be close to 2 for values found in
+//! the table, and 1 for values not in the table.
 //!
 //! The storage for k/v pairs is chunked into 2MiB vectors:
 //!
@@ -44,8 +45,8 @@
 //!     data_chunks: Vec<Box<[u8]>>,
 //! ```
 //!
-//! `data_chunks` starts empty, and as data is added to the table, we allocate another chunk.  The
-//! format for each k/v pair of data in each chunk is:
+//! `data_chunks` starts empty, and as data is added to the table, we allocate
+//! another chunk.  The format for each k/v pair of data in each chunk is:
 //!
 //! ```ignore
 //!     key_len: <compressed u30>
@@ -54,26 +55,28 @@
 //!     value: [u8]
 //! ```
 //!
-//! Another memory savings comes from using a swiss table with exactly a 60% load factor.  Swiss
-//! tables require a significant portion of the table be empty, and normally as the table grows,
-//! they dynamically double the size.  At least when using the alloc crate, this resize causes a
-//! new table to be allocated at 2X the size, data is copied from the old table to the new, and the
-//! old table is freed.  This results in a 3X expansion in memory usage vs the prior array size.
-//! In contrast, this scheme has only 40% of the table empty and is never resized.
+//! Another memory savings comes from using a swiss table with exactly a 60%
+//! load factor.  Swiss tables require a significant portion of the table be
+//! empty, and normally as the table grows, they dynamically double the size.
+//! At least when using the alloc crate, this resize causes a new table to be
+//! allocated at 2X the size, data is copied from the old table to the new, and
+//! the old table is freed.  This results in a 3X expansion in memory usage vs
+//! the prior array size. In contrast, this scheme has only 40% of the table
+//! empty and is never resized.
 //!
 //! There are certain limits imposed by this structure:
 //!
 //!   * Every k/v pair must fit into a 2MiB chunk.
-//!   * The total memory allocated to keys and values, and their compressed lengths, is < 1TiB.
+//!   * The total memory allocated to keys and values, and their compressed
+//!     lengths, is < 1TiB.
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::mem;
 
-use bytes::Bytes;
 use rand_core::{OsRng, RngCore};
 
-// To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
-// k/v pair.  It is referred to as u40 below.
+// To save memory, we use 5 byte array index values instead of 8 bytes.  This
+// saves 12 bytes per k/v pair.  It is referred to as u40 below.
 const INDEX_SIZE: usize = 5;
 
 #[derive(Clone, Copy, Default)]
@@ -108,9 +111,10 @@ enum LookupResult {
 }
 
 impl LookupHtbl {
-    /// Set the initial size of self.table.  For best speed and memory use, this should be as large
-    /// as the number of key/value entries that will be loaded.  NOTE: Only call this once, before
-    /// storing anything in the table.
+    /// Set the initial size of self.table.  For best speed and memory use, this
+    /// should be as large as the number of key/value entries that will be
+    /// loaded.  NOTE: Only call this once, before storing anything in the
+    /// table.
     pub fn reserve(&mut self, max_entries: usize) {
         if self.used_entries != 0 {
             return; // Too late to reserve memory.
@@ -120,15 +124,16 @@ impl LookupHtbl {
         self.max_entries = max_entries;
         self.table = vec![Entry::default(); allocated_entries];
         self.data_chunks = vec![];
-        // Initialized used_data to 1, so that we can use 0 as the null value.  The first byte of
-        // the first chunk will never be used as a result.
+        // Initialized used_data to 1, so that we can use 0 as the null value.  The
+        // first byte of the first chunk will never be used as a result.
         self.used_data = 1usize;
         self.used_entries = 0usize;
         self.hash_secret = OsRng.next_u64();
         if self.hash_secret == 0u64 {
             panic!("There is something very wrong with OsRng");
         }
-        // Set chunk size such that we have chunk sizes about 1/10th the size of the entries table.
+        // Set chunk size such that we have chunk sizes about 1/10th the size of the
+        // entries table.
         let mut chunk_size = allocated_entries.next_power_of_two();
         if chunk_size < 1 << 21 {
             // The minimum chunk size is 2MiB.
@@ -139,25 +144,28 @@ impl LookupHtbl {
         self.chunk_bits = self.chunk_size.ilog2() as usize;
     }
 
-    // Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
-    // Otherwise, return the LookupResult::NotFound(table index, hash_byte).
+    // Lookup the key/value pair.  If found, return LookupResult::Found(table_index,
+    // data_index). Otherwise, return the LookupResult::NotFound(table index,
+    // hash_byte).
     fn lookup(&self, key: &[u8]) -> LookupResult {
         if self.table.is_empty() {
             panic!("Check for emtpy before calling lookup");
         }
         let key_hash: u64 = hash(key, self.hash_secret);
-        // The lower 32-bites are used in reduce to compute the table index, and values next to
-        // each other in the table will have their lower-32 bits close to each other.  The next
-        // higher byte should have no significant correlation for unequal keys.
+        // The lower 32-bites are used in reduce to compute the table index, and values
+        // next to each other in the table will have their lower-32 bits close
+        // to each other.  The next higher byte should have no significant
+        // correlation for unequal keys.
         let key_hash_byte = (key_hash >> 32) as u8;
         let mut table_index = reduce(key_hash, self.table.len());
-        // To quickly find the correct entry, we skip entries that have hash_byte values that don't
-        // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
-        // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
-        // keys, and return Found if they match.  Otherwise, we start back at the top of the loop.
+        // To quickly find the correct entry, we skip entries that have hash_byte values
+        // that don't match the key's hash.  This avoids 99.6% of cache misses
+        // caused comparing the key to the wrong key.  Once we found an entry
+        // with a matching hash byte, we then compare the two keys, and return
+        // Found if they match.  Otherwise, we start back at the top of the loop.
         loop {
-            // We try to load only the hash byte to save time.  Once we have a matching hash byte,
-            // the loop ends and we compare keys.
+            // We try to load only the hash byte to save time.  Once we have a matching hash
+            // byte, the loop ends and we compare keys.
             let mut entry = &self.table[table_index];
             while entry.hash_byte != key_hash_byte && entry.hash_byte != 0 {
                 table_index += 1;
@@ -220,8 +228,9 @@ impl LookupHtbl {
         &chunk[value_index..value_index + value_len]
     }
 
-    /// Insert a k/v pair into the table.  Returns None if the key was not already in the table,
-    /// and Some(&[u8]) referring to the prior value otherwise.
+    /// Insert a k/v pair into the table.  Returns None if the key was not
+    /// already in the table, and Some(&[u8]) referring to the prior value
+    /// otherwise.
     pub fn insert(&mut self, key: &[u8], value: &[u8]) -> Option<&[u8]> {
         if self.table.is_empty() {
             self.reserve(1);
@@ -246,7 +255,8 @@ impl LookupHtbl {
         }
     }
 
-    // This increases memory for the table temporarily increase 3X, and permanently by 2X.
+    // This increases memory for the table temporarily increase 3X, and permanently
+    // by 2X.
     fn grow_table(&mut self) {
         if self.max_entries == 0 {
             self.reserve(1);
@@ -271,9 +281,11 @@ impl LookupHtbl {
         }
     }
 
-    // Create a k/v pair in the most recent chunk.  Create a new chunk if this would overflow.
+    // Create a k/v pair in the most recent chunk.  Create a new chunk if this would
+    // overflow.
     fn new_data(&mut self, key: &[u8], value: &[u8]) -> usize {
-        // Check to see if we need a new chunk.  INDEX_SIZE is also the max for compressed ints.
+        // Check to see if we need a new chunk.  INDEX_SIZE is also the max for
+        // compressed ints.
         let additional_data_len = 2 * INDEX_SIZE + key.len() + value.len();
         assert!(additional_data_len < self.chunk_size);
         let end_index = self.used_data + additional_data_len;
@@ -282,8 +294,9 @@ impl LookupHtbl {
             let values = Box::<[u8]>::new_zeroed_slice(self.chunk_size);
             // Safety:
             //     This is safe because we allocated these values as a zero-ed slice, which
-            //     initializes our u8 values to 0.  The assumption here is that the zero value for
-            //     u8 is zero, a safe assumption: what would happen if 0u8 != 0x00u8?
+            //     initializes our u8 values to 0.  The assumption here is that the zero
+            // value for     u8 is zero, a safe assumption: what would happen if
+            // 0u8 != 0x00u8?
             let values = unsafe { values.assume_init() };
             self.data_chunks.push(values);
             if chunk_index == 0 {
@@ -305,9 +318,9 @@ impl LookupHtbl {
     }
 
     /// This is like HashMap::extend.
-    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
+    pub fn extend<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(&mut self, new_data: T) {
         for (key, value) in new_data {
-            self.insert(&key, &value);
+            self.insert(key, value);
         }
     }
 
@@ -323,10 +336,7 @@ impl LookupHtbl {
 
     /// Return an iterator that can be used to iterate through k/v pairs.
     pub fn iter(&self) -> LookupHtblIter {
-        LookupHtblIter {
-            htbl: self,
-            table_index: 0,
-        }
+        LookupHtblIter { htbl: self, table_index: 0 }
     }
 }
 
@@ -368,16 +378,14 @@ impl<'a> IntoIterator for &'a LookupHtbl {
 
     // Required method
     fn into_iter(self) -> Self::IntoIter {
-        LookupHtblIter {
-            htbl: self,
-            table_index: 0usize,
-        }
+        LookupHtblIter { htbl: self, table_index: 0usize }
     }
 }
 
-// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as the index into the
-// hash table.  This is faster than computing x % N, and avoids the wasted space of requiring the
-// hash table to be a power of 2 in size.
+// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as
+// the index into the hash table.  This is faster than computing x % N, and
+// avoids the wasted space of requiring the hash table to be a power of 2 in
+// size.
 #[inline]
 fn reduce(hash: u64, table_len: usize) -> usize {
     (((hash as u128) * (table_len as u128)) >> 64) as usize
@@ -394,14 +402,13 @@ fn read_index(entry: &Entry) -> usize {
 // Write a u40 index to unaligned memory LE.
 #[inline]
 fn write_index(entry: &mut Entry, value: usize) {
-    entry
-        .data_index
-        .copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
+    entry.data_index.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
 }
 
-// Read a compressed integer length.  Returns (length, num bytes of length) Compressed integers for
-// lengths are <2-bit num_bytes><6-bit MSBs>.  num_bytes is 0 for small integers <= 64.  Lengths up
-// to 2^30 can be represented, limiting keys and values to 1GiB each.
+// Read a compressed integer length.  Returns (length, num bytes of length)
+// Compressed integers for lengths are <2-bit num_bytes><6-bit MSBs>.  num_bytes
+// is 0 for small integers <= 64.  Lengths up to 2^30 can be represented,
+// limiting keys and values to 1GiB each.
 #[inline]
 fn read_len(data: &[u8], index: usize) -> (usize, usize) {
     let first_byte = data[index] as usize;
@@ -416,7 +423,8 @@ fn read_len(data: &[u8], index: usize) -> (usize, usize) {
     (len, 1 + num_bytes)
 }
 
-// Write a compressed length to data.  Return the number of bytes used to represent the length.
+// Write a compressed length to data.  Return the number of bytes used to
+// represent the length.
 #[inline]
 fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
     if len < 64 {
@@ -434,9 +442,10 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
     num_bytes
 }
 
-// This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
-// hashing in order to pass the dieharder tests.  It also passes distribution checks when used to
-// produce indexes into swiss hash tables in the way we do here, with reduce.
+// This hash both defends against DDoS attacks and passes dieharder tests.  It
+// is 2 rounds of hashing in order to pass the dieharder tests.  It also passes
+// distribution checks when used to produce indexes into swiss hash tables in
+// the way we do here, with reduce.
 #[inline(always)]
 fn hash_u64(v: u64, hash_secret: u64) -> u64 {
     let v1 = v.wrapping_add(hash_secret) ^ v.rotate_left(32);
@@ -511,11 +520,7 @@ mod tests {
     #[test]
     fn test_for_loop() {
         let keys = ["key1".as_bytes(), "key2".as_bytes(), "key3".as_bytes()];
-        let values = [
-            "value1".as_bytes(),
-            "value2".as_bytes(),
-            "value3".as_bytes(),
-        ];
+        let values = ["value1".as_bytes(), "value2".as_bytes(), "value3".as_bytes()];
         let mut table = LookupHtbl::default();
         table.reserve(3);
         for i in 0..3 {
@@ -573,10 +578,7 @@ mod tests {
 
     #[test]
     fn test_rand_vals() {
-        let mut r = Rand {
-            seed: 0u64,
-            hash_secret: 0x54d3_582e_5012_b464,
-        };
+        let mut r = Rand { seed: 0u64, hash_secret: 0x54d3_582e_5012_b464 };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
         for _ in 0..10_000 {
@@ -603,19 +605,18 @@ mod tests {
         assert!(table.get("key".as_bytes()) == Some("value2".as_bytes()));
     }
 
-    // The RNG function should act like a random oracle, in which case the odds of seeing the same
-    // value as one that came before is determined by the Birthday Problem.  Using the rule of
-    // thumb for how large the sequence needs to be to have a .5 probability of collision: sqrt(0.5
-    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence longer
+    // The RNG function should act like a random oracle, in which case the odds of
+    // seeing the same value as one that came before is determined by the
+    // Birthday Problem.  Using the rule of thumb for how large the sequence
+    // needs to be to have a .5 probability of collision: sqrt(0.5
+    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a
+    //   sequence longer
     // than 2^28 without collisions.
     //
     // This is a linear-time algorithm for finding the cycle length of an RNG.
     #[test]
     fn test_rng_sequence_len() {
-        let mut r = Rand {
-            seed: 0u64,
-            hash_secret: 0x5b97_8fda_47ab_926d,
-        };
+        let mut r = Rand { seed: 0u64, hash_secret: 0x5b97_8fda_47ab_926d };
         for loop_power in 0..28 {
             let target = r.rand64();
             for i in 0usize..(1usize << loop_power) {
@@ -626,8 +627,8 @@ mod tests {
         }
     }
 
-    // Test that the hash function yeilds the expected 2.54 average sequence length in a swiss
-    // table with 50% load factor.
+    // Test that the hash function yeilds the expected 2.54 average sequence length
+    // in a swiss table with 50% load factor.
     #[test]
     fn test_swiss_collisions() {
         let table_len = 1usize << 25;
@@ -666,9 +667,10 @@ mod tests {
             let ave_seq_len = total_len as f32 / num_seq as f32;
             if (ave_seq_len - 2.5415f32).abs() >= 0.02 {
                 // When SHA256(counter) is used to randomly fill a swiss hash table to 50%, then
-                // average sequence length of used entries in the table is (experimentally) 25415.
-                // A good hash function needs to distribute keys well enough to achieve a similar
-                // behavior to that of a cryptographic strength hash function.  For example, with
+                // average sequence length of used entries in the table is (experimentally)
+                // 25415. A good hash function needs to distribute keys well
+                // enough to achieve a similar behavior to that of a
+                // cryptographic strength hash function.  For example, with
                 // the old ahash function, I was seeing sequence lengths of 3.5, and this
                 // significantly slowed down lookups.
                 panic!("tweak {}: ave seq len = {}", tweak, ave_seq_len);

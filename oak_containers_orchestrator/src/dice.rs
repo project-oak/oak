@@ -35,7 +35,8 @@ const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
 
 /// Loads the DICE data from the file provided by Stage 1.
 ///
-/// The file is also overwritten with zeros to ensure it cannot be reused by another process.
+/// The file is also overwritten with zeros to ensure it cannot be reused by
+/// another process.
 pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
     let mut file = OpenOptions::new()
         .read(true)
@@ -45,21 +46,19 @@ pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
     let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
 
     let mut buffer = Vec::with_capacity(size);
-    file.read_to_end(&mut buffer)
-        .context("couldn't read DICE data from file")?;
+    file.read_to_end(&mut buffer).context("couldn't read DICE data from file")?;
 
     let result =
         DiceData::decode_length_delimited(&buffer[..]).context("couldn't parse DICE data")?;
 
     buffer.zeroize();
     file.rewind()?;
-    file.write_all(&buffer)
-        .context("couldn't overwrite DICE data file")?;
+    file.write_all(&buffer).context("couldn't overwrite DICE data file")?;
     result.try_into()
 }
 
-/// Measures the downloaded container image bytes and configuration and returns these as a vector of
-/// additional CWT claims.
+/// Measures the downloaded container image bytes and configuration and returns
+/// these as a vector of additional CWT claims.
 pub fn measure_container_and_config(
     container_bytes: &[u8],
     config_bytes: &[u8],

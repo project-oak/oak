@@ -79,21 +79,18 @@ struct InvocationChannel {
 
 impl InvocationChannel {
     pub fn new(socket: Box<dyn Channel>) -> Self {
-        Self {
-            inner: frame::Framed::new(socket),
-        }
+        Self { inner: frame::Framed::new(socket) }
     }
 
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<(M, Timer)> {
-        // `message_buffer` will contain the full message we are going to read. Instead of
-        // allocating separate buffers and copying data into `message_buffer`, we will ensure that
-        // `message_buffer` has enough capacity. There will be at least one frame, so we start with
+        // `message_buffer` will contain the full message we are going to read. Instead
+        // of allocating separate buffers and copying data into
+        // `message_buffer`, we will ensure that `message_buffer` has enough
+        // capacity. There will be at least one frame, so we start with
         // the maximum size of a single frame body as initial capacity.
         let mut message_buffer = BytesMut::with_capacity(frame::MAX_BODY_SIZE);
-        let (first_frame, timer) = self
-            .inner
-            .read_frame(&mut message_buffer)
-            .context("couldn't read frame")?;
+        let (first_frame, timer) =
+            self.inner.read_frame(&mut message_buffer).context("couldn't read frame")?;
 
         if !first_frame.flags.contains(frame::Flags::START) {
             anyhow::bail!("expected a frame with the START flag set");
@@ -103,9 +100,9 @@ impl InvocationChannel {
             return Ok((M::decode(&message_buffer[..]), timer));
         }
 
-        // The length of the entire message is encoded in the body of the first frame. The
-        // length includes the first frame. Decode it so the buffer needs to be resized/copied
-        // at most once.
+        // The length of the entire message is encoded in the body of the first frame.
+        // The length includes the first frame. Decode it so the buffer needs to
+        // be resized/copied at most once.
         let message_length: usize = {
             let mut buffer = [0u8; message::LENGTH_SIZE];
             let range = message::LENGTH_OFFSET..(message::LENGTH_OFFSET + message::LENGTH_SIZE);
@@ -114,16 +111,14 @@ impl InvocationChannel {
                 .expect("couldn't convert message length to usize")
         };
 
-        // This likely causes a copy of the pre-existing data, but we needed to read the first
-        // frame to figure out how much space we need for the entire message. No more resizes
-        // are going to happen from here.
+        // This likely causes a copy of the pre-existing data, but we needed to read the
+        // first frame to figure out how much space we need for the entire
+        // message. No more resizes are going to happen from here.
         message_buffer.reserve(message_length - frame::MAX_BODY_SIZE);
 
         loop {
-            let (frame, _) = self
-                .inner
-                .read_frame(&mut message_buffer)
-                .context("couldn't read frame")?;
+            let (frame, _) =
+                self.inner.read_frame(&mut message_buffer).context("couldn't read frame")?;
 
             if frame.flags.contains(frame::Flags::START) {
                 anyhow::bail!("received two frames with the START flag set");
@@ -141,9 +136,7 @@ impl InvocationChannel {
         let encoded_data = message.encode();
         let frames: Vec<frame::Frame> = frame::bytes_into_frames(&encoded_data[..])?;
         for frame in frames.into_iter() {
-            self.inner
-                .write_frame(frame)
-                .context("couldn't write frame")?
+            self.inner.write_frame(frame).context("couldn't write frame")?
         }
         Ok(())
     }

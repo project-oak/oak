@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -89,6 +90,17 @@ message StringReferenceValue {
   repeated string values = 1;
 }
 
+message Regex {
+  string value = 1;
+}
+
+message RegexReferenceValue {
+  oneof type {
+    SkipVerification skip = 1;
+    Regex regex = 2;
+  }
+}
+
 message RootLayerReferenceValues {
   // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
   // Verification is skipped when not running in a TEE.
@@ -101,9 +113,8 @@ message RootLayerReferenceValues {
 }
 
 message AmdSevReferenceValues {
-  // TBD: Add conditions on all kinds of fields contained in the
-  // attestation report.
-  StringReferenceValue firmware_version = 2;
+  // Minimum accepted versions of all TCB components.
+  TcbVersion min_tcb_version = 5;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
@@ -128,9 +139,12 @@ message KernelLayerReferenceValues {
   // Verifies the kernel based on endorsement.
   KernelBinaryReferenceValue kernel = 1;
 
-  // Verifies the command line by which the kernel was built. The command
-  // line is treated as a binary blob, as if it were a binary.
-  BinaryReferenceValue kernel_cmd_line = 2;
+  // No longer used. Will be removed.
+  // TODO: b/325979696 - Validate the kernel command-line using a regex.
+  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
+
+  // Validates the kernel command-line using a regex.
+  RegexReferenceValue kernel_cmd_line_regex = 8;
 
   // Fields are deprecated and kept only for backwards compatibility.
   // Remove ASAP.

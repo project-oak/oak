@@ -46,14 +46,8 @@ const UCODE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.37
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
 // Ideally, we'd check everything listed there.
 pub fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::Result<()> {
-    anyhow::ensure!(
-        ark.tbs_certificate.version == Version::V3,
-        "unexpected version of ARK cert"
-    );
-    anyhow::ensure!(
-        ask.tbs_certificate.version == Version::V3,
-        "unexpected version of ASK cert"
-    );
+    anyhow::ensure!(ark.tbs_certificate.version == Version::V3, "unexpected version of ARK cert");
+    anyhow::ensure!(ask.tbs_certificate.version == Version::V3, "unexpected version of ASK cert");
 
     verify_cert_signature(ark, ask)?;
     verify_cert_signature(ark, ark)?;
@@ -69,10 +63,7 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
     );
 
     let verifying_key = {
-        let pubkey_info = signer
-            .tbs_certificate
-            .subject_public_key_info
-            .owned_to_ref();
+        let pubkey_info = signer.tbs_certificate.subject_public_key_info.owned_to_ref();
         let pubkey = RsaPublicKey::try_from(pubkey_info)
             .map_err(|_err| anyhow::anyhow!("could not parse RSA public key"))?;
         rsa::pss::VerifyingKey::<Sha384>::new(pubkey)

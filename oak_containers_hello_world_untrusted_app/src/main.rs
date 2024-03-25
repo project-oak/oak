@@ -34,9 +34,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get endorsed evidence: {}", error))?;
     let evidence = endorsed_evidence.evidence.context("no evidence provided")?;
-    let endorsements = endorsed_evidence
-        .endorsements
-        .context("no endorsements provided")?;
+    let endorsements = endorsed_evidence.endorsements.context("no endorsements provided")?;
 
     let attestation_verifier = InsecureAttestationVerifier {};
     let attestation_results = attestation_verifier
@@ -54,9 +52,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
 
-    let (response, _) = client_encryptor
-        .decrypt(&encrypted_response)
-        .context("couldn't decrypt response")?;
+    let (response, _) =
+        client_encryptor.decrypt(&encrypted_response).context("couldn't decrypt response")?;
     let greeting = String::from_utf8(response).expect("couldn't parse response");
 
     log::info!("Received a greeting from the trusted app: {:?}", greeting);

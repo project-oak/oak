@@ -67,7 +67,8 @@ type Measurement = [u8; 32];
 type BootAllocator = allocator::BumpAllocator<0x20000>;
 static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
-// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
+// Heap for short-term allocations. These allocations are not expected to
+// outlive Stage 0.
 #[cfg_attr(not(test), global_allocator)]
 static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
@@ -96,7 +97,8 @@ pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentS
 
 pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 
-/// Passes control to the operating system kernel. No more code from the BIOS will run.
+/// Passes control to the operating system kernel. No more code from the BIOS
+/// will run.
 ///
 /// # Safety
 ///
@@ -119,15 +121,18 @@ pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
     );
 }
 
-/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU doesn't support it.
+/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU
+/// doesn't support it.
 ///
 /// Initialized in the bootstrap assembly code.
 pub fn sev_status() -> SevStatus {
-    // Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+    // Will be set in the bootstrap assembly code where we have to read the MSR
+    // anyway.
     #[no_mangle]
     static mut SEV_STATUS: SevStatus = SevStatus::empty();
 
-    // Safety: we don't allow mutation and this is initialized in the bootstrap assembly.
+    // Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
     unsafe { SEV_STATUS }
 }
 
@@ -135,14 +140,16 @@ pub fn sev_status() -> SevStatus {
 ///
 /// # Arguments
 ///
-/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
+/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
+///   tables.
 pub fn rust64_start(encrypted: u64) -> ! {
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
     paging::init_page_table_refs(encrypted);
 
-    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
+    // implies SEV-ES).
     if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         sev::init_ghcb(&BOOT_ALLOC);
     }
@@ -151,22 +158,22 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::info!("starting...");
     log::info!("Enabled SEV features: {:?}", sev_status());
 
-    ENCRYPTED
-        .set(encrypted)
-        .expect("encrypted bit already initialized");
+    ENCRYPTED.set(encrypted).expect("encrypted bit already initialized");
 
     if sev_status().contains(SevStatus::SEV_ENABLED) {
-        // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode
-        // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
-        // working, we may want to check that MTRR is supported, but only if we want to
-        // support very old processors. However, note that, this branch is only executed if
+        // Safety: This is safe for SEV-ES and SNP because we're using an originally
+        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
+        // If we get CPUID reads working, we may want to check that MTRR is
+        // supported, but only if we want to support very old processors.
+        // However, note that, this branch is only executed if
         // we have encryption, and this wouldn't be true for very old processors.
         unsafe {
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
     }
 
-    // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
+    // Safety: we assume there won't be any other hardware devices using the fw_cfg
+    // IO ports.
     let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
 
     let mut zero_page = Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC);
@@ -202,19 +209,19 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
-    // Initialize the short-term heap. Any allocations that rely on a global allocator before this
-    // point will fail.
+    // Initialize the short-term heap. Any allocations that rely on a global
+    // allocator before this point will fail.
     allocator::init_global_allocator(zero_page.e820_table());
 
-    let setup_data_sha2_256_digest = zero_page
-        .try_fill_hdr_from_setup_data(&mut fwcfg)
-        .unwrap_or_default();
+    let setup_data_sha2_256_digest =
+        zero_page.try_fill_hdr_from_setup_data(&mut fwcfg).unwrap_or_default();
 
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        // Initialize the Guest Message encryptor for generating attestation reports and a unique
-        // device secret.
+        // Initialize the Guest Message encryptor for generating attestation reports and
+        // a unique device secret.
         sev::init_guest_message_encryptor().expect("couldn't initialize guest message encryptor");
-        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
+        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its
+        // contents.
         let cc_blob = Box::leak(Box::new_in(
             oak_linux_boot_params::CCBlobSevInfo::new(
                 unsafe { SEV_SECRETS.as_ptr() },
@@ -222,10 +229,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
             ),
             &BOOT_ALLOC,
         ));
-        let setup_data = Box::leak(Box::new_in(
-            oak_linux_boot_params::CCSetupData::new(cc_blob),
-            &BOOT_ALLOC,
-        ));
+        let setup_data =
+            Box::leak(Box::new_in(oak_linux_boot_params::CCSetupData::new(cc_blob), &BOOT_ALLOC));
 
         zero_page.add_setup_data(setup_data);
     }
@@ -237,10 +242,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
     let mut entry = kernel_info.entry;
 
-    // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
-    // the entry point address from there; if there is no valid ELF header at that address, assume
-    // it's code, and jump there directly.
-    // Safety: this assumes the kernel is loaded at the given address.
+    // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If
+    // it works, extract the entry point address from there; if there is no
+    // valid ELF header at that address, assume it's code, and jump there
+    // directly. Safety: this assumes the kernel is loaded at the given address.
     let header = unsafe { &*(entry.as_u64() as *const elf::file::Elf64_Ehdr) };
     if header.e_ident[0] == elf::abi::ELFMAG0
         && header.e_ident[1] == elf::abi::ELFMAG1
@@ -263,10 +268,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
 
     if let Err(err) = smp::bootstrap_aps(rsdp) {
-        log::warn!(
-            "Failed to bootstrap APs: {}. APs may not be properly initialized.",
-            err
-        );
+        log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
     }
 
     // Register the AP Jump Table, if required.
@@ -275,8 +277,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
         let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
         if sev_status().contains(SevStatus::SNP_ACTIVE) {
             // Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don't care about the contents of the secrets page beyond writing our jump
-            // table address into it.
+            // Safety: we don't care about the contents of the secrets page beyond writing
+            // our jump table address into it.
             let secrets = unsafe { SEV_SECRETS.assume_init_mut() };
             secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
         } else {
@@ -299,35 +301,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     let memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    log::debug!(
-        "Kernel image digest: sha2-256:{}",
-        hex::encode(kernel_info.measurement)
-    );
-    log::debug!(
-        "Kernel setup data digest: sha2-256:{}",
-        hex::encode(setup_data_sha2_256_digest)
-    );
-    log::debug!(
-        "Kernel image digest: sha2-256:{}",
-        hex::encode(cmdline_sha2_256_digest)
-    );
-    log::debug!(
-        "Initial RAM disk digest: sha2-256:{}",
-        hex::encode(ram_disk_sha2_256_digest)
-    );
-    log::debug!(
-        "ACPI table generation digest: sha2-256:{}",
-        hex::encode(acpi_sha2_256_digest)
-    );
-    log::debug!(
-        "E820 table digest: sha2-256:{}",
-        hex::encode(memory_map_sha2_256_digest)
-    );
+    log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
+    log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
+    log::debug!("Kernel command-line: {}", cmdline);
+    log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
+    log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
+    log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
 
     let measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
         kernel_sha2_256_digest: kernel_info.measurement,
         cmdline_sha2_256_digest,
+        cmdline: cmdline.clone(),
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
@@ -358,8 +343,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
     // Append the DICE data address to the kernel command-line.
     let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
     let cmdline = if kernel_info.kernel_type == KernelType::Elf {
-        // Current systems that use the ELF kernel does not support DICE data, so don't append the
-        // extra parameter.
+        // Current systems that use the ELF kernel does not support DICE data, so don't
+        // append the extra parameter.
         cmdline
     } else if cmdline.is_empty() {
         extra
@@ -372,8 +357,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
-    // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
-    // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
+    // Clean-ups we need to do just before we jump to the kernel proper: clean up
+    // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
+    // hugepage for the first 2M of memory.
     drop(fwcfg);
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
         sev::deinit_ghcb();
@@ -385,13 +371,13 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 }
 
-/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a panic_handler
-/// function in individual binary crates.
+/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a
+/// panic_handler function in individual binary crates.
 pub fn panic(info: &PanicInfo) -> ! {
     log::error!("{}", info);
 
-    // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and
-    // terminate the program.
+    // Trigger a breakpoint exception. As we don't have a #BP handler, this will
+    // triple fault and terminate the program.
     int3();
 
     loop {

@@ -47,24 +47,27 @@ pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
 /// The offset used for the direct mapping of all physical memory.
 const DIRECT_MAPPING_OFFSET: VirtAddr = VirtAddr::new_truncate(0xFFFF_8800_0000_0000);
 
-/// For now we use a fixed position for the encrypted bit. For now we assume that we will be running
-/// on AMD Arcadia-Milan CPUs, which use bit 51.
+/// For now we use a fixed position for the encrypted bit. For now we assume
+/// that we will be running on AMD Arcadia-Milan CPUs, which use bit 51.
 pub const ENCRYPTED_BIT_POSITION: u8 = 51;
 
 // TODO(#3394): Move to a shared crate.
 pub trait Translator {
-    /// Translates the given virtual address to the physical address that it maps to.
+    /// Translates the given virtual address to the physical address that it
+    /// maps to.
     ///
     /// Returns `None` if there is no valid mapping for the given address.
     fn translate_virtual(&self, addr: VirtAddr) -> Option<PhysAddr>;
 
     /// Translate a physical address to a virtual address.
     ///
-    /// Note that a physical address may be mapped multiple times. This function will always return
-    /// the address from the directly mapped region, ignoring ohter mappings if they exist.
+    /// Note that a physical address may be mapped multiple times. This function
+    /// will always return the address from the directly mapped region,
+    /// ignoring ohter mappings if they exist.
     fn translate_physical(&self, addr: PhysAddr) -> Option<VirtAddr>;
 
-    /// Translate a physical frame to virtual page, using the directly mapped region.
+    /// Translate a physical frame to virtual page, using the directly mapped
+    /// region.
     fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>>;
 }
 
@@ -132,8 +135,8 @@ impl From<PageTableFlags> for BasePageTableFlags {
 
 /// Page mapper for pages of type `<S>`.
 ///
-/// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but knows about memory
-/// encryption.
+/// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but
+/// knows about memory encryption.
 pub trait Mapper<S: PageSize> {
     unsafe fn map_to_with_table_flags(
         &self,
@@ -154,9 +157,10 @@ pub trait Mapper<S: PageSize> {
     ///
     /// # Safety
     ///
-    /// There are many ways how changing page table entries can break memory safety or cause other
-    /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
-    /// `WRITABLE` from the page that contains your stack.
+    /// There are many ways how changing page table entries can break memory
+    /// safety or cause other failures, e.g. by setting the `NO_EXECUTE` bit
+    /// on pages that contain your code or removing `WRITABLE` from the page
+    /// that contains your stack.
     unsafe fn update_flags(
         &self,
         page: Page<S>,
@@ -185,7 +189,8 @@ pub fn init(
         })
         .filter(|e| e.entry_type() == Some(E820EntryType::RAM))
         .map(|e| {
-            // Clip both ends, if necessary, to make sure that we are aligned with 2 MiB pages.
+            // Clip both ends, if necessary, to make sure that we are aligned with 2 MiB
+            // pages.
             (
                 PhysAddr::new(align_up(e.addr() as u64, Size2MiB::SIZE)),
                 PhysAddr::new(align_down((e.addr() + e.size()) as u64, Size2MiB::SIZE)),
@@ -204,7 +209,8 @@ pub fn init(
 
     // Step 2: mark known in-use regions as not available.
 
-    // First, leave out the first 2 MiB as there be dragons (and bootloader data structures)
+    // First, leave out the first 2 MiB as there be dragons (and bootloader data
+    // structures)
     alloc.mark_valid(
         PhysFrame::range(
             PhysFrame::from_start_address(PhysAddr::new(0x0)).unwrap(),
@@ -218,7 +224,8 @@ pub fn init(
         .iter()
         .filter(|phdr| phdr.p_type == PT_LOAD)
         .map(|phdr| {
-            // Align the physical addresses to 2 MiB boundaries, making them larger if necessary.
+            // Align the physical addresses to 2 MiB boundaries, making them larger if
+            // necessary.
             PhysFrame::range(
                 PhysFrame::from_start_address(PhysAddr::new(align_down(
                     phdr.p_paddr,
@@ -270,11 +277,9 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
 }
 
 pub fn encryption() -> MemoryEncryption {
-    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
-    if get_sev_status()
-        .unwrap_or(SevStatus::empty())
-        .contains(SevStatus::SEV_ENABLED)
-    {
+    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume
+    // it's bit 51.
+    if get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
         MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } else {
         MemoryEncryption::NoEncryption
@@ -297,27 +302,26 @@ pub fn encryption() -> MemoryEncryption {
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
 pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'static str> {
-    // Safety: this expects the frame allocator to be initialized and the memory region it's handing
-    // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
-    // This reference will no longer be valid after we reload the page tables!
-    let pml4_frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
-        .lock()
-        .allocate_frame()
-        .ok_or("couldn't allocate a frame for PML4")?;
+    // Safety: this expects the frame allocator to be initialized and the memory
+    // region it's handing memory out of to be identity mapped. This is true for
+    // the lower 2 GiB after we boot. This reference will no longer be valid
+    // after we reload the page tables!
+    let pml4_frame: PhysFrame<Size4KiB> =
+        FRAME_ALLOCATOR.lock().allocate_frame().ok_or("couldn't allocate a frame for PML4")?;
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
     pml4.zero();
 
-    // Populate all the kernel space entries of the level 4 page table. This means that these
-    // entries should never change, memory allocation will happen on lower level page tables. This
-    // is done to permit the kernel to switch between different level 4 page tables in the future.
-    // All page tables that include these mappings will point to the same lower level page tables /
+    // Populate all the kernel space entries of the level 4 page table. This means
+    // that these entries should never change, memory allocation will happen on
+    // lower level page tables. This is done to permit the kernel to switch
+    // between different level 4 page tables in the future. All page tables that
+    // include these mappings will point to the same lower level page tables /
     // memory in kernel space.
     {
         let mut fa = FRAME_ALLOCATOR.lock();
         for entry in pml4.iter_mut().skip(256) {
-            let pml3_frame: PhysFrame<Size4KiB> = fa
-                .allocate_frame()
-                .ok_or("couldn't allocate a frame for PML3")?;
+            let pml3_frame: PhysFrame<Size4KiB> =
+                fa.allocate_frame().ok_or("couldn't allocate a frame for PML3")?;
             let pml3 = unsafe { &mut *(pml3_frame.start_address().as_u64() as *mut PageTable) };
             pml3.zero();
             entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
@@ -328,8 +332,9 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
-        // Create a direct map for all physical memory, marking it NO_EXECUTE. The size (128 GB) has
-        // been chosen go coincide with the amout of memory our frame allocator can track.
+        // Create a direct map for all physical memory, marking it NO_EXECUTE. The size
+        // (128 GB) has been chosen go coincide with the amout of memory our
+        // frame allocator can track.
         page_tables::create_offset_map(
             PhysFrame::<Size2MiB>::range(
                 PhysFrame::from_start_address(PhysAddr::new(0x00_0000_0000)).unwrap(),
@@ -345,8 +350,8 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
         )
         .map_err(|_| "couldn't set up paging for physical memory")?;
 
-        // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
-        // permissions) in the program header.
+        // Mapping for the kernel itself in the upper -2G of memory, based on the
+        // mappings (and permissions) in the program header.
         page_tables::create_kernel_map(program_headers, &mut page_table)
             .map_err(|_| "couldn't set up paging for the kernel")?;
     }
@@ -356,15 +361,16 @@ pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'st
 
 /// Allocates memory usable as a stack.
 ///
-/// The stack will be one page (2 MiB) in size, will be allocated in the VMA_ALLOCATOR area, and
-/// will consume two pages: one as a unmapped stack guard (so that we'd get a page fault if we blow
-/// the stack), and one backed by a physical frame as the actual stack.
+/// The stack will be one page (2 MiB) in size, will be allocated in the
+/// VMA_ALLOCATOR area, and will consume two pages: one as a unmapped stack
+/// guard (so that we'd get a page fault if we blow the stack), and one backed
+/// by a physical frame as the actual stack.
 ///
-/// The return address is usable as the stack pointer; that is, it points to the end of the
-/// allocated stack page.
+/// The return address is usable as the stack pointer; that is, it points to the
+/// end of the allocated stack page.
 pub fn allocate_stack() -> VirtAddr {
-    // Of the two pages we allocate, the first will be the stack guard page, and the second will be
-    // the actual stack.
+    // Of the two pages we allocate, the first will be the stack guard page, and the
+    // second will be the actual stack.
     let pages = VMA_ALLOCATOR
         .lock()
         .allocate(2)

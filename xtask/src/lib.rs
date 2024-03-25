@@ -35,8 +35,5 @@ pub static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()
 
 // Creates a path relative to the workspace root.
 pub fn workspace_path(relative_path: &[&str]) -> PathBuf {
-    [&[env!("WORKSPACE_ROOT")], relative_path]
-        .concat()
-        .iter()
-        .collect()
+    [&[env!("WORKSPACE_ROOT")], relative_path].concat().iter().collect()
 }

@@ -105,7 +105,8 @@ pub struct BuildClient {
 
 #[derive(serde::Deserialize, Default, Debug, Clone, PartialEq, EnumIter)]
 pub enum ServerVariant {
-    /// Production-like server variant, without logging or any of the experimental features enabled
+    /// Production-like server variant, without logging or any of the
+    /// experimental features enabled
     #[default]
     Base,
 }
@@ -115,10 +116,7 @@ impl std::str::FromStr for ServerVariant {
     fn from_str(variant: &str) -> Result<Self, Self::Err> {
         match variant {
             "base" => Ok(ServerVariant::Base),
-            _ => Err(format!(
-                "couldn't parse functions server variant {}",
-                variant
-            )),
+            _ => Err(format!("couldn't parse functions server variant {}", variant)),
         }
     }
 }
@@ -143,19 +141,13 @@ impl ServerVariant {
 
 #[derive(Parser, Clone, Debug)]
 pub struct RunTestsOpt {
-    #[arg(
-        long,
-        help = "Remove generated files after running tests for each crate"
-    )]
+    #[arg(long, help = "Remove generated files after running tests for each crate")]
     pub cleanup: bool,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub struct RunCargoFuzz {
-    #[arg(
-        long,
-        help = "name of a specific fuzz-target. If not specified, runs all fuzz targets."
-    )]
+    #[arg(long, help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.")]
     pub target_name: Option<String>,
     /// Additional `libFuzzer` arguments passed through to the binary
     #[arg(last(true))]
@@ -164,8 +156,8 @@ pub struct RunCargoFuzz {
 
 /// Partial representation of Cargo manifest files.
 ///
-/// Only the fields that are required for extracting specific information (e.g., names of fuzz
-/// targets) are included.
+/// Only the fields that are required for extracting specific information (e.g.,
+/// names of fuzz targets) are included.
 #[derive(serde::Deserialize, Debug)]
 pub struct CargoManifest {
     #[serde(default)]
@@ -197,7 +189,8 @@ pub enum Dependency {
     Json(DependencySpec),
 }
 
-/// Partial representation of a Json specification of a dependency in a `Cargo.toml` file.
+/// Partial representation of a Json specification of a dependency in a
+/// `Cargo.toml` file.
 #[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
 pub struct DependencySpec {
     #[serde(default)]
@@ -249,8 +242,8 @@ pub struct FuzzableExample {
     pub out_dir: String,
 }
 
-/// A construct to keep track of the status of the execution. It only cares about the top-level
-/// steps.
+/// A construct to keep track of the status of the execution. It only cares
+/// about the top-level steps.
 #[derive(Clone)]
 pub struct Status {
     error: usize,
@@ -260,21 +253,17 @@ pub struct Status {
 
 impl Status {
     pub fn new(remaining: usize) -> Self {
-        Status {
-            error: 0,
-            ok: 0,
-            remaining,
-        }
+        Status { error: 0, ok: 0, remaining }
     }
 
-    /// Guarantees that the `error`, `ok`, and `remaining` counts are updated only after the
-    /// completions of each top-level step.
+    /// Guarantees that the `error`, `ok`, and `remaining` counts are updated
+    /// only after the completions of each top-level step.
     fn update(&mut self, context: &Context, step_has_error: bool) {
         // Update the status with results from the step, only if it is a top-level step.
         if context.depth() == 1 {
             self.remaining -= 1;
-            // We only care about pass (`ok`) and fail (`error`). If an entire step is skipped, we
-            // count it as a passed step.
+            // We only care about pass (`ok`) and fail (`error`). If an entire step is
+            // skipped, we count it as a passed step.
             if step_has_error {
                 self.error += 1;
             } else {
@@ -284,15 +273,16 @@ impl Status {
     }
 }
 
-/// Formats the status as `E:<error-count>,O:<ok-count>,R:<remaining-count>`, suitable for
-/// annotating the log lines.
+/// Formats the status as `E:<error-count>,O:<ok-count>,R:<remaining-count>`,
+/// suitable for annotating the log lines.
 impl std::fmt::Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "✓:{},✗:{},⠇:{}", self.ok, self.error, self.remaining)
     }
 }
 
-/// Encapsulates all the local state relative to a step, and is propagated to child steps.
+/// Encapsulates all the local state relative to a step, and is propagated to
+/// child steps.
 pub struct Context {
     opt: Opt,
     prefix: Vec<String>,
@@ -300,19 +290,13 @@ pub struct Context {
 
 impl Context {
     pub fn root(opt: &Opt) -> Self {
-        Context {
-            opt: opt.clone(),
-            prefix: vec![],
-        }
+        Context { opt: opt.clone(), prefix: vec![] }
     }
 
     fn child(&self, name: &str) -> Self {
         let mut prefix = self.prefix.clone();
         prefix.push(name.to_string());
-        Context {
-            opt: self.opt.clone(),
-            prefix,
-        }
+        Context { opt: self.opt.clone(), prefix }
     }
 
     fn depth(&self) -> usize {
@@ -326,7 +310,8 @@ impl Context {
 
     /// Prints a footer that repeats information from the header.
     ///
-    /// Useful when footer and header are expected to be far away from each other.
+    /// Useful when footer and header are expected to be far away from each
+    /// other.
     fn footer_long(&self) -> String {
         let margin = "│".repeat(self.depth() - 1);
         format!("{}└[{}]─▶", margin, self.prefix.last().unwrap().cyan())
@@ -375,27 +360,19 @@ pub struct SingleStatusResult {
     pub logs: String,
 }
 
-/// An execution step, which may be a single `Runnable`, or a collection of sub-steps.
+/// An execution step, which may be a single `Runnable`, or a collection of
+/// sub-steps.
 pub enum Step {
-    Single {
-        name: String,
-        command: Box<dyn Runnable>,
-    },
-    Multiple {
-        name: String,
-        steps: Vec<Step>,
-    },
+    Single { name: String, command: Box<dyn Runnable> },
+    Multiple { name: String, steps: Vec<Step> },
 }
 
 impl Step {
-    /// Returns the number of top-level steps or commands. The number of sub-steps is not
-    /// recursively accumulated in the returned length.
+    /// Returns the number of top-level steps or commands. The number of
+    /// sub-steps is not recursively accumulated in the returned length.
     pub fn len(&self) -> usize {
         match self {
-            Step::Single {
-                name: _,
-                command: _,
-            } => 1,
+            Step::Single { name: _, command: _ } => 1,
             Step::Multiple { name: _, steps: s } => s.len(),
         }
     }
@@ -422,27 +399,19 @@ where
     T: IntoIterator,
     T::Item: std::fmt::Display,
 {
-    format!(
-        "[{}]",
-        values
-            .into_iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(",")
-    )
+    format!("[{}]", values.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(","))
 }
 
 /// Reads the entire content of the provided future into a vector.
 pub async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
     let mut buf = Vec::new();
-    io.read_to_end(&mut buf)
-        .await
-        .expect("couldn't read from future");
+    io.read_to_end(&mut buf).await.expect("couldn't read from future");
     buf
 }
 
-/// Run the provided step, printing out information about the execution, and returning a set of
-/// status results from the single or multiple steps that were executed.
+/// Run the provided step, printing out information about the execution, and
+/// returning a set of status results from the single or multiple steps that
+/// were executed.
 #[async_recursion]
 pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> StepResult {
     let mut step_result = StepResult::default();
@@ -493,9 +462,7 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
                     context.margin(),
                     "╚════════════════════════".blue()
                 );
-                step_result
-                    .failed_steps_prefixes
-                    .push(format!("{}", context));
+                step_result.failed_steps_prefixes.push(format!("{}", context));
             }
 
             eprintln!(
@@ -516,9 +483,7 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
             for step in steps {
                 let mut result = run_step(&context, step, run_status.clone()).await;
                 step_result.values = step_result.values.union(&result.values).cloned().collect();
-                step_result
-                    .failed_steps_prefixes
-                    .append(&mut result.failed_steps_prefixes);
+                step_result.failed_steps_prefixes.append(&mut result.failed_steps_prefixes);
                 let failed = result.values.contains(&StatusResultValue::Error);
                 run_status.update(&context, failed);
                 if failed && !context.opt.keep_going {
@@ -580,28 +545,22 @@ impl Runnable for Cmd {
             self.args.join(" "),
             self.current_dir
                 .as_ref()
-                .map_or("".to_string(), |dir| format!(
-                    " (in directory {})",
-                    dir.display()
-                ))
+                .map_or("".to_string(), |dir| format!(" (in directory {})", dir.display()))
         )
     }
-    /// Run the provided command, printing a status message with the current prefix.
-    /// TODO(#396): Return one of three results: pass, fail, or internal error (e.g. if the binary
-    /// to run was not found).
+    /// Run the provided command, printing a status message with the current
+    /// prefix. TODO(#396): Return one of three results: pass, fail, or
+    /// internal error (e.g. if the binary to run was not found).
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running> {
         let mut cmd = tokio::process::Command::new(&self.executable);
         cmd.args(&self.args);
 
-        // Ensure that the child process is killed when the `Running` instance is dropped (including
-        // on panic).
+        // Ensure that the child process is killed when the `Running` instance is
+        // dropped (including on panic).
         cmd.kill_on_drop(true);
 
         if opt.dry_run {
-            Box::new(SingleStatusResult {
-                value: StatusResultValue::Skipped,
-                logs: String::new(),
-            })
+            Box::new(SingleStatusResult { value: StatusResultValue::Skipped, logs: String::new() })
         } else {
             // If the `logs` flag is enabled, inherit stdout and stderr from the main xtask
             // process.
@@ -628,10 +587,7 @@ impl Runnable for Cmd {
                 .unwrap_or_else(|err| panic!("couldn't spawn command: {:?}: {}", cmd, err));
 
             if let Some(pid) = child.id() {
-                PROCESSES
-                    .lock()
-                    .expect("couldn't acquire processes lock")
-                    .push(pid as i32);
+                PROCESSES.lock().expect("couldn't acquire processes lock").push(pid as i32);
             }
 
             Box::new(RunningCmd { child })
@@ -695,22 +651,12 @@ impl Running for RunningCmd {
     }
 
     async fn result(mut self: Box<Self>) -> SingleStatusResult {
-        let output = self
-            .child
-            .wait_with_output()
-            .await
-            .expect("couldn't get exit status");
+        let output = self.child.wait_with_output().await.expect("couldn't get exit status");
         let logs = format_logs(&output.stdout, &output.stderr);
         if output.status.success() {
-            SingleStatusResult {
-                value: StatusResultValue::Ok,
-                logs,
-            }
+            SingleStatusResult { value: StatusResultValue::Ok, logs }
         } else {
-            SingleStatusResult {
-                value: StatusResultValue::Error,
-                logs,
-            }
+            SingleStatusResult { value: StatusResultValue::Error, logs }
         }
     }
 }
@@ -734,7 +680,8 @@ fn format_logs(stdout: &[u8], stderr: &[u8]) -> String {
 
 /// A task that can be run asynchronously.
 pub trait Runnable: Send {
-    /// Returns a description of the task, e.g. the command line arguments that are part of it.
+    /// Returns a description of the task, e.g. the command line arguments that
+    /// are part of it.
     fn description(&self) -> String;
     /// Starts the task and returns a [`Running`] implementation.
     fn run(self: Box<Self>, opt: &Opt) -> Box<dyn Running>;
@@ -764,8 +711,8 @@ impl Running for SingleStatusResult {
     }
 }
 
-/// Similar to the `vec!` macro, but also allows a "spread" operator syntax (`...`) to inline and
-/// expand nested iterable values.
+/// Similar to the `vec!` macro, but also allows a "spread" operator syntax
+/// (`...`) to inline and expand nested iterable values.
 ///
 /// See <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax>.
 #[macro_export]
@@ -796,33 +743,12 @@ macro_rules! spread [
 fn test_spread() {
     assert_eq!(vec![1], spread![1].cloned().collect::<Vec<i32>>());
     assert_eq!(vec![1, 2], spread![1, 2].cloned().collect::<Vec<i32>>());
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![1, 2, 3, 4].cloned().collect::<Vec<i32>>()
-    );
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![...[1, 2], 3, 4].cloned().collect::<Vec<i32>>()
-    );
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![1, ...[2, 3], 4].cloned().collect::<Vec<i32>>()
-    );
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![1, 2, ...[3, 4]].cloned().collect::<Vec<i32>>()
-    );
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![...[1, 2], ...[3, 4]].cloned().collect::<Vec<i32>>()
-    );
-    assert_eq!(
-        vec![1, 2, 3, 4],
-        spread![...[1, 2, 3, 4]].cloned().collect::<Vec<i32>>()
-    );
+    assert_eq!(vec![1, 2, 3, 4], spread![1, 2, 3, 4].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2, 3, 4], spread![...[1, 2], 3, 4].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2, 3, 4], spread![1, ...[2, 3], 4].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2, 3, 4], spread![1, 2, ...[3, 4]].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2, 3, 4], spread![...[1, 2], ...[3, 4]].cloned().collect::<Vec<i32>>());
+    assert_eq!(vec![1, 2, 3, 4], spread![...[1, 2, 3, 4]].cloned().collect::<Vec<i32>>());
 
-    assert_eq!(
-        vec!["foo", "bar"],
-        spread!["foo", "bar"].cloned().collect::<Vec<_>>()
-    );
+    assert_eq!(vec!["foo", "bar"], spread!["foo", "bar"].cloned().collect::<Vec<_>>());
 }

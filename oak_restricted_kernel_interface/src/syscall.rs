@@ -104,8 +104,8 @@ pub fn mmap(
         Err(Errno::from_repr(ret)
             .unwrap_or_else(|| panic!("unexpected error from mmap syscall: {}", ret)))
     } else {
-        // Safety: if the syscall didn't return an error, then the kernel guarantees that the
-        // address is valid and there is enough memory allocated.
+        // Safety: if the syscall didn't return an error, then the kernel guarantees
+        // that the address is valid and there is enough memory allocated.
         Ok(unsafe { core::slice::from_raw_parts_mut(ret as *mut u8, size as usize) })
     }
 }
@@ -130,8 +130,8 @@ pub fn unstable_switch_proccess(buf: &[u8]) -> ! {
     unreachable!();
 }
 
-// Note that these tests are not being executed against Restricted Kernel, but rather the Linux
-// kernel of the machine cargo is running on!
+// Note that these tests are not being executed against Restricted Kernel, but
+// rather the Linux kernel of the machine cargo is running on!
 #[cfg(test)]
 mod tests {
     extern crate std;

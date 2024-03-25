@@ -66,7 +66,8 @@ pub trait Handler {
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self::HandlerType>;
 
-    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
-    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    /// Handles a call to invoke by getting the raw request bytes from the body
+    /// of the request to invoke and returns a reponse to invoke setting the
+    /// raw bytes in the body of the response.
     fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status>;
 }

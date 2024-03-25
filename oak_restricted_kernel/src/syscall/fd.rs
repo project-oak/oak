@@ -35,8 +35,8 @@ pub trait FileDescriptor: Send {
 
 type Fd = c_int;
 
-/// Utility function that copies the maximum number of bytes from a source buffer
-/// to a destination buffer.
+/// Utility function that copies the maximum number of bytes from a source
+/// buffer to a destination buffer.
 pub fn copy_max_slice(src_buf: &[u8], dst_buf: &mut [u8]) -> usize {
     let length: usize = min(src_buf.len(), dst_buf.len());
     dst_buf[..length].copy_from_slice(&src_buf[..length]);
@@ -48,10 +48,11 @@ static FILE_DESCRIPTORS: Spinlock<BTreeMap<Fd, Box<dyn FileDescriptor>>> =
 
 /// Register a file descriptor.
 ///
-/// This is kind of similar to what the "open" syscall would do, except that we don't expose this to
-/// the user space and we don't allocate file descriptors.
+/// This is kind of similar to what the "open" syscall would do, except that we
+/// don't expose this to the user space and we don't allocate file descriptors.
 ///
-/// Returns the FileDescriptor object back as an error if the fd is already in use.
+/// Returns the FileDescriptor object back as an error if the fd is already in
+/// use.
 pub fn register(
     fd: Fd,
     descriptor: Box<dyn FileDescriptor>,
@@ -68,17 +69,17 @@ pub fn register(
 
 /// Unregisters a file descriptor.
 ///
-/// If the fd was registered, returns the FileDescriptor object backing it; if the fd was
-/// unregistered, returns None.
+/// If the fd was registered, returns the FileDescriptor object backing it; if
+/// the fd was unregistered, returns None.
 #[allow(dead_code)]
 pub fn unregister(fd: Fd) -> Option<Box<dyn FileDescriptor>> {
     FILE_DESCRIPTORS.lock().remove(&fd)
 }
 
 pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // We should validate that the pointer and count are valid, as these come from userspace and
-    // therefore are not to be trusted, but right now everything is in kernel space so there is
-    // nothing to check.
+    // We should validate that the pointer and count are valid, as these come from
+    // userspace and therefore are not to be trusted, but right now everything
+    // is in kernel space so there is nothing to check.
     let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS
@@ -89,9 +90,9 @@ pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
 }
 
 pub fn syscall_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
-    // We should validate that the pointer and count are valid, as these come from userspace and
-    // therefore are not to be trusted, but right now everything is in kernel space so there is
-    // nothing to check.
+    // We should validate that the pointer and count are valid, as these come from
+    // userspace and therefore are not to be trusted, but right now everything
+    // is in kernel space so there is nothing to check.
     let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS

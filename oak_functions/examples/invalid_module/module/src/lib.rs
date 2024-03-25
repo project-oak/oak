@@ -14,4 +14,5 @@
 // limitations under the License.
 //
 
-// This Wasm module does not even export `main`, and is therefore not loadable by Oak Functions.
+// This Wasm module does not even export `main`, and is therefore not loadable
+// by Oak Functions.

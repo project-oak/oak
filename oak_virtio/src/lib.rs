@@ -16,8 +16,8 @@
 
 //! Simple virtio drivers implemented based on polling.
 //!
-//! This crate assumes that an identity mapping is used in page tables, so that guest-virtual and
-//! guest-physical addresses are the same.
+//! This crate assumes that an identity mapping is used in page tables, so that
+//! guest-virtual and guest-physical addresses are the same.
 
 #![no_std]
 #![feature(allocator_api)]
@@ -37,8 +37,8 @@ pub mod vsock;
 
 /// Read bytes from a source.
 ///
-/// This trait is similar to the <std::io::Read> trait, except that this trait is pared down to a
-/// minimum and works in a `no_std` environment.
+/// This trait is similar to the <std::io::Read> trait, except that this trait
+/// is pared down to a minimum and works in a `no_std` environment.
 pub trait Read {
     /// Read bytes until `data` has been filled.
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
@@ -46,8 +46,8 @@ pub trait Read {
 
 /// Write bytes to a source.
 ///
-/// This trait is similar to the <std::io::Write> trait, except that this trait is pared down to a
-/// minimum and works in a `no_std` environment.
+/// This trait is similar to the <std::io::Write> trait, except that this trait
+/// is pared down to a minimum and works in a `no_std` environment.
 pub trait Write {
     /// Write all bytes in `data`.
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()>;

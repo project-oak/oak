@@ -144,9 +144,7 @@ memory just below the end of 4 GiB address space, like any other BIOS ROM.
      0x20_0000 +------------------------------------------------+ 2MiB
                |                                                |
      0x10_0000 +------------------------------------------------+ 1MiB
-               |                     Disabled                   |
-      0xF_0000 +------------------------------------------------+ 960KiB
-               |               Reserved BIOS Range              |
+               |                    BIOS Hole                   |
       0xA_0000 +------------------------------------------------+ 640KiB
                |     Extended BIOS Data Area (ACPI Tables)      |
       0x8_0000 +------------------------------------------------+ 512KiB
@@ -163,10 +161,6 @@ The Linux kernel and the Oak restricted kernel both assume that the firmware
 will validate all (or at least most) of the guest-physical memory before jumping
 into the kernel (by calling the PVALIDATE instruction).
 
-The one difference is that the Linux kernel assumes that the firmware will not
-validate the VGA BIOS ROM range (0C0000-0xC7FFF), so we skip this range. For
-simplicity of the logic we actually skip a larger range (0xA0000-0xEFFFF).
-
 We don't have to PVALIDATE the Stage 0 ROM image range, since that memory was
 already set in the appropriate validated state by the Secure Processor before
 launching the guest VM.
@@ -178,9 +172,7 @@ launching the guest VM.
    0xFFFE_0000 +------------------------------------------------+ 4GiB - 128MiB
                |                   PVALIDATEd                   |
      0x10_0000 +------------------------------------------------+ 1MiB
-               |   PVALIDATEd SMBIOS entry point table memory   |
-      0xF_0000 +------------------------------------------------+ 960KiB
-               |                   Unvalidated                  |
+               |                    BIOS Hole                   |
       0xA_0000 +------------------------------------------------+ 640KiB
                |      PVALIDATEd by bootstrap assembly code     |
            0x0 +------------------------------------------------+

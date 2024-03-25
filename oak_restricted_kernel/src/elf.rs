@@ -17,9 +17,11 @@
 use goblin::elf64::program_header::ProgramHeader;
 use x86_64::VirtAddr;
 
-/// Interpret raw memory at the given address as an ELF header and return the program headers.
+/// Interpret raw memory at the given address as an ELF header and return the
+/// program headers.
 ///
-/// Safety: this virtual address must be valid and contain ELF headers and program headers.
+/// Safety: this virtual address must be valid and contain ELF headers and
+/// program headers.
 pub unsafe fn get_phdrs(addr: VirtAddr) -> &'static [ProgramHeader] {
     let raw_header = core::slice::from_raw_parts(
         addr.as_u64() as *const u8,

@@ -86,14 +86,20 @@ SECTIONS {
 
     .bss (NOLOAD) : {
         bss_start = .;
-        *(.bss .bss.*)
+        /* Include large section (.lbss) to support large code model.
+         * See <https://lld.llvm.org/ELF/large_sections.html>.
+         */
+        *(.bss .bss.* .lbss.*)
         bss_size = . - bss_start;
     } > ram_low
 
     .data : 
     AT ( ADDR (.text) + SIZEOF (.text) ) {
         data_start = .;
-        *(.data .data.*)
+        /* Include large section (.ldata) to support large code model.
+         * See <https://lld.llvm.org/ELF/large_sections.html>.
+         */
+        *(.data .data.* .ldata.*)
         data_size = . - data_start;
     } > ram_low
 
@@ -118,11 +124,17 @@ SECTIONS {
     . = ORIGIN(bios);
 
     .rodata : {
-        KEEP(*(.rodata .rodata.*))
+        /* Include large section (.lrodata) to support large code model. 
+         * See <https://lld.llvm.org/ELF/large_sections.html>.
+         */
+        KEEP(*(.rodata .rodata.* .lrodata.*))
     } > bios
 
     .text : {
-        *(.text .text.*)
+        /* Include large section (.ltext) to support large code model.
+         * See <https://lld.llvm.org/ELF/large_sections.html>.
+         */
+        *(.text .text.* .ltext.*)
         text_end = .;
     } > bios
 

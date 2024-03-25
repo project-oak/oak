@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
-//! that can be used for communicating with the hypervisor.
+//! This module contains an implementation of the guest-hypervisor
+//! communications block (GHCB) page that can be used for communicating with the
+//! hypervisor.
 
 use bitflags::bitflags;
 use x86_64::{PhysAddr, VirtAddr};
@@ -41,7 +42,8 @@ pub const GHCB_PROTOCOL_VERSION: u16 = 2;
 /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
 
-/// The value of the sw_exit_code field when doing the MSR reading or writing protocol.
+/// The value of the sw_exit_code field when doing the MSR reading or writing
+/// protocol.
 ///
 /// See section 4.1.3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_MSR_PROT: u64 = 0x7C;
@@ -61,7 +63,8 @@ const SW_EXIT_CODE_MMIO_READ: u64 = 0x8000_0001;
 /// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_MMIO_WRITE: u64 = 0x8000_0002;
 
-/// The value of the sw_exit_code field when managing the AP Jump Table under SEV-ES.
+/// The value of the sw_exit_code field when managing the AP Jump Table under
+/// SEV-ES.
 ///
 /// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_AP_JUMP_TABLE: u64 = 0x8000_0005;
@@ -98,14 +101,13 @@ const IOIO_DATA_SIZE_16: u64 = 1 << 5;
 const IOIO_DATA_SIZE_32: u64 = 1 << 6;
 
 /// The bitmap representing the minimum fields that must always be valid.
-const BASE_VALID_BITMAP: ValidBitmap = ValidBitmap::SW_EXIT_CODE
-    .union(ValidBitmap::SW_EXIT_INFO_1)
-    .union(ValidBitmap::SW_EXIT_INFO_2);
+const BASE_VALID_BITMAP: ValidBitmap =
+    ValidBitmap::SW_EXIT_CODE.union(ValidBitmap::SW_EXIT_INFO_1).union(ValidBitmap::SW_EXIT_INFO_2);
 
 /// The mask to use on MSR register values.
 ///
-/// RDMSR and WRMSR only use the 32-bit EAX and EDX registers, not 64-bit RAX and RDX, so we only
-/// use the least significant 32 bits.
+/// RDMSR and WRMSR only use the 32-bit EAX and EDX registers, not 64-bit RAX
+/// and RDX, so we only use the least significant 32 bits.
 const MSR_REGISTER_MASK: u64 = 0xffff_ffff;
 
 /// The guest-host communications block.
@@ -152,24 +154,28 @@ pub struct Ghcb {
     _reserved_6: [u8; 56],
     /// Value of the XCR0 extended control register.
     pub xcr0: u64,
-    /// Bitmap indicating which quadwords of the save state area are valid in the range from offset
-    /// 0x000 through to offset 0x3ef.
+    /// Bitmap indicating which quadwords of the save state area are valid in
+    /// the range from offset 0x000 through to offset 0x3ef.
     ///
-    /// A flag must be set for each field that is set as part of handling a non-automatic exit
-    /// event. The value must also be checked on the return from the hypervisor.
+    /// A flag must be set for each field that is set as part of handling a
+    /// non-automatic exit event. The value must also be checked on the
+    /// return from the hypervisor.
     pub valid_bitmap: ValidBitmap,
-    /// The guest-physical address of the page that contains the x87-related saved state.
+    /// The guest-physical address of the page that contains the x87-related
+    /// saved state.
     pub x87_state_gpa: u64,
     /// Reserved. Must be 0.
     _reserved_7: [u8; 1016],
-    /// Area that can be used as a shared buffer for communicating additional information.
+    /// Area that can be used as a shared buffer for communicating additional
+    /// information.
     pub shared_buffer: [u8; 2032],
     /// Reserved. Must be 0.
     _reserved_8: [u8; 10],
     /// The version of the GHCB protocol and page layout in use.
     pub protocol_version: u16,
-    /// The usage of the GHCB page. A value of 0 indicates the usage is in line with the definition
-    /// as specified in this struct. Any other value indicates a hypervisor-defined usage.
+    /// The usage of the GHCB page. A value of 0 indicates the usage is in line
+    /// with the definition as specified in this struct. Any other value
+    /// indicates a hypervisor-defined usage.
     pub ghcb_usage: u32,
 }
 
@@ -323,16 +329,15 @@ where
         self.ghcb.as_mut().reset();
     }
 
-    /// Gets the guest-physical address for the guest-hypervisor communication block.
+    /// Gets the guest-physical address for the guest-hypervisor communication
+    /// block.
     pub fn get_gpa(&self) -> PhysAddr {
         self.gpa
     }
 
     /// Registers the address of the GHCB with the hypervisor.
     pub fn register_with_hypervisor(&self) -> Result<(), RegisterGhcbGpaError> {
-        register_ghcb_location(RegisterGhcbGpaRequest::new(
-            self.get_gpa().as_u64() as usize
-        )?)
+        register_ghcb_location(RegisterGhcbGpaRequest::new(self.get_gpa().as_u64() as usize)?)
     }
 
     pub fn set_ap_jump_table(&mut self, jump_table: PhysAddr) -> Result<(), &'static str> {
@@ -359,7 +364,8 @@ where
         Ok(PhysAddr::new(self.ghcb.as_ref().sw_exit_info_2))
     }
 
-    /// Read a 32-bit value from a MMIO memory address via the MMIO Access protocol.
+    /// Read a 32-bit value from a MMIO memory address via the MMIO Access
+    /// protocol.
     ///
     /// See Section 4.1.5 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn mmio_read_u32(&mut self, source: PhysAddr) -> Result<u32, &'static str> {
@@ -370,8 +376,8 @@ where
         ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
         ghcb.sw_exit_info_1 = source.as_u64();
         ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
-        // Use the shared_buffer as the unencrypted guest memory. This is mandated as of Version
-        // 2 of the communication block.
+        // Use the shared_buffer as the unencrypted guest memory. This is mandated as of
+        // Version 2 of the communication block.
         ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
         ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
 
@@ -384,7 +390,8 @@ where
         ))
     }
 
-    /// Write a 32-bit value to a MMIO memory address via the MMIO Access protocol.
+    /// Write a 32-bit value to a MMIO memory address via the MMIO Access
+    /// protocol.
     ///
     /// See Section 4.1.5 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn mmio_write_u32(
@@ -501,9 +508,9 @@ where
         ghcb.rax = request.eax as u64;
         ghcb.rcx = request.ecx as u64;
         ghcb.xcr0 = request.xcr0;
-        // We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the GHCB
-        // protocol). We can use the CPUID page when SEV-SNP is enabled so this function will only
-        // be used with SEV-ES.
+        // We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the
+        // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
+        // this function will only be used with SEV-ES.
         ghcb.valid_bitmap = BASE_VALID_BITMAP
             .union(ValidBitmap::RAX)
             .union(ValidBitmap::RCX)
@@ -552,11 +559,11 @@ where
         Ok(low | (high << 32))
     }
 
-    /// Sends a guest request message to the Platform Secure Processor via the Guest Message
-    /// Protocol.
+    /// Sends a guest request message to the Platform Secure Processor via the
+    /// Guest Message Protocol.
     ///
-    /// The memory containing the request and response data must already be shared with the
-    /// hypervisor.
+    /// The memory containing the request and response data must already be
+    /// shared with the hypervisor.
     pub fn do_guest_message_request(
         &mut self,
         request_address: PhysAddr,
@@ -576,18 +583,20 @@ where
         }
     }
 
-    /// Sets the address of the GHCB, exits to the hypervisor, and checks the return value when
-    /// execution resumes.
+    /// Sets the address of the GHCB, exits to the hypervisor, and checks the
+    /// return value when execution resumes.
     fn do_vmg_exit(&mut self) -> Result<(), &'static str> {
         self.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
-        // Use a memory fence to ensure all writes happen before we hand over to the VMM.
+        // Use a memory fence to ensure all writes happen before we hand over to the
+        // VMM.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
         set_ghcb_address_and_exit(GhcbGpa::new(self.get_gpa().as_u64() as usize)?);
-        // Use a memory fence to ensure that all earlier writes are commited before we read from the
-        // GHCB.
+        // Use a memory fence to ensure that all earlier writes are commited before we
+        // read from the GHCB.
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-        // The mask for extracting the hypervisor's return value from the sw_exit_info_1 field.
+        // The mask for extracting the hypervisor's return value from the sw_exit_info_1
+        // field.
         const SW_EXIT_INFO_1_RETURN_MASK: u64 = 0xffff_ffff;
 
         if self.ghcb.as_mut().sw_exit_info_1 & SW_EXIT_INFO_1_RETURN_MASK == 0 {

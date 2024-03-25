@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Type, constant and Wasm host function definitions for the Oak-Functions application
-//! binary interface (ABI).
+//! Type, constant and Wasm host function definitions for the Oak-Functions
+//! application binary interface (ABI).
 
 #![no_std]
 
@@ -71,26 +71,25 @@ impl Response {
     /// Sets the `status` and `body` to the given status and body, and sets the
     /// `length` to the length of the body.
     pub fn create(status: StatusCode, body: Vec<u8>) -> Self {
-        Response {
-            status,
-            body: body.clone(),
-            length: body.len() as u64,
-        }
+        Response { status, body: body.clone(), length: body.len() as u64 }
     }
 
     /// Returns the body of the response, excluding any trailing 0s.
     ///
-    /// Uses the effective length of the body, in `self.length`, to remove the trailing 0s.
-    /// Returns as error if `self.length` cannot be converted to `usize` due to an overflow.
+    /// Uses the effective length of the body, in `self.length`, to remove the
+    /// trailing 0s. Returns as error if `self.length` cannot be converted
+    /// to `usize` due to an overflow.
     pub fn body(&self) -> Result<&[u8], core::num::TryFromIntError> {
         let length = usize::try_from(self.length)?;
         Ok(&self.body.as_slice()[..length])
     }
 
-    /// Creates and returns a new [`Response`] instance with the same `status` and `body` as `self`,
-    /// except that the `body` may be padded, by adding a number trailing 0s, to make its length
-    /// equal to `body_size`. Sets the `length` of the new instance to the length of `self.body`.
-    /// Returns an error if the length of the `body` is larger than `body_size`.
+    /// Creates and returns a new [`Response`] instance with the same `status`
+    /// and `body` as `self`, except that the `body` may be padded, by
+    /// adding a number trailing 0s, to make its length
+    /// equal to `body_size`. Sets the `length` of the new instance to the
+    /// length of `self.body`. Returns an error if the length of the `body`
+    /// is larger than `body_size`.
     pub fn pad(&self, body_size: usize) -> anyhow::Result<Self> {
         if self.body.len() <= body_size {
             let mut body = self.body.as_slice().to_vec();
@@ -98,11 +97,7 @@ impl Response {
             let length = body.len() as u64;
             // Add trailing 0s
             body.resize(body_size, 0);
-            Ok(Response {
-                status: self.status,
-                body,
-                length,
-            })
+            Ok(Response { status: self.status, body, length })
         } else {
             anyhow::bail!("response body is larger than the input body_size")
         }
@@ -139,17 +134,13 @@ impl Response {
 
         body.extend_from_slice(&bytes[RESPONSE_BODY_OFFSET..bytes.len()]);
 
-        Ok(Self {
-            status,
-            body,
-            length,
-        })
+        Ok(Self { status, body, length })
     }
 }
 
-// The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
-// "oak_functions" module that are made available to WebAssembly modules running as Oak-Functions
-// workloads.
+// The Oak-Functions ABI primarily consists of a collection of Wasm host
+// functions in the "oak_functions" module that are made available to
+// WebAssembly modules running as Oak-Functions workloads.
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak_functions")]
 extern "C" {

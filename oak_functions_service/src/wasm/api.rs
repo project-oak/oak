@@ -31,8 +31,8 @@ use crate::{
 };
 
 /// The main purpose of this factory is to allow creating a new instance of the
-/// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the
-/// current lookup data.
+/// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable
+/// snapshot of the current lookup data.
 pub struct StdWasmApiFactory {
     pub lookup_data_manager: Arc<LookupDataManager>,
 }
@@ -54,8 +54,8 @@ impl WasmApiFactory for StdWasmApiFactory {
 
 /// Implementation of the standard Oak Functions API.
 ///
-/// There are probably more locks than necessary here, it should be possible to reduce them in the
-/// future.
+/// There are probably more locks than necessary here, it should be possible to
+/// reduce them in the future.
 #[derive(Clone)]
 pub struct StdWasmApiImpl {
     lookup_data: LookupData,
@@ -71,26 +71,21 @@ impl StdWasmApi for StdWasmApiImpl {
         &mut self,
         _: ReadRequestRequest,
     ) -> Result<ReadRequestResponse, micro_rpc::Status> {
-        self.logger
-            .log_sensitive(Level::Debug, "invoked read_request");
-        Ok(ReadRequestResponse {
-            body: self.request.clone(),
-        })
+        self.logger.log_sensitive(Level::Debug, "invoked read_request");
+        Ok(ReadRequestResponse { body: self.request.clone() })
     }
     fn write_response(
         &mut self,
         req: WriteResponseRequest,
     ) -> Result<WriteResponseResponse, micro_rpc::Status> {
-        self.logger
-            .log_sensitive(Level::Debug, "invoked write_response");
+        self.logger.log_sensitive(Level::Debug, "invoked write_response");
         *self.response.lock() = req.body;
         Ok(WriteResponseResponse::default())
     }
 
     fn log(&mut self, request: LogRequest) -> Result<LogResponse, ::micro_rpc::Status> {
         self.logger.log_sensitive(Level::Debug, "invoked log");
-        self.logger
-            .log_sensitive(Level::Debug, &format!("[Wasm] {}", request.message));
+        self.logger.log_sensitive(Level::Debug, &format!("[Wasm] {}", request.message));
         Ok(LogResponse::default())
     }
 
@@ -110,8 +105,7 @@ impl StdWasmApi for StdWasmApiImpl {
         // Log found value.
         value.as_ref().map_or_else(
             || {
-                self.logger
-                    .log_sensitive(Level::Debug, "storage_get_item(): value not found");
+                self.logger.log_sensitive(Level::Debug, "storage_get_item(): value not found");
             },
             |value| {
                 // Truncate value for logging.
@@ -123,9 +117,7 @@ impl StdWasmApi for StdWasmApiImpl {
             },
         );
 
-        Ok(LookupDataResponse {
-            value: value.map(Into::into),
-        })
+        Ok(LookupDataResponse { value: value.map(Into::into) })
     }
 
     fn lookup_data_multi(
@@ -135,22 +127,14 @@ impl StdWasmApi for StdWasmApiImpl {
         // The request contains the keys to lookup.
         let keys = request.keys;
 
-        self.logger.log_sensitive(
-            Level::Debug,
-            &format!("lookup_data_multi(): {} keys", keys.len()),
-        );
+        self.logger
+            .log_sensitive(Level::Debug, &format!("lookup_data_multi(): {} keys", keys.len()));
 
         let values: Vec<BytesValue> = keys
             .iter()
             .map(|key| match self.lookup_data.get(key) {
-                Some(value) => BytesValue {
-                    found: true,
-                    value: value.into(),
-                },
-                None => BytesValue {
-                    found: false,
-                    value: Vec::new(),
-                },
+                Some(value) => BytesValue { found: true, value: value.into() },
+                None => BytesValue { found: false, value: Vec::new() },
             })
             .collect();
 
@@ -159,9 +143,7 @@ impl StdWasmApi for StdWasmApiImpl {
 
     fn test(&mut self, req: TestRequest) -> Result<TestResponse, micro_rpc::Status> {
         self.logger.log_sensitive(Level::Debug, "invoked test");
-        Ok(TestResponse {
-            body: if req.echo { req.body } else { Vec::new() },
-        })
+        Ok(TestResponse { body: if req.echo { req.body } else { Vec::new() } })
     }
 }
 

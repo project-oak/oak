@@ -50,14 +50,16 @@ use crate::{sev_status, BootAllocator};
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
+/// message protocol.
 static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlock::new(None);
 
-/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
+/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the
+/// pages as shared.
 ///
-/// This allocator is inefficient as it will only allocate 4K chunks, potentially wasting memory.
-/// For example, if you allocate two u32-s, although they could well fit on one page, currently
-/// that'd use 8K of memory.
+/// This allocator is inefficient as it will only allocate 4K chunks,
+/// potentially wasting memory. For example, if you allocate two u32-s, although
+/// they could well fit on one page, currently that'd use 8K of memory.
 /// That, however, is an implementation detail, and may change in the future.
 #[repr(transparent)]
 struct SharedAllocator<A: Allocator> {
@@ -72,15 +74,13 @@ impl<A: Allocator> SharedAllocator<A> {
 
 unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        let layout = layout
-            .align_to(Size4KiB::SIZE as usize)
-            .map_err(|_| AllocError)?
-            .pad_to_align();
+        let layout =
+            layout.align_to(Size4KiB::SIZE as usize).map_err(|_| AllocError)?.pad_to_align();
         let allocation = self.inner.allocate(layout)?;
         if sev_status().contains(SevStatus::SEV_ENABLED) {
             for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
-                // Safety: the allocation has succeeded and the offset won't exceed the size of the
-                // allocation.
+                // Safety: the allocation has succeeded and the offset won't exceed the size of
+                // the allocation.
                 share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
                     allocation.as_non_null_ptr().as_ptr().add(offset)
                 })))
@@ -97,8 +97,8 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
             .pad_to_align();
         if sev_status().contains(SevStatus::SEV_ENABLED) {
             for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
-                // Safety: the allocation has succeeded and the offset won't exceed the size of the
-                // allocation.
+                // Safety: the allocation has succeeded and the offset won't exceed the size of
+                // the allocation.
                 unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
                     ptr.as_ptr().add(offset)
                 })))
@@ -118,9 +118,7 @@ impl<T, A: Allocator> Shared<T, A> {
     where
         A: 'static,
     {
-        Self {
-            inner: Box::new_in(t, SharedAllocator::new(alloc)),
-        }
+        Self { inner: Box::new_in(t, SharedAllocator::new(alloc)) }
     }
 }
 
@@ -177,7 +175,8 @@ pub fn init_ghcb(alloc: &'static BootAllocator) {
     }
 }
 
-/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
+/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP
+/// enabled.
 pub fn deinit_ghcb() {
     let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
     unshare_page(Page::containing_address(ghcb_addr));
@@ -186,7 +185,8 @@ pub fn deinit_ghcb() {
 /// Shares a single 4KiB page with the hypervisor.
 pub fn share_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
-    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
     assert!(page_start < Size2MiB::SIZE);
     // Remove the ENCRYPTED bit from the entry that maps the page.
     {
@@ -207,10 +207,12 @@ pub fn share_page(page: Page<Size4KiB>) {
     }
 }
 
-/// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
+/// Stops sharing a single 4KiB page with the hypervisor when running with AMD
+/// SEV-SNP enabled.
 pub fn unshare_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
-    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
     assert!(page_start < Size2MiB::SIZE);
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
@@ -235,11 +237,12 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     }
 }
 
-// Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
-// be invoked on 2 MiB and 4 KiB pages.
-// This trait translates between the page sizes defined in the x86_64 crate (`Size4KiB`, `Size2MiB`)
-// and the sizes defined in `oak_sev_guest` crate (`Page4KiB`, `Page2MiB`). There is no mapping for
-// `Size1GiB` as pages of that size can't be used for valitation.
+// Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
+// `PVALIDATE` can only be invoked on 2 MiB and 4 KiB pages.
+// This trait translates between the page sizes defined in the x86_64 crate
+// (`Size4KiB`, `Size2MiB`) and the sizes defined in `oak_sev_guest` crate
+// (`Page4KiB`, `Page2MiB`). There is no mapping for `Size1GiB` as pages of that
+// size can't be used for valitation.
 pub trait ValidatablePageSize {
     const SEV_PAGE_SIZE: SevPageSize;
 }
@@ -258,16 +261,12 @@ trait Validate<S: PageSize> {
 
 impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
     fn pvalidate(&self) -> Result<(), InstructionError> {
-        pvalidate(
-            self.start_address().as_u64() as usize,
-            S::SEV_PAGE_SIZE,
-            Validation::Validated,
-        )
+        pvalidate(self.start_address().as_u64() as usize, S::SEV_PAGE_SIZE, Validation::Validated)
     }
 }
 
-/// Container for a page of virtual memory, and the page table that controls the mappings for that
-/// page.
+/// Container for a page of virtual memory, and the page table that controls the
+/// mappings for that page.
 struct MappedPage<S: PageSize> {
     pub page: Page<S>,
     pub page_table: PageTable,
@@ -275,10 +274,8 @@ struct MappedPage<S: PageSize> {
 
 impl<S: PageSize> MappedPage<S> {
     pub fn new(vaddr: VirtAddr) -> Result<Self, AddressNotAligned> {
-        let mapped_page = Self {
-            page: Page::from_start_address(vaddr)?,
-            page_table: PageTable::new(),
-        };
+        let mapped_page =
+            Self { page: Page::from_start_address(vaddr)?, page_table: PageTable::new() };
         Ok(mapped_page)
     }
 }
@@ -296,14 +293,16 @@ where
     // Create a copy as we'll be consuming the range as we call `next()`, below.
     let mut range = *range;
 
-    // A page table consists of 512 entries; let's figure out what the pages would be.
+    // A page table consists of 512 entries; let's figure out what the pages would
+    // be.
     let start = Page::from_start_address(memory.page.start_address()).unwrap();
     let pages = Page::<S>::range(start, start + 512);
 
-    // We have 512 entries to play with, but the frame range can contain many more entries than
-    // that. Thus, we need to iterate over the range in chunks of 512; the easiest way to do it is
-    // to iterate (mutably) over the page directory itself, and for each entry, fetch the next
-    // entry in the range. If we've covered everything, `range.next()` will return `None`, and
+    // We have 512 entries to play with, but the frame range can contain many more
+    // entries than that. Thus, we need to iterate over the range in chunks of
+    // 512; the easiest way to do it is to iterate (mutably) over the page
+    // directory itself, and for each entry, fetch the next entry in the range.
+    // If we've covered everything, `range.next()` will return `None`, and
     // the count will be zero once we've covered everything.
     memory.page_table.zero();
     while memory
@@ -311,16 +310,13 @@ where
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_addr(
-                frame.start_address() + encrypted,
-                PageTableFlags::PRESENT | flags,
-            )
+            entry.set_addr(frame.start_address() + encrypted, PageTableFlags::PRESENT | flags)
         })
         .count()
         > 0
     {
-        // We now know we've filled in at least one entry of the page table, and thus have something
-        // to validate.
+        // We now know we've filled in at least one entry of the page table, and thus
+        // have something to validate.
         tlb::flush_all();
 
         if let Some(err) = memory
@@ -346,8 +342,8 @@ trait Validatable4KiB {
     /// Validate a region of memory using 4 KiB pages.
     ///
     /// Args:
-    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to memory
-    ///   encrypted: value of the encrypted bit in the page table
+    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to
+    /// memory   encrypted: value of the encrypted bit in the page table
     fn pvalidate(
         &self,
         pt: &mut MappedPage<Size2MiB>,
@@ -361,31 +357,27 @@ impl Validatable4KiB for PhysFrameRange<Size4KiB> {
         pt: &mut MappedPage<Size2MiB>,
         encrypted: u64,
     ) -> Result<(), InstructionError> {
-        pvalidate_range(
-            self,
-            pt,
-            encrypted,
-            PageTableFlags::empty(),
-            |_addr, err| match err {
-                InstructionError::ValidationStatusNotUpdated => {
-                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                    Ok(())
-                }
-                other => Err(other),
-            },
-        )
+        pvalidate_range(self, pt, encrypted, PageTableFlags::empty(), |_addr, err| match err {
+            InstructionError::ValidationStatusNotUpdated => {
+                // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                // or it is already validated. See the PVALIDATE instruction in
+                // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+                Ok(())
+            }
+            other => Err(other),
+        })
     }
 }
 
 trait Validatable2MiB {
-    /// Validate a region of memory using 2 MiB pages, falling back to 4 KiB if necessary.
+    /// Validate a region of memory using 2 MiB pages, falling back to 4 KiB if
+    /// necessary.
     ///
     /// Args:
-    ///   pd: pointer to the page directory we can mutate to map 2 MiB pages to memory
-    ///   pt: pointer to the page table we can mutate to map 4 KiB pages to memory
-    ///   encrypted: value of the encrypted bit in the page table
+    ///   pd: pointer to the page directory we can mutate to map 2 MiB pages to
+    /// memory   pt: pointer to the page table we can mutate to map 4 KiB
+    /// pages to memory   encrypted: value of the encrypted bit in the page
+    /// table
     fn pvalidate(
         &self,
         pd: &mut MappedPage<Size1GiB>,
@@ -401,36 +393,31 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
         pt: &mut MappedPage<Size2MiB>,
         encrypted: u64,
     ) -> Result<(), InstructionError> {
-        pvalidate_range(
-            self,
-            pd,
-            encrypted,
-            PageTableFlags::HUGE_PAGE,
-            |addr, err| match err {
-                InstructionError::FailSizeMismatch => {
-                    // 2MiB is no go, fail back to 4KiB pages.
-                    // This will not panic as every address that is 2 MiB-aligned is by definition
-                    // also 4 KiB-aligned.
-                    let start = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(
-                        addr.as_u64() & !encrypted,
-                    ))
-                    .unwrap();
-                    let range = PhysFrame::range(start, start + 512);
-                    range.pvalidate(pt, encrypted)
-                }
-                InstructionError::ValidationStatusNotUpdated => {
-                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                    // or it is already validated. See the PVALIDATE instruction in
-                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                    Ok(())
-                }
-                other => Err(other),
-            },
-        )
+        pvalidate_range(self, pd, encrypted, PageTableFlags::HUGE_PAGE, |addr, err| match err {
+            InstructionError::FailSizeMismatch => {
+                // 2MiB is no go, fail back to 4KiB pages.
+                // This will not panic as every address that is 2 MiB-aligned is by definition
+                // also 4 KiB-aligned.
+                let start = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(
+                    addr.as_u64() & !encrypted,
+                ))
+                .unwrap();
+                let range = PhysFrame::range(start, start + 512);
+                range.pvalidate(pt, encrypted)
+            }
+            InstructionError::ValidationStatusNotUpdated => {
+                // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                // or it is already validated. See the PVALIDATE instruction in
+                // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+                Ok(())
+            }
+            other => Err(other),
+        })
     }
 }
 
-/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type `RAM`.
+/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
+/// `RAM`.
 pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     log::info!("starting SEV-SNP memory validation");
 
@@ -438,12 +425,9 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
 
     // Page directory, for validation with 2 MiB pages.
     let mut validation_pd = MappedPage::new(VirtAddr::new(Size1GiB::SIZE)).unwrap();
-    // For virtual address space, we currently shouldn't have anything at the second gigabyte, so we
-    // can map the page to virtual address [1 GiB..2 GiB).
-    if page_tables.pdpt[1]
-        .flags()
-        .contains(PageTableFlags::PRESENT)
-    {
+    // For virtual address space, we currently shouldn't have anything at the second
+    // gigabyte, so we can map the page to virtual address [1 GiB..2 GiB).
+    if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PDPT[1] is in use");
     }
     page_tables.pdpt[1].set_addr(
@@ -453,12 +437,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
 
     // Page table, for validation with 4 KiB pages.
     let mut validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
-    // Find a location for our (temporary) page table. The initial page tables map [0..2MiB), so it
-    // should be safe to put our temporary mappings at [2..4MiB).
-    if page_tables.pd_0[1]
-        .flags()
-        .contains(PageTableFlags::PRESENT)
-    {
+    // Find a location for our (temporary) page table. The initial page tables map
+    // [0..2MiB), so it should be safe to put our temporary mappings at
+    // [2..4MiB).
+    if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
     page_tables.pd_0[1].set_addr(
@@ -466,9 +448,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         PageTableFlags::PRESENT,
     );
 
-    // We already pvalidated the memory in the first 640KiB of RAM in the boot assembly code. We
-    // avoid redoing this as calling pvalidate again on these pages leads to unexpected results,
-    // such us removing the shared state from the RMP for the fw_cfg DMA buffer.
+    // We already pvalidated the memory in the first 640KiB of RAM in the boot
+    // assembly code. We avoid redoing this as calling pvalidate again on these
+    // pages leads to unexpected results, such us removing the shared state from
+    // the RMP for the fw_cfg DMA buffer.
     let min_addr = 0xA0000;
 
     for entry in e820_table {
@@ -481,7 +464,8 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
 
         // If the memory boundaries align with 2 MiB, start with that.
         if start_address.is_aligned(Size2MiB::SIZE) && limit_address.is_aligned(Size2MiB::SIZE) {
-            // These unwraps can't fail as we've made sure that the addresses are 2 MiB-aligned.
+            // These unwraps can't fail as we've made sure that the addresses are 2
+            // MiB-aligned.
             let range = PhysFrame::<Size2MiB>::range(
                 PhysFrame::from_start_address(start_address).unwrap(),
                 PhysFrame::from_start_address(limit_address).unwrap(),
@@ -507,15 +491,13 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
 
 /// Initializes the Guest Message encryptor using VMPCK0.
 pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
-    // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
-    // underlying bytes.
+    // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
+    // requirements on the underlying bytes.
     let key = &mut unsafe { crate::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR
-        .lock()
-        .replace(GuestMessageEncryptor::new(key)?);
-    // Once the we have read VMPCK0 we wipe it so that later boot stages cannot request attestation
-    // reports or derived sealing keys for VMPL0. This stops later boot stages from creating
-    // counterfeit DICE chains.
+    GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)?);
+    // Once the we have read VMPCK0 we wipe it so that later boot stages cannot
+    // request attestation reports or derived sealing keys for VMPL0. This stops
+    // later boot stages from creating counterfeit DICE chains.
     key.zeroize();
     Ok(())
 }
@@ -528,9 +510,7 @@ pub fn send_guest_message_request<
     request: Request,
 ) -> Result<Response, &'static str> {
     let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    let encryptor = guard
-        .as_mut()
-        .ok_or("guest message encryptor is not initialized")?;
+    let encryptor = guard.as_mut().ok_or("guest message encryptor is not initialized")?;
     let alloc = &crate::SHORT_TERM_ALLOC;
     let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())?;

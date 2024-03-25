@@ -54,7 +54,8 @@ use crate::mm;
 
 /// State we need to track for system calls.
 ///
-/// Do not change the order of the fields here, as this is accessed from assembly!
+/// Do not change the order of the fields here, as this is accessed from
+/// assembly!
 #[repr(C)]
 #[derive(Debug)]
 struct GsData {
@@ -64,7 +65,8 @@ struct GsData {
     /// User stack pointer. Saved from RSP after SYSCALL.
     user_sp: VirtAddr,
 
-    /// User instruction pointer (where to return after SYSCALL). Saved from RCX.
+    /// User instruction pointer (where to return after SYSCALL). Saved from
+    /// RCX.
     user_ip: VirtAddr,
 
     /// User flags. Saved from R11.
@@ -118,8 +120,8 @@ extern "sysv64" fn syscall_handler(
     arg5: usize,
     arg6: usize,
 ) -> isize {
-    // SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return value in RAX
-    // (which matches SYSRET!)
+    // SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return
+    // value in RAX (which matches SYSRET!)
     match Syscall::from_repr(syscall) {
         Some(Syscall::Read) => syscall_read(arg1 as i32, arg2 as *mut c_void, arg3),
         Some(Syscall::Write) => syscall_write(arg1 as i32, arg2 as *const c_void, arg3),
@@ -140,7 +142,8 @@ extern "sysv64" fn syscall_handler(
 
 /// Main entry point for system calls in the Oak Restricted Kernel.
 ///
-/// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to invoke system calls.
+/// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to
+/// invoke system calls.
 ///
 /// The system calls follow the Linux calling convention:
 /// <https://github.com/torvalds/linux/blob/master/arch/x86/entry/calling.h>
@@ -150,27 +153,30 @@ extern "sysv64" fn syscall_handler(
 ///   - arguments go in `RDI`, `RSI`, `RDX`, `RCX`, `R8`, `R9`
 ///   - return value is in `RAX`
 ///
-/// For the list of system calls that are supported, see the `oak_restricted_kernel_interface`
-/// crate.
+/// For the list of system calls that are supported, see the
+/// `oak_restricted_kernel_interface` crate.
 #[naked]
 extern "C" fn syscall_entrypoint() {
     // When user code uses `SYSCALL`, the following happens (abridged):
     //  - RIP of the instruction following the SYSCALL will be in RCX
     //  - RFLAGS will be saved in R11
     //  - new RIP will be loaded from LSTAR (see `enable_syscalls()`)
-    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in
+    //    `descriptors.rs`)
     //  - CPL will be forced to zero.
     //
     // For `SYSRET`, the fast system return:
     //  - lower 32 bits of RFLAGS will be loaded from R11, upper 32 are cleared
     //  - RIP will be loaded from RCX
-    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in
+    //    `descriptors.rs`)
     //  - CPL will be forced to 3
     //
-    // Note that (a) this does not preserve RCX and R11, which the user code will take into account,
-    // and (b) SYSRET will always go back to ring 3.
+    // Note that (a) this does not preserve RCX and R11, which the user code will
+    // take into account, and (b) SYSRET will always go back to ring 3.
     //
-    // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3 for more details.
+    // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3
+    // for more details.
     unsafe {
         asm! {
             // Switch to the syscall stack

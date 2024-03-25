@@ -93,9 +93,7 @@ fn test_write_packet() {
     let mut vsock = VSock::new(device, identity_map, &Global);
     vsock.init(identity_map, inverse_identity_map).unwrap();
     vsock.write_packet(&mut packet);
-    let bytes = transport
-        .device_read_once_from_queue::<QUEUE_SIZE>(1)
-        .unwrap();
+    let bytes = transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap();
     assert_eq!(packet.as_slice(), &bytes[..]);
 }
 

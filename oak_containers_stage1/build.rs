@@ -25,10 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/session/messages.proto",
         ],
         "..",
-        CodegenOptions {
-            build_client: true,
-            ..Default::default()
-        },
+        CodegenOptions { build_client: true, ..Default::default() },
     )?;
     Ok(())
 }

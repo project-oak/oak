@@ -33,9 +33,8 @@ impl OakFunctionsClient {
             .await
             .context("couldn't connect via gRPC channel")?;
         let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
-        let oak_client = OakClient::create(transport, verifier)
-            .await
-            .context("couldn't create Oak client")?;
+        let oak_client =
+            OakClient::create(transport, verifier).await.context("couldn't create Oak client")?;
         Ok(Self { oak_client })
     }
 
@@ -47,8 +46,8 @@ impl OakFunctionsClient {
                 format!("couldn't invoke Oak Functions: {:?}", err),
             )
         })?;
-        // An error here is specific to the Oak Functions application (e.g. the Wasm module does not
-        // have the correct exported / imported functions).
+        // An error here is specific to the Oak Functions application (e.g. the Wasm
+        // module does not have the correct exported / imported functions).
         let response =
             micro_rpc::ResponseWrapper::decode(response_bytes.as_slice()).map_err(|err| {
                 micro_rpc::Status::new_with_message(

@@ -36,8 +36,8 @@ use sha2::Sha256;
 pub const KEY_ID_LENGTH: usize = 20;
 /// ID for the CWT private claim corresponding to the Subject of the CWT.
 pub const SUBJECT_PUBLIC_KEY_ID: i64 = -4670552;
-/// ID for the bitstring used to describe the intended usage for the key represented by the
-/// certificate.
+/// ID for the bitstring used to describe the intended usage for the key
+/// represented by the certificate.
 pub const KEY_USAGE_ID: i64 = -4670553;
 /// The CWT private claim ID for the Kernel layer.
 pub const KERNEL_LAYER_ID: i64 = -4670555;
@@ -51,19 +51,23 @@ pub const CONTAINER_IMAGE_LAYER_ID: i64 = -4670559;
 pub const KERNEL_MEASUREMENT_ID: i64 = -4670561;
 /// The CWT private claim ID for the kernel command-line measurement.
 pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670562;
+/// The CWT private claim ID for the raw kernel command-line.
+pub const KERNEL_COMMANDLINE_ID: i64 = -4670573;
 /// The CWT private claim ID for the kernel setup data measurement.
 pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670563;
 /// The CWT private claim ID for the initial RAM file system measurement.
 pub const INITRD_MEASUREMENT_ID: i64 = -4670564;
 /// The CWT private claim ID for the physical memory map (e820 table).
 pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670565;
-/// The CWT private claim ID for the concatenated hash of the commands for building the ACPI tables.
+/// The CWT private claim ID for the concatenated hash of the commands for
+/// building the ACPI tables.
 pub const ACPI_MEASUREMENT_ID: i64 = -4670566;
 /// The CWT private claim ID for the measurement of the layer 2 binary.
 pub const LAYER_2_CODE_MEASUREMENT_ID: i64 = -4670567;
 /// The CWT private claim ID for the measurement of the layer 3 binary.
 pub const LAYER_3_CODE_MEASUREMENT_ID: i64 = -4670569;
-/// The CWT private claim ID for the measurement of the application or container config.
+/// The CWT private claim ID for the measurement of the application or container
+/// config.
 pub const FINAL_LAYER_CONFIG_MEASUREMENT_ID: i64 = -4670570;
 /// The CWT private claim ID for SHA2_256 digests.
 pub const SHA2_256_ID: i64 = -4670572;
@@ -98,8 +102,7 @@ pub fn derive_verifying_key_id(public_key: &VerifyingKey) -> [u8; KEY_ID_LENGTH]
     let ikm = public_key.to_encoded_point(false);
     let hkdf = Hkdf::<Sha256>::new(Some(ID_SALT), ikm.as_bytes());
     let mut result = [0u8; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, &mut result)
-        .expect("invalid length for HKDF output");
+    hkdf.expand(INFO_STR, &mut result).expect("invalid length for HKDF output");
     result
 }
 
@@ -107,8 +110,7 @@ pub fn derive_verifying_key_id(public_key: &VerifyingKey) -> [u8; KEY_ID_LENGTH]
 pub fn derive_kem_public_key_id(public_key_bytes: &[u8]) -> [u8; KEY_ID_LENGTH] {
     let hkdf = Hkdf::<Sha256>::new(Some(ID_SALT), public_key_bytes);
     let mut result = [0u8; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, &mut result)
-        .expect("invalid length for HKDF output");
+    hkdf.expand(INFO_STR, &mut result).expect("invalid length for HKDF output");
     result
 }
 
@@ -127,10 +129,7 @@ pub fn cose_key_to_hpke_public_key(cose_key: &CoseKey) -> Result<Vec<u8>, &'stat
     if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)) {
         return Err("invalid algorithm");
     }
-    if !cose_key
-        .key_ops
-        .contains(&KeyOperation::Assigned(iana::KeyOperation::WrapKey))
-    {
+    if !cose_key.key_ops.contains(&KeyOperation::Assigned(iana::KeyOperation::WrapKey)) {
         return Err("invalid key operations");
     }
     if !cose_key.params.iter().any(|(label, value)| {
@@ -160,18 +159,13 @@ pub fn hpke_public_key_to_cose_key(public_key: &[u8]) -> CoseKey {
         kty: KeyType::Assigned(iana::KeyType::OKP),
         key_id: Vec::from(derive_kem_public_key_id(public_key)),
         alg: Some(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)),
-        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::WrapKey)]
-            .into_iter()
-            .collect(),
+        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::WrapKey)].into_iter().collect(),
         params: vec![
             (
                 Label::Int(iana::OkpKeyParameter::Crv as i64),
                 Value::from(iana::EllipticCurve::X25519 as u64),
             ),
-            (
-                Label::Int(iana::OkpKeyParameter::X as i64),
-                Value::Bytes(public_key.to_vec()),
-            ),
+            (Label::Int(iana::OkpKeyParameter::X as i64), Value::Bytes(public_key.to_vec())),
         ],
         ..Default::default()
     }
@@ -185,10 +179,7 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
     if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256)) {
         return Err("invalid algorithm");
     }
-    if !cose_key
-        .key_ops
-        .contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
-    {
+    if !cose_key.key_ops.contains(&KeyOperation::Assigned(iana::KeyOperation::Verify)) {
         return Err("invalid key operations");
     }
     if !cose_key.params.iter().any(|(label, value)| {
@@ -239,9 +230,7 @@ pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
         kty: KeyType::Assigned(iana::KeyType::EC2),
         key_id: Vec::from(derive_verifying_key_id(public_key)),
         alg: Some(Algorithm::Assigned(iana::Algorithm::ES256)),
-        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::Verify)]
-            .into_iter()
-            .collect(),
+        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::Verify)].into_iter().collect(),
         params: vec![
             (
                 Label::Int(iana::Ec2KeyParameter::Crv as i64),
@@ -260,17 +249,20 @@ pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
     }
 }
 
-/// Generates a CWT certificate representing an ECDSA signing key, such as an embedded certificate
-/// authority (ECA), and returns the certificate and its associated private key.
+/// Generates a CWT certificate representing an ECDSA signing key, such as an
+/// embedded certificate authority (ECA), and returns the certificate and its
+/// associated private key.
 ///
 /// # Arguments
 ///
-/// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
-/// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
-///   encoding of the output from calling `derive_verifying_key_id` using the issuer's public key.
-/// * `additional_claims` - Any additional claims that must be included in the certificate. This is
-///   typically used to provide measurements of the components in the layer associated with th
-///   certificate.
+/// * `issuer_eca_key` - The private key that the issuer uses to sign issued
+///   certificates.
+/// * `issuer_id` - A string identifying the key used by the issuer. This would
+///   typically be the hex encoding of the output from calling
+///   `derive_verifying_key_id` using the issuer's public key.
+/// * `additional_claims` - Any additional claims that must be included in the
+///   certificate. This is typically used to provide measurements of the
+///   components in the layer associated with th certificate.
 pub fn generate_signing_certificate(
     issuer_eca_key: &SigningKey,
     issuer_id: String,
@@ -286,18 +278,20 @@ pub fn generate_signing_certificate(
     )
 }
 
-/// Generates a CWT certificate representing a Key Encapsulation Mechanism (KEM) for Hybrid
-/// Public-Key Encryption (HPKE) from a serialized public key.
+/// Generates a CWT certificate representing a Key Encapsulation Mechanism (KEM)
+/// for Hybrid Public-Key Encryption (HPKE) from a serialized public key.
 ///
 /// # Arguments
 ///
-/// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
-/// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
-///   encoding of the output from calling `derive_kem_public_key_id` using the issuer's public key.
+/// * `issuer_eca_key` - The private key that the issuer uses to sign issued
+///   certificates.
+/// * `issuer_id` - A string identifying the key used by the issuer. This would
+///   typically be the hex encoding of the output from calling
+///   `derive_kem_public_key_id` using the issuer's public key.
 /// * `kem_public_key` - The serialized HPKE KEM public key.
-/// * `additional_claims` - Any additional claims that must be included in the certificate. This is
-///   typically used to provide measurements of the components in the layer associated with th
-///   certificate.
+/// * `additional_claims` - Any additional claims that must be included in the
+///   certificate. This is typically used to provide measurements of the
+///   components in the layer associated with th certificate.
 pub fn generate_kem_certificate(
     issuer_eca_key: &SigningKey,
     issuer_id: String,
@@ -337,12 +331,8 @@ fn generate_certificate(
         }
     }
 
-    let protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES256)
-        .build();
-    let unprotected = coset::HeaderBuilder::new()
-        .key_id((*b"AsymmetricECDSA256").into())
-        .build();
+    let protected = coset::HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
+    let unprotected = coset::HeaderBuilder::new().key_id((*b"AsymmetricECDSA256").into()).build();
     Ok(coset::CoseSign1Builder::new()
         .protected(protected)
         .unprotected(unprotected)
@@ -354,7 +344,8 @@ fn generate_certificate(
         .build())
 }
 
-/// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
+/// Parses a bytes slice as a CWT certificate and extracts the payload as a set
+/// of claims.
 pub fn get_claims_set_from_certificate_bytes(bytes: &[u8]) -> Result<ClaimsSet, CoseError> {
     let cwt = CoseSign1::from_slice(bytes)?;
     let payload = cwt.payload.unwrap_or_default();

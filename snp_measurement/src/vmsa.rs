@@ -34,11 +34,12 @@ const CPU_STEPPING: u8 = 0;
 
 /// The guest-physical address of the VMSA page.
 ///
-/// The current implementation uses the same fixed address for all VMSA pages. It is calculated as
-/// the start-address of the last 4KiB page that can be addressed within the allowed physical bits.
+/// The current implementation uses the same fixed address for all VMSA pages.
+/// It is calculated as the start-address of the last 4KiB page that can be
+/// addressed within the allowed physical bits.
 ///
-/// For AMD "Milan" CPUs the maximum supported physical memory bit-width is 48 when SEV-SNP is
-/// enabled.
+/// For AMD "Milan" CPUs the maximum supported physical memory bit-width is 48
+/// when SEV-SNP is enabled.
 #[allow(unused)]
 pub const VMSA_ADDRESS: PhysAddr = PhysAddr::new((1 << 48) - Size4KiB::SIZE);
 

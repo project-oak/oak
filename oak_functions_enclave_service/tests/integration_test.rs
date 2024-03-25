@@ -42,22 +42,19 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 fn init() {
     // See https://github.com/rust-cli/env_logger/#in-tests.
-    let _ = env_logger::builder()
-        .is_test(true)
-        .filter_level(log::LevelFilter::Trace)
-        .try_init();
+    let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Trace).try_init();
 }
 
 fn new_service_for_testing() -> OakFunctionsService<
-    oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
-    oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+    oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle,
+    oak_restricted_kernel_sdk::testing::MockEvidenceProvider,
     oak_functions_service::wasm::WasmHandler,
 > {
     OakFunctionsService::new(
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
             .expect("failed to create EvidenceProvidder"),
         Arc::new(
-            oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle::create()
+            oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle::create()
                 .expect("failed to create EncryptionKeyHandle"),
         ),
         None,
@@ -79,10 +76,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
     assert_matches!(
         result,
-        Err(micro_rpc::Status {
-            code: micro_rpc::StatusCode::FailedPrecondition,
-            ..
-        })
+        Err(micro_rpc::Status { code: micro_rpc::StatusCode::FailedPrecondition, .. })
     );
 }
 
@@ -100,9 +94,8 @@ fn it_should_handle_user_requests_after_initialization() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let evidence = initialize_response
-        .evidence
-        .expect("initialize response doesn't have public key info");
+    let evidence =
+        initialize_response.evidence.expect("initialize response doesn't have public key info");
     let server_encryption_public_key =
         extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
@@ -115,10 +108,8 @@ fn it_should_handle_user_requests_after_initialization() {
 
     // Send invoke request.
     #[allow(clippy::needless_update)]
-    let invoke_request = InvokeRequest {
-        encrypted_request: Some(encrypted_request),
-        ..Default::default()
-    };
+    let invoke_request =
+        InvokeRequest { encrypted_request: Some(encrypted_request), ..Default::default() };
     let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
 }
@@ -141,10 +132,7 @@ fn it_should_only_initialize_once() {
 
     assert_matches!(
         result,
-        Err(micro_rpc::Status {
-            code: micro_rpc::StatusCode::FailedPrecondition,
-            ..
-        })
+        Err(micro_rpc::Status { code: micro_rpc::StatusCode::FailedPrecondition, .. })
     );
 }
 
@@ -162,9 +150,8 @@ fn it_should_error_on_invalid_wasm_module() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let evidence = initialize_response
-        .evidence
-        .expect("initialize response doesn't have public key info");
+    let evidence =
+        initialize_response.evidence.expect("initialize response doesn't have public key info");
     let server_encryption_public_key =
         extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
@@ -181,22 +168,16 @@ fn it_should_error_on_invalid_wasm_module() {
     let lookup_response = client
         .handle_user_request(
             #[allow(clippy::needless_update)]
-            &InvokeRequest {
-                encrypted_request: Some(encrypted_request),
-                ..Default::default()
-            },
+            &InvokeRequest { encrypted_request: Some(encrypted_request), ..Default::default() },
         )
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
-    let encrypted_response = lookup_response
-        .unwrap()
-        .encrypted_response
-        .expect("no encrypted response provided");
+    let encrypted_response =
+        lookup_response.unwrap().encrypted_response.expect("no encrypted response provided");
 
     // Decrypt response.
-    let (response_bytes, _) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("client couldn't decrypt response");
+    let (response_bytes, _) =
+        client_encryptor.decrypt(&encrypted_response).expect("client couldn't decrypt response");
 
     let response = micro_rpc::ResponseWrapper::decode(response_bytes.as_slice())
         .map_err(|err| {
@@ -210,16 +191,14 @@ fn it_should_error_on_invalid_wasm_module() {
     let response_result: Result<Vec<u8>, micro_rpc::Status> = response.into();
     log::info!("response_result: {:?}", response_result);
 
-    // The error is encrypted and sent only to the client, and should say something about the Wasm
-    // module not being valid. The error is mostly user facing, so its details may change in the
-    // future, but here we check for a reasonable substring.
+    // The error is encrypted and sent only to the client, and should say something
+    // about the Wasm module not being valid. The error is mostly user facing,
+    // so its details may change in the future, but here we check for a
+    // reasonable substring.
     assert!(response_result.is_err());
     let err = response_result.unwrap_err();
     assert_eq!(err.code, micro_rpc::StatusCode::Internal);
-    assert_eq!(
-        err.message,
-        "couldn't validate `main` export: Func(ExportedFuncNotFound)"
-    );
+    assert_eq!(err.message, "couldn't validate `main` export: Func(ExportedFuncNotFound)");
 }
 
 #[test]
@@ -236,9 +215,8 @@ fn it_should_support_lookup_data() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let evidence = initialize_response
-        .evidence
-        .expect("initialize response doesn't have public key info");
+    let evidence =
+        initialize_response.evidence.expect("initialize response doesn't have public key info");
     let server_encryption_public_key =
         extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
@@ -252,10 +230,7 @@ fn it_should_support_lookup_data() {
     let request = ExtendNextLookupDataRequest { chunk: Some(chunk) };
 
     client.extend_next_lookup_data(&request).into_ok().unwrap();
-    client
-        .finish_next_lookup_data(&FinishNextLookupDataRequest {})
-        .into_ok()
-        .unwrap();
+    client.finish_next_lookup_data(&FinishNextLookupDataRequest {}).into_ok().unwrap();
 
     // TODO(#4274): Deduplicate this logic with Oak Client library.
 
@@ -270,22 +245,16 @@ fn it_should_support_lookup_data() {
     let lookup_response = client
         .handle_user_request(
             #[allow(clippy::needless_update)]
-            &InvokeRequest {
-                encrypted_request: Some(encrypted_request),
-                ..Default::default()
-            },
+            &InvokeRequest { encrypted_request: Some(encrypted_request), ..Default::default() },
         )
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
-    let encrypted_response = lookup_response
-        .unwrap()
-        .encrypted_response
-        .expect("no encrypted response provided");
+    let encrypted_response =
+        lookup_response.unwrap().encrypted_response.expect("no encrypted response provided");
 
     // Decrypt response.
-    let (response_bytes, _) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("client couldn't decrypt response");
+    let (response_bytes, _) =
+        client_encryptor.decrypt(&encrypted_response).expect("client couldn't decrypt response");
 
     let response = micro_rpc::ResponseWrapper::decode(response_bytes.as_slice())
         .map_err(|err| {
@@ -308,7 +277,8 @@ fn it_should_handle_wasm_panic() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
-    // Use the Oak Functions test Wasm module, which contains a function that panics.
+    // Use the Oak Functions test Wasm module, which contains a function that
+    // panics.
     let wasm_path =
         oak_functions_test_utils::build_rust_crate_wasm("oak_functions_test_module").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
@@ -318,9 +288,8 @@ fn it_should_handle_wasm_panic() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let evidence = initialize_response
-        .evidence
-        .expect("initialize response doesn't have public key info");
+    let evidence =
+        initialize_response.evidence.expect("initialize response doesn't have public key info");
     let server_encryption_public_key =
         extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
@@ -328,8 +297,8 @@ fn it_should_handle_wasm_panic() {
         oak_functions_client: &'a mut OakFunctionsClient<
             OakFunctionsServer<
                 OakFunctionsService<
-                    oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
-                    oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+                    oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle,
+                    oak_restricted_kernel_sdk::testing::MockEvidenceProvider,
                     oak_functions_service::wasm::WasmHandler,
                 >,
             >,
@@ -375,8 +344,8 @@ fn it_should_handle_wasm_panic() {
 
             log::debug!("response outer bytes: {:?}", response_outer_bytes);
 
-            // There is an additional layer of wrapping around the response, so we need to unwrap
-            // it.
+            // There is an additional layer of wrapping around the response, so we need to
+            // unwrap it.
             let response_inner =
                 micro_rpc::ResponseWrapper::decode(response_outer_bytes.as_slice())
                     .map_err(|err| {
@@ -403,15 +372,13 @@ fn it_should_handle_wasm_panic() {
 
     let request_data = vec![1, 2, 3, 4, 5, 6, 7];
 
-    let echo_and_panic_request = EchoAndPanicRequest {
-        data: request_data.clone(),
-    };
+    let echo_and_panic_request = EchoAndPanicRequest { data: request_data.clone() };
     let echo_and_panic_response = client
         .echo_and_panic(&echo_and_panic_request)
         .into_ok()
         .expect("couldn't receive response");
 
-    // The current behaviour is that the panic is ignored and the response is the latest value
-    // written.
+    // The current behaviour is that the panic is ignored and the response is the
+    // latest value written.
     assert_eq!(request_data, echo_and_panic_response.data);
 }

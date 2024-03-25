@@ -26,11 +26,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/abseil/abseil-cpp
 http_archive(
     name = "com_google_absl",
-    sha256 = "5366d7e7fa7ba0d915014d387b66d0d002c03236448e1ba9ef98122c13b35c36",
-    strip_prefix = "abseil-cpp-20230125.3",
+    sha256 = "3c743204df78366ad2eaf236d6631d83f6bc928d1705dd0000b872e53b73dc6a",
+    strip_prefix = "abseil-cpp-20240116.1",
     urls = [
-        # Abseil LTS 20230125.3.
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.tar.gz",
+        # Abseil LTS 20240116.1
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240116.1.tar.gz",
     ],
 )
 
@@ -62,11 +62,10 @@ http_archive(
 # https://github.com/grpc/grpc
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "e034992a0b464042021f6d440f2090acc2422c103a322b0844e3921ccea981dc",
-    strip_prefix = "grpc-1.56.0",
+    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
+    strip_prefix = "grpc-1.62.0",
     urls = [
-        # gRPC v1.56.0 (2023-06-14).
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.56.0.tar.gz",
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
     ],
 )
 
@@ -271,3 +270,164 @@ gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
     target_arch = ARCHS.x86_64,
 )
+
+# Rust support
+http_archive(
+    name = "rules_rust",
+    integrity = "sha256-ww398ehv1QZQp26mRbOkXy8AZnsGGHpoXpVU4WfKl+4=",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.40.0/rules_rust-v0.40.0.tar.gz"],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition = "2021",
+    versions = [
+        "1.76.0",
+        "nightly/2023-11-15",
+    ],
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies(bootstrap = True)
+
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
+
+crates_repository(
+    name = "oak_crates_index",
+    cargo_lockfile = "//:Cargo.bazel.lock",  # In Cargo-free mode this is used as output, not input.
+    lockfile = "//:cargo-bazel-lock.json",  # Shares most contents with cargo_lockfile.
+    packages = {
+        "anyhow": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "async-trait": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "base64": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "0.21",
+        ),
+        "bitflags": crate.spec(version = "*"),
+        "ciborium": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "coset": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "ecdsa": crate.spec(
+            default_features = False,
+            features = [
+                "pkcs8",
+                "pem",
+            ],
+            version = "*",
+        ),
+        "getrandom": crate.spec(
+            default_features = False,
+            # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
+            features = ["rdrand"],
+            version = "*",
+        ),
+        "hex": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "*",
+        ),
+        "hkdf": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "p256": crate.spec(
+            default_features = False,
+            features = [
+                "alloc",
+                "ecdsa-core",
+                "ecdsa",
+                "pem",
+            ],
+            version = "*",
+        ),
+        "p384": crate.spec(
+            default_features = False,
+            features = [
+                "ecdsa",
+                "pem",
+            ],
+            version = "0.13.0",
+        ),
+        "prost": crate.spec(
+            default_features = False,
+            features = ["prost-derive"],
+            version = "*",
+        ),
+        "prost-build": crate.spec(
+            version = "*",
+        ),
+        "rand_core": crate.spec(
+            default_features = False,
+            features = ["getrandom"],
+            version = "*",
+        ),
+        "rsa": crate.spec(
+            default_features = False,
+            version = "0.9.6",
+        ),
+        "serde": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "*",
+        ),
+        "serde_json": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "*",
+        ),
+        "sha2": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "static_assertions": crate.spec(version = "*"),
+        "strum": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "*",
+        ),
+        "time": crate.spec(
+            default_features = False,
+            features = [
+                "serde",
+                "parsing",
+            ],
+            version = "0.3.28",
+        ),
+        "x509-cert": crate.spec(
+            default_features = False,
+            features = ["pem"],
+            version = "0.2.5",
+        ),
+        "zerocopy": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "*",
+        ),
+        "zeroize": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "*",
+        ),
+    },
+    supported_platform_triples = ["x86_64-unknown-linux-gnu"],  # Non needed with Bazel+Cargo - possibly reading .cargo dir.
+)
+
+load("@oak_crates_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()

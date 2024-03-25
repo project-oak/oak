@@ -39,9 +39,9 @@ use crate::mm::{
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
 ///
-/// We use 2MiB pages during early boot, so we must make sure there are no other kernel data
-/// structures located in the page so that we can safely share the page with the hypervisor without
-/// leaking other data.
+/// We use 2MiB pages during early boot, so we must make sure there are no other
+/// kernel data structures located in the page so that we can safely share the
+/// page with the hypervisor without leaking other data.
 #[derive(Debug)]
 #[repr(C, align(2097152))]
 struct GhcbAlignmentWrapper {
@@ -53,9 +53,7 @@ static_assertions::assert_eq_size!(GhcbAlignmentWrapper, [u8; Size2MiB::SIZE as 
 static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
 pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
-    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(
-        GHCB_PROTOCOL.get().expect("GHCB not initialized"),
-    ))
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(GHCB_PROTOCOL.get().expect("GHCB not initialized")))
 }
 
 pub static GHCB_PROTOCOL: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
@@ -72,12 +70,12 @@ pub fn init(snp_enabled: bool) {
 
 /// Shares the page containing the GHCB with the hypervisor again.
 ///
-/// This should be called as soon as the kernel memory has been initialised, as that would have
-/// caused the page to be marked as encrypted.
+/// This should be called as soon as the kernel memory has been initialised, as
+/// that would have caused the page to be marked as encrypted.
 pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &M) {
     let ghcb_page = get_ghcb_page();
-    // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
-    // were set during the kernel memory initialisation.
+    // Safety: we only change the encrypted flag, all other flags for the GHCB pages
+    // are as they were set during the kernel memory initialisation.
     unsafe {
         match mapper.update_flags(
             // Turn the 2M page into a 4K page. This unwrap will not fail, as 2M pages are
@@ -94,33 +92,29 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &M) {
     }
 
     // Reset the GHCB in case something touched it while it was marked as encrypted.
-    GHCB_PROTOCOL
-        .get()
-        .expect("GHCB not initialized")
-        .lock()
-        .reset();
+    GHCB_PROTOCOL.get().expect("GHCB not initialized").lock().reset();
 }
 
 /// Initializes the GHCB and shares it with the hypervisor during early boot.
 fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
-    // Safety: This is called only during early boot, so there is only a single execution context.
+    // Safety: This is called only during early boot, so there is only a single
+    // execution context.
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
 
     let ghcb_page = get_ghcb_page();
     let mapper = get_identity_mapped_encrypted_page_table();
-    // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
-    // are only marked as present and writable, and possibly encrypted.
+    // Safety: we only remove the encrypted bit as the initial pages created by the
+    // stage 0 firmware are only marked as present and writable, and possibly
+    // encrypted.
     unsafe {
-        match mapper.update_flags(
-            ghcb_page,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        ) {
+        match mapper.update_flags(ghcb_page, PageTableFlags::PRESENT | PageTableFlags::WRITABLE) {
             Ok(mapper_flush) => mapper_flush.flush(),
             Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
         };
     }
     if snp_enabled {
-        // It is OK to crash if we cannot find the physical frame that contains the GHCB.
+        // It is OK to crash if we cannot find the physical frame that contains the
+        // GHCB.
         let ghcb_frame = PhysFrame::<Size2MiB>::from_start_address(
             mapper
                 .translate_virtual(ghcb_page.start_address())
@@ -128,9 +122,10 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
         )
         .expect("the GHCB physical address is not correctly aligned");
 
-        // Since we don't have the GHCB set up already we need to use the MSR protocol to mark every
-        // individual 4KiB area in the 2MiB page as shared in the RMP. It is OK to crash if we
-        // cannot share the GHCB with the hypervisor.
+        // Since we don't have the GHCB set up already we need to use the MSR protocol
+        // to mark every individual 4KiB area in the 2MiB page as shared in the
+        // RMP. It is OK to crash if we cannot share the GHCB with the
+        // hypervisor.
         change_snp_state_for_frame(&ghcb_frame, PageAssignment::Shared)
             .expect("couldn't change SNP state for frame");
 
@@ -143,17 +138,17 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
 
     ghcb.reset();
 
-    GhcbProtocol::new(ghcb, |virt_addr: VirtAddr| {
-        mapper.translate_virtual(virt_addr)
-    })
+    GhcbProtocol::new(ghcb, |virt_addr: VirtAddr| mapper.translate_virtual(virt_addr))
 }
 
-/// Gets a mapper that understands encrypted pages and assumes an identity mapping.
+/// Gets a mapper that understands encrypted pages and assumes an identity
+/// mapping.
 ///
-/// This must only be used during early boot when the identity-mapped page tables created by the
-/// stage 0 firmware is still active, and only if SEV, SEV-ES or SEV-SNP is active.
-fn get_identity_mapped_encrypted_page_table<'a>(
-) -> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
+/// This must only be used during early boot when the identity-mapped page
+/// tables created by the stage 0 firmware is still active, and only if SEV,
+/// SEV-ES or SEV-SNP is active.
+fn get_identity_mapped_encrypted_page_table<'a>()
+-> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
     // We assume an identity mapping, so the offset is zero.
     let offset = VirtAddr::new(0);
     // We assume that this will only be used if memory encryption is enabled.
@@ -161,16 +156,16 @@ fn get_identity_mapped_encrypted_page_table<'a>(
     let offset_mapper = PhysOffset::new(offset, encryption);
     // Find the level 4 page table that is currently in use.
     let (l4_frame, _) = Cr3::read();
-    // Safety: we have fetched the address of the currently used PML4 table from CR3, so this is a
-    // valid address pointing to a valid page table.
+    // Safety: we have fetched the address of the currently used PML4 table from
+    // CR3, so this is a valid address pointing to a valid page table.
     let pml4 = unsafe { &mut *offset_mapper.frame_to_pointer(l4_frame) };
     EncryptedPageTable::new(pml4, offset, encryption)
 }
 
 /// Gets the 2MiB memory page that contains the GHCB.
 fn get_ghcb_page() -> Page<Size2MiB> {
-    // Safety: the reference to a mutable static is safe, as we only use it to calculate a virtual
-    // address and don't dereference it.
+    // Safety: the reference to a mutable static is safe, as we only use it to
+    // calculate a virtual address and don't dereference it.
     let ghcb_pointer = unsafe { &GHCB_WRAPPER as *const GhcbAlignmentWrapper };
     let ghcb_address = VirtAddr::from_ptr(ghcb_pointer);
     Page::<Size2MiB>::from_start_address(ghcb_address).expect("invalid start address for GHCB page")

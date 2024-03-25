@@ -25,17 +25,11 @@ pub struct Status {
 
 impl Status {
     pub fn new(code: StatusCode) -> Self {
-        Self {
-            code,
-            message: "".to_string(),
-        }
+        Self { code, message: "".to_string() }
     }
 
     pub fn new_with_message(code: StatusCode, message: impl Into<String>) -> Self {
-        Self {
-            code,
-            message: message.into(),
-        }
+        Self { code, message: message.into() }
     }
 }
 

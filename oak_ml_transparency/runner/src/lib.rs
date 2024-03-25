@@ -42,8 +42,8 @@ pub struct ModelEvaluationSpec {
     result: Value,
 }
 
-/// Generates a claim in the form of an intoto-statement about the model, identified by the given
-/// name and digest, and the given evaluation result.
+/// Generates a claim in the form of an intoto-statement about the model,
+/// identified by the given name and digest, and the given evaluation result.
 pub fn generate_claim(
     model_name: &str,
     model_digest: &str,
@@ -78,8 +78,8 @@ pub fn generate_claim(
     })
 }
 
-/// Runs the given evaluation script on the given model, and returns the result as a string, or an
-/// error if the evaluation fails.
+/// Runs the given evaluation script on the given model, and returns the result
+/// as a string, or an error if the evaluation fails.
 pub fn run_evaluation(model_path: &PathBuf, eval_path: &PathBuf) -> Result<String> {
     // Run python evaluation script
     let output = Command::new("python3")
@@ -93,10 +93,7 @@ pub fn run_evaluation(model_path: &PathBuf, eval_path: &PathBuf) -> Result<Strin
     if !output.status.success() {
         io::stdout().write_all(&output.stdout)?;
         io::stderr().write_all(&output.stderr)?;
-        anyhow::bail!(
-            "Running the evaluation failed with status {}",
-            output.status,
-        )
+        anyhow::bail!("Running the evaluation failed with status {}", output.status,)
     }
 
     let mut file = File::open(RESULT_PATH)?;
@@ -111,7 +108,8 @@ pub fn run_evaluation(model_path: &PathBuf, eval_path: &PathBuf) -> Result<Strin
     Ok(result)
 }
 
-/// Computes a SHA2-256 digest of `input` and returns it as a hex-encoded string.
+/// Computes a SHA2-256 digest of `input` and returns it as a hex-encoded
+/// string.
 pub fn get_sha256_hex(input: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input);
@@ -147,8 +145,8 @@ mod tests {
     #[test]
     fn run_evaluation_returns_result() {
         let script_path = PathBuf::from("testdata/eval.py");
-        // This is not really a model, but the evaluation script does not care, and the runner does
-        // not care either, as long as it is a file it can load!
+        // This is not really a model, but the evaluation script does not care, and the
+        // runner does not care either, as long as it is a file it can load!
         let model_path = PathBuf::from("testdata/eval.py");
 
         let got = run_evaluation(&script_path, &model_path).expect("running evaluation failed");

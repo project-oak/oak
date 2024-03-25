@@ -25,35 +25,28 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          linux_kernel_upstream = builtins.fetchurl {
-            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.6.tar.xz";
-            sha256 = "1lrp7pwnxnqyy8c2l4n4nz997039gbnssrfm8ss8kl3h2c7fr2g4";
+          linux_kernel_version = "6.1.33";
+          linux_kernel_src = builtins.fetchurl {
+            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
+            sha256 = "1kfj7mi3n2lfaw4spz5cbvcl1md038figabyg80fha3kxal6nzdq";
           };
-          # TODO: b/328294742 - This derivation does not currently compile correctly, but it is a starting point.
-          oak_containers_kernel = pkgs.stdenv.mkDerivation {
-            name = "oak_containers_kernel";
-            src = ./oak_containers_kernel;
-            buildInputs = with pkgs; [
-              cowsay
-              curl
-              flex
-              bison
-              bc
-              libelf
-              elfutils
-              glibc
-              glibc.static
-              cpio
-            ];
-            baseInputs = [
-              linux_kernel_upstream
-            ];
-            buildPhase = ''
-              make target/vmlinux
-              cp target/vmlinux $out
-            '';
-            installPhase = ''
-              '';
+          # Build the linux kernel for Oak Containers as a nix package, which simplifies
+          # reproducibility.
+          # Note that building a package via nix is not by itself a guarantee of
+          # reproducibility; see https://reproducible.nixos.org.
+          linux_kernel = pkgs.linuxManualConfig {
+            # To allow reproducibility, the following options need to be configured:
+            # - CONFIG_MODULE_SIG is not set
+            # - CONFIG_MODULE_SIG_ALL is not set
+            # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
+            configfile = ./oak_containers_kernel/configs/6.1.33/minimal.config;
+            version = linux_kernel_version;
+            src = linux_kernel_src;
+            allowImportFromDerivation = true;
+            kernelPatches = [{
+              name = "virtio-dma";
+              patch = ./oak_containers_kernel/patches/virtio-dma.patch;
+            }];
           };
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
@@ -102,7 +95,7 @@
           };
         in
         {
-          packages = { };
+          packages = { inherit linux_kernel; };
           formatter = pkgs.nixpkgs-fmt;
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
@@ -181,7 +174,7 @@
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
               shellHook = ''
-                export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+                export LINUX_KERNEL="${linux_kernel}"
               '';
               inputsFrom = [
                 base
@@ -208,6 +201,9 @@
             };
             # Shell for container kernel image provenance workflow.
             bzImageProvenance = with pkgs; mkShell {
+              shellHook = ''
+                export LINUX_KERNEL="${linux_kernel}"
+              '';
               inputsFrom = [
                 rust
               ];

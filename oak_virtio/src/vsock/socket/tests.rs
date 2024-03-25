@@ -39,12 +39,8 @@ fn test_socket_accept() {
     let listener = SocketListener::new(vsock, GUEST_PORT);
     let socket = listener.accept().unwrap();
     assert_eq!(socket.connection_state, ConnectionState::Connected);
-    let response = Packet::new(
-        transport
-            .device_read_once_from_queue::<QUEUE_SIZE>(1)
-            .unwrap(),
-    )
-    .unwrap();
+    let response =
+        Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
     assert_eq!(response.get_op().unwrap(), VSockOp::Response);
 }
 
@@ -71,12 +67,8 @@ fn test_socket_connect() {
     assert_eq!(socket.connection_state, ConnectionState::Connected);
 
     // Read the original request from the queue and validate.
-    let request = Packet::new(
-        transport
-            .device_read_once_from_queue::<QUEUE_SIZE>(1)
-            .unwrap(),
-    )
-    .unwrap();
+    let request =
+        Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
     assert_eq!(request.get_op().unwrap(), VSockOp::Request);
 }
 
@@ -114,18 +106,10 @@ fn test_write_all() {
     let data = [31; 5000];
     let (mut socket, transport) = new_socket_and_transport();
     assert!(socket.write_all(&data[..]).is_ok());
-    let first = Packet::new(
-        transport
-            .device_read_once_from_queue::<QUEUE_SIZE>(1)
-            .unwrap(),
-    )
-    .unwrap();
-    let second = Packet::new(
-        transport
-            .device_read_once_from_queue::<QUEUE_SIZE>(1)
-            .unwrap(),
-    )
-    .unwrap();
+    let first =
+        Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
+    let second =
+        Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
     assert_eq!(first.get_dst_cid(), HOST_CID);
     assert_eq!(first.get_src_cid(), GUEST_CID);
     assert_eq!(first.get_dst_port(), HOST_PORT);
@@ -158,12 +142,8 @@ fn test_many_echos() {
 
         // Echo back.
         assert!(socket.write_all(&buffer[..]).is_ok());
-        let output = Packet::new(
-            transport
-                .device_read_once_from_queue::<QUEUE_SIZE>(1)
-                .unwrap(),
-        )
-        .unwrap();
+        let output =
+            Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
         assert_eq!(output.get_payload(), &data[..]);
     }
 }
@@ -194,12 +174,8 @@ fn new_socket_and_transport() -> (Socket<'static, TestingTransport, Global>, Tes
     let listener = SocketListener::new(vsock, GUEST_PORT);
     let socket = listener.accept().unwrap();
     // Take the response packet from the queue.
-    let response = Packet::new(
-        transport
-            .device_read_once_from_queue::<QUEUE_SIZE>(1)
-            .unwrap(),
-    )
-    .unwrap();
+    let response =
+        Packet::new(transport.device_read_once_from_queue::<QUEUE_SIZE>(1).unwrap()).unwrap();
     assert_eq!(response.get_op().unwrap(), VSockOp::Response);
 
     (socket, transport)

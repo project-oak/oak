@@ -18,22 +18,21 @@ use oak_attestation::dice::evidence_to_proto;
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, endorsements,
-    kernel_binary_reference_value, reference_values, ApplicationLayerReferenceValues,
-    BinaryReferenceValue, Endorsements, InsecureReferenceValues, KernelBinaryReferenceValue,
-    KernelLayerReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-    RootLayerReferenceValues, SkipVerification,
+    kernel_binary_reference_value, reference_values, regex_reference_value,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, InsecureReferenceValues,
+    KernelBinaryReferenceValue, KernelLayerReferenceValues, OakRestrictedKernelEndorsements,
+    OakRestrictedKernelReferenceValues, ReferenceValues, RegexReferenceValue,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
 };
-use oak_restricted_kernel_sdk::EvidenceProvider;
+use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
 #[test]
 fn verify_mock_dice_chain() {
-    let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
-            .expect("failed to create mock provider");
+    let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        .expect("failed to create mock provider");
     let mock_evidence = mock_evidence_provider.get_evidence();
 
     let result = verify_dice_chain(
@@ -48,27 +47,22 @@ fn verify_mock_dice_chain() {
 
 #[test]
 fn verify_mock_evidence() {
-    let mock_evidence_provider =
-        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
-            .expect("failed to create mock provider");
+    let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        .expect("failed to create mock provider");
     let evidence = evidence_to_proto(mock_evidence_provider.get_evidence().clone())
         .expect("failed to convert evidence to proto");
 
     let endorsements = Endorsements {
-        r#type: Some(endorsements::Type::OakRestrictedKernel(
-            OakRestrictedKernelEndorsements {
-                root_layer: Some(RootLayerEndorsements::default()),
-                ..Default::default()
-            },
-        )),
+        r#type: Some(endorsements::Type::OakRestrictedKernel(OakRestrictedKernelEndorsements {
+            root_layer: Some(RootLayerEndorsements::default()),
+            ..Default::default()
+        })),
     };
 
     // reference values that skip everything.
     let reference_values = {
         let skip = BinaryReferenceValue {
-            r#type: Some(binary_reference_value::Type::Skip(
-                SkipVerification::default(),
-            )),
+            r#type: Some(binary_reference_value::Type::Skip(SkipVerification::default())),
         };
         ReferenceValues {
             r#type: Some(reference_values::Type::OakRestrictedKernel(
@@ -87,6 +81,9 @@ fn verify_mock_evidence() {
                         kernel_image: Some(skip.clone()),
                         kernel_setup_data: Some(skip.clone()),
                         kernel_cmd_line: Some(skip.clone()),
+                        kernel_cmd_line_regex: Some(RegexReferenceValue {
+                            r#type: Some(regex_reference_value::Type::Skip(SkipVerification {})),
+                        }),
                         init_ram_fs: Some(skip.clone()),
                         memory_map: Some(skip.clone()),
                         acpi: Some(skip.clone()),

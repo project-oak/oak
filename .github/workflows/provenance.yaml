@@ -33,6 +33,7 @@ jobs:
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/oak_functions_insecure_enclave_app.toml
           - buildconfigs/oak_restricted_kernel_simple_io_wrapper.toml
+          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper.toml
           - buildconfigs/stage0_bin.toml
           - buildconfigs/oak_orchestrator.toml
 

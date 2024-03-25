@@ -53,13 +53,14 @@ pub fn init_gdt_early() {
     descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
     descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
 
-    // Safety: descriptors are 'static, so this is safe to load, but unfortunately the fact isn't
-    // visible through the MutexGuard.
+    // Safety: descriptors are 'static, so this is safe to load, but unfortunately
+    // the fact isn't visible through the MutexGuard.
     unsafe {
         descriptors.gdt.load_unsafe();
     }
 
-    // Safety: it's safe to load these segments as we've initialized the GDT just above.
+    // Safety: it's safe to load these segments as we've initialized the GDT just
+    // above.
     unsafe {
         CS::set_reg(descriptors.kernel_cs_selector);
         DS::set_reg(descriptors.kernel_ds_selector);
@@ -74,18 +75,19 @@ pub fn init_gdt_early() {
 pub fn init_gdt(double_fault_stack: VirtAddr, privileged_interrupt_stack: VirtAddr) -> u16 {
     let mut descriptors = DESCRIPTORS.lock();
 
-    // If an interrupt triggers a switch to Ring 0, the CPU will switch to the privileged stack.
+    // If an interrupt triggers a switch to Ring 0, the CPU will switch to the
+    // privileged stack.
     descriptors.tss.privilege_stack_table[0] = privileged_interrupt_stack;
-    // If we double fault (which means something is _really_ wrong), the CPU will switch to this
-    // stack.
+    // If we double fault (which means something is _really_ wrong), the CPU will
+    // switch to this stack.
     descriptors.tss.interrupt_stack_table[DOUBLE_FAULT_STACK_INDEX as usize] = double_fault_stack;
 
     descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
     descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
-    // Safety: we know that descriptors are 'static as they are stored in the static variable, but
-    // unfortunately that fact is not visible through the MutexGuard.
-    // Thus, we need to rely on `transmute()` to extend the lifetime and use `load_unsafe()` to
-    // actually load the GDT.
+    // Safety: we know that descriptors are 'static as they are stored in the static
+    // variable, but unfortunately that fact is not visible through the
+    // MutexGuard. Thus, we need to rely on `transmute()` to extend the lifetime
+    // and use `load_unsafe()` to actually load the GDT.
     let tss_descriptor =
         Descriptor::tss_segment(unsafe { core::intrinsics::transmute(&descriptors.tss) });
     descriptors.tss_selector = descriptors.gdt.add_entry(tss_descriptor);

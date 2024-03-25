@@ -17,22 +17,21 @@ const OUTPUTS: [&str; 1] = ["micro_rpc.tests.rs"];
 
 #[test]
 fn generate() {
-    // This test simply copies the output created by the `build.rs` script back into the source
-    // tree, so that it can be tracked in Git. We use the `.txt` extension so that other tools do
-    // not attempt to format or lint it or warn about missing license header.
+    // This test simply copies the output created by the `build.rs` script back into
+    // the source tree, so that it can be tracked in Git. We use the `.txt`
+    // extension so that other tools do not attempt to format or lint it or warn
+    // about missing license header.
     //
-    // This allows to see the current output of the generator, and see how changes in the generator
-    // affect the output file.
+    // This allows to see the current output of the generator, and see how changes
+    // in the generator affect the output file.
     //
-    // This test does not actually compare the current output to the expected one, it always
-    // overwrite the current one whenever it is run. The actual comparison is performed by the
-    // developer (who should notice that the generated file has changed), and also in CI (thanks to
-    // the git_check_diff step).
+    // This test does not actually compare the current output to the expected one,
+    // it always overwrite the current one whenever it is run. The actual
+    // comparison is performed by the developer (who should notice that the
+    // generated file has changed), and also in CI (thanks to the git_check_diff
+    // step).
     for output in OUTPUTS.into_iter() {
-        std::fs::copy(
-            format!("{}/{}", env!("OUT_DIR"), output),
-            format!("out/{}.txt", output),
-        )
-        .unwrap();
+        std::fs::copy(format!("{}/{}", env!("OUT_DIR"), output), format!("out/{}.txt", output))
+            .unwrap();
     }
 }

@@ -23,7 +23,8 @@ use spinning_top::Spinlock;
 
 extern crate log;
 
-// Base I/O port for the first serial port in the system (colloquially known as COM1)
+// Base I/O port for the first serial port in the system (colloquially known as
+// COM1)
 const COM1_BASE: u16 = 0x3f8;
 
 pub static SERIAL1: Spinlock<Option<SerialPort>> = Spinlock::new(None);
@@ -36,13 +37,8 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
-        writeln!(
-            SERIAL1.lock().as_mut().unwrap(),
-            "kernel {}: {}",
-            record.level(),
-            record.args()
-        )
-        .unwrap();
+        writeln!(SERIAL1.lock().as_mut().unwrap(), "kernel {}: {}", record.level(), record.args())
+            .unwrap();
     }
 
     fn flush(&self) {
@@ -61,8 +57,7 @@ pub fn init_logging(sev_es_enabled: bool) {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
     let mut port = unsafe { SerialPort::new(COM1_BASE, port_factory) };
-    port.init()
-        .expect("couldn't initialize logging serial port");
+    port.init().expect("couldn't initialize logging serial port");
 
     if SERIAL1.lock().replace(port).is_some() {
         panic!("serial port 1 is already initialized");

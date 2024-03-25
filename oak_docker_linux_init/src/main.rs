@@ -32,9 +32,10 @@ fn main() -> ! {
     // Set up the Linux environment, since we expect to be the initial process.
     init::init().unwrap();
 
-    // For now, just set PATH to some common locations. Docker image has information about
-    // the environment variables that need to be set up before the container is launched. We
-    // should use that information to set up all the necessary environment variables.
+    // For now, just set PATH to some common locations. Docker image has information
+    // about the environment variables that need to be set up before the
+    // container is launched. We should use that information to set up all the
+    // necessary environment variables.
     std::env::set_var("PATH", "/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin");
 
     let file = File::open(DOCKER_COMMAND_PATH).expect("Error reading file");
@@ -52,8 +53,8 @@ fn main() -> ! {
         Err(error) => println!("Error running docker command: {:?}", error),
     }
 
-    // Linux does not expect the initial process to ever exit, so we keep sleeping 1 second at a
-    // time.
+    // Linux does not expect the initial process to ever exit, so we keep sleeping 1
+    // second at a time.
     loop {
         nix::unistd::sleep(1);
     }

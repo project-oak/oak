@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -42,12 +43,22 @@ message AttestationResults {
 
   // Contains the verified public key for encryption whenever the status
   // indicates success. The key is serialized as an X25519 octet string.
-  bytes encryption_public_key = 3;
+  //
+  // Deprecated: will be replaced by the
+  // `extracted_evidence.encryption_public_key` field. For now both are
+  // populated.
+  bytes encryption_public_key = 3 [deprecated = true];
 
   // Contains the verified public key for signing whenever the status
   // indicates success. The key is serialized using the SEC 1
   // Elliptic-Curve-Point-to-Octet-String conversion.
-  bytes signing_public_key = 4;
+  //
+  // Deprecated: will be replaced by the `extracted_evidence.signing_public_key`
+  // field. For now both are populated.
+  bytes signing_public_key = 4 [deprecated = true];
+
+  // Contains the evidence values whenever the status indicates success.
+  ExtractedEvidence extracted_evidence = 5;
 }
 
 // Evidence values extracted from attestation evidence during verification.
@@ -87,6 +98,12 @@ message AmdAttestationReport {
   // Current TCB Version.
   TcbVersion current_tcb = 2;
 
+  // Reported TCB version (the version can be lower than current_tcb in case of
+  // a provisional update. See
+  // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
+  // (Section 3.4) for more detail).
+  TcbVersion reported_tcb = 7;
+
   // Whether the VM was booted in debug mode.
   bool debug = 3;
 
@@ -95,9 +112,13 @@ message AmdAttestationReport {
   // binary.
   bytes initial_measurement = 4;
 
-  // The hardware ID of the AMD SEV-SNP platform that generated the atttestation
+  // The hardware ID of the AMD SEV-SNP platform that generated the attestation
   // report.
   bytes hardware_id = 5;
+
+  // The VM Protection Leve (VMPL) that was active when the attestation report
+  // was generated.
+  uint32 vmpl = 6;
 }
 
 // Values extracted from an Intel TDX attestation report.
@@ -112,20 +133,6 @@ message FakeAttestationReport {
   bytes report_data = 1;
 }
 
-// The versions of the components in the AMD SEV-SNP platform Trusted Compute
-// Base (TCB).
-message TcbVersion {
-  // The current security version number (SVN) of the secure processor (PSP)
-  // bootloader.
-  uint32 boot_loader = 1;
-  // The current SVN of the PSP operating system.
-  uint32 tee = 2;
-  // The current SVN of the SNP firmware.
-  uint32 snp = 3;
-  // The lowest current patch level of all the CPU cores.
-  uint32 microcode = 4;
-}
-
 // Values extracted from the the kernel layer evidence, as measured by stage0.
 message KernelLayerData {
   // Measured digests of the image part of the kernel.
@@ -136,7 +143,10 @@ message KernelLayerData {
 
   // Measured digests of the command-line that was passed to the kernel
   // during startup.
-  RawDigest kernel_cmd_line = 2;
+  RawDigest kernel_cmd_line = 2 [deprecated = true];
+
+  // Command-line that was passed to the kernel during startup.
+  string kernel_raw_cmd_line = 7;
 
   // Measured digests of the initial RAM disk.
   RawDigest init_ram_fs = 4;

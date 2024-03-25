@@ -39,11 +39,7 @@ impl LauncherClient {
         let channel = Channel::builder(addr.clone()).connect().await?;
         let inner = GrpcLauncherClient::new(channel.clone());
         let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
-        Ok(Self {
-            addr,
-            inner,
-            hostlib_key_provisioning_client,
-        })
+        Ok(Self { addr, inner, hostlib_key_provisioning_client })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -56,10 +52,8 @@ impl LauncherClient {
             .into_inner();
 
         let mut container_buf: Vec<u8> = Vec::new();
-        while let Some(mut load_response) = stream
-            .message()
-            .await
-            .context("couldn't load message from stream")?
+        while let Some(mut load_response) =
+            stream.message().await.context("couldn't load message from stream")?
         {
             container_buf.append(&mut load_response.image_chunk);
         }
@@ -85,9 +79,8 @@ impl LauncherClient {
         evidence: Evidence,
     ) -> Result<(), Box<dyn std::error::Error>> {
         #[allow(deprecated)]
-        let request = tonic::Request::new(SendAttestationEvidenceRequest {
-            dice_evidence: Some(evidence),
-        });
+        let request =
+            tonic::Request::new(SendAttestationEvidenceRequest { dice_evidence: Some(evidence) });
         self.inner
             .clone()
             .send_attestation_evidence(request)
@@ -99,11 +92,7 @@ impl LauncherClient {
 
     pub async fn notify_app_ready(&self) -> Result<(), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(());
-        self.inner
-            .clone()
-            .notify_app_ready(request)
-            .await
-            .context("couldn't send notification")?;
+        self.inner.clone().notify_app_ready(request).await.context("couldn't send notification")?;
         Ok(())
     }
 
@@ -132,8 +121,6 @@ impl LauncherClient {
     }
 
     pub fn openmetrics_builder(&self) -> TonicExporterBuilder {
-        opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint(self.addr.clone().to_string())
+        opentelemetry_otlp::new_exporter().tonic().with_endpoint(self.addr.clone().to_string())
     }
 }

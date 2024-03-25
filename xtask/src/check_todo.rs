@@ -26,8 +26,8 @@ static PATTERN: Lazy<Regex> =
             .expect("couldn't parse regex")
     });
 
-/// A [`Runnable`] command that checks for the existence of todos in the codebase with no associated
-/// GitHub issue number or formatted according to http://go/todo-style.
+/// A [`Runnable`] command that checks for the existence of todos in the
+/// codebase with no associated GitHub issue number or formatted according to http://go/todo-style.
 pub struct CheckTodo {
     path: String,
 }
@@ -56,10 +56,7 @@ impl Runnable for CheckTodo {
             .filter(|word| CheckTodo::is_invalid_todo(word))
             .collect::<Vec<_>>();
         let result = if invalid_todo_words.is_empty() {
-            SingleStatusResult {
-                value: StatusResultValue::Ok,
-                logs: String::new(),
-            }
+            SingleStatusResult { value: StatusResultValue::Ok, logs: String::new() }
         } else {
             SingleStatusResult {
                 value: StatusResultValue::Error,
@@ -78,34 +75,16 @@ mod tests {
         assert!(CheckTodo::is_invalid_todo(&format!("{}DO()", "TO")));
         assert!(!CheckTodo::is_invalid_todo(&format!("{}DO(#123)", "TO")));
 
-        assert!(!CheckTodo::is_invalid_todo(&format!(
-            "{}DO: b/123 - do something.",
-            "TO"
-        )));
+        assert!(!CheckTodo::is_invalid_todo(&format!("{}DO: b/123 - do something.", "TO")));
         // Missing full stop.
-        assert!(CheckTodo::is_invalid_todo(&format!(
-            "{}DO: b/123 - do something",
-            "TO"
-        )));
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO: b/123 - do something", "TO")));
         // Missing link separator.
-        assert!(CheckTodo::is_invalid_todo(&format!(
-            "{}DO: do something.",
-            "TO"
-        )));
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO: do something.", "TO")));
         // Empty link.
-        assert!(CheckTodo::is_invalid_todo(&format!(
-            "{}DO: - do something.",
-            "TO"
-        )));
-        assert!(CheckTodo::is_invalid_todo(&format!(
-            "{}DO:-do something.",
-            "TO"
-        )));
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO: - do something.", "TO")));
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO:-do something.", "TO")));
         // Empty description.
-        assert!(CheckTodo::is_invalid_todo(&format!(
-            "{}DO: b/123 - .",
-            "TO"
-        )));
+        assert!(CheckTodo::is_invalid_todo(&format!("{}DO: b/123 - .", "TO")));
         assert!(CheckTodo::is_invalid_todo(&format!("{}DO: b/123 -.", "TO")));
     }
 }

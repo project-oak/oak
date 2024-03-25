@@ -56,20 +56,14 @@ fn test_fragmenting_bytes_into_frames() {
 
 #[test]
 fn test_request_message_encoding() {
-    let message = message::RequestMessage {
-        invocation_id: 0,
-        body: mock_payload(),
-    };
+    let message = message::RequestMessage { invocation_id: 0, body: mock_payload() };
     let reconstructed_message = message::RequestMessage::decode(&message.clone().encode());
     assert_eq!(message, reconstructed_message);
 }
 
 #[test]
 fn test_response_message_encoding() {
-    let message = message::ResponseMessage {
-        invocation_id: 0,
-        body: mock_payload(),
-    };
+    let message = message::ResponseMessage { invocation_id: 0, body: mock_payload() };
     let reconstructed_message = message::ResponseMessage::decode(&message.clone().encode());
     assert_eq!(message, reconstructed_message);
 }
@@ -102,10 +96,7 @@ impl Write for MessageStore {
 fn test_invocation_channel() {
     let mut invocation_channel = InvocationChannel::new(Box::new(MessageStore::default()));
 
-    let message = message::RequestMessage {
-        invocation_id: 4,
-        body: mock_payload(),
-    };
+    let message = message::RequestMessage { invocation_id: 4, body: mock_payload() };
 
     invocation_channel.write_message(message.clone()).unwrap();
 
@@ -117,46 +108,26 @@ fn test_invocation_channel() {
 #[test]
 fn test_invocation_channel_double_start_frame() {
     let mut invocation_channel = {
-        let message = message::RequestMessage {
-            invocation_id: 0,
-            body: mock_payload(),
-        }
-        .encode();
-        let start_frame = frame::bytes_into_frames(&message)
-            .unwrap()
-            .first()
-            .unwrap()
-            .clone();
+        let message = message::RequestMessage { invocation_id: 0, body: mock_payload() }.encode();
+        let start_frame = frame::bytes_into_frames(&message).unwrap().first().unwrap().clone();
         let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
         frame_store.write_frame(start_frame.clone()).unwrap();
         frame_store.write_frame(start_frame).unwrap();
         InvocationChannel { inner: frame_store }
     };
 
-    invocation_channel
-        .read_message::<message::RequestMessage>()
-        .unwrap_err();
+    invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
 }
 
 #[test]
 fn test_invocation_channel_expected_start_frame() {
     let mut invocation_channel = {
-        let message = message::RequestMessage {
-            invocation_id: 0,
-            body: mock_payload(),
-        }
-        .encode();
-        let end_frame = frame::bytes_into_frames(&message)
-            .unwrap()
-            .last()
-            .unwrap()
-            .clone();
+        let message = message::RequestMessage { invocation_id: 0, body: mock_payload() }.encode();
+        let end_frame = frame::bytes_into_frames(&message).unwrap().last().unwrap().clone();
         let mut frame_store = frame::Framed::new(Box::new(MessageStore::default()));
         frame_store.write_frame(end_frame).unwrap();
         InvocationChannel { inner: frame_store }
     };
 
-    invocation_channel
-        .read_message::<message::RequestMessage>()
-        .unwrap_err();
+    invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
 }

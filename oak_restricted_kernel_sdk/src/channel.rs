@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Provides functionality to communicate with host application over the communication channel.
+//! Provides functionality to communicate with host application over the
+//! communication channel.
 
 use alloc::boxed::Box;
 
@@ -36,8 +37,8 @@ impl FileDescriptorChannel {
 }
 
 impl Default for FileDescriptorChannel {
-    /// Constructs a new FileDescriptorChannel that assumes we'll use the well-known Oak file
-    /// descriptor number.
+    /// Constructs a new FileDescriptorChannel that assumes we'll use the
+    /// well-known Oak file descriptor number.
     fn default() -> Self {
         Self::new(OAK_CHANNEL_FD)
     }
@@ -90,9 +91,8 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
     let channel_handle = &mut oak_channel::server::ServerChannelHandle::new(channel);
     loop {
         log::debug!("waiting for a request message");
-        let (request_message, timer) = channel_handle
-            .read_request()
-            .context("couldn't receive message")?;
+        let (request_message, timer) =
+            channel_handle.read_request().context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
         log::debug!(
             "received request message with invocation id {} ({} bytes)",

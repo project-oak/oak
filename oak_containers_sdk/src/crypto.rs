@@ -78,10 +78,7 @@ impl OrchestratorCryptoClient {
         self.inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
-            .sign(SignRequest {
-                message,
-                key_origin: key_origin.into(),
-            })
+            .sign(SignRequest { message, key_origin: key_origin.into() })
             .await?
             .into_inner()
             .signature
@@ -149,8 +146,6 @@ impl InstanceSigner {
 #[async_trait(?Send)]
 impl Signer for InstanceSigner {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
-        self.orchestrator_crypto_client
-            .sign(KeyOrigin::Instance, message.to_vec())
-            .await
+        self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await
     }
 }

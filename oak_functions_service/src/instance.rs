@@ -16,7 +16,6 @@
 
 use alloc::{format, sync::Arc};
 
-use bytes::Bytes;
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 
@@ -53,30 +52,24 @@ impl<H: Handler> OakFunctionsInstance<H> {
                     )
                 },
             )?;
-        Ok(Self {
-            lookup_data_manager,
-            wasm_handler,
-        })
+        Ok(Self { lookup_data_manager, wasm_handler })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
     pub fn handle_user_request(&self, request: Vec<u8>) -> Result<Vec<u8>, micro_rpc::Status> {
         // TODO(#3442): Implement constant response size policy.
-        self.wasm_handler
-            .handle_invoke(Request { body: request })
-            .map(|response| response.body)
+        self.wasm_handler.handle_invoke(Request { body: request }).map(|response| response.body)
     }
     /// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     pub fn extend_next_lookup_data(
         &self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager
-            .extend_next_lookup_data(to_data(request.chunk.ok_or(
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::InvalidArgument,
-                    "no chunk in extend request",
-                ),
-            )?));
+        self.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.as_ref().ok_or(
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                "no chunk in extend request",
+            ),
+        )?));
         Ok(ExtendNextLookupDataResponse {})
     }
 
@@ -84,8 +77,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
         &self,
         chunk: LookupDataChunk,
     ) -> Result<(), micro_rpc::Status> {
-        self.lookup_data_manager
-            .extend_next_lookup_data(to_data(chunk));
+        self.lookup_data_manager.extend_next_lookup_data(to_data(&chunk));
         Ok(())
     }
 
@@ -120,9 +112,6 @@ impl<H: Handler> OakFunctionsInstance<H> {
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Bytes, Bytes)> {
-    chunk
-        .items
-        .into_iter()
-        .map(|entry| (entry.key, entry.value))
+fn to_data(chunk: &LookupDataChunk) -> impl Iterator<Item = (&[u8], &[u8])> {
+    chunk.items.iter().map(|entry| (entry.key.as_ref(), entry.value.as_ref()))
 }

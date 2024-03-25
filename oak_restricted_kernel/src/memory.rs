@@ -62,17 +62,14 @@ impl GrowableHeap {
     pub const fn empty() -> Self {
         // Safety: zero is definitely aligned with a 2 MiB boundary.
         let zero_page = unsafe { Page::from_start_address_unchecked(VirtAddr::zero()) };
-        Self {
-            heap: Heap::empty(),
-            base: zero_page,
-            available: Page::range(zero_page, zero_page),
-        }
+        Self { heap: Heap::empty(), base: zero_page, available: Page::range(zero_page, zero_page) }
     }
 
     /// Extends the current pool of memory by one 2 MiB page.
     fn extend(&mut self) -> Result<(), &'static str> {
-        // We might want to do something more clever here, such as exponentially increasing the
-        // number of frames we allocate. For now, let's just keep extending by one frame.
+        // We might want to do something more clever here, such as exponentially
+        // increasing the number of frames we allocate. For now, let's just keep
+        // extending by one frame.
         let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR
             .lock()
             .allocate_frame()
@@ -80,9 +77,10 @@ impl GrowableHeap {
         let pt_guard = PAGE_TABLES.lock();
         let mapper = pt_guard.get().unwrap();
 
-        // Safety: if the page is already mapped, then we'll get an error and thus we won't
-        // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
-        // the memory is currently unused and thus there should be no references to that memory.
+        // Safety: if the page is already mapped, then we'll get an error and thus we
+        // won't overwrite any existing mappings, Otherwise, creating a new
+        // mapping is safe as the memory is currently unused and thus there
+        // should be no references to that memory.
         unsafe {
             mapper
                 .map_to_with_table_flags(
@@ -118,15 +116,13 @@ impl GrowableHeap {
         // Get the first 2 MiB of memory for the heap.
         self.extend().unwrap();
 
-        self.heap.init(
-            self.base.start_address().as_mut_ptr(),
-            Size2MiB::SIZE as usize,
-        );
+        self.heap.init(self.base.start_address().as_mut_ptr(), Size2MiB::SIZE as usize);
     }
 
     pub fn allocate_first_fit(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
-        // Try allocating the data structure; if the allocation fails, grow the heap and try again
-        // until we succeed (or until we can't extend ourselves any further)
+        // Try allocating the data structure; if the allocation fails, grow the heap and
+        // try again until we succeed (or until we can't extend ourselves any
+        // further)
         loop {
             match self.heap.allocate_first_fit(layout) {
                 Ok(ptr) => return Ok(ptr),
@@ -170,17 +166,16 @@ unsafe impl GlobalAlloc for LockedGrowableHeap {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
-        self.0
-            .lock()
-            .deallocate(NonNull::new_unchecked(ptr), layout)
+        self.0.lock().deallocate(NonNull::new_unchecked(ptr), layout)
     }
 }
 
-/// Initializes the global allocator from the largest contiguous slice of available memory.
+/// Initializes the global allocator from the largest contiguous slice of
+/// available memory.
 ///
-/// Pointers to addresses in the memory area (or references to data contained within the slice) must
-/// be considered invalid after calling this function, as the allocator may overwrite the data at
-/// any point.
+/// Pointers to addresses in the memory area (or references to data contained
+/// within the slice) must be considered invalid after calling this function, as
+/// the allocator may overwrite the data at any point.
 pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> {
     // This is safe as we know the memory is available based on the e820 map.
     unsafe {
@@ -193,8 +188,8 @@ pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> 
 ///
 /// # Safety
 ///
-/// The caller has to guarantee that the page range is valid and not in use, as we will change page
-/// table flags for pages in that range.
+/// The caller has to guarantee that the page range is valid and not in use, as
+/// we will change page table flags for pages in that range.
 pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
     mapper: &M,
@@ -217,8 +212,5 @@ pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
         pages.end.start_address().as_u64()
     );
 
-    Ok(LockedHeap::new(
-        pages.start.start_address().as_mut_ptr(),
-        pages.count() * S::SIZE as usize,
-    ))
+    Ok(LockedHeap::new(pages.start.start_address().as_mut_ptr(), pages.count() * S::SIZE as usize))
 }

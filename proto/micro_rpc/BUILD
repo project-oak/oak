@@ -26,6 +26,12 @@ proto_library(
     srcs = ["messages.proto"],
 )
 
+proto_library(
+    name = "options_proto",
+    srcs = ["options.proto"],
+    deps = ["@com_google_protobuf//:descriptor_proto"],
+)
+
 java_proto_library(
     name = "messages_java_proto",
     deps = [":messages_proto"],

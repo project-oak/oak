@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.functions.wasm.v1;
 
 import "google/protobuf/wrappers.proto";
+import "proto/micro_rpc/options.proto";
 
 // The standard API for Oak Functions, which is exposed to Wasm modules via micro RPC, and wrapped
 // by the Oak Functions SDK.
@@ -30,7 +31,9 @@ service StdWasmApi {
   // This method is idempotent: multiple calls result in the same response.
   //
   // method_id: 0
-  rpc ReadRequest(ReadRequestRequest) returns (ReadRequestResponse) {}
+  rpc ReadRequest(ReadRequestRequest) returns (ReadRequestResponse) {
+    option (.oak.micro_rpc.method_id) = 0;
+  }
 
   // Write a response for the client.
   //
@@ -39,7 +42,9 @@ service StdWasmApi {
   // runtime sends an empty response to the client.
   //
   // method_id: 1
-  rpc WriteResponse(WriteResponseRequest) returns (WriteResponseResponse) {}
+  rpc WriteResponse(WriteResponseRequest) returns (WriteResponseResponse) {
+    option (.oak.micro_rpc.method_id) = 1;
+  }
 
   // Writes a debug log message.
   //
@@ -47,22 +52,30 @@ service StdWasmApi {
   // in debug mode.
   //
   // method_id: 2
-  rpc Log(LogRequest) returns (LogResponse) {}
+  rpc Log(LogRequest) returns (LogResponse) {
+    option (.oak.micro_rpc.method_id) = 2;
+  }
 
   // Looks up an item from the in-memory key/value lookup store.
   //
   // method_id: 3
-  rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {}
+  rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {
+    option (.oak.micro_rpc.method_id) = 3;
+  }
 
   // Looks up multiple items from the in-memory key/value lookup store.
   //
   // method_id: 4
-  rpc LookupDataMulti(LookupDataMultiRequest) returns (LookupDataMultiResponse) {}
+  rpc LookupDataMulti(LookupDataMultiRequest) returns (LookupDataMultiResponse) {
+    option (.oak.micro_rpc.method_id) = 4;
+  }
 
   // Test method only.
   //
   // method_id: 128
-  rpc Test(TestRequest) returns (TestResponse) {}
+  rpc Test(TestRequest) returns (TestResponse) {
+    option (.oak.micro_rpc.method_id) = 128;
+  }
 }
 
 message ReadRequestRequest {}

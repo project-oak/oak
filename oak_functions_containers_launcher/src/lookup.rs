@@ -70,7 +70,8 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     }
 }
 
-// Loads lookup data from the given path, encodes it, and sends it to the client.
+// Loads lookup data from the given path, encodes it, and sends it to the
+// client.
 pub async fn update_lookup_data(
     client: &mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     lookup_data_path: &PathBuf,
@@ -79,12 +80,7 @@ pub async fn update_lookup_data(
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let chunks = chunk_up_lookup_data(lookup_data, max_chunk_size).into_iter();
 
-    UpdateClient {
-        inner: client,
-        chunks,
-    }
-    .update()
-    .await
+    UpdateClient { inner: client, chunks }.update().await
 }
 
 fn chunk_up_lookup_data(
@@ -93,8 +89,8 @@ fn chunk_up_lookup_data(
 ) -> Vec<LookupDataChunk> {
     let mut chunks = Vec::new();
 
-    // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
-    // overhead, we generously estimate 50 bytes.
+    // We will add the estimated size of ever LookupDataEntry, and to account for
+    // the LookupData overhead, we generously estimate 50 bytes.
     let mut estimated_chunk_size = ByteUnit::Byte(50);
     // Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
     let overestimated_delimiter_size = ByteUnit::Byte(10);
@@ -121,11 +117,7 @@ fn chunk_up_lookup_data(
 
 fn load_lookup_data(file_path: &std::path::PathBuf) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let bytes = std::fs::read(file_path).map_err(|error| {
-        anyhow!(
-            "couldn't read the lookup data file {}: {}",
-            file_path.display(),
-            error
-        )
+        anyhow!("couldn't read the lookup data file {}: {}", file_path.display(), error)
     })?;
     parse_lookup_entries(bytes.as_slice())
 }
@@ -165,7 +157,8 @@ fn test_chunk_up_lookup_data_in_bound() {
 fn test_chunk_up_lookup_data_exceed_bound() {
     let max_chunk_size = ByteUnit::Kibibyte(1);
 
-    // Create data with 9 entries with 100 bytes each accounting for the added overhead.
+    // Create data with 9 entries with 100 bytes each accounting for the added
+    // overhead.
     let mut data = HashMap::new();
     for i in 0..9 {
         let key = format!("{:050}", i).into_bytes();

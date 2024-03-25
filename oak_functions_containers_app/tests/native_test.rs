@@ -42,13 +42,13 @@ async fn test_native_handler() {
 
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger));
-    lookup_data_manager.extend_next_lookup_data(
-        [("key_0".as_bytes().into(), "value_0".as_bytes().into())].into_iter(),
-    );
+    lookup_data_manager
+        .extend_next_lookup_data([("key_0".as_bytes(), "value_0".as_bytes())].into_iter());
 
     lookup_data_manager.finish_next_lookup_data();
 
-    // This test fails right now because the library links in too many other libraries.
+    // This test fails right now because the library links in too many other
+    // libraries.
     /*
     let handler = NativeHandler::new_handler(&library, lookup_data_manager, None)
         .expect("failed to load test library");

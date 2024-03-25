@@ -61,13 +61,8 @@ fn load_segment(
     let start_address = phys_to_virt(PhysAddr::new(phdr.p_paddr));
     let size = phdr.p_memsz as usize;
     check_memory(start_address, size, e820_table)?;
-    check_non_overlapping(
-        start_address,
-        size,
-        VirtAddr::from_ptr(buf.as_ptr()),
-        buf.len(),
-    )
-    .map_err(|_| "region overlaps with ELF file")?;
+    check_non_overlapping(start_address, size, VirtAddr::from_ptr(buf.as_ptr()), buf.len())
+        .map_err(|_| "region overlaps with ELF file")?;
     if let Some(ramdisk) = ramdisk {
         check_non_overlapping(
             start_address,
@@ -77,15 +72,16 @@ fn load_segment(
         )
         .map_err(|_| "region overlaps with ramdisk")?
     };
-    // Safety: we checked that the target memory is valid and that it does not overlap with the
-    // source buffer.
+    // Safety: we checked that the target memory is valid and that it does not
+    // overlap with the source buffer.
     let target = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
 
     // Zero out the target in case the file content is shorter than the target.
     target.fill(0);
 
-    // Manually copy between slices to avoid the compiler's intrinsic memcpy which uses an indirect
-    // call, causing a relocation entry in the resulting ELF binary.
+    // Manually copy between slices to avoid the compiler's intrinsic memcpy which
+    // uses an indirect call, causing a relocation entry in the resulting ELF
+    // binary.
     #[allow(clippy::manual_memcpy)]
     {
         for i in 0..file_length {

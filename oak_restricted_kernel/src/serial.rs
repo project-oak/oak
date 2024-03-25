@@ -21,7 +21,8 @@ pub struct Serial {
     port: AtomicRefCell<SerialPort>,
 }
 
-// Base I/O port for the second serial port in the system (colloquially known as COM2)
+// Base I/O port for the second serial port in the system (colloquially known as
+// COM2)
 static COM2_BASE: u16 = 0x2f8;
 
 impl Serial {
@@ -30,9 +31,7 @@ impl Serial {
         // available, so assuming the loader adheres to it, this is safe.
         let mut port = unsafe { SerialPort::new(COM2_BASE) };
         port.init();
-        Serial {
-            port: AtomicRefCell::new(port),
-        }
+        Serial { port: AtomicRefCell::new(port) }
     }
 }
 

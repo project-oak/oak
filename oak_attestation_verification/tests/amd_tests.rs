@@ -31,11 +31,7 @@ fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?
     {
-        eprintln!(
-            "cert ext id={} val={}",
-            ext.extn_id,
-            hex::encode(ext.extn_value.as_bytes())
-        );
+        eprintln!("cert ext id={} val={}", ext.extn_id, hex::encode(ext.extn_value.as_bytes()));
     }
     Ok(())
 }

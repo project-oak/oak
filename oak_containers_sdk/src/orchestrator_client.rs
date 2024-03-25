@@ -53,12 +53,7 @@ impl OrchestratorClient {
     }
 
     pub async fn get_application_config(&mut self) -> Result<Vec<u8>> {
-        let config = self
-            .inner
-            .get_application_config(())
-            .await?
-            .into_inner()
-            .config;
+        let config = self.inner.get_application_config(()).await?.into_inner().config;
         Ok(config)
     }
 

@@ -19,8 +19,9 @@
 use alloc::{format, string::String, vec::Vec};
 use core::result::Result;
 
-/// Extracts the bytes used to encode a CBOR object from a slice that might include unused bytes by
-/// deserializing and re-serializing the encoded CBOR object.
+/// Extracts the bytes used to encode a CBOR object from a slice that might
+/// include unused bytes by deserializing and re-serializing the encoded CBOR
+/// object.
 pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
     let mut result: Vec<u8> = Vec::new();
     let value: ciborium::Value =
@@ -32,8 +33,9 @@ pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
 
 pub(crate) trait PaddedCopyFromSlice {
     /// Like [`slice::copy_from_slice`] but does not panic if slices are not
-    /// the same length. In the case of a shorter source slice, pads the remaining
-    /// bytes with zeroes. In the case of a longer source slice it returns an error.
+    /// the same length. In the case of a shorter source slice, pads the
+    /// remaining bytes with zeroes. In the case of a longer source slice it
+    /// returns an error.
     fn padded_copy_from_slice(&mut self, src: &[u8]) -> Result<(), &'static str>;
 }
 

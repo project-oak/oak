@@ -51,8 +51,8 @@ const DEVICE_ID: u16 = 3;
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-1020002>.
 const PCI_DEVICE_ID: u16 = 0x1040 + DEVICE_ID;
 
-/// Simple driver implementation for a virtio serial/console device that only supports a single port
-/// and no configuration.
+/// Simple driver implementation for a virtio serial/console device that only
+/// supports a single port and no configuration.
 ///
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010>.
 pub struct Console<'a, T: VirtioTransport, A: Allocator> {
@@ -62,21 +62,22 @@ pub struct Console<'a, T: VirtioTransport, A: Allocator> {
     rx_queue: DeviceWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
     /// The transmit queue, used for sending bytes.
     tx_queue: DriverWriteOnlyQueue<'a, QUEUE_SIZE, DATA_BUFFER_SIZE, A>,
-    /// A buffer to temporarily store extra data from the device that was not fully read when using
-    /// `read_all`. This could happen if the device sent more bytes in a single buffer than was
-    /// expected by `read_all`.
+    /// A buffer to temporarily store extra data from the device that was not
+    /// fully read when using `read_all`. This could happen if the device
+    /// sent more bytes in a single buffer than was expected by `read_all`.
     pending_data: Option<VecDeque<u8>>,
 }
 
 impl<'a, A: Allocator> Console<'a, VirtioPciTransport, A> {
-    /// Finds the virtio console PCI device, initialises the device, and configures the queues.
+    /// Finds the virtio console PCI device, initialises the device, and
+    /// configures the queues.
     pub fn find_and_configure_device<VP: Translator, PV: InverseTranslator>(
         translate: VP,
         inverse: PV,
         alloc: &'a A,
     ) -> anyhow::Result<Self> {
-        // For now we just scan the first 32 devices on PCI bus 0 to find the first one that matches
-        // the vendor ID and device ID.
+        // For now we just scan the first 32 devices on PCI bus 0 to find the first one
+        // that matches the vendor ID and device ID.
         let pci_device = find_device(super::PCI_VENDOR_ID, PCI_DEVICE_ID)
             .ok_or_else(|| anyhow::anyhow!("couldn't find a virtio console device"))?;
         let transport = VirtioPciTransport::new(pci_device);
@@ -91,14 +92,16 @@ impl<'a, T, A: Allocator> Console<'a, T, A>
 where
     T: VirtioTransport,
 {
-    /// Reads the next available bytes from the receive queue, if any are available.
+    /// Reads the next available bytes from the receive queue, if any are
+    /// available.
     pub fn read_bytes(&mut self) -> Option<VecDeque<u8>> {
         let buffer = self.rx_queue.read_next_used_buffer()?;
         let mut result = VecDeque::with_capacity(buffer.len());
         result.extend(buffer);
 
         if self.rx_queue.inner.must_notify_device() {
-            // Notify the device that bytes have been read and the buffer is available again.
+            // Notify the device that bytes have been read and the buffer is available
+            // again.
             self.device.notify_queue(RX_QUEUE_ID);
         }
 
@@ -133,12 +136,7 @@ where
     fn new<VP: Translator>(device: VirtioBaseDevice<T>, translate: VP, alloc: &'a A) -> Self {
         let tx_queue = DriverWriteOnlyQueue::new(&translate, alloc);
         let rx_queue = DeviceWriteOnlyQueue::new(&translate, alloc);
-        Console {
-            device,
-            tx_queue,
-            rx_queue,
-            pending_data: None,
-        }
+        Console { device, tx_queue, rx_queue, pending_data: None }
     }
 
     /// Initializes the device and configures the queues.
@@ -188,12 +186,13 @@ where
         Ok(())
     }
 
-    /// Tries once to fill the destination with as much data as is currently available, either in
-    /// the pending buffer (if data was left over from the previous read), or from the next
-    /// available buffer in the queue if there was no data in the pending buffer.
+    /// Tries once to fill the destination with as much data as is currently
+    /// available, either in the pending buffer (if data was left over from
+    /// the previous read), or from the next available buffer in the queue
+    /// if there was no data in the pending buffer.
     ///
-    /// If data is read from the queue and not fully used the remainder is stored back into the
-    /// pending buffer.
+    /// If data is read from the queue and not fully used the remainder is
+    /// stored back into the pending buffer.
     ///
     /// Returns the number of bytes read if any data was available to read.
     fn read_partial(&mut self, dest: &mut [u8]) -> Option<usize> {
@@ -249,8 +248,8 @@ where
 
     fn flush(&mut self) -> anyhow::Result<()> {
         // We always flush on write, so do nothing.
-        // TODO(#2876): We should use a buffered writer so that we don't always flush on write, and
-        // provide an actual flush implementation here.
+        // TODO(#2876): We should use a buffered writer so that we don't always flush on
+        // write, and provide an actual flush implementation here.
         Ok(())
     }
 }

@@ -23,12 +23,12 @@ pub use oak_core::*;
 pub use oak_enclave_runtime_support::heap;
 use oak_restricted_kernel_interface::syscall::{fsync, write};
 
-struct Stderr {}
+pub struct Stderr {}
 
 impl Stderr {
     const STDERR_FD: i32 = 2;
 
-    fn flush() {
+    pub fn flush() {
         fsync(Self::STDERR_FD).unwrap();
     }
 }
@@ -47,7 +47,8 @@ impl core::fmt::Write for Stderr {
 
 /// [`log::Log`] implementation that outputs logs on standard error.
 ///
-/// Implicitly declared as the global logger when using the [`crate::entrypoint`] macro.
+/// Implicitly declared as the global logger when using the
+/// [`crate::entrypoint`] macro.
 pub struct StderrLogger {}
 
 impl log::Log for StderrLogger {

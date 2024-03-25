@@ -39,10 +39,8 @@ impl<T: Transport + EvidenceProvider> OakClient<T> {
         mut transport: T,
         verifier: &dyn AttestationVerifier,
     ) -> anyhow::Result<Self> {
-        let endorsed_evidence = transport
-            .get_endorsed_evidence()
-            .await
-            .context("couldn't get endorsed evidence")?;
+        let endorsed_evidence =
+            transport.get_endorsed_evidence().await.context("couldn't get endorsed evidence")?;
 
         let evidence = endorsed_evidence
             .evidence

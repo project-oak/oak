@@ -33,8 +33,9 @@ use crate::{
 ///
 /// Used to send inter-processor interrupts (IPIs) to other cores in the system.
 ///
-/// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC Interrupt Command
-/// Register Operations) in the AMD64 Architecture Programmer's Manual, Volume 2 for more details.
+/// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC
+/// Interrupt Command Register Operations) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 trait InterprocessorInterrupt {
     /// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
     #[allow(clippy::too_many_arguments)]
@@ -52,8 +53,8 @@ trait InterprocessorInterrupt {
 
 /// APIC Error Status.
 ///
-/// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 trait ErrorStatus {
     fn read(&self) -> ApicErrorFlags;
     fn clear(&mut self);
@@ -68,16 +69,16 @@ trait ApicId {
 
 /// APIC Version.
 ///
-/// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 trait ApicVersion {
     fn read(&self) -> (bool, u8, u8);
 }
 
 /// APIC spurious interrupt register.
 ///
-/// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture Programmer's Manual,
-/// Volume 2 for more details.
+/// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture
+/// Programmer's Manual, Volume 2 for more details.
 trait SpuriousInterrupts {
     fn read(&self) -> (SpuriousInterruptFlags, u8);
     fn write(&mut self, flags: SpuriousInterruptFlags, vec: u8);
@@ -97,10 +98,11 @@ mod xapic {
 
     /// Representation of the APIC MMIO registers.
     ///
-    /// We do not represent _all_ the xAPIC registers here, but only the ones we are interested in.
+    /// We do not represent _all_ the xAPIC registers here, but only the ones we
+    /// are interested in.
     ///
-    /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC Registers) of the AMD64
-    /// Architecture Programmer's Manual, Volume 2.
+    /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC
+    /// Registers) of the AMD64 Architecture Programmer's Manual, Volume 2.
     #[repr(C, align(4096))]
     struct ApicRegisters {
         registers: [u32; 1024],
@@ -125,8 +127,8 @@ mod xapic {
 
     impl Xapic {
         fn read(&self, register: usize) -> u32 {
-            // Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
+            // Safety: these registers can only be accessed through ApicRegisters, by which
+            // we should have established where the MMIO area is.
             if let Some(ghcb) = GHCB_WRAPPER.get() {
                 ghcb.lock()
                     .mmio_read_u32(self.aba + (register * core::mem::size_of::<u32>()))
@@ -142,8 +144,8 @@ mod xapic {
                     .mmio_write_u32(self.aba + (register * core::mem::size_of::<u32>()), val)
                     .expect("couldn't read the MSR using the GHCB protocol")
             } else {
-                // Safety: these registers can only be accessed through ApicRegisters, by which we
-                // should have established where the MMIO area is.
+                // Safety: these registers can only be accessed through ApicRegisters, by which
+                // we should have established where the MMIO area is.
                 unsafe { (&mut self.mmio_area.registers[register] as *mut u32).write_volatile(val) }
             }
         }
@@ -152,8 +154,8 @@ mod xapic {
     impl super::ApicId for Xapic {
         /// Read the Local APIC ID register.
         ///
-        /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual, Volume 2 for the
-        /// register format.
+        /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual,
+        /// Volume 2 for the register format.
         fn apic_id(&self) -> u32 {
             self.read(APIC_ID_REGISTER_OFFSET) >> 24
         }
@@ -170,13 +172,9 @@ mod xapic {
             trigger_mode: super::TriggerMode,
             destination_shorthand: super::DestinationShorthand,
         ) -> Result<(), &'static str> {
-            let destination: u8 = destination
-                .try_into()
-                .map_err(|_| "destination APIC ID too big for xAPIC")?;
-            self.write(
-                INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET,
-                (destination as u32) << 24,
-            );
+            let destination: u8 =
+                destination.try_into().map_err(|_| "destination APIC ID too big for xAPIC")?;
+            self.write(INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET, (destination as u32) << 24);
             self.write(
                 INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
                 destination_shorthand as u32
@@ -216,30 +214,24 @@ mod xapic {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
             let val = self.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
-            (
-                SpuriousInterruptFlags::from_bits_truncate(val),
-                (val & 0xFF) as u8,
-            )
+            (SpuriousInterruptFlags::from_bits_truncate(val), (val & 0xFF) as u8)
         }
 
         fn write(&mut self, flags: super::SpuriousInterruptFlags, vec: u8) {
-            self.write(
-                SPURIOUS_INTERRUPT_REGISTER_OFFSET,
-                flags.bits() | vec as u32,
-            )
+            self.write(SPURIOUS_INTERRUPT_REGISTER_OFFSET, flags.bits() | vec as u32)
         }
     }
 
-    // Reserve a 4K chunk of memory -- we don't really care where, we only care that we don't
-    // overlap and can change the physical address it points to.
+    // Reserve a 4K chunk of memory -- we don't really care where, we only care that
+    // we don't overlap and can change the physical address it points to.
     static mut APIC_MMIO_AREA: MaybeUninit<ApicRegisters> = MaybeUninit::uninit();
 
     pub(crate) fn init(apic_base: PhysAddr) -> Xapic {
-        // Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA virtual
-        // address to be somewhere in the first two megabytes.
+        // Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA
+        // virtual address to be somewhere in the first two megabytes.
 
-        // Safety: we're not dereferencing the pointer, we just want to know where it landed in
-        // virtual memory.
+        // Safety: we're not dereferencing the pointer, we just want to know where it
+        // landed in virtual memory.
         let vaddr = VirtAddr::from_ptr(unsafe { APIC_MMIO_AREA.as_ptr() });
         if vaddr.as_u64() > Size2MiB::SIZE {
             panic!("APIC_MMIO_AREA virtual address does not land in the first page table");
@@ -251,10 +243,7 @@ mod xapic {
         );
         flush_all();
         // Safety: we've mapped APIC_MMIO_AREA to where the caller claimed it to be.
-        Xapic {
-            mmio_area: unsafe { APIC_MMIO_AREA.assume_init_mut() },
-            aba: apic_base,
-        }
+        Xapic { mmio_area: unsafe { APIC_MMIO_AREA.assume_init_mut() }, aba: apic_base }
     }
 }
 
@@ -351,21 +340,14 @@ pub struct Lapic {
 impl Lapic {
     pub fn enable() -> Result<Self, &'static str> {
         let x2apic = if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .get_cpuid(CpuidInput {
-                    eax: 0x0000_0001,
-                    ecx: 0,
-                    xcr0: 0,
-                    xss: 0,
-                })?
-                .ecx
+            ghcb.lock().get_cpuid(CpuidInput { eax: 0x0000_0001, ecx: 0, xcr0: 0, xss: 0 })?.ecx
         } else {
             // Safety: the CPUs we support are new enough to support CPUID.
             unsafe { __cpuid(0x0000_0001) }.ecx
         } & (1 << 21)
             > 0;
-        // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for explanation
-        // of the initialization procedure.
+        // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
+        // explanation of the initialization procedure.
         let (aba, mut flags) = ApicBase::read();
         if !flags.contains(ApicBaseFlags::AE) {
             flags |= ApicBaseFlags::AE;
@@ -391,10 +373,7 @@ impl Lapic {
         } else {
             log::info!("Using xAPIC for AP initialization.");
             let apic = xapic::init(aba);
-            Lapic {
-                apic_id: apic.apic_id(),
-                interface: Apic::Xapic(apic),
-            }
+            Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         // Version should be between [0x10...0x20).
         let (_, _, version) = apic.apic_version().read();
@@ -404,8 +383,7 @@ impl Lapic {
         }
         let (flags, vec) = apic.spurious_interrupt_register().read();
         if !flags.contains(SpuriousInterruptFlags::ASE) {
-            apic.spurious_interrupt_register()
-                .write(flags | SpuriousInterruptFlags::ASE, vec)
+            apic.spurious_interrupt_register().write(flags | SpuriousInterruptFlags::ASE, vec)
         }
         Ok(apic)
     }

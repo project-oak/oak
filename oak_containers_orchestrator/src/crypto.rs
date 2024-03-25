@@ -36,14 +36,8 @@ pub fn generate_instance_keys() -> (InstanceKeys, InstancePublicKeys) {
     let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
     let (signing_key, signing_public_key) = generate_ecdsa_key_pair();
     (
-        InstanceKeys {
-            encryption_key,
-            signing_key,
-        },
-        InstancePublicKeys {
-            encryption_public_key,
-            signing_public_key,
-        },
+        InstanceKeys { encryption_key, signing_key },
+        InstancePublicKeys { encryption_public_key, signing_public_key },
     )
 }
 
@@ -61,17 +55,14 @@ impl InstanceKeys {
     pub fn generate_group_keys(&self) -> (GroupKeys, GroupPublicKeys) {
         let (group_encryption_key, group_encryption_public_key) = generate_encryption_key_pair();
         (
-            GroupKeys {
-                encryption_key: group_encryption_key,
-            },
-            GroupPublicKeys {
-                encryption_public_key: group_encryption_public_key,
-            },
+            GroupKeys { encryption_key: group_encryption_key },
+            GroupPublicKeys { encryption_public_key: group_encryption_public_key },
         )
     }
 
     pub fn provide_group_keys(&self, group_keys: GroupKeysProto) -> anyhow::Result<GroupKeys> {
-        // Create server encryptor for decrypting the group keys received from the leader enclave.
+        // Create server encryptor for decrypting the group keys received from the
+        // leader enclave.
         let encrypted_encryption_private_key = group_keys
             .encrypted_encryption_private_key
             .context("encrypted encryption key wasn't provided")?;
@@ -85,9 +76,7 @@ impl InstanceKeys {
             EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
                 .context("couldn't deserialize private key")?;
 
-        Ok(GroupKeys {
-            encryption_key: group_encryption_key,
-        })
+        Ok(GroupKeys { encryption_key: group_encryption_key })
     }
 }
 
@@ -100,7 +89,8 @@ pub struct GroupPublicKeys {
 }
 
 impl GroupKeys {
-    /// Returns group encryption private key which was encrypted with the `peer_public_key`.
+    /// Returns group encryption private key which was encrypted with the
+    /// `peer_public_key`.
     pub fn encrypted_group_encryption_key(
         &self,
         peer_public_key: &[u8],
@@ -116,10 +106,7 @@ pub(crate) struct CryptoService {
 
 impl CryptoService {
     pub(crate) fn new(instance_keys: InstanceKeys, group_keys: Arc<GroupKeys>) -> Self {
-        Self {
-            instance_keys,
-            group_keys,
-        }
+        Self { instance_keys, group_keys }
     }
 
     fn signing_key(
@@ -165,9 +152,7 @@ impl OrchestratorCrypto for CryptoService {
             .map_err(|err| {
                 tonic::Status::internal(format!("couldn't serialize session keys: {err}"))
             })?;
-        Ok(tonic::Response::new(DeriveSessionKeysResponse {
-            session_keys: Some(session_keys),
-        }))
+        Ok(tonic::Response::new(DeriveSessionKeysResponse { session_keys: Some(session_keys) }))
     }
 
     async fn sign(
@@ -180,8 +165,6 @@ impl OrchestratorCrypto for CryptoService {
             signing_key,
             &request.message,
         );
-        Ok(tonic::Response::new(SignResponse {
-            signature: Some(signature),
-        }))
+        Ok(tonic::Response::new(SignResponse { signature: Some(signature) }))
     }
 }

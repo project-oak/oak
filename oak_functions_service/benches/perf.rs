@@ -19,8 +19,8 @@ use pprof::criterion::{Output, PProfProfiler};
 
 /// Custom criterion configuration for flamegraph output.
 ///
-/// The flamegraph output is saved to a file with a name based on the benchmark name, under
-/// `target/criterion`.
+/// The flamegraph output is saved to a file with a name based on the benchmark
+/// name, under `target/criterion`.
 pub fn flamegraph() -> Criterion {
     Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)))
 }

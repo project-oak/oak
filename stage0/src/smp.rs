@@ -35,9 +35,9 @@ extern "C" {
     static AP_START: c_void;
 }
 
-// This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
-// AP has become alive. It's in a special magic section as we have to ensure it's in the first 64K
-// fo memory (or: the first segment).
+// This symbol will be referenced from outside Rust, from the AP bootstrap code,
+// to denote that an AP has become alive. It's in a special magic section as we
+// have to ensure it's in the first 64K fo memory (or: the first segment).
 #[no_mangle]
 #[link_section = ".ap_bss"]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
@@ -48,21 +48,22 @@ pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
 
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;
-    // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no connection to
-    // actual seconds.
+    // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no
+    // connection to actual seconds.
     for _ in 1..(1 << 15) {
         // Safety: SSE2 is supported in all 64-bit processors.
         unsafe { _mm_pause() };
     }
-    // We assume that we're not going to call start_ap() concurrently, so there is no race condition
-    // here. Which should be true, as we don't have threads and this is running on the sole BSP.
+    // We assume that we're not going to call start_ap() concurrently, so there is
+    // no race condition here. Which should be true, as we don't have threads
+    // and this is running on the sole BSP.
     let current_live_count = LIVE_AP_COUNT.load(Ordering::SeqCst);
-    // Safety: we're not going to dereference the memory, we're just interested in the pointer
-    // value.
+    // Safety: we're not going to dereference the memory, we're just interested in
+    // the pointer value.
     let vector = unsafe { &AP_START as *const _ as u64 };
     lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))?;
-    // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
-    // core hasn't started
+    // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send
+    // SIPI again if the core hasn't started
     for _ in 1..(1 << 20) {
         // Safety: SSE2 is supported in all 64-bit processors.
         unsafe { _mm_pause() };
@@ -80,20 +81,20 @@ pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static
 
 // TODO(#4235): Bootstrap the APs.
 pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
-    // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see if we can use
-    // the old RSDT. (If we have neither XSDT or RSDT, the ACPI tables are broken.)
+    // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
+    // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
+    // tables are broken.)
     let madt = if let Ok(Some(xsdt)) = rsdp.xsdt() {
-        xsdt.get(Madt::SIGNATURE)
-            .ok_or("MADT table not found in XSDT")?
+        xsdt.get(Madt::SIGNATURE).ok_or("MADT table not found in XSDT")?
     } else {
         let rsdt = rsdp.rsdt()?.ok_or("RSDT not found")?;
-        rsdt.get(Madt::SIGNATURE)
-            .ok_or("MADT table not found in RSDT")?
+        rsdt.get(Madt::SIGNATURE).ok_or("MADT table not found in RSDT")?
     };
     let madt = Madt::new(madt).expect("invalid MADT");
 
-    // Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
-    // Safety: we can reasonably expect the PICs to be available.
+    // Disable the local PIC and set up our local APIC, as we need to send IPIs to
+    // APs via the APIC. Safety: we can reasonably expect the PICs to be
+    // available.
     unsafe { disable_pic8259()? };
     let mut lapic = Lapic::enable()?;
 
@@ -102,9 +103,9 @@ pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
     // How many APs do we expect to come online?
     let mut expected_aps = 0;
 
-    // APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
-    // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
-    // 256 CPUs).
+    // APIC and X2APIC structures are largely the same; X2APIC entries are used if
+    // the APIC ID is too large to fit into the one-byte field of the APIC
+    // structure (e.g. if you have more than 256 CPUs).
     for item in madt.iter() {
         let (remote_lapic_id, flags) = match item.structure_type {
             ProcessorLocalApic::STRUCTURE_TYPE => {
@@ -137,8 +138,8 @@ pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
         start_ap(&mut lapic, remote_lapic_id)?;
     }
 
-    // Wait until all APs have told they are online. Or we time out waiting for them.
-    // The timeout has been chosen arbitrarily and may need to be tuned.
+    // Wait until all APs have told they are online. Or we time out waiting for
+    // them. The timeout has been chosen arbitrarily and may need to be tuned.
     for _ in 0..(1 << 23) {
         if LIVE_AP_COUNT.load(Ordering::SeqCst) == expected_aps {
             break;

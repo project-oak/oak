@@ -34,15 +34,17 @@ use crate::FRAME_ALLOCATOR;
 
 #[derive(Clone, Copy, Debug)]
 pub enum MemoryEncryption {
-    /// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it is ignored.
+    /// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it
+    /// is ignored.
     NoEncryption,
 
     /// Memory encryption uses bit `C` in the page tables.
     ///
-    /// The location of the C-bit is machine-dependent; it is reported by CPUID function 8000_001F
-    /// in EBX\[5:0\].
-    /// See AMD64 Architecture Programmer's Manual, Volume 2, Section 15.34.1 and
-    /// AMD64 Architecture Programmer's Manual, Volume 3, Section E.4.17 for more details.
+    /// The location of the C-bit is machine-dependent; it is reported by CPUID
+    /// function 8000_001F in EBX\[5:0\].
+    /// See AMD64 Architecture Programmer's Manual, Volume 2, Section 15.34.1
+    /// and AMD64 Architecture Programmer's Manual, Volume 3, Section E.4.17
+    /// for more details.
     Encrypted(u8),
 }
 
@@ -57,7 +59,8 @@ impl MemoryEncryption {
 
 /// Helper for mapper that assumes all memory is mapped to a given fixed offset.
 ///
-/// See <x86_64::structures::paging::mapper::PageTableFrameMapping> for more details.
+/// See <x86_64::structures::paging::mapper::PageTableFrameMapping> for more
+/// details.
 pub struct PhysOffset {
     offset: VirtAddr,
     encryption: MemoryEncryption,
@@ -82,10 +85,11 @@ unsafe impl PageTableFrameMapping for PhysOffset {
     }
 }
 
-/// Wrapper around `FrameAllocator` that sets the encrypted bit on the allocated frame, if needed.
+/// Wrapper around `FrameAllocator` that sets the encrypted bit on the allocated
+/// frame, if needed.
 ///
-/// This is only meant to be used inside `EncryptedPageTable` to lie to `MappedPageTable` about the
-/// physical addresses.
+/// This is only meant to be used inside `EncryptedPageTable` to lie to
+/// `MappedPageTable` about the physical addresses.
 struct EncryptedFrameAllocator {
     encryption: MemoryEncryption,
 }
@@ -120,7 +124,8 @@ impl FrameDeallocator<Size4KiB> for EncryptedFrameAllocator {
 
 /// Frame allocator that always fails to allocate.
 ///
-/// This is useful in situations where we do not expect any new allocations to take place.
+/// This is useful in situations where we do not expect any new allocations to
+/// take place.
 struct FailAllocator {}
 unsafe impl<S: PageSize> FrameAllocator<S> for FailAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
@@ -191,7 +196,8 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
         page: Page<S>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<S>, FlagUpdateError> {
-        // `ENCRYPTED` requires special treatment, therefore it's easier to just re-map the page.
+        // `ENCRYPTED` requires special treatment, therefore it's easier to just re-map
+        // the page.
         let frame = match self.unmap(page) {
             Err(UnmapError::ParentEntryHugePage) => Err(FlagUpdateError::ParentEntryHugePage),
             Err(UnmapError::PageNotMapped) => Err(FlagUpdateError::PageNotMapped),
@@ -208,10 +214,9 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
                 panic!("unexpected frame allocation when changing page table flags")
             }
             // This should never happen, as we've just unmapped the page.
-            Err(MapToError::PageAlreadyMapped(page)) => panic!(
-                "expected page {:?} to be unmapped, but it was still mapped",
-                page
-            ),
+            Err(MapToError::PageAlreadyMapped(page)) => {
+                panic!("expected page {:?} to be unmapped, but it was still mapped", page)
+            }
             Err(MapToError::ParentEntryHugePage) => Err(FlagUpdateError::ParentEntryHugePage),
         }
     }
@@ -295,9 +300,7 @@ mod tests {
     #[test]
     fn frame_allocator_unencrypted() {
         let frame = PhysFrame::from_start_address(PhysAddr::new(1u64 << 21)).unwrap();
-        FRAME_ALLOCATOR
-            .lock()
-            .mark_valid(PhysFrame::range(frame, frame + 1), true);
+        FRAME_ALLOCATOR.lock().mark_valid(PhysFrame::range(frame, frame + 1), true);
         let mut frame_allocator: EncryptedFrameAllocator =
             EncryptedFrameAllocator::new(MemoryEncryption::NoEncryption);
         let allocated_frame = frame_allocator.allocate_frame().unwrap();
@@ -307,16 +310,11 @@ mod tests {
     #[test]
     fn frame_allocator_encrypted() {
         let frame = PhysFrame::from_start_address(PhysAddr::new(1u64 << 21)).unwrap();
-        FRAME_ALLOCATOR
-            .lock()
-            .mark_valid(PhysFrame::range(frame, frame + 1), true);
+        FRAME_ALLOCATOR.lock().mark_valid(PhysFrame::range(frame, frame + 1), true);
         let mut frame_allocator: EncryptedFrameAllocator =
             EncryptedFrameAllocator::new(MemoryEncryption::Encrypted(51));
         let allocated_frame = frame_allocator.allocate_frame().unwrap();
-        assert_eq!(
-            allocated_frame.start_address().as_u64() & (1u64 << 51),
-            (1u64 << 51)
-        );
+        assert_eq!(allocated_frame.start_address().as_u64() & (1u64 << 51), (1u64 << 51));
     }
 
     struct FakeMapper {

@@ -17,11 +17,11 @@
 fn main() {
     println!("cargo:rerun-if-env-changed=WORKSPACE_ROOT");
     micro_rpc_build::compile(
-        &[format!(
-            "{}micro_rpc_tests/proto/test_schema.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!("{}micro_rpc_tests/proto", env!("WORKSPACE_ROOT"))],
+        &[format!("{}micro_rpc_tests/proto/test_schema.proto", env!("WORKSPACE_ROOT"))],
+        &[
+            format!("{}micro_rpc_tests/proto", env!("WORKSPACE_ROOT")),
+            env!("WORKSPACE_ROOT").to_string(),
+        ],
         Default::default(),
     );
 }

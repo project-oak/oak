@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! C-like structs for representing DICE data in environments where we don't have protocol buffer
-//! support.
+//! C-like structs for representing DICE data in environments where we don't
+//! have protocol buffer support.
 
 use alloc::{format, string::String, vec::Vec};
 
@@ -49,14 +49,18 @@ pub const P256_PRIVATE_KEY_SIZE: usize = 32;
 /// The actual size used when encoding a X25519 private key.
 pub const X25519_PRIVATE_KEY_SIZE: usize = 32;
 
-/// The maximum size of a serialized COSE Key object representing an ECDSA public key.
+/// The maximum size of a serialized COSE Key object representing an ECDSA
+/// public key.
 pub const PUBLIC_KEY_SIZE: usize = 256;
 
-/// The maximum size of a serialized CWT certificate.
+/// The maximum size of a larger serialized CWT certificate.
+pub const LARGE_CERTIFICATE_SIZE: usize = 1536;
+
+/// The maximum size of a standard serialized CWT certificate.
 pub const CERTIFICATE_SIZE: usize = 1024;
 
-/// The name of the kernel command-line parameter that is used to send the physical address of the
-/// Stage 0 DICE data struct.
+/// The name of the kernel command-line parameter that is used to send the
+/// physical address of the Stage 0 DICE data struct.
 pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
 
 /// The magic number used to identify the Stage 0 DICE data in memory.
@@ -83,14 +87,16 @@ pub struct RootLayerEvidence {
     /// The hardware platform that generated the remote attestation report.
     pub tee_platform: u64,
     _padding: u64,
-    /// Byte representation of the signed attestation report provided by the TEE platform.
+    /// Byte representation of the signed attestation report provided by the TEE
+    /// platform.
     pub remote_attestation_report: [u8; REPORT_SIZE],
-    /// Serialized COSE Key representation of the ECDSA public key that can be used to verify the
-    /// signature of the next layer's certificate.
+    /// Serialized COSE Key representation of the ECDSA public key that can be
+    /// used to verify the signature of the next layer's certificate.
     ///
-    /// The SHA2-256 digest of this field must included as additional data in the signed remote
-    /// attestation report to bind the key to the report. This means that the attestation
-    /// report effectively acts as a non-standard certificate for this key.
+    /// The SHA2-256 digest of this field must included as additional data in
+    /// the signed remote attestation report to bind the key to the report.
+    /// This means that the attestation report effectively acts as a
+    /// non-standard certificate for this key.
     pub eca_public_key: [u8; PUBLIC_KEY_SIZE],
 }
 
@@ -133,9 +139,10 @@ static_assertions::assert_eq_size!([u8; 2320], RootLayerEvidence);
 #[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 pub struct LayerEvidence {
-    /// Serialized CWT certificate for the ECA private key owned by the corresponding layer. The
-    /// certificate must include measurements of the layer that owns the private key.
-    pub eca_certificate: [u8; CERTIFICATE_SIZE],
+    /// Serialized CWT certificate for the ECA private key owned by the
+    /// corresponding layer. The certificate must include measurements of
+    /// the layer that owns the private key.
+    pub eca_certificate: [u8; LARGE_CERTIFICATE_SIZE],
 }
 
 impl LayerEvidence {
@@ -146,9 +153,10 @@ impl LayerEvidence {
     }
 }
 
-static_assertions::assert_eq_size!([u8; CERTIFICATE_SIZE], LayerEvidence);
+static_assertions::assert_eq_size!([u8; LARGE_CERTIFICATE_SIZE], LayerEvidence);
 
-/// Private key that can be used by a layer to sign a certificate for the next layer.
+/// Private key that can be used by a layer to sign a certificate for the next
+/// layer.
 #[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 pub struct CertificateAuthority {
@@ -168,11 +176,13 @@ pub struct CompoundDeviceIdentifier {
 
 static_assertions::assert_eq_size!([u8; CDI_SIZE], CompoundDeviceIdentifier);
 
-/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
+/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the
+/// Restricted Kernel).
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(4096))]
 pub struct Stage0DiceData {
-    /// Magic number that is expected to always be set to the value of `STAGE0_MAGIC`.
+    /// Magic number that is expected to always be set to the value of
+    /// `STAGE0_MAGIC`.
     pub magic: u64,
     _padding_0: u64,
     /// The evidence about Stage 0 and the initial state of the VM.
@@ -183,20 +193,21 @@ pub struct Stage0DiceData {
     pub layer_1_certificate_authority: CertificateAuthority,
     /// The compound device identifier for Layer 1.
     pub layer_1_cdi: CompoundDeviceIdentifier,
-    _padding_1: [u8; 640],
+    _padding_1: [u8; 128],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);
 
-/// Certificates for the ECDSA keys that can be used for an application for signing or encryption.
+/// Certificates for the ECDSA keys that can be used for an application for
+/// signing or encryption.
 #[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 pub struct ApplicationKeys {
-    /// Serialized CWT certificate for the signing private key. The certificate must include
-    /// measurements of the application.
+    /// Serialized CWT certificate for the signing private key. The certificate
+    /// must include measurements of the application.
     pub signing_public_key_certificate: [u8; CERTIFICATE_SIZE],
-    /// Serialized CWT certificate for the encryption private key. The certificate must include
-    /// measurements of the application.
+    /// Serialized CWT certificate for the encryption private key. The
+    /// certificate must include measurements of the application.
     pub encryption_public_key_certificate: [u8; CERTIFICATE_SIZE],
 }
 
@@ -211,19 +222,23 @@ impl ApplicationKeys {
 
 static_assertions::assert_eq_size!([u8; 2048], ApplicationKeys);
 
-/// ECDSA private keys that can be used for an application for signing or encryption.
+/// ECDSA private keys that can be used for an application for signing or
+/// encryption.
 #[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 pub struct ApplicationPrivateKeys {
-    /// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
+    /// The RAW bytes representing an ECDSA private key that can be used to sign
+    /// arbitrary data.
     pub signing_private_key: [u8; PRIVATE_KEY_SIZE],
-    /// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
+    /// The RAW bytes representing an ECDSA private key that can be used for
+    /// hybrid encryption.
     pub encryption_private_key: [u8; PRIVATE_KEY_SIZE],
 }
 
 static_assertions::assert_eq_size!([u8; 128], ApplicationPrivateKeys);
 
-/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
+/// Wrapper for passing the attestation evidence from the Restricted Kernel to
+/// the application.
 #[derive(AsBytes, FromZeroes, FromBytes, Clone)]
 #[repr(C)]
 pub struct Evidence {
@@ -231,15 +246,15 @@ pub struct Evidence {
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the Restricted Kernel.
     pub restricted_kernel_evidence: LayerEvidence,
-    /// Keys (and associated certificates) that can be used by the application for encryption or
-    /// signing.
+    /// Keys (and associated certificates) that can be used by the application
+    /// for encryption or signing.
     pub application_keys: ApplicationKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 5392], Evidence);
+static_assertions::assert_eq_size!([u8; 5904], Evidence);
 
-/// Wrapper for passing the attestation evidence and private keys from the Restricted Kernel to the
-/// application.
+/// Wrapper for passing the attestation evidence and private keys from the
+/// Restricted Kernel to the application.
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C)]
 pub struct RestrictedKernelDiceData {
@@ -247,4 +262,4 @@ pub struct RestrictedKernelDiceData {
     pub application_private_keys: ApplicationPrivateKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);
+static_assertions::assert_eq_size!([u8; 6032], RestrictedKernelDiceData);

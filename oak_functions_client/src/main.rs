@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! Sends a gRPC request to an Oak Functions application and checks that the response has the
-//! correct format.
+//! Sends a gRPC request to an Oak Functions application and checks that the
+//! response has the correct format.
 
 use anyhow::Context;
 use clap::Parser;
@@ -37,18 +37,15 @@ pub struct Opt {
     )]
     uri: String,
 
-    #[arg(
-        long,
-        help = "request payload",
-        required_unless_present = "test_large_message"
-    )]
+    #[arg(long, help = "request payload", required_unless_present = "test_large_message")]
     request: Option<String>,
 
     /// Optional, only for testing.
     #[arg(long, help = "expected response body, for testing")]
     expected_response_pattern: Option<String>,
 
-    /// Number of times the request should be sent, and the expected response validated.
+    /// Number of times the request should be sent, and the expected response
+    /// validated.
     #[arg(long, requires_all = &["request", "expected_response_pattern"])]
     iterations: Option<usize>,
 
@@ -78,12 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     let request = opt.request.unwrap();
 
-    println!(
-        "req: {:?}",
-        Request {
-            body: request.as_bytes().to_vec(),
-        }
-    );
+    println!("req: {:?}", Request { body: request.as_bytes().to_vec() });
 
     for _ in 0..iterations {
         let response = client.invoke(request.as_bytes()).await?;

@@ -35,18 +35,15 @@ pub struct ExternPath {
 
 impl ExternPath {
     pub fn new(proto_path: &str, rust_path: &str) -> Self {
-        ExternPath {
-            proto_path: proto_path.to_string(),
-            rust_path: rust_path.to_string(),
-        }
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
     }
 }
 
 /// Generate gRPC code from Protobuf using `tonic` library.
 ///
-/// The path to the root repository must be passed as `include`. All paths to `.proto` files
-/// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
-/// be specified relative to this path.
+/// The path to the root repository must be passed as `include`. All paths to
+/// `.proto` files must be specified relative to this path. Likewise, all
+/// imported paths in `.proto` files must be specified relative to this path.
 pub fn generate_grpc_code(
     protos: &[impl AsRef<Path>],
     include: impl AsRef<Path>,
@@ -62,16 +59,14 @@ pub fn generate_grpc_code(
         .build_client(options.build_client)
         .build_server(options.build_server);
 
-    // Do not use the default logic for re-running the build script, as it covers the entire
-    // include directory, which also includes all the Rust code, so everything is always rebuilt
-    // every time. Instead, we specify the list of files to watch explicitly, even though that
-    // may not have 100% recall, since some of the transitive includes may be missed.
+    // Do not use the default logic for re-running the build script, as it covers
+    // the entire include directory, which also includes all the Rust code, so
+    // everything is always rebuilt every time. Instead, we specify the list of
+    // files to watch explicitly, even though that may not have 100% recall,
+    // since some of the transitive includes may be missed.
     config = config.emit_rerun_if_changed(false);
     protos.iter().for_each(|filename| {
-        println!(
-            "cargo:rerun-if-changed={}",
-            filename.as_ref().as_os_str().to_string_lossy()
-        )
+        println!("cargo:rerun-if-changed={}", filename.as_ref().as_os_str().to_string_lossy())
     });
 
     for extern_path in options.extern_paths {
@@ -82,8 +77,8 @@ pub fn generate_grpc_code(
 
 fn set_protoc_env_if_unset() {
     if std::env::var("PROTOC").is_err() {
-        // Use the system protoc if no override is set, so prost-build does not try to use the
-        // bundled one that we remove as part of the vendoring process.
+        // Use the system protoc if no override is set, so prost-build does not try to
+        // use the bundled one that we remove as part of the vendoring process.
         std::env::set_var("PROTOC", "protoc");
     }
 }

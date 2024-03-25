@@ -66,7 +66,5 @@ pub fn get_vsock_channel<A: Allocator>(
     .expect("couldn't configure PCI virtio vsock device");
     info!("Socket device status: {}", vsock.get_status());
     let listener = oak_virtio::vsock::socket::SocketListener::new(vsock, VSOCK_PORT);
-    Channel {
-        inner: listener.accept().expect("couldn't accept connection"),
-    }
+    Channel { inner: listener.accept().expect("couldn't accept connection") }
 }
