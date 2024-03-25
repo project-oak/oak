@@ -165,8 +165,7 @@ pub struct Process {
 }
 
 impl Process {
-    /// Creates a process from the application, without executing it. Returns
-    /// the PID of the new process.
+    /// Creates a process from the application, without executing it.
     ///
     /// # Safety
     ///
