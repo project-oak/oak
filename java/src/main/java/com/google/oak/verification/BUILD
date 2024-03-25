@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -37,9 +38,12 @@ java_binary(
     ],
 )
 
-java_library(
+kt_jvm_library(
     name = "verification",
-    srcs = glob(["*.java"]),
+    srcs = glob([
+        "*.java",
+        "*.kt",
+    ]),
     deps = [
         "@com_google_code_gson_gson",
     ],
