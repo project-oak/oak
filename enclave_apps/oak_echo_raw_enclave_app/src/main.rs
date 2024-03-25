@@ -33,11 +33,10 @@ const MESSAGE_SIZE: usize = 1;
 // them back.
 #[entrypoint]
 fn start_echo_server() -> ! {
-    log::info!("suo");
     let mut channel = FileDescriptorChannel::default();
-    log::info!("channel");
     loop {
         let bytes = {
+            log::info!("about to allocate bytes");
             let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
             log::info!("allocated bytes");
             channel.read_exact(&mut bytes).expect("couldn't read bytes");
