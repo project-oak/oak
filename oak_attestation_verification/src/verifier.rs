@@ -532,7 +532,12 @@ fn verify_kernel_layer(
         // migrated.
         anyhow::ensure!(
             matches!(
-                reference_values.kernel_cmd_line_regex.as_ref().unwrap().r#type.as_ref(),
+                reference_values
+                    .kernel_cmd_line_regex
+                    .as_ref()
+                    .expect("no kernel command line regex reference values")
+                    .r#type
+                    .as_ref(),
                 Some(regex_reference_value::Type::Skip(_))
             ),
             "No kernel_raw_cmd_line provided"
