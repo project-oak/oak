@@ -865,6 +865,10 @@
 <a href="#865" id="865">865</a>
 <a href="#866" id="866">866</a>
 <a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1655,9 +1659,13 @@
     </span><span class="attr">#[deprecated]
     #[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
-    <span class="doccomment">/// Command-line that was passed to the kernel during startup.
-    </span><span class="attr">#[prost(string, tag = <span class="string">&quot;7&quot;</span>)]
-    </span><span class="kw">pub </span>kernel_raw_cmd_line: ::prost::alloc::string::String,
+    <span class="doccomment">/// Command-line that was passed to the kernel during startup. If absent,
+    /// verification will only succeed with the corresponding reference value set
+    /// to skip (for compatibility with the legacy version of the evidence
+    /// producing code). Empty value corresponds to the kernel being run with an
+    /// empty command line.
+    </span><span class="attr">#[prost(string, optional, tag = <span class="string">&quot;7&quot;</span>)]
+    </span><span class="kw">pub </span>kernel_raw_cmd_line: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
     <span class="doccomment">/// Measured digests of the initial RAM disk.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
