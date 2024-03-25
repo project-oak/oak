@@ -110,12 +110,12 @@
 <span class="kw">pub use </span>oak_enclave_runtime_support::heap;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscall::{fsync, write};
 
-<span class="kw">struct </span>Stderr {}
+<span class="kw">pub struct </span>Stderr {}
 
 <span class="kw">impl </span>Stderr {
     <span class="kw">const </span>STDERR_FD: i32 = <span class="number">2</span>;
 
-    <span class="kw">fn </span>flush() {
+    <span class="kw">pub fn </span>flush() {
         fsync(<span class="self">Self</span>::STDERR_FD).unwrap();
     }
 }
