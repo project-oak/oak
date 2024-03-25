@@ -47,7 +47,7 @@ const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
-const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_obsolete_evidence.binarypb";
+const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
 const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC

@@ -145,7 +145,11 @@ message KernelLayerData {
   // during startup.
   RawDigest kernel_cmd_line = 2 [deprecated = true];
 
-  // Command-line that was passed to the kernel during startup.
+  // Command-line that was passed to the kernel during startup. If absent,
+  // verification will only succeed with the corresponding reference value set
+  // to skip (for compatibility with the legacy version of the evidence
+  // producing code). Empty value corresponds to the kernel being run with an
+  // empty command line.
   optional string kernel_raw_cmd_line = 7;
 
   // Measured digests of the initial RAM disk.
