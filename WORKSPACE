@@ -391,6 +391,10 @@ crates_repository(
             features = ["getrandom"],
             version = "*",
         ),
+        "regex": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
         "rsa": crate.spec(
             default_features = False,
             version = "0.9.6",

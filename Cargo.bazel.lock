@@ -230,6 +230,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand_core",
+ "regex",
  "rsa",
  "serde",
  "serde_json",
