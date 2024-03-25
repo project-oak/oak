@@ -104,5 +104,6 @@ fn entrypoint() -> ! {
 
     let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
         .expect("failed to create app process");
+    log::info!("created application with pid: {}", pid);
     syscall::unstable_switch_proccess(pid)
 }
