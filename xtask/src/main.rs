@@ -638,7 +638,14 @@ fn run_bazel_build() -> Step {
         name: "bazel build".to_string(),
         command: Cmd::new(
             "bazel",
-            ["build", "--", "//java/...:all", "//cc/...:all", "//proto/...:all"],
+            [
+                "build",
+                "--",
+                "//java/...:all",
+                "//cc/...:all",
+                "//proto/...:all",
+                "//oak_proto_rust",
+            ],
         ),
     }
 }
@@ -648,7 +655,7 @@ fn run_bazel_test() -> Step {
         name: "bazel test".to_string(),
         command: Cmd::new(
             "bazel",
-            ["test", "--", "//java/...:all", "//cc/...:all", "//proto/...:all"],
+            ["test", "--", "//java/...:all", "//cc/...:all", "//proto/...:all", "//oak_proto_rust"],
         ),
     }
 }

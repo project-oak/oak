@@ -1,5 +1,5 @@
 {
-  "checksum": "20905ca77634d11a6071cbe711d2fd7f7a7688bca9c5a4a45e7149bd539b060e",
+  "checksum": "ea906083db334fa545e6bddd74c9c9271f2cb3802f30aaed50f7eec83bedadb5",
   "crates": {
     "aho-corasick 1.1.2": {
       "name": "aho-corasick",
@@ -1419,6 +1419,10 @@
             {
               "id": "rand_core 0.6.4",
               "target": "rand_core"
+            },
+            {
+              "id": "regex 1.10.3",
+              "target": "regex"
             },
             {
               "id": "rsa 0.9.6",
@@ -7395,6 +7399,7 @@
     "prost 0.12.3",
     "prost-build 0.12.3",
     "rand_core 0.6.4",
+    "regex 1.10.3",
     "rsa 0.9.6",
     "serde 1.0.197",
     "serde_json 1.0.114",
