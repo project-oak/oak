@@ -24,7 +24,7 @@ import "proto/key_provisioning/key_provisioning.proto";
 enum KeyProvisioningRole {
   KEY_PROVISIONING_ROLE_UNSPECIFIED = 0;
   LEADER = 1;
-  DEPENDANT = 2;
+  FOLLOWER = 2;
 }
 
 message GetKeyProvisioningRoleResponse {
@@ -40,11 +40,11 @@ service HostlibKeyProvisioning {
   // Get the enclave role for Key Provisioning.
   // Could be one of the following:
   //   - Leader that generates group keys and distributes them.
-  //   - Dependant that requests group keys from the leader.
+  //   - Follower that requests group keys from the leader.
   rpc GetKeyProvisioningRole(google.protobuf.Empty) returns (GetKeyProvisioningRoleResponse) {}
 
   // Get enclave group keys to the enclave as part of Key Provisioning.
-  // This method is only called by the Dependant Orchestrator.
+  // This method is only called by the Follower Orchestrator.
   //
   // This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
   // Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
