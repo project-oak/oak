@@ -92,7 +92,6 @@ message ApplicationKeys {
   // <https://www.rfc-editor.org/rfc/rfc8392.html>
   optional bytes group_encryption_public_key_certificate = 3;
 
-
   // Certificate signing the group signing public key as part of Key
   // Provisioning.
   //

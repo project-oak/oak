@@ -18,7 +18,8 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::{
-    crypto::generate_instance_keys, launcher_client::LauncherClient, proto::oak::containers::v1::KeyProvisioningRole
+    crypto::generate_instance_keys, launcher_client::LauncherClient,
+    proto::oak::containers::v1::KeyProvisioningRole,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -63,12 +64,13 @@ async fn main() -> anyhow::Result<()> {
 
     // Generate application keys.
     let (instance_keys, instance_public_keys) = generate_instance_keys();
-    let (mut group_keys, group_public_keys) = if key_provisioning_role == KeyProvisioningRole::Leader {
-        let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
-        (Some(Arc::new(group_keys)), Some(group_public_keys))
-    } else {
-        (None, None)
-    };
+    let (mut group_keys, group_public_keys) =
+        if key_provisioning_role == KeyProvisioningRole::Leader {
+            let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
+            (Some(Arc::new(group_keys)), Some(group_public_keys))
+        } else {
+            (None, None)
+        };
 
     // Load application.
     let container_bundle = launcher_client
@@ -101,17 +103,17 @@ async fn main() -> anyhow::Result<()> {
         .send_attestation_evidence(evidence)
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
-    
+
     // Request group keys.
     if key_provisioning_role == KeyProvisioningRole::Follower {
         let get_group_keys_response = launcher_client
-                .get_group_keys()
-                .await
-                .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
+            .get_group_keys()
+            .await
+            .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
         let provisioned_group_keys = instance_keys
             .provide_group_keys(get_group_keys_response)
             .context("couldn't provide group keys")?;
-        group_keys =  Some(Arc::new(provisioned_group_keys));
+        group_keys = Some(Arc::new(provisioned_group_keys));
     }
 
     if let Some(path) = args.ipc_socket_path.parent() {
