@@ -766,6 +766,7 @@ fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()
         Some(text_reference_value::Type::Skip(_)) => Ok(()),
         Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
+            anyhow::ensure!(!string_literals.value.is_empty());
             for sl in string_literals.value.iter() {
                 if sl == actual {
                     return Ok(());
