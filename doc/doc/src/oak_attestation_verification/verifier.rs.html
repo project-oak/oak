@@ -1060,6 +1060,28 @@
 <a href="#1060" id="1060">1060</a>
 <a href="#1061" id="1061">1061</a>
 <a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1095,8 +1117,8 @@
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        regex_reference_value, root_layer_data::Report, AmdAttestationReport,
-        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
+        ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
         ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
@@ -1105,15 +1127,16 @@
         KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RegexReferenceValue, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
+        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>regex::Regex;
+<span class="attr">#[cfg(feature = <span class="string">&quot;regex&quot;</span>)]
+</span><span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -1580,27 +1603,27 @@
     .context(<span class="string">&quot;kernel failed verification&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
-        verify_regex(
+        verify_text(
             kernel_raw_cmd_line.as_str(),
             reference_values
-                .kernel_cmd_line_regex
+                .kernel_cmd_line_text
                 .as_ref()
-                .context(<span class="string">&quot;no kernel command line regex reference values&quot;</span>)<span class="question-mark">?</span>,
+                .context(<span class="string">&quot;no kernel command line text reference values&quot;</span>)<span class="question-mark">?</span>,
         )
         .context(<span class="string">&quot;kernel command line failed verification&quot;</span>)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
-        <span class="comment">// Support missing kernel_cmd_line_regex but only if the corresponding reference
+        <span class="comment">// Support missing kernel_raw_cmd_line but only if the corresponding reference
         // value is set to skip. This is a temporary workaround until all clients are
         // migrated.
         </span><span class="macro">anyhow::ensure!</span>(
             <span class="macro">matches!</span>(
                 reference_values
-                    .kernel_cmd_line_regex
+                    .kernel_cmd_line_text
                     .as_ref()
-                    .expect(<span class="string">&quot;no kernel command line regex reference values&quot;</span>)
+                    .expect(<span class="string">&quot;no kernel command line text reference values&quot;</span>)
                     .r#type
                     .as_ref(),
-                <span class="prelude-val">Some</span>(regex_reference_value::Type::Skip(<span class="kw">_</span>))
+                <span class="prelude-val">Some</span>(text_reference_value::Type::Skip(<span class="kw">_</span>))
             ),
             <span class="string">&quot;No kernel_raw_cmd_line provided&quot;
         </span>)
@@ -1822,23 +1845,44 @@
     }
 }
 
-<span class="kw">fn </span>verify_regex(actual: <span class="kw-2">&amp;</span>str, expected: <span class="kw-2">&amp;</span>RegexReferenceValue) -&gt; anyhow::Result&lt;()&gt; {
+<span class="kw">fn </span>verify_text(actual: <span class="kw-2">&amp;</span>str, expected: <span class="kw-2">&amp;</span>TextReferenceValue) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>expected.r#type.as_ref() {
-        <span class="prelude-val">Some</span>(regex_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
-        <span class="prelude-val">Some</span>(regex_reference_value::Type::Regex(regex)) =&gt; {
-            <span class="kw">let </span>re = Regex::new(regex.value.as_str()).map_err(|msg| {
-                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;Couldn&#39;t parse regex in the reference value: {msg}&quot;</span>)
-            })<span class="question-mark">?</span>;
-            <span class="kw">if </span>re.is_match(actual) {
-                <span class="prelude-val">Ok</span>(())
-            } <span class="kw">else </span>{
-                <span class="macro">anyhow::bail!</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;kernel cmd line doesn&#39;t match the reference value: {actual}&quot;
-                </span>))
+        <span class="prelude-val">Some</span>(text_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(text_reference_value::Type::Regex(regex)) =&gt; verify_regex(actual, regex),
+        <span class="prelude-val">Some</span>(text_reference_value::Type::StringLiterals(string_literals)) =&gt; {
+            <span class="macro">anyhow::ensure!</span>(!string_literals.value.is_empty());
+            <span class="kw">for </span>sl <span class="kw">in </span>string_literals.value.iter() {
+                <span class="kw">if </span>sl == actual {
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                }
             }
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;value doesn&#39;t match the reference value string literal: {actual}&quot;
+            </span>)))
         }
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;missing skip or value in the regex reference value&quot;</span>)),
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;missing skip or value in the text reference value&quot;</span>)),
     }
+}
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;regex&quot;</span>)]
+</span><span class="kw">fn </span>verify_regex(
+    actual: <span class="kw-2">&amp;</span>str,
+    regex: <span class="kw-2">&amp;</span>oak_proto_rust::oak::attestation::v1::Regex,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>re = Regex::new(regex.value.as_str())
+        .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse regex in the reference value: {msg}&quot;</span>))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="macro">anyhow::ensure!</span>(
+        re.is_match(actual),
+        <span class="macro">format!</span>(<span class="string">&quot;value doesn&#39;t match the reference value regex: {actual}&quot;</span>)
+    ))
+}
+
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;regex&quot;</span>))]
+</span><span class="kw">fn </span>verify_regex(
+    _actual: <span class="kw-2">&amp;</span>str,
+    _regex: <span class="kw-2">&amp;</span>oak_proto_rust::oak::attestation::v1::Regex,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;verification of regex values not supported&quot;</span>))
 }
 
 <span class="kw">struct </span>ApplicationKeyValues {
