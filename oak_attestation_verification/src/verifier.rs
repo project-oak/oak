@@ -773,28 +773,25 @@ fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()
     }
 }
 
+#[cfg(feature = "regex")]
 fn verify_regex(
     actual: &str,
     regex: &oak_proto_rust::oak::attestation::v1::Regex,
 ) -> anyhow::Result<()> {
-    if cfg!(feature = "regex") {
-        #[cfg(feature = "regex")]
-        {
-            let re = Regex::new(regex.value.as_str()).map_err(|msg| {
-                anyhow::anyhow!("couldn't parse regex in the reference value: {msg}")
-            })?;
-            anyhow::ensure!(
-                re.is_match(actual),
-                format!("value doesn't match the reference value regex: {actual}")
-            )
-        }
-        Ok(())
-    } else {
-        // To avoid unused variable warning when regex is not enabled.
-        let _ = actual;
-        let _ = regex;
-        Err(anyhow::anyhow!("verification of regex values not supported"))
-    }
+    let re = Regex::new(regex.value.as_str())
+        .map_err(|msg| anyhow::anyhow!("couldn't parse regex in the reference value: {msg}"))?;
+    Ok(anyhow::ensure!(
+        re.is_match(actual),
+        format!("value doesn't match the reference value regex: {actual}")
+    ))
+}
+
+#[cfg(not(feature = "regex"))]
+fn verify_regex(
+    _actual: &str,
+    _regex: &oak_proto_rust::oak::attestation::v1::Regex,
+) -> anyhow::Result<()> {
+    Err(anyhow::anyhow!("verification of regex values not supported"))
 }
 
 struct ApplicationKeyValues {
