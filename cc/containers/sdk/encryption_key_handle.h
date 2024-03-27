@@ -37,6 +37,15 @@ class InstanceEncryptionKeyHandle : public ::oak::crypto::EncryptionKeyHandle {
   OrchestratorCryptoClient orchestrator_crypto_client_;
 };
 
+class GroupEncryptionKeyHandle : public ::oak::crypto::EncryptionKeyHandle {
+ public:
+  absl::StatusOr<std::unique_ptr<::oak::crypto::RecipientContext>> GenerateRecipientContext(
+      absl::string_view serialized_encapsulated_public_key) override;
+
+ private:
+  OrchestratorCryptoClient orchestrator_crypto_client_;
+};
+
 }  // namespace oak::containers::sdk
 
 #endif  // THIRD_PARTY_OAK_CC_CONTAINERS_ENCRYPTION_KEY_HANDLE_H_
