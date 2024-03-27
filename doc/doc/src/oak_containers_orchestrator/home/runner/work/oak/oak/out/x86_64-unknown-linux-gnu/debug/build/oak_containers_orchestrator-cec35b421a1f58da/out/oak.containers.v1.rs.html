@@ -1359,7 +1359,7 @@
 </span><span class="kw">pub enum </span>KeyProvisioningRole {
     Unspecified = <span class="number">0</span>,
     Leader = <span class="number">1</span>,
-    Dependant = <span class="number">2</span>,
+    Follower = <span class="number">2</span>,
 }
 <span class="kw">impl </span>KeyProvisioningRole {
     <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
@@ -1370,7 +1370,7 @@
         <span class="kw">match </span><span class="self">self </span>{
             KeyProvisioningRole::Unspecified =&gt; <span class="string">&quot;KEY_PROVISIONING_ROLE_UNSPECIFIED&quot;</span>,
             KeyProvisioningRole::Leader =&gt; <span class="string">&quot;LEADER&quot;</span>,
-            KeyProvisioningRole::Dependant =&gt; <span class="string">&quot;DEPENDANT&quot;</span>,
+            KeyProvisioningRole::Follower =&gt; <span class="string">&quot;FOLLOWER&quot;</span>,
         }
     }
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
@@ -1378,7 +1378,7 @@
         <span class="kw">match </span>value {
             <span class="string">&quot;KEY_PROVISIONING_ROLE_UNSPECIFIED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unspecified),
             <span class="string">&quot;LEADER&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Leader),
-            <span class="string">&quot;DEPENDANT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Dependant),
+            <span class="string">&quot;FOLLOWER&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Follower),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -1474,7 +1474,7 @@
         <span class="doccomment">/// Get the enclave role for Key Provisioning.
         /// Could be one of the following:
         ///   - Leader that generates group keys and distributes them.
-        ///   - Dependant that requests group keys from the leader.
+        ///   - Follower that requests group keys from the leader.
         </span><span class="kw">pub async fn </span>get_key_provisioning_role(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
@@ -1506,7 +1506,7 @@
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
         <span class="doccomment">/// Get enclave group keys to the enclave as part of Key Provisioning.
-        /// This method is only called by the Dependant Orchestrator.
+        /// This method is only called by the Follower Orchestrator.
         ///
         /// This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
         /// Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
@@ -1552,7 +1552,7 @@
         <span class="doccomment">/// Get the enclave role for Key Provisioning.
         /// Could be one of the following:
         ///   - Leader that generates group keys and distributes them.
-        ///   - Dependant that requests group keys from the leader.
+        ///   - Follower that requests group keys from the leader.
         </span><span class="kw">async fn </span>get_key_provisioning_role(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
@@ -1561,7 +1561,7 @@
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Get enclave group keys to the enclave as part of Key Provisioning.
-        /// This method is only called by the Dependant Orchestrator.
+        /// This method is only called by the Follower Orchestrator.
         ///
         /// This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
         /// Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
