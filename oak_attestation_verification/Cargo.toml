@@ -35,7 +35,7 @@ p384 = { version = "0.13.0", default-features = false, features = [
 prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
-regex = { version = "*", default-features = false }
+regex = { version = "*", default-features = false, optional = true }
 rsa = { version = "0.9.6", default-features = false }
 serde = { version = "*", default-features = false, features = ["derive"] }
 serde_json = { version = "*", default-features = false, features = ["alloc"] }
