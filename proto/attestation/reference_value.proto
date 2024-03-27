@@ -85,9 +85,11 @@ message FileReferenceValue {
 }
 
 // Verifies that a particular string is equal to at least one of the specified
-// ones. No checks are performed if this is empty. Deprecated. Use
-// TextReferenceValue instead.
+// ones. No checks are performed if this is empty.
 message StringReferenceValue {
+  // Use TextReferenceValue instead.
+  option deprecated = true;
+
   repeated string values = 1;
 }
 
@@ -99,8 +101,10 @@ message StringLiteral {
   string value = 1;
 }
 
-// Deprecated. Use TextReferenceValue instead.
 message RegexReferenceValue {
+  // Use TextReferenceValue instead.
+  option deprecated = true;
+
   oneof type {
     SkipVerification skip = 1;
     Regex regex = 2;
@@ -158,10 +162,10 @@ message KernelLayerReferenceValues {
 
   // Fields are deprecated and kept only for backwards compatibility.
   // Remove ASAP.
-  optional BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
-  optional BinaryReferenceValue kernel_image = 7 [deprecated = true];
+  BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
+  BinaryReferenceValue kernel_image = 7 [deprecated = true];
   RegexReferenceValue kernel_cmd_line_regex = 8 [deprecated = true];
-  optional BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
+  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
 
   // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;

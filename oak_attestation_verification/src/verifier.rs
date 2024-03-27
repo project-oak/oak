@@ -793,7 +793,7 @@ fn verify_regex(
         // To avoid unused variable warning when regex is not enabled.
         let _ = actual;
         let _ = regex;
-        return Err(anyhow::anyhow!("verification of regex values not supported"));
+        Err(anyhow::anyhow!("verification of regex values not supported"))
     }
 }
 
