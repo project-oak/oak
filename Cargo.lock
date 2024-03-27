@@ -1474,7 +1474,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 dependencies = [
  "fallible-iterator",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "stable_deref_trait",
 ]
 
@@ -1518,7 +1518,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "slab",
  "tokio",
  "tokio-util",
@@ -1762,9 +1762,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.1.0"
+version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d530e1a18b1cb4c484e6e34556a0d948706958449fca0cab753d649f2bce3d1f"
+checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
@@ -1784,7 +1784,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "321f0f839cd44a4686e9504b0a62b4d69a50b62072144c71c68f5873c167b8d9"
 dependencies = [
  "ahash",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "is-terminal",
  "itoa",
  "log",
@@ -3190,7 +3190,7 @@ checksum = "a6a622008b6e321afc04970976f62ee297fdbaa6f95318ca343e3eebb9648441"
 dependencies = [
  "crc32fast",
  "hashbrown 0.14.3",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "memchr",
 ]
 
@@ -3425,7 +3425,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1d3afd2628e69da2be385eb6f2fd57c8ac7977ceeff6dc166ff1657b0e386a9"
 dependencies = [
  "fixedbitset",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
 ]
 
 [[package]]
@@ -4233,11 +4233,11 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.9.30"
+version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1bf28c79a99f70ee1f1d83d10c875d2e70618417fda01ad1785e027579d9d38"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
 dependencies = [
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "itoa",
  "ryu",
  "serde",
@@ -4827,7 +4827,7 @@ version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d34d383cd00a163b4a5b85053df514d45bc330f6de7737edfe0a93311d1eaa03"
 dependencies = [
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -5041,9 +5041,9 @@ dependencies = [
 
 [[package]]
 name = "unsafe-libyaml"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab4c90930b95a82d00dc9e9ac071b4991924390d46cbd0dfe566148667605e4b"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "untrusted"
@@ -5228,7 +5228,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9dbe55c8f9d0dbd25d9447a5a889ff90c0cc3feaa7395310d3d826b2c703eaab"
 dependencies = [
  "bitflags 2.4.1",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "semver",
 ]
 
@@ -5266,7 +5266,7 @@ dependencies = [
  "encoding_rs",
  "fxprof-processed-profile",
  "gimli",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "ittapi",
  "libc",
  "log",
@@ -5397,7 +5397,7 @@ dependencies = [
  "cpp_demangle 0.3.5",
  "cranelift-entity",
  "gimli",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "log",
  "object",
  "rustc-demangle",
@@ -5460,7 +5460,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "encoding_rs",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "libc",
  "log",
  "mach",
@@ -5529,7 +5529,7 @@ checksum = "faf2c76781a27e07802669f6f0e11eb4441546407eb65be60c3d862200988b92"
 dependencies = [
  "anyhow",
  "heck",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "wit-parser",
 ]
 
@@ -5801,7 +5801,7 @@ checksum = "316b36a9f0005f5aa4b03c39bc3728d045df136f8c13a73b7db4510dec725e08"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.1.0",
+ "indexmap 2.2.6",
  "log",
  "semver",
  "serde",
