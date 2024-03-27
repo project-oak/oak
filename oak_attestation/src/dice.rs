@@ -141,7 +141,7 @@ impl DiceBuilder {
         // Generate group keys certificates as part of Key Provisioning.
         let group_encryption_public_key_certificate =
             if let Some(group_kem_public_key) = group_kem_public_key {
-                let group_encryption_public_key_certificate = generate_kem_certificate(
+                generate_kem_certificate(
                     &self.signing_key,
                     issuer_id.clone(),
                     group_kem_public_key,
@@ -150,15 +150,14 @@ impl DiceBuilder {
                 .map_err(anyhow::Error::msg)
                 .context("couldn't generate encryption public key certificate")?
                 .to_vec()
-                .map_err(anyhow::Error::msg)?;
-                group_encryption_public_key_certificate
+                .map_err(anyhow::Error::msg)?
             } else {
                 vec![]
             };
 
         let group_signing_public_key_certificate =
             if let Some(group_verifying_key) = group_verifying_key {
-                let group_signing_public_key_certificate = generate_signing_certificate(
+                generate_signing_certificate(
                     &self.signing_key,
                     issuer_id.clone(),
                     group_verifying_key,
@@ -167,8 +166,7 @@ impl DiceBuilder {
                 .map_err(anyhow::Error::msg)
                 .context("couldn't generate signing public key certificate")?
                 .to_vec()
-                .map_err(anyhow::Error::msg)?;
-                group_signing_public_key_certificate
+                .map_err(anyhow::Error::msg)?
             } else {
                 vec![]
             };
