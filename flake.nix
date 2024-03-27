@@ -40,6 +40,12 @@
             # - CONFIG_MODULE_SIG_ALL is not set
             # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
             configfile = ./oak_containers_kernel/configs/6.1.33/minimal.config;
+            # And also the following build variables.
+            # See https://docs.kernel.org/kbuild/reproducible-builds.html.
+            extraMakeFlags = [
+              "KBUILD_BUILD_USER=user"
+              "KBUILD_BUILD_HOST=host"
+            ];
             version = linux_kernel_version;
             src = linux_kernel_src;
             allowImportFromDerivation = true;
