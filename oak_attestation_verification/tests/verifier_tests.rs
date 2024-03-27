@@ -23,15 +23,15 @@ use oak_attestation_verification::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
-        kernel_binary_reference_value, reference_values, regex_reference_value,
-        root_layer_data::Report, AmdSevReferenceValues, ApplicationLayerEndorsements,
+        kernel_binary_reference_value, reference_values, root_layer_data::Report,
+        text_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
         ContainerLayerReferenceValues, Digests, EndorsementReferenceValue, Endorsements, Evidence,
         InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        Regex, RegexReferenceValue, RootLayerEndorsements, RootLayerReferenceValues,
-        SkipVerification, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
         TransparentReleaseEndorsement,
     },
     RawDigest,
@@ -167,11 +167,16 @@ fn create_containers_reference_values() -> ReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
             r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
-        kernel_image: Some(skip.clone()),
-        kernel_setup_data: Some(skip.clone()),
-        kernel_cmd_line: Some(skip.clone()),
-        kernel_cmd_line_regex: Some(RegexReferenceValue {
-            r#type: Some(regex_reference_value::Type::Regex(Regex { value: String::from("^.*$") })),
+        kernel_setup_data: None,
+        kernel_image: None,
+        kernel_cmd_line: None,
+        kernel_cmd_line_regex: None,
+        kernel_cmd_line_text: Some(TextReferenceValue {
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from(
+                    "console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=3072000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet",
+                )],
+            })),
         }),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
@@ -210,11 +215,14 @@ fn create_rk_reference_values() -> ReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
             r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
-        kernel_image: Some(skip.clone()),
-        kernel_setup_data: Some(skip.clone()),
-        kernel_cmd_line: Some(skip.clone()),
-        kernel_cmd_line_regex: Some(RegexReferenceValue {
-            r#type: Some(regex_reference_value::Type::Regex(Regex { value: String::from("^.*$") })),
+        kernel_setup_data: None,
+        kernel_image: None,
+        kernel_cmd_line: None,
+        kernel_cmd_line_regex: None,
+        kernel_cmd_line_text: Some(TextReferenceValue {
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from("console=ttyS0")],
+            })),
         }),
         init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
@@ -498,8 +506,8 @@ fn verify_fails_with_non_matching_command_line_reference_value_set() {
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
-                r#type: Some(regex_reference_value::Type::Regex(Regex {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
+                r#type: Some(text_reference_value::Type::Regex(Regex {
                     value: String::from("this will fail"),
                 })),
             });
@@ -519,14 +527,43 @@ fn verify_fails_with_non_matching_command_line_reference_value_set() {
 }
 
 #[test]
-fn verify_succeeds_with_matching_command_line_reference_value_set() {
+#[cfg(not(feature = "regex"))]
+fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_disabled() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
-                r#type: Some(regex_reference_value::Type::Regex(Regex {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
+                r#type: Some(text_reference_value::Type::Regex(Regex {
+                    value: String::from("^console=[a-zA-Z0-9]+$"),
+                })),
+            });
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
+}
+
+#[test]
+#[cfg(feature = "regex")]
+fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_regex_enabled() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let mut reference_values = create_rk_reference_values();
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
+                r#type: Some(text_reference_value::Type::Regex(Regex {
                     value: String::from("^console=[a-zA-Z0-9]+$"),
                 })),
             });
@@ -568,8 +605,8 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_regex = Some(RegexReferenceValue {
-                r#type: Some(regex_reference_value::Type::Skip(SkipVerification {})),
+            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
+                r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
             });
         }
         Some(_) => {}
