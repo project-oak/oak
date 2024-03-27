@@ -151,9 +151,9 @@ impl DiceBuilder {
                 .context("couldn't generate encryption public key certificate")?
                 .to_vec()
                 .map_err(anyhow::Error::msg)?;
-                Some(group_encryption_public_key_certificate)
+                group_encryption_public_key_certificate
             } else {
-                None
+                vec![]
             };
 
         let group_signing_public_key_certificate =
@@ -168,9 +168,9 @@ impl DiceBuilder {
                 .context("couldn't generate signing public key certificate")?
                 .to_vec()
                 .map_err(anyhow::Error::msg)?;
-                Some(group_signing_public_key_certificate)
+                group_signing_public_key_certificate
             } else {
-                None
+                vec![]
             };
 
         evidence.application_keys = Some(ApplicationKeys {
@@ -279,7 +279,7 @@ fn application_keys_to_proto(
     Ok(ApplicationKeys {
         encryption_public_key_certificate,
         signing_public_key_certificate,
-        group_encryption_public_key_certificate: None,
-        group_signing_public_key_certificate: None,
+        group_encryption_public_key_certificate: vec![],
+        group_signing_public_key_certificate: vec![],
     })
 }
