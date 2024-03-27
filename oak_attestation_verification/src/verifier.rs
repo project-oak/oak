@@ -765,10 +765,16 @@ fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()
     match expected.r#type.as_ref() {
         Some(text_reference_value::Type::Skip(_)) => Ok(()),
         Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
-        Some(text_reference_value::Type::StringLiteral(string_literal)) => Ok(anyhow::ensure!(
-            actual == string_literal.value,
-            format!("value doesn't match the reference value string literal: {actual}")
-        )),
+        Some(text_reference_value::Type::StringLiterals(string_literals)) => {
+            for sl in string_literals.value.iter() {
+                if sl == actual {
+                    return Ok(());
+                }
+            }
+            Err(anyhow::anyhow!(format!(
+                "value doesn't match the reference value string literal: {actual}"
+            )))
+        }
         None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),
     }
 }

@@ -30,7 +30,7 @@ use oak_proto_rust::oak::{
         InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiteral,
+        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
         SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
         TransparentReleaseEndorsement,
     },
@@ -172,10 +172,10 @@ fn create_containers_reference_values() -> ReferenceValues {
         kernel_cmd_line: None,
         kernel_cmd_line_regex: None,
         kernel_cmd_line_text: Some(TextReferenceValue {
-            r#type: Some(text_reference_value::Type::StringLiteral(StringLiteral {
-                value: String::from(
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from(
                     "console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=3072000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet",
-                ),
+                )],
             })),
         }),
         init_ram_fs: Some(skip.clone()),
@@ -220,8 +220,8 @@ fn create_rk_reference_values() -> ReferenceValues {
         kernel_cmd_line: None,
         kernel_cmd_line_regex: None,
         kernel_cmd_line_text: Some(TextReferenceValue {
-            r#type: Some(text_reference_value::Type::StringLiteral(StringLiteral {
-                value: String::from("console=ttyS0"),
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from("console=ttyS0")],
             })),
         }),
         init_ram_fs: Some(skip.clone()),

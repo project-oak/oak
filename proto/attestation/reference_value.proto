@@ -97,8 +97,10 @@ message Regex {
   string value = 1;
 }
 
-message StringLiteral {
-  string value = 1;
+// A match in at least onevalue is considered a success. At least one value must
+// be specified, otherwise verification fails.
+message StringLiterals {
+  repeated string value = 1;
 }
 
 message RegexReferenceValue {
@@ -115,7 +117,7 @@ message TextReferenceValue {
   oneof type {
     SkipVerification skip = 1;
     Regex regex = 2;
-    StringLiteral string_literal = 3;
+    StringLiterals string_literals = 3;
   }
 }
 
