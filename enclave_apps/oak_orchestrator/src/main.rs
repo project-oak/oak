@@ -102,6 +102,8 @@ fn entrypoint() -> ! {
         .expect("failed to write dice data");
     attested_app.dice_data.as_bytes_mut().zeroize();
 
-    log::info!("Exiting and launching application.");
-    syscall::unstable_switch_proccess(attested_app.elf_binary.as_slice())
+    let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
+        .expect("failed to create app process");
+    log::info!("created application with pid: {}", pid);
+    syscall::unstable_switch_proccess(pid)
 }

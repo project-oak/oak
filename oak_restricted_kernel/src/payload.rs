@@ -25,11 +25,11 @@ use goblin::{
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use self_cell::self_cell;
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB},
+    structures::paging::{PageSize, PhysFrame, Size2MiB},
     VirtAddr,
 };
 
-use crate::syscall::mmap::mmap;
+use crate::{syscall::mmap::mmap, PROCCESSES};
 
 // Set up the userspace stack at the end of the lower half of the virtual
 // address space. Well... almost. It's one page lower than the very end, as
@@ -160,19 +160,21 @@ pub fn identify_pml4_frame(
 }
 
 pub struct Process {
-    pml4: x86_64::structures::paging::PageTable,
+    pml4_frame: PhysFrame,
     entry: VirtAddr,
 }
 
 impl Process {
-    /// Creates a process from the application, without executing it.
+    /// Creates a process from the application, without executing it. Returns
+    /// the PID of the new process.
     ///
     /// # Safety
     ///
     /// The application must be built from a valid ELF file representing an Oak
     /// Restricted Application.
-    pub unsafe fn from_application(application: &Application) -> Result<Self, anyhow::Error> {
+    pub unsafe fn from_application(application: &Application) -> Result<usize, anyhow::Error> {
         let pml4 = crate::BASE_L4_PAGE_TABLE.get().context("base l4 table should be set")?.clone();
+        let pml4_frame: PhysFrame = identify_pml4_frame(&pml4)?;
         // Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
         // application has been mapped into the process pt.
@@ -198,17 +200,15 @@ impl Process {
             // Safety: the new page table maintains the same mappings for kernel space.
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
         }
-
-        Ok(Self { pml4, entry })
+        let pid = PROCCESSES.add(Self { pml4_frame, entry });
+        Ok(pid)
     }
     /// Executes the process.
     pub fn execute(&self) -> ! {
-        let pml4_frame = identify_pml4_frame(&self.pml4).expect("could not get pml4 frame");
         // Safety: the new page table maintains the same mappings for kernel space.
-        unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
+        unsafe { crate::PAGE_TABLES.lock().replace(self.pml4_frame) };
 
         let entry = self.entry;
-        log::info!("Running application");
         // Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
         // user to guarantee that the file made sense.

@@ -96,12 +96,21 @@ pub enum Syscall {
     ///   a value of <errno::Errno> on failure; 0, otherwise.
     Fsync = 74,
 
-    /// Terminates the calling process and executes the supplied ELF binary
-    /// instead.
+    /// Create new process from ELF file, without starting it.
     ///
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
     ///   - arg1 (c_size_t): size of the buffer
+    /// Returns:
+    ///   a value of <errno::Errno> on failure; Otherwise the PID of the new
+    /// process.
+    UnstableCreateProcess = UNSTABLE_SYSCALL_SPACE,
+
+    /// Switch the active execution execution to the process with the provided
+    /// PID.
+    ///
+    /// Arguments:
+    ///   - arg0 (c_size_t): PID of the process.
     /// Returns:
     ///   a value of <errno::Errno> on failure; 0, otherwise.
     UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + 1,
