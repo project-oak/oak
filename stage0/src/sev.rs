@@ -19,6 +19,7 @@ use core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use oak_core::sync::OnceCell;
@@ -230,7 +231,7 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     }
     tlb::flush_all();
     // We have to revalidate the page again after un-sharing it.
-    if let Err(err) = page.pvalidate() {
+    if let Err(err) = page.pvalidate(&counters::VALIDATED_4K) {
         if err != InstructionError::ValidationStatusNotUpdated {
             panic!("shared page revalidation failed");
         }
@@ -256,12 +257,14 @@ impl ValidatablePageSize for Size2MiB {
 }
 
 trait Validate<S: PageSize> {
-    fn pvalidate(&self) -> Result<(), InstructionError>;
+    fn pvalidate(&self, counter: &AtomicUsize) -> Result<(), InstructionError>;
 }
 
 impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
-    fn pvalidate(&self) -> Result<(), InstructionError> {
-        pvalidate(self.start_address().as_u64() as usize, S::SEV_PAGE_SIZE, Validation::Validated)
+    fn pvalidate(&self, counter: &AtomicUsize) -> Result<(), InstructionError> {
+        pvalidate(self.start_address().as_u64() as usize, S::SEV_PAGE_SIZE, Validation::Validated)?;
+        counter.fetch_add(1, Ordering::SeqCst);
+        Ok(())
     }
 }
 
@@ -285,6 +288,7 @@ fn pvalidate_range<S: PageSize + ValidatablePageSize, T: PageSize, F>(
     memory: &mut MappedPage<T>,
     encrypted: u64,
     flags: PageTableFlags,
+    success_counter: &AtomicUsize,
     mut f: F,
 ) -> Result<(), InstructionError>
 where
@@ -324,7 +328,7 @@ where
             .iter()
             .zip(pages)
             .filter(|(entry, _)| !entry.is_unused())
-            .map(|(entry, page)| (entry, page.pvalidate()))
+            .map(|(entry, page)| (entry, page.pvalidate(success_counter)))
             .map(|(entry, result)| result.or_else(|err| f(entry.addr(), err)))
             .find(|result| result.is_err())
         {
@@ -336,6 +340,23 @@ where
     }
 
     Ok(())
+}
+
+pub mod counters {
+    use core::sync::atomic::AtomicUsize;
+
+    /// Number of PVALIDATE invocations that did not change Validated state.
+    pub static ERROR_VALIDATION_STATUS_NOT_UPDATED: AtomicUsize = AtomicUsize::new(0);
+
+    /// Number of FAIL_SIZEMISMATCH errors when invoking PVALIDATE on 2 MiB
+    /// pages.
+    pub static ERROR_FAIL_SIZE_MISMATCH: AtomicUsize = AtomicUsize::new(0);
+
+    /// Number of successful PVALIDATE invocations on 2 MiB pages.
+    pub static VALIDATED_2M: AtomicUsize = AtomicUsize::new(0);
+
+    /// Number of successful PVALIDATE invocations on 4 KiB pages.
+    pub static VALIDATED_4K: AtomicUsize = AtomicUsize::new(0);
 }
 
 trait Validatable4KiB {
@@ -357,15 +378,23 @@ impl Validatable4KiB for PhysFrameRange<Size4KiB> {
         pt: &mut MappedPage<Size2MiB>,
         encrypted: u64,
     ) -> Result<(), InstructionError> {
-        pvalidate_range(self, pt, encrypted, PageTableFlags::empty(), |_addr, err| match err {
-            InstructionError::ValidationStatusNotUpdated => {
-                // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                // or it is already validated. See the PVALIDATE instruction in
-                // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                Ok(())
-            }
-            other => Err(other),
-        })
+        pvalidate_range(
+            self,
+            pt,
+            encrypted,
+            PageTableFlags::empty(),
+            &counters::VALIDATED_4K,
+            |_addr, err| match err {
+                InstructionError::ValidationStatusNotUpdated => {
+                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                    // or it is already validated. See the PVALIDATE instruction in
+                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+                    counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                }
+                other => Err(other),
+            },
+        )
     }
 }
 
@@ -393,26 +422,35 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
         pt: &mut MappedPage<Size2MiB>,
         encrypted: u64,
     ) -> Result<(), InstructionError> {
-        pvalidate_range(self, pd, encrypted, PageTableFlags::HUGE_PAGE, |addr, err| match err {
-            InstructionError::FailSizeMismatch => {
-                // 2MiB is no go, fail back to 4KiB pages.
-                // This will not panic as every address that is 2 MiB-aligned is by definition
-                // also 4 KiB-aligned.
-                let start = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(
-                    addr.as_u64() & !encrypted,
-                ))
-                .unwrap();
-                let range = PhysFrame::range(start, start + 512);
-                range.pvalidate(pt, encrypted)
-            }
-            InstructionError::ValidationStatusNotUpdated => {
-                // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
-                // or it is already validated. See the PVALIDATE instruction in
-                // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
-                Ok(())
-            }
-            other => Err(other),
-        })
+        pvalidate_range(
+            self,
+            pd,
+            encrypted,
+            PageTableFlags::HUGE_PAGE,
+            &counters::VALIDATED_2M,
+            |addr, err| match err {
+                InstructionError::FailSizeMismatch => {
+                    // 2MiB is no go, fail back to 4KiB pages.
+                    // This will not panic as every address that is 2 MiB-aligned is by definition
+                    // also 4 KiB-aligned.
+                    counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(1, Ordering::SeqCst);
+                    let start = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(
+                        addr.as_u64() & !encrypted,
+                    ))
+                    .unwrap();
+                    let range = PhysFrame::range(start, start + 512);
+                    range.pvalidate(pt, encrypted)
+                }
+                InstructionError::ValidationStatusNotUpdated => {
+                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                    // or it is already validated. See the PVALIDATE instruction in
+                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+                    counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                }
+                other => Err(other),
+            },
+        )
     }
 }
 
@@ -487,6 +525,16 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     page_tables.pdpt[1].set_unused();
     tlb::flush_all();
     log::info!("SEV-SNP memory validation complete.");
+    log::info!("  Validated using 2 MiB pages: {}", counters::VALIDATED_2M.load(Ordering::SeqCst));
+    log::info!("  Validated using 4 KiB pages: {}", counters::VALIDATED_4K.load(Ordering::SeqCst));
+    log::info!(
+        "  Valid state not updated: {}",
+        counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.load(Ordering::SeqCst)
+    );
+    log::info!(
+        "  RMP page size mismatch errors (fallback to 4K): {}",
+        counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
+    );
 }
 
 /// Initializes the Guest Message encryptor using VMPCK0.
