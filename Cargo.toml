@@ -60,6 +60,7 @@ members = [
   "stage0",
   "stage0_dice",
   "testing/oak_echo_service",
+  "third_party/rust-hypervisor-firmware-virtio",
   "xtask",
   "oak_restricted_kernel_sdk_proc_macro",
 ]
@@ -74,7 +75,6 @@ exclude = [
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
-  "third_party/rust-hypervisor-firmware-virtio",
 ]
 
 # Special version of release that enables more aggressive optimizations.
