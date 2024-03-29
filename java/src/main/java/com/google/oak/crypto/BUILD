@@ -15,16 +15,17 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-java_library(
+kt_jvm_library(
     name = "decryption_result",
     srcs = [
-        "DecryptionResult.java",
+        "DecryptionResult.kt",
     ],
 )
 

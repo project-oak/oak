@@ -33,8 +33,8 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        regex_reference_value, root_layer_data::Report, AmdAttestationReport,
-        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
+        ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
         ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
@@ -43,14 +43,15 @@ use oak_proto_rust::oak::{
         KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RegexReferenceValue, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TeePlatform, TransparentReleaseEndorsement,
+        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
+#[cfg(feature = "regex")]
 use regex::Regex;
 use x509_cert::{
     der::{Decode, DecodePem},
@@ -517,14 +518,32 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    verify_regex(
-        values.kernel_raw_cmd_line.as_str(),
-        reference_values
-            .kernel_cmd_line_regex
-            .as_ref()
-            .context("no kernel command line regex reference values")?,
-    )
-    .context("kernel command line failed verification")?;
+    if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
+        verify_text(
+            kernel_raw_cmd_line.as_str(),
+            reference_values
+                .kernel_cmd_line_text
+                .as_ref()
+                .context("no kernel command line text reference values")?,
+        )
+        .context("kernel command line failed verification")?;
+    } else {
+        // Support missing kernel_raw_cmd_line but only if the corresponding reference
+        // value is set to skip. This is a temporary workaround until all clients are
+        // migrated.
+        anyhow::ensure!(
+            matches!(
+                reference_values
+                    .kernel_cmd_line_text
+                    .as_ref()
+                    .expect("no kernel command line text reference values")
+                    .r#type
+                    .as_ref(),
+                Some(text_reference_value::Type::Skip(_))
+            ),
+            "No kernel_raw_cmd_line provided"
+        )
+    }
 
     verify_measurement_digest(
         values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
@@ -742,23 +761,44 @@ fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Resul
     }
 }
 
-fn verify_regex(actual: &str, expected: &RegexReferenceValue) -> anyhow::Result<()> {
+fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()> {
     match expected.r#type.as_ref() {
-        Some(regex_reference_value::Type::Skip(_)) => Ok(()),
-        Some(regex_reference_value::Type::Regex(regex)) => {
-            let re = Regex::new(regex.value.as_str()).map_err(|msg| {
-                anyhow::anyhow!("Couldn't parse regex in the reference value: {msg}")
-            })?;
-            if re.is_match(actual) {
-                Ok(())
-            } else {
-                anyhow::bail!(format!(
-                    "kernel cmd line doesn't match the reference value: {actual}"
-                ))
+        Some(text_reference_value::Type::Skip(_)) => Ok(()),
+        Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
+        Some(text_reference_value::Type::StringLiterals(string_literals)) => {
+            anyhow::ensure!(!string_literals.value.is_empty());
+            for sl in string_literals.value.iter() {
+                if sl == actual {
+                    return Ok(());
+                }
             }
+            Err(anyhow::anyhow!(format!(
+                "value doesn't match the reference value string literal: {actual}"
+            )))
         }
-        None => Err(anyhow::anyhow!("missing skip or value in the regex reference value")),
+        None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),
     }
+}
+
+#[cfg(feature = "regex")]
+fn verify_regex(
+    actual: &str,
+    regex: &oak_proto_rust::oak::attestation::v1::Regex,
+) -> anyhow::Result<()> {
+    let re = Regex::new(regex.value.as_str())
+        .map_err(|msg| anyhow::anyhow!("couldn't parse regex in the reference value: {msg}"))?;
+    Ok(anyhow::ensure!(
+        re.is_match(actual),
+        format!("value doesn't match the reference value regex: {actual}")
+    ))
+}
+
+#[cfg(not(feature = "regex"))]
+fn verify_regex(
+    _actual: &str,
+    _regex: &oak_proto_rust::oak::attestation::v1::Regex,
+) -> anyhow::Result<()> {
+    Err(anyhow::anyhow!("verification of regex values not supported"))
 }
 
 struct ApplicationKeyValues {
@@ -938,11 +978,9 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
     let kernel_cmd_line =
         Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
-    let kernel_raw_cmd_line = String::from(
-        extract_value(values, KERNEL_COMMANDLINE_ID)?
-            .as_text()
-            .expect("kernel cmd line CWT value is not a text"),
-    );
+    let kernel_raw_cmd_line = extract_value(values, KERNEL_COMMANDLINE_ID)
+        .ok()
+        .map(|v| String::from(v.as_text().expect("kernel_raw_cmd_line found but is not a string")));
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);

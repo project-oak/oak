@@ -21,9 +21,10 @@ fn main() {
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
 
+    #[allow(clippy::if_same_then_else)]
     if env::var("PROFILE").unwrap() == "release" {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2M");
     } else {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2048K");
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2M");
     }
 }

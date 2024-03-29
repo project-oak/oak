@@ -96,6 +96,8 @@ impl DiceBuilder {
         additional_claims: Vec<(ClaimName, ciborium::Value)>,
         kem_public_key: &[u8],
         verifying_key: &VerifyingKey,
+        group_kem_public_key: Option<&[u8]>,
+        group_verifying_key: Option<&VerifyingKey>,
     ) -> anyhow::Result<Evidence> {
         // The last evidence layer contains the certificate for the current signing key.
         // Since the builder contains an existing signing key there must be at
@@ -127,7 +129,7 @@ impl DiceBuilder {
 
         let signing_public_key_certificate = generate_signing_certificate(
             &self.signing_key,
-            issuer_id,
+            issuer_id.clone(),
             verifying_key,
             additional_claims,
         )
@@ -136,9 +138,44 @@ impl DiceBuilder {
         .to_vec()
         .map_err(anyhow::Error::msg)?;
 
+        // Generate group keys certificates as part of Key Provisioning.
+        let group_encryption_public_key_certificate =
+            if let Some(group_kem_public_key) = group_kem_public_key {
+                generate_kem_certificate(
+                    &self.signing_key,
+                    issuer_id.clone(),
+                    group_kem_public_key,
+                    vec![],
+                )
+                .map_err(anyhow::Error::msg)
+                .context("couldn't generate encryption public key certificate")?
+                .to_vec()
+                .map_err(anyhow::Error::msg)?
+            } else {
+                vec![]
+            };
+
+        let group_signing_public_key_certificate =
+            if let Some(group_verifying_key) = group_verifying_key {
+                generate_signing_certificate(
+                    &self.signing_key,
+                    issuer_id.clone(),
+                    group_verifying_key,
+                    vec![],
+                )
+                .map_err(anyhow::Error::msg)
+                .context("couldn't generate signing public key certificate")?
+                .to_vec()
+                .map_err(anyhow::Error::msg)?
+            } else {
+                vec![]
+            };
+
         evidence.application_keys = Some(ApplicationKeys {
             encryption_public_key_certificate,
             signing_public_key_certificate,
+            group_encryption_public_key_certificate,
+            group_signing_public_key_certificate,
         });
 
         Ok(evidence)
@@ -237,5 +274,10 @@ fn application_keys_to_proto(
     let signing_public_key_certificate =
         oak_dice::utils::cbor_encoded_bytes_to_vec(&value.signing_public_key_certificate[..])
             .map_err(anyhow::Error::msg)?;
-    Ok(ApplicationKeys { encryption_public_key_certificate, signing_public_key_certificate })
+    Ok(ApplicationKeys {
+        encryption_public_key_certificate,
+        signing_public_key_certificate,
+        group_encryption_public_key_certificate: vec![],
+        group_signing_public_key_certificate: vec![],
+    })
 }

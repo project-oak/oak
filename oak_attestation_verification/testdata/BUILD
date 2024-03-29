@@ -42,6 +42,8 @@ exports_files([
     "rekor_public_key.pem",
     "rk_evidence.binarypb",
     "rk_evidence.textproto",
+    "rk_evidence_20240312.binarypb",
+    "rk_evidence_20240312.textproto",
     "rk_vcek_milan.der",
     "rk_vcek_milan.pem",
 ])

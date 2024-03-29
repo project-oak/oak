@@ -53,10 +53,7 @@ pub const X25519_PRIVATE_KEY_SIZE: usize = 32;
 /// public key.
 pub const PUBLIC_KEY_SIZE: usize = 256;
 
-/// The maximum size of a larger serialized CWT certificate.
-pub const LARGE_CERTIFICATE_SIZE: usize = 1536;
-
-/// The maximum size of a standard serialized CWT certificate.
+/// The maximum size of a serialized CWT certificate.
 pub const CERTIFICATE_SIZE: usize = 1024;
 
 /// The name of the kernel command-line parameter that is used to send the
@@ -142,7 +139,7 @@ pub struct LayerEvidence {
     /// Serialized CWT certificate for the ECA private key owned by the
     /// corresponding layer. The certificate must include measurements of
     /// the layer that owns the private key.
-    pub eca_certificate: [u8; LARGE_CERTIFICATE_SIZE],
+    pub eca_certificate: [u8; CERTIFICATE_SIZE],
 }
 
 impl LayerEvidence {
@@ -153,7 +150,7 @@ impl LayerEvidence {
     }
 }
 
-static_assertions::assert_eq_size!([u8; LARGE_CERTIFICATE_SIZE], LayerEvidence);
+static_assertions::assert_eq_size!([u8; CERTIFICATE_SIZE], LayerEvidence);
 
 /// Private key that can be used by a layer to sign a certificate for the next
 /// layer.
@@ -193,7 +190,7 @@ pub struct Stage0DiceData {
     pub layer_1_certificate_authority: CertificateAuthority,
     /// The compound device identifier for Layer 1.
     pub layer_1_cdi: CompoundDeviceIdentifier,
-    _padding_1: [u8; 128],
+    _padding_1: [u8; 640],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);
@@ -251,7 +248,7 @@ pub struct Evidence {
     pub application_keys: ApplicationKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 5904], Evidence);
+static_assertions::assert_eq_size!([u8; 5392], Evidence);
 
 /// Wrapper for passing the attestation evidence and private keys from the
 /// Restricted Kernel to the application.
@@ -262,4 +259,4 @@ pub struct RestrictedKernelDiceData {
     pub application_private_keys: ApplicationPrivateKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 6032], RestrictedKernelDiceData);
+static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);

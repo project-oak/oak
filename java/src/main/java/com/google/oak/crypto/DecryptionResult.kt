@@ -16,12 +16,12 @@
 
 package com.google.oak.crypto;
 
-public final class DecryptionResult {
-  public final byte[] plaintext;
-  public final byte[] associatedData;
-
-  public DecryptionResult(byte[] plaintext, byte[] associatedData) {
-    this.plaintext = plaintext;
-    this.associatedData = associatedData;
-  }
-}
+class DecryptionResult(
+    // This is needed because the Java code reference backing fields directly.
+    // By default, Kotlin properties generate getter/setter methods, and does not
+    // expose the backing fields directly.
+    @JvmField
+    val plaintext: ByteArray,
+    @JvmField
+    val associatedData: ByteArray,
+)

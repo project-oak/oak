@@ -18,11 +18,11 @@ use oak_attestation::dice::evidence_to_proto;
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, endorsements,
-    kernel_binary_reference_value, reference_values, regex_reference_value,
+    kernel_binary_reference_value, reference_values, text_reference_value,
     ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, InsecureReferenceValues,
     KernelBinaryReferenceValue, KernelLayerReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RegexReferenceValue,
-    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
+    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
+    RootLayerReferenceValues, SkipVerification, TextReferenceValue,
 };
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
@@ -78,11 +78,12 @@ fn verify_mock_evidence() {
                                 SkipVerification {},
                             )),
                         }),
-                        kernel_image: Some(skip.clone()),
-                        kernel_setup_data: Some(skip.clone()),
-                        kernel_cmd_line: Some(skip.clone()),
-                        kernel_cmd_line_regex: Some(RegexReferenceValue {
-                            r#type: Some(regex_reference_value::Type::Skip(SkipVerification {})),
+                        kernel_image: None,
+                        kernel_setup_data: None,
+                        kernel_cmd_line: None,
+                        kernel_cmd_line_regex: None,
+                        kernel_cmd_line_text: Some(TextReferenceValue {
+                            r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
                         }),
                         init_ram_fs: Some(skip.clone()),
                         memory_map: Some(skip.clone()),
