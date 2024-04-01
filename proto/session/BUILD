@@ -75,6 +75,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "service_unary_cc_grpc",
     srcs = [":service_unary_proto"],
+    generate_mocks = True,
     grpc_only = True,
     deps = [":service_unary_cc_proto"],
 )
