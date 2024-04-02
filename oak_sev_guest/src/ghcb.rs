@@ -19,14 +19,18 @@
 //! hypervisor.
 
 use bitflags::bitflags;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{
+    structures::paging::{page::NotGiantPageSize, PageSize, PhysFrame, Size2MiB, Size4KiB},
+    PhysAddr, VirtAddr,
+};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::{
     cpuid::{CpuidInput, CpuidOutput},
+    instructions::PageSize as SevPageSize,
     msr::{
-        register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
-        RegisterGhcbGpaRequest,
+        register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, PageAssignment,
+        RegisterGhcbGpaError, RegisterGhcbGpaRequest,
     },
     Translator,
 };
@@ -70,6 +74,12 @@ const SW_EXIT_CODE_MMIO_WRITE: u64 = 0x8000_0002;
 const SW_EXIT_CODE_AP_JUMP_TABLE: u64 = 0x8000_0005;
 
 ///
+/// The value of the sw_exit_code field when doing a Page State Change request.
+///
+/// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_PAGE_STATE_CHANGE: u64 = 0x8000_0010;
+
+///
 /// The value of the sw_exit_code field when doing a Guest Message request.
 ///
 /// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
@@ -109,6 +119,9 @@ const BASE_VALID_BITMAP: ValidBitmap =
 /// RDMSR and WRMSR only use the 32-bit EAX and EDX registers, not 64-bit RAX
 /// and RDX, so we only use the least significant 32 bits.
 const MSR_REGISTER_MASK: u64 = 0xffff_ffff;
+
+/// Size of the shared buffer space in the GHCB structure.
+const SHARED_BUFFER_SIZE: usize = 2032;
 
 /// The guest-host communications block.
 ///
@@ -168,7 +181,7 @@ pub struct Ghcb {
     _reserved_7: [u8; 1016],
     /// Area that can be used as a shared buffer for communicating additional
     /// information.
-    pub shared_buffer: [u8; 2032],
+    pub shared_buffer: [u8; SHARED_BUFFER_SIZE],
     /// Reserved. Must be 0.
     _reserved_8: [u8; 10],
     /// The version of the GHCB protocol and page layout in use.
@@ -583,6 +596,46 @@ where
         }
     }
 
+    /// Performs a Page State Change operation on the given physical frame.
+    ///
+    /// See section 4.1.6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+    pub fn page_state_change<S: NotGiantPageSize>(
+        &mut self,
+        frame: PhysFrame<S>,
+        assignment: PageAssignment,
+    ) -> Result<(), &'static str> {
+        let mut page_state_change = PageStateChange::new_zeroed();
+        page_state_change.header.cur_entry = 0;
+        page_state_change.header.end_entry = 0;
+        page_state_change.entry[0] =
+            PageStateChangeEntry { page_operation: assignment, gfn: frame, current_page: 0 }.into();
+
+        let gpa_base = self.get_gpa().as_u64();
+        let ghcb = self.ghcb.as_mut();
+        ghcb.reset();
+        ghcb.sw_exit_code = SW_EXIT_CODE_PAGE_STATE_CHANGE;
+        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+        page_state_change
+            .write_to(&mut ghcb.shared_buffer)
+            .ok_or("Unexpected length mismatch between PSC request and GHCB shared buffer")?;
+        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+
+        self.do_vmg_exit()?;
+
+        let ghcb = self.ghcb.as_ref();
+        let page_state_change = PageStateChange::read_from(&ghcb.shared_buffer)
+            .ok_or("Unexpected length mismatch between PSC request and GHCB shared buffer")?;
+        // If cur_entry did not move past end_entry, SW_EXITINFO2 will contain
+        // additional information. For now, we just return a generic error.
+        if page_state_change.header.cur_entry <= page_state_change.header.end_entry {
+            return Err("cur_entry did not move!");
+        };
+        // According to documentation the `current_page` field in each
+        // `PageStateChangeEntry` struct should change to show that a page has been
+        // successfully processed, but I always get zeroes there.
+        Ok(())
+    }
+
     /// Sets the address of the GHCB, exits to the hypervisor, and checks the
     /// return value when execution resumes.
     fn do_vmg_exit(&mut self) -> Result<(), &'static str> {
@@ -612,5 +665,75 @@ where
 fn reset_slice(slice: &mut [u8]) {
     for byte in slice {
         *byte = 0;
+    }
+}
+
+#[repr(C)]
+#[derive(AsBytes, FromBytes, FromZeroes)]
+struct PageStateChangeHeader {
+    cur_entry: u16,
+    end_entry: u16,
+    _reserved: u32,
+}
+
+/// Page State Change structure.
+///
+/// See section 4.1.6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+#[repr(C)]
+#[derive(AsBytes, FromBytes, FromZeroes)]
+struct PageStateChange {
+    header: PageStateChangeHeader,
+    entry: [u64; 253],
+}
+static_assertions::assert_eq_size!(PageStateChange, [u8; SHARED_BUFFER_SIZE]);
+
+/// Page State Change Entry.
+///
+/// See Table 9 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+struct PageStateChangeEntry<S: NotGiantPageSize> {
+    page_operation: PageAssignment,
+
+    /// Physical frame in guest memory for the operation.
+    gfn: PhysFrame<S>,
+
+    /// Input: offset, in 4K increments, on which to bein the page state change
+    /// operation. Output: offset of the current page in 4K increments that
+    /// has been successfully processed.
+    current_page: u16,
+}
+
+impl<S: NotGiantPageSize> From<PageStateChangeEntry<S>> for u64 {
+    fn from(value: PageStateChangeEntry<S>) -> Self {
+        // [63:57]: Reserved, must be zero. Reset the whole thing to zero.
+        let mut entry = 0u64;
+        // [56]: Page size.
+        entry |= match S::SIZE {
+            Size4KiB::SIZE => (SevPageSize::Page4KiB as u64) << 56,
+            Size2MiB::SIZE => (SevPageSize::Page2MiB as u64) << 56,
+            _ => unreachable!("Unexpected non-giant page size (not 4 KiB or 2 MiB)"),
+        };
+        // [55:52]: Page operation.
+        entry |= (value.page_operation as u64) << 52;
+        // [51:12]: Guest physical frame number
+        // PhysFrame guarantees that the address is properly aligned.
+        entry |= value.gfn.start_address().as_u64();
+        // [11:0]: Current page.
+        entry |= (value.current_page as u64) & 0xFFF;
+        entry
+    }
+}
+
+impl<S: NotGiantPageSize> TryFrom<u64> for PageStateChangeEntry<S> {
+    type Error = &'static str;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        let page_operation = PageAssignment::from_repr(((value & 0x10_0000_0000_0000) >> 52) as u8)
+            .ok_or("Invalid page assignment field value")?;
+        let address = PhysAddr::new(value & 0x000F_FFFF_FFFF_F000);
+        let gfn =
+            PhysFrame::from_start_address(address).map_err(|_| "Frame address not aligned")?;
+        let current_page = (value & 0x0FFF) as u16;
+
+        Ok(PageStateChangeEntry { page_operation, gfn, current_page })
     }
 }
