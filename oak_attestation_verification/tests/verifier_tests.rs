@@ -45,37 +45,49 @@ const CONTAINERS_VCEK_MILAN_CERT_DER: &str = "testdata/oc_vcek_milan.der";
 const RK_VCEK_MILAN_CERT_DER: &str = "testdata/rk_vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
-const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
-const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
-const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
-const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
+const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.textproto";
+const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.textproto";
+const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.textproto";
+const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.textproto";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
+fn read_evidence_textproto(textproto_path: &str) -> std::io::Result<Vec<u8>> {
+    let bytes = std::process::Command::new("protoc")
+        .args(&["--encode=oak.attestation.v1.Evidence", "./proto/attestation/evidence.proto"])
+        .stdin(std::fs::File::open(textproto_path)?)
+        .output()?
+        .stdout;
+    Ok(bytes)
+}
+
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
 fn create_containers_evidence() -> Evidence {
-    let serialized = fs::read(CONTAINERS_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized =
+        read_evidence_textproto(CONTAINERS_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
 // application.
 fn create_rk_evidence() -> Evidence {
-    let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized = read_evidence_textproto(RK_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
 // application but with obsolete DICE data that is still used by some clients.
 fn create_rk_obsolete_evidence() -> Evidence {
-    let serialized = fs::read(RK_OBSOLETE_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized =
+        read_evidence_textproto(RK_OBSOLETE_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid fake evidence instance.
 fn create_fake_evidence() -> Evidence {
-    let serialized = fs::read(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
+    let serialized =
+        read_evidence_textproto(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
 }
 
