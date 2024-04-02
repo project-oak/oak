@@ -33,7 +33,7 @@ pub enum Validation {
 }
 
 /// The size of a memory page.
-#[derive(Debug, FromRepr)]
+#[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(u32)]
 pub enum PageSize {
     /// The page is a 4KiB page.
