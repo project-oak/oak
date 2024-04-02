@@ -49,17 +49,30 @@ const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.textproto";
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.textproto";
 const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.textproto";
 const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.textproto";
+const EVIDENCE_PROTO_FILE_PATH: &str = "../proto/attestation/evidence.proto";
+const EVIDENCE_PROTO_PATH: &str = "../proto/attestation";
+const EVIDENCE_PROTO_NAME: &str = "oak.attestation.v1.Evidence";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
 fn read_evidence_textproto(textproto_path: &str) -> std::io::Result<Vec<u8>> {
-    let bytes = std::process::Command::new("protoc")
-        .args(&["--encode=oak.attestation.v1.Evidence", "./proto/attestation/evidence.proto"])
+    let ouput = std::process::Command::new("protoc")
+        .args(&[
+            format!("--encode={}", EVIDENCE_PROTO_NAME).as_str(),
+            format!("--proto_path={}", EVIDENCE_PROTO_PATH).as_str(),
+            EVIDENCE_PROTO_FILE_PATH,
+        ])
         .stdin(std::fs::File::open(textproto_path)?)
-        .output()?
-        .stdout;
-    Ok(bytes)
+        .output()?;
+    if ouput.status.code() == Some(0) {
+        Ok(ouput.stdout)
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            std::str::from_utf8(&ouput.stderr).expect("failed to parse protoc error message"),
+        ))
+    }
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
