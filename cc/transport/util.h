@@ -27,4 +27,5 @@ namespace oak::transport {
 absl::Status to_absl_status(const grpc::Status& grpc_status);
 
 }  // namespace oak::transport
+
 #endif  // CC_TRANSPORT_UTIL_H_
