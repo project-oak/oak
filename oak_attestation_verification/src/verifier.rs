@@ -783,12 +783,11 @@ fn verify_text(
                 &public_keys.rekor_public_key,
             )?;
             // Compare the actual command line against the one inlined in the endorsement.
-            if actual.as_bytes() != &endorsement.subject {
-                anyhow::bail!("unexpected endorsement usage");
-            }
-            Ok(())
+            let regex = String::from_utf8(endorsement.subject.clone())
+                .expect("endorsement subject is not utf8");
+            verify_regex(actual, &regex)
         }
-        Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
+        Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, &regex.value),
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
             anyhow::ensure!(!string_literals.value.is_empty());
             for sl in string_literals.value.iter() {
@@ -805,11 +804,8 @@ fn verify_text(
 }
 
 #[cfg(feature = "regex")]
-fn verify_regex(
-    actual: &str,
-    regex: &oak_proto_rust::oak::attestation::v1::Regex,
-) -> anyhow::Result<()> {
-    let re = Regex::new(regex.value.as_str())
+fn verify_regex(actual: &str, regex: &str) -> anyhow::Result<()> {
+    let re = Regex::new(regex)
         .map_err(|msg| anyhow::anyhow!("couldn't parse regex in the reference value: {msg}"))?;
     Ok(anyhow::ensure!(
         re.is_match(actual),
@@ -818,10 +814,7 @@ fn verify_regex(
 }
 
 #[cfg(not(feature = "regex"))]
-fn verify_regex(
-    _actual: &str,
-    _regex: &oak_proto_rust::oak::attestation::v1::Regex,
-) -> anyhow::Result<()> {
+fn verify_regex(_actual: &str, _regex: &str) -> anyhow::Result<()> {
     Err(anyhow::anyhow!("verification of regex values not supported"))
 }
 
