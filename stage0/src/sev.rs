@@ -513,8 +513,17 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     // the RMP for the fw_cfg DMA buffer.
     let min_addr = 0xA0000;
 
+    // Locate the legacy SMBIOS range in the E820 table and verify it has the
+    // correct size.
+    let legacy_smbios_range_start_addr = 0xF0000;
+    let mut legacy_smbios_range_size = 0;
+
     for entry in e820_table {
-        if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
+        if entry.addr() == legacy_smbios_range_start_addr
+            && entry.entry_type() == Some(E820EntryType::RESERVED)
+        {
+            legacy_smbios_range_size = entry.size();
+        } else if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
             continue;
         }
 
@@ -579,6 +588,32 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
             range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate memory");
         }
     }
+
+    // Sanity check that we have a valid legacy SMBIOS range entry in the E820
+    // table.
+    assert!(legacy_smbios_range_size == 0x1_0000);
+
+    // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
+    // the SMBIOS entry point table, even if the range is marked as reserved.
+    let range = PhysFrame::<Size4KiB>::range(
+        PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_start_addr as u64))
+            .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(
+            (legacy_smbios_range_start_addr + legacy_smbios_range_size) as u64,
+        ))
+        .unwrap(),
+    );
+    range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate SMBIOS memory");
+
+    // Safety: the E820 table indicates that this is the correct memory segment.
+    let legacy_smbios_range_bytes = unsafe {
+        core::slice::from_raw_parts_mut::<u8>(
+            legacy_smbios_range_start_addr as *mut u8,
+            legacy_smbios_range_size,
+        )
+    };
+    // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+    legacy_smbios_range_bytes.zeroize();
 
     page_tables.pd_0[1].set_unused();
     page_tables.pdpt[1].set_unused();
