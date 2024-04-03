@@ -20,12 +20,65 @@
 
 extern crate alloc;
 
+use core::fmt::Write;
+
 use oak_dice::evidence::Stage0DiceData;
 use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD};
 use oak_restricted_kernel_orchestrator::AttestedApp;
-use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
+use oak_restricted_kernel_sdk::channel::FileDescriptorChannel;
 use zerocopy::{AsBytes, FromZeroes};
 use zeroize::Zeroize;
+
+struct OrchestratorLogger {}
+
+impl log::Log for OrchestratorLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        writeln!(
+            oak_restricted_kernel_sdk::utils::Stderr {},
+            "orchestrator {}: {}",
+            record.level(),
+            record.args()
+        )
+        .unwrap();
+    }
+
+    fn flush(&self) {
+        oak_restricted_kernel_sdk::utils::Stderr::flush();
+    }
+}
+
+#[global_allocator]
+static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap =
+    oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
+
+static LOGGER: OrchestratorLogger = OrchestratorLogger {};
+
+// The orchestrator uses a custom logging implementation, hence the
+// #[oak_restricted_kernel_sdk::entrypoint] is not used. The allocator,
+// handlers, etc are declared explicitly.
+#[no_mangle]
+fn _start() -> ! {
+    oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
+    oak_restricted_kernel_sdk::utils::log::set_max_level(
+        oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug,
+    );
+    entrypoint()
+}
+
+#[alloc_error_handler]
+fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
+    panic!("error allocating memory in orchestrator: {:#?}", layout);
+}
+
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    log::error!("orchestrator PANIC: {}", info);
+    oak_restricted_kernel_interface::syscall::exit(-1);
+}
 
 fn read_stage0_dice_data() -> Stage0DiceData {
     let mut result = Stage0DiceData::new_zeroed();
@@ -35,8 +88,7 @@ fn read_stage0_dice_data() -> Stage0DiceData {
     result
 }
 
-#[entrypoint]
-fn start() -> ! {
+fn entrypoint() -> ! {
     let mut attested_app = {
         let stage0_dice_data = read_stage0_dice_data();
         let channel = FileDescriptorChannel::default();

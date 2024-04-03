@@ -36,6 +36,7 @@ cc_library(
     hdrs = ["grpc_streaming_transport.h"],
     deps = [
         ":transport",
+        ":util",
         "//proto/crypto:crypto_cc_proto",
         "//proto/session:messages_cc_proto",
         "//proto/session:service_streaming_cc_grpc",
@@ -48,6 +49,34 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "grpc_unary_transport",
+    hdrs = ["grpc_unary_transport.h"],
+    deps = [
+        ":transport",
+        ":util",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:messages_cc_proto",
+        "//proto/session:service_unary_cc_grpc",
+        "//proto/session:service_unary_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "util",
+    srcs = ["util.cc"],
+    hdrs = ["util.h"],
+    deps = [
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+    ],
+)
+
 cc_test(
     name = "grpc_streaming_transport_test",
     srcs = ["grpc_streaming_transport_test.cc"],
@@ -57,6 +86,23 @@ cc_test(
         "//proto/session:messages_cc_proto",
         "//proto/session:service_streaming_cc_grpc",
         "//proto/session:service_streaming_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "grpc_unary_transport_test",
+    srcs = ["grpc_unary_transport_test.cc"],
+    deps = [
+        ":grpc_unary_transport",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:messages_cc_proto",
+        "//proto/session:service_unary_cc_grpc",
+        "//proto/session:service_unary_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:absl_check",

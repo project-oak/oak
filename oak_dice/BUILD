@@ -24,6 +24,9 @@ package(
 rust_library(
     name = "oak_dice",
     srcs = glob(["src/**"]),
+    crate_features = [
+        "no_std",
+    ],
     deps = [
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:ciborium",

@@ -84,6 +84,20 @@ message ApplicationKeys {
   // Represented as a CBOR/COSE/CWT ECA certificate.
   // <https://www.rfc-editor.org/rfc/rfc8392.html>
   bytes signing_public_key_certificate = 2;
+
+  // Certificate signing the group encryption public key as part of Key
+  // Provisioning.
+  //
+  // Represented as a CBOR/COSE/CWT ECA certificate.
+  // <https://www.rfc-editor.org/rfc/rfc8392.html>
+  bytes group_encryption_public_key_certificate = 3;
+
+  // Certificate signing the group signing public key as part of Key
+  // Provisioning.
+  //
+  // Represented as a CBOR/COSE/CWT ECA certificate.
+  // <https://www.rfc-editor.org/rfc/rfc8392.html>
+  bytes group_signing_public_key_certificate = 4;
 }
 
 // Attestation Evidence used by the client to the identity of firmware and

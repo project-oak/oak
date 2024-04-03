@@ -56,78 +56,89 @@ async fn main() -> anyhow::Result<()> {
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
 
+    // Get key provisioning role.
+    let key_provisioning_role = launcher_client
+        .get_key_provisioning_role()
+        .await
+        .map_err(|error| anyhow!("couldn't get key provisioning role: {:?}", error))?;
+
+    // Generate application keys.
+    let (instance_keys, instance_public_keys) = generate_instance_keys();
+    let (mut group_keys, group_public_keys) =
+        if key_provisioning_role == KeyProvisioningRole::Leader {
+            let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
+            (Some(Arc::new(group_keys)), Some(group_public_keys))
+        } else {
+            (None, None)
+        };
+
+    // Load application.
     let container_bundle = launcher_client
         .get_container_bundle()
         .await
         .map_err(|error| anyhow!("couldn't get container bundle: {:?}", error))?;
-
     let application_config = launcher_client
         .get_application_config()
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
+    // Generate attestation evidence and send it to the Hostlib.
     let dice_builder = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
     let additional_claims = oak_containers_orchestrator::dice::measure_container_and_config(
         &container_bundle,
         &application_config,
     );
-    let (instance_keys, instance_public_keys) = generate_instance_keys();
-
     let evidence = dice_builder.add_application_keys(
         additional_claims,
         &instance_public_keys.encryption_public_key,
         &instance_public_keys.signing_public_key,
+        if let Some(ref group_public_keys) = group_public_keys {
+            Some(&group_public_keys.encryption_public_key)
+        } else {
+            None
+        },
+        None,
     )?;
     launcher_client
         .send_attestation_evidence(evidence)
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
+    // Request group keys.
+    if key_provisioning_role == KeyProvisioningRole::Follower {
+        let get_group_keys_response = launcher_client
+            .get_group_keys()
+            .await
+            .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
+        let provisioned_group_keys = instance_keys
+            .provide_group_keys(get_group_keys_response)
+            .context("couldn't provide group keys")?;
+        group_keys = Some(Arc::new(provisioned_group_keys));
+    }
+
     if let Some(path) = args.ipc_socket_path.parent() {
         tokio::fs::create_dir_all(path).await?;
     }
 
-    let key_provisioning_role = launcher_client
-        .get_key_provisioning_role()
-        .await
-        .map_err(|error| anyhow!("couldn't get key provisioning role: {:?}", error))?;
-    let group_keys = Arc::new(match key_provisioning_role {
-        KeyProvisioningRole::Unspecified => anyhow::bail!("unspecified key provisioning role"),
-        KeyProvisioningRole::Leader => {
-            // TODO(#4442): Sign group public keys in the enclave evidence.
-            let (group_keys, _) = instance_keys.generate_group_keys();
-            group_keys
-        }
-        KeyProvisioningRole::Dependant => {
-            let get_group_keys_response = launcher_client
-                .get_group_keys()
-                .await
-                .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
-            instance_keys
-                .provide_group_keys(get_group_keys_response)
-                .context("couldn't provide group keys")?
-        }
-    });
-
     let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
 
+    // Start application and gRPC servers.
     let user = nix::unistd::User::from_name(&args.runtime_user)
         .context(format!("error resolving user {}", args.runtime_user))?
         .context(format!("user `{}` not found", args.runtime_user))?;
-
     let cancellation_token = CancellationToken::new();
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
             instance_keys,
-            group_keys.clone(),
+            group_keys.clone().context("group keys were not provisioned")?,
             application_config,
             launcher_client,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::key_provisioning::create(
             &args.orchestrator_addr,
-            group_keys,
+            group_keys.context("group keys were not provisioned")?,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(

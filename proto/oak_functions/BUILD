@@ -42,6 +42,7 @@ proto_library(
 proto_library(
     name = "testing_proto",
     srcs = ["testing.proto"],
+    deps = ["//proto/micro_rpc:options_proto"],
 )
 
 build_test(

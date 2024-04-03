@@ -23,6 +23,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "cc/transport/util.h"
 #include "grpcpp/channel.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
@@ -32,19 +33,12 @@
 
 namespace oak::transport {
 
-namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::EndorsedEvidence;
 using ::oak::session::v1::GetEndorsedEvidenceRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
-}  // namespace
-
-absl::Status to_absl_status(const grpc::Status& grpc_status) {
-  return absl::Status(static_cast<absl::StatusCode>(grpc_status.error_code()),
-                      grpc_status.error_message());
-}
 
 absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEndorsedEvidence() {
   // Create request.

@@ -19,8 +19,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
-import "proto/digest.proto";
 import "proto/attestation/tcb_version.proto";
+import "proto/digest.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -79,15 +79,46 @@ message FileReferenceValue {
   // Allowable digests for the file.
   Digests digests = 1;
 
-  // Absolute path to the file in question, or just the file name. Relative paths are
-  // not supported.
+  // Absolute path to the file in question, or just the file name. Relative
+  // paths are not supported.
   string path = 2;
 }
 
-// Verifies that a particular string is equal to at least one of the specified ones.
-// No checks are performed if this is empty.
+// Verifies that a particular string is equal to at least one of the specified
+// ones. No checks are performed if this is empty.
 message StringReferenceValue {
+  // Use TextReferenceValue instead.
+  option deprecated = true;
+
   repeated string values = 1;
+}
+
+message Regex {
+  string value = 1;
+}
+
+// A match in at least onevalue is considered a success. At least one value must
+// be specified, otherwise verification fails.
+message StringLiterals {
+  repeated string value = 1;
+}
+
+message RegexReferenceValue {
+  // Use TextReferenceValue instead.
+  option deprecated = true;
+
+  oneof type {
+    SkipVerification skip = 1;
+    Regex regex = 2;
+  }
+}
+
+message TextReferenceValue {
+  oneof type {
+    SkipVerification skip = 1;
+    Regex regex = 2;
+    StringLiterals string_literals = 3;
+  }
 }
 
 message RootLayerReferenceValues {
@@ -95,9 +126,9 @@ message RootLayerReferenceValues {
   // Verification is skipped when not running in a TEE.
   AmdSevReferenceValues amd_sev = 1;
   IntelTdxReferenceValues intel_tdx = 2;
-  // When insecure is set no verification of the TEE platform is performed. This can
-  // be used when not running in a TEE or when the client is agnostic about the
-  // platform and doesn't care about the hardware verification.
+  // When insecure is set no verification of the TEE platform is performed. This
+  // can be used when not running in a TEE or when the client is agnostic about
+  // the platform and doesn't care about the hardware verification.
   InsecureReferenceValues insecure = 3;
 }
 
@@ -128,14 +159,15 @@ message KernelLayerReferenceValues {
   // Verifies the kernel based on endorsement.
   KernelBinaryReferenceValue kernel = 1;
 
-  // No longer used. Will be removed.
-  // TODO: b/325979696 - Validate the kernel command-line using a regex.
-  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
+  // Validates the kernel command-line using either a string literal or a regex.
+  TextReferenceValue kernel_cmd_line_text = 9;
 
-  // Fields are deprecated and kept only for backwards compatibility.
-  // Remove ASAP.
+  // Fields are deprecated and kept only for backwards compatibility. They are
+  // not being used by the verifier. Remove ASAP.
   BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
   BinaryReferenceValue kernel_image = 7 [deprecated = true];
+  RegexReferenceValue kernel_cmd_line_regex = 8 [deprecated = true];
+  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
 
   // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;
