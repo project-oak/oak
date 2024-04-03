@@ -916,6 +916,7 @@
 <a href="#916" id="916">916</a>
 <a href="#917" id="917">917</a>
 <a href="#918" id="918">918</a>
+<a href="#919" id="919">919</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1072,12 +1073,13 @@
         }
     }
 }
-<span class="doccomment">/// Message for passing embedded certificate authority information between layers.
-/// Will never appear in the evidence that is sent to the client.
+<span class="doccomment">/// Message for passing embedded certificate authority information between
+/// layers. Will never appear in the evidence that is sent to the client.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>CertificateAuthority {
-    <span class="doccomment">/// ECA private key that will be used by a layer to sign a certificate for the next layer.
+    <span class="doccomment">/// ECA private key that will be used by a layer to sign a certificate for the
+    /// next layer.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>eca_private_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }

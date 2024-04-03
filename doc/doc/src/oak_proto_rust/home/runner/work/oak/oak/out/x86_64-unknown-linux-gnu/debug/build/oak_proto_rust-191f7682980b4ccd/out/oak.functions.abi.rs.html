@@ -36,7 +36,12 @@
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// The client can check the configuration report for the configuration of the Oak Functions runtime.
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+</pre></div><pre class="rust"><code><span class="doccomment">/// The client can check the configuration report for the configuration of the
+/// Oak Functions runtime.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ConfigurationReport {
@@ -47,30 +52,33 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>policy: ::core::option::Option&lt;ServerPolicy&gt;,
 }
-<span class="doccomment">/// / Server-side policy describing limits on the size of the response and response processing time to
-/// / avoid side-channel leaks.
+<span class="doccomment">/// / Server-side policy describing limits on the size of the response and
+/// / response processing time to avoid side-channel leaks.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ServerPolicy {
     <span class="doccomment">/// A fixed size for responses returned by the trusted runtime.
     ///
-    /// This size only applies to the body of the Oak Functions response. If the response body
-    /// computed by the Wasm module is smaller than this amount, it is padded with additional
-    /// data before serialization and inclusion in the HTTP response to the client. If the body is
-    /// larger than this amount, the trusted runtime discards the response and instead uses a
-    /// response with a body of exactly this size, containing an error message indicating the
-    /// policy violation. The body included in the HTTP response sent to the client is the binary
-    /// protobuf encoding of the Oak Functions response, and will have a size larger than
-    /// `constant_response_size_bytes`. However, this size is still guaranteed to be a constant.
+    /// This size only applies to the body of the Oak Functions response. If the
+    /// response body computed by the Wasm module is smaller than this amount, it
+    /// is padded with additional data before serialization and inclusion in the
+    /// HTTP response to the client. If the body is larger than this amount, the
+    /// trusted runtime discards the response and instead uses a response with a
+    /// body of exactly this size, containing an error message indicating the
+    /// policy violation. The body included in the HTTP response sent to the client
+    /// is the binary protobuf encoding of the Oak Functions response, and will
+    /// have a size larger than `constant_response_size_bytes`. However, this size
+    /// is still guaranteed to be a constant.
     </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>constant_response_size_bytes: u32,
     <span class="doccomment">/// A fixed response time, in milliseconds.
     ///
-    /// Similar to the previous one, but controls the amount of time the function is allowed to run
-    /// for. If the function finishes before this time, the response is not sent back until the
-    /// time is elapsed. If the function does not finish within this deadline, the trusted runtime
-    /// sends a response to the client containing an error message indicating the failure. The size
-    /// of this response is equal to the size specified by the previous parameter.
+    /// Similar to the previous one, but controls the amount of time the function
+    /// is allowed to run for. If the function finishes before this time, the
+    /// response is not sent back until the time is elapsed. If the function does
+    /// not finish within this deadline, the trusted runtime sends a response to
+    /// the client containing an error message indicating the failure. The size of
+    /// this response is equal to the size specified by the previous parameter.
     </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>constant_processing_time_ms: u32,
 }

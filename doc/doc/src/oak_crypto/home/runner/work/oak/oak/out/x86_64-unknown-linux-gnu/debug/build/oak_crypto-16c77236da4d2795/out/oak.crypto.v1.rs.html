@@ -55,6 +55,7 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Request message encrypted using Hybrid Public Key Encryption (HPKE).
 /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -64,8 +65,8 @@
     /// using the derived session key.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_message: ::core::option::Option&lt;AeadEncryptedMessage&gt;,
-    <span class="doccomment">/// Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-    /// Only sent in the first message of the secure session.
+    <span class="doccomment">/// Ephemeral Diffie-Hellman client public key that is needed to derive a
+    /// session key. Only sent in the first message of the secure session.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>serialized_encapsulated_public_key: ::core::option::Option&lt;
         ::prost::alloc::vec::Vec&lt;u8&gt;,
@@ -94,8 +95,9 @@
     <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="doccomment">/// Envelope containing session keys required to encrypt/decrypt messages within a secure session.
-/// Needed to serialize contexts in order to send them over an RPC.
+<span class="doccomment">/// Envelope containing session keys required to encrypt/decrypt messages within
+/// a secure session. Needed to serialize contexts in order to send them over an
+/// RPC.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SessionKeys {

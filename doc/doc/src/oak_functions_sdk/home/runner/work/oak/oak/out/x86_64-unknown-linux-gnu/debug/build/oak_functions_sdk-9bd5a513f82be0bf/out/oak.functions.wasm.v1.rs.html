@@ -378,8 +378,8 @@
 </span><span class="kw">pub struct </span>BytesValue {
     <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// If true, the value was found in the store. This is useful to distinguish between a value that
-    /// was not found and a value that was found and is empty.
+    <span class="doccomment">/// If true, the value was found in the store. This is useful to distinguish
+    /// between a value that was not found and a value that was found and is empty.
     </span><span class="attr">#[prost(bool, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>found: bool,
 }

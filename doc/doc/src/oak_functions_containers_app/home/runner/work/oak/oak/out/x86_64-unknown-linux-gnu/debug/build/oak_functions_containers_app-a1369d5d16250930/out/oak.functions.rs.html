@@ -921,6 +921,12 @@
 <a href="#921" id="921">921</a>
 <a href="#922" id="922">922</a>
 <a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
+<a href="#926" id="926">926</a>
+<a href="#927" id="927">927</a>
+<a href="#928" id="928">928</a>
+<a href="#929" id="929">929</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Generated client implementations.
 </span><span class="kw">pub mod </span>oak_functions_client {
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
@@ -1073,9 +1079,9 @@
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
         <span class="doccomment">/// Extends the next lookup data by the given chunk of lookup data. Only
-        /// after the sender calls finishes building the next lookup data, the receiver replaces the
-        /// current lookup data with the next lookup data, and only then chunk is will be served in
-        /// lookups.
+        /// after the sender calls finishes building the next lookup data, the receiver
+        /// replaces the current lookup data with the next lookup data, and only then
+        /// chunk is will be served in lookups.
         ///
         /// method_id: 2
         </span><span class="kw">pub async fn </span>extend_next_lookup_data(
@@ -1109,8 +1115,9 @@
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
-        <span class="doccomment">/// Finishes building the next lookup data with the given chunk of lookup data. The receiver
-        /// replaces the current lookup data and the next lookup data will be served in lookups.
+        <span class="doccomment">/// Finishes building the next lookup data with the given chunk of lookup data.
+        /// The receiver replaces the current lookup data and the next lookup data will
+        /// be served in lookups.
         ///
         /// method_id: 3
         </span><span class="kw">pub async fn </span>finish_next_lookup_data(
@@ -1178,7 +1185,8 @@
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
-        <span class="doccomment">/// Streaming version combining `ExtendNextLookupData` and `FinishNextLookupData`.
+        <span class="doccomment">/// Streaming version combining `ExtendNextLookupData` and
+        /// `FinishNextLookupData`.
         ///
         /// This is mainly for use with gRPC, as microRPC doesn&#39;t support streaming.
         ///
@@ -1216,8 +1224,9 @@
         </span>}
         <span class="doccomment">/// Reserves additional capacity for entries in the lookup table.
         ///
-        /// It should be called before `ExtendNextLookupData`/`StreamLookupData` to reduce the
-        /// number of memory allocations, but it&#39;s not mandatory to call this RPC.
+        /// It should be called before `ExtendNextLookupData`/`StreamLookupData` to
+        /// reduce the number of memory allocations, but it&#39;s not mandatory to call
+        /// this RPC.
         ///
         /// method_id: 6
         </span><span class="kw">pub async fn </span>reserve(
@@ -1287,9 +1296,9 @@
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Extends the next lookup data by the given chunk of lookup data. Only
-        /// after the sender calls finishes building the next lookup data, the receiver replaces the
-        /// current lookup data with the next lookup data, and only then chunk is will be served in
-        /// lookups.
+        /// after the sender calls finishes building the next lookup data, the receiver
+        /// replaces the current lookup data with the next lookup data, and only then
+        /// chunk is will be served in lookups.
         ///
         /// method_id: 2
         </span><span class="kw">async fn </span>extend_next_lookup_data(
@@ -1303,8 +1312,9 @@
             &gt;,
             tonic::Status,
         &gt;;
-        <span class="doccomment">/// Finishes building the next lookup data with the given chunk of lookup data. The receiver
-        /// replaces the current lookup data and the next lookup data will be served in lookups.
+        <span class="doccomment">/// Finishes building the next lookup data with the given chunk of lookup data.
+        /// The receiver replaces the current lookup data and the next lookup data will
+        /// be served in lookups.
         ///
         /// method_id: 3
         </span><span class="kw">async fn </span>finish_next_lookup_data(
@@ -1332,7 +1342,8 @@
             &gt;,
             tonic::Status,
         &gt;;
-        <span class="doccomment">/// Streaming version combining `ExtendNextLookupData` and `FinishNextLookupData`.
+        <span class="doccomment">/// Streaming version combining `ExtendNextLookupData` and
+        /// `FinishNextLookupData`.
         ///
         /// This is mainly for use with gRPC, as microRPC doesn&#39;t support streaming.
         ///
@@ -1352,8 +1363,9 @@
         &gt;;
         <span class="doccomment">/// Reserves additional capacity for entries in the lookup table.
         ///
-        /// It should be called before `ExtendNextLookupData`/`StreamLookupData` to reduce the
-        /// number of memory allocations, but it&#39;s not mandatory to call this RPC.
+        /// It should be called before `ExtendNextLookupData`/`StreamLookupData` to
+        /// reduce the number of memory allocations, but it&#39;s not mandatory to call
+        /// this RPC.
         ///
         /// method_id: 6
         </span><span class="kw">async fn </span>reserve(

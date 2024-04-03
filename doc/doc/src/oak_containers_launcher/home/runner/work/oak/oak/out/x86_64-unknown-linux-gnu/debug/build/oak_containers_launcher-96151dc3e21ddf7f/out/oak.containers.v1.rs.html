@@ -446,6 +446,12 @@
 <a href="#446" id="446">446</a>
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetKeyProvisioningRoleResponse {
@@ -494,7 +500,8 @@
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="kw">use </span>tonic::codegen::http::Uri;
-    <span class="doccomment">/// Defines the service exposed by the Hostlib that is used provide the Orchestrator with group keys.
+    <span class="doccomment">/// Defines the service exposed by the Hostlib that is used provide the
+    /// Orchestrator with group keys.
     </span><span class="attr">#[derive(Debug, Clone)]
     </span><span class="kw">pub struct </span>HostlibKeyProvisioningClient&lt;T&gt; {
         inner: tonic::client::Grpc&lt;T&gt;,
@@ -614,8 +621,10 @@
         <span class="doccomment">/// Get enclave group keys to the enclave as part of Key Provisioning.
         /// This method is only called by the Follower Orchestrator.
         ///
-        /// This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
-        /// Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
+        /// This method must be called after
+        /// `oak.containers.Launcher.SendAttestationEvidence`, because Hostlib needs to
+        /// have the Attestation Evidence in order to request group keys from the
+        /// leader.
         </span><span class="kw">pub async fn </span>get_group_keys(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
@@ -669,8 +678,10 @@
         <span class="doccomment">/// Get enclave group keys to the enclave as part of Key Provisioning.
         /// This method is only called by the Follower Orchestrator.
         ///
-        /// This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
-        /// Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
+        /// This method must be called after
+        /// `oak.containers.Launcher.SendAttestationEvidence`, because Hostlib needs to
+        /// have the Attestation Evidence in order to request group keys from the
+        /// leader.
         </span><span class="kw">async fn </span>get_group_keys(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
@@ -679,7 +690,8 @@
             tonic::Status,
         &gt;;
     }
-    <span class="doccomment">/// Defines the service exposed by the Hostlib that is used provide the Orchestrator with group keys.
+    <span class="doccomment">/// Defines the service exposed by the Hostlib that is used provide the
+    /// Orchestrator with group keys.
     </span><span class="attr">#[derive(Debug)]
     </span><span class="kw">pub struct </span>HostlibKeyProvisioningServer&lt;T: HostlibKeyProvisioning&gt; {
         inner: _Inner&lt;T&gt;,

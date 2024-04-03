@@ -274,8 +274,11 @@
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
-/// attestation endorsements provided by the hostlib.
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+</pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
+/// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>EndorsedEvidence {
@@ -362,19 +365,22 @@
             &gt;
             + Send
             + <span class="lifetime">&#39;static</span>;
-        <span class="doccomment">/// Used to send a sequence of messages ensuring that they are all handled by the same server
-        /// instance, by virtue of being multiplexed over a single gRPC stream.
+        <span class="doccomment">/// Used to send a sequence of messages ensuring that they are all handled by
+        /// the same server instance, by virtue of being multiplexed over a single gRPC
+        /// stream.
         ///
-        /// The `RequestWrapper` and `ResponseWrapper` messages are thin wrappers around the underlying
-        /// messages exchanged by client and server, giving it a minimal amount of structure and type
-        /// safety.
+        /// The `RequestWrapper` and `ResponseWrapper` messages are thin wrappers
+        /// around the underlying messages exchanged by client and server, giving it a
+        /// minimal amount of structure and type safety.
         ///
-        /// The expected message sequence starts with the client sending a `GetEndorsedEvidenceRequest`
-        /// message in order to fetch the evidence of the enclave. This method may be handled by the
-        /// untrusted launcher or by the enclave, depending on the server implementation.
+        /// The expected message sequence starts with the client sending a
+        /// `GetEndorsedEvidenceRequest` message in order to fetch the evidence of the
+        /// enclave. This method may be handled by the untrusted launcher or by the
+        /// enclave, depending on the server implementation.
         ///
-        /// Then the client encrypts the payload with the public key contained in the evidence via a hybrid
-        /// encryption protocol, and sends the encrypted payload as part of a `InvokeRequest` message.
+        /// Then the client encrypts the payload with the public key contained in the
+        /// evidence via a hybrid encryption protocol, and sends the encrypted payload
+        /// as part of a `InvokeRequest` message.
         </span><span class="kw">async fn </span>stream(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;tonic::Streaming&lt;<span class="kw">super</span>::RequestWrapper&gt;&gt;,

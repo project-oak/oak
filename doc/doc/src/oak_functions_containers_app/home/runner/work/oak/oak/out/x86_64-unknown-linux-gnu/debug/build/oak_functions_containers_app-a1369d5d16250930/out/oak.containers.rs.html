@@ -393,9 +393,10 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
-/// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
-/// orchestrator.
+<a href="#396" id="396">396</a>
+</pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the
+/// response into smaller pieces to respect proto/gRPC limits. The image needs to
+/// be reassembled in the stage1 or the orchestrator.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetImageResponse {
@@ -421,8 +422,8 @@
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="kw">use </span>tonic::codegen::http::Uri;
-    <span class="doccomment">/// Defines the service exposed by the launcher, that can be invoked by the stage1 and the
-    /// orchestrator.
+    <span class="doccomment">/// Defines the service exposed by the launcher, that can be invoked by the
+    /// stage1 and the orchestrator.
     </span><span class="attr">#[derive(Debug, Clone)]
     </span><span class="kw">pub struct </span>LauncherClient&lt;T&gt; {
         inner: tonic::client::Grpc&lt;T&gt;,
@@ -503,8 +504,8 @@
             <span class="self">self</span>.inner = <span class="self">self</span>.inner.max_encoding_message_size(limit);
             <span class="self">self
         </span>}
-        <span class="doccomment">/// Provides stage1 with the Oak system image (which contains the Linux distribution and the
-        /// orchestrator binary).
+        <span class="doccomment">/// Provides stage1 with the Oak system image (which contains the Linux
+        /// distribution and the orchestrator binary).
         </span><span class="kw">pub async fn </span>get_oak_system_image(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
@@ -588,10 +589,10 @@
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
-        <span class="doccomment">/// Sends Attestation Evidence containing the Attestation Report with corresponding measurements
-        /// and public keys to the Launcher.
-        /// This API is called exactly once after the Attestation Evidence is generated. Calling this API
-        /// a second time will result in an error.
+        <span class="doccomment">/// Sends Attestation Evidence containing the Attestation Report with
+        /// corresponding measurements and public keys to the Launcher. This API is
+        /// called exactly once after the Attestation Evidence is generated. Calling
+        /// this API a second time will result in an error.
         </span><span class="kw">pub async fn </span>send_attestation_evidence(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;,
@@ -616,8 +617,8 @@
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
-        <span class="doccomment">/// Notifies the launcher that the trusted app is ready to serve requests and listening on the
-        /// pre-arranged port (8080).
+        <span class="doccomment">/// Notifies the launcher that the trusted app is ready to serve requests and
+        /// listening on the pre-arranged port (8080).
         </span><span class="kw">pub async fn </span>notify_app_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
@@ -647,7 +648,8 @@
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="kw">use </span>tonic::codegen::http::Uri;
-    <span class="doccomment">/// Defines the service exposed by the orchestrator, that can be invoked by the application.
+    <span class="doccomment">/// Defines the service exposed by the orchestrator, that can be invoked by the
+    /// application.
     </span><span class="attr">#[derive(Debug, Clone)]
     </span><span class="kw">pub struct </span>OrchestratorClient&lt;T&gt; {
         inner: tonic::client::Grpc&lt;T&gt;,
@@ -728,8 +730,8 @@
             <span class="self">self</span>.inner = <span class="self">self</span>.inner.max_encoding_message_size(limit);
             <span class="self">self
         </span>}
-        <span class="doccomment">/// Exposes the previously loaded trusted application config to the application,
-        /// which may choose to retrieve it.
+        <span class="doccomment">/// Exposes the previously loaded trusted application config to the
+        /// application, which may choose to retrieve it.
         </span><span class="kw">pub async fn </span>get_application_config(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
@@ -760,8 +762,8 @@
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
-        <span class="doccomment">/// Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
-        /// pre-arranged port (8080).
+        <span class="doccomment">/// Notifies the orchestrator that the trusted app is ready to serve requests
+        /// and listening on the pre-arranged port (8080).
         </span><span class="kw">pub async fn </span>notify_app_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
