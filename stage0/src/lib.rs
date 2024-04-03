@@ -42,7 +42,7 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
-use crate::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+use crate::{alloc::string::ToString, kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
 mod acpi;
 mod acpi_tables;
@@ -308,11 +308,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
 
+    // TODO(#4981): Remove temporary workaround for command line length limit.
+    let cmdline_max_len = 256;
     let measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
         kernel_sha2_256_digest: kernel_info.measurement,
         cmdline_sha2_256_digest,
-        cmdline: cmdline.clone(),
+        cmdline: if cmdline.len() > cmdline_max_len {
+            cmdline[..cmdline_max_len].to_string()
+        } else {
+            cmdline.clone()
+        },
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
