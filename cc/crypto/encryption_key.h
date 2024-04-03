@@ -29,7 +29,8 @@ namespace oak::crypto {
 
 class EncryptionKeyHandle {
  public:
-  virtual absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
+  virtual absl::StatusOr<std::unique_ptr<RecipientContext>>
+  GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) = 0;
 
   virtual ~EncryptionKeyHandle() = default;

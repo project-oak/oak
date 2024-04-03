@@ -16,10 +16,11 @@
 
 syntax = "proto3";
 
-// This file contains empty proto message stubs to make protoc happy when compiling code that
-// depends on Oak protos that are not available in other repos.
-// The actual implementations are provided in Rust using the `extern_paths` option of
-// tonic: https://docs.rs/tonic-build/0.10.2/tonic_build/struct.Builder.html#method.extern_path
+// This file contains empty proto message stubs to make protoc happy when
+// compiling code that depends on Oak protos that are not available in other
+// repos. The actual implementations are provided in Rust using the
+// `extern_paths` option of tonic:
+// https://docs.rs/tonic-build/0.10.2/tonic_build/struct.Builder.html#method.extern_path
 // See also the `build.rs` file in this crate.
 package oak.crypto.v1;
 

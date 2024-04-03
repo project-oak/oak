@@ -21,7 +21,8 @@ package oak.functions.abi;
 option java_multiple_files = true;
 option java_package = "oak.functions.abi";
 
-// The client can check the configuration report for the configuration of the Oak Functions runtime.
+// The client can check the configuration report for the configuration of the
+// Oak Functions runtime.
 message ConfigurationReport {
   // Hash of the loaded Wasm module.
   bytes wasm_hash = 1;
@@ -29,26 +30,29 @@ message ConfigurationReport {
   ServerPolicy policy = 2;
 }
 
-/// Server-side policy describing limits on the size of the response and response processing time to
-/// avoid side-channel leaks.
+/// Server-side policy describing limits on the size of the response and
+/// response processing time to avoid side-channel leaks.
 message ServerPolicy {
   // A fixed size for responses returned by the trusted runtime.
   //
-  // This size only applies to the body of the Oak Functions response. If the response body
-  // computed by the Wasm module is smaller than this amount, it is padded with additional
-  // data before serialization and inclusion in the HTTP response to the client. If the body is
-  // larger than this amount, the trusted runtime discards the response and instead uses a
-  // response with a body of exactly this size, containing an error message indicating the
-  // policy violation. The body included in the HTTP response sent to the client is the binary
-  // protobuf encoding of the Oak Functions response, and will have a size larger than
-  // `constant_response_size_bytes`. However, this size is still guaranteed to be a constant.
+  // This size only applies to the body of the Oak Functions response. If the
+  // response body computed by the Wasm module is smaller than this amount, it
+  // is padded with additional data before serialization and inclusion in the
+  // HTTP response to the client. If the body is larger than this amount, the
+  // trusted runtime discards the response and instead uses a response with a
+  // body of exactly this size, containing an error message indicating the
+  // policy violation. The body included in the HTTP response sent to the client
+  // is the binary protobuf encoding of the Oak Functions response, and will
+  // have a size larger than `constant_response_size_bytes`. However, this size
+  // is still guaranteed to be a constant.
   uint32 constant_response_size_bytes = 1;
   // A fixed response time, in milliseconds.
   //
-  // Similar to the previous one, but controls the amount of time the function is allowed to run
-  // for. If the function finishes before this time, the response is not sent back until the
-  // time is elapsed. If the function does not finish within this deadline, the trusted runtime
-  // sends a response to the client containing an error message indicating the failure. The size
-  // of this response is equal to the size specified by the previous parameter.
+  // Similar to the previous one, but controls the amount of time the function
+  // is allowed to run for. If the function finishes before this time, the
+  // response is not sent back until the time is elapsed. If the function does
+  // not finish within this deadline, the trusted runtime sends a response to
+  // the client containing an error message indicating the failure. The size of
+  // this response is equal to the size specified by the previous parameter.
   uint32 constant_processing_time_ms = 2;
 }

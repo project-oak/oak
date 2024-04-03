@@ -23,10 +23,10 @@ option java_package = "com.google.micro_rpc";
 
 // A wrapper message representing a request over a transport.
 message RequestWrapper {
-  // The id of the method to invoke. This is usually specified via the IDL that drives the code
-  // generation. In other contexts (e.g. gRPC), IDLs may use the method name as part of the
-  // serialization, but here we prefer an opaque numeric identifier for both conciseness and
-  // stability across renames.
+  // The id of the method to invoke. This is usually specified via the IDL that
+  // drives the code generation. In other contexts (e.g. gRPC), IDLs may use the
+  // method name as part of the serialization, but here we prefer an opaque
+  // numeric identifier for both conciseness and stability across renames.
   uint32 method_id = 1;
   // The bytes of the serialized request.
   bytes body = 2;
@@ -34,7 +34,8 @@ message RequestWrapper {
 
 // A message representing an error status code with associated message.
 //
-// Similar to https://github.com/googleapis/googleapis/blob/master/google/rpc/status.proto.
+// Similar to
+// https://github.com/googleapis/googleapis/blob/master/google/rpc/status.proto.
 message Status {
   // The status code, which should be an enum value of
   // https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto.

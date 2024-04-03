@@ -59,15 +59,17 @@ TEST(StubbyUnaryTransportTest, KeyRetrievedAndInvokeCalledSuccess) {
        ->mutable_encryption_public_key_certificate() = application_key;
 
   EXPECT_CALL(*mock_stub, GetEndorsedEvidence(_, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(evidence_response), Return(grpc::Status::OK)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(evidence_response), Return(grpc::Status::OK)));
 
   GrpcUnaryTransport<MockUnarySessionStub> unary_transport(mock_stub.get());
 
   auto actual_endorsed_evidence = unary_transport.GetEndorsedEvidence();
   ASSERT_TRUE(actual_endorsed_evidence.ok());
-  EXPECT_THAT(
-      actual_endorsed_evidence->evidence().application_keys().encryption_public_key_certificate(),
-      StrEq(application_key));
+  EXPECT_THAT(actual_endorsed_evidence->evidence()
+                  .application_keys()
+                  .encryption_public_key_certificate(),
+              StrEq(application_key));
 
   // Now we test the invoke method.
 
@@ -75,7 +77,8 @@ TEST(StubbyUnaryTransportTest, KeyRetrievedAndInvokeCalledSuccess) {
   AeadEncryptedMessage request_aead_encrypted_message;
   request_aead_encrypted_message.set_ciphertext(request_ciphertext);
   EncryptedRequest encrypted_request;
-  *encrypted_request.mutable_encrypted_message() = request_aead_encrypted_message;
+  *encrypted_request.mutable_encrypted_message() =
+      request_aead_encrypted_message;
   InvokeRequest invoke_request;
   *invoke_request.mutable_encrypted_request() = encrypted_request;
 
@@ -83,12 +86,14 @@ TEST(StubbyUnaryTransportTest, KeyRetrievedAndInvokeCalledSuccess) {
   AeadEncryptedMessage response_aead_encrypted_message;
   response_aead_encrypted_message.set_ciphertext(response_ciphertext);
   EncryptedResponse encrypted_response;
-  *encrypted_response.mutable_encrypted_message() = response_aead_encrypted_message;
+  *encrypted_response.mutable_encrypted_message() =
+      response_aead_encrypted_message;
   InvokeResponse invoke_response;
   *invoke_response.mutable_encrypted_response() = encrypted_response;
 
   EXPECT_CALL(*mock_stub, Invoke(_, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(invoke_response), Return(::grpc::Status::OK)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(invoke_response), Return(::grpc::Status::OK)));
 
   auto actual_encrypted_response = unary_transport.Invoke(encrypted_request);
   ASSERT_TRUE(actual_encrypted_response.ok());

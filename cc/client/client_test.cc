@@ -65,15 +65,19 @@ class OakClientTest : public testing::Test {
   std::shared_ptr<EncryptionKeyProvider> encryption_key_;
 };
 
-// TODO(#3641): Send test remote attestation report to the client and add corresponding tests.
+// TODO(#3641): Send test remote attestation report to the client and add
+// corresponding tests.
 class TestTransport : public TransportWrapper {
  public:
   explicit TestTransport(std::shared_ptr<EncryptionKeyProvider> encryption_key)
       : encryption_key_(encryption_key) {}
 
-  absl::StatusOr<EndorsedEvidence> GetEndorsedEvidence() override { return EndorsedEvidence(); }
+  absl::StatusOr<EndorsedEvidence> GetEndorsedEvidence() override {
+    return EndorsedEvidence();
+  }
 
-  absl::StatusOr<EncryptedResponse> Invoke(const EncryptedRequest& encrypted_request) override {
+  absl::StatusOr<EncryptedResponse> Invoke(
+      const EncryptedRequest& encrypted_request) override {
     ServerEncryptor server_encryptor = ServerEncryptor(*encryption_key_);
     auto decrypted_request = server_encryptor.Decrypt(encrypted_request);
     if (!decrypted_request.ok()) {
@@ -81,9 +85,10 @@ class TestTransport : public TransportWrapper {
     }
 
     if (decrypted_request->plaintext != kTestRequest) {
-      return absl::InvalidArgumentError(std::string("incorrect request, expected: ") +
-                                        std::string(kTestRequest) +
-                                        ", got : " + decrypted_request->plaintext);
+      return absl::InvalidArgumentError(
+          std::string("incorrect request, expected: ") +
+          std::string(kTestRequest) +
+          ", got : " + decrypted_request->plaintext);
     }
 
     return server_encryptor.Encrypt(kTestResponse, kTestAssociatedData);
@@ -95,11 +100,13 @@ class TestTransport : public TransportWrapper {
 
 class TestAttestationVerifier : public AttestationVerifier {
  public:
-  explicit TestAttestationVerifier(std::shared_ptr<EncryptionKeyProvider> encryption_key)
+  explicit TestAttestationVerifier(
+      std::shared_ptr<EncryptionKeyProvider> encryption_key)
       : encryption_key_(encryption_key) {}
 
   absl::StatusOr<::oak::attestation::v1::AttestationResults> Verify(
-      std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
+      std::chrono::time_point<std::chrono::system_clock> now,
+      const Evidence& evidence,
       const Endorsements& endorsements) const override {
     AttestationResults attestation_results;
     attestation_results.set_status(AttestationResults::STATUS_SUCCESS);

@@ -33,10 +33,12 @@ int main(int argc, char* argv[]) {
   absl::InitializeLog();
 
   OrchestratorClient client;
-  absl::StatusOr<std::string> application_config = client.GetApplicationConfig();
+  absl::StatusOr<std::string> application_config =
+      client.GetApplicationConfig();
   QCHECK_OK(application_config);
   TrustedApplicationImpl service(
-      std::make_unique<::oak::containers::sdk::InstanceEncryptionKeyHandle>(), *application_config);
+      std::make_unique<::oak::containers::sdk::InstanceEncryptionKeyHandle>(),
+      *application_config);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());

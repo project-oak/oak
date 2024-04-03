@@ -39,8 +39,8 @@ absl::Status write_response(absl::string_view response);
 // Calls the log Rust function that writes a debug log message if in debug mode.
 absl::Status log(absl::string_view message);
 
-// Calls the lookup_data Rust function that looks up an item from the in-memory key/value lookup
-// store.
+// Calls the lookup_data Rust function that looks up an item from the in-memory
+// key/value lookup store.
 absl::StatusOr<std::string> storage_get_item(absl::string_view key);
 
 }  // namespace oak::functions::sdk

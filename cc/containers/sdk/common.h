@@ -20,7 +20,8 @@
 namespace oak::containers::sdk {
 
 // Unix socket used to connect to the Orchestrator.
-inline static const char kOrchestratorSocket[] = "unix:/oak_utils/orchestrator_ipc";
+inline static const char kOrchestratorSocket[] =
+    "unix:/oak_utils/orchestrator_ipc";
 
 inline static const char kContextAuthority[] = "[::]:0";
 

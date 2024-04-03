@@ -21,10 +21,11 @@ package oak.functions.wasm.v1;
 import "google/protobuf/wrappers.proto";
 import "proto/micro_rpc/options.proto";
 
-// The standard API for Oak Functions, which is exposed to Wasm modules via micro RPC, and wrapped
-// by the Oak Functions SDK.
+// The standard API for Oak Functions, which is exposed to Wasm modules via
+// micro RPC, and wrapped by the Oak Functions SDK.
 //
-// Other forks of Oak Functions may customize the API and provide a different set of methods.
+// Other forks of Oak Functions may customize the API and provide a different
+// set of methods.
 service StdWasmApi {
   // Read a request from the client.
   //
@@ -37,9 +38,9 @@ service StdWasmApi {
 
   // Write a response for the client.
   //
-  // Multiple calls overwrite the response, and only the last value is sent to the client.
-  // If the Oak Functions WebAssembly module never invokes this method, the Oak Functions
-  // runtime sends an empty response to the client.
+  // Multiple calls overwrite the response, and only the last value is sent to
+  // the client. If the Oak Functions WebAssembly module never invokes this
+  // method, the Oak Functions runtime sends an empty response to the client.
   //
   // method_id: 1
   rpc WriteResponse(WriteResponseRequest) returns (WriteResponseResponse) {
@@ -48,8 +49,8 @@ service StdWasmApi {
 
   // Writes a debug log message.
   //
-  // These log messages are considered sensitive, so will only be logged by the runtime if running
-  // in debug mode.
+  // These log messages are considered sensitive, so will only be logged by the
+  // runtime if running in debug mode.
   //
   // method_id: 2
   rpc Log(LogRequest) returns (LogResponse) {
@@ -66,7 +67,8 @@ service StdWasmApi {
   // Looks up multiple items from the in-memory key/value lookup store.
   //
   // method_id: 4
-  rpc LookupDataMulti(LookupDataMultiRequest) returns (LookupDataMultiResponse) {
+  rpc LookupDataMulti(LookupDataMultiRequest)
+      returns (LookupDataMultiResponse) {
     option (.oak.micro_rpc.method_id) = 4;
   }
 
@@ -124,7 +126,7 @@ message TestResponse {
 
 message BytesValue {
   bytes value = 1;
-  // If true, the value was found in the store. This is useful to distinguish between a value that
-  // was not found and a value that was found and is empty.
+  // If true, the value was found in the store. This is useful to distinguish
+  // between a value that was not found and a value that was found and is empty.
   bool found = 2;
 }

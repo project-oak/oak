@@ -24,9 +24,9 @@ import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
 import "proto/session/messages.proto";
 
-// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
-// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
-// orchestrator.
+// As images can be large (hundreds of megabytes), the launcher chunks up the
+// response into smaller pieces to respect proto/gRPC limits. The image needs to
+// be reassembled in the stage1 or the orchestrator.
 message GetImageResponse {
   bytes image_chunk = 1;
 }
@@ -41,39 +41,45 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-// Defines the service exposed by the launcher, that can be invoked by the stage1 and the
-// orchestrator.
+// Defines the service exposed by the launcher, that can be invoked by the
+// stage1 and the orchestrator.
 service Launcher {
-  // Provides stage1 with the Oak system image (which contains the Linux distribution and the
-  // orchestrator binary).
-  rpc GetOakSystemImage(google.protobuf.Empty) returns (stream GetImageResponse) {}
+  // Provides stage1 with the Oak system image (which contains the Linux
+  // distribution and the orchestrator binary).
+  rpc GetOakSystemImage(google.protobuf.Empty)
+      returns (stream GetImageResponse) {}
 
   // Provides orchestrator with the trusted container image.
-  rpc GetContainerBundle(google.protobuf.Empty) returns (stream GetImageResponse) {}
+  rpc GetContainerBundle(google.protobuf.Empty)
+      returns (stream GetImageResponse) {}
 
   // This method is used by the orchestrator to load and measure the trusted
   // application config. The orchestrator will later, separately expose this
   // config to the application.
-  rpc GetApplicationConfig(google.protobuf.Empty) returns (GetApplicationConfigResponse) {}
+  rpc GetApplicationConfig(google.protobuf.Empty)
+      returns (GetApplicationConfigResponse) {}
 
-  // Sends Attestation Evidence containing the Attestation Report with corresponding measurements
-  // and public keys to the Launcher.
-  // This API is called exactly once after the Attestation Evidence is generated. Calling this API
-  // a second time will result in an error.
-  rpc SendAttestationEvidence(SendAttestationEvidenceRequest) returns (google.protobuf.Empty) {}
+  // Sends Attestation Evidence containing the Attestation Report with
+  // corresponding measurements and public keys to the Launcher. This API is
+  // called exactly once after the Attestation Evidence is generated. Calling
+  // this API a second time will result in an error.
+  rpc SendAttestationEvidence(SendAttestationEvidenceRequest)
+      returns (google.protobuf.Empty) {}
 
-  // Notifies the launcher that the trusted app is ready to serve requests and listening on the
-  // pre-arranged port (8080).
+  // Notifies the launcher that the trusted app is ready to serve requests and
+  // listening on the pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
-// Defines the service exposed by the orchestrator, that can be invoked by the application.
+// Defines the service exposed by the orchestrator, that can be invoked by the
+// application.
 service Orchestrator {
-  // Exposes the previously loaded trusted application config to the application,
-  // which may choose to retrieve it.
-  rpc GetApplicationConfig(google.protobuf.Empty) returns (GetApplicationConfigResponse) {}
+  // Exposes the previously loaded trusted application config to the
+  // application, which may choose to retrieve it.
+  rpc GetApplicationConfig(google.protobuf.Empty)
+      returns (GetApplicationConfigResponse) {}
 
-  // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
-  // pre-arranged port (8080).
+  // Notifies the orchestrator that the trusted app is ready to serve requests
+  // and listening on the pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }

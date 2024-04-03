@@ -28,7 +28,8 @@
 
 namespace oak::attestation::verification {
 
-// Verifier implementation that doesn't verify attestation evidence and is used for testing.
+// Verifier implementation that doesn't verify attestation evidence and is used
+// for testing.
 class InsecureAttestationVerifier : public AttestationVerifier {
  public:
   // Doesn't perform attestation verification and just returns a success value.

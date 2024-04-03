@@ -33,9 +33,11 @@ absl::StatusOr<EncryptionKeyProvider> EncryptionKeyProvider::Create() {
   return EncryptionKeyProvider(*key_pair);
 }
 
-absl::StatusOr<std::unique_ptr<RecipientContext>> EncryptionKeyProvider::GenerateRecipientContext(
+absl::StatusOr<std::unique_ptr<RecipientContext>>
+EncryptionKeyProvider::GenerateRecipientContext(
     absl::string_view serialized_encapsulated_public_key) {
-  return SetupBaseRecipient(serialized_encapsulated_public_key, key_pair_, kOakHPKEInfo);
+  return SetupBaseRecipient(serialized_encapsulated_public_key, key_pair_,
+                            kOakHPKEInfo);
 }
 
 }  // namespace oak::crypto

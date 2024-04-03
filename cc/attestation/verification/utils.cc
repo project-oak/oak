@@ -39,12 +39,15 @@ absl::StatusOr<std::string> ExtractPublicKey(absl::string_view certificate) {
   return std::string(public_key.begin(), public_key.end());
 }
 
-absl::StatusOr<std::string> ExtractEncryptionPublicKey(const Evidence& evidence) {
-  return ExtractPublicKey(evidence.application_keys().encryption_public_key_certificate());
+absl::StatusOr<std::string> ExtractEncryptionPublicKey(
+    const Evidence& evidence) {
+  return ExtractPublicKey(
+      evidence.application_keys().encryption_public_key_certificate());
 }
 
 absl::StatusOr<std::string> ExtractSigningPublicKey(const Evidence& evidence) {
-  return ExtractPublicKey(evidence.application_keys().signing_public_key_certificate());
+  return ExtractPublicKey(
+      evidence.application_keys().signing_public_key_certificate());
 }
 
 }  // namespace oak::attestation::verification

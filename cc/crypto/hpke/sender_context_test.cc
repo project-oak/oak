@@ -35,24 +35,29 @@ using ::testing::StrNe;
 class SenderContextTest : public testing::Test {
  protected:
   void SetUp() override {
-    std::vector<uint8_t> public_key_bytes = {11,  107, 5,   176, 4,   145, 171, 193, 163, 81,  105,
-                                             238, 171, 115, 56,  160, 130, 85,  22,  227, 118, 76,
-                                             77,  89,  144, 223, 10,  112, 11,  149, 205, 199};
-    std::string serialized_public_key(public_key_bytes.begin(), public_key_bytes.end());
+    std::vector<uint8_t> public_key_bytes = {
+        11,  107, 5,   176, 4,   145, 171, 193, 163, 81,  105,
+        238, 171, 115, 56,  160, 130, 85,  22,  227, 118, 76,
+        77,  89,  144, 223, 10,  112, 11,  149, 205, 199};
+    std::string serialized_public_key(public_key_bytes.begin(),
+                                      public_key_bytes.end());
     serialized_public_key_ = serialized_public_key;
     info_string_ = "Test HPKE info";
     associated_data_response_ = "Test response associated data";
     associated_data_request_ = "Test request associated data";
-    default_response_key_ = {166, 107, 125, 81, 22,  76,  76,  237, 160, 40,  232,
-                             236, 244, 165, 13, 38,  157, 220, 162, 233, 235, 158,
-                             226, 157, 152, 52, 162, 106, 93,  68,  12,  171};
+    default_response_key_ = {166, 107, 125, 81,  22,  76,  76,  237,
+                             160, 40,  232, 236, 244, 165, 13,  38,
+                             157, 220, 162, 233, 235, 158, 226, 157,
+                             152, 52,  162, 106, 93,  68,  12,  171};
     default_nonce_bytes_ = {1, 242, 45, 144, 96, 26, 190, 43, 156, 154, 2, 69};
   }
 
-  SenderContext CreateTestSenderContext(std::unique_ptr<EVP_AEAD_CTX> response_aead_context) {
-    return SenderContext(std::vector<uint8_t>(),
-                         nullptr,  // Sender request sealing is not tested in this test.
-                         std::move(response_aead_context));
+  SenderContext CreateTestSenderContext(
+      std::unique_ptr<EVP_AEAD_CTX> response_aead_context) {
+    return SenderContext(
+        std::vector<uint8_t>(),
+        nullptr,  // Sender request sealing is not tested in this test.
+        std::move(response_aead_context));
   }
 
   std::string serialized_public_key_;
@@ -67,14 +72,17 @@ TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {
   absl::StatusOr<std::unique_ptr<SenderContext>> sender_context =
       SetupBaseSender(serialized_public_key_, info_string_);
   ASSERT_TRUE(sender_context.ok());
-  std::string encapsulated_public_key1 = (*sender_context)->GetSerializedEncapsulatedPublicKey();
+  std::string encapsulated_public_key1 =
+      (*sender_context)->GetSerializedEncapsulatedPublicKey();
   auto sender_context2 = SetupBaseSender(serialized_public_key_, info_string_);
   ASSERT_TRUE(sender_context2.ok());
-  std::string encapsulated_public_key2 = (*sender_context2)->GetSerializedEncapsulatedPublicKey();
+  std::string encapsulated_public_key2 =
+      (*sender_context2)->GetSerializedEncapsulatedPublicKey();
   EXPECT_THAT(encapsulated_public_key1, StrNe(encapsulated_public_key2));
 }
 
-TEST_F(SenderContextTest, SetupBaseSenderReturnsInvalidArgumentErrorForEmptyKey) {
+TEST_F(SenderContextTest,
+       SetupBaseSenderReturnsInvalidArgumentErrorForEmptyKey) {
   std::string empty_public_key = "";
   absl::StatusOr<std::unique_ptr<SenderContext>> sender_context =
       SetupBaseSender(empty_public_key, info_string_);
@@ -110,11 +118,13 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
       /* tag_len= */ 0));
 
   // Configure sender context.
-  SenderContext sender_context = CreateTestSenderContext(std::move(response_aead_context_receive));
+  SenderContext sender_context =
+      CreateTestSenderContext(std::move(response_aead_context_receive));
 
   // Generate encrypted message.
   std::string plaintext_message = "Hello World";
-  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(), plaintext_message.end());
+  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
+                                       plaintext_message.end());
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
@@ -122,7 +132,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
       /* key_len= */ default_response_key_.size(),
       /* tag_len= */ 0));
 
-  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() + EVP_HPKE_MAX_OVERHEAD);
+  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() +
+                                        EVP_HPKE_MAX_OVERHEAD);
   size_t ciphertext_size;
   ASSERT_TRUE(EVP_AEAD_CTX_seal(
       /* ctx= */ response_aead_context_send.get(),
@@ -139,8 +150,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Successfully open encrypted message and get back original plaintext.
-  auto decyphered_message =
-      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(
+      default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_TRUE(decyphered_message.ok());
 
   // Cleanup the lingering context.
@@ -149,7 +160,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
 
 TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   // The second set of nonce bytes are not the same.
-  std::vector<uint8_t> nonce_bytes_diff = {0, 242, 45, 144, 96, 26, 190, 43, 156, 154, 2, 69};
+  std::vector<uint8_t> nonce_bytes_diff = {0,   242, 45,  144, 96, 26,
+                                           190, 43,  156, 154, 2,  69};
 
   std::vector<uint8_t> associated_data_bytes(associated_data_response_.begin(),
                                              associated_data_response_.end());
@@ -163,11 +175,13 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
       /* tag_len= */ 0));
 
   // Configure sender context.
-  SenderContext sender_context = CreateTestSenderContext(std::move(response_aead_context_receive));
+  SenderContext sender_context =
+      CreateTestSenderContext(std::move(response_aead_context_receive));
 
   // Generate encrypted message.
   std::string plaintext_message = "Hello World";
-  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(), plaintext_message.end());
+  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
+                                       plaintext_message.end());
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
@@ -175,7 +189,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
       /* key_len= */ default_response_key_.size(),
       /* tag_len= */ 0));
 
-  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() + EVP_HPKE_MAX_OVERHEAD);
+  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() +
+                                        EVP_HPKE_MAX_OVERHEAD);
   size_t ciphertext_size;
   ASSERT_TRUE(EVP_AEAD_CTX_seal(
       /* ctx= */ response_aead_context_send.get(),
@@ -192,8 +207,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Attempt to open the encrypted message. This should fail.
-  auto decyphered_message =
-      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(
+      default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -201,7 +216,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   EVP_AEAD_CTX_free(response_aead_context_send.release());
 }
 
-TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAligned) {
+TEST_F(SenderContextTest,
+       SenderOpensEncryptedMessageFailureAssociatedDataNotAligned) {
   std::vector<uint8_t> associated_data_bytes(associated_data_response_.begin(),
                                              associated_data_response_.end());
 
@@ -214,11 +230,13 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAli
       /* tag_len= */ 0));
 
   // Configure sender context.
-  SenderContext sender_context = CreateTestSenderContext(std::move(response_aead_context_receive));
+  SenderContext sender_context =
+      CreateTestSenderContext(std::move(response_aead_context_receive));
 
   // Generate encrypted message.
   std::string plaintext_message = "Hello World";
-  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(), plaintext_message.end());
+  std::vector<uint8_t> plaintext_bytes(plaintext_message.begin(),
+                                       plaintext_message.end());
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_send(EVP_AEAD_CTX_new(
       /* aead= */ aead_version,
@@ -226,7 +244,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAli
       /* key_len= */ default_response_key_.size(),
       /* tag_len= */ 0));
 
-  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() + EVP_HPKE_MAX_OVERHEAD);
+  std::vector<uint8_t> ciphertext_bytes(plaintext_bytes.size() +
+                                        EVP_HPKE_MAX_OVERHEAD);
   size_t ciphertext_size;
   ASSERT_TRUE(EVP_AEAD_CTX_seal(
       /* ctx= */ response_aead_context_send.get(),
@@ -242,10 +261,11 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAli
   ciphertext_bytes.resize(ciphertext_size);
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
-  // Attempt to open the encrypted message using different associated data. This should fail.
+  // Attempt to open the encrypted message using different associated data. This
+  // should fail.
   std::string different_associated_data = "Different response associated data";
-  auto decyphered_message =
-      sender_context.Open(default_nonce_bytes_, ciphertext, different_associated_data);
+  auto decyphered_message = sender_context.Open(
+      default_nonce_bytes_, ciphertext, different_associated_data);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -266,14 +286,16 @@ TEST_F(SenderContextTest, SenderOpensEmptyEncryptedMessageFailure) {
       /* tag_len= */ 0));
 
   // Configure sender context.
-  SenderContext sender_context = CreateTestSenderContext(std::move(response_aead_context_receive));
+  SenderContext sender_context =
+      CreateTestSenderContext(std::move(response_aead_context_receive));
 
   // We use an empty ciphertext.
   std::string ciphertext = "";
-  auto decyphered_message =
-      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(
+      default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
-  EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kInvalidArgument);
+  EXPECT_EQ(decyphered_message.status().code(),
+            absl::StatusCode::kInvalidArgument);
 }
 
 }  // namespace

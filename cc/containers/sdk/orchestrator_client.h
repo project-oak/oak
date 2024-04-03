@@ -34,8 +34,8 @@ namespace oak::containers::sdk {
 class OrchestratorClient {
  public:
   OrchestratorClient()
-      : OrchestratorClient(
-            grpc::CreateChannel(kOrchestratorSocket, grpc::InsecureChannelCredentials())) {}
+      : OrchestratorClient(grpc::CreateChannel(
+            kOrchestratorSocket, grpc::InsecureChannelCredentials())) {}
 
   absl::StatusOr<std::string> GetApplicationConfig() const;
   absl::Status NotifyAppReady() const;

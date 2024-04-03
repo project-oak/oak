@@ -52,17 +52,19 @@ int main(int argc, char* argv[]) {
 
   // Create gRPC client stub.
   LOG(INFO) << "connecting to: " << address;
-  std::shared_ptr<Channel> channel = CreateChannel(address, InsecureChannelCredentials());
+  std::shared_ptr<Channel> channel =
+      CreateChannel(address, InsecureChannelCredentials());
   std::shared_ptr<oak::session::v1::StreamingSession::Stub> stub =
       StreamingSession::NewStub(channel);
   ClientContext context;
-  std::unique_ptr<ClientReaderWriter<RequestWrapper, ResponseWrapper>> channel_reader_writer =
-      stub->Stream(&context);
+  std::unique_ptr<ClientReaderWriter<RequestWrapper, ResponseWrapper>>
+      channel_reader_writer = stub->Stream(&context);
 
   // Create Oak Client.
   LOG(INFO) << "creating Oak Client";
   std::unique_ptr<GrpcStreamingTransport> transport =
-      std::make_unique<GrpcStreamingTransport>(std::move(channel_reader_writer));
+      std::make_unique<GrpcStreamingTransport>(
+          std::move(channel_reader_writer));
   InsecureAttestationVerifier verifier = InsecureAttestationVerifier();
   absl::StatusOr<std::unique_ptr<OakClient>> oak_client =
       OakClient::Create(std::move(transport), verifier);

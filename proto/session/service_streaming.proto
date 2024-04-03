@@ -39,18 +39,21 @@ message ResponseWrapper {
 
 // Service definition for streaming communication with an Oak server.
 service StreamingSession {
-  // Used to send a sequence of messages ensuring that they are all handled by the same server
-  // instance, by virtue of being multiplexed over a single gRPC stream.
+  // Used to send a sequence of messages ensuring that they are all handled by
+  // the same server instance, by virtue of being multiplexed over a single gRPC
+  // stream.
   //
-  // The `RequestWrapper` and `ResponseWrapper` messages are thin wrappers around the underlying
-  // messages exchanged by client and server, giving it a minimal amount of structure and type
-  // safety.
+  // The `RequestWrapper` and `ResponseWrapper` messages are thin wrappers
+  // around the underlying messages exchanged by client and server, giving it a
+  // minimal amount of structure and type safety.
   //
-  // The expected message sequence starts with the client sending a `GetEndorsedEvidenceRequest`
-  // message in order to fetch the evidence of the enclave. This method may be handled by the
-  // untrusted launcher or by the enclave, depending on the server implementation.
+  // The expected message sequence starts with the client sending a
+  // `GetEndorsedEvidenceRequest` message in order to fetch the evidence of the
+  // enclave. This method may be handled by the untrusted launcher or by the
+  // enclave, depending on the server implementation.
   //
-  // Then the client encrypts the payload with the public key contained in the evidence via a hybrid
-  // encryption protocol, and sends the encrypted payload as part of a `InvokeRequest` message.
+  // Then the client encrypts the payload with the public key contained in the
+  // evidence via a hybrid encryption protocol, and sends the encrypted payload
+  // as part of a `InvokeRequest` message.
   rpc Stream(stream RequestWrapper) returns (stream ResponseWrapper);
 }

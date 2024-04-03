@@ -29,21 +29,23 @@
 
 namespace oak::crypto {
 
-// Encryptor class for encrypting client requests that will be sent to the server and decrypting
-// server responses that are received by the client. Each Encryptor corresponds to a single crypto
-// session between the client and the server.
+// Encryptor class for encrypting client requests that will be sent to the
+// server and decrypting server responses that are received by the client. Each
+// Encryptor corresponds to a single crypto session between the client and the
+// server.
 //
-// Sequence numbers for requests and responses are incremented separately, meaning that there could
-// be multiple responses per request and multiple requests per response.
+// Sequence numbers for requests and responses are incremented separately,
+// meaning that there could be multiple responses per request and multiple
+// requests per response.
 class ClientEncryptor {
  public:
   // Creates a new instance of [`ClientEncryptor`].
-  // The corresponding encryption and decryption keys are generated using the server public key with
-  // Hybrid Public Key Encryption (HPKE).
+  // The corresponding encryption and decryption keys are generated using the
+  // server public key with Hybrid Public Key Encryption (HPKE).
   // <https://www.rfc-editor.org/rfc/rfc9180.html>
   //
-  // `serialized_server_public_key` must be a NIST P-256 SEC1 encoded point public key.
-  // <https://secg.org/sec1-v2.pdf>
+  // `serialized_server_public_key` must be a NIST P-256 SEC1 encoded point
+  // public key. <https://secg.org/sec1-v2.pdf>
   static absl::StatusOr<std::unique_ptr<ClientEncryptor>> Create(
       absl::string_view serialized_server_public_key);
 
@@ -56,14 +58,15 @@ class ClientEncryptor {
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns an [`oak.crypto.EncryptedRequest`] proto message.
-  absl::StatusOr<::oak::crypto::v1::EncryptedRequest> Encrypt(absl::string_view plaintext,
-                                                              absl::string_view associated_data);
+  absl::StatusOr<::oak::crypto::v1::EncryptedRequest> Encrypt(
+      absl::string_view plaintext, absl::string_view associated_data);
 
   // Decrypts a [`EncryptedResponse`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a response message plaintext and associated data.
-  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedResponse encrypted_response);
+  absl::StatusOr<DecryptionResult> Decrypt(
+      oak::crypto::v1::EncryptedResponse encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.

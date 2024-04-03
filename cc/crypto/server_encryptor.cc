@@ -37,7 +37,8 @@ using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 }  // namespace
 
-absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encrypted_request) {
+absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(
+    EncryptedRequest encrypted_request) {
   // Get recipient context.
   if (!recipient_context_) {
     absl::Status status = InitializeRecipientContexts(encrypted_request);
@@ -47,20 +48,22 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encry
   }
 
   // Decrypt request.
-  const std::vector<uint8_t> nonce(encrypted_request.encrypted_message().nonce().begin(),
-                                   encrypted_request.encrypted_message().nonce().end());
-  absl::StatusOr<std::string> plaintext =
-      recipient_context_->Open(nonce, encrypted_request.encrypted_message().ciphertext(),
-                               encrypted_request.encrypted_message().associated_data());
+  const std::vector<uint8_t> nonce(
+      encrypted_request.encrypted_message().nonce().begin(),
+      encrypted_request.encrypted_message().nonce().end());
+  absl::StatusOr<std::string> plaintext = recipient_context_->Open(
+      nonce, encrypted_request.encrypted_message().ciphertext(),
+      encrypted_request.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
   }
 
-  return DecryptionResult{*plaintext, encrypted_request.encrypted_message().associated_data()};
+  return DecryptionResult{
+      *plaintext, encrypted_request.encrypted_message().associated_data()};
 }
 
-absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view plaintext,
-                                                           absl::string_view associated_data) {
+absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(
+    absl::string_view plaintext, absl::string_view associated_data) {
   // Get recipient context.
   if (!recipient_context_) {
     return absl::InternalError("server encryptor is not initialized");
@@ -81,23 +84,29 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
   EncryptedResponse encrypted_response;
   *encrypted_response.mutable_encrypted_message()->mutable_nonce() =
       std::string(nonce->begin(), nonce->end());
-  *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
-  *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
+  *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() =
+      *ciphertext;
+  *encrypted_response.mutable_encrypted_message()->mutable_associated_data() =
+      associated_data;
 
   return encrypted_response;
 }
 
-absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest& request) {
+absl::Status ServerEncryptor::InitializeRecipientContexts(
+    const EncryptedRequest& request) {
   // Get serialized encapsulated public key.
   if (!request.has_serialized_encapsulated_public_key()) {
     return absl::InvalidArgumentError(
-        "serialized encapsulated public key is not present in the initial request message");
+        "serialized encapsulated public key is not present in the initial "
+        "request message");
   }
-  std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
+  std::string serialized_encapsulated_public_key =
+      request.serialized_encapsulated_public_key();
 
   // Create recipient contexts.
   absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =
-      encryption_key_handle_.GenerateRecipientContext(serialized_encapsulated_public_key);
+      encryption_key_handle_.GenerateRecipientContext(
+          serialized_encapsulated_public_key);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }

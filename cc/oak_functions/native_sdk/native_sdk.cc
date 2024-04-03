@@ -28,14 +28,16 @@
 namespace oak::functions::sdk {
 
 // These functions are implemented in Rust, but called from C.
-// This code does not take ownership of the raw pointers resulting from the Rust callbacks.
+// This code does not take ownership of the raw pointers resulting from the Rust
+// callbacks.
 
 extern "C" {
 
 const uint8_t* (*read_request_callback)(size_t* len);
 bool (*write_response_callback)(const uint8_t* data, size_t len);
 bool (*log_callback)(const uint8_t* data, size_t len);
-const uint8_t* (*storage_get_item_callback)(const uint8_t* key, size_t key_len, size_t* item_len);
+const uint8_t* (*storage_get_item_callback)(const uint8_t* key, size_t key_len,
+                                            size_t* item_len);
 const uint8_t* (*read_error_callback)(uint32_t* status_code, size_t* len);
 
 }  // extern "C"
@@ -47,8 +49,10 @@ namespace {
 absl::Status read_status() {
   uint32_t status_code;
   size_t len;
-  const char* message = reinterpret_cast<const char*>(read_error_callback(&status_code, &len));
-  return absl::Status(static_cast<absl::StatusCode>(status_code), absl::string_view(message, len));
+  const char* message =
+      reinterpret_cast<const char*>(read_error_callback(&status_code, &len));
+  return absl::Status(static_cast<absl::StatusCode>(status_code),
+                      absl::string_view(message, len));
 }
 
 }  // namespace
@@ -64,15 +68,16 @@ absl::StatusOr<std::string> read_request() {
 }
 
 absl::Status write_response(absl::string_view response) {
-  if (!write_response_callback(reinterpret_cast<const uint8_t*>(response.data()),
-                               response.size())) {
+  if (!write_response_callback(
+          reinterpret_cast<const uint8_t*>(response.data()), response.size())) {
     return read_status();
   }
   return absl::OkStatus();
 }
 
 absl::Status log(absl::string_view message) {
-  if (!log_callback(reinterpret_cast<const uint8_t*>(message.data()), message.size())) {
+  if (!log_callback(reinterpret_cast<const uint8_t*>(message.data()),
+                    message.size())) {
     return read_status();
   }
   return absl::OkStatus();
@@ -80,8 +85,8 @@ absl::Status log(absl::string_view message) {
 
 absl::StatusOr<std::string> storage_get_item(absl::string_view key) {
   size_t item_len;
-  const uint8_t* item = storage_get_item_callback(reinterpret_cast<const uint8_t*>(key.data()),
-                                                  key.size(), &item_len);
+  const uint8_t* item = storage_get_item_callback(
+      reinterpret_cast<const uint8_t*>(key.data()), key.size(), &item_len);
   if (item == nullptr) {
     return read_status();
   }
@@ -93,7 +98,8 @@ extern "C" void register_callbacks(
     const uint8_t* (*read_request_cb)(size_t* len),
     bool (*write_response_cb)(const uint8_t* data, size_t len),
     bool (*log_cb)(const uint8_t* data, size_t len),
-    const uint8_t* (*storage_get_item_cb)(const uint8_t* key, size_t key_len, size_t* item_len),
+    const uint8_t* (*storage_get_item_cb)(const uint8_t* key, size_t key_len,
+                                          size_t* item_len),
     const uint8_t* (*read_error_cb)(uint32_t* status_code, size_t* len)) {
   read_request_callback = read_request_cb;
   write_response_callback = write_response_cb;
