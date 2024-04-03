@@ -520,11 +520,13 @@ fn verify_kernel_layer(
 
     if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
         verify_text(
+            now_utc_millis,
             kernel_raw_cmd_line.as_str(),
             reference_values
                 .kernel_cmd_line_text
                 .as_ref()
                 .context("no kernel command line text reference values")?,
+            endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
         )
         .context("kernel command line failed verification")?;
     } else {
@@ -761,10 +763,33 @@ fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Resul
     }
 }
 
-fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()> {
+fn verify_text(
+    now_utc_millis: i64,
+    actual: &str,
+    expected: &TextReferenceValue,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+) -> anyhow::Result<()> {
     match expected.r#type.as_ref() {
         Some(text_reference_value::Type::Skip(_)) => Ok(()),
-        Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
+        Some(text_reference_value::Type::Endorsement(public_keys)) => {
+            let endorsement =
+                endorsement.context("matching endorsement not found for text reference value")?;
+            verify_binary_endorsement(
+                now_utc_millis,
+                &endorsement.endorsement,
+                &endorsement.endorsement_signature,
+                &endorsement.rekor_log_entry,
+                &public_keys.endorser_public_key,
+                &public_keys.rekor_public_key,
+            )?;
+            // Compare the actual command line against the one inlined in the endorsement.
+            let regex = String::from_utf8(endorsement.subject.clone())
+                .expect("endorsement subject is not utf8");
+            verify_regex(actual, &regex).context("regex from endorsement does not match")
+        }
+        Some(text_reference_value::Type::Regex(regex)) => {
+            verify_regex(actual, &regex.value).context("regex from reference values does not match")
+        }
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
             anyhow::ensure!(!string_literals.value.is_empty());
             for sl in string_literals.value.iter() {
@@ -781,11 +806,8 @@ fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()
 }
 
 #[cfg(feature = "regex")]
-fn verify_regex(
-    actual: &str,
-    regex: &oak_proto_rust::oak::attestation::v1::Regex,
-) -> anyhow::Result<()> {
-    let re = Regex::new(regex.value.as_str())
+fn verify_regex(actual: &str, regex: &str) -> anyhow::Result<()> {
+    let re = Regex::new(regex)
         .map_err(|msg| anyhow::anyhow!("couldn't parse regex in the reference value: {msg}"))?;
     Ok(anyhow::ensure!(
         re.is_match(actual),
@@ -794,10 +816,7 @@ fn verify_regex(
 }
 
 #[cfg(not(feature = "regex"))]
-fn verify_regex(
-    _actual: &str,
-    _regex: &oak_proto_rust::oak::attestation::v1::Regex,
-) -> anyhow::Result<()> {
+fn verify_regex(_actual: &str, _regex: &str) -> anyhow::Result<()> {
     Err(anyhow::anyhow!("verification of regex values not supported"))
 }
 
