@@ -911,6 +911,11 @@
 <a href="#911" id="911">911</a>
 <a href="#912" id="912">912</a>
 <a href="#913" id="913">913</a>
+<a href="#914" id="914">914</a>
+<a href="#915" id="915">915</a>
+<a href="#916" id="916">916</a>
+<a href="#917" id="917">917</a>
+<a href="#918" id="918">918</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1334,8 +1339,8 @@
     <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>value: ::prost::alloc::string::String,
 }
-<span class="doccomment">/// A match in at least onevalue is considered a success. At least one value must
-/// be specified, otherwise verification fails.
+<span class="doccomment">/// A match in at least one value is considered a success. At least one value
+/// must be specified, otherwise verification fails.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>StringLiterals {
@@ -1359,10 +1364,12 @@
         </span>Regex(<span class="kw">super</span>::Regex),
     }
 }
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+<span class="doccomment">/// Reference value to match text via endorsement, or directly via constants
+/// or a regular expression.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>TextReferenceValue {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;text_reference_value::Type&quot;</span>, tags = <span class="string">&quot;1, 2, 3&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">&quot;text_reference_value::Type&quot;</span>, tags = <span class="string">&quot;1, 4, 2, 3&quot;</span>)]
     </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;text_reference_value::Type&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `TextReferenceValue`.
@@ -1372,6 +1379,8 @@
     </span><span class="kw">pub enum </span>Type {
         <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
         </span>Skip(<span class="kw">super</span>::SkipVerification),
+        <span class="attr">#[prost(message, tag = <span class="string">&quot;4&quot;</span>)]
+        </span>Endorsement(<span class="kw">super</span>::EndorsementReferenceValue),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>Regex(<span class="kw">super</span>::Regex),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
@@ -1428,7 +1437,8 @@
     <span class="doccomment">/// Verifies the kernel based on endorsement.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;KernelBinaryReferenceValue&gt;,
-    <span class="doccomment">/// Validates the kernel command-line using either a string literal or a regex.
+    <span class="doccomment">/// Verifies the kernel command line, i.e. the parameters passed to the
+    /// kernel on boot.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;9&quot;</span>)]
     </span><span class="kw">pub </span>kernel_cmd_line_text: ::core::option::Option&lt;TextReferenceValue&gt;,
     <span class="doccomment">/// Fields are deprecated and kept only for backwards compatibility. They are

@@ -1082,6 +1082,25 @@
 <a href="#1082" id="1082">1082</a>
 <a href="#1083" id="1083">1083</a>
 <a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1604,11 +1623,13 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
         verify_text(
+            now_utc_millis,
             kernel_raw_cmd_line.as_str(),
             reference_values
                 .kernel_cmd_line_text
                 .as_ref()
                 .context(<span class="string">&quot;no kernel command line text reference values&quot;</span>)<span class="question-mark">?</span>,
+            endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
         )
         .context(<span class="string">&quot;kernel command line failed verification&quot;</span>)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
@@ -1845,10 +1866,33 @@
     }
 }
 
-<span class="kw">fn </span>verify_text(actual: <span class="kw-2">&amp;</span>str, expected: <span class="kw-2">&amp;</span>TextReferenceValue) -&gt; anyhow::Result&lt;()&gt; {
+<span class="kw">fn </span>verify_text(
+    now_utc_millis: i64,
+    actual: <span class="kw-2">&amp;</span>str,
+    expected: <span class="kw-2">&amp;</span>TextReferenceValue,
+    endorsement: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TransparentReleaseEndorsement&gt;,
+) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>expected.r#type.as_ref() {
         <span class="prelude-val">Some</span>(text_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
-        <span class="prelude-val">Some</span>(text_reference_value::Type::Regex(regex)) =&gt; verify_regex(actual, regex),
+        <span class="prelude-val">Some</span>(text_reference_value::Type::Endorsement(public_keys)) =&gt; {
+            <span class="kw">let </span>endorsement =
+                endorsement.context(<span class="string">&quot;matching endorsement not found for text reference value&quot;</span>)<span class="question-mark">?</span>;
+            verify_binary_endorsement(
+                now_utc_millis,
+                <span class="kw-2">&amp;</span>endorsement.endorsement,
+                <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
+                <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
+                <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
+                <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+            )<span class="question-mark">?</span>;
+            <span class="comment">// Compare the actual command line against the one inlined in the endorsement.
+            </span><span class="kw">let </span>regex = String::from_utf8(endorsement.subject.clone())
+                .expect(<span class="string">&quot;endorsement subject is not utf8&quot;</span>);
+            verify_regex(actual, <span class="kw-2">&amp;</span>regex).context(<span class="string">&quot;regex from endorsement does not match&quot;</span>)
+        }
+        <span class="prelude-val">Some</span>(text_reference_value::Type::Regex(regex)) =&gt; {
+            verify_regex(actual, <span class="kw-2">&amp;</span>regex.value).context(<span class="string">&quot;regex from reference values does not match&quot;</span>)
+        }
         <span class="prelude-val">Some</span>(text_reference_value::Type::StringLiterals(string_literals)) =&gt; {
             <span class="macro">anyhow::ensure!</span>(!string_literals.value.is_empty());
             <span class="kw">for </span>sl <span class="kw">in </span>string_literals.value.iter() {
@@ -1865,11 +1909,8 @@
 }
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;regex&quot;</span>)]
-</span><span class="kw">fn </span>verify_regex(
-    actual: <span class="kw-2">&amp;</span>str,
-    regex: <span class="kw-2">&amp;</span>oak_proto_rust::oak::attestation::v1::Regex,
-) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>re = Regex::new(regex.value.as_str())
+</span><span class="kw">fn </span>verify_regex(actual: <span class="kw-2">&amp;</span>str, regex: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>re = Regex::new(regex)
         .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse regex in the reference value: {msg}&quot;</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="macro">anyhow::ensure!</span>(
         re.is_match(actual),
@@ -1878,10 +1919,7 @@
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;regex&quot;</span>))]
-</span><span class="kw">fn </span>verify_regex(
-    _actual: <span class="kw-2">&amp;</span>str,
-    _regex: <span class="kw-2">&amp;</span>oak_proto_rust::oak::attestation::v1::Regex,
-) -&gt; anyhow::Result&lt;()&gt; {
+</span><span class="kw">fn </span>verify_regex(_actual: <span class="kw-2">&amp;</span>str, _regex: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;()&gt; {
     <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;verification of regex values not supported&quot;</span>))
 }
 
