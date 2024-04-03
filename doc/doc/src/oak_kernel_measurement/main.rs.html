@@ -114,6 +114,18 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -145,6 +157,10 @@
 </span><span class="kw">struct </span>Cli {
     <span class="attr">#[arg(long, help = <span class="string">&quot;The location of the kernel bzImage file&quot;</span>)]
     </span>kernel: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    <span class="attr">#[arg(long, help = <span class="string">&quot;The location of output the extracted kernel setup data file to&quot;</span>)]
+    </span>kernel_setup_data_output: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    <span class="attr">#[arg(long, help = <span class="string">&quot;The location of output the extracted kernel image file to&quot;</span>)]
+    </span>kernel_image_output: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 }
 
 <span class="kw">impl </span>Cli {
@@ -166,6 +182,14 @@
     <span class="kw">let </span><span class="kw-2">mut </span>setup_hasher = Sha256::new();
     setup_hasher.update(<span class="kw-2">&amp;</span>kernel_info.setup_data);
     <span class="macro">println!</span>(<span class="string">&quot;Kernel Setup Data Measurement: sha2-256:{}&quot;</span>, hex::encode(setup_hasher.finalize()));
+
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = cli.kernel_setup_data_output {
+        std::fs::write(path, kernel_info.setup_data).context(<span class="string">&quot;couldn&#39;t write kernel setup data&quot;</span>)<span class="question-mark">?</span>;
+    }
+
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = cli.kernel_image_output {
+        std::fs::write(path, kernel_info.kernel_image).context(<span class="string">&quot;couldn&#39;t write kernel image&quot;</span>)<span class="question-mark">?</span>;
+    }
 
     <span class="prelude-val">Ok</span>(())
 }
