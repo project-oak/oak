@@ -578,6 +578,65 @@
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
 <a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -619,8 +678,9 @@
 <span class="kw">use </span>x86_64::{
     instructions::tlb,
     structures::paging::{
-        frame::PhysFrameRange, page::AddressNotAligned, Page, PageSize, PageTable, PageTableFlags,
-        PhysFrame, Size1GiB, Size2MiB, Size4KiB,
+        frame::PhysFrameRange,
+        page::{AddressNotAligned, NotGiantPageSize},
+        Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -863,7 +923,7 @@
     }
 }
 
-<span class="kw">fn </span>pvalidate_range&lt;S: PageSize + ValidatablePageSize, T: PageSize, F&gt;(
+<span class="kw">fn </span>pvalidate_range&lt;S: NotGiantPageSize + ValidatablePageSize, T: PageSize, F&gt;(
     range: <span class="kw-2">&amp;</span>PhysFrameRange&lt;S&gt;,
     memory: <span class="kw-2">&amp;mut </span>MappedPage&lt;T&gt;,
     encrypted: u64,
@@ -1034,6 +1094,26 @@
     }
 }
 
+<span class="kw">trait </span>PageStateChange {
+    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+}
+
+<span class="kw">impl</span>&lt;S: NotGiantPageSize&gt; PageStateChange <span class="kw">for </span>PhysFrameRange&lt;S&gt; {
+    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="comment">// Future optimization: do this operation in batches of 253 frames (that&#39;s how
+        // many can fit in one PageStateChange request) instead of one at a time.
+        </span><span class="kw">for </span>frame <span class="kw">in </span><span class="kw-2">*</span><span class="self">self </span>{
+            GHCB_WRAPPER
+                .get()
+                .expect(<span class="string">&quot;GHCB not initialized&quot;</span>)
+                .lock()
+                .page_state_change(frame, assignment)<span class="question-mark">?</span>;
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
 <span class="doccomment">/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
 /// `RAM`.
 </span><span class="kw">pub fn </span>validate_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], encrypted: u64) {
@@ -1077,28 +1157,66 @@
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let </span>start_address = PhysAddr::new(entry.addr() <span class="kw">as </span>u64);
-        <span class="kw">let </span>limit_address = PhysAddr::new((entry.addr() + entry.size()) <span class="kw">as </span>u64);
+        <span class="kw">let </span>start_address = PhysAddr::new(entry.addr() <span class="kw">as </span>u64).align_up(Size4KiB::SIZE);
+        <span class="kw">let </span>limit_address =
+            PhysAddr::new((entry.addr() + entry.size()) <span class="kw">as </span>u64).align_down(Size4KiB::SIZE);
 
-        <span class="comment">// If the memory boundaries align with 2 MiB, start with that.
-        </span><span class="kw">if </span>start_address.is_aligned(Size2MiB::SIZE) &amp;&amp; limit_address.is_aligned(Size2MiB::SIZE) {
+        <span class="kw">if </span>start_address &gt; limit_address {
+            <span class="macro">log::error!</span>(
+                <span class="string">&quot;nonsensical entry in E820 table: [{}, {})&quot;</span>,
+                entry.addr(),
+                entry.addr() + entry.size()
+            );
+            <span class="kw">continue</span>;
+        }
+
+        <span class="comment">// Attempt to validate as many pages as possible using 2 MiB pages (aka
+        // hugepages).
+        </span><span class="kw">let </span>hugepage_start = start_address.align_up(Size2MiB::SIZE);
+        <span class="kw">let </span>hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
+
+        <span class="comment">// If start_address == hugepage_start, we&#39;re aligned with 2M address boundary.
+        // Otherwise, we need to process any 4K pages before the alignment.
+        // Note that limit_address may be less than hugepage_start, which means that the
+        // E820 entry was less than 2M in size and didn&#39;t cross a 2M boundary.
+        </span><span class="kw">if </span>hugepage_start &gt; start_address {
+            <span class="kw">let </span>limit = core::cmp::min(hugepage_start, limit_address);
+            <span class="comment">// We know the addresses are aligned to at least 4K, so the unwraps are safe.
+            </span><span class="kw">let </span>range = PhysFrame::&lt;Size4KiB&gt;::range(
+                PhysFrame::from_start_address(start_address).unwrap(),
+                PhysFrame::from_start_address(limit).unwrap(),
+            );
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">&quot;failed to validate memory&quot;</span>);
+        }
+
+        <span class="comment">// If hugepage_limit &gt; hugepage_start, we&#39;ve got some contiguous 2M chunks that
+        // we can process as hugepages.
+        </span><span class="kw">if </span>hugepage_limit &gt; hugepage_start {
             <span class="comment">// These unwraps can&#39;t fail as we&#39;ve made sure that the addresses are 2
             // MiB-aligned.
             </span><span class="kw">let </span>range = PhysFrame::&lt;Size2MiB&gt;::range(
-                PhysFrame::from_start_address(start_address).unwrap(),
+                PhysFrame::from_start_address(hugepage_start).unwrap(),
+                PhysFrame::from_start_address(hugepage_limit).unwrap(),
+            );
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range
+                .pvalidate(<span class="kw-2">&amp;mut </span>validation_pd, <span class="kw-2">&amp;mut </span>validation_pt, encrypted)
+                .expect(<span class="string">&quot;failed to validate memory&quot;</span>);
+        }
+
+        <span class="comment">// And finally, we may have some trailing 4K pages in [hugepage_limit,
+        // limit_address) that we need to process.
+        </span><span class="kw">if </span>limit_address &gt; hugepage_limit {
+            <span class="kw">let </span>start = core::cmp::max(start_address, hugepage_limit);
+            <span class="comment">// We know the addresses are aligned to at least 4K, so the unwraps are safe.
+            </span><span class="kw">let </span>range = PhysFrame::&lt;Size4KiB&gt;::range(
+                PhysFrame::from_start_address(start).unwrap(),
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pd, <span class="kw-2">&amp;mut </span>validation_pt, encrypted)
-        } <span class="kw">else </span>{
-            <span class="comment">// No such luck, fail over to 4K pages.
-            // The unwraps can&#39;t fail as we make sure that the addresses are 4 KiB-aligned.
-            </span><span class="kw">let </span>range = PhysFrame::&lt;Size4KiB&gt;::range(
-                PhysFrame::from_start_address(start_address.align_up(Size4KiB::SIZE)).unwrap(),
-                PhysFrame::from_start_address(limit_address.align_down(Size4KiB::SIZE)).unwrap(),
-            );
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted)
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">&quot;failed to validate memory&quot;</span>);
         }
-        .expect(<span class="string">&quot;failed to validate memory&quot;</span>);
     }
 
     page_tables.pd_0[<span class="number">1</span>].set_unused();

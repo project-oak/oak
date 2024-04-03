@@ -307,7 +307,7 @@
 }
 
 <span class="doccomment">/// The size of a memory page.
-</span><span class="attr">#[derive(Debug, FromRepr)]
+</span><span class="attr">#[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>PageSize {
     <span class="doccomment">/// The page is a 4KiB page.
