@@ -29,6 +29,10 @@ const DEFAULT_LINUX_KERNEL: &str = "oak_containers_kernel/target/bzImage";
 struct Cli {
     #[arg(long, help = "The location of the kernel bzImage file")]
     kernel: Option<PathBuf>,
+    #[arg(long, help = "The location of output the extracted kernel setup data file to")]
+    kernel_setup_data_output: Option<PathBuf>,
+    #[arg(long, help = "The location of output the extracted kernel image file to")]
+    kernel_image_output: Option<PathBuf>,
 }
 
 impl Cli {
@@ -50,6 +54,14 @@ fn main() -> anyhow::Result<()> {
     let mut setup_hasher = Sha256::new();
     setup_hasher.update(&kernel_info.setup_data);
     println!("Kernel Setup Data Measurement: sha2-256:{}", hex::encode(setup_hasher.finalize()));
+
+    if let Some(path) = cli.kernel_setup_data_output {
+        std::fs::write(path, kernel_info.setup_data).context("couldn't write kernel setup data")?;
+    }
+
+    if let Some(path) = cli.kernel_image_output {
+        std::fs::write(path, kernel_info.kernel_image).context("couldn't write kernel image")?;
+    }
 
     Ok(())
 }
