@@ -29,8 +29,9 @@
 
 namespace oak::crypto {
 
-// Context for generating encrypted requests to the recipient and for decrypting encrypted responses
-// from the recipient. This is based on bi-directional encryption using AEAD.
+// Context for generating encrypted requests to the recipient and for decrypting
+// encrypted responses from the recipient. This is based on bi-directional
+// encryption using AEAD.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>.
 class SenderContext {
  public:
@@ -48,13 +49,15 @@ class SenderContext {
 
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce, absl::string_view plaintext,
+  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce,
+                                   absl::string_view plaintext,
                                    absl::string_view associated_data);
 
-  // Decrypts response message and validates associated data using AEAD as part of
-  // bidirectional communication.
+  // Decrypts response message and validates associated data using AEAD as part
+  // of bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext,
+  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce,
+                                   absl::string_view ciphertext,
                                    absl::string_view associated_data);
 
   ~SenderContext();
@@ -65,13 +68,13 @@ class SenderContext {
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
 };
 
-// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
-// public key) and creating a sender context.
-// Returns the encapsulated public key, sender request and sender response contexts.
+// Sets up an HPKE sender by generating an ephemeral keypair (and serializing
+// the corresponding public key) and creating a sender context. Returns the
+// encapsulated public key, sender request and sender response contexts.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 //
-// Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
-// <https://secg.org/sec1-v2.pdf>
+// Encapsulated public key is represented as a NIST P-256 SEC1 encoded point
+// public key. <https://secg.org/sec1-v2.pdf>
 absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
     absl::string_view serialized_recipient_public_key, absl::string_view info);
 

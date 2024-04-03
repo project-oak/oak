@@ -35,18 +35,22 @@ message GetGroupKeysResponse {
   oak.key_provisioning.v1.GroupKeys group_keys = 1;
 }
 
-// Defines the service exposed by the Hostlib that is used provide the Orchestrator with group keys.
+// Defines the service exposed by the Hostlib that is used provide the
+// Orchestrator with group keys.
 service HostlibKeyProvisioning {
   // Get the enclave role for Key Provisioning.
   // Could be one of the following:
   //   - Leader that generates group keys and distributes them.
   //   - Follower that requests group keys from the leader.
-  rpc GetKeyProvisioningRole(google.protobuf.Empty) returns (GetKeyProvisioningRoleResponse) {}
+  rpc GetKeyProvisioningRole(google.protobuf.Empty)
+      returns (GetKeyProvisioningRoleResponse) {}
 
   // Get enclave group keys to the enclave as part of Key Provisioning.
   // This method is only called by the Follower Orchestrator.
   //
-  // This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
-  // Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
+  // This method must be called after
+  // `oak.containers.Launcher.SendAttestationEvidence`, because Hostlib needs to
+  // have the Attestation Evidence in order to request group keys from the
+  // leader.
   rpc GetGroupKeys(google.protobuf.Empty) returns (GetGroupKeysResponse) {}
 }

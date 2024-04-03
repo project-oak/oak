@@ -33,15 +33,16 @@ namespace oak::containers::sdk {
 class OrchestratorCryptoClient {
  public:
   OrchestratorCryptoClient()
-      : OrchestratorCryptoClient(
-            grpc::CreateChannel(kOrchestratorSocket, grpc::InsecureChannelCredentials())) {}
+      : OrchestratorCryptoClient(grpc::CreateChannel(
+            kOrchestratorSocket, grpc::InsecureChannelCredentials())) {}
 
   absl::StatusOr<::oak::crypto::v1::SessionKeys> DeriveSessionKeys(
       ::oak::containers::v1::KeyOrigin key_origin,
       absl::string_view serialized_encapsulated_public_key) const;
 
  private:
-  explicit OrchestratorCryptoClient(const std::shared_ptr<grpc::Channel>& channel)
+  explicit OrchestratorCryptoClient(
+      const std::shared_ptr<grpc::Channel>& channel)
       : stub_(::oak::containers::v1::OrchestratorCrypto::NewStub(channel)) {}
 
   std::unique_ptr<::oak::containers::v1::OrchestratorCrypto::Stub> stub_;

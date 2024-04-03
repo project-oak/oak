@@ -31,39 +31,45 @@
 
 namespace oak::crypto {
 
-// Encryptor class for decrypting client requests that are received by the server and encrypting
-// server responses that will be sent back to the client. Each Encryptor corresponds to a single
-// crypto session between the client and the server.
+// Encryptor class for decrypting client requests that are received by the
+// server and encrypting server responses that will be sent back to the client.
+// Each Encryptor corresponds to a single crypto session between the client and
+// the server.
 //
-// Sequence numbers for requests and responses are incremented separately, meaning that there could
-// be multiple responses per request and multiple requests per response.
+// Sequence numbers for requests and responses are incremented separately,
+// meaning that there could be multiple responses per request and multiple
+// requests per response.
 class ServerEncryptor {
  public:
   // Constructor for `ServerEncryptor`.
-  // `EncryptionKeyHandle` argument is a long-term object containing the private key and
-  // should outlive the per-session `ServerEncryptor` object.
+  // `EncryptionKeyHandle` argument is a long-term object containing the private
+  // key and should outlive the per-session `ServerEncryptor` object.
   ServerEncryptor(EncryptionKeyHandle& encryption_key_handle)
-      : encryption_key_handle_(encryption_key_handle), recipient_context_(nullptr){};
+      : encryption_key_handle_(encryption_key_handle),
+        recipient_context_(nullptr){};
 
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a response message plaintext and associated data.
-  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedRequest encrypted_request);
+  absl::StatusOr<DecryptionResult> Decrypt(
+      oak::crypto::v1::EncryptedRequest encrypted_request);
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns an [`oak.crypto.EncryptedResponse`] proto message.
-  // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Encrypt(absl::string_view plaintext,
-                                                               absl::string_view associated_data);
+  // TODO(#3843): Return unserialized proto messages once we have Java
+  // encryption without JNI.
+  absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Encrypt(
+      absl::string_view plaintext, absl::string_view associated_data);
 
  private:
   EncryptionKeyHandle& encryption_key_handle_;
   std::unique_ptr<RecipientContext> recipient_context_;
 
-  absl::Status InitializeRecipientContexts(const oak::crypto::v1::EncryptedRequest& request);
+  absl::Status InitializeRecipientContexts(
+      const oak::crypto::v1::EncryptedRequest& request);
 };
 
 }  // namespace oak::crypto

@@ -37,10 +37,11 @@ namespace oak::crypto {
 constexpr size_t kAeadAlgorithmKeySizeBytes = 32;
 constexpr size_t kAeadNonceSizeBytes = 12;
 
-absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
-                                                         absl::string_view key_context_string) {
+absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
+    EVP_HPKE_CTX* hpke_ctx, absl::string_view key_context_string) {
   std::vector<uint8_t> key(kAeadAlgorithmKeySizeBytes);
-  std::vector<uint8_t> key_context_bytes(key_context_string.begin(), key_context_string.end());
+  std::vector<uint8_t> key_context_bytes(key_context_string.begin(),
+                                         key_context_string.end());
 
   if (!EVP_HPKE_CTX_export(
           /* ctx= */ hpke_ctx,
@@ -72,16 +73,19 @@ absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce() {
   return nonce;
 }
 
-absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,
+absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context,
+                                     std::vector<uint8_t> nonce,
                                      absl::string_view plaintext,
                                      absl::string_view associated_data) {
   std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
   if (plaintext_bytes.empty()) {
     return absl::InvalidArgumentError("No plaintext was provided");
   }
-  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
+  std::vector<uint8_t> associated_data_bytes(associated_data.begin(),
+                                             associated_data.end());
   size_t max_out_len =
-      plaintext_bytes.size() + EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
+      plaintext_bytes.size() +
+      EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
 
   std::vector<uint8_t> ciphertext_bytes(max_out_len);
   size_t ciphertext_bytes_len = 0;
@@ -104,14 +108,16 @@ absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<ui
   return ciphertext;
 }
 
-absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,
+absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context,
+                                     std::vector<uint8_t> nonce,
                                      absl::string_view ciphertext,
                                      absl::string_view associated_data) {
   std::vector<uint8_t> ciphertext_bytes(ciphertext.begin(), ciphertext.end());
   if (ciphertext_bytes.empty()) {
     return absl::InvalidArgumentError("No ciphertext was provided");
   }
-  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
+  std::vector<uint8_t> associated_data_bytes(associated_data.begin(),
+                                             associated_data.end());
 
   // The plaintext should not be longer than the ciphertext.
   std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());

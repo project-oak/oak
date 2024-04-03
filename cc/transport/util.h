@@ -22,8 +22,8 @@
 
 namespace oak::transport {
 
-// Converts gRPC status to an absl status. The gRPC error status code is casted and the error
-// message is copied.
+// Converts gRPC status to an absl status. The gRPC error status code is casted
+// and the error message is copied.
 absl::Status to_absl_status(const grpc::Status& grpc_status);
 
 }  // namespace oak::transport

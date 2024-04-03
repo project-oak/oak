@@ -38,12 +38,16 @@ using oak::session::v1::RequestWrapper;
 using oak::session::v1::ResponseWrapper;
 using oak::transport::GrpcStreamingTransport;
 using ::testing::_;
-using ServerStream = ::grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>;
-using ClientStream = ::grpc::ClientReaderWriterInterface<RequestWrapper, ResponseWrapper>;
+using ServerStream =
+    ::grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>;
+using ClientStream =
+    ::grpc::ClientReaderWriterInterface<RequestWrapper, ResponseWrapper>;
 
-class MockServiceStreaming : public ::oak::session::v1::StreamingSession::Service {
+class MockServiceStreaming
+    : public ::oak::session::v1::StreamingSession::Service {
  public:
-  MOCK_METHOD(grpc::Status, Stream, (grpc::ServerContext*, (ServerStream*)), (override));
+  MOCK_METHOD(grpc::Status, Stream, (grpc::ServerContext*, (ServerStream*)),
+              (override));
 };
 class GrpcStreamingTransportTest : public ::testing::Test {
  protected:
@@ -72,52 +76,64 @@ class GrpcStreamingTransportTest : public ::testing::Test {
 TEST_F(GrpcStreamingTransportTest, InvokePropagatesSendError) {
   GrpcStreamingTransport transport(stub_->Stream(&context_));
 
-  EXPECT_CALL(mock_service_, Stream(_, _)).WillOnce([](grpc::ServerContext*, ServerStream* stream) {
-    return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "fake error");
-  });
+  EXPECT_CALL(mock_service_, Stream(_, _))
+      .WillOnce([](grpc::ServerContext*, ServerStream* stream) {
+        return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
+                            "fake error");
+      });
 
   EncryptedRequest request;
-  absl::StatusOr<oak::crypto::v1::EncryptedResponse> response = transport.Invoke(request);
-  ASSERT_EQ(response.status(), absl::Status(absl::StatusCode::kFailedPrecondition,
-                                            "while writing request: fake error"));
+  absl::StatusOr<oak::crypto::v1::EncryptedResponse> response =
+      transport.Invoke(request);
+  ASSERT_EQ(response.status(),
+            absl::Status(absl::StatusCode::kFailedPrecondition,
+                         "while writing request: fake error"));
 }
 
 TEST_F(GrpcStreamingTransportTest, GetEndorsedEvidencePropagatesSendError) {
   GrpcStreamingTransport transport(stub_->Stream(&context_));
 
-  EXPECT_CALL(mock_service_, Stream(_, _)).WillOnce([](grpc::ServerContext*, ServerStream* stream) {
-    return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "fake error");
-  });
+  EXPECT_CALL(mock_service_, Stream(_, _))
+      .WillOnce([](grpc::ServerContext*, ServerStream* stream) {
+        return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
+                            "fake error");
+      });
 
   absl::StatusOr<EndorsedEvidence> response = transport.GetEndorsedEvidence();
-  ASSERT_EQ(response.status(), absl::Status(absl::StatusCode::kFailedPrecondition,
-                                            "while writing request: fake error"));
+  ASSERT_EQ(response.status(),
+            absl::Status(absl::StatusCode::kFailedPrecondition,
+                         "while writing request: fake error"));
 }
 
 TEST_F(GrpcStreamingTransportTest, InvokePropagatesWeirdError) {
   GrpcStreamingTransport transport(stub_->Stream(&context_));
 
-  EXPECT_CALL(mock_service_, Stream(_, _)).WillOnce([](grpc::ServerContext*, ServerStream* stream) {
-    return grpc::Status::OK;
-  });
+  EXPECT_CALL(mock_service_, Stream(_, _))
+      .WillOnce([](grpc::ServerContext*, ServerStream* stream) {
+        return grpc::Status::OK;
+      });
 
   EncryptedRequest request;
-  absl::StatusOr<oak::crypto::v1::EncryptedResponse> response = transport.Invoke(request);
+  absl::StatusOr<oak::crypto::v1::EncryptedResponse> response =
+      transport.Invoke(request);
 
   ASSERT_EQ(response.status().code(), absl::StatusCode::kInternal);
-  EXPECT_THAT(response.status().message(), testing::StartsWith("failed to read request"));
+  EXPECT_THAT(response.status().message(),
+              testing::StartsWith("failed to read request"));
 }
 
 TEST_F(GrpcStreamingTransportTest, GetEndorsedEvidencePropagatesWeirdError) {
   ::grpc::ClientContext context;
   GrpcStreamingTransport transport(stub_->Stream(&context));
 
-  EXPECT_CALL(mock_service_, Stream(_, _)).WillOnce([](grpc::ServerContext*, ServerStream* stream) {
-    return grpc::Status::OK;
-  });
+  EXPECT_CALL(mock_service_, Stream(_, _))
+      .WillOnce([](grpc::ServerContext*, ServerStream* stream) {
+        return grpc::Status::OK;
+      });
 
   absl::StatusOr<EndorsedEvidence> response = transport.GetEndorsedEvidence();
 
   ASSERT_EQ(response.status().code(), absl::StatusCode::kInternal);
-  EXPECT_THAT(response.status().message(), testing::StartsWith("failed to read request"));
+  EXPECT_THAT(response.status().message(),
+              testing::StartsWith("failed to read request"));
 }

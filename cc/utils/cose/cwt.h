@@ -57,7 +57,8 @@ class Cwt {
     IAT = 6,
     CTI = 7,
 
-    // Public key associated with the subject in the form of a COSE_Key structure.
+    // Public key associated with the subject in the form of a COSE_Key
+    // structure.
     // <https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#cbor-uds-certificates>
     SUBJECT_PUBLIC_KEY_ID = -4670552,
   };
@@ -65,8 +66,8 @@ class Cwt {
   // Parsed CBOR item containing CWT object.
   std::unique_ptr<cppbor::Item> item_;
 
-  Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub, CoseKey&& subject_public_key,
-      std::unique_ptr<cppbor::Item>&& item)
+  Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub,
+      CoseKey&& subject_public_key, std::unique_ptr<cppbor::Item>&& item)
       : iss(iss),
         sub(sub),
         subject_public_key(std::move(subject_public_key)),

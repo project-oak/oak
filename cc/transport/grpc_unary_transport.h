@@ -37,15 +37,18 @@ namespace oak::transport {
 template <typename OakBackendStub>
 class GrpcUnaryTransport : public ::oak::transport::TransportWrapper {
  public:
-  explicit GrpcUnaryTransport(OakBackendStub* const client_stub) : client_stub_(client_stub) {}
+  explicit GrpcUnaryTransport(OakBackendStub* const client_stub)
+      : client_stub_(client_stub) {}
 
   // Collects the enclave's evidence that needs to be verified by the client.
-  absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEndorsedEvidence() override {
+  absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEndorsedEvidence()
+      override {
     ::grpc::ClientContext context;
     ::oak::session::v1::GetEndorsedEvidenceRequest request;
     ::oak::session::v1::GetEndorsedEvidenceResponse response;
 
-    grpc::Status status = client_stub_->GetEndorsedEvidence(&context, request, &response);
+    grpc::Status status =
+        client_stub_->GetEndorsedEvidence(&context, request, &response);
     if (!status.ok()) {
       absl::Status absl_status = to_absl_status(status);
       LOG(ERROR) << "Failed to fetch evidence with status: " << absl_status;

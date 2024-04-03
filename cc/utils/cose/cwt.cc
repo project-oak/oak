@@ -41,15 +41,16 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
   // Deserialize COSE_Sign1 payload.
   auto [item, end, error] = cppbor::parse(cose_sign1->payload->value());
   if (!error.empty()) {
-    return absl::InvalidArgumentError(absl::StrCat("couldn't deserialize CWT: ", error));
+    return absl::InvalidArgumentError(
+        absl::StrCat("couldn't deserialize CWT: ", error));
   }
   if (item->type() != cppbor::MAP) {
     return UnexpectedCborTypeError("CWT", cppbor::MAP, item->type());
   }
   const cppbor::Map* map = item->asMap();
   if (map->size() < 3) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("invalid CWT map size, expected >= 3, found ", map->size()));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "invalid CWT map size, expected >= 3, found ", map->size()));
   }
 
   // Get CWT claims.
@@ -67,7 +68,8 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
   if (sub->type() != cppbor::TSTR) {
     return UnexpectedCborTypeError("sub", cppbor::TSTR, sub->type());
   }
-  const auto& subject_public_key_item = map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
+  const auto& subject_public_key_item =
+      map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
   if (subject_public_key_item == nullptr) {
     return absl::InvalidArgumentError("SUB not found");
   }
@@ -78,17 +80,20 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
 
   // Deserialize COSE_Key.
   absl::StatusOr<CoseKey> subject_public_key =
-      CoseKey::DeserializeHpkePublicKey(subject_public_key_item->asBstr()->value());
+      CoseKey::DeserializeHpkePublicKey(
+          subject_public_key_item->asBstr()->value());
   if (!subject_public_key.ok()) {
     return subject_public_key.status();
   }
 
-  return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key), std::move(item));
+  return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key),
+             std::move(item));
 }
 
 absl::StatusOr<std::vector<uint8_t>> Cwt::SerializeHpkePublicKey(
     const std::vector<uint8_t>& public_key) {
-  auto serialized_public_key_certificate = CoseKey::SerializeHpkePublicKey(public_key);
+  auto serialized_public_key_certificate =
+      CoseKey::SerializeHpkePublicKey(public_key);
   if (!serialized_public_key_certificate.ok()) {
     return serialized_public_key_certificate.status();
   }
@@ -97,7 +102,8 @@ absl::StatusOr<std::vector<uint8_t>> Cwt::SerializeHpkePublicKey(
   // TODO(#4818): Implement assigning ISS and SUB public fields.
   map.add(ISS, cppbor::Tstr(""));
   map.add(SUB, cppbor::Tstr(""));
-  map.add(SUBJECT_PUBLIC_KEY_ID, cppbor::Bstr(*serialized_public_key_certificate));
+  map.add(SUBJECT_PUBLIC_KEY_ID,
+          cppbor::Bstr(*serialized_public_key_certificate));
 
   std::vector<uint8_t> encoded_map(map.encodedSize());
   map.encode(encoded_map.data(), encoded_map.data() + encoded_map.size());

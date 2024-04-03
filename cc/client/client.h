@@ -47,7 +47,8 @@ class OakClient {
 
  private:
   std::unique_ptr<oak::transport::Transport> transport_;
-  // TODO(#4157): Store client encryptor once crypto sessions are implemented on the server.
+  // TODO(#4157): Store client encryptor once crypto sessions are implemented on
+  // the server.
   std::string server_encryption_public_key_;
 
   OakClient(std::unique_ptr<oak::transport::Transport> transport,

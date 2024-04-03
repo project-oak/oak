@@ -32,7 +32,8 @@ class EvidenceProvider {
   virtual ~EvidenceProvider() = default;
 
   // Returns evidence about the trustworthiness of a remote server.
-  virtual absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEndorsedEvidence() = 0;
+  virtual absl::StatusOr<::oak::session::v1::EndorsedEvidence>
+  GetEndorsedEvidence() = 0;
 };
 
 // Abstract class for sending messages to the enclave.

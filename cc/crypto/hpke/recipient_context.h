@@ -49,13 +49,15 @@ class RecipientContext {
 
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext,
+  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce,
+                                   absl::string_view ciphertext,
                                    absl::string_view associated_data);
 
-  // Encrypts response message with associated data using AEAD as part of bidirectional
-  // communication.
+  // Encrypts response message with associated data using AEAD as part of
+  // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce, absl::string_view plaintext,
+  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce,
+                                   absl::string_view plaintext,
                                    absl::string_view associated_data);
 
   ~RecipientContext();
@@ -68,8 +70,8 @@ class RecipientContext {
 // Sets up an HPKE recipient by creating a recipient context.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
-    absl::string_view serialized_encapsulated_public_key, const KeyPair& recipient_key_pair,
-    absl::string_view info);
+    absl::string_view serialized_encapsulated_public_key,
+    const KeyPair& recipient_key_pair, absl::string_view info);
 
 }  // namespace oak::crypto
 

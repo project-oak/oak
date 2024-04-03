@@ -35,9 +35,11 @@ TEST(CoseTest, CoseSign1SerializeDeserializeSuccess) {
   auto serialized_cose_sign1_string =
       std::string(serialized_cose_sign1->begin(), serialized_cose_sign1->end());
 
-  auto deserialized_cose_sign1 = CoseSign1::Deserialize(serialized_cose_sign1_string);
+  auto deserialized_cose_sign1 =
+      CoseSign1::Deserialize(serialized_cose_sign1_string);
   EXPECT_TRUE(deserialized_cose_sign1.ok()) << deserialized_cose_sign1.status();
-  EXPECT_THAT(deserialized_cose_sign1->payload->value(), ElementsAreArray(test_payload));
+  EXPECT_THAT(deserialized_cose_sign1->payload->value(),
+              ElementsAreArray(test_payload));
 }
 
 TEST(CoseTest, CoseKeySerializeDeserializeSuccess) {
@@ -45,9 +47,11 @@ TEST(CoseTest, CoseKeySerializeDeserializeSuccess) {
   auto serialized_cose_key = CoseKey::SerializeHpkePublicKey(test_public_key);
   EXPECT_TRUE(serialized_cose_key.ok()) << serialized_cose_key.status();
 
-  auto deserialized_cose_key = CoseKey::DeserializeHpkePublicKey(*serialized_cose_key);
+  auto deserialized_cose_key =
+      CoseKey::DeserializeHpkePublicKey(*serialized_cose_key);
   EXPECT_TRUE(deserialized_cose_key.ok()) << deserialized_cose_key.status();
-  EXPECT_THAT(deserialized_cose_key->GetPublicKey(), ElementsAreArray(test_public_key));
+  EXPECT_THAT(deserialized_cose_key->GetPublicKey(),
+              ElementsAreArray(test_public_key));
 }
 
 }  // namespace

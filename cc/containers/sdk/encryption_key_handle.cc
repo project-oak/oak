@@ -35,8 +35,9 @@ using ::oak::crypto::v1::SessionKeys;
 absl::StatusOr<std::unique_ptr<RecipientContext>>
 InstanceEncryptionKeyHandle::GenerateRecipientContext(
     absl::string_view serialized_encapsulated_public_key) {
-  absl::StatusOr<SessionKeys> session_keys = orchestrator_crypto_client_.DeriveSessionKeys(
-      KeyOrigin::INSTANCE, serialized_encapsulated_public_key);
+  absl::StatusOr<SessionKeys> session_keys =
+      orchestrator_crypto_client_.DeriveSessionKeys(
+          KeyOrigin::INSTANCE, serialized_encapsulated_public_key);
   if (!session_keys.ok()) {
     return absl::InternalError("couldn't derive session keys");
   }
@@ -47,8 +48,9 @@ InstanceEncryptionKeyHandle::GenerateRecipientContext(
 absl::StatusOr<std::unique_ptr<RecipientContext>>
 GroupEncryptionKeyHandle::GenerateRecipientContext(
     absl::string_view serialized_encapsulated_public_key) {
-  absl::StatusOr<SessionKeys> session_keys = orchestrator_crypto_client_.DeriveSessionKeys(
-      KeyOrigin::GROUP, serialized_encapsulated_public_key);
+  absl::StatusOr<SessionKeys> session_keys =
+      orchestrator_crypto_client_.DeriveSessionKeys(
+          KeyOrigin::GROUP, serialized_encapsulated_public_key);
   if (!session_keys.ok()) {
     return absl::InternalError("couldn't derive session keys");
   }

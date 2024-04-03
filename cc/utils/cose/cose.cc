@@ -35,7 +35,8 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(absl::string_view data) {
   auto [item, end, error] =
       cppbor::parse(reinterpret_cast<const uint8_t*>(data.data()), data.size());
   if (!error.empty()) {
-    return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Sign1: ", error));
+    return absl::InvalidArgumentError(
+        absl::StrCat("couldn't parse COSE_Sign1: ", error));
   }
   if (item->type() != cppbor::ARRAY) {
     return UnexpectedCborTypeError("COSE_Sign1", cppbor::ARRAY, item->type());
@@ -43,16 +44,19 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(absl::string_view data) {
   const cppbor::Array* array = item->asArray();
   if (array->size() != 4) {
     return absl::InvalidArgumentError(
-        absl::StrCat("invalid COSE_Sign1 CBOR array size, expected 4, found ", array->size()));
+        absl::StrCat("invalid COSE_Sign1 CBOR array size, expected 4, found ",
+                     array->size()));
   }
 
   const auto& protected_headers = array->get(0);
   if (protected_headers->type() != cppbor::BSTR) {
-    return UnexpectedCborTypeError("protected_headers", cppbor::BSTR, protected_headers->type());
+    return UnexpectedCborTypeError("protected_headers", cppbor::BSTR,
+                                   protected_headers->type());
   }
   const auto& unprotected_headers = array->get(1);
   if (unprotected_headers->type() != cppbor::MAP) {
-    return UnexpectedCborTypeError("unprotected_headers", cppbor::MAP, unprotected_headers->type());
+    return UnexpectedCborTypeError("unprotected_headers", cppbor::MAP,
+                                   unprotected_headers->type());
   }
   const auto& payload = array->get(2);
   if (payload->type() != cppbor::BSTR) {
@@ -60,14 +64,16 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(absl::string_view data) {
   }
   const auto& signature = array->get(3);
   if (signature->type() != cppbor::BSTR) {
-    return UnexpectedCborTypeError("signature", cppbor::BSTR, signature->type());
+    return UnexpectedCborTypeError("signature", cppbor::BSTR,
+                                   signature->type());
   }
 
-  return CoseSign1(protected_headers->asBstr(), unprotected_headers->asMap(), payload->asBstr(),
-                   signature->asBstr(), std::move(item));
+  return CoseSign1(protected_headers->asBstr(), unprotected_headers->asMap(),
+                   payload->asBstr(), signature->asBstr(), std::move(item));
 }
 
-absl::StatusOr<std::vector<uint8_t>> CoseSign1::Serialize(const std::vector<uint8_t>& payload) {
+absl::StatusOr<std::vector<uint8_t>> CoseSign1::Serialize(
+    const std::vector<uint8_t>& payload) {
   cppbor::Array array;
   // TODO(#4818): Implement headers and signature.
   std::vector<uint8_t> protected_headers;
@@ -78,35 +84,41 @@ absl::StatusOr<std::vector<uint8_t>> CoseSign1::Serialize(const std::vector<uint
   array.add(cppbor::Bstr(signature));
 
   std::vector<uint8_t> encoded_array(array.encodedSize());
-  array.encode(encoded_array.data(), encoded_array.data() + encoded_array.size());
+  array.encode(encoded_array.data(),
+               encoded_array.data() + encoded_array.size());
   return encoded_array;
 }
 
-absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(absl::string_view data) {
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(
+    absl::string_view data) {
   auto [item, end, error] =
       cppbor::parse(reinterpret_cast<const uint8_t*>(data.data()), data.size());
   if (!error.empty()) {
-    return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Key: ", error));
+    return absl::InvalidArgumentError(
+        absl::StrCat("couldn't parse COSE_Key: ", error));
   }
   return DeserializeHpkePublicKey(std::move(item));
 }
 
-absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(const std::vector<uint8_t>& data) {
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(
+    const std::vector<uint8_t>& data) {
   auto [item, end, error] = cppbor::parse(data);
   if (!error.empty()) {
-    return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Key: ", error));
+    return absl::InvalidArgumentError(
+        absl::StrCat("couldn't parse COSE_Key: ", error));
   }
   return DeserializeHpkePublicKey(std::move(item));
 }
 
-absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor::Item>&& item) {
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(
+    std::unique_ptr<cppbor::Item>&& item) {
   if (item->type() != cppbor::MAP) {
     return UnexpectedCborTypeError("COSE_Key", cppbor::MAP, item->type());
   }
   const cppbor::Map* map = item->asMap();
   if (map->size() < 5) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("invalid COSE_Key CBOR map size, expected >= 5, found ", map->size()));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "invalid COSE_Key CBOR map size, expected >= 5, found ", map->size()));
   }
 
   const auto& kty = map->get<int, int>(KTY);
@@ -146,8 +158,8 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor
     return UnexpectedCborTypeError("X", cppbor::BSTR, x->type());
   }
 
-  return CoseKey(kty->asUint(), alg->asNint(), key_ops->asArray(), crv->asUint(), x->asBstr(),
-                 std::move(item));
+  return CoseKey(kty->asUint(), alg->asNint(), key_ops->asArray(),
+                 crv->asUint(), x->asBstr(), std::move(item));
 }
 
 absl::StatusOr<std::vector<uint8_t>> CoseKey::SerializeHpkePublicKey(
@@ -188,11 +200,12 @@ std::string CborTypeToString(cppbor::MajorType cbor_type) {
   }
 }
 
-absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType expected,
+absl::Status UnexpectedCborTypeError(std::string_view name,
+                                     cppbor::MajorType expected,
                                      cppbor::MajorType found) {
-  return absl::InvalidArgumentError(absl::StrCat("expected ", name, " to have ",
-                                                 CborTypeToString(expected), " CBOR type, found ",
-                                                 CborTypeToString(found)));
+  return absl::InvalidArgumentError(
+      absl::StrCat("expected ", name, " to have ", CborTypeToString(expected),
+                   " CBOR type, found ", CborTypeToString(found)));
 }
 
 }  // namespace oak::utils::cose

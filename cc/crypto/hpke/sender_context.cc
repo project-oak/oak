@@ -30,9 +30,9 @@
 
 namespace oak::crypto {
 
-absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& nonce,
-                                                absl::string_view plaintext,
-                                                absl::string_view associated_data) {
+absl::StatusOr<std::string> SenderContext::Seal(
+    const std::vector<uint8_t>& nonce, absl::string_view plaintext,
+    absl::string_view associated_data) {
   absl::StatusOr<std::string> ciphertext =
       AeadSeal(request_aead_context_.get(), nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
@@ -41,11 +41,11 @@ absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& nonc
   return ciphertext;
 }
 
-absl::StatusOr<std::string> SenderContext::Open(const std::vector<uint8_t>& nonce,
-                                                absl::string_view ciphertext,
-                                                absl::string_view associated_data) {
-  absl::StatusOr<std::string> plaintext =
-      AeadOpen(response_aead_context_.get(), nonce, ciphertext, associated_data);
+absl::StatusOr<std::string> SenderContext::Open(
+    const std::vector<uint8_t>& nonce, absl::string_view ciphertext,
+    absl::string_view associated_data) {
+  absl::StatusOr<std::string> plaintext = AeadOpen(
+      response_aead_context_.get(), nonce, ciphertext, associated_data);
   if (!plaintext.ok()) {
     return plaintext.status();
   }
@@ -59,12 +59,15 @@ SenderContext::~SenderContext() {
 
 absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
     absl::string_view serialized_recipient_public_key, absl::string_view info) {
-  // First collect encapsulated public key information and sender request context.
+  // First collect encapsulated public key information and sender request
+  // context.
   KeyInfo encap_public_key_info;
-  encap_public_key_info.key_bytes = std::vector<uint8_t>(EVP_HPKE_MAX_ENC_LENGTH);
+  encap_public_key_info.key_bytes =
+      std::vector<uint8_t>(EVP_HPKE_MAX_ENC_LENGTH);
 
-  std::vector<uint8_t> recipient_public_key_bytes(serialized_recipient_public_key.begin(),
-                                                  serialized_recipient_public_key.end());
+  std::vector<uint8_t> recipient_public_key_bytes(
+      serialized_recipient_public_key.begin(),
+      serialized_recipient_public_key.end());
 
   if (recipient_public_key_bytes.empty()) {
     return absl::InvalidArgumentError("No key was provided");
@@ -94,27 +97,31 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
   encap_public_key_info.key_bytes.resize(encap_public_key_info.key_size);
 
   // Configure sender request context.
-  // This is a deviation from the HPKE RFC, because we are deriving both session request and
-  // response keys from the exporter secret, instead of having a request key be directly derived
-  // from the shared secret. This is required to be able to share session keys between the Kernel
-  // and the Application via RPC.
+  // This is a deviation from the HPKE RFC, because we are deriving both session
+  // request and response keys from the exporter secret, instead of having a
+  // request key be directly derived from the shared secret. This is required to
+  // be able to share session keys between the Kernel and the Application via
+  // RPC.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  auto request_aead_context = GetContext(hpke_sender_context.get(), "request_key");
+  auto request_aead_context =
+      GetContext(hpke_sender_context.get(), "request_key");
   if (!request_aead_context.ok()) {
     return request_aead_context.status();
   }
 
   // Configure sender response context.
-  auto response_aead_context = GetContext(hpke_sender_context.get(), "response_key");
+  auto response_aead_context =
+      GetContext(hpke_sender_context.get(), "response_key");
   if (!response_aead_context.ok()) {
     return response_aead_context.status();
   }
 
   // Create sender context.
-  std::unique_ptr<SenderContext> sender_context = std::make_unique<SenderContext>(
-      /* encapsulated_public_key= */ encap_public_key_info.key_bytes,
-      /* request_aead_context= */ *std::move(request_aead_context),
-      /* response_aead_context= */ *std::move(response_aead_context));
+  std::unique_ptr<SenderContext> sender_context =
+      std::make_unique<SenderContext>(
+          /* encapsulated_public_key= */ encap_public_key_info.key_bytes,
+          /* request_aead_context= */ *std::move(request_aead_context),
+          /* response_aead_context= */ *std::move(response_aead_context));
 
   EVP_HPKE_CTX_free(hpke_sender_context.release());
   return sender_context;
