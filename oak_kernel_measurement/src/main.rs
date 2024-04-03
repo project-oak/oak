@@ -29,9 +29,9 @@ const DEFAULT_LINUX_KERNEL: &str = "oak_containers_kernel/target/bzImage";
 struct Cli {
     #[arg(long, help = "The location of the kernel bzImage file")]
     kernel: Option<PathBuf>,
-    #[arg(long, help = "The location of to output the extracted kernel setup data file to")]
+    #[arg(long, help = "The location of output the extracted kernel setup data file to")]
     kernel_setup_data_output: Option<PathBuf>,
-    #[arg(long, help = "The location of to output the extracted kernel image file to")]
+    #[arg(long, help = "The location of output the extracted kernel image file to")]
     kernel_image_output: Option<PathBuf>,
 }
 
