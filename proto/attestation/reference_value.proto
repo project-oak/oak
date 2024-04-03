@@ -97,8 +97,8 @@ message Regex {
   string value = 1;
 }
 
-// A match in at least onevalue is considered a success. At least one value must
-// be specified, otherwise verification fails.
+// A match in at least one value is considered a success. At least one value
+// must be specified, otherwise verification fails.
 message StringLiterals {
   repeated string value = 1;
 }
@@ -113,9 +113,12 @@ message RegexReferenceValue {
   }
 }
 
+// Reference value to match text via endorsement, or directly via constants
+// or a regular expression.
 message TextReferenceValue {
   oneof type {
     SkipVerification skip = 1;
+    EndorsementReferenceValue endorsement = 4;
     Regex regex = 2;
     StringLiterals string_literals = 3;
   }
@@ -159,7 +162,8 @@ message KernelLayerReferenceValues {
   // Verifies the kernel based on endorsement.
   KernelBinaryReferenceValue kernel = 1;
 
-  // Validates the kernel command-line using either a string literal or a regex.
+  // Verifies the kernel command line, i.e. the parameters passed to the
+  // kernel on boot.
   TextReferenceValue kernel_cmd_line_text = 9;
 
   // Fields are deprecated and kept only for backwards compatibility. They are

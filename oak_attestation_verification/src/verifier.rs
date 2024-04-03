@@ -520,11 +520,13 @@ fn verify_kernel_layer(
 
     if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
         verify_text(
+            now_utc_millis,
             kernel_raw_cmd_line.as_str(),
             reference_values
                 .kernel_cmd_line_text
                 .as_ref()
                 .context("no kernel command line text reference values")?,
+            endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
         )
         .context("kernel command line failed verification")?;
     } else {
@@ -761,9 +763,31 @@ fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Resul
     }
 }
 
-fn verify_text(actual: &str, expected: &TextReferenceValue) -> anyhow::Result<()> {
+fn verify_text(
+    now_utc_millis: i64,
+    actual: &str,
+    expected: &TextReferenceValue,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+) -> anyhow::Result<()> {
     match expected.r#type.as_ref() {
         Some(text_reference_value::Type::Skip(_)) => Ok(()),
+        Some(text_reference_value::Type::Endorsement(public_keys)) => {
+            let endorsement =
+                endorsement.context("matching endorsement not found for text reference value")?;
+            verify_binary_endorsement(
+                now_utc_millis,
+                &endorsement.endorsement,
+                &endorsement.endorsement_signature,
+                &endorsement.rekor_log_entry,
+                &public_keys.endorser_public_key,
+                &public_keys.rekor_public_key,
+            )?;
+            // Compare the actual command line against the one inlined in the endorsement.
+            if actual.as_bytes() != &endorsement.subject {
+                anyhow::bail!("unexpected endorsement usage");
+            }
+            Ok(())
+        }
         Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, regex),
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
             anyhow::ensure!(!string_literals.value.is_empty());
