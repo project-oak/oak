@@ -116,8 +116,7 @@ mutable_interrupt_handler_with_error_code!(
                 let instruction: u16 =
                     unsafe { core::ptr::read_unaligned(stack_frame.rip.as_ptr()) };
                 if instruction != CPUID_INSTRUCTION {
-                    error!("KERNEL PANIC: INSTRUCTION WAS NOT CPUID");
-                    shutdown::shutdown();
+                    panic!("INSTRUCTION WAS NOT CPUID");
                 }
 
                 if let Some(cpuid_page) = CPUID_PAGE.get() {
