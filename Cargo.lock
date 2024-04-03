@@ -64,6 +64,17 @@ dependencies = [
 
 [[package]]
 name = "ahash"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
+dependencies = [
+ "getrandom",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
+name = "ahash"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c3a9648d43b9cd48db467b3f87fdd6e146bcc88ab0180006cef2179fe11d01"
@@ -89,12 +100,6 @@ name = "aliasable"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
-
-[[package]]
-name = "allocator-api2"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
 name = "aml"
@@ -1508,9 +1513,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.24"
+version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
+checksum = "81fe527a889e1532da5c525686d96d4c2e74cdd345badf8dfef9f6b39dd5f5e8"
 dependencies = [
  "bytes",
  "fnv",
@@ -1536,6 +1541,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash 0.7.8",
+]
 
 [[package]]
 name = "hashbrown"
@@ -1543,7 +1551,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
- "ahash",
+ "ahash 0.8.7",
 ]
 
 [[package]]
@@ -1552,8 +1560,7 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
- "ahash",
- "allocator-api2",
+ "ahash 0.8.7",
 ]
 
 [[package]]
@@ -1783,7 +1790,7 @@ version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "321f0f839cd44a4686e9504b0a62b4d69a50b62072144c71c68f5873c167b8d9"
 dependencies = [
- "ahash",
+ "ahash 0.8.7",
  "indexmap 2.1.0",
  "is-terminal",
  "itoa",
@@ -1885,7 +1892,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "http",
  "log",
  "maplit",
@@ -2629,7 +2636,7 @@ name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2774,7 +2781,7 @@ dependencies = [
  "command-fds",
  "env_logger",
  "futures",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2839,7 +2846,7 @@ dependencies = [
  "byteorder",
  "criterion",
  "criterion-macro",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2934,7 +2941,7 @@ dependencies = [
  "bmrng",
  "clap",
  "command-fds",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -3079,7 +3086,7 @@ name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 2.0.48",
+ "syn 1.0.109",
 ]
 
 [[package]]
