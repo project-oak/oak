@@ -785,9 +785,11 @@ fn verify_text(
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .expect("endorsement subject is not utf8");
-            verify_regex(actual, &regex)
+            verify_regex(actual, &regex).context("regex from endorsement does not match")
         }
-        Some(text_reference_value::Type::Regex(regex)) => verify_regex(actual, &regex.value),
+        Some(text_reference_value::Type::Regex(regex)) => {
+            verify_regex(actual, &regex.value).context("regex from reference values does not match")
+        }
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
             anyhow::ensure!(!string_literals.value.is_empty());
             for sl in string_literals.value.iter() {
