@@ -1093,25 +1093,19 @@
     }
 
     <span class="kw">pub fn </span>set_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, jump_table: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
-
-        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
-        ghcb.sw_exit_info_1 = <span class="number">0</span>; <span class="comment">// SET
-        </span>ghcb.sw_exit_info_2 = jump_table.as_u64();
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+            ghcb.sw_exit_info_1 = <span class="number">0</span>; <span class="comment">// SET
+            </span>ghcb.sw_exit_info_2 = jump_table.as_u64();
+        })
     }
 
     <span class="kw">pub fn </span>get_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
-
-        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
-        ghcb.sw_exit_info_1 = <span class="number">1</span>; <span class="comment">// GET
-        </span>ghcb.sw_exit_info_2 = <span class="number">0</span>;
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+            ghcb.sw_exit_info_1 = <span class="number">1</span>; <span class="comment">// GET
+            </span>ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(PhysAddr::new(<span class="self">self</span>.ghcb.as_ref().sw_exit_info_2))
     }
@@ -1122,18 +1116,17 @@
     /// See Section 4.1.5 in &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
     </span><span class="kw">pub fn </span>mmio_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
 
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
-        ghcb.sw_exit_info_1 = source.as_u64();
-        ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
-        <span class="comment">// Use the shared_buffer as the unencrypted guest memory. This is mandated as of
-        // Version 2 of the communication block.
-        </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
+            ghcb.sw_exit_info_1 = source.as_u64();
+            ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
+            <span class="comment">// Use the shared_buffer as the unencrypted guest memory. This is mandated as of
+            // Version 2 of the communication block.
+            </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+        })<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(u32::from_ne_bytes(
             <span class="self">self</span>.ghcb.as_ref().shared_buffer[<span class="number">0</span>..core::mem::size_of::&lt;u32&gt;()]
                 .as_bytes()
@@ -1152,19 +1145,18 @@
         value: u32,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
 
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
-        ghcb.sw_exit_info_1 = destination.as_u64();
-        ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
-        <span class="comment">// Pointer to `shared_buffer` inside the GHCB.
-        </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
-        <span class="comment">// Safety: the shared buffer is bigger than an u32.
-        </span>ghcb.shared_buffer.as_bytes_mut()[<span class="number">0</span>..core::mem::size_of::&lt;u32&gt;()]
-            .copy_from_slice(value.as_bytes());
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
+            ghcb.sw_exit_info_1 = destination.as_u64();
+            ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
+            <span class="comment">// Pointer to `shared_buffer` inside the GHCB.
+            </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+            <span class="comment">// Safety: the shared buffer is bigger than an u32.
+            </span>ghcb.shared_buffer.as_bytes_mut()[<span class="number">0</span>..core::mem::size_of::&lt;u32&gt;()]
+                .copy_from_slice(value.as_bytes());
+        })
     }
 
     <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.
@@ -1173,12 +1165,13 @@
     </span><span class="kw">pub fn </span>io_write_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rax = data <span class="kw">as </span>u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     <span class="doccomment">/// Read an 8 bit number from an IO port via the IOIO protocol.
@@ -1187,12 +1180,12 @@
     </span><span class="kw">pub fn </span>io_read_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u8)
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_ref().rax <span class="kw">as </span>u8)
     }
 
     <span class="doccomment">/// Writes a 16 bit number to an IO port via the IOIO protocol.
@@ -1201,12 +1194,13 @@
     </span><span class="kw">pub fn </span>io_write_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rax = data <span class="kw">as </span>u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     <span class="doccomment">/// Read a 16 bit number from an IO port via the IOIO protocol.
@@ -1215,11 +1209,11 @@
     </span><span class="kw">pub fn </span>io_read_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u16)
     }
 
@@ -1229,12 +1223,13 @@
     </span><span class="kw">pub fn </span>io_write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().rax = data <span class="kw">as </span>u64;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rax = data <span class="kw">as </span>u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     <span class="doccomment">/// Read a 32 bit number from an IO port via the IOIO protocol.
@@ -1243,31 +1238,28 @@
     </span><span class="kw">pub fn </span>io_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = io_port;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.ghcb.as_mut().rax <span class="kw">as </span>u32)
     }
 
     <span class="doccomment">/// Calls a CPUID function for the given input using the GHCB protocol.
     </span><span class="kw">pub fn </span>get_cpuid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: CpuidInput) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidOutput, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
-        ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
-        ghcb.sw_exit_info_1 = <span class="number">0</span>;
-        ghcb.sw_exit_info_2 = <span class="number">0</span>;
-        ghcb.rax = request.eax <span class="kw">as </span>u64;
-        ghcb.rcx = request.ecx <span class="kw">as </span>u64;
-        ghcb.xcr0 = request.xcr0;
-        <span class="comment">// We don&#39;t set the value for XSS , as it is not supported for SEV-ES (v1 of the
-        // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
-        // this function will only be used with SEV-ES.
-        </span>ghcb.valid_bitmap = BASE_VALID_BITMAP
-            .union(ValidBitmap::RAX)
-            .union(ValidBitmap::RCX)
-            .union(ValidBitmap::XCR0);
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
+            ghcb.sw_exit_info_1 = <span class="number">0</span>;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rax = request.eax <span class="kw">as </span>u64;
+            ghcb.rcx = request.ecx <span class="kw">as </span>u64;
+            ghcb.xcr0 = request.xcr0;
+            <span class="comment">// We don&#39;t set the value for XSS , as it is not supported for SEV-ES (v1 of the
+            // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
+            // this function will only be used with SEV-ES.
+            </span>ghcb.valid_bitmap |= ValidBitmap::RAX | ValidBitmap::RCX | ValidBitmap::XCR0;
+        })<span class="question-mark">?</span>;
         <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
         <span class="prelude-val">Ok</span>(CpuidOutput {
             eax: ghcb.rax <span class="kw">as </span>u32,
@@ -1281,33 +1273,32 @@
     ///
     /// See section 4.1.3 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
     </span><span class="kw">pub fn </span>msr_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = <span class="number">1</span>;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().rcx = msr <span class="kw">as </span>u64;
-        <span class="comment">// Split the data into the lower halves of RDX and RAX.
-        </span><span class="self">self</span>.ghcb.as_mut().rax = data &amp; MSR_REGISTER_MASK;
-        <span class="self">self</span>.ghcb.as_mut().rdx = data &gt;&gt; <span class="number">32</span>;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP
-            .union(ValidBitmap::RAX)
-            .union(ValidBitmap::RCX)
-            .union(ValidBitmap::RDX);
-        <span class="self">self</span>.do_vmg_exit()
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+            ghcb.sw_exit_info_1 = <span class="number">1</span>;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rcx = msr <span class="kw">as </span>u64;
+            <span class="comment">// Split the data into the lower halves of RDX and RAX.
+            </span>ghcb.rax = data &amp; MSR_REGISTER_MASK;
+            ghcb.rdx = data &gt;&gt; <span class="number">32</span>;
+            ghcb.valid_bitmap |= ValidBitmap::RAX | ValidBitmap::RCX | ValidBitmap::RDX;
+        })
     }
 
     <span class="doccomment">/// Reads a value from the specified model-specific register.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
     </span><span class="kw">pub fn </span>msr_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
-        <span class="self">self</span>.ghcb.as_mut().rcx = msr <span class="kw">as </span>u64;
-        <span class="self">self</span>.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RCX);
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+            ghcb.sw_exit_info_1 = <span class="number">0</span>;
+            ghcb.sw_exit_info_2 = <span class="number">0</span>;
+            ghcb.rcx = msr <span class="kw">as </span>u64;
+            ghcb.valid_bitmap |= ValidBitmap::RCX;
+        })<span class="question-mark">?</span>;
         <span class="comment">// Reconstruct the value from the lower halves of RAX and RDX.
-        </span><span class="kw">let </span>low = <span class="self">self</span>.ghcb.as_mut().rax &amp; MSR_REGISTER_MASK;
-        <span class="kw">let </span>high = <span class="self">self</span>.ghcb.as_mut().rdx &amp; MSR_REGISTER_MASK;
+        </span><span class="kw">let </span>low = <span class="self">self</span>.ghcb.as_ref().rax &amp; MSR_REGISTER_MASK;
+        <span class="kw">let </span>high = <span class="self">self</span>.ghcb.as_ref().rdx &amp; MSR_REGISTER_MASK;
         <span class="prelude-val">Ok</span>(low | (high &lt;&lt; <span class="number">32</span>))
     }
 
@@ -1321,13 +1312,12 @@
         request_address: PhysAddr,
         response_address: PhysAddr,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
-        ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
-        ghcb.sw_exit_info_1 = request_address.as_u64();
-        ghcb.sw_exit_info_2 = response_address.as_u64();
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
-        <span class="kw">if </span><span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 == <span class="number">0 </span>{
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
+            ghcb.sw_exit_info_1 = request_address.as_u64();
+            ghcb.sw_exit_info_2 = response_address.as_u64();
+        })<span class="question-mark">?</span>;
+        <span class="kw">if </span><span class="self">self</span>.ghcb.as_ref().sw_exit_info_2 == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
@@ -1350,16 +1340,14 @@
             PageStateChangeEntry { page_operation: assignment, gfn: frame, current_page: <span class="number">0 </span>}.into();
 
         <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
-        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_PAGE_STATE_CHANGE;
-        ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
-        page_state_change
-            .write_to(<span class="kw-2">&amp;mut </span>ghcb.shared_buffer)
-            .ok_or(<span class="string">&quot;Unexpected length mismatch between PSC request and GHCB shared buffer&quot;</span>)<span class="question-mark">?</span>;
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
-
-        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="self">self</span>.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_PAGE_STATE_CHANGE;
+            ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
+            page_state_change
+                .write_to(<span class="kw-2">&amp;mut </span>ghcb.shared_buffer)
+                .expect(<span class="string">&quot;Unexpected length mismatch between PSC request and GHCB shared buffer&quot;</span>);
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+        })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_ref();
         <span class="kw">let </span>page_state_change = PageStateChange::read_from(<span class="kw-2">&amp;</span>ghcb.shared_buffer)
@@ -1373,6 +1361,18 @@
         // `PageStateChangeEntry` struct should change to show that a page has been
         // successfully processed, but I always get zeroes there.
         </span><span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Simple wrapper for operations that rely on the GHCB.
+    </span><span class="kw">fn </span>call&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, func: F) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;
+    <span class="kw">where
+        </span>F: FnOnce(<span class="kw-2">&amp;mut </span>Ghcb),
+    {
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        ghcb.reset();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        func(ghcb);
+        <span class="self">self</span>.do_vmg_exit()
     }
 
     <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the
