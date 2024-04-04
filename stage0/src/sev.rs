@@ -587,7 +587,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         .find(|entry| {
             entry.addr() == 0xF_0000
                 && entry.size() == 0x1_0000
-                && entry.entry_type() != Some(E820EntryType::RESERVED)
+                && entry.entry_type() == Some(E820EntryType::RESERVED)
         })
         .unwrap();
 
