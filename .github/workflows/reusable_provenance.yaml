@@ -57,7 +57,6 @@ jobs:
       - name: Print values
         run: |
           echo "${{ steps.artifact-path.outputs.name }}"
-          echo "${{ steps.provenance-name.outputs.name }}"
           echo "${{ steps.builder-digest.outputs.builder-digest }}"
 
   generate_provenance:
@@ -152,7 +151,7 @@ jobs:
           set -o nounset
           set -o xtrace
           set -o pipefail
-          file="${{ needs.get_inputs.outputs.provenance-name }}"
+          file="attestation.intoto"
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             file="${file}.build.slsa"
           fi
@@ -207,4 +206,4 @@ jobs:
       - name: Print provenance digest
         working-directory: downloads
         run: |
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})"
+          echo "$(sha256sum attestation.intoto)"
