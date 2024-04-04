@@ -317,6 +317,10 @@ crates_repository(
     packages = {
         "aes-gcm": crate.spec(
             default_features = False,
+            features = [
+                "aes",
+                "alloc",
+            ],
             version = "*",
         ),
         "anyhow": crate.spec(
@@ -333,22 +337,28 @@ crates_repository(
             version = "0.21",
         ),
         "bitflags": crate.spec(version = "*"),
+        "bytes": crate.spec(version = "*"),
         "ciborium": crate.spec(
             default_features = False,
             version = "*",
-        ),
-        "curve25519-dalek": crate.spec(
-            version = "4.1.1",
         ),
         "coset": crate.spec(
             default_features = False,
             version = "*",
         ),
+        # Pin to 4.1.1 see issue #4952
+        # TODO: #4952 - Remove this pinning.
+        "curve25519-dalek": crate.spec(
+            default_features = False,
+            version = "=4.1.1",
+        ),
         "ecdsa": crate.spec(
             default_features = False,
             features = [
-                "pkcs8",
+                "der",
                 "pem",
+                "pkcs8",
+                "signing",
             ],
             version = "*",
         ),
@@ -375,6 +385,10 @@ crates_repository(
             ],
             version = "*",
         ),
+        "log": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
         "p256": crate.spec(
             default_features = False,
             features = [
@@ -394,9 +408,12 @@ crates_repository(
             version = "0.13.0",
         ),
         "pkcs8": crate.spec(
+            default_features = False,
+            features = ["alloc"],
             version = "*",
         ),
         "primeorder": crate.spec(
+            default_features = False,
             version = "*",
         ),
         "prost": crate.spec(
@@ -459,13 +476,12 @@ crates_repository(
             version = "*",
         ),
         "zeroize": crate.spec(
-            default_features = False,
             features = ["derive"],
             version = "*",
         ),
     },
     rust_version = "nightly/2023-11-15",
-    supported_platform_triples = ["x86_64-unknown-linux-gnu"],  # Non needed with Bazel+Cargo - possibly reading .cargo dir.
+    supported_platform_triples = ["x86_64-unknown-linux-gnu"],
 )
 
 load("@oak_crates_index//:defs.bzl", "crate_repositories")

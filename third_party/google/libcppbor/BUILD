@@ -8,11 +8,11 @@ package(
 
 cc_library(
     name = "libcppbor",
-    hdrs = glob([
-        "include/**/*.h",
-    ]),
     srcs = glob([
         "src/**/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/**/*.h",
     ]),
     include_prefix = "libcppbor",
     deps = [

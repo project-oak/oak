@@ -22,6 +22,7 @@ use oak_crypto::{
     hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
+use oak_proto_rust::oak::crypto::v1::Signature;
 use p256::ecdsa::SigningKey;
 
 use crate::{
@@ -68,7 +69,7 @@ impl MockSigner {
 }
 
 impl Signer for MockSigner {
-    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
         Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
     }
 }

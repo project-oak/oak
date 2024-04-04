@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oak_crypto = { path = "../oak_crypto" }
+oak_proto_rust = { path = "../oak_proto_rust" }
 micro_rpc = { path = "../micro_rpc" }
 prost = "*"
 tonic = "*"

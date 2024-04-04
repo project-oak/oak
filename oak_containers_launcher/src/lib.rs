@@ -24,7 +24,7 @@ pub mod proto {
             }
         }
         pub use oak_attestation::proto::oak::{attestation, session};
-        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_proto_rust::oak::crypto;
         pub mod key_provisioning {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]

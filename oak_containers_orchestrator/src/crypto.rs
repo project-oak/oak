@@ -19,9 +19,9 @@ use anyhow::Context;
 use oak_crypto::{
     encryption_key::{generate_encryption_key_pair, EncryptionKey, EncryptionKeyHandle},
     encryptor::ServerEncryptor,
-    proto::oak::crypto::v1::EncryptedRequest,
 };
 use oak_dice::cert::generate_ecdsa_key_pair;
+use oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 use tonic::{Request, Response};
 
 use crate::proto::oak::{

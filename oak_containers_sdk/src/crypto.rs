@@ -15,10 +15,8 @@
 
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_crypto::{
-    encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext,
-    proto::oak::crypto::v1::SessionKeys,
-};
+use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
+use oak_proto_rust::oak::crypto::v1::{SessionKeys, Signature};
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -70,11 +68,7 @@ impl OrchestratorCryptoClient {
         Ok(context)
     }
 
-    async fn sign(
-        &self,
-        key_origin: KeyOrigin,
-        message: Vec<u8>,
-    ) -> anyhow::Result<oak_crypto::signer::Signature> {
+    async fn sign(&self, key_origin: KeyOrigin, message: Vec<u8>) -> anyhow::Result<Signature> {
         self.inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
@@ -126,7 +120,7 @@ impl AsyncEncryptionKeyHandle for InstanceEncryptionKeyHandle {
 
 #[async_trait(?Send)]
 pub trait Signer {
-    async fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
 }
 
 pub struct InstanceSigner {
@@ -145,7 +139,7 @@ impl InstanceSigner {
 
 #[async_trait(?Send)]
 impl Signer for InstanceSigner {
-    async fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
         self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await
     }
 }

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
@@ -23,12 +22,23 @@ package(
 )
 
 rust_library(
-    name = "oak_proto_rust",
+    name = "oak_attestation",
     srcs = glob(["src/**"]),
     deps = [
         ":build",
         "//micro_rpc",
+        "//oak_crypto",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:ciborium",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:zeroize",
     ],
 )
 
@@ -40,22 +50,11 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
-    crate_features = ["bazel"],
     data = [
-        "//proto:digest_proto",
-        "//proto/attestation:attachment_proto",
         "//proto/attestation:dice_proto",
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
-        "//proto/attestation:expected_value_proto",
-        "//proto/attestation:reference_value_proto",
-        "//proto/attestation:tcb_version_proto",
-        "//proto/attestation:verification_proto",
-        "//proto/crypto:crypto_proto",
-        "//proto/crypto:crypto_rust_prost",
-        "//proto/oak_functions:abi_proto",
-        "//proto/oak_functions:lookup_data_proto",
-        "//proto/oak_functions:testing_proto",
+        "//proto/session:messages_proto",
         "@com_google_protobuf//:protoc",
     ],
     deps = [

@@ -23,7 +23,7 @@ mod proto {
             }
         }
         pub use oak_attestation::proto::oak::attestation;
-        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_proto_rust::oak::crypto;
     }
 }
 

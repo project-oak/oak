@@ -16,6 +16,7 @@ oak_channel = { workspace = true }
 oak_crypto = { workspace = true }
 oak_core = { workspace = true }
 oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 oak_enclave_runtime_support = { default-features = false, workspace = true }
 oak_restricted_kernel_sdk_proc_macro = { workspace = true }
