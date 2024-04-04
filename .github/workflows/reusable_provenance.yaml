@@ -128,53 +128,30 @@ jobs:
         run: ls -R
         working-directory: downloads
 
-      - name: Upload binary to Ent
+      - name: Upload binary, provenance, signed tag to Ent
         id: ent_upload_binary
-        working-directory: downloads
-        run: |
-          set -o errexit
-          set -o nounset
-          set -o xtrace
-          set -o pipefail
-          # The artifact path may be a wildcard that resolves to multiple files.
-          for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
-              if [[ -f "$file" ]]; then
-                  digest="$(ent put --digest-format=human --porcelain "${file}")"
-                  echo "binary_digest=${digest}" >> $GITHUB_OUTPUT
-              fi
-          done
-
-      - name: Upload provenance to Ent
-        id: ent_upload_provenance
         working-directory: downloads
         # The output on any trigger other than "pull_request" has an additional
         # ".sigstore" suffix. However, that suffix appears to be ".build.slsa".
         # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker#workflow-outputs
+        # The artifact path may be a wildcard that resolves to multiple files.
         run: |
           set -o errexit
           set -o nounset
           set -o xtrace
           set -o pipefail
-          file="attestation.intoto"
+          provenance_file="attestation.intoto"
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            file="${file}.build.slsa"
+            provenance_file="${provenance_file}.build.slsa"
           fi
-          digest="$(ent put --digest-format=human --porcelain "${file}")"
-          echo "provenance_digest=${digest}" >> $GITHUB_OUTPUT
-
-      - name: Upload signed tag to Ent
-        run: |
-          set -o errexit
-          set -o nounset
-          set -o xtrace
-          set -o pipefail
-          # The artifact path may be a wildcard that resolves to multiple files.
+          provenance_digest="$(ent put --digest-format=human --porcelain "${provenance_file}")"
           for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
-              if [[ -f "$file" ]]; then
+              if [[ -f "${file}" ]]; then
                   binary_name="$(basename "${file}")"
+                  binary_digest="$(ent put --digest-format=human --porcelain "${file}")"
                   ent tag set --public-key=${{ inputs.ent-public-key }} \
                     --label="artifact_${GITHUB_SHA}_${binary_name}" \
-                    --target=${{ steps.ent_upload_binary.outputs.binary_digest }}
+                    --target="${binary_digest}"
                   ent tag set --public-key=${{ inputs.ent-public-key }} \
                     --label="provenance_${GITHUB_SHA}_${binary_name}" \
                     --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
