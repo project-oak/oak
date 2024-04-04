@@ -136,9 +136,13 @@ jobs:
           set -o nounset
           set -o xtrace
           set -o pipefail
-          file="${{ needs.get_inputs.outputs.artifact-path }}"
-          digest="$(ent put --digest-format=human --porcelain "${file}")"
-          echo "binary_digest=${digest}" >> $GITHUB_OUTPUT
+          # The artifact path may be a wildcard that resolves to multiple files.
+          for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
+              if [[ -f "$file" ]]; then
+                  digest="$(ent put --digest-format=human --porcelain "${file}")"
+                  echo "binary_digest=${digest}" >> $GITHUB_OUTPUT
+              fi
+          done
 
       - name: Upload provenance to Ent
         id: ent_upload_provenance
@@ -164,14 +168,18 @@ jobs:
           set -o nounset
           set -o xtrace
           set -o pipefail
-          file="${{ needs.get_inputs.outputs.artifact-path }}"
-          binary_name="$(basename "${file}")"
-          ent tag set --public-key=${{ inputs.ent-public-key }} \
-            --label="artifact_${GITHUB_SHA}_${binary_name}" \
-            --target=${{ steps.ent_upload_binary.outputs.binary_digest }}
-          ent tag set --public-key=${{ inputs.ent-public-key }} \
-            --label="provenance_${GITHUB_SHA}_${binary_name}" \
-            --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
+          # The artifact path may be a wildcard that resolves to multiple files.
+          for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
+              if [[ -f "$file" ]]; then
+                  binary_name="$(basename "${file}")"
+                  ent tag set --public-key=${{ inputs.ent-public-key }} \
+                    --label="artifact_${GITHUB_SHA}_${binary_name}" \
+                    --target=${{ steps.ent_upload_binary.outputs.binary_digest }}
+                  ent tag set --public-key=${{ inputs.ent-public-key }} \
+                    --label="provenance_${GITHUB_SHA}_${binary_name}" \
+                    --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
+              fi
+          done
 
   # Debug step similar to `upload_provenance`, but runs on pull-request events.
   # Differs from `upload_provenance` in that it does not publish the binary
