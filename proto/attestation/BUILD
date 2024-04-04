@@ -84,6 +84,15 @@ java_proto_library(
 )
 
 proto_library(
+    name = "expected_value_proto",
+    srcs = ["expected_value.proto"],
+    deps = [
+        ":reference_value_proto",
+        "//proto:digest_proto",
+    ],
+)
+
+proto_library(
     name = "reference_value_proto",
     srcs = ["reference_value.proto"],
     deps = [

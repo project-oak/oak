@@ -46,6 +46,7 @@ cargo_build_script(
         "//proto/attestation:dice_proto",
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
+        "//proto/attestation:expected_value_proto",
         "//proto/attestation:reference_value_proto",
         "//proto/attestation:tcb_version_proto",
         "//proto/attestation:verification_proto",
