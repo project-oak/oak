@@ -16,7 +16,7 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String, vec, vec::Vec};
 
 use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -31,21 +31,22 @@ use oak_dice::cert::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
-        attestation_results::Status, binary_reference_value, endorsements,
+        attestation_results::Status, binary_reference_value, endorsements, expected_digests,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
         ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
-        ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
+        ContainerLayerReferenceValues, Endorsements, Evidence, ExpectedDigests, ExtractedEvidence,
         FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
         IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
         KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TeePlatform, TextReferenceValue,
+        TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -64,8 +65,8 @@ use crate::{
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     util::{
-        hash_sha2_256, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
-        MatchResult,
+        hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
+        raw_digest_from_contents, raw_to_hex_digest, MatchResult,
     },
 };
 
@@ -646,9 +647,22 @@ fn verify_measurement_digest(
     endorsement: Option<&TransparentReleaseEndorsement>,
     reference_value: &BinaryReferenceValue,
 ) -> anyhow::Result<()> {
-    let actual = raw_to_hex_digest(measurement);
+    let expected = get_expected_measurement_digest(now_utc_millis, endorsement, reference_value)?;
+    compare_measurement_digest(measurement, &expected)
+}
+
+// Generate the expected measurement digest values for the provided endorsement
+// and reference_value. The resulting values can be cached by the client to
+// avoid re-computation later.
+fn get_expected_measurement_digest(
+    now_utc_millis: i64,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+    reference_value: &BinaryReferenceValue,
+) -> anyhow::Result<ExpectedDigests> {
     match reference_value.r#type.as_ref() {
-        Some(binary_reference_value::Type::Skip(_)) => Ok(()),
+        Some(binary_reference_value::Type::Skip(_)) => Ok(ExpectedDigests {
+            r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+        }),
         Some(binary_reference_value::Type::Endorsement(public_keys)) => {
             let endorsement =
                 endorsement.context("matching endorsement not found for reference value")?;
@@ -660,20 +674,38 @@ fn verify_measurement_digest(
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
             )?;
-            let expected = get_digest(&parse_endorsement_statement(&endorsement.endorsement)?)?;
-            verify_hex_digests(&actual, &expected)
+            Ok(ExpectedDigests {
+                r#type: Some(expected_digests::Type::Digests(RawDigests {
+                    digests: vec![hex_to_raw_digest(&get_digest(&parse_endorsement_statement(
+                        &endorsement.endorsement,
+                    )?)?)?],
+                })),
+            })
         }
-        Some(binary_reference_value::Type::Digests(expected_digests)) => {
-            if expected_digests.digests.iter().any(|expected_digest| {
-                let expected = raw_to_hex_digest(expected_digest);
-                verify_hex_digests(&actual, &expected).is_ok()
-            }) {
-                Ok(())
-            } else {
-                Err(anyhow::anyhow!("measurement digest does not match any reference values"))
-            }
-        }
+        Some(binary_reference_value::Type::Digests(expected_digests)) => Ok(ExpectedDigests {
+            r#type: Some(expected_digests::Type::Digests(RawDigests {
+                digests: expected_digests.digests.clone(),
+            })),
+        }),
         None => Err(anyhow::anyhow!("empty binary reference value")),
+    }
+}
+
+/// Verifies the measurement digest value against a reference value and
+/// the expected digests calculated from endorsements and reference values.
+fn compare_measurement_digest(
+    measurement: &RawDigest,
+    expected: &ExpectedDigests,
+) -> anyhow::Result<()> {
+    match expected.r#type.as_ref() {
+        Some(expected_digests::Type::Skipped(_)) => Ok(()),
+        Some(expected_digests::Type::Digests(digests)) => digests
+            .digests
+            .iter()
+            .find(|expected| verify_raw_digests(measurement, expected).is_ok())
+            .map(|_| ())
+            .ok_or(anyhow::anyhow!("measurement digest does not match any reference values")),
+        None => Err(anyhow::anyhow!("empty expected value")),
     }
 }
 
@@ -755,6 +787,16 @@ fn verify_kernel_measurement_digest(
 
 fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Result<()> {
     match is_hex_digest_match(actual, expected) {
+        MatchResult::SAME => Ok(()),
+        MatchResult::DIFFERENT => {
+            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
+        }
+        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
+    }
+}
+
+fn verify_raw_digests(actual: &RawDigest, expected: &RawDigest) -> anyhow::Result<()> {
+    match is_raw_digest_match(actual, expected) {
         MatchResult::SAME => Ok(()),
         MatchResult::DIFFERENT => {
             Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))

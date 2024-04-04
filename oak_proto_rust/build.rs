@@ -19,6 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
+        "../proto/attestation/expected_value.proto",
         "../proto/attestation/evidence.proto",
         "../proto/attestation/reference_value.proto",
         "../proto/attestation/verification.proto",
