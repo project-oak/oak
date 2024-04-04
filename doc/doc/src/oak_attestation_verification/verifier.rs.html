@@ -1101,6 +1101,48 @@
 <a href="#1101" id="1101">1101</a>
 <a href="#1102" id="1102">1102</a>
 <a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1119,7 +1161,7 @@
 
 </span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
-</span><span class="kw">use </span>alloc::{format, string::String, vec::Vec};
+</span><span class="kw">use </span>alloc::{format, string::String, vec, vec::Vec};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -1134,21 +1176,22 @@
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        attestation_results::Status, binary_reference_value, endorsements,
+        attestation_results::Status, binary_reference_value, endorsements, expected_digests,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
         ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
-        ContainerLayerReferenceValues, Endorsements, Evidence, ExtractedEvidence,
+        ContainerLayerReferenceValues, Endorsements, Evidence, ExpectedDigests, ExtractedEvidence,
         FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
         IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
         KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TcbVersion, TeePlatform, TextReferenceValue,
+        TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -1167,8 +1210,8 @@
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     util::{
-        hash_sha2_256, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
-        MatchResult,
+        hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
+        raw_digest_from_contents, raw_to_hex_digest, MatchResult,
     },
 };
 
@@ -1749,9 +1792,22 @@
     endorsement: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TransparentReleaseEndorsement&gt;,
     reference_value: <span class="kw-2">&amp;</span>BinaryReferenceValue,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>actual = raw_to_hex_digest(measurement);
+    <span class="kw">let </span>expected = get_expected_measurement_digest(now_utc_millis, endorsement, reference_value)<span class="question-mark">?</span>;
+    compare_measurement_digest(measurement, <span class="kw-2">&amp;</span>expected)
+}
+
+<span class="comment">// Generate the expected measurement digest values for the provided endorsement
+// and reference_value. The resulting values can be cached by the client to
+// avoid re-computation later.
+</span><span class="kw">fn </span>get_expected_measurement_digest(
+    now_utc_millis: i64,
+    endorsement: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TransparentReleaseEndorsement&gt;,
+    reference_value: <span class="kw-2">&amp;</span>BinaryReferenceValue,
+) -&gt; anyhow::Result&lt;ExpectedDigests&gt; {
     <span class="kw">match </span>reference_value.r#type.as_ref() {
-        <span class="prelude-val">Some</span>(binary_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(binary_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(ExpectedDigests {
+            r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Skipped(VerificationSkipped {})),
+        }),
         <span class="prelude-val">Some</span>(binary_reference_value::Type::Endorsement(public_keys)) =&gt; {
             <span class="kw">let </span>endorsement =
                 endorsement.context(<span class="string">&quot;matching endorsement not found for reference value&quot;</span>)<span class="question-mark">?</span>;
@@ -1763,20 +1819,38 @@
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
             )<span class="question-mark">?</span>;
-            <span class="kw">let </span>expected = get_digest(<span class="kw-2">&amp;</span>parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-            verify_hex_digests(<span class="kw-2">&amp;</span>actual, <span class="kw-2">&amp;</span>expected)
+            <span class="prelude-val">Ok</span>(ExpectedDigests {
+                r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Digests(RawDigests {
+                    digests: <span class="macro">vec!</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>get_digest(<span class="kw-2">&amp;</span>parse_endorsement_statement(
+                        <span class="kw-2">&amp;</span>endorsement.endorsement,
+                    )<span class="question-mark">?</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>],
+                })),
+            })
         }
-        <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(expected_digests)) =&gt; {
-            <span class="kw">if </span>expected_digests.digests.iter().any(|expected_digest| {
-                <span class="kw">let </span>expected = raw_to_hex_digest(expected_digest);
-                verify_hex_digests(<span class="kw-2">&amp;</span>actual, <span class="kw-2">&amp;</span>expected).is_ok()
-            }) {
-                <span class="prelude-val">Ok</span>(())
-            } <span class="kw">else </span>{
-                <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;measurement digest does not match any reference values&quot;</span>))
-            }
-        }
+        <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(expected_digests)) =&gt; <span class="prelude-val">Ok</span>(ExpectedDigests {
+            r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Digests(RawDigests {
+                digests: expected_digests.digests.clone(),
+            })),
+        }),
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;empty binary reference value&quot;</span>)),
+    }
+}
+
+<span class="doccomment">/// Verifies the measurement digest value against a reference value and
+/// the expected digests calculated from endorsements and reference values.
+</span><span class="kw">fn </span>compare_measurement_digest(
+    measurement: <span class="kw-2">&amp;</span>RawDigest,
+    expected: <span class="kw-2">&amp;</span>ExpectedDigests,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">match </span>expected.r#type.as_ref() {
+        <span class="prelude-val">Some</span>(expected_digests::Type::Skipped(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(expected_digests::Type::Digests(digests)) =&gt; digests
+            .digests
+            .iter()
+            .find(|expected| verify_raw_digests(measurement, expected).is_ok())
+            .map(|<span class="kw">_</span>| ())
+            .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;measurement digest does not match any reference values&quot;</span>)),
+        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;empty expected value&quot;</span>)),
     }
 }
 
@@ -1858,6 +1932,16 @@
 
 <span class="kw">fn </span>verify_hex_digests(actual: <span class="kw-2">&amp;</span>HexDigest, expected: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>is_hex_digest_match(actual, expected) {
+        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
+        MatchResult::DIFFERENT =&gt; {
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;mismatched digests: expected={expected:?} actual={actual:?}&quot;</span>,))
+        }
+        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;invalid digests&quot;</span>)),
+    }
+}
+
+<span class="kw">fn </span>verify_raw_digests(actual: <span class="kw-2">&amp;</span>RawDigest, expected: <span class="kw-2">&amp;</span>RawDigest) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">match </span>is_raw_digest_match(actual, expected) {
         MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
         MatchResult::DIFFERENT =&gt; {
             <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;mismatched digests: expected={expected:?} actual={actual:?}&quot;</span>,))
