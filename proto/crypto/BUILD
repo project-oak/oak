@@ -15,6 +15,7 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_rust//proto/prost:defs.bzl", "rust_prost_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -34,6 +35,11 @@ cc_proto_library(
 java_proto_library(
     name = "crypto_java_proto",
     deps = [":crypto_proto"],
+)
+
+rust_prost_library(
+    name = "crypto_rust_prost",
+    proto = ":crypto_proto",
 )
 
 build_test(
