@@ -518,7 +518,10 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
+    // TODO(#4981): Remove temporary workaround for command line length limit.
+    if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref()
+        && kernel_raw_cmd_line.len() < 256
+    {
         verify_text(
             now_utc_millis,
             kernel_raw_cmd_line.as_str(),
@@ -530,7 +533,7 @@ fn verify_kernel_layer(
         )
         .context("kernel command line failed verification")?;
     } else {
-        // Support missing kernel_raw_cmd_line but only if the corresponding reference
+        // Support invalid kernel_raw_cmd_line but only if the corresponding reference
         // value is set to skip. This is a temporary workaround until all clients are
         // migrated.
         anyhow::ensure!(
@@ -543,7 +546,7 @@ fn verify_kernel_layer(
                     .as_ref(),
                 Some(text_reference_value::Type::Skip(_))
             ),
-            "No kernel_raw_cmd_line provided"
+            "No valid kernel_raw_cmd_line provided"
         )
     }
 
