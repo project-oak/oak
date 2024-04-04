@@ -6,5 +6,22 @@
 
 # System Image Build Tools
 
+## Full System Image Tools
+
+`build.sh` and `Dockerfile`
+
 Tools for building the Oak Containers system image. The system image contains
 the guest Linux distribution and the Orchestrator.
+
+## Base System Image Tools
+
+`build-base.sh` and `base_iamge.Dockerfile`
+
+This directory contains files needed to rebuild the base image used by the
+system container.
+
+The base image contains things that rarely change for the image: the base
+operating system, network configuration, and service enablements.
+
+This image is used to build the system container image with `oci_rules`,
+avoiding the need for Docker when rebuilding a system image container.
