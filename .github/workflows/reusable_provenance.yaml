@@ -25,7 +25,6 @@ jobs:
   get_inputs:
     outputs:
       artifact-path: ${{ steps.artifact-path.outputs.name }}
-      provenance-name: ${{ steps.provenance-name.outputs.name }}
       builder-digest: ${{ steps.builder-digest.outputs.builder-digest }}
 
     runs-on: ubuntu-20.04
@@ -42,16 +41,6 @@ jobs:
           set -o xtrace
           set -o pipefail
           name="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
-          echo "name=${name}" >> $GITHUB_OUTPUT
-
-      - name: Get provenance name
-        id: provenance-name
-        run: |
-          set -o errexit
-          set -o nounset
-          set -o xtrace
-          set -o pipefail
-          name="$(basename ${{ steps.artifact-path.outputs.name }}).intoto"
           echo "name=${name}" >> $GITHUB_OUTPUT
 
       - name: Get builder image info
@@ -82,7 +71,7 @@ jobs:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development'
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
       config-path: ${{ inputs.build-config-path }}
-      provenance-name: ${{ needs.get_inputs.outputs.provenance-name }}
+      provenance-name: attestation.intoto
       compile-builder: true
 
   # This job uploads the signed provenance from the previous step to Ent, and
