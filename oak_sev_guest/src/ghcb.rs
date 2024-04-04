@@ -354,25 +354,19 @@ where
     }
 
     pub fn set_ap_jump_table(&mut self, jump_table: PhysAddr) -> Result<(), &'static str> {
-        let ghcb = self.ghcb.as_mut();
-
-        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
-        ghcb.sw_exit_info_1 = 0; // SET
-        ghcb.sw_exit_info_2 = jump_table.as_u64();
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+            ghcb.sw_exit_info_1 = 0; // SET
+            ghcb.sw_exit_info_2 = jump_table.as_u64();
+        })
     }
 
     pub fn get_ap_jump_table(&mut self) -> Result<PhysAddr, &'static str> {
-        let ghcb = self.ghcb.as_mut();
-
-        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
-        ghcb.sw_exit_info_1 = 1; // GET
-        ghcb.sw_exit_info_2 = 0;
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+            ghcb.sw_exit_info_1 = 1; // GET
+            ghcb.sw_exit_info_2 = 0;
+        })?;
 
         Ok(PhysAddr::new(self.ghcb.as_ref().sw_exit_info_2))
     }
@@ -383,18 +377,17 @@ where
     /// See Section 4.1.5 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn mmio_read_u32(&mut self, source: PhysAddr) -> Result<u32, &'static str> {
         let gpa_base = self.get_gpa().as_u64();
-        let ghcb = self.ghcb.as_mut();
 
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
-        ghcb.sw_exit_info_1 = source.as_u64();
-        ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
-        // Use the shared_buffer as the unencrypted guest memory. This is mandated as of
-        // Version 2 of the communication block.
-        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
+            ghcb.sw_exit_info_1 = source.as_u64();
+            ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
+            // Use the shared_buffer as the unencrypted guest memory. This is mandated as of
+            // Version 2 of the communication block.
+            ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+        })?;
 
-        self.do_vmg_exit()?;
         Ok(u32::from_ne_bytes(
             self.ghcb.as_ref().shared_buffer[0..core::mem::size_of::<u32>()]
                 .as_bytes()
@@ -413,19 +406,18 @@ where
         value: u32,
     ) -> Result<(), &'static str> {
         let gpa_base = self.get_gpa().as_u64();
-        let ghcb = self.ghcb.as_mut();
 
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
-        ghcb.sw_exit_info_1 = destination.as_u64();
-        ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
-        // Pointer to `shared_buffer` inside the GHCB.
-        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
-        // Safety: the shared buffer is bigger than an u32.
-        ghcb.shared_buffer.as_bytes_mut()[0..core::mem::size_of::<u32>()]
-            .copy_from_slice(value.as_bytes());
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
+            ghcb.sw_exit_info_1 = destination.as_u64();
+            ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
+            // Pointer to `shared_buffer` inside the GHCB.
+            ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+            // Safety: the shared buffer is bigger than an u32.
+            ghcb.shared_buffer.as_bytes_mut()[0..core::mem::size_of::<u32>()]
+                .copy_from_slice(value.as_bytes());
+        })
     }
 
     /// Writes an 8 bit number to an IO port via the IOIO protocol.
@@ -434,12 +426,13 @@ where
     pub fn io_write_u8(&mut self, port: u16, data: u8) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().rax = data as u64;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rax = data as u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     /// Read an 8 bit number from an IO port via the IOIO protocol.
@@ -448,12 +441,12 @@ where
     pub fn io_read_u8(&mut self, port: u16) -> Result<u8, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        self.do_vmg_exit()?;
-        Ok(self.ghcb.as_mut().rax as u8)
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+        })?;
+        Ok(self.ghcb.as_ref().rax as u8)
     }
 
     /// Writes a 16 bit number to an IO port via the IOIO protocol.
@@ -462,12 +455,13 @@ where
     pub fn io_write_u16(&mut self, port: u16, data: u16) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().rax = data as u64;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rax = data as u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     /// Read a 16 bit number from an IO port via the IOIO protocol.
@@ -476,11 +470,11 @@ where
     pub fn io_read_u16(&mut self, port: u16) -> Result<u16, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+        })?;
         Ok(self.ghcb.as_mut().rax as u16)
     }
 
@@ -490,12 +484,13 @@ where
     pub fn io_write_u32(&mut self, port: u16, data: u32) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().rax = data as u64;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RAX);
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rax = data as u64;
+            ghcb.valid_bitmap |= ValidBitmap::RAX;
+        })
     }
 
     /// Read a 32 bit number from an IO port via the IOIO protocol.
@@ -504,31 +499,28 @@ where
     pub fn io_read_u32(&mut self, port: u16) -> Result<u32, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port as u64) << 16);
 
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = io_port;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP;
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_IOIO_PROT;
+            ghcb.sw_exit_info_1 = io_port;
+            ghcb.sw_exit_info_2 = 0;
+        })?;
         Ok(self.ghcb.as_mut().rax as u32)
     }
 
     /// Calls a CPUID function for the given input using the GHCB protocol.
     pub fn get_cpuid(&mut self, request: CpuidInput) -> Result<CpuidOutput, &'static str> {
-        let ghcb = self.ghcb.as_mut();
-        ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
-        ghcb.sw_exit_info_1 = 0;
-        ghcb.sw_exit_info_2 = 0;
-        ghcb.rax = request.eax as u64;
-        ghcb.rcx = request.ecx as u64;
-        ghcb.xcr0 = request.xcr0;
-        // We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the
-        // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
-        // this function will only be used with SEV-ES.
-        ghcb.valid_bitmap = BASE_VALID_BITMAP
-            .union(ValidBitmap::RAX)
-            .union(ValidBitmap::RCX)
-            .union(ValidBitmap::XCR0);
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
+            ghcb.sw_exit_info_1 = 0;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rax = request.eax as u64;
+            ghcb.rcx = request.ecx as u64;
+            ghcb.xcr0 = request.xcr0;
+            // We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the
+            // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
+            // this function will only be used with SEV-ES.
+            ghcb.valid_bitmap |= ValidBitmap::RAX | ValidBitmap::RCX | ValidBitmap::XCR0;
+        })?;
         let ghcb = self.ghcb.as_mut();
         Ok(CpuidOutput {
             eax: ghcb.rax as u32,
@@ -542,33 +534,32 @@ where
     ///
     /// See section 4.1.3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn msr_write(&mut self, msr: u32, data: u64) -> Result<(), &'static str> {
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = 1;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().rcx = msr as u64;
-        // Split the data into the lower halves of RDX and RAX.
-        self.ghcb.as_mut().rax = data & MSR_REGISTER_MASK;
-        self.ghcb.as_mut().rdx = data >> 32;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP
-            .union(ValidBitmap::RAX)
-            .union(ValidBitmap::RCX)
-            .union(ValidBitmap::RDX);
-        self.do_vmg_exit()
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+            ghcb.sw_exit_info_1 = 1;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rcx = msr as u64;
+            // Split the data into the lower halves of RDX and RAX.
+            ghcb.rax = data & MSR_REGISTER_MASK;
+            ghcb.rdx = data >> 32;
+            ghcb.valid_bitmap |= ValidBitmap::RAX | ValidBitmap::RCX | ValidBitmap::RDX;
+        })
     }
 
     /// Reads a value from the specified model-specific register.
     ///
     /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn msr_read(&mut self, msr: u32) -> Result<u64, &'static str> {
-        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = 0;
-        self.ghcb.as_mut().sw_exit_info_2 = 0;
-        self.ghcb.as_mut().rcx = msr as u64;
-        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RCX);
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+            ghcb.sw_exit_info_1 = 0;
+            ghcb.sw_exit_info_2 = 0;
+            ghcb.rcx = msr as u64;
+            ghcb.valid_bitmap |= ValidBitmap::RCX;
+        })?;
         // Reconstruct the value from the lower halves of RAX and RDX.
-        let low = self.ghcb.as_mut().rax & MSR_REGISTER_MASK;
-        let high = self.ghcb.as_mut().rdx & MSR_REGISTER_MASK;
+        let low = self.ghcb.as_ref().rax & MSR_REGISTER_MASK;
+        let high = self.ghcb.as_ref().rdx & MSR_REGISTER_MASK;
         Ok(low | (high << 32))
     }
 
@@ -582,13 +573,12 @@ where
         request_address: PhysAddr,
         response_address: PhysAddr,
     ) -> Result<(), &'static str> {
-        let ghcb = self.ghcb.as_mut();
-        ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
-        ghcb.sw_exit_info_1 = request_address.as_u64();
-        ghcb.sw_exit_info_2 = response_address.as_u64();
-        ghcb.valid_bitmap = BASE_VALID_BITMAP;
-        self.do_vmg_exit()?;
-        if self.ghcb.as_mut().sw_exit_info_2 == 0 {
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
+            ghcb.sw_exit_info_1 = request_address.as_u64();
+            ghcb.sw_exit_info_2 = response_address.as_u64();
+        })?;
+        if self.ghcb.as_ref().sw_exit_info_2 == 0 {
             Ok(())
         } else {
             // For now we treat all non-zero return values as unrecoverable errors.
@@ -611,16 +601,14 @@ where
             PageStateChangeEntry { page_operation: assignment, gfn: frame, current_page: 0 }.into();
 
         let gpa_base = self.get_gpa().as_u64();
-        let ghcb = self.ghcb.as_mut();
-        ghcb.reset();
-        ghcb.sw_exit_code = SW_EXIT_CODE_PAGE_STATE_CHANGE;
-        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
-        page_state_change
-            .write_to(&mut ghcb.shared_buffer)
-            .ok_or("Unexpected length mismatch between PSC request and GHCB shared buffer")?;
-        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
-
-        self.do_vmg_exit()?;
+        self.call(|ghcb| {
+            ghcb.sw_exit_code = SW_EXIT_CODE_PAGE_STATE_CHANGE;
+            ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+            page_state_change
+                .write_to(&mut ghcb.shared_buffer)
+                .expect("Unexpected length mismatch between PSC request and GHCB shared buffer");
+            ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
+        })?;
 
         let ghcb = self.ghcb.as_ref();
         let page_state_change = PageStateChange::read_from(&ghcb.shared_buffer)
@@ -634,6 +622,18 @@ where
         // `PageStateChangeEntry` struct should change to show that a page has been
         // successfully processed, but I always get zeroes there.
         Ok(())
+    }
+
+    /// Simple wrapper for operations that rely on the GHCB.
+    fn call<F>(&mut self, func: F) -> Result<(), &'static str>
+    where
+        F: FnOnce(&mut Ghcb),
+    {
+        let ghcb = self.ghcb.as_mut();
+        ghcb.reset();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+        func(ghcb);
+        self.do_vmg_exit()
     }
 
     /// Sets the address of the GHCB, exits to the hypervisor, and checks the
