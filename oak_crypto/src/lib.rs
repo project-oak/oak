@@ -27,7 +27,11 @@ pub mod proto {
         pub mod crypto {
             pub mod v1 {
                 #![allow(dead_code)]
+                #[cfg(not(feature = "bazel"))]
                 include!(concat!(env!("OUT_DIR"), "/oak.crypto.v1.rs"));
+
+                #[cfg(feature = "bazel")]
+                pub use ::crypto_proto::crypto::v1::*;
             }
         }
     }
