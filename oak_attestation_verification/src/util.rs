@@ -135,52 +135,53 @@ pub enum MatchResult {
 }
 
 /// Compares two binary arrays byte per byte.
-fn match_strings(a: &str, b: &str) -> MatchResult {
+fn matches<T: Eq>(a: &T, b: &T) -> MatchResult {
     if a != b {
         return MatchResult::DIFFERENT;
     }
     MatchResult::SAME
 }
 
-/// Compares two hex digests.
-pub fn is_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
-    if !a.psha2.is_empty() && !b.psha2.is_empty() {
-        return match_strings(&a.psha2, &b.psha2);
-    }
-    if !a.sha2_256.is_empty() && !b.sha2_256.is_empty() {
-        return match_strings(&a.sha2_256, &b.sha2_256);
-    }
-    if !a.sha2_512.is_empty() && !b.sha2_512.is_empty() {
-        return match_strings(&a.sha2_512, &b.sha2_512);
-    }
-    if !a.sha3_512.is_empty() && !b.sha3_512.is_empty() {
-        return match_strings(&a.sha3_512, &b.sha3_512);
-    }
-    if !a.sha3_384.is_empty() && !b.sha3_384.is_empty() {
-        return match_strings(&a.sha3_384, &b.sha3_384);
-    }
-    if !a.sha3_256.is_empty() && !b.sha3_256.is_empty() {
-        return match_strings(&a.sha3_256, &b.sha3_256);
-    }
-    if !a.sha3_224.is_empty() && !b.sha3_224.is_empty() {
-        return match_strings(&a.sha3_224, &b.sha3_224);
-    }
-    if !a.sha2_384.is_empty() && !b.sha2_384.is_empty() {
-        return match_strings(&a.sha2_384, &b.sha2_384);
-    }
+macro_rules! digest_match_function {
+    ($name:ident: $type:ty) => {
+        pub fn $name(a: &$type, b: &$type) -> MatchResult {
+            if !a.psha2.is_empty() && !b.psha2.is_empty() {
+                return matches(&a.psha2, &b.psha2);
+            }
+            if !a.sha2_256.is_empty() && !b.sha2_256.is_empty() {
+                return matches(&a.sha2_256, &b.sha2_256);
+            }
+            if !a.sha2_512.is_empty() && !b.sha2_512.is_empty() {
+                return matches(&a.sha2_512, &b.sha2_512);
+            }
+            if !a.sha3_512.is_empty() && !b.sha3_512.is_empty() {
+                return matches(&a.sha3_512, &b.sha3_512);
+            }
+            if !a.sha3_384.is_empty() && !b.sha3_384.is_empty() {
+                return matches(&a.sha3_384, &b.sha3_384);
+            }
+            if !a.sha3_256.is_empty() && !b.sha3_256.is_empty() {
+                return matches(&a.sha3_256, &b.sha3_256);
+            }
+            if !a.sha3_224.is_empty() && !b.sha3_224.is_empty() {
+                return matches(&a.sha3_224, &b.sha3_224);
+            }
+            if !a.sha2_384.is_empty() && !b.sha2_384.is_empty() {
+                return matches(&a.sha2_384, &b.sha2_384);
+            }
 
-    // Nit: Put the weak hash to the end of comparisons.
-    if !a.sha1.is_empty() && !b.sha1.is_empty() {
-        return match_strings(&a.sha1, &b.sha1);
-    }
+            // Nit: Put the weak hash to the end of comparisons.
+            if !a.sha1.is_empty() && !b.sha1.is_empty() {
+                return matches(&a.sha1, &b.sha1);
+            }
 
-    MatchResult::UNDECIDABLE
+            MatchResult::UNDECIDABLE
+        }
+    };
 }
 
-/// Compares two raw digests.
-pub fn is_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
-    is_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b))
-}
+digest_match_function!(is_hex_digest_match: HexDigest);
+digest_match_function!(is_raw_digest_match: RawDigest);
 
 /// Converts raw digest to hex digest.
 pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
