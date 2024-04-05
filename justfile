@@ -43,7 +43,6 @@ _wrap_kernel kernel_bin_prefix:
     rust-objcopy --output-target=binary "${KERNEL_BIN_PATH}" "${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage"
 
     # Process the kernel binary using oak_kernel_measurement.
-    echo "Processing the kernel binary..."
     cargo run --package oak_kernel_measurement -- \
         --kernel="${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage" \
         --kernel-setup-data-output="${BIN_DIR}/${KERNEL_BIN_PREFIX}_setup_data" \
