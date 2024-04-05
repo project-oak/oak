@@ -33,21 +33,22 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements, expected_digests,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
-        ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        root_layer_data::Report, text_expected_value, text_reference_value, AmdAttestationReport,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExtractedEvidence,
-        FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
-        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue,
-        KernelExpectedValues, KernelLayerData, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersData, OakContainersEndorsements, OakContainersReferenceValues,
-        OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
+        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
+        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
         RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues, SystemLayerData,
         SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
+        VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -544,16 +545,17 @@ fn verify_kernel_layer(
     if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref()
         && kernel_raw_cmd_line.len() < 256
     {
-        verify_text(
+        let expected = get_text_expected_values(
             now_utc_millis,
-            kernel_raw_cmd_line.as_str(),
             reference_values
                 .kernel_cmd_line_text
                 .as_ref()
                 .context("no kernel command line text reference values")?,
             endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
         )
-        .context("kernel command line failed verification")?;
+        .context("failed to get expected kernel cmd line value")?;
+
+        compare_text_value(kernel_raw_cmd_line.as_str(), &expected)?;
     } else {
         // Support invalid kernel_raw_cmd_line but only if the corresponding reference
         // value is set to skip. This is a temporary workaround until all clients are
@@ -865,14 +867,34 @@ fn verify_raw_digests(actual: &RawDigest, expected: &RawDigest) -> anyhow::Resul
     }
 }
 
-fn verify_text(
-    now_utc_millis: i64,
-    actual: &str,
-    expected: &TextReferenceValue,
-    endorsement: Option<&TransparentReleaseEndorsement>,
-) -> anyhow::Result<()> {
+fn compare_text_value(actual: &str, expected: &TextExpectedValue) -> anyhow::Result<()> {
     match expected.r#type.as_ref() {
-        Some(text_reference_value::Type::Skip(_)) => Ok(()),
+        Some(text_expected_value::Type::Skipped(_)) => Ok(()),
+        Some(text_expected_value::Type::Regex(regex)) => {
+            verify_regex(actual, &regex.value).context("regex from endorsement does not match")
+        }
+        Some(text_expected_value::Type::StringLiterals(string_literals)) => {
+            if string_literals.value.iter().any(|sl| sl == actual) {
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!(format!(
+                    "value doesn't match the reference value string literal: {actual}"
+                )))
+            }
+        }
+        None => Err(anyhow::anyhow!("missing skip or value in the text expected value")),
+    }
+}
+
+fn get_text_expected_values(
+    now_utc_millis: i64,
+    value: &TextReferenceValue,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+) -> anyhow::Result<TextExpectedValue> {
+    match value.r#type.as_ref() {
+        Some(text_reference_value::Type::Skip(_)) => Ok(TextExpectedValue {
+            r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
+        }),
         Some(text_reference_value::Type::Endorsement(public_keys)) => {
             let endorsement =
                 endorsement.context("matching endorsement not found for text reference value")?;
@@ -887,21 +909,21 @@ fn verify_text(
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .expect("endorsement subject is not utf8");
-            verify_regex(actual, &regex).context("regex from endorsement does not match")
+            Ok(TextExpectedValue {
+                r#type: Some(text_expected_value::Type::Regex(ExpectedRegex { value: regex })),
+            })
         }
-        Some(text_reference_value::Type::Regex(regex)) => {
-            verify_regex(actual, &regex.value).context("regex from reference values does not match")
-        }
+        Some(text_reference_value::Type::Regex(regex)) => Ok(TextExpectedValue {
+            r#type: Some(text_expected_value::Type::Regex(ExpectedRegex {
+                value: regex.value.clone(),
+            })),
+        }),
         Some(text_reference_value::Type::StringLiterals(string_literals)) => {
-            anyhow::ensure!(!string_literals.value.is_empty());
-            for sl in string_literals.value.iter() {
-                if sl == actual {
-                    return Ok(());
-                }
-            }
-            Err(anyhow::anyhow!(format!(
-                "value doesn't match the reference value string literal: {actual}"
-            )))
+            Ok(TextExpectedValue {
+                r#type: Some(text_expected_value::Type::StringLiterals(ExpectedStringLiterals {
+                    value: string_literals.value.clone(),
+                })),
+            })
         }
         None => Err(anyhow::anyhow!("missing skip or value in the text reference value")),
     }
