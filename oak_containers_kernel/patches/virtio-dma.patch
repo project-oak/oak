@@ -1,6 +1,6 @@
-diff '--color=auto' -u -r linux-6.1.33-orig/drivers/virtio/virtio.c linux-6.1.33/drivers/virtio/virtio.c
---- linux-6.1.33-orig/drivers/virtio/virtio.c	2023-06-09 08:34:30.000000000 +0000
-+++ linux-6.1.33/drivers/virtio/virtio.c	2024-02-01 18:55:31.105888971 +0000
+diff '--color=auto' -u -r linux-6.1.84-orig/drivers/virtio/virtio.c linux-6.1.84/drivers/virtio/virtio.c
+--- linux-6.1.84-orig/drivers/virtio/virtio.c   2024-04-04 21:59:30.067483241 +0000
++++ linux-6.1.84/drivers/virtio/virtio.c        2024-04-04 22:00:11.070532877 +0000
 @@ -177,11 +177,8 @@
  	if (virtio_check_mem_acc_cb(dev)) {
  		if (!virtio_has_feature(dev, VIRTIO_F_VERSION_1)) {
@@ -15,9 +15,9 @@ diff '--color=auto' -u -r linux-6.1.33-orig/drivers/virtio/virtio.c linux-6.1.33
  			dev_warn(&dev->dev,
  				 "device must provide VIRTIO_F_ACCESS_PLATFORM\n");
  			return -ENODEV;
-diff '--color=auto' -u -r linux-6.1.33-orig/include/linux/virtio_config.h linux-6.1.33/include/linux/virtio_config.h
---- linux-6.1.33-orig/include/linux/virtio_config.h	2023-06-09 08:34:30.000000000 +0000
-+++ linux-6.1.33/include/linux/virtio_config.h	2024-02-01 19:02:29.526141223 +0000
+diff '--color=auto' -u -r linux-6.1.84-orig/include/linux/virtio_config.h linux-6.1.84/include/linux/virtio_config.h
+--- linux-6.1.84-orig/include/linux/virtio_config.h	2024-04-04 21:59:30.415509125 +0000
++++ linux-6.1.84/include/linux/virtio_config.h	2024-04-04 22:00:50.461462565 +0000
 @@ -201,6 +201,9 @@
  	 * Note the reverse polarity of the quirk feature (compared to most
  	 * other features), this is for compatibility with legacy systems.
