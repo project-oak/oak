@@ -155,6 +155,8 @@ jobs:
                   ent tag set --public-key=${{ inputs.ent-public-key }} \
                     --label="provenance_${GITHUB_SHA}_${binary_name}" \
                     --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
+              else
+                  echo "Warning: Input '${file}' is not a file."
               fi
           done
 
