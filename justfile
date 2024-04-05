@@ -24,17 +24,30 @@ oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
 _wrap_kernel kernel_bin_prefix:
-    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_bin_prefix}}_bin cargo build --release
-    rust-objcopy --output-target=binary oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
-    rm -rf oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
-    mkdir -p oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
-    cp \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin \
-        oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/bzimage
+    #!/usr/bin/env bash
+    # This script builds and then wraps a kernel as a bzImage. It outputs the bzimage and its constituent parts for measurement.
+    KERNEL_BIN_PREFIX="{{kernel_bin_prefix}}"
+    OAK_WRAPPER_DIR="oak_restricted_kernel_wrapper"
+    BIN_DIR="${OAK_WRAPPER_DIR}/bin/${KERNEL_BIN_PREFIX}"
+    RUST_TARGET_DIR="${OAK_WRAPPER_DIR}/target/x86_64-unknown-none/release"
+    KERNEL_BIN_PATH="${RUST_TARGET_DIR}/oak_restricted_kernel_wrapper"
+
+    # Ensure clean state for the binaries. All binaries in "${BIN_DIR}" will be included in any provenances.
+    rm -rf "${BIN_DIR}"
+    mkdir -p "${BIN_DIR}"
+
+    # Wrap the kernel as a bzImage.
+    env --chdir="${OAK_WRAPPER_DIR}" OAK_RESTRICTED_KERNEL_FILE_NAME="${KERNEL_BIN_PREFIX}_bin" cargo build --release
+
+    # Copy the kernel binary to the designated location.
+    rust-objcopy --output-target=binary "${KERNEL_BIN_PATH}" "${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage"
+
+    # Process the kernel binary using oak_kernel_measurement.
+    echo "Processing the kernel binary..."
     cargo run --package oak_kernel_measurement -- \
-        --kernel=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/bzimage \
-        --kernel-setup-data-output=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/kernel_setup_data \
-        --kernel-image-output=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/kernel_image
+        --kernel="${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage" \
+        --kernel-setup-data-output="${BIN_DIR}/${KERNEL_BIN_PREFIX}_setup_data" \
+        --kernel-image-output="${BIN_DIR}/${KERNEL_BIN_PREFIX}_image"
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
     just _wrap_kernel oak_restricted_kernel
