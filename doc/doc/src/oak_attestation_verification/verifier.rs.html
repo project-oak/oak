@@ -1178,6 +1178,9 @@
 <a href="#1178" id="1178">1178</a>
 <a href="#1179" id="1179">1179</a>
 <a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1708,7 +1711,10 @@
     )
     .context(<span class="string">&quot;kernel failed verification&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref() {
+    <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref()
+        &amp;&amp; kernel_raw_cmd_line.len() &lt; <span class="number">256
+    </span>{
         verify_text(
             now_utc_millis,
             kernel_raw_cmd_line.as_str(),
@@ -1720,7 +1726,7 @@
         )
         .context(<span class="string">&quot;kernel command line failed verification&quot;</span>)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
-        <span class="comment">// Support missing kernel_raw_cmd_line but only if the corresponding reference
+        <span class="comment">// Support invalid kernel_raw_cmd_line but only if the corresponding reference
         // value is set to skip. This is a temporary workaround until all clients are
         // migrated.
         </span><span class="macro">anyhow::ensure!</span>(
@@ -1733,7 +1739,7 @@
                     .as_ref(),
                 <span class="prelude-val">Some</span>(text_reference_value::Type::Skip(<span class="kw">_</span>))
             ),
-            <span class="string">&quot;No kernel_raw_cmd_line provided&quot;
+            <span class="string">&quot;No valid kernel_raw_cmd_line provided&quot;
         </span>)
     }
 
