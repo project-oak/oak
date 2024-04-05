@@ -580,6 +580,39 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         }
     }
 
+    // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
+    // Unwrap() will panic if entry not found with expected start, size, and type.
+    let legacy_smbios_range_entry = e820_table
+        .iter()
+        .find(|entry| {
+            entry.addr() == 0xF_0000
+                && entry.size() == 0x1_0000
+                && entry.entry_type() == Some(E820EntryType::RESERVED)
+        })
+        .expect("couldn't find legacy SMBIOS memory range");
+
+    // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
+    // the SMBIOS entry point table, even if the range is marked as reserved.
+    let range = PhysFrame::<Size4KiB>::range(
+        PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
+            .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(
+            (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+        ))
+        .unwrap(),
+    );
+    range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate SMBIOS memory");
+
+    // Safety: the E820 table indicates that this is the correct memory segment.
+    let legacy_smbios_range_bytes = unsafe {
+        core::slice::from_raw_parts_mut::<u8>(
+            legacy_smbios_range_entry.addr() as *mut u8,
+            legacy_smbios_range_entry.size(),
+        )
+    };
+    // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+    legacy_smbios_range_bytes.zeroize();
+
     page_tables.pd_0[1].set_unused();
     page_tables.pdpt[1].set_unused();
     tlb::flush_all();
