@@ -574,6 +574,8 @@
 <a href="#574" id="574">574</a>
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -725,11 +727,13 @@
         <span class="self">self</span>.validate_e820_table();
 
         <span class="comment">// Carve out a chunk of memory for the ACPI area in the range
-        // [0x80000-0xA0000). We also remove the region [0xA0000,0x100000)
+        // [0x80000-0xA0000). We also remove the region [0xA0000,0xF0000)
         // since historically this contained hardware-related regions such as
-        // the VGA bios rom.
+        // the VGA bios rom. Finally, reserve [0xF0000,0x100000) as Stage0
+        // initializes this memory to handle legacy scans of the SMBIOS range.
         </span><span class="self">self</span>.insert_e820_entry(BootE820Entry::new(<span class="number">0x8_0000</span>, <span class="number">0x2_0000</span>, E820EntryType::ACPI));
-        <span class="self">self</span>.ensure_e820_gap(<span class="number">0xA_0000</span>, <span class="number">0x6_0000</span>);
+        <span class="self">self</span>.ensure_e820_gap(<span class="number">0xA_0000</span>, <span class="number">0x5_0000</span>);
+        <span class="self">self</span>.insert_e820_entry(BootE820Entry::new(<span class="number">0xF_0000</span>, <span class="number">0x1_0000</span>, E820EntryType::RESERVED));
 
         <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.inner.e820_table() {
             <span class="macro">log::debug!</span>(
