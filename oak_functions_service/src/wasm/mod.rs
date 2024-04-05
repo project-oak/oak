@@ -464,6 +464,7 @@ impl Handler for WasmHandler {
         let mut store = wasmi::Store::new(module.engine(), user_state);
         let instance = self.linker.instantiate(&mut store, module)?;
 
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         instance.exports(&store).for_each(|export| {
             store
                 .data()
@@ -486,18 +487,21 @@ impl Handler for WasmHandler {
         // included in the metric.
         #[cfg(feature = "std")]
         let now = Instant::now();
+        #[allow(unused)]
         let result = main.call(&mut store, ());
         #[cfg(feature = "std")]
         if let Some(ref observer) = self.observer {
             observer.wasm_invocation(now.elapsed());
         }
 
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
         );
 
-        let response_bytes = response.lock().clone();
+        let response_bytes = core::mem::take(response.lock().as_mut());
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store
             .data()
             .logger
