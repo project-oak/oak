@@ -24,7 +24,12 @@ on:
 jobs:
   get_inputs:
     outputs:
-      artifact-path: ${{ steps.artifact-path.outputs.name }}
+      # Resolves to one or more files which are passed to the SLSA provenance generator.
+      artifact-path: ${{ steps.parse-build-config.outputs.artifact-path }}
+      # Resolves to a single binary file which makes up the TR package.
+      binary-file: ${{ steps.parse-build-config.outputs.binary-file }}
+      # The name of the TR package.
+      package-name: ${{ steps.parse-build-config.outputs.package-name }}
       builder-digest: ${{ steps.builder-digest.outputs.builder-digest }}
 
     runs-on: ubuntu-20.04
@@ -33,15 +38,19 @@ jobs:
       - name: Mount main branch
         uses: actions/checkout@v3
 
-      - name: Get artifact path
-        id: artifact-path
+      - name: Parse build config
+        id: parse-build-config
         run: |
           set -o errexit
           set -o nounset
           set -o xtrace
           set -o pipefail
-          name="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
-          echo "name=${name}" >> $GITHUB_OUTPUT
+          artifact_path="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
+          binary_file="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'binary_file = \K(.*)')"
+          package_name="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'package_name = \K(.*)')"
+          echo "artifact-path=${artifact_path}" >> $GITHUB_OUTPUT
+          echo "binary-file=${binary_file}" >> $GITHUB_OUTPUT
+          echo "package-name=${package_name}" >> $GITHUB_OUTPUT
 
       - name: Get builder image info
         id: builder-digest
@@ -56,7 +65,9 @@ jobs:
 
       - name: Print values
         run: |
-          echo "${{ steps.artifact-path.outputs.name }}"
+          echo "${{ steps.parse-build-config.outputs.artifact-path }}"
+          echo "${{ steps.parse-build-config.outputs.binary-file }}"
+          echo "${{ steps.parse-build-config.outputs.package-name }}"
           echo "${{ steps.builder-digest.outputs.builder-digest }}"
 
   generate_provenance:
@@ -144,7 +155,18 @@ jobs:
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             provenance_file="${provenance_file}.build.slsa"
           fi
+          binary_file="${{ needs.get_inputs.outputs.binary-file }}"
+          package_name="${{ needs.get_inputs.outputs.package-name }}"
           provenance_digest="$(ent put --digest-format=human --porcelain "${provenance_file}")"
+          if [[ -f ${binary_file} ]]; do
+            binary_digest="$(ent put --digest-format=human --porcelain "${binary_file}")"
+            ent tag set --public-key=${{ inputs.ent-public-key }} \
+              --label="artifact_${GITHUB_SHA}_${package_name}" \
+              --target="${binary_digest}"
+            ent tag set --public-key=${{ inputs.ent-public-key }} \
+              --label="provenance_${GITHUB_SHA}_${package_name}" \
+              --target=${provenance_digest}
+          done
           for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
               if [[ -f "${file}" ]]; then
                   binary_name="$(basename "${file}")"
