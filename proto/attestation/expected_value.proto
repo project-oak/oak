@@ -42,3 +42,26 @@ message ExpectedDigests {
     RawDigests digests = 2;
   }
 }
+
+// The expected binary digests for a system layer image.
+message SystemLayerExpectedValues {
+  // The allowable digest values for a system layer image.
+  ExpectedDigests system_image = 1;
+}
+
+// The expected bundle and configuration digests for a container layer.
+message ContainerLayerExpectedValues {
+  // The allowable digest values for a container bundle.
+  ExpectedDigests bundle = 1;
+  // The allowable digest values for a configuration passed into a container.
+  ExpectedDigests config = 2;
+}
+
+// The expected binary and configuration digests for an application layer.
+message ApplicationLayerExpectedValues {
+  // The allowable digest values for an application binary.
+  ExpectedDigests binary = 1;
+  // The allowable digest values for a configuration passed to the application
+  // binary.
+  ExpectedDigests configuration = 2;
+}
