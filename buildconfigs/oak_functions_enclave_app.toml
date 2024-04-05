@@ -13,5 +13,3 @@ command = [
   "--release",
 ]
 artifact_path = "./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app"
-binary_file = "./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app"
-package_name = "oak_functions_enclave_app"

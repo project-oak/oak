@@ -10,5 +10,3 @@ command = [
   "--release",
 ]
 artifact_path = "./enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app"
-binary_file = "./enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app"
-package_name = "key_xor_test_app"

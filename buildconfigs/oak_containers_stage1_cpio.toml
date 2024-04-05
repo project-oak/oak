@@ -11,5 +11,3 @@ command = [
   "make",
 ]
 artifact_path = "./target/stage1.cpio"
-binary_file = "./target/stage1.cpio"
-package_name = "oak_containers_kernel"

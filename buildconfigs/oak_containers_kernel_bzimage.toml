@@ -11,5 +11,3 @@ command = [
   "make",
 ]
 artifact_path = "./oak_containers_kernel/target/bzImage"
-binary_file = "./oak_containers_kernel/target/bzImage"
-package_name = "oak_containers_kernel"

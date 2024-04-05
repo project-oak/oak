@@ -8,5 +8,3 @@ command = [
   "--output=claim.json",
 ]
 artifact_path = "./oak_ml_transparency/mnist/claim.json"
-binary_file = ""
-package_name = ""
