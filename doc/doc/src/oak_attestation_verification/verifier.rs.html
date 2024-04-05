@@ -1143,6 +1143,41 @@
 <a href="#1143" id="1143">1143</a>
 <a href="#1144" id="1144">1144</a>
 <a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
+<a href="#1155" id="1155">1155</a>
+<a href="#1156" id="1156">1156</a>
+<a href="#1157" id="1157">1157</a>
+<a href="#1158" id="1158">1158</a>
+<a href="#1159" id="1159">1159</a>
+<a href="#1160" id="1160">1160</a>
+<a href="#1161" id="1161">1161</a>
+<a href="#1162" id="1162">1162</a>
+<a href="#1163" id="1163">1163</a>
+<a href="#1164" id="1164">1164</a>
+<a href="#1165" id="1165">1165</a>
+<a href="#1166" id="1166">1166</a>
+<a href="#1167" id="1167">1167</a>
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1180,18 +1215,18 @@
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
         ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
-        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
-        CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
-        ContainerLayerReferenceValues, Endorsements, Evidence, ExpectedDigests, ExtractedEvidence,
-        FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
-        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
-        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TeePlatform, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped,
+        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
+        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
+        ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
+        Endorsements, Evidence, ExpectedDigests, ExtractedEvidence, FakeAttestationReport,
+        InsecureReferenceValues, IntelTdxAttestationReport, IntelTdxReferenceValues,
+        KernelAttachment, KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues, SystemLayerData,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -1407,14 +1442,17 @@
     )
     .context(<span class="string">&quot;kernel layer verification failed&quot;</span>)<span class="question-mark">?</span>;
 
-    verify_application_layer(
+    <span class="kw">let </span>expected = get_application_layer_expected_values(
         now_utc_millis,
-        values.application_layer.as_ref().context(<span class="string">&quot;no applications layer evidence values&quot;</span>)<span class="question-mark">?</span>,
         endorsements.application_layer.as_ref(),
         reference_values
             .application_layer
             .as_ref()
             .context(<span class="string">&quot;no application layer reference values&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>;
+    compare_application_layer_measurement_digests(
+        values.application_layer.as_ref().context(<span class="string">&quot;no applications layer evidence values&quot;</span>)<span class="question-mark">?</span>,
+        <span class="kw-2">&amp;</span>expected,
     )
     .context(<span class="string">&quot;application layer verification failed&quot;</span>)
 }
@@ -1443,19 +1481,25 @@
     )
     .context(<span class="string">&quot;kernel layer verification failed&quot;</span>)<span class="question-mark">?</span>;
 
-    verify_system_layer(
+    <span class="kw">let </span>expected = get_system_layer_expected_values(
         now_utc_millis,
-        values.system_layer.as_ref().context(<span class="string">&quot;no system layer evidence values&quot;</span>)<span class="question-mark">?</span>,
         endorsements.system_layer.as_ref(),
         reference_values.system_layer.as_ref().context(<span class="string">&quot;no system layer reference values&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>;
+    compare_system_layer_measurement_digests(
+        values.system_layer.as_ref().context(<span class="string">&quot;no system layer evidence values&quot;</span>)<span class="question-mark">?</span>,
+        <span class="kw-2">&amp;</span>expected,
     )
     .context(<span class="string">&quot;system layer verification failed&quot;</span>)<span class="question-mark">?</span>;
 
-    verify_container_layer(
+    <span class="kw">let </span>expected = get_container_layer_expected_values(
         now_utc_millis,
-        values.container_layer.as_ref().context(<span class="string">&quot;no container layer evidence values&quot;</span>)<span class="question-mark">?</span>,
         endorsements.container_layer.as_ref(),
-        reference_values.container_layer.as_ref().context(<span class="string">&quot;no container layer reference values&quot;</span>)<span class="question-mark">?</span>,
+        reference_values.container_layer.as_ref().context(<span class="string">&quot;no containers layer values&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>;
+    compare_container_layer_measurement_digests(
+        values.container_layer.as_ref().context(<span class="string">&quot;no container layer evidence values&quot;</span>)<span class="question-mark">?</span>,
+        <span class="kw-2">&amp;</span>expected,
     )
     .context(<span class="string">&quot;container layer verification failed&quot;</span>)
 }
@@ -1718,70 +1762,96 @@
     .context(<span class="string">&quot;ACPI table building commands failed verification&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the measurement values of the system image layer for Oak
-/// Containers.
-</span><span class="kw">fn </span>verify_system_layer(
+<span class="kw">fn </span>get_system_layer_expected_values(
     now_utc_millis: i64,
-    values: <span class="kw-2">&amp;</span>SystemLayerData,
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SystemLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>SystemLayerReferenceValues,
-) -&gt; anyhow::Result&lt;()&gt; {
-    verify_measurement_digest(
-        values.system_image.as_ref().context(<span class="string">&quot;no system image evidence value&quot;</span>)<span class="question-mark">?</span>,
+) -&gt; anyhow::Result&lt;SystemLayerExpectedValues&gt; {
+    <span class="kw">let </span>system_image = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context(<span class="string">&quot;no system image reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;system image failed verification&quot;</span>)
+        reference_values.system_image.as_ref().context(<span class="string">&quot;container bundle reference value&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>);
+    <span class="prelude-val">Ok</span>(SystemLayerExpectedValues { system_image })
 }
 
-<span class="doccomment">/// Verifies the measurement values of the application layer for Oak Restricted
-/// Kernel.
-</span><span class="kw">fn </span>verify_application_layer(
+<span class="kw">fn </span>compare_system_layer_measurement_digests(
+    values: <span class="kw-2">&amp;</span>SystemLayerData,
+    expected: <span class="kw-2">&amp;</span>SystemLayerExpectedValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    compare_measurement_digest(
+        values.system_image.as_ref().context(<span class="string">&quot;no system image evidence value&quot;</span>)<span class="question-mark">?</span>,
+        expected.system_image.as_ref().context(<span class="string">&quot;no expected system image value&quot;</span>)<span class="question-mark">?</span>,
+    )
+    .context(<span class="string">&quot;system layer system image failed verification&quot;</span>)
+}
+
+<span class="kw">fn </span>get_application_layer_expected_values(
     now_utc_millis: i64,
-    values: <span class="kw-2">&amp;</span>ApplicationLayerData,
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ApplicationLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>ApplicationLayerReferenceValues,
-) -&gt; anyhow::Result&lt;()&gt; {
-    verify_measurement_digest(
-        values.binary.as_ref().context(<span class="string">&quot;no binary evidence value&quot;</span>)<span class="question-mark">?</span>,
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context(<span class="string">&quot;application binary reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;application binary failed verification&quot;</span>)<span class="question-mark">?</span>;
-
-    verify_measurement_digest(
-        values.config.as_ref().context(<span class="string">&quot;no config evidence value&quot;</span>)<span class="question-mark">?</span>,
-        now_utc_millis,
-        endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context(<span class="string">&quot;no configuration reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;configuration failed verification&quot;</span>)
-}
-
-<span class="doccomment">/// Verifies the measurement values of the container layer for Oak Containers.
-</span><span class="kw">fn </span>verify_container_layer(
-    now_utc_millis: i64,
-    values: <span class="kw-2">&amp;</span>ContainerLayerData,
-    endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ContainerLayerEndorsements&gt;,
-    reference_values: <span class="kw-2">&amp;</span>ContainerLayerReferenceValues,
-) -&gt; anyhow::Result&lt;()&gt; {
-    verify_measurement_digest(
-        values.bundle.as_ref().context(<span class="string">&quot;no bundle evidence value&quot;</span>)<span class="question-mark">?</span>,
+) -&gt; anyhow::Result&lt;ApplicationLayerExpectedValues&gt; {
+    <span class="kw">let </span>binary = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
         reference_values.binary.as_ref().context(<span class="string">&quot;container bundle reference value&quot;</span>)<span class="question-mark">?</span>,
-    )
-    .context(<span class="string">&quot;container bundle failed verification&quot;</span>)<span class="question-mark">?</span>;
-
-    verify_measurement_digest(
-        values.config.as_ref().context(<span class="string">&quot;no config evidence value&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>);
+    <span class="kw">let </span>configuration = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context(<span class="string">&quot;no configuration reference value&quot;</span>)<span class="question-mark">?</span>,
+        reference_values.configuration.as_ref().context(<span class="string">&quot;container bundle reference value&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>);
+    <span class="prelude-val">Ok</span>(ApplicationLayerExpectedValues { binary, configuration })
+}
+
+<span class="kw">fn </span>compare_application_layer_measurement_digests(
+    values: <span class="kw-2">&amp;</span>ApplicationLayerData,
+    expected: <span class="kw-2">&amp;</span>ApplicationLayerExpectedValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    compare_measurement_digest(
+        values.binary.as_ref().context(<span class="string">&quot;no binary evidence value&quot;</span>)<span class="question-mark">?</span>,
+        expected.binary.as_ref().context(<span class="string">&quot;no expected binary value&quot;</span>)<span class="question-mark">?</span>,
     )
-    .context(<span class="string">&quot;configuration failed verification&quot;</span>)
+    .context(<span class="string">&quot;application layer binary failed verification&quot;</span>)<span class="question-mark">?</span>;
+    compare_measurement_digest(
+        values.config.as_ref().context(<span class="string">&quot;no config evidence value&quot;</span>)<span class="question-mark">?</span>,
+        expected.configuration.as_ref().context(<span class="string">&quot;no expected config value&quot;</span>)<span class="question-mark">?</span>,
+    )
+    .context(<span class="string">&quot;application layer config failed verification&quot;</span>)
+}
+
+<span class="kw">fn </span>get_container_layer_expected_values(
+    now_utc_millis: i64,
+    endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ContainerLayerEndorsements&gt;,
+    reference_values: <span class="kw-2">&amp;</span>ContainerLayerReferenceValues,
+) -&gt; anyhow::Result&lt;ContainerLayerExpectedValues&gt; {
+    <span class="kw">let </span>bundle = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
+        now_utc_millis,
+        endorsements.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context(<span class="string">&quot;container bundle reference value&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>);
+    <span class="kw">let </span>config = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
+        now_utc_millis,
+        endorsements.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context(<span class="string">&quot;container bundle reference value&quot;</span>)<span class="question-mark">?</span>,
+    )<span class="question-mark">?</span>);
+    <span class="prelude-val">Ok</span>(ContainerLayerExpectedValues { bundle, config })
+}
+
+<span class="kw">fn </span>compare_container_layer_measurement_digests(
+    values: <span class="kw-2">&amp;</span>ContainerLayerData,
+    expected: <span class="kw-2">&amp;</span>ContainerLayerExpectedValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    compare_measurement_digest(
+        values.bundle.as_ref().context(<span class="string">&quot;no bundle evidence value&quot;</span>)<span class="question-mark">?</span>,
+        expected.bundle.as_ref().context(<span class="string">&quot;no expected bundle value&quot;</span>)<span class="question-mark">?</span>,
+    )
+    .context(<span class="string">&quot;container bundle failed verification&quot;</span>)<span class="question-mark">?</span>;
+    compare_measurement_digest(
+        values.config.as_ref().context(<span class="string">&quot;no config evidence value&quot;</span>)<span class="question-mark">?</span>,
+        expected.config.as_ref().context(<span class="string">&quot;no expected config value&quot;</span>)<span class="question-mark">?</span>,
+    )
+    .context(<span class="string">&quot;container config failed verification&quot;</span>)
 }
 
 <span class="doccomment">/// Verifies the measurement digest value against a reference value and an
