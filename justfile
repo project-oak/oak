@@ -40,11 +40,11 @@ _wrap_kernel kernel_bin_prefix:
     env --chdir="${OAK_WRAPPER_DIR}" OAK_RESTRICTED_KERNEL_FILE_NAME="${KERNEL_BIN_PREFIX}_bin" cargo build --release
 
     # Copy the kernel binary to the designated location.
-    rust-objcopy --output-target=binary "${KERNEL_BIN_PATH}" "${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage"
+    rust-objcopy --output-target=binary "${KERNEL_BIN_PATH}" "${BIN_DIR}/${KERNEL_BIN_PREFIX}_wrapper_bin"
 
     # Process the kernel binary using oak_kernel_measurement.
     cargo run --package oak_kernel_measurement -- \
-        --kernel="${BIN_DIR}/${KERNEL_BIN_PREFIX}_bzimage" \
+        --kernel="${BIN_DIR}/${KERNEL_BIN_PREFIX}_wrapper_bin" \
         --kernel-setup-data-output="${BIN_DIR}/${KERNEL_BIN_PREFIX}_setup_data" \
         --kernel-image-output="${BIN_DIR}/${KERNEL_BIN_PREFIX}_image"
 

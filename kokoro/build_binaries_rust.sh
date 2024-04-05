@@ -42,8 +42,8 @@ readonly generated_binaries=(
     ./enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
 )
 readonly binary_names=(
-    oak_restricted_kernel_simple_io_bzimage
-    oak_restricted_kernel_simple_io_init_rd_bzimage
+    oak_restricted_kernel_simple_io_wrapper_bin
+    oak_restricted_kernel_simple_io_init_rd_wrapper_bin
     oak_restricted_kernel_simple_io_wrapper_cmd_line_regex
     stage0_bin
     key_xor_test_app
