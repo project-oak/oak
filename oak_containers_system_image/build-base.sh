@@ -13,8 +13,22 @@ cd "$SCRIPTS_DIR"
 # Unfortunately we can't do it in Dockerfile (with `COPY --chown`), as that requires BuildKit.
 chmod --recursive a+rX files/
 
-docker build . --tag=oak-containers-sysimage-base:latest --file base_image.Dockerfile
+readonly OCI_IMAGE_FILE="./target/oak_container_sysimage_oci_image_base.tar"
+readonly OCI_BUNDLE_FILE="./target/oak_container_sysimage_oci_image_base_bundle.tar"
 
-readonly DOCKER_IMAGE_NAME='europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base:latest'
-docker tag oak-containers-sysimage-base:latest "${DOCKER_IMAGE_NAME}"
-docker push "${DOCKER_IMAGE_NAME}"
+# Export the container as an OCI Image.
+# Ref: https://docs.docker.com/build/exporters/oci-docker/
+readonly BUILDER="$(docker buildx create --driver docker-container)"
+docker buildx \
+    --builder="${BUILDER}" \
+    build \
+    --tag="latest" \
+    --output="type=oci,dest=${OCI_IMAGE_FILE}" \
+    --file base_image.Dockerfile \
+    .
+
+../scripts/export_container_bundle \
+    -c "${OCI_IMAGE_FILE}" \
+    -o "${OCI_BUNDLE_FILE}"
+
+#bazel run push_base

@@ -1,0 +1,10 @@
+command = [
+  "nix",
+  "develop",
+  ".#containersSysImage",
+  "--command",
+  "env",
+  "--chdir=oak_containers_system_image",
+  "./bazel_oci_build.sh"
+]
+artifact_path = "./bazel-bin/oak_containers_system_iamge/runtime_bundle.tar"
