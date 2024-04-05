@@ -35,18 +35,18 @@ use oak_proto_rust::oak::{
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_reference_value, AmdAttestationReport, AmdSevReferenceValues,
         ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
-        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
-        CbEndorsements, CbReferenceValues, ContainerLayerData, ContainerLayerEndorsements,
-        ContainerLayerReferenceValues, Endorsements, Evidence, ExpectedDigests, ExtractedEvidence,
-        FakeAttestationReport, InsecureReferenceValues, IntelTdxAttestationReport,
-        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelLayerData,
-        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TeePlatform, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped,
+        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
+        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
+        ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
+        Endorsements, Evidence, ExpectedDigests, ExtractedEvidence, FakeAttestationReport,
+        InsecureReferenceValues, IntelTdxAttestationReport, IntelTdxReferenceValues,
+        KernelAttachment, KernelBinaryReferenceValue, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues, SystemLayerData,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -262,14 +262,17 @@ fn verify_oak_restricted_kernel(
     )
     .context("kernel layer verification failed")?;
 
-    verify_application_layer(
+    let expected = get_application_layer_expected_values(
         now_utc_millis,
-        values.application_layer.as_ref().context("no applications layer evidence values")?,
         endorsements.application_layer.as_ref(),
         reference_values
             .application_layer
             .as_ref()
             .context("no application layer reference values")?,
+    )?;
+    compare_application_layer_measurement_digests(
+        values.application_layer.as_ref().context("no applications layer evidence values")?,
+        &expected,
     )
     .context("application layer verification failed")
 }
@@ -298,19 +301,25 @@ fn verify_oak_containers(
     )
     .context("kernel layer verification failed")?;
 
-    verify_system_layer(
+    let expected = get_system_layer_expected_values(
         now_utc_millis,
-        values.system_layer.as_ref().context("no system layer evidence values")?,
         endorsements.system_layer.as_ref(),
         reference_values.system_layer.as_ref().context("no system layer reference values")?,
+    )?;
+    compare_system_layer_measurement_digests(
+        values.system_layer.as_ref().context("no system layer evidence values")?,
+        &expected,
     )
     .context("system layer verification failed")?;
 
-    verify_container_layer(
+    let expected = get_container_layer_expected_values(
         now_utc_millis,
-        values.container_layer.as_ref().context("no container layer evidence values")?,
         endorsements.container_layer.as_ref(),
-        reference_values.container_layer.as_ref().context("no container layer reference values")?,
+        reference_values.container_layer.as_ref().context("no containers layer values")?,
+    )?;
+    compare_container_layer_measurement_digests(
+        values.container_layer.as_ref().context("no container layer evidence values")?,
+        &expected,
     )
     .context("container layer verification failed")
 }
@@ -573,70 +582,96 @@ fn verify_kernel_layer(
     .context("ACPI table building commands failed verification")
 }
 
-/// Verifies the measurement values of the system image layer for Oak
-/// Containers.
-fn verify_system_layer(
+fn get_system_layer_expected_values(
     now_utc_millis: i64,
-    values: &SystemLayerData,
     endorsements: Option<&SystemLayerEndorsements>,
     reference_values: &SystemLayerReferenceValues,
-) -> anyhow::Result<()> {
-    verify_measurement_digest(
-        values.system_image.as_ref().context("no system image evidence value")?,
+) -> anyhow::Result<SystemLayerExpectedValues> {
+    let system_image = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context("no system image reference value")?,
-    )
-    .context("system image failed verification")
+        reference_values.system_image.as_ref().context("container bundle reference value")?,
+    )?);
+    Ok(SystemLayerExpectedValues { system_image })
 }
 
-/// Verifies the measurement values of the application layer for Oak Restricted
-/// Kernel.
-fn verify_application_layer(
+fn compare_system_layer_measurement_digests(
+    values: &SystemLayerData,
+    expected: &SystemLayerExpectedValues,
+) -> anyhow::Result<()> {
+    compare_measurement_digest(
+        values.system_image.as_ref().context("no system image evidence value")?,
+        expected.system_image.as_ref().context("no expected system image value")?,
+    )
+    .context("system layer system image failed verification")
+}
+
+fn get_application_layer_expected_values(
     now_utc_millis: i64,
-    values: &ApplicationLayerData,
     endorsements: Option<&ApplicationLayerEndorsements>,
     reference_values: &ApplicationLayerReferenceValues,
-) -> anyhow::Result<()> {
-    verify_measurement_digest(
-        values.binary.as_ref().context("no binary evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("application binary reference value")?,
-    )
-    .context("application binary failed verification")?;
-
-    verify_measurement_digest(
-        values.config.as_ref().context("no config evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context("no configuration reference value")?,
-    )
-    .context("configuration failed verification")
-}
-
-/// Verifies the measurement values of the container layer for Oak Containers.
-fn verify_container_layer(
-    now_utc_millis: i64,
-    values: &ContainerLayerData,
-    endorsements: Option<&ContainerLayerEndorsements>,
-    reference_values: &ContainerLayerReferenceValues,
-) -> anyhow::Result<()> {
-    verify_measurement_digest(
-        values.bundle.as_ref().context("no bundle evidence value")?,
+) -> anyhow::Result<ApplicationLayerExpectedValues> {
+    let binary = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
         reference_values.binary.as_ref().context("container bundle reference value")?,
-    )
-    .context("container bundle failed verification")?;
-
-    verify_measurement_digest(
-        values.config.as_ref().context("no config evidence value")?,
+    )?);
+    let configuration = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context("no configuration reference value")?,
+        reference_values.configuration.as_ref().context("container bundle reference value")?,
+    )?);
+    Ok(ApplicationLayerExpectedValues { binary, configuration })
+}
+
+fn compare_application_layer_measurement_digests(
+    values: &ApplicationLayerData,
+    expected: &ApplicationLayerExpectedValues,
+) -> anyhow::Result<()> {
+    compare_measurement_digest(
+        values.binary.as_ref().context("no binary evidence value")?,
+        expected.binary.as_ref().context("no expected binary value")?,
     )
-    .context("configuration failed verification")
+    .context("application layer binary failed verification")?;
+    compare_measurement_digest(
+        values.config.as_ref().context("no config evidence value")?,
+        expected.configuration.as_ref().context("no expected config value")?,
+    )
+    .context("application layer config failed verification")
+}
+
+fn get_container_layer_expected_values(
+    now_utc_millis: i64,
+    endorsements: Option<&ContainerLayerEndorsements>,
+    reference_values: &ContainerLayerReferenceValues,
+) -> anyhow::Result<ContainerLayerExpectedValues> {
+    let bundle = Some(get_expected_measurement_digest(
+        now_utc_millis,
+        endorsements.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context("container bundle reference value")?,
+    )?);
+    let config = Some(get_expected_measurement_digest(
+        now_utc_millis,
+        endorsements.and_then(|value| value.binary.as_ref()),
+        reference_values.binary.as_ref().context("container bundle reference value")?,
+    )?);
+    Ok(ContainerLayerExpectedValues { bundle, config })
+}
+
+fn compare_container_layer_measurement_digests(
+    values: &ContainerLayerData,
+    expected: &ContainerLayerExpectedValues,
+) -> anyhow::Result<()> {
+    compare_measurement_digest(
+        values.bundle.as_ref().context("no bundle evidence value")?,
+        expected.bundle.as_ref().context("no expected bundle value")?,
+    )
+    .context("container bundle failed verification")?;
+    compare_measurement_digest(
+        values.config.as_ref().context("no config evidence value")?,
+        expected.config.as_ref().context("no expected config value")?,
+    )
+    .context("container config failed verification")
 }
 
 /// Verifies the measurement digest value against a reference value and an
