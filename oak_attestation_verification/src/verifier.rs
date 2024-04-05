@@ -518,8 +518,7 @@ fn verify_kernel_layer(
     )
     .context("kernel failed verification")?;
 
-    // TODO: b/331252282 - Remove temporary workaround for command line length
-    // limit.
+    // TODO: b/331252282 - Remove temporary workaround for cmd line.
     if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref()
         && kernel_raw_cmd_line.len() < 256
     {

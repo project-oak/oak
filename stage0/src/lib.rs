@@ -308,8 +308,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
 
-    // TODO: b/331252282 - Remove temporary workaround for command line length
-    // limit.
+    // TODO: b/331252282 - Remove temporary workaround for cmd line length.
     let cmdline_max_len = 256;
     let measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
