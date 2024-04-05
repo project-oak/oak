@@ -43,12 +43,14 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::proto::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
+    launcher::{
+        launcher_server::{Launcher, LauncherServer},
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
     v1::{
         hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
         GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
     },
-    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
 };
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay

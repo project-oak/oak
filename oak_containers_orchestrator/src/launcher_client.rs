@@ -20,9 +20,10 @@ use tonic::transport::Channel;
 use crate::proto::oak::{
     attestation::v1::Evidence,
     containers::{
-        launcher_client::LauncherClient as GrpcLauncherClient,
+        launcher::{
+            launcher_client::LauncherClient as GrpcLauncherClient, SendAttestationEvidenceRequest,
+        },
         v1::{hostlib_key_provisioning_client::HostlibKeyProvisioningClient, KeyProvisioningRole},
-        SendAttestationEvidenceRequest,
     },
     key_provisioning::v1::GroupKeys,
 };

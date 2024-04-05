@@ -16,8 +16,10 @@
 pub mod proto {
     pub mod oak {
         pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
+            pub mod launcher {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.launcher");
+            }
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
                 tonic::include_proto!("oak.containers.v1");
