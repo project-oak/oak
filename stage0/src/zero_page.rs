@@ -149,11 +149,13 @@ impl ZeroPage {
         self.validate_e820_table();
 
         // Carve out a chunk of memory for the ACPI area in the range
-        // [0x80000-0xA0000). We also remove the region [0xA0000,0x100000)
+        // [0x80000-0xA0000). We also remove the region [0xA0000,0xF0000)
         // since historically this contained hardware-related regions such as
-        // the VGA bios rom.
+        // the VGA bios rom. Finally, reserve [0xF0000,0x100000) as Stage0
+        // initializes this memory to handle legacy scans of the SMBIOS range.
         self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
-        self.ensure_e820_gap(0xA_0000, 0x6_0000);
+        self.ensure_e820_gap(0xA_0000, 0x5_0000);
+        self.insert_e820_entry(BootE820Entry::new(0xF_0000, 0x1_0000, E820EntryType::RESERVED));
 
         for entry in self.inner.e820_table() {
             log::debug!(

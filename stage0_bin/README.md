@@ -123,6 +123,9 @@ Stage0 maps the first 1 GiB of physical memory using identity mapping before
 handing control over to the kernel. The stage0 binary itself is mapped into
 memory just below the end of 4 GiB address space, like any other BIOS ROM.
 
+We explicitly reserve the SMBIOS entry table memory range (0xF0000-0xFFFFF) to
+indicate that Stage0 initializes this range.
+
 ```text
                |                      ...                       |
  0x1_0000_0000 +------------------------------------------------+ 4GiB
@@ -144,6 +147,8 @@ memory just below the end of 4 GiB address space, like any other BIOS ROM.
      0x20_0000 +------------------------------------------------+ 2MiB
                |                                                |
      0x10_0000 +------------------------------------------------+ 1MiB
+               |    Reserved SMBIOS entry point table memory    |
+      0xF_0000 +------------------------------------------------+ 960KiB
                |                    BIOS Hole                   |
       0xA_0000 +------------------------------------------------+ 640KiB
                |     Extended BIOS Data Area (ACPI Tables)      |
@@ -161,6 +166,9 @@ The Linux kernel and the Oak restricted kernel both assume that the firmware
 will validate all (or at least most) of the guest-physical memory before jumping
 into the kernel (by calling the PVALIDATE instruction).
 
+Because legacy code may scan the SMBIOS region (even if marked as reserved in
+the E820 table), we pvalidate this region to prevent crashes.
+
 We don't have to PVALIDATE the Stage 0 ROM image range, since that memory was
 already set in the appropriate validated state by the Secure Processor before
 launching the guest VM.
@@ -172,6 +180,8 @@ launching the guest VM.
    0xFFFE_0000 +------------------------------------------------+ 4GiB - 128MiB
                |                   PVALIDATEd                   |
      0x10_0000 +------------------------------------------------+ 1MiB
+               |   PVALIDATEd SMBIOS entry point table memory   |
+      0xF_0000 +------------------------------------------------+ 960KiB
                |                    BIOS Hole                   |
       0xA_0000 +------------------------------------------------+ 640KiB
                |      PVALIDATEd by bootstrap assembly code     |
