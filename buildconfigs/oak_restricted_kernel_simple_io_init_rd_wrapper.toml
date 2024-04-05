@@ -7,4 +7,5 @@ command = [
   "oak_restricted_kernel_simple_io_init_rd_wrapper",
 ]
 artifact_path = "./oak_restricted_kernel_wrapper/target/released_bin_with_components_oak_restricted_kernel_simple_io_init_rd/*"
+binary_file = "./oak_restricted_kernel_wrapper/target/released_bin_with_components_oak_restricted_kernel_simple_io_init_rd/bzimage"
 package_name = "oak_restricted_kernel_simple_io_init_rd_wrapper_bin"
