@@ -39,15 +39,18 @@ using ::oak::crypto::v1::SessionKeys;
 }  // namespace
 
 absl::StatusOr<SessionKeys> OrchestratorCryptoClient::DeriveSessionKeys(
-    KeyOrigin key_origin, absl::string_view serialized_encapsulated_public_key) const {
+    KeyOrigin key_origin,
+    absl::string_view serialized_encapsulated_public_key) const {
   ClientContext context;
   context.set_authority(kContextAuthority);
   DeriveSessionKeysRequest request;
   request.set_key_origin(key_origin);
-  request.set_serialized_encapsulated_public_key(serialized_encapsulated_public_key);
+  request.set_serialized_encapsulated_public_key(
+      serialized_encapsulated_public_key);
   DeriveSessionKeysResponse response;
 
-  ::grpc::Status status = stub_->DeriveSessionKeys(&context, request, &response);
+  ::grpc::Status status =
+      stub_->DeriveSessionKeys(&context, request, &response);
   if (!status.ok()) {
     return absl::InternalError("couldn't derive session keys");
   }

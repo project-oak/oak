@@ -18,9 +18,11 @@
 #include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_KeyPair.h"
 
-JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate(JNIEnv* env,
-                                                                                 jclass obj) {
-  absl::StatusOr<::oak::crypto::KeyPair> kp_status = oak::crypto::KeyPair::Generate();
+JNIEXPORT jobject JNICALL
+Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate(JNIEnv* env,
+                                                       jclass obj) {
+  absl::StatusOr<::oak::crypto::KeyPair> kp_status =
+      oak::crypto::KeyPair::Generate();
   if (!kp_status.ok()) {
     return {};
   }
@@ -35,8 +37,9 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate
                           reinterpret_cast<const jbyte*>(public_key.c_str()));
 
   jclass key_pair_class = env->FindClass("com/google/oak/crypto/hpke/KeyPair");
-  jmethodID key_pair_constructor = env->GetMethodID(key_pair_class, "<init>", "([B[B)V");
-  jobject key_pair =
-      env->NewObject(key_pair_class, key_pair_constructor, private_key_arr, public_key_arr);
+  jmethodID key_pair_constructor =
+      env->GetMethodID(key_pair_class, "<init>", "([B[B)V");
+  jobject key_pair = env->NewObject(key_pair_class, key_pair_constructor,
+                                    private_key_arr, public_key_arr);
   return key_pair;
 }

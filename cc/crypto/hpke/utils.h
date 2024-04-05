@@ -31,35 +31,43 @@
 
 namespace oak::crypto {
 
-// Helpful struct for keeping track of key information returned from the BoringSSL HPKE library.
+// Helpful struct for keeping track of key information returned from the
+// BoringSSL HPKE library.
 struct KeyInfo {
   size_t key_size;
   std::vector<uint8_t> key_bytes;
 };
 
 // Generate session key for the AEAD context.
-absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
-                                                         absl::string_view key_context_string);
+absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
+    EVP_HPKE_CTX* hpke_ctx, absl::string_view key_context_string);
 
 // Generates random nonce for AEAD.
-// RFC 9180 uses deterministic nonces which leads to the possibility of the following attack:
-// - An attacker can record a client request and wait until the application database changes
+// RFC 9180 uses deterministic nonces which leads to the possibility of the
+// following attack:
+// - An attacker can record a client request and wait until the application
+// database changes
 //   - I.e. it updates an internal lookup database based on the public data
-// - Then if an attacker replays the same request it can get a different response encrypted with the
-// same nonce
-//   - And having 2 different messages encrypted with the same nonce breaks AES-GCM
+// - Then if an attacker replays the same request it can get a different
+// response encrypted with the same nonce
+//   - And having 2 different messages encrypted with the same nonce breaks
+//   AES-GCM
 //     - The attack is called AES-GCM Forbidden Attack
-// To mitigate the AES-GCM Forbidden Attack Oak is using random nonces for encrypting messages with
-// AEAD.
+// To mitigate the AES-GCM Forbidden Attack Oak is using random nonces for
+// encrypting messages with AEAD.
 absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce();
 
-// Encrypts `plaintext` and authenticates `associated_data` using AEAD with `context` and `nonce`.
-absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,
+// Encrypts `plaintext` and authenticates `associated_data` using AEAD with
+// `context` and `nonce`.
+absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context,
+                                     std::vector<uint8_t> nonce,
                                      absl::string_view plaintext,
                                      absl::string_view associated_data);
 
-// Decrypts `ciphertext` and authenticates `associated_data` using AEAD using `context` and `nonce`.
-absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,
+// Decrypts `ciphertext` and authenticates `associated_data` using AEAD using
+// `context` and `nonce`.
+absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context,
+                                     std::vector<uint8_t> nonce,
                                      absl::string_view ciphertext,
                                      absl::string_view associated_data);
 

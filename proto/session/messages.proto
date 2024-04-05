@@ -25,8 +25,8 @@ import "proto/attestation/evidence.proto";
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
-// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
-// attestation endorsements provided by the hostlib.
+// Endorsed evidence contains an attestation evidence provided by the enclave
+// and the corresponding attestation endorsements provided by the hostlib.
 message EndorsedEvidence {
   oak.attestation.v1.Evidence evidence = 1;
   oak.attestation.v1.Endorsements endorsements = 2;

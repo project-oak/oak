@@ -45,8 +45,8 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
   return std::make_unique<ClientEncryptor>(std::move(*sender_context));
 }
 
-absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plaintext,
-                                                          absl::string_view associated_data) {
+absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(
+    absl::string_view plaintext, absl::string_view associated_data) {
   // Encrypt request.
   absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
   if (!nonce.ok()) {
@@ -62,10 +62,13 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
   EncryptedRequest encrypted_request;
   *encrypted_request.mutable_encrypted_message()->mutable_nonce() =
       std::string(nonce->begin(), nonce->end());
-  *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
-  *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
+  *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() =
+      *ciphertext;
+  *encrypted_request.mutable_encrypted_message()->mutable_associated_data() =
+      associated_data;
 
-  // Encapsulated public key is only sent in the initial request message of the session.
+  // Encapsulated public key is only sent in the initial request message of the
+  // session.
   if (!serialized_encapsulated_public_key_has_been_sent_) {
     *encrypted_request.mutable_serialized_encapsulated_public_key() =
         sender_context_->GetSerializedEncapsulatedPublicKey();
@@ -75,18 +78,21 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
   return encrypted_request;
 }
 
-absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(EncryptedResponse encrypted_response) {
+absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(
+    EncryptedResponse encrypted_response) {
   // Decrypt response.
-  const std::vector<uint8_t> nonce(encrypted_response.encrypted_message().nonce().begin(),
-                                   encrypted_response.encrypted_message().nonce().end());
-  absl::StatusOr<std::string> plaintext =
-      sender_context_->Open(nonce, encrypted_response.encrypted_message().ciphertext(),
-                            encrypted_response.encrypted_message().associated_data());
+  const std::vector<uint8_t> nonce(
+      encrypted_response.encrypted_message().nonce().begin(),
+      encrypted_response.encrypted_message().nonce().end());
+  absl::StatusOr<std::string> plaintext = sender_context_->Open(
+      nonce, encrypted_response.encrypted_message().ciphertext(),
+      encrypted_response.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
   }
 
-  return DecryptionResult{*plaintext, encrypted_response.encrypted_message().associated_data()};
+  return DecryptionResult{
+      *plaintext, encrypted_response.encrypted_message().associated_data()};
 }
 
 }  // namespace oak::crypto

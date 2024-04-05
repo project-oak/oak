@@ -51,26 +51,29 @@ using ::oak::transport::TransportWrapper;
 constexpr absl::string_view kEmptyAssociatedData = "";
 
 absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
-    std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
-  absl::StatusOr<EndorsedEvidence> endorsed_evidence = transport->GetEndorsedEvidence();
+    std::unique_ptr<TransportWrapper> transport,
+    AttestationVerifier& verifier) {
+  absl::StatusOr<EndorsedEvidence> endorsed_evidence =
+      transport->GetEndorsedEvidence();
   if (!endorsed_evidence.ok()) {
     return endorsed_evidence.status();
   }
 
-  absl::StatusOr<AttestationResults> attestation_results =
-      verifier.Verify(std::chrono::system_clock::now(), endorsed_evidence->evidence(),
-                      endorsed_evidence->endorsements());
+  absl::StatusOr<AttestationResults> attestation_results = verifier.Verify(
+      std::chrono::system_clock::now(), endorsed_evidence->evidence(),
+      endorsed_evidence->endorsements());
   if (!attestation_results.ok()) {
     return attestation_results.status();
   }
 
   switch (attestation_results->status()) {
     case AttestationResults::STATUS_SUCCESS:
-      return absl::WrapUnique(
-          new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+      return absl::WrapUnique(new OakClient(
+          std::move(transport), attestation_results->encryption_public_key()));
     case AttestationResults::STATUS_GENERIC_FAILURE:
       return absl::FailedPreconditionError(
-          absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
+          absl::StrCat("couldn't verify endorsed evidence: ",
+                       attestation_results->reason()));
     case AttestationResults::STATUS_UNSPECIFIED:
     default:
       return absl::InternalError("illegal status code in attestation results");
@@ -93,13 +96,15 @@ absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
   }
 
   // Send request.
-  absl::StatusOr<EncryptedResponse> encrypted_response = transport_->Invoke(*encrypted_request);
+  absl::StatusOr<EncryptedResponse> encrypted_response =
+      transport_->Invoke(*encrypted_request);
   if (!encrypted_response.ok()) {
     return encrypted_response.status();
   }
 
   // Decrypt response.
-  absl::StatusOr<DecryptionResult> response = (*client_encryptor)->Decrypt(*encrypted_response);
+  absl::StatusOr<DecryptionResult> response =
+      (*client_encryptor)->Decrypt(*encrypted_response);
   if (!response.ok()) {
     return response.status();
   }

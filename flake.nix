@@ -25,10 +25,10 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          linux_kernel_version = "6.1.33";
+          linux_kernel_version = "6.1.84";
           linux_kernel_src = builtins.fetchurl {
             url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
-            sha256 = "1kfj7mi3n2lfaw4spz5cbvcl1md038figabyg80fha3kxal6nzdq";
+            sha256 = "0ykhl4i6yhryzgjkdbdz4pd3b1ghv84h6mpn7bdx0ra7w7mx55xg";
           };
           # Build the linux kernel for Oak Containers as a nix package, which simplifies
           # reproducibility.
@@ -39,7 +39,7 @@
             # - CONFIG_MODULE_SIG is not set
             # - CONFIG_MODULE_SIG_ALL is not set
             # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
-            configfile = ./oak_containers_kernel/configs/6.1.33/minimal.config;
+            configfile = ./oak_containers_kernel/configs/6.1.84/minimal.config;
             # And also the following build variables.
             # See https://docs.kernel.org/kbuild/reproducible-builds.html.
             extraMakeFlags = [

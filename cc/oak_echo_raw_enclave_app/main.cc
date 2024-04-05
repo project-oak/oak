@@ -23,8 +23,8 @@ constexpr int CHANNEL_FD = 10;
 int main(int argc, char* argv[]) {
   char buf;
 
-  // This should be set up by the runtime for us, but it isn't. It's a bug in the toolchain we need
-  // to fix.
+  // This should be set up by the runtime for us, but it isn't. It's a bug in
+  // the toolchain we need to fix.
   std::ios_base::Init init;
 
   std::cerr << "In main!" << std::endl;

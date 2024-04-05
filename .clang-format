@@ -2,3 +2,10 @@ BasedOnStyle: Google
 ColumnLimit: 100
 DerivePointerAlignment: false
 PointerAlignment: Left
+---
+Language: Cpp
+ColumnLimit: 80
+---
+Language: Proto
+ColumnLimit: 80
+---

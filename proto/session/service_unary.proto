@@ -26,7 +26,8 @@ option java_package = "com.google.oak.session.v1";
 // Service definition for unary communication with Oak server.
 service UnarySession {
   // Gets a attestation evidence and endorsements.
-  rpc GetEndorsedEvidence(GetEndorsedEvidenceRequest) returns (GetEndorsedEvidenceResponse);
+  rpc GetEndorsedEvidence(GetEndorsedEvidenceRequest)
+      returns (GetEndorsedEvidenceResponse);
 
   // Performs lookup for a list of encrypted keys. The keys should be encrypted
   // using the Public key provided by the enclave. The response is encrypted

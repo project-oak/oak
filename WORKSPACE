@@ -315,6 +315,10 @@ crates_repository(
     cargo_lockfile = "//:Cargo.bazel.lock",  # In Cargo-free mode this is used as output, not input.
     lockfile = "//:cargo-bazel-lock.json",  # Shares most contents with cargo_lockfile.
     packages = {
+        "aes-gcm": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
         "anyhow": crate.spec(
             default_features = False,
             version = "*",
@@ -332,6 +336,9 @@ crates_repository(
         "ciborium": crate.spec(
             default_features = False,
             version = "*",
+        ),
+        "curve25519-dalek": crate.spec(
+            version = "4.1.1",
         ),
         "coset": crate.spec(
             default_features = False,
@@ -360,6 +367,14 @@ crates_repository(
             default_features = False,
             version = "*",
         ),
+        "hpke": crate.spec(
+            default_features = False,
+            features = [
+                "alloc",
+                "x25519",
+            ],
+            version = "*",
+        ),
         "p256": crate.spec(
             default_features = False,
             features = [
@@ -377,6 +392,12 @@ crates_repository(
                 "pem",
             ],
             version = "0.13.0",
+        ),
+        "pkcs8": crate.spec(
+            version = "*",
+        ),
+        "primeorder": crate.spec(
+            version = "*",
         ),
         "prost": crate.spec(
             default_features = False,
@@ -443,9 +464,18 @@ crates_repository(
             version = "*",
         ),
     },
+    rust_version = "nightly/2023-11-15",
     supported_platform_triples = ["x86_64-unknown-linux-gnu"],  # Non needed with Bazel+Cargo - possibly reading .cargo dir.
 )
 
 load("@oak_crates_index//:defs.bzl", "crate_repositories")
 
 crate_repositories()
+
+load("//bazel/tools/prost:deps.bzl", "prost_toolchain_crates")
+
+prost_toolchain_crates()
+
+load("//bazel/tools/prost:defs.bzl", "setup_prost_toolchain")
+
+setup_prost_toolchain()

@@ -108,6 +108,17 @@ mutable_interrupt_handler_with_error_code!(
     ) {
         match error_code {
             0x72 => {
+                // Make sure it was triggered from a CPUID instruction.
+                const CPUID_INSTRUCTION: u16 = 0xa20f;
+                // Safety: we are copying two bytes and interpreting it as a
+                // 16-bit number without making any other assumptions about
+                // the layout.
+                let instruction: u16 =
+                    unsafe { core::ptr::read_unaligned(stack_frame.rip.as_ptr()) };
+                if instruction != CPUID_INSTRUCTION {
+                    panic!("INSTRUCTION WAS NOT CPUID");
+                }
+
                 if let Some(cpuid_page) = CPUID_PAGE.get() {
                     let target = stack_frame.into();
                     let count = cpuid_page.count as usize;

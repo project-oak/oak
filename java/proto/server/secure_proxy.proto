@@ -26,7 +26,8 @@ option java_package = "com.google.oak.server";
 // Secure proxy wraps a service in an encrypted connection.
 service SecureProxy {
   // EncryptedConnect creates an encrypted connection between a client and a
-  // server, and delegates the processing of the requests to another, unencrypted, service.
+  // server, and delegates the processing of the requests to another,
+  // unencrypted, service.
   rpc EncryptedConnect(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
 }

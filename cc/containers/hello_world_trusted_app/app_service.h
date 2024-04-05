@@ -28,14 +28,17 @@
 
 namespace oak::oak_containers_hello_world_trusted_app {
 
-class TrustedApplicationImpl : public containers::example::TrustedApplication::Service {
+class TrustedApplicationImpl
+    : public containers::example::TrustedApplication::Service {
  public:
-  TrustedApplicationImpl(std::unique_ptr<::oak::crypto::EncryptionKeyHandle> encryption_key_handle,
-                         absl::string_view application_config)
+  TrustedApplicationImpl(
+      std::unique_ptr<::oak::crypto::EncryptionKeyHandle> encryption_key_handle,
+      absl::string_view application_config)
       : encryption_key_handle_(std::move(encryption_key_handle)),
         application_config_(application_config) {}
 
-  grpc::Status Hello(grpc::ServerContext* context, const containers::example::HelloRequest* request,
+  grpc::Status Hello(grpc::ServerContext* context,
+                     const containers::example::HelloRequest* request,
                      containers::example::HelloResponse* response) override;
 
  private:

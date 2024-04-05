@@ -23,14 +23,14 @@ import "proto/attestation/evidence.proto";
 import "proto/attestation/endorsement.proto";
 
 message GroupKeys {
-  // Encryption private key that was encrypted with HPKE using the encryption public key provided
-  // in the endorsed evidence.
+  // Encryption private key that was encrypted with HPKE using the encryption
+  // public key provided in the endorsed evidence.
   oak.crypto.v1.EncryptedRequest encrypted_encryption_private_key = 1;
 }
 
 message GetGroupKeysRequest {
-  // Evidence contains the encryption public key for encrypting the group encryption key with
-  // Hybrid Encryption.
+  // Evidence contains the encryption public key for encrypting the group
+  // encryption key with Hybrid Encryption.
   // <https://datatracker.ietf.org/doc/rfc9180/>
   oak.attestation.v1.Evidence evidence = 1;
   oak.attestation.v1.Endorsements endorsements = 2;
@@ -42,6 +42,7 @@ message GetGroupKeysResponse {
 
 // Defines the Key Provisioning Service that distributes keys between enclaves.
 service KeyProvisioning {
-  // Request enclave group keys from for other enclaves as part of Key Provisioning.
+  // Request enclave group keys from for other enclaves as part of Key
+  // Provisioning.
   rpc GetGroupKeys(GetGroupKeysRequest) returns (GetGroupKeysResponse) {}
 }

@@ -54,21 +54,26 @@ service UnarySession {
   //
   // The expected message seqeuence starts with an intial handshake:
   // - Client->Server: `UnaryRequest` with a serialized `ClientHello` message.
-  // - Server->Client: `UnaryResponse` with a serialized `ServerIdentity` message.
-  // - Client->Server: `UnaryRequest` with a serialized `ClientIdentity` message.
-  // - Server->Client: `UnaryResponse` with an empty message, confirming handshake completion.
+  // - Server->Client: `UnaryResponse` with a serialized `ServerIdentity`
+  // message.
+  // - Client->Server: `UnaryRequest` with a serialized `ClientIdentity`
+  // message.
+  // - Server->Client: `UnaryResponse` with an empty message, confirming
+  // handshake completion.
   //
   // After the handshake, both client and server derive matching session keys
   // and are then able to exchange multiple UnaryRequest/UnaryResponse request
   // pairs that contain a seralized `EncryptedData` message:
   // - Client->Server: `UnaryRequest` with a serialized `EncryptedData` message.
-  // - Server->Client: `UnaryResponse` with a serialized `EncryptedData` message.
+  // - Server->Client: `UnaryResponse` with a serialized `EncryptedData`
+  // message.
   //
-  // Messages are represented as serialized messages defined in the `remote_attestation::message.rs`
-  // and `com.google.oak.remote_attestation.Message`.
+  // Messages are represented as serialized messages defined in the
+  // `remote_attestation::message.rs` and
+  // `com.google.oak.remote_attestation.Message`.
   rpc Message(UnaryRequest) returns (UnaryResponse);
 
-  // Gets the public key and the attestation report that binds the public key to a specific instance
-  // of the code running in a TEE.
+  // Gets the public key and the attestation report that binds the public key to
+  // a specific instance of the code running in a TEE.
   rpc GetPublicKeyInfo(google.protobuf.Empty) returns (PublicKeyInfo);
 }

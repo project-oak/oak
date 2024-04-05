@@ -39,8 +39,9 @@ use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb,
     structures::paging::{
-        frame::PhysFrameRange, page::AddressNotAligned, Page, PageSize, PageTable, PageTableFlags,
-        PhysFrame, Size1GiB, Size2MiB, Size4KiB,
+        frame::PhysFrameRange,
+        page::{AddressNotAligned, NotGiantPageSize},
+        Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -283,7 +284,7 @@ impl<S: PageSize> MappedPage<S> {
     }
 }
 
-fn pvalidate_range<S: PageSize + ValidatablePageSize, T: PageSize, F>(
+fn pvalidate_range<S: NotGiantPageSize + ValidatablePageSize, T: PageSize, F>(
     range: &PhysFrameRange<S>,
     memory: &mut MappedPage<T>,
     encrypted: u64,
@@ -454,6 +455,26 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
     }
 }
 
+trait PageStateChange {
+    fn page_state_change(&self, assignment: PageAssignment) -> Result<(), &'static str>;
+}
+
+impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
+    fn page_state_change(&self, assignment: PageAssignment) -> Result<(), &'static str> {
+        // Future optimization: do this operation in batches of 253 frames (that's how
+        // many can fit in one PageStateChange request) instead of one at a time.
+        for frame in *self {
+            GHCB_WRAPPER
+                .get()
+                .expect("GHCB not initialized")
+                .lock()
+                .page_state_change(frame, assignment)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
 /// `RAM`.
 pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
@@ -497,29 +518,100 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
             continue;
         }
 
-        let start_address = PhysAddr::new(entry.addr() as u64);
-        let limit_address = PhysAddr::new((entry.addr() + entry.size()) as u64);
+        let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
+        let limit_address =
+            PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
 
-        // If the memory boundaries align with 2 MiB, start with that.
-        if start_address.is_aligned(Size2MiB::SIZE) && limit_address.is_aligned(Size2MiB::SIZE) {
+        if start_address > limit_address {
+            log::error!(
+                "nonsensical entry in E820 table: [{}, {})",
+                entry.addr(),
+                entry.addr() + entry.size()
+            );
+            continue;
+        }
+
+        // Attempt to validate as many pages as possible using 2 MiB pages (aka
+        // hugepages).
+        let hugepage_start = start_address.align_up(Size2MiB::SIZE);
+        let hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
+
+        // If start_address == hugepage_start, we're aligned with 2M address boundary.
+        // Otherwise, we need to process any 4K pages before the alignment.
+        // Note that limit_address may be less than hugepage_start, which means that the
+        // E820 entry was less than 2M in size and didn't cross a 2M boundary.
+        if hugepage_start > start_address {
+            let limit = core::cmp::min(hugepage_start, limit_address);
+            // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+            let range = PhysFrame::<Size4KiB>::range(
+                PhysFrame::from_start_address(start_address).unwrap(),
+                PhysFrame::from_start_address(limit).unwrap(),
+            );
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate memory");
+        }
+
+        // If hugepage_limit > hugepage_start, we've got some contiguous 2M chunks that
+        // we can process as hugepages.
+        if hugepage_limit > hugepage_start {
             // These unwraps can't fail as we've made sure that the addresses are 2
             // MiB-aligned.
             let range = PhysFrame::<Size2MiB>::range(
-                PhysFrame::from_start_address(start_address).unwrap(),
+                PhysFrame::from_start_address(hugepage_start).unwrap(),
+                PhysFrame::from_start_address(hugepage_limit).unwrap(),
+            );
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range
+                .pvalidate(&mut validation_pd, &mut validation_pt, encrypted)
+                .expect("failed to validate memory");
+        }
+
+        // And finally, we may have some trailing 4K pages in [hugepage_limit,
+        // limit_address) that we need to process.
+        if limit_address > hugepage_limit {
+            let start = core::cmp::max(start_address, hugepage_limit);
+            // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+            let range = PhysFrame::<Size4KiB>::range(
+                PhysFrame::from_start_address(start).unwrap(),
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
-            range.pvalidate(&mut validation_pd, &mut validation_pt, encrypted)
-        } else {
-            // No such luck, fail over to 4K pages.
-            // The unwraps can't fail as we make sure that the addresses are 4 KiB-aligned.
-            let range = PhysFrame::<Size4KiB>::range(
-                PhysFrame::from_start_address(start_address.align_up(Size4KiB::SIZE)).unwrap(),
-                PhysFrame::from_start_address(limit_address.align_down(Size4KiB::SIZE)).unwrap(),
-            );
-            range.pvalidate(&mut validation_pt, encrypted)
+            range.page_state_change(PageAssignment::Private).unwrap();
+            range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate memory");
         }
-        .expect("failed to validate memory");
     }
+
+    // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
+    // Unwrap() will panic if entry not found with expected start, size, and type.
+    let legacy_smbios_range_entry = e820_table
+        .iter()
+        .find(|entry| {
+            entry.addr() == 0xF_0000
+                && entry.size() == 0x1_0000
+                && entry.entry_type() == Some(E820EntryType::RESERVED)
+        })
+        .expect("couldn't find legacy SMBIOS memory range");
+
+    // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
+    // the SMBIOS entry point table, even if the range is marked as reserved.
+    let range = PhysFrame::<Size4KiB>::range(
+        PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
+            .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(
+            (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+        ))
+        .unwrap(),
+    );
+    range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate SMBIOS memory");
+
+    // Safety: the E820 table indicates that this is the correct memory segment.
+    let legacy_smbios_range_bytes = unsafe {
+        core::slice::from_raw_parts_mut::<u8>(
+            legacy_smbios_range_entry.addr() as *mut u8,
+            legacy_smbios_range_entry.size(),
+        )
+    };
+    // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+    legacy_smbios_range_bytes.zeroize();
 
     page_tables.pd_0[1].set_unused();
     page_tables.pdpt[1].set_unused();

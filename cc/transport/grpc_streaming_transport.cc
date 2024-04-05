@@ -23,6 +23,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "cc/transport/util.h"
 #include "grpcpp/channel.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
@@ -32,25 +33,19 @@
 
 namespace oak::transport {
 
-namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::EndorsedEvidence;
 using ::oak::session::v1::GetEndorsedEvidenceRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
-}  // namespace
-
-absl::Status to_absl_status(const grpc::Status& grpc_status) {
-  return absl::Status(static_cast<absl::StatusCode>(grpc_status.error_code()),
-                      grpc_status.error_message());
-}
 
 absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEndorsedEvidence() {
   // Create request.
   RequestWrapper request;
   GetEndorsedEvidenceRequest get_endorsed_evidence_request;
-  *request.mutable_get_endorsed_evidence_request() = get_endorsed_evidence_request;
+  *request.mutable_get_endorsed_evidence_request() =
+      get_endorsed_evidence_request;
 
   // Send request.
   auto response = Send(request);
@@ -63,10 +58,12 @@ absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEndorsedEvidence() {
     case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
       return response->get_endorsed_evidence_response().endorsed_evidence();
     case ResponseWrapper::kInvokeResponseFieldNumber:
-      return absl::InternalError("received InvokeResponse instead of GetEndorsedEvidenceResponse");
+      return absl::InternalError(
+          "received InvokeResponse instead of GetEndorsedEvidenceResponse");
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
-      return absl::InternalError("received unsupported response: " + absl::StrCat(*response));
+      return absl::InternalError("received unsupported response: " +
+                                 absl::StrCat(*response));
   }
 }
 
@@ -74,7 +71,8 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
     const EncryptedRequest& encrypted_request) {
   // Create request.
   RequestWrapper request;
-  *request.mutable_invoke_request()->mutable_encrypted_request() = encrypted_request;
+  *request.mutable_invoke_request()->mutable_encrypted_request() =
+      encrypted_request;
 
   // Send request.
   auto response = Send(request);
@@ -85,12 +83,14 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
   // Process response.
   switch (response->response_case()) {
     case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
-      return absl::InternalError("received GetEndorsedEvidenceResponse instead of InvokeResponse");
+      return absl::InternalError(
+          "received GetEndorsedEvidenceResponse instead of InvokeResponse");
     case ResponseWrapper::kInvokeResponseFieldNumber:
       return response->invoke_response().encrypted_response();
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
-      return absl::InternalError("received unsupported response: " + absl::StrCat(*response));
+      return absl::InternalError("received unsupported response: " +
+                                 absl::StrCat(*response));
   }
 }
 
@@ -101,15 +101,18 @@ GrpcStreamingTransport::~GrpcStreamingTransport() {
   }
 }
 
-absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(const RequestWrapper& request) {
+absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(
+    const RequestWrapper& request) {
   // Send a request.
   if (!channel_reader_writer_->Write(request)) {
     absl::Status status = Close();
     if (status.ok()) {
       return absl::InternalError(
-          "failed to read request for unspecified reason. This is likely an implementation bug.");
+          "failed to read request for unspecified reason. This is likely an "
+          "implementation bug.");
     } else {
-      return absl::Status(status.code(), absl::StrCat("while writing request: ", status.message()));
+      return absl::Status(status.code(), absl::StrCat("while writing request: ",
+                                                      status.message()));
     }
   }
 
@@ -119,9 +122,11 @@ absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(const RequestWrappe
     absl::Status status = Close();
     if (status.ok()) {
       return absl::InternalError(
-          "failed to write request for unspecified reason. This is likely an implementation bug.");
+          "failed to write request for unspecified reason. This is likely an "
+          "implementation bug.");
     } else {
-      return absl::Status(status.code(), absl::StrCat("while reading request: ", status.message()));
+      return absl::Status(status.code(), absl::StrCat("while reading request: ",
+                                                      status.message()));
     }
   }
   return response;

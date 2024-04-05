@@ -33,13 +33,16 @@ namespace oak::utils::cose {
 // <https://datatracker.ietf.org/doc/html/rfc8152#section-4.2>
 class CoseSign1 {
  public:
-  // Parameters about the current layer that are to be cryptographically protected.
+  // Parameters about the current layer that are to be cryptographically
+  // protected.
   const cppbor::Bstr* protected_headers;
-  // Parameters about the current layer that are not cryptographically protected.
+  // Parameters about the current layer that are not cryptographically
+  // protected.
   const cppbor::Map* unprotected_headers;
   // Serialized content to be signed.
   const cppbor::Bstr* payload;
-  // Array of signatures. Each signature is represented as a COSE_Signature structure.
+  // Array of signatures. Each signature is represented as a COSE_Signature
+  // structure.
   const cppbor::Bstr* signature;
 
   static absl::StatusOr<CoseSign1> Deserialize(absl::string_view data);
@@ -47,15 +50,16 @@ class CoseSign1 {
   // Puts payload into a COSE_Sign1 and serializes it.
   // TODO(#4818): This function is currently used for tests only. We need to
   // refactor COSE classes to support both serialization and deserialization.
-  static absl::StatusOr<std::vector<uint8_t>> Serialize(const std::vector<uint8_t>& payload);
+  static absl::StatusOr<std::vector<uint8_t>> Serialize(
+      const std::vector<uint8_t>& payload);
 
  private:
   // Parsed CBOR item containing COSE_Sign1 object.
   std::unique_ptr<cppbor::Item> item_;
 
-  CoseSign1(const cppbor::Bstr* protected_headers, const cppbor::Map* unprotected_headers,
-            const cppbor::Bstr* payload, const cppbor::Bstr* signature,
-            std::unique_ptr<cppbor::Item>&& item)
+  CoseSign1(const cppbor::Bstr* protected_headers,
+            const cppbor::Map* unprotected_headers, const cppbor::Bstr* payload,
+            const cppbor::Bstr* signature, std::unique_ptr<cppbor::Item>&& item)
       : protected_headers(protected_headers),
         unprotected_headers(unprotected_headers),
         payload(payload),
@@ -81,8 +85,10 @@ class CoseKey {
 
   // Deserializes HPKE public key as a COSE_Key.
   // <https://www.rfc-editor.org/rfc/rfc9180.html>
-  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(absl::string_view data);
-  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(const std::vector<uint8_t>& data);
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(
+      absl::string_view data);
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(
+      const std::vector<uint8_t>& data);
 
   // Transforms HPKE public key into a COSE_Key and serializes it.
   // TODO(#4818): This function is currently used for tests only. We need to
@@ -141,16 +147,24 @@ class CoseKey {
   // Parsed CBOR item containing COSE_Key object.
   std::unique_ptr<cppbor::Item> item_;
 
-  CoseKey(const cppbor::Uint* kty, const cppbor::Nint* alg, const cppbor::Array* key_ops,
-          const cppbor::Uint* crv, const cppbor::Bstr* x, std::unique_ptr<cppbor::Item>&& item)
-      : kty(kty), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
+  CoseKey(const cppbor::Uint* kty, const cppbor::Nint* alg,
+          const cppbor::Array* key_ops, const cppbor::Uint* crv,
+          const cppbor::Bstr* x, std::unique_ptr<cppbor::Item>&& item)
+      : kty(kty),
+        alg(alg),
+        key_ops(key_ops),
+        crv(crv),
+        x(x),
+        item_(std::move(item)) {}
 
-  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(std::unique_ptr<cppbor::Item>&& item);
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(
+      std::unique_ptr<cppbor::Item>&& item);
 };
 
 std::string CborTypeToString(cppbor::MajorType cbor_type);
 
-absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType expected,
+absl::Status UnexpectedCborTypeError(std::string_view name,
+                                     cppbor::MajorType expected,
                                      cppbor::MajorType found);
 
 }  // namespace oak::utils::cose

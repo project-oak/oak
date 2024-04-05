@@ -38,8 +38,10 @@ absl::StatusOr<std::string> OrchestratorClient::GetApplicationConfig() const {
   grpc::ClientContext context;
   context.set_authority(kContextAuthority);
   GetApplicationConfigResponse response;
-  if (auto status = stub_->GetApplicationConfig(&context, {}, &response); !status.ok()) {
-    return absl::Status(static_cast<absl::StatusCode>(status.error_code()), status.error_message());
+  if (auto status = stub_->GetApplicationConfig(&context, {}, &response);
+      !status.ok()) {
+    return absl::Status(static_cast<absl::StatusCode>(status.error_code()),
+                        status.error_message());
   }
   return std::move(*response.mutable_config());
 }
@@ -48,8 +50,10 @@ absl::Status OrchestratorClient::NotifyAppReady() const {
   grpc::ClientContext context;
   context.set_authority(kContextAuthority);
   google::protobuf::Empty response;
-  if (auto status = stub_->NotifyAppReady(&context, {}, &response); !status.ok()) {
-    return absl::Status(static_cast<absl::StatusCode>(status.error_code()), status.error_message());
+  if (auto status = stub_->NotifyAppReady(&context, {}, &response);
+      !status.ok()) {
+    return absl::Status(static_cast<absl::StatusCode>(status.error_code()),
+                        status.error_message());
   }
   return absl::OkStatus();
 }

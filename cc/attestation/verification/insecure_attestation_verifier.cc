@@ -34,9 +34,10 @@ using ::oak::attestation::v1::Evidence;
 }  // namespace
 
 absl::StatusOr<AttestationResults> InsecureAttestationVerifier::Verify(
-    std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
-    const Endorsements& endorsements) const {
-  absl::StatusOr<std::string> encryption_public_key = ExtractEncryptionPublicKey(evidence);
+    std::chrono::time_point<std::chrono::system_clock> now,
+    const Evidence& evidence, const Endorsements& endorsements) const {
+  absl::StatusOr<std::string> encryption_public_key =
+      ExtractEncryptionPublicKey(evidence);
   if (!encryption_public_key.ok()) {
     return encryption_public_key.status();
   }

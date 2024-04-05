@@ -38,20 +38,23 @@ service OakFunctions {
   }
 
   // Extends the next lookup data by the given chunk of lookup data. Only
-  // after the sender calls finishes building the next lookup data, the receiver replaces the
-  // current lookup data with the next lookup data, and only then chunk is will be served in
-  // lookups.
+  // after the sender calls finishes building the next lookup data, the receiver
+  // replaces the current lookup data with the next lookup data, and only then
+  // chunk is will be served in lookups.
   //
   // method_id: 2
-  rpc ExtendNextLookupData(ExtendNextLookupDataRequest) returns (ExtendNextLookupDataResponse) {
+  rpc ExtendNextLookupData(ExtendNextLookupDataRequest)
+      returns (ExtendNextLookupDataResponse) {
     option (.oak.micro_rpc.method_id) = 2;
   }
 
-  // Finishes building the next lookup data with the given chunk of lookup data. The receiver
-  // replaces the current lookup data and the next lookup data will be served in lookups.
+  // Finishes building the next lookup data with the given chunk of lookup data.
+  // The receiver replaces the current lookup data and the next lookup data will
+  // be served in lookups.
   //
   // method_id: 3
-  rpc FinishNextLookupData(FinishNextLookupDataRequest) returns (FinishNextLookupDataResponse) {
+  rpc FinishNextLookupData(FinishNextLookupDataRequest)
+      returns (FinishNextLookupDataResponse) {
     option (.oak.micro_rpc.method_id) = 3;
   }
 
@@ -62,19 +65,22 @@ service OakFunctions {
     option (.oak.micro_rpc.method_id) = 4;
   }
 
-  // Streaming version combining `ExtendNextLookupData` and `FinishNextLookupData`.
+  // Streaming version combining `ExtendNextLookupData` and
+  // `FinishNextLookupData`.
   //
   // This is mainly for use with gRPC, as microRPC doesn't support streaming.
   //
   // method_id: 5
-  rpc StreamLookupData(stream LookupDataChunk) returns (FinishNextLookupDataResponse) {
+  rpc StreamLookupData(stream LookupDataChunk)
+      returns (FinishNextLookupDataResponse) {
     option (.oak.micro_rpc.method_id) = 5;
   }
 
   // Reserves additional capacity for entries in the lookup table.
   //
-  // It should be called before `ExtendNextLookupData`/`StreamLookupData` to reduce the
-  // number of memory allocations, but it's not mandatory to call this RPC.
+  // It should be called before `ExtendNextLookupData`/`StreamLookupData` to
+  // reduce the number of memory allocations, but it's not mandatory to call
+  // this RPC.
   //
   // method_id: 6
   rpc Reserve(ReserveRequest) returns (ReserveResponse) {
@@ -108,8 +114,8 @@ message LookupDataChunk {
   repeated LookupDataEntry items = 1;
 }
 
-// If the definition of ExtendNextLookupData changes, the estimation of the size when
-// serialized in the Oak Functions Launcher needs to change, too.
+// If the definition of ExtendNextLookupData changes, the estimation of the size
+// when serialized in the Oak Functions Launcher needs to change, too.
 message ExtendNextLookupDataRequest {
   LookupDataChunk chunk = 1;
 }

@@ -29,8 +29,8 @@ message EncryptedRequest {
   // Message encrypted with Authenticated Encryption with Associated Data (AEAD)
   // using the derived session key.
   AeadEncryptedMessage encrypted_message = 1;
-  // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-  // Only sent in the first message of the secure session.
+  // Ephemeral Diffie-Hellman client public key that is needed to derive a
+  // session key. Only sent in the first message of the secure session.
   optional bytes serialized_encapsulated_public_key = 2;
 }
 
@@ -51,8 +51,9 @@ message AeadEncryptedMessage {
   bytes nonce = 3;
 }
 
-// Envelope containing session keys required to encrypt/decrypt messages within a secure session.
-// Needed to serialize contexts in order to send them over an RPC.
+// Envelope containing session keys required to encrypt/decrypt messages within
+// a secure session. Needed to serialize contexts in order to send them over an
+// RPC.
 message SessionKeys {
   // AEAD key for encrypting/decrypting client requests.
   bytes request_key = 1;

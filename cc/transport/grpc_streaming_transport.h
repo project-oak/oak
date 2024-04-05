@@ -33,20 +33,22 @@ namespace oak::transport {
 class GrpcStreamingTransport : public TransportWrapper {
  public:
   explicit GrpcStreamingTransport(
-      std::unique_ptr<::grpc::ClientReaderWriterInterface<::oak::session::v1::RequestWrapper,
-                                                          ::oak::session::v1::ResponseWrapper>>
+      std::unique_ptr<::grpc::ClientReaderWriterInterface<
+          ::oak::session::v1::RequestWrapper,
+          ::oak::session::v1::ResponseWrapper>>
           channel_reader_writer)
       : channel_reader_writer_(std::move(channel_reader_writer)) {}
 
-  absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEndorsedEvidence() override;
+  absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEndorsedEvidence()
+      override;
   absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Invoke(
       const oak::crypto::v1::EncryptedRequest& encrypted_request) override;
 
   ~GrpcStreamingTransport() override;
 
  private:
-  std::unique_ptr<::grpc::ClientReaderWriterInterface<::oak::session::v1::RequestWrapper,
-                                                      ::oak::session::v1::ResponseWrapper>>
+  std::unique_ptr<::grpc::ClientReaderWriterInterface<
+      ::oak::session::v1::RequestWrapper, ::oak::session::v1::ResponseWrapper>>
       channel_reader_writer_;
   absl::once_flag close_once_;
   absl::Status close_status_;

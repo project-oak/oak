@@ -1,0 +1,77 @@
+
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.attestation.v1;
+
+import "proto/digest.proto";
+
+option go_package = "proto/oak/attestation/v1";
+option java_multiple_files = true;
+option java_package = "com.google.oak.attestation.v1";
+
+message VerificationSkipped {}
+
+message RawDigests {
+  repeated RawDigest digests = 1;
+}
+
+message ExpectedDigests {
+  oneof type {
+    // If the reference value was set to SkipVerification, we represent that
+    // here.
+    VerificationSkipped skipped = 1;
+
+    // One or more digests that should be considered a valid match against an
+    // actual value.
+    RawDigests digests = 2;
+  }
+}
+
+// The expected values for kernel image and setup data, computed from previously
+// provided endorsements and reference values.
+message KernelExpectedValues {
+  // Allowable digests for the image.
+  ExpectedDigests image = 1;
+
+  // Allowable digests for the setup data.
+  ExpectedDigests setup_data = 2;
+}
+
+// The expected binary digests for a system layer image.
+message SystemLayerExpectedValues {
+  // The allowable digest values for a system layer image.
+  ExpectedDigests system_image = 1;
+}
+
+// The expected bundle and configuration digests for a container layer.
+message ContainerLayerExpectedValues {
+  // The allowable digest values for a container bundle.
+  ExpectedDigests bundle = 1;
+  // The allowable digest values for a configuration passed into a container.
+  ExpectedDigests config = 2;
+}
+
+// The expected binary and configuration digests for an application layer.
+message ApplicationLayerExpectedValues {
+  // The allowable digest values for an application binary.
+  ExpectedDigests binary = 1;
+  // The allowable digest values for a configuration passed to the application
+  // binary.
+  ExpectedDigests configuration = 2;
+}
