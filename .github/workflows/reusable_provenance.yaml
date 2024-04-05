@@ -26,9 +26,7 @@ jobs:
     outputs:
       # Resolves to one or more files which are passed to the SLSA provenance generator.
       artifact-path: ${{ steps.parse-build-config.outputs.artifact-path }}
-      # Resolves to a single binary file which makes up the TR package.
-      binary-file: ${{ steps.parse-build-config.outputs.binary-file }}
-      # The name of the TR package.
+      # The name of the TR package. Coincides with the name of the buildconfig.
       package-name: ${{ steps.parse-build-config.outputs.package-name }}
       builder-digest: ${{ steps.builder-digest.outputs.builder-digest }}
 
@@ -45,11 +43,9 @@ jobs:
           set -o nounset
           set -o xtrace
           set -o pipefail
-          artifact_path="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
-          binary_file="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'binary_file = \K(.*)')"
-          package_name="$(tail -3 ${{ inputs.build-config-path }} | grep -oP 'package_name = \K(.*)')"
+          artifact_path="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
+          package_name="$(basename ${{ inputs.build-config-path }} .toml)"
           echo "artifact-path=${artifact_path}" >> $GITHUB_OUTPUT
-          echo "binary-file=${binary_file}" >> $GITHUB_OUTPUT
           echo "package-name=${package_name}" >> $GITHUB_OUTPUT
 
       - name: Get builder image info
@@ -66,7 +62,6 @@ jobs:
       - name: Print values
         run: |
           echo "${{ steps.parse-build-config.outputs.artifact-path }}"
-          echo "${{ steps.parse-build-config.outputs.binary-file }}"
           echo "${{ steps.parse-build-config.outputs.package-name }}"
           echo "${{ steps.builder-digest.outputs.builder-digest }}"
 
@@ -155,10 +150,11 @@ jobs:
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             provenance_file="${provenance_file}.build.slsa"
           fi
-          binary_file="${{ needs.get_inputs.outputs.binary-file }}"
           package_name="${{ needs.get_inputs.outputs.package-name }}"
           provenance_digest="$(ent put --digest-format=human --porcelain "${provenance_file}")"
-          if [[ -f ${binary_file} ]]; do
+          artifact_count=$(ls -1 ${{ needs.get_inputs.outputs.artifact-path }} | wc -l)
+          if [ "${artifact_count}" -eq 1 ]; then
+            binary_file=${{ needs.get_inputs.outputs.artifact-path }}
             binary_digest="$(ent put --digest-format=human --porcelain "${binary_file}")"
             ent tag set --public-key=${{ inputs.ent-public-key }} \
               --label="artifact_${GITHUB_SHA}_${package_name}" \
@@ -166,21 +162,22 @@ jobs:
             ent tag set --public-key=${{ inputs.ent-public-key }} \
               --label="provenance_${GITHUB_SHA}_${package_name}" \
               --target=${provenance_digest}
-          done
-          for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
-              if [[ -f "${file}" ]]; then
-                  binary_name="$(basename "${file}")"
-                  binary_digest="$(ent put --digest-format=human --porcelain "${file}")"
-                  ent tag set --public-key=${{ inputs.ent-public-key }} \
-                    --label="artifact_${GITHUB_SHA}_${binary_name}" \
-                    --target="${binary_digest}"
-                  ent tag set --public-key=${{ inputs.ent-public-key }} \
-                    --label="provenance_${GITHUB_SHA}_${binary_name}" \
-                    --target="${provenance_digest}"
-              else
-                  echo "Warning: Input '${file}' is not a file."
-              fi
-          done
+          else
+            for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
+                if [[ -f "${file}" ]]; then
+                    binary_name="$(basename "${file}")"
+                    binary_digest="$(ent put --digest-format=human --porcelain "${file}")"
+                    ent tag set --public-key=${{ inputs.ent-public-key }} \
+                      --label="artifact_${GITHUB_SHA}_${binary_name}" \
+                      --target="${binary_digest}"
+                    ent tag set --public-key=${{ inputs.ent-public-key }} \
+                      --label="provenance_${GITHUB_SHA}_${binary_name}" \
+                      --target="${provenance_digest}"
+                else
+                    echo "Warning: Input '${file}' is not a file."
+                fi
+            done
+          fi
 
   # Debug step similar to `upload_provenance`, but runs on pull-request events.
   # Differs from `upload_provenance` in that it does not publish the binary
