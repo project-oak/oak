@@ -589,7 +589,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
                 && entry.size() == 0x1_0000
                 && entry.entry_type() == Some(E820EntryType::RESERVED)
         })
-        .unwrap();
+        .expect("couldn't find legacy SMBOIS memory range");
 
     // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
     // the SMBIOS entry point table, even if the range is marked as reserved.
