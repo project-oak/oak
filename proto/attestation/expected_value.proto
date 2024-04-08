@@ -43,6 +43,16 @@ message ExpectedDigests {
   }
 }
 
+// The expected values for kernel image and setup data, computed from previously
+// provided endorsements and reference values.
+message KernelExpectedValues {
+  // Allowable digests for the image.
+  ExpectedDigests image = 1;
+
+  // Allowable digests for the setup data.
+  ExpectedDigests setup_data = 2;
+}
+
 // The expected binary digests for a system layer image.
 message SystemLayerExpectedValues {
   // The allowable digest values for a system layer image.
