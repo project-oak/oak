@@ -24,7 +24,7 @@ on:
 jobs:
   get_inputs:
     outputs:
-      # Resolves to a single file which are passed to the SLSA provenance
+      # Resolves to a single file which is passed to the SLSA provenance
       # generator.
       # TODO: b/301399862 - We need to figure out how we can pass more than
       # one file to the provenance generation, without having Ent tags that
