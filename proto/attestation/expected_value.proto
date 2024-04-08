@@ -43,6 +43,26 @@ message ExpectedDigests {
   }
 }
 
+message ExpectedRegex {
+  string value = 1;
+}
+
+message ExpectedStringLiterals {
+  repeated string value = 1;
+}
+
+message TextExpectedValue {
+  oneof type {
+    // If the reference value was set to SkipVerification, we represent that
+    // here.
+    VerificationSkipped skipped = 1;
+
+    ExpectedRegex regex = 2;
+
+    ExpectedStringLiterals string_literals = 3;
+  }
+}
+
 // The expected values for kernel image and setup data, computed from previously
 // provided endorsements and reference values.
 message KernelExpectedValues {
