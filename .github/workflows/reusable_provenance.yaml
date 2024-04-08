@@ -30,7 +30,8 @@ jobs:
       # one file to the provenance generation, without having Ent tags that
       # depend on filenames.
       artifact-path: ${{ steps.parse-build-config.outputs.artifact-path }}
-      # The name of the TR package. Coincides with the name of the buildconfig.
+      # The name of the internal TR package. This must coincide with the
+      # basename of the buildconfig.
       package-name: ${{ steps.parse-build-config.outputs.package-name }}
       builder-digest: ${{ steps.builder-digest.outputs.builder-digest }}
 
