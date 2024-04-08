@@ -24,7 +24,15 @@ on:
 jobs:
   get_inputs:
     outputs:
-      artifact-path: ${{ steps.artifact-path.outputs.name }}
+      # Resolves to a single file which is passed to the SLSA provenance
+      # generator.
+      # TODO: b/301399862 - We need to figure out how we can pass more than
+      # one file to the provenance generation, without having Ent tags that
+      # depend on filenames.
+      artifact-path: ${{ steps.parse-build-config.outputs.artifact-path }}
+      # The name of the internal TR package. This must coincide with the
+      # basename of the buildconfig.
+      package-name: ${{ steps.parse-build-config.outputs.package-name }}
       builder-digest: ${{ steps.builder-digest.outputs.builder-digest }}
 
     runs-on: ubuntu-20.04
@@ -33,15 +41,17 @@ jobs:
       - name: Mount main branch
         uses: actions/checkout@v3
 
-      - name: Get artifact path
-        id: artifact-path
+      - name: Parse build config
+        id: parse-build-config
         run: |
           set -o errexit
           set -o nounset
           set -o xtrace
           set -o pipefail
-          name="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
-          echo "name=${name}" >> $GITHUB_OUTPUT
+          artifact_path="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
+          package_name="$(basename ${{ inputs.build-config-path }} .toml)"
+          echo "artifact-path=${artifact_path}" >> $GITHUB_OUTPUT
+          echo "package-name=${package_name}" >> $GITHUB_OUTPUT
 
       - name: Get builder image info
         id: builder-digest
@@ -56,7 +66,8 @@ jobs:
 
       - name: Print values
         run: |
-          echo "${{ steps.artifact-path.outputs.name }}"
+          echo "${{ steps.parse-build-config.outputs.artifact-path }}"
+          echo "${{ steps.parse-build-config.outputs.package-name }}"
           echo "${{ steps.builder-digest.outputs.builder-digest }}"
 
   generate_provenance:
@@ -144,21 +155,16 @@ jobs:
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             provenance_file="${provenance_file}.build.slsa"
           fi
+          package_name=${{ needs.get_inputs.outputs.package-name }}
+          binary_file=${{ needs.get_inputs.outputs.artifact-path }}
+          binary_digest="$(ent put --digest-format=human --porcelain "${binary_file}")"
           provenance_digest="$(ent put --digest-format=human --porcelain "${provenance_file}")"
-          for file in ${{ needs.get_inputs.outputs.artifact-path }}; do
-              if [[ -f "${file}" ]]; then
-                  binary_name="$(basename "${file}")"
-                  binary_digest="$(ent put --digest-format=human --porcelain "${file}")"
-                  ent tag set --public-key=${{ inputs.ent-public-key }} \
-                    --label="artifact_${GITHUB_SHA}_${binary_name}" \
-                    --target="${binary_digest}"
-                  ent tag set --public-key=${{ inputs.ent-public-key }} \
-                    --label="provenance_${GITHUB_SHA}_${binary_name}" \
-                    --target="${provenance_digest}"
-              else
-                  echo "Warning: Input '${file}' is not a file."
-              fi
-          done
+          ent tag set --public-key=${{ inputs.ent-public-key }} \
+            --label="artifact_${GITHUB_SHA}_${package_name}" \
+            --target="${binary_digest}"
+          ent tag set --public-key=${{ inputs.ent-public-key }} \
+            --label="provenance_${GITHUB_SHA}_${package_name}" \
+            --target=${provenance_digest}
 
   # Debug step similar to `upload_provenance`, but runs on pull-request events.
   # Differs from `upload_provenance` in that it does not publish the binary
