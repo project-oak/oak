@@ -516,6 +516,10 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -982,7 +986,8 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
         <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module)<span class="question-mark">?</span>;
 
-        instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;deny_sensitive_logging&quot;</span>))]
+        </span>instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
             store
                 .data()
                 .logger
@@ -1004,19 +1009,22 @@
         // included in the metric.
         </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
         </span><span class="kw">let </span>now = Instant::now();
-        <span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
+        <span class="attr">#[allow(unused)]
+        </span><span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
         <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
             observer.wasm_invocation(now.elapsed());
         }
 
-        store.data().logger.log_sensitive(
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;deny_sensitive_logging&quot;</span>))]
+        </span>store.data().logger.log_sensitive(
             Level::Info,
             <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
         );
 
-        <span class="kw">let </span>response_bytes = response.lock().clone();
-        store
+        <span class="kw">let </span>response_bytes = core::mem::take(response.lock().as_mut());
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;deny_sensitive_logging&quot;</span>))]
+        </span>store
             .data()
             .logger
             .log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;response bytes: {:?}&quot;</span>, response_bytes));
