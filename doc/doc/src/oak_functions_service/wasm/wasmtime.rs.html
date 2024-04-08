@@ -497,6 +497,7 @@
 <a href="#497" id="497">497</a>
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -894,7 +895,8 @@
         logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>config = wasmtime::Config::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>config = wasmtime::Config::new();
+        config.cranelift_opt_level(wasmtime::OptLevel::Speed);
         <span class="kw">let </span>engine = wasmtime::Engine::new(<span class="kw-2">&amp;</span>config)
             .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t create Wasmtime engine: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
         <span class="kw">let </span>module = wasmtime::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
