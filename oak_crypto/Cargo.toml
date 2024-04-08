@@ -25,6 +25,7 @@ hpke = { version = "*", default-features = false, features = [
   "alloc",
   "x25519",
 ] }
+oak_proto_rust = { workspace = true }
 p256 = { version = "*", default-features = false, features = [
   "alloc",
   "ecdsa",
@@ -39,9 +40,6 @@ rand_core = { version = "*", default-features = false, features = [
 sha2 = { version = "*", default-features = false }
 static_assertions = "*"
 zeroize = "*"
-
-[build-dependencies]
-micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }

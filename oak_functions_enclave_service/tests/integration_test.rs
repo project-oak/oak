@@ -24,7 +24,7 @@ use alloc::sync::Arc;
 use core::assert_matches::assert_matches;
 
 use oak_client::verifier::extract_encryption_public_key;
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
+use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_enclave_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
@@ -32,7 +32,10 @@ use oak_functions_enclave_service::{
     },
     OakFunctionsService,
 };
-use oak_proto_rust::oak::oak_functions::testing::{EchoAndPanicRequest, TestModuleClient};
+use oak_proto_rust::oak::{
+    crypto::v1::EncryptedRequest,
+    oak_functions::testing::{EchoAndPanicRequest, TestModuleClient},
+};
 use prost::Message;
 
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;

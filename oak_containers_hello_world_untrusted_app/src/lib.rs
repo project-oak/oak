@@ -20,7 +20,7 @@ mod proto {
                 tonic::include_proto!("oak.containers.example");
             }
         }
-        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_proto_rust::oak::crypto;
     }
 }
 

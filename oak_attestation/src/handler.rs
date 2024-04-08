@@ -21,9 +21,9 @@ use anyhow::Context;
 use oak_crypto::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
     encryptor::ServerEncryptor,
-    proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
     EMPTY_ASSOCIATED_DATA,
 };
+use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 
 /// Wraps a closure to an underlying function with request encryption and
 /// response decryption logic, based on the provided encryption key.

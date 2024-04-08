@@ -41,8 +41,7 @@ pub mod proto {
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_proto_rust::oak::attestation;
+        pub use oak_proto_rust::oak::{attestation, crypto};
     }
 }
 

@@ -28,12 +28,11 @@ rust_library(
         "src/hpke/*.rs",
         "src/noise_handshake/*.rs",
     ]),
-    crate_features = ["bazel"],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        "//proto/crypto:crypto_rust_prost",
+        "//oak_proto_rust",
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:ecdsa",

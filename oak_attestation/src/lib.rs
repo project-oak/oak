@@ -26,8 +26,7 @@ pub mod proto {
                 include!(concat!(env!("OUT_DIR"), "/oak.session.v1.rs"));
             }
         }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_proto_rust::oak::attestation;
+        pub use oak_proto_rust::oak::{attestation, crypto};
     }
 }
 

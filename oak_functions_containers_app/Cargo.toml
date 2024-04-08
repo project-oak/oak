@@ -23,6 +23,7 @@ oak_debug_service = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_service = { workspace = true, features = ["std"] }
 oak_crypto = { workspace = true }
+oak_proto_rust = { workspace = true }
 micro_rpc = { workspace = true }
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",

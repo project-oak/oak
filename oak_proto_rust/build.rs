@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("proto compilation failed");
 
     micro_rpc_build::compile(
-        &["../proto/oak_functions/testing.proto"],
+        &["../proto/oak_functions/testing.proto", "../proto/crypto/crypto.proto"],
         &[".."],
         Default::default(),
     );

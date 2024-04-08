@@ -21,6 +21,7 @@ use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
+use oak_proto_rust::oak::crypto::v1::Signature;
 use p256::ecdsa::SigningKey;
 
 /// [`EncryptionKeyHandle`] implementation that using the instance's evidence
@@ -54,7 +55,7 @@ pub trait Signer {
     /// Attempt to sign the provided message bytestring using a signing private
     /// key, a corresponding public key of which is contained in the
     /// Attestation Evidence.
-    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
+    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
 }
 
 /// [`Signer`] implementation that using the instance's evidence and
@@ -74,7 +75,7 @@ impl InstanceSigner {
 }
 
 impl Signer for InstanceSigner {
-    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
         Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
     }
 }

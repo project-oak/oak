@@ -23,8 +23,7 @@ pub mod proto {
                 tonic::include_proto!("oak.session.v1");
             }
         }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_proto_rust::oak::attestation;
+        pub use oak_proto_rust::oak::{attestation, crypto};
     }
 }
 
