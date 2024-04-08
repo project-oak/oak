@@ -1,5 +1,5 @@
 {
-  "checksum": "467a875ba77ed04a1e95a5bf7e79f1dd96a880873c6e46bd2ee4f5d75ec6dfbb",
+  "checksum": "f54fb811f525992881af16b92e3ff01179325e0e0b58d2629086625e10d0cae7",
   "crates": {
     "aead 0.5.2": {
       "name": "aead",
@@ -2046,6 +2046,10 @@
               "target": "hpke"
             },
             {
+              "id": "lock_api 0.4.11",
+              "target": "lock_api"
+            },
+            {
               "id": "log 0.4.21",
               "target": "log"
             },
@@ -2096,6 +2100,10 @@
             {
               "id": "sha2 0.10.8",
               "target": "sha2"
+            },
+            {
+              "id": "spinning_top 0.3.0",
+              "target": "spinning_top"
             },
             {
               "id": "static_assertions 1.1.0",
@@ -3907,6 +3915,92 @@
         "version": "0.4.13"
       },
       "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "lock_api 0.4.11": {
+      "name": "lock_api",
+      "version": "0.4.11",
+      "package_url": "https://github.com/Amanieu/parking_lot",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/lock_api/0.4.11/download",
+          "sha256": "3c168f8615b12bc01f9c17e2eb0cc07dcae1940121185446edc3744920e8ef45"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "lock_api",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "lock_api",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "arc_lock",
+            "atomic_usize",
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "lock_api 0.4.11",
+              "target": "build_script_build"
+            },
+            {
+              "id": "scopeguard 1.2.0",
+              "target": "scopeguard"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.4.11"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "autocfg 1.2.0",
+              "target": "autocfg"
+            }
+          ],
+          "selects": {}
+        }
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -6361,6 +6455,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "scopeguard 1.2.0": {
+      "name": "scopeguard",
+      "version": "1.2.0",
+      "package_url": "https://github.com/bluss/scopeguard",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/scopeguard/1.2.0/download",
+          "sha256": "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "scopeguard",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "scopeguard",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.2.0"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "sec1 0.7.3": {
       "name": "sec1",
       "version": "0.7.3",
@@ -6936,6 +7069,54 @@
         "MIT"
       ],
       "license_file": "LICENSE"
+    },
+    "spinning_top 0.3.0": {
+      "name": "spinning_top",
+      "version": "0.3.0",
+      "package_url": "https://github.com/rust-osdev/spinning_top",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/spinning_top/0.3.0/download",
+          "sha256": "d96d2d1d716fb500937168cc09353ffdc7a012be8475ac7308e1bdf0e3923300"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "spinning_top",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "spinning_top",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "lock_api 0.4.11",
+              "target": "lock_api"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.0"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
     },
     "spki 0.7.3": {
       "name": "spki",
@@ -8797,6 +8978,7 @@
     "hex 0.4.3",
     "hkdf 0.12.4",
     "hpke 0.11.0",
+    "lock_api 0.4.11",
     "log 0.4.21",
     "p256 0.13.2",
     "p384 0.13.0",
@@ -8810,6 +8992,7 @@
     "serde 1.0.197",
     "serde_json 1.0.115",
     "sha2 0.10.8",
+    "spinning_top 0.3.0",
     "static_assertions 1.1.0",
     "strum 0.26.2",
     "time 0.3.34",
