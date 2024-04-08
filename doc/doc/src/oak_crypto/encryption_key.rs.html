@@ -127,6 +127,7 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 <span class="kw">use </span>zeroize::{Zeroize, Zeroizing};
 
 <span class="kw">use crate</span>::{
@@ -135,7 +136,6 @@
         generate_kem_key_pair, setup_base_recipient, Deserializable, PrivateKey, RecipientContext,
         Serializable, OAK_HPKE_INFO,
     },
-    proto::oak::crypto::v1::EncryptedRequest,
     EMPTY_ASSOCIATED_DATA,
 };
 

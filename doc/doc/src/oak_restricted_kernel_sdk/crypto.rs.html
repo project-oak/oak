@@ -78,6 +78,7 @@
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -101,6 +102,7 @@
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::Signature;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 
 <span class="doccomment">/// [`EncryptionKeyHandle`] implementation that using the instance&#39;s evidence
@@ -134,7 +136,7 @@
     <span class="doccomment">/// Attempt to sign the provided message bytestring using a signing private
     /// key, a corresponding public key of which is contained in the
     /// Attestation Evidence.
-    </span><span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt;;
+    </span><span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt;;
 }
 
 <span class="doccomment">/// [`Signer`] implementation that using the instance&#39;s evidence and
@@ -154,7 +156,7 @@
 }
 
 <span class="kw">impl </span>Signer <span class="kw">for </span>InstanceSigner {
-    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt; {
+    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt; {
         <span class="prelude-val">Ok</span>(&lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message))
     }
 }

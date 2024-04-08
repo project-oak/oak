@@ -229,6 +229,7 @@
 </span><span class="kw">use </span>alloc::vec::Vec;
 
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse};
 
 <span class="kw">use crate</span>::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
@@ -236,7 +237,6 @@
         deserialize_nonce, generate_random_nonce, setup_base_sender, RecipientContext,
         SenderContext, OAK_HPKE_INFO,
     },
-    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 
 <span class="doccomment">/// Encryptor object for encrypting client requests that will be sent to the

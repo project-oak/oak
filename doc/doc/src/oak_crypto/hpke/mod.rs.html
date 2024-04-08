@@ -230,8 +230,6 @@
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -257,12 +255,10 @@
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem <span class="kw">as </span>KemTrait, OpModeR, OpModeS,
 };
 <span class="kw">pub use </span>hpke::{Deserializable, Serializable};
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::SessionKeys;
 <span class="kw">use </span>rand_core::{OsRng, RngCore};
 
-<span class="kw">use crate</span>::{
-    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-    proto::oak::crypto::v1::SessionKeys,
-};
+<span class="kw">use </span><span class="kw">crate</span>::hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES};
 
 <span class="kw">type </span>Aead = AesGcm256;
 <span class="kw">type </span>Kdf = HkdfSha256;

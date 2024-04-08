@@ -117,6 +117,7 @@
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -141,6 +142,7 @@
     hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::Signature;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 
 <span class="kw">use crate</span>::{
@@ -187,7 +189,7 @@
 }
 
 <span class="kw">impl </span>Signer <span class="kw">for </span>MockSigner {
-    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt; {
+    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt; {
         <span class="prelude-val">Ok</span>(&lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message))
     }
 }
