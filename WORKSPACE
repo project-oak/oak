@@ -364,7 +364,7 @@ crates_repository(
         ),
         "getrandom": crate.spec(
             default_features = False,
-            # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
+            # rdrand is required to support x64_64-unknown-none.
             features = ["rdrand"],
             version = "*",
         ),
@@ -384,6 +384,9 @@ crates_repository(
                 "x25519",
             ],
             version = "*",
+        ),
+        "lock_api": crate.spec(
+            features = ["arc_lock"],
         ),
         "log": crate.spec(
             default_features = False,
@@ -451,6 +454,7 @@ crates_repository(
             default_features = False,
             version = "*",
         ),
+        "spinning_top": crate.spec(version = "*"),
         "static_assertions": crate.spec(version = "*"),
         "strum": crate.spec(
             default_features = False,
