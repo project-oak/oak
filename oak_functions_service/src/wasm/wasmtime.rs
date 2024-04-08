@@ -395,7 +395,8 @@ impl WasmtimeHandler {
         logger: Arc<dyn OakLogger>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self> {
-        let config = wasmtime::Config::new();
+        let mut config = wasmtime::Config::new();
+        config.cranelift_opt_level(wasmtime::OptLevel::Speed);
         let engine = wasmtime::Engine::new(&config)
             .map_err(|err| anyhow::anyhow!("couldn't create Wasmtime engine: {:?}", err))?;
         let module = wasmtime::Module::new(&engine, wasm_module_bytes)
