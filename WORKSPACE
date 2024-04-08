@@ -231,9 +231,9 @@ git_repository(
 # Bazel rules for building OCI images and runtime bundles.
 http_archive(
     name = "rules_oci",
-    sha256 = "686f871f9697e08877b85ea6c16c8d48f911bf466c3aeaf108ca0ab2603c7306",
-    strip_prefix = "rules_oci-1.5.1",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.5.1/rules_oci-v1.5.1.tar.gz",
+    sha256 = "56d5499025d67a6b86b2e6ebae5232c72104ae682b5a21287770bd3bf0661abf",
+    strip_prefix = "rules_oci-1.7.5",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.5/rules_oci-v1.7.5.tar.gz",
 )
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
