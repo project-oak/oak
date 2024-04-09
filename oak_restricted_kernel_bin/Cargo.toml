@@ -19,7 +19,7 @@ members = ["."]
 
 [dependencies]
 log = "*"
-oak_linux_boot_params = { path = "../linux_boot_params" }
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
 oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = false }
 
 [[bin]]
