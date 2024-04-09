@@ -41,7 +41,7 @@ const FIRMWARE_TOP: PhysAddr = PhysAddr::new(0x1_0000_0000);
 const LEGACY_TOP: PhysAddr = PhysAddr::new(0x10_0000);
 
 /// The maximum size of the shadow firmware for legacy boot.
-const LEGACY_MAX_SIZE: usize = 128 * 1024;
+const LEGACY_MAX_SIZE: u64 = 128 * 1024;
 
 /// The reverse offset from the end of the firmware blob to the end of the GUID
 /// tables.
@@ -222,12 +222,12 @@ impl Stage0Info {
     }
 
     fn new(bytes: Vec<u8>) -> Self {
-        let size = bytes.len();
+        let size = bytes.len() as u64;
         let start_address = FIRMWARE_TOP - size;
         let legacy_size = size.min(LEGACY_MAX_SIZE);
         let legacy_start_address = LEGACY_TOP - legacy_size;
         let legacy_offset = size - legacy_size;
-        Self { bytes, start_address, legacy_start_address, legacy_offset }
+        Self { bytes, start_address, legacy_start_address, legacy_offset: legacy_offset as usize }
     }
 }
 
