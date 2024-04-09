@@ -1,5 +1,5 @@
 {
-  "checksum": "f54fb811f525992881af16b92e3ff01179325e0e0b58d2629086625e10d0cae7",
+  "checksum": "967533bb81a653f366fc2502c26407b5044c39ae8aea4a3f336d1ed582cfa00b",
   "crates": {
     "aead 0.5.2": {
       "name": "aead",
@@ -555,6 +555,45 @@
         "version": "1.6.0"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "bit_field 0.10.2": {
+      "name": "bit_field",
+      "version": "0.10.2",
+      "package_url": "https://github.com/phil-opp/rust-bit-field",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bit_field/0.10.2/download",
+          "sha256": "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bit_field",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bit_field",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "0.10.2"
+      },
+      "license": "Apache-2.0/MIT",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -2102,6 +2141,10 @@
               "target": "sha2"
             },
             {
+              "id": "snafu 0.8.2",
+              "target": "snafu"
+            },
+            {
               "id": "spinning_top 0.3.0",
               "target": "spinning_top"
             },
@@ -2120,6 +2163,10 @@
             {
               "id": "x509-cert 0.2.5",
               "target": "x509_cert"
+            },
+            {
+              "id": "x86_64 0.15.1",
+              "target": "x86_64"
             },
             {
               "id": "zerocopy 0.7.32",
@@ -7032,6 +7079,129 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "snafu 0.8.2": {
+      "name": "snafu",
+      "version": "0.8.2",
+      "package_url": "https://github.com/shepmaster/snafu",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/snafu/0.8.2/download",
+          "sha256": "75976f4748ab44f6e5332102be424e7c2dc18daeaf7e725f2040c3ebb133512e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "snafu",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "snafu",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "rust_1_61",
+            "rust_1_65",
+            "std"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "snafu-derive 0.8.2",
+              "target": "snafu_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.8.2"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "snafu-derive 0.8.2": {
+      "name": "snafu-derive",
+      "version": "0.8.2",
+      "package_url": "https://github.com/shepmaster/snafu",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/snafu-derive/0.8.2/download",
+          "sha256": "b4b19911debfb8c2fb1107bc6cb2d61868aaf53a988449213959bb1b5b1ed95f"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "snafu_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "snafu_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "rust_1_61"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "heck 0.4.1",
+              "target": "heck"
+            },
+            {
+              "id": "proc-macro2 1.0.79",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.35",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.58",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.8.2"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "spin 0.5.2": {
       "name": "spin",
       "version": "0.5.2",
@@ -7872,6 +8042,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "volatile 0.4.6": {
+      "name": "volatile",
+      "version": "0.4.6",
+      "package_url": "https://github.com/rust-osdev/volatile",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/volatile/0.4.6/download",
+          "sha256": "442887c63f2c839b346c192d047a7c87e73d0689c9157b00b53dcc27dd5ea793"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "volatile",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "volatile",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "0.4.6"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "wasi 0.11.0+wasi-snapshot-preview1": {
       "name": "wasi",
       "version": "0.11.0+wasi-snapshot-preview1",
@@ -8683,6 +8892,83 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "x86_64 0.15.1": {
+      "name": "x86_64",
+      "version": "0.15.1",
+      "package_url": "https://github.com/rust-osdev/x86_64",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x86_64/0.15.1/download",
+          "sha256": "4bc79523af8abf92fb1a970c3e086c5a343f6bcc1a0eb890f575cbb3b45743df"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x86_64",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x86_64",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "abi_x86_interrupt",
+            "asm_const",
+            "const_fn",
+            "default",
+            "instructions",
+            "nightly",
+            "step_trait"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bit_field 0.10.2",
+              "target": "bit_field"
+            },
+            {
+              "id": "bitflags 2.5.0",
+              "target": "bitflags"
+            },
+            {
+              "id": "volatile 0.4.6",
+              "target": "volatile"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "rustversion 1.0.14",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.15.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "zerocopy 0.7.32": {
       "name": "zerocopy",
       "version": "0.7.32",
@@ -8992,11 +9278,13 @@
     "serde 1.0.197",
     "serde_json 1.0.115",
     "sha2 0.10.8",
+    "snafu 0.8.2",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",
     "strum 0.26.2",
     "time 0.3.34",
     "x509-cert 0.2.5",
+    "x86_64 0.15.1",
     "zerocopy 0.7.32",
     "zeroize 1.7.0"
   ],

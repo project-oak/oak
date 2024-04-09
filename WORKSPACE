@@ -454,6 +454,7 @@ crates_repository(
             default_features = False,
             version = "*",
         ),
+        "snafu": crate.spec(version = "*"),
         "spinning_top": crate.spec(version = "*"),
         "static_assertions": crate.spec(version = "*"),
         "strum": crate.spec(
@@ -474,6 +475,7 @@ crates_repository(
             features = ["pem"],
             version = "0.2.5",
         ),
+        "x86_64": crate.spec(version = "*"),
         "zerocopy": crate.spec(
             default_features = False,
             features = ["derive"],
