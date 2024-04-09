@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_dice/src/cert.rs`."><title>cert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_dice" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_dice/src/cert.rs`."><title>cert.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_dice" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_dice/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -372,14 +374,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -444,11 +446,11 @@
 </span><span class="kw">pub const </span>SHA2_256_ID: i64 = -<span class="number">4670572</span>;
 
 <span class="doccomment">/// String to be used as salt for generating Key IDs.
-</span><span class="kw">const </span>ID_SALT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;DICE_ID_SALT&quot;</span>;
+</span><span class="kw">const </span>ID_SALT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"DICE_ID_SALT"</span>;
 <span class="doccomment">/// Info string for HKDF generator.
-</span><span class="kw">const </span>INFO_STR: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;ID&quot;</span>;
+</span><span class="kw">const </span>INFO_STR: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"ID"</span>;
 <span class="doccomment">/// Empty additional data.
-</span><span class="kw">const </span>EMPTY_ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
+</span><span class="kw">const </span>EMPTY_ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b""</span>;
 
 <span class="macro">bitflags::bitflags! </span>{
     <span class="doccomment">/// Intended usage of a key.
@@ -473,7 +475,7 @@
     <span class="kw">let </span>ikm = public_key.to_encoded_point(<span class="bool-val">false</span>);
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(ID_SALT), ikm.as_bytes());
     <span class="kw">let </span><span class="kw-2">mut </span>result = [<span class="number">0u8</span>; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
+    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">"invalid length for HKDF output"</span>);
     result
 }
 
@@ -481,7 +483,7 @@
 </span><span class="kw">pub fn </span>derive_kem_public_key_id(public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; KEY_ID_LENGTH] {
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(ID_SALT), public_key_bytes);
     <span class="kw">let </span><span class="kw-2">mut </span>result = [<span class="number">0u8</span>; KEY_ID_LENGTH];
-    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
+    hkdf.expand(INFO_STR, <span class="kw-2">&amp;mut </span>result).expect(<span class="string">"invalid length for HKDF output"</span>);
     result
 }
 
@@ -493,21 +495,21 @@
 }
 
 <span class="doccomment">/// Converts a COSE_Key to a serialized HPKE KEM public key.
-</span><span class="kw">pub fn </span>cose_key_to_hpke_public_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>cose_key_to_hpke_public_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">if </span>cose_key.kty != KeyType::Assigned(iana::KeyType::OKP) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key type&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid key type"</span>);
     }
     <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid algorithm&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid algorithm"</span>);
     }
     <span class="kw">if </span>!cose_key.key_ops.contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::WrapKey)) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key operations&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid key operations"</span>);
     }
     <span class="kw">if </span>!cose_key.params.iter().any(|(label, value)| {
         label == <span class="kw-2">&amp;</span>Label::Int(iana::OkpKeyParameter::Crv <span class="kw">as </span>i64)
             &amp;&amp; value == <span class="kw-2">&amp;</span>Value::from(iana::EllipticCurve::X25519 <span class="kw">as </span>u64)
     }) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid elliptic curve&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid elliptic curve"</span>);
     }
     cose_key
         .params
@@ -521,7 +523,7 @@
                 <span class="prelude-val">None
             </span>}
         })
-        .ok_or(<span class="string">&quot;public key not found&quot;</span>)
+        .ok_or(<span class="string">"public key not found"</span>)
 }
 
 <span class="doccomment">/// Converts a serialized HPKE KEM public key to a COSE_Key representation
@@ -543,21 +545,21 @@
 }
 
 <span class="doccomment">/// Converts a COSE_Key to a ECDSA verifying key.
-</span><span class="kw">pub fn </span>cose_key_to_verifying_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>cose_key_to_verifying_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">if </span>cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key type&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid key type"</span>);
     }
     <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256)) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid algorithm&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid algorithm"</span>);
     }
     <span class="kw">if </span>!cose_key.key_ops.contains(<span class="kw-2">&amp;</span>KeyOperation::Assigned(iana::KeyOperation::Verify)) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key operations&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid key operations"</span>);
     }
     <span class="kw">if </span>!cose_key.params.iter().any(|(label, value)| {
         label == <span class="kw-2">&amp;</span>Label::Int(iana::Ec2KeyParameter::Crv <span class="kw">as </span>i64)
             &amp;&amp; value == <span class="kw-2">&amp;</span>Value::from(iana::EllipticCurve::P_256 <span class="kw">as </span>u64)
     }) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid elliptic curve&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid elliptic curve"</span>);
     }
     <span class="kw">let </span>x = cose_key
         .params
@@ -571,7 +573,7 @@
                 <span class="prelude-val">None
             </span>}
         })
-        .ok_or(<span class="string">&quot;x component of public key not found&quot;</span>)<span class="question-mark">?</span>;
+        .ok_or(<span class="string">"x component of public key not found"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>y = cose_key
         .params
         .iter()
@@ -584,14 +586,14 @@
                 <span class="prelude-val">None
             </span>}
         })
-        .ok_or(<span class="string">&quot;x component of public key not found&quot;</span>)<span class="question-mark">?</span>;
+        .ok_or(<span class="string">"x component of public key not found"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>encoded_point = EncodedPoint::from_affine_coordinates(
         FieldBytes::from_slice(<span class="kw-2">&amp;</span>x),
         FieldBytes::from_slice(<span class="kw-2">&amp;</span>y),
         <span class="bool-val">false</span>,
     );
     VerifyingKey::from_encoded_point(<span class="kw-2">&amp;</span>encoded_point)
-        .map_err(|_err| <span class="string">&quot;invalid public key coordinates&quot;</span>)
+        .map_err(|_err| <span class="string">"invalid public key coordinates"</span>)
 }
 
 <span class="doccomment">/// Converts an ECDSA verifying key to a COSE_Key representation.
@@ -630,7 +632,7 @@
 ///   certificates.
 /// * `issuer_id` - A string identifying the key used by the issuer. This would
 ///   typically be the hex encoding of the output from calling
-///   `derive_verifying_key_id` using the issuer&#39;s public key.
+///   `derive_verifying_key_id` using the issuer's public key.
 /// * `additional_claims` - Any additional claims that must be included in the
 ///   certificate. This is typically used to provide measurements of the
 ///   components in the layer associated with th certificate.
@@ -658,7 +660,7 @@
 ///   certificates.
 /// * `issuer_id` - A string identifying the key used by the issuer. This would
 ///   typically be the hex encoding of the output from calling
-///   `derive_kem_public_key_id` using the issuer&#39;s public key.
+///   `derive_kem_public_key_id` using the issuer's public key.
 /// * `kem_public_key` - The serialized HPKE KEM public key.
 /// * `additional_claims` - Any additional claims that must be included in the
 ///   certificate. This is typically used to provide measurements of the
@@ -703,7 +705,7 @@
     }
 
     <span class="kw">let </span>protected = coset::HeaderBuilder::new().algorithm(iana::Algorithm::ES256).build();
-    <span class="kw">let </span>unprotected = coset::HeaderBuilder::new().key_id((<span class="kw-2">*</span><span class="string">b&quot;AsymmetricECDSA256&quot;</span>).into()).build();
+    <span class="kw">let </span>unprotected = coset::HeaderBuilder::new().key_id((<span class="kw-2">*</span><span class="string">b"AsymmetricECDSA256"</span>).into()).build();
     <span class="prelude-val">Ok</span>(coset::CoseSign1Builder::new()
         .protected(protected)
         .unprotected(unprotected)
@@ -724,7 +726,7 @@
 }
 
 <span class="doccomment">/// Extracts the certified public key from the claims set of a certificate.
-</span><span class="kw">pub fn </span>get_public_key_from_claims_set(claims: <span class="kw-2">&amp;</span>ClaimsSet) -&gt; <span class="prelude-ty">Result</span>&lt;CoseKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>get_public_key_from_claims_set(claims: <span class="kw-2">&amp;</span>ClaimsSet) -&gt; <span class="prelude-ty">Result</span>&lt;CoseKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>public_key_bytes = claims
         .rest
         .iter()
@@ -737,7 +739,7 @@
                 <span class="prelude-val">None
             </span>}
         })
-        .ok_or(<span class="string">&quot;public key not found&quot;</span>)<span class="question-mark">?</span>;
-    CoseKey::from_slice(public_key_bytes).map_err(|_cose_err| <span class="string">&quot;couldn&#39;t deserialize public key&quot;</span>)
+        .ok_or(<span class="string">"public key not found"</span>)<span class="question-mark">?</span>;
+    CoseKey::from_slice(public_key_bytes).map_err(|_cose_err| <span class="string">"couldn't deserialize public key"</span>)
 }
 </code></pre></div></section></main></body></html>

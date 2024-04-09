@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `snp_measurement/src/stage0.rs`."><title>stage0.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="snp_measurement" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `snp_measurement/src/stage0.rs`."><title>stage0.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="snp_measurement" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../snp_measurement/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -382,14 +384,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -470,7 +472,7 @@
 ]);
 
 <span class="doccomment">/// The expected first 4 bytes of the SEV metadata section header.
-</span><span class="kw">const </span>SEV_SECTION_SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;ASEV&quot;</span>;
+</span><span class="kw">const </span>SEV_SECTION_SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"ASEV"</span>;
 
 <span class="doccomment">/// The version of SEV metadata sections we expect to encounter.
 </span><span class="kw">const </span>SEV_METADATA_VERSION: u32 = <span class="number">1</span>;
@@ -506,11 +508,11 @@
         <span class="kw">let </span>sev_metadata_content = <span class="kw-2">*</span><span class="self">self
             </span>.parse_firmware_guid_table()
             .get(<span class="kw-2">&amp;</span>SEV_MEATADATA_GUID)
-            .expect(<span class="string">&quot;couldn&#39;t find SEV metadata entry in GUID table&quot;</span>);
+            .expect(<span class="string">"couldn't find SEV metadata entry in GUID table"</span>);
         <span class="macro">assert_eq!</span>(
             sev_metadata_content.len(),
             size_of::&lt;u32&gt;(),
-            <span class="string">&quot;invalid length for SEV metadata entry&quot;
+            <span class="string">"invalid length for SEV metadata entry"
         </span>);
         <span class="comment">// We expect the SEV metadata entry in the GUID table to contain only 4 bytes
         // that represent the 32-bit unsigned little-endian encoding of the
@@ -519,14 +521,14 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>sev_metadata_offset: u32 = <span class="number">0</span>;
         sev_metadata_offset.as_bytes_mut().copy_from_slice(sev_metadata_content);
         <span class="kw">let </span>sev_metadata_offset = sev_metadata_offset <span class="kw">as </span>usize;
-        <span class="macro">trace!</span>(<span class="string">&quot;SEV metadata offset: {}&quot;</span>, sev_metadata_offset);
-        <span class="macro">assert!</span>(sev_metadata_offset &lt; <span class="self">self</span>.bytes.len(), <span class="string">&quot;invalid SEV metadata offset&quot;</span>);
+        <span class="macro">trace!</span>(<span class="string">"SEV metadata offset: {}"</span>, sev_metadata_offset);
+        <span class="macro">assert!</span>(sev_metadata_offset &lt; <span class="self">self</span>.bytes.len(), <span class="string">"invalid SEV metadata offset"</span>);
         <span class="kw">let </span>sev_metadata_header_start = <span class="self">self</span>.bytes.len() - sev_metadata_offset;
         <span class="kw">let </span>sev_metadata_header_end = sev_metadata_header_start + SEV_METADATA_HEADER_SIZE;
         <span class="kw">let </span>header = SevMetadataHeader::parse(
             <span class="kw-2">&amp;</span><span class="self">self</span>.bytes[sev_metadata_header_start..sev_metadata_header_end],
         );
-        <span class="macro">trace!</span>(<span class="string">&quot;SEV metadata entry count: {}&quot;</span>, header.count);
+        <span class="macro">trace!</span>(<span class="string">"SEV metadata entry count: {}"</span>, header.count);
         <span class="kw">let </span>metadata_entries_end = sev_metadata_header_start + header.length <span class="kw">as </span>usize;
         <span class="self">self</span>.bytes[sev_metadata_header_end..metadata_entries_end]
             .chunks(SEV_METADATA_ENTRY_SIZE)
@@ -539,11 +541,11 @@
         <span class="kw">let </span>sev_es_reset_block_content = <span class="kw-2">*</span><span class="self">self
             </span>.parse_firmware_guid_table()
             .get(<span class="kw-2">&amp;</span>SEV_ES_RESET_GUID)
-            .expect(<span class="string">&quot;couldn&#39;t find SEV-ES reset block entry in GUID table&quot;</span>);
+            .expect(<span class="string">"couldn't find SEV-ES reset block entry in GUID table"</span>);
         <span class="macro">assert_eq!</span>(
             sev_es_reset_block_content.len(),
             size_of::&lt;u32&gt;(),
-            <span class="string">&quot;invalid length for SEV-ES reset block entry&quot;
+            <span class="string">"invalid length for SEV-ES reset block entry"
         </span>);
         <span class="comment">// We expect the SEV-ES reset block entry in the GUID table to contain only 4
         // bytes that represent the 32-bit unsigned little-endian encoding of
@@ -564,16 +566,16 @@
         <span class="kw">while </span>entry_end &gt; GUID_TABLE_ENTRY_HEADER_SIZE {
             <span class="kw">let </span>GuidTableEntryHeader { guid: entry_guid, size: entry_size } =
                 GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span>content[..entry_end]);
-            <span class="macro">assert!</span>(entry_end &gt;= entry_size <span class="kw">as </span>usize, <span class="string">&quot;invalid entry size&quot;</span>);
+            <span class="macro">assert!</span>(entry_end &gt;= entry_size <span class="kw">as </span>usize, <span class="string">"invalid entry size"</span>);
             <span class="kw">let </span>content_end = entry_end - GUID_TABLE_ENTRY_HEADER_SIZE;
             <span class="kw">let </span>content_start = entry_end - entry_size <span class="kw">as </span>usize;
             <span class="kw">if let </span><span class="prelude-val">Some</span>(_existing) = result.insert(entry_guid, <span class="kw-2">&amp;</span>content[content_start..content_end])
             {
-                <span class="macro">panic!</span>(<span class="string">&quot;duplicate GUID detected in table&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"duplicate GUID detected in table"</span>);
             }
             entry_end = content_start;
         }
-        <span class="macro">assert_eq!</span>(entry_end, <span class="number">0</span>, <span class="string">&quot;malformed GUID table contents&quot;</span>);
+        <span class="macro">assert_eq!</span>(entry_end, <span class="number">0</span>, <span class="string">"malformed GUID table contents"</span>);
         result
     }
 
@@ -581,21 +583,21 @@
     </span><span class="kw">fn </span>get_guid_table_content(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="macro">assert!</span>(
             <span class="self">self</span>.bytes.len() &gt; GUID_TABLE_END_OFFSET + GUID_TABLE_ENTRY_HEADER_SIZE,
-            <span class="string">&quot;firmware ROM too small&quot;
+            <span class="string">"firmware ROM too small"
         </span>);
         <span class="comment">// We parse the GUID table from the end, starting at the footer.
         </span><span class="kw">let </span>table_end = <span class="self">self</span>.bytes.len() - GUID_TABLE_END_OFFSET;
-        <span class="macro">trace!</span>(<span class="string">&quot;GUID table end: {}&quot;</span>, table_end);
+        <span class="macro">trace!</span>(<span class="string">"GUID table end: {}"</span>, table_end);
         <span class="kw">let </span>GuidTableEntryHeader { guid: footer_guid, size: table_size } =
             GuidTableEntryHeader::parse(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes[..table_end]);
         <span class="macro">assert_eq!</span>(
             footer_guid, GUID_TABLE_FOOTER_GUID,
-            <span class="string">&quot;firmware image doesn&#39;t contain a valid GUID table&quot;
+            <span class="string">"firmware image doesn't contain a valid GUID table"
         </span>);
-        <span class="macro">trace!</span>(<span class="string">&quot;GUID table size: {}&quot;</span>, table_size);
+        <span class="macro">trace!</span>(<span class="string">"GUID table size: {}"</span>, table_size);
         <span class="macro">assert!</span>(
             table_size <span class="kw">as </span>usize &gt; GUID_TABLE_ENTRY_HEADER_SIZE &amp;&amp; (table_size <span class="kw">as </span>usize) &lt; table_end,
-            <span class="string">&quot;invalid GUID table size&quot;
+            <span class="string">"invalid GUID table size"
         </span>);
         <span class="kw">let </span>content_start = table_end - (table_size <span class="kw">as </span>usize);
         <span class="kw">let </span>content_end = table_end - GUID_TABLE_ENTRY_HEADER_SIZE;
@@ -615,13 +617,13 @@
 <span class="doccomment">/// Loads the Stage 0 firmware ROM image from the supplied path.
 </span><span class="kw">pub fn </span>load_stage0(stage0_rom_path: PathBuf) -&gt; anyhow::Result&lt;Stage0Info&gt; {
     <span class="kw">let </span>stage0_bytes =
-        std::fs::read(stage0_rom_path).context(<span class="string">&quot;couldn&#39;t load stage0 firmware ROM image&quot;</span>)<span class="question-mark">?</span>;
-    <span class="macro">debug!</span>(<span class="string">&quot;Stage0 size: {}&quot;</span>, stage0_bytes.len());
+        std::fs::read(stage0_rom_path).context(<span class="string">"couldn't load stage0 firmware ROM image"</span>)<span class="question-mark">?</span>;
+    <span class="macro">debug!</span>(<span class="string">"Stage0 size: {}"</span>, stage0_bytes.len());
 
     <span class="kw">let </span><span class="kw-2">mut </span>stage0_hasher = Sha256::new();
     stage0_hasher.update(<span class="kw-2">&amp;</span>stage0_bytes);
     <span class="kw">let </span>stage0_sha256_digest = stage0_hasher.finalize();
-    <span class="macro">info!</span>(<span class="string">&quot;Stage0 digest: sha256:{}&quot;</span>, hex::encode(stage0_sha256_digest));
+    <span class="macro">info!</span>(<span class="string">"Stage0 digest: sha256:{}"</span>, hex::encode(stage0_sha256_digest));
     <span class="prelude-val">Ok</span>(Stage0Info::new(stage0_bytes))
 }
 
@@ -644,19 +646,19 @@
         <span class="macro">assert_eq!</span>(
             start_address,
             start_address.align_down(Size4KiB::SIZE),
-            <span class="string">&quot;invalid SEV metadata entry base address&quot;
+            <span class="string">"invalid SEV metadata entry base address"
         </span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>size: u32 = <span class="number">0</span>;
         size.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">4</span>..<span class="number">8</span>]);
-        <span class="macro">assert_eq!</span>((size <span class="kw">as </span>u64) % Size4KiB::SIZE, <span class="number">0</span>, <span class="string">&quot;invalid SEV metadata entry size&quot;</span>);
+        <span class="macro">assert_eq!</span>((size <span class="kw">as </span>u64) % Size4KiB::SIZE, <span class="number">0</span>, <span class="string">"invalid SEV metadata entry size"</span>);
         <span class="kw">let </span>page_count = (size <span class="kw">as </span>usize) / (Size4KiB::SIZE <span class="kw">as </span>usize);
 
         <span class="kw">let </span><span class="kw-2">mut </span>page_type: u32 = <span class="number">0</span>;
         page_type.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">8</span>..<span class="number">12</span>]);
-        <span class="macro">trace!</span>(<span class="string">&quot;Metadata page entry: base: {}, size: {}, page_type: {}&quot;</span>, base, size, page_type);
+        <span class="macro">trace!</span>(<span class="string">"Metadata page entry: base: {}, size: {}, page_type: {}"</span>, base, size, page_type);
         <span class="kw">let </span>page_type = SevMetadataPageType::from_repr(page_type)
-            .expect(<span class="string">&quot;invalid SEV metadata page type&quot;</span>)
+            .expect(<span class="string">"invalid SEV metadata page type"</span>)
             .into();
 
         <span class="self">Self </span>{ start_address, page_count, page_type }
@@ -678,7 +680,7 @@
 <span class="kw">impl </span>From&lt;SevMetadataPageType&gt; <span class="kw">for </span>PageType {
     <span class="kw">fn </span>from(value: SevMetadataPageType) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
-            SevMetadataPageType::Invalid =&gt; <span class="macro">panic!</span>(<span class="string">&quot;invalid SEV metadata page type&quot;</span>),
+            SevMetadataPageType::Invalid =&gt; <span class="macro">panic!</span>(<span class="string">"invalid SEV metadata page type"</span>),
             SevMetadataPageType::Cpuid =&gt; PageType::Cpuid,
             SevMetadataPageType::Secrets =&gt; PageType::Secrets,
             SevMetadataPageType::Unmeasured =&gt; PageType::Unmeasured,
@@ -728,8 +730,8 @@
 
 <span class="doccomment">/// The header of the SEV metadata section.
 ///
-/// We validate the signature and version, but don&#39;t use it for anything else,
-/// so we don&#39;t need to store their values in the struct.
+/// We validate the signature and version, but don't use it for anything else,
+/// so we don't need to store their values in the struct.
 ///
 /// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm&gt;
 </span><span class="kw">struct </span>SevMetadataHeader {
@@ -742,20 +744,20 @@
         <span class="macro">assert!</span>(bytes.len() == SEV_METADATA_HEADER_SIZE);
         <span class="kw">let </span><span class="kw-2">mut </span>signature: [u8; <span class="number">4</span>] = [<span class="number">0</span>; <span class="number">4</span>];
         signature[..].copy_from_slice(<span class="kw-2">&amp;</span>bytes[..<span class="number">4</span>]);
-        <span class="macro">assert_eq!</span>(signature, SEV_SECTION_SIGNATURE, <span class="string">&quot;invalid signature for SEV metadata section&quot;</span>);
+        <span class="macro">assert_eq!</span>(signature, SEV_SECTION_SIGNATURE, <span class="string">"invalid signature for SEV metadata section"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>version: u32 = <span class="number">0</span>;
         version.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">8</span>..<span class="number">12</span>]);
-        <span class="macro">assert_eq!</span>(version, SEV_METADATA_VERSION, <span class="string">&quot;invalid version for SEV metadata section&quot;</span>);
+        <span class="macro">assert_eq!</span>(version, SEV_METADATA_VERSION, <span class="string">"invalid version for SEV metadata section"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>length: u32 = <span class="number">0</span>;
         length.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">4</span>..<span class="number">8</span>]);
         <span class="kw">let </span><span class="kw-2">mut </span>count: u32 = <span class="number">0</span>;
         count.as_bytes_mut().copy_from_slice(<span class="kw-2">&amp;</span>bytes[<span class="number">12</span>..<span class="number">16</span>]);
-        <span class="macro">trace!</span>(<span class="string">&quot;SEV metadata header: length:{}, count:{}&quot;</span>, length, count);
+        <span class="macro">trace!</span>(<span class="string">"SEV metadata header: length:{}, count:{}"</span>, length, count);
         <span class="macro">assert_eq!</span>(
             length,
             count * (SEV_METADATA_ENTRY_SIZE <span class="kw">as </span>u32) + (SEV_METADATA_HEADER_SIZE <span class="kw">as </span>u32),
-            <span class="string">&quot;invalid length or count in SEV metadata section&quot;
+            <span class="string">"invalid length or count in SEV metadata section"
         </span>);
         <span class="self">Self </span>{ length, count }
     }

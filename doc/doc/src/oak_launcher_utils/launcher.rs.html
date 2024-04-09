@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_launcher_utils/src/launcher.rs`."><title>launcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_launcher_utils" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_launcher_utils/src/launcher.rs`."><title>launcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_launcher_utils" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_launcher_utils/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -247,14 +249,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -301,7 +303,7 @@
     </span><span class="kw">pub </span>bios_binary: PathBuf,
 
     <span class="doccomment">/// Port to use for debugging with gdb
-    </span><span class="attr">#[arg(long = <span class="string">&quot;gdb&quot;</span>)]
+    </span><span class="attr">#[arg(long = <span class="string">"gdb"</span>)]
     </span><span class="kw">pub </span>gdb: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
     <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for
@@ -310,7 +312,7 @@
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
     <span class="doccomment">/// Path to the initrd image to use.
-    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;kernel&quot;</span>]</span>)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">"kernel"</span>]</span>)]
     <span class="kw">pub </span>initrd: PathBuf,
 }
 
@@ -318,7 +320,7 @@
 </span><span class="kw">fn </span>path_exists(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
     <span class="kw">let </span>path = PathBuf::from(s);
     <span class="kw">if </span>!fs::metadata(s).map_err(|err| err.to_string())<span class="question-mark">?</span>.is_file() {
-        <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;path does not represent a file&quot;</span>))
+        <span class="prelude-val">Err</span>(String::from(<span class="string">"path does not represent a file"</span>))
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(path)
     }
@@ -337,10 +339,10 @@
     </span><span class="kw">pub fn </span>start(params: Params, guest_console: net::UnixStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>app_bytes = <span class="kw">if let </span><span class="prelude-val">Some</span>(app_binary) = params.app_binary {
             <span class="kw">let </span>bytes = fs::read(<span class="kw-2">&amp;</span>app_binary).with_context(|| {
-                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t read application binary {}&quot;</span>, app_binary.display())
+                <span class="macro">format!</span>(<span class="string">"couldn't read application binary {}"</span>, app_binary.display())
             })<span class="question-mark">?</span>;
             <span class="macro">log::info!</span>(
-                <span class="string">&quot;read application binary from disk {} ({} bytes)&quot;</span>,
+                <span class="string">"read application binary from disk {} ({} bytes)"</span>,
                 app_binary.display(),
                 bytes.len()
             );
@@ -367,53 +369,53 @@
         cmd.preserved_fds(<span class="macro">vec!</span>[guest_console.into(), guest_socket.into()]);
 
         <span class="comment">// Construct the command-line arguments for `qemu`.
-        </span>cmd.arg(<span class="string">&quot;-enable-kvm&quot;</span>);
+        </span>cmd.arg(<span class="string">"-enable-kvm"</span>);
         <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required
         // for remote attestation.
-        </span>cmd.args([<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;IvyBridge-IBRS,enforce&quot;</span>]);
+        </span>cmd.args([<span class="string">"-cpu"</span>, <span class="string">"IvyBridge-IBRS,enforce"</span>]);
         <span class="comment">// Set memory size if given.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory_size) = params.memory_size {
-            cmd.args([<span class="string">&quot;-m&quot;</span>, <span class="kw-2">&amp;</span>memory_size]);
+            cmd.args([<span class="string">"-m"</span>, <span class="kw-2">&amp;</span>memory_size]);
         };
-        <span class="comment">// Disable a bunch of hardware we don&#39;t need.
-        </span>cmd.arg(<span class="string">&quot;-nodefaults&quot;</span>);
-        cmd.arg(<span class="string">&quot;-nographic&quot;</span>);
-        <span class="comment">// If the VM restarts, don&#39;t restart it (we&#39;re not expecting any restarts so any
+        <span class="comment">// Disable a bunch of hardware we don't need.
+        </span>cmd.arg(<span class="string">"-nodefaults"</span>);
+        cmd.arg(<span class="string">"-nographic"</span>);
+        <span class="comment">// If the VM restarts, don't restart it (we're not expecting any restarts so any
         // restart should be treated as a failure)
-        </span>cmd.arg(<span class="string">&quot;-no-reboot&quot;</span>);
+        </span>cmd.arg(<span class="string">"-no-reboot"</span>);
         <span class="comment">// Use the `microvm` machine as the basis, and ensure ACPI is enabled.
-        </span>cmd.args([<span class="string">&quot;-machine&quot;</span>, <span class="string">&quot;microvm,acpi=on&quot;</span>]);
+        </span>cmd.args([<span class="string">"-machine"</span>, <span class="string">"microvm,acpi=on"</span>]);
         <span class="comment">// Route first serial port to console.
-        </span>cmd.args([<span class="string">&quot;-chardev&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_console_fd}&quot;</span>).as_str()]);
-        cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
+        </span>cmd.args([<span class="string">"-chardev"</span>, <span class="macro">format!</span>(<span class="string">"socket,id=consock,fd={guest_console_fd}"</span>).as_str()]);
+        cmd.args([<span class="string">"-serial"</span>, <span class="string">"chardev:consock"</span>]);
         <span class="comment">// Add the virtio device.
-        </span>cmd.args([<span class="string">&quot;-chardev&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;socket,id=commsock,fd={guest_socket_fd}&quot;</span>).as_str()]);
-        cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-serial-device,max_ports=1&quot;</span>]);
-        cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtconsole,chardev=commsock&quot;</span>]);
+        </span>cmd.args([<span class="string">"-chardev"</span>, <span class="macro">format!</span>(<span class="string">"socket,id=commsock,fd={guest_socket_fd}"</span>).as_str()]);
+        cmd.args([<span class="string">"-device"</span>, <span class="string">"virtio-serial-device,max_ports=1"</span>]);
+        cmd.args([<span class="string">"-device"</span>, <span class="string">"virtconsole,chardev=commsock"</span>]);
         <span class="comment">// Use stage0 as the BIOS.
-        </span>cmd.args([<span class="string">&quot;-bios&quot;</span>, params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
-        <span class="comment">// stage0 accoutrements: kernel that&#39;s compatible with the linux boot protocol
-        </span>cmd.args([<span class="string">&quot;-kernel&quot;</span>, params.kernel.into_os_string().into_string().unwrap().as_str()]);
+        </span>cmd.args([<span class="string">"-bios"</span>, params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
+        <span class="comment">// stage0 accoutrements: kernel that's compatible with the linux boot protocol
+        </span>cmd.args([<span class="string">"-kernel"</span>, params.kernel.into_os_string().into_string().unwrap().as_str()]);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gdb_port) = params.gdb {
             <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before
             // booting
-            </span>cmd.args([<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{gdb_port}&quot;</span>).as_str()]);
-            cmd.arg(<span class="string">&quot;-S&quot;</span>);
+            </span>cmd.args([<span class="string">"-gdb"</span>, <span class="macro">format!</span>(<span class="string">"tcp::{gdb_port}"</span>).as_str()]);
+            cmd.arg(<span class="string">"-S"</span>);
         }
 
-        cmd.args([<span class="string">&quot;-initrd&quot;</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
+        cmd.args([<span class="string">"-initrd"</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
 
-        <span class="macro">info!</span>(<span class="string">&quot;executing: {:?}&quot;</span>, cmd);
+        <span class="macro">info!</span>(<span class="string">"executing: {:?}"</span>, cmd);
 
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(app_bytes) = app_bytes {
             oak_channel::basic_framed::send_raw(<span class="kw-2">&amp;mut </span>host_socket, <span class="kw-2">&amp;</span>app_bytes)
-                .context(<span class="string">&quot;failed to send application&quot;</span>)<span class="question-mark">?</span>;
-            <span class="attr">#[cfg(feature = <span class="string">&quot;exchange_evidence&quot;</span>)]
+                .context(<span class="string">"failed to send application"</span>)<span class="question-mark">?</span>;
+            <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
             </span><span class="kw">let </span>_evidence = oak_channel::basic_framed::receive_raw(<span class="kw-2">&amp;mut </span>host_socket)
-                .context(<span class="string">&quot;failed to receive attestion evidence&quot;</span>)<span class="question-mark">?</span>;
+                .context(<span class="string">"failed to receive attestion evidence"</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ guest_console: guest_console_clone, host_socket, instance })
@@ -423,19 +425,19 @@
 <span class="attr">#[async_trait]
 </span><span class="kw">impl </span>GuestInstance <span class="kw">for </span>Instance {
     <span class="kw">async fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt; {
-        <span class="macro">info!</span>(<span class="string">&quot;waiting for guest instance to terminate&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"waiting for guest instance to terminate"</span>);
         <span class="self">self</span>.instance.wait().<span class="kw">await</span>.map_err(anyhow::Error::from)
     }
 
     <span class="kw">async fn </span>kill(<span class="kw-2">mut </span><span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt; {
-        <span class="macro">info!</span>(<span class="string">&quot;killing guest instance; cleaning up and shutting down&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"killing guest instance; cleaning up and shutting down"</span>);
         <span class="self">self</span>.guest_console.shutdown(Shutdown::Both)<span class="question-mark">?</span>;
         <span class="self">self</span>.instance.start_kill()<span class="question-mark">?</span>;
         <span class="self">self</span>.wait().<span class="kw">await
     </span>}
 
     <span class="kw">async fn </span>connect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>oak_channel::Channel&gt;&gt; {
-        <span class="macro">info!</span>(<span class="string">&quot;connecting to guest instance&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"connecting to guest instance"</span>);
         <span class="prelude-val">Ok</span>(Box::new(<span class="self">self</span>.host_socket.try_clone()<span class="question-mark">?</span>))
     }
 }
@@ -461,7 +463,7 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(Box&lt;<span class="kw">dyn </span>GuestInstance&gt;, ConnectorHandle), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
     <span class="comment">// Provide a way for the launched instance to send logs
     </span><span class="kw">let </span>guest_writer: UnixStream = {
-        <span class="comment">// Create two linked consoles. Technically both can read/write, but we&#39;ll
+        <span class="comment">// Create two linked consoles. Technically both can read/write, but we'll
         // use them as a one way channel.
         </span><span class="kw">let </span>(console_writer, console_receiver) = UnixStream::pair()<span class="question-mark">?</span>;
 
@@ -470,10 +472,10 @@
             <span class="kw">let </span><span class="kw-2">mut </span>reader = BufReader::new(console_receiver);
 
             <span class="kw">let </span><span class="kw-2">mut </span>line = String::new();
-            <span class="kw">while </span>reader.read_line(<span class="kw-2">&amp;mut </span>line).expect(<span class="string">&quot;couldn&#39;t read line&quot;</span>) &gt; <span class="number">0 </span>{
+            <span class="kw">while </span>reader.read_line(<span class="kw-2">&amp;mut </span>line).expect(<span class="string">"couldn't read line"</span>) &gt; <span class="number">0 </span>{
                 <span class="comment">// remove the new line character
                 </span>line.pop();
-                <span class="macro">log::info!</span>(<span class="string">&quot;console: {:?}&quot;</span>, line);
+                <span class="macro">log::info!</span>(<span class="string">"console: {:?}"</span>, line);
                 line.clear();
             }
         });
@@ -481,7 +483,7 @@
         console_writer
     };
 
-    <span class="macro">log::info!</span>(<span class="string">&quot;launching instance&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"launching instance"</span>);
 
     <span class="kw">let </span>guest_instance = Box::new(Instance::start(params, guest_writer)<span class="question-mark">?</span>);
 

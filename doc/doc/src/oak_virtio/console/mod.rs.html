@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_virtio/src/console/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_virtio" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_virtio/src/console/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_virtio" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_virtio/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -259,14 +261,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -313,31 +315,31 @@
 /// supports a single port and no configuration.
 ///
 /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-39000010&gt;.
-</span><span class="kw">pub struct </span>Console&lt;<span class="lifetime">&#39;a</span>, T: VirtioTransport, A: Allocator&gt; {
+</span><span class="kw">pub struct </span>Console&lt;<span class="lifetime">'a</span>, T: VirtioTransport, A: Allocator&gt; {
     <span class="doccomment">/// The base virtio-over-PCI device used for configuration and notification.
     </span>device: VirtioBaseDevice&lt;T&gt;,
     <span class="doccomment">/// The receive queue, used for receiving bytes.
-    </span>rx_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
+    </span>rx_queue: DeviceWriteOnlyQueue&lt;<span class="lifetime">'a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
     <span class="doccomment">/// The transmit queue, used for sending bytes.
-    </span>tx_queue: DriverWriteOnlyQueue&lt;<span class="lifetime">&#39;a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
+    </span>tx_queue: DriverWriteOnlyQueue&lt;<span class="lifetime">'a</span>, QUEUE_SIZE, DATA_BUFFER_SIZE, A&gt;,
     <span class="doccomment">/// A buffer to temporarily store extra data from the device that was not
     /// fully read when using `read_all`. This could happen if the device
     /// sent more bytes in a single buffer than was expected by `read_all`.
     </span>pending_data: <span class="prelude-ty">Option</span>&lt;VecDeque&lt;u8&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, A: Allocator&gt; Console&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, A: Allocator&gt; Console&lt;<span class="lifetime">'a</span>, VirtioPciTransport, A&gt; {
     <span class="doccomment">/// Finds the virtio console PCI device, initialises the device, and
     /// configures the queues.
     </span><span class="kw">pub fn </span>find_and_configure_device&lt;VP: Translator, PV: InverseTranslator&gt;(
         translate: VP,
         inverse: PV,
-        alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
+        alloc: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>A,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// For now we just scan the first 32 devices on PCI bus 0 to find the first one
         // that matches the vendor ID and device ID.
         </span><span class="kw">let </span>pci_device = find_device(<span class="kw">super</span>::PCI_VENDOR_ID, PCI_DEVICE_ID)
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find a virtio console device&quot;</span>))<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't find a virtio console device"</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>transport = VirtioPciTransport::new(pci_device);
         <span class="kw">let </span>device = VirtioBaseDevice::new(transport);
         <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">Self</span>::new(device, <span class="kw-2">&amp;</span>translate, alloc);
@@ -346,7 +348,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Console&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T, A: Allocator&gt; Console&lt;<span class="lifetime">'a</span>, T, A&gt;
 <span class="kw">where
     </span>T: VirtioTransport,
 {
@@ -391,7 +393,7 @@
         <span class="self">self</span>.device.get_status()
     }
 
-    <span class="kw">fn </span>new&lt;VP: Translator&gt;(device: VirtioBaseDevice&lt;T&gt;, translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new&lt;VP: Translator&gt;(device: VirtioBaseDevice&lt;T&gt;, translate: VP, alloc: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>A) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>tx_queue = DriverWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
         <span class="kw">let </span>rx_queue = DeviceWriteOnlyQueue::new(<span class="kw-2">&amp;</span>translate, alloc);
         Console { device, tx_queue, rx_queue, pending_data: <span class="prelude-val">None </span>}
@@ -405,38 +407,38 @@
     ) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.device
             .start_init(DEVICE_ID <span class="kw">as </span>u32, inverse)
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;virtio error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;couldn&#39;t initialize the PCI device&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"virtio error: {:?}"</span>, error))
+            .context(<span class="string">"couldn't initialize the PCI device"</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .configure_queue(
                 RX_QUEUE_ID,
                 QUEUE_SIZE <span class="kw">as </span>u16,
                 translate(<span class="self">self</span>.rx_queue.inner.get_desc_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.rx_queue.inner.get_avail_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.rx_queue.inner.get_used_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
             )
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;queue configuration error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;couldn&#39;t configure the receive queue&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"queue configuration error: {:?}"</span>, error))
+            .context(<span class="string">"couldn't configure the receive queue"</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .configure_queue(
                 TX_QUEUE_ID,
                 QUEUE_SIZE <span class="kw">as </span>u16,
                 translate(<span class="self">self</span>.tx_queue.inner.get_desc_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.tx_queue.inner.get_avail_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
                 translate(<span class="self">self</span>.tx_queue.inner.get_used_addr())
-                    .context(<span class="string">&quot;couldn&#39;t translate VirtAddr to PhysAddr&quot;</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"couldn't translate VirtAddr to PhysAddr"</span>)<span class="question-mark">?</span>,
             )
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;queue configuration error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;couldn&#39;t configure the transmit queue&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"queue configuration error: {:?}"</span>, error))
+            .context(<span class="string">"couldn't configure the transmit queue"</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.device
             .complete_init()
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;device activation error: {:?}&quot;</span>, error))
-            .context(<span class="string">&quot;couldn&#39;t activate the PCI device&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"device activation error: {:?}"</span>, error))
+            .context(<span class="string">"couldn't activate the PCI device"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Let the device know there are available buffers in the receiver queue.
         </span><span class="self">self</span>.device.notify_queue(RX_QUEUE_ID);
@@ -475,7 +477,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Read <span class="kw">for </span>Console&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T, A: Allocator&gt; Read <span class="kw">for </span>Console&lt;<span class="lifetime">'a</span>, T, A&gt;
 <span class="kw">where
     </span>T: VirtioTransport,
 {
@@ -490,7 +492,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, A: Allocator&gt; Write <span class="kw">for </span>Console&lt;<span class="lifetime">&#39;a</span>, T, A&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T, A: Allocator&gt; Write <span class="kw">for </span>Console&lt;<span class="lifetime">'a</span>, T, A&gt;
 <span class="kw">where
     </span>T: VirtioTransport,
 {
@@ -506,7 +508,7 @@
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// We always flush on write, so do nothing.
-        // TODO(#2876): We should use a buffered writer so that we don&#39;t always flush on
+        // TODO(#2876): We should use a buffered writer so that we don't always flush on
         // write, and provide an actual flush implementation here.
         </span><span class="prelude-val">Ok</span>(())
     }

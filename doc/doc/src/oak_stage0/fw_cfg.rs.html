@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/fw_cfg.rs`."><title>fw_cfg.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/fw_cfg.rs`."><title>fw_cfg.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -548,14 +550,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -583,7 +585,7 @@
 <span class="kw">const </span>FWCFG_PORT_DATA: u16 = <span class="number">0x511</span>;
 <span class="kw">const </span>FWCFG_PORT_DMA: u16 = <span class="number">0x514</span>;
 
-<span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;QEMU&quot;</span>;
+<span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"QEMU"</span>;
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// The interface features supported by the device.
@@ -610,7 +612,7 @@
     }
 }
 
-<span class="doccomment">/// Selector keys for &quot;well-known&quot; fw_cfg entries.
+<span class="doccomment">/// Selector keys for "well-known" fw_cfg entries.
 ///
 /// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative
 /// list.
@@ -675,11 +677,11 @@
 }
 
 <span class="kw">impl </span>core::fmt::Debug <span class="kw">for </span>DirEntry {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; core::fmt::Result {
-        f.debug_struct(<span class="string">&quot;DirEntry&quot;</span>)
-            .field(<span class="string">&quot;name&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name())
-            .field(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size())
-            .field(<span class="string">&quot;select&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.selector())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
+        f.debug_struct(<span class="string">"DirEntry"</span>)
+            .field(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.name())
+            .field(<span class="string">"size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size())
+            .field(<span class="string">"select"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.selector())
             .finish()
     }
 }
@@ -692,8 +694,8 @@
     data: PortWrapper&lt;u8&gt;,
     dma_high: PortWrapper&lt;u32&gt;,
     dma_low: PortWrapper&lt;u32&gt;,
-    dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator&gt;,
-    dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator&gt;,
+    dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
+    dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
     dma_enabled: bool,
 }
 
@@ -702,12 +704,12 @@
     ///
     /// While we do probe for the existence of the QEMU fw_cfg device, reading
     /// or writing to I/O ports that are not in use is inherently undefined
-    /// behaviour. What&#39;s worse, if there happens to be some other device
+    /// behaviour. What's worse, if there happens to be some other device
     /// using those I/O ports, the results are completely unknowable.
     ///
     /// The caller has to guarantee that at least doing the probe will not cause
     /// any adverse effects.
-    </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="self">Self </span>{
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
             data: io_port_factory().new_reader(FWCFG_PORT_DATA),
@@ -732,12 +734,12 @@
         fwcfg.read(<span class="kw-2">&amp;mut </span>features)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>features =
-            Features::from_bits(features).ok_or(<span class="string">&quot;invalid fw_cfg device features received&quot;</span>)<span class="question-mark">?</span>;
+            Features::from_bits(features).ok_or(<span class="string">"invalid fw_cfg device features received"</span>)<span class="question-mark">?</span>;
         <span class="kw">if </span>features.contains(Features::DMA) {
             fwcfg.dma_enabled = <span class="bool-val">true</span>;
         }
 
-        <span class="kw">if </span>signature == SIGNATURE { <span class="prelude-val">Ok</span>(fwcfg) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(<span class="string">&quot;QEMU fw_cfg device not available&quot;</span>) }
+        <span class="kw">if </span>signature == SIGNATURE { <span class="prelude-val">Ok</span>(fwcfg) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(<span class="string">"QEMU fw_cfg device not available"</span>) }
     }
 
     <span class="doccomment">/// Returns an iterator over the files in the fw_cfg system.
@@ -745,16 +747,16 @@
     /// # Safety
     ///
     /// You should consume the iterator fully before calling any other methods
-    /// of this struct, or at the very least don&#39;t use the iterator after
+    /// of this struct, or at the very least don't use the iterator after
     /// calling some other function. (This means that, for example, you
-    /// shouldn&#39;t try to read the files while iterating over the
+    /// shouldn't try to read the files while iterating over the
     /// directory contents.)
     /// If you call any other methods, the iterator will be in an undefined
     /// state and unsafe to read from.
-    </span><span class="kw">pub unsafe fn </span>dir(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = DirEntry&gt; + <span class="lifetime">&#39;_ </span>{
+    </span><span class="kw">pub unsafe fn </span>dir(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = DirEntry&gt; + <span class="lifetime">'_ </span>{
         <span class="self">self</span>.write_selector(FwCfgItems::FileDir <span class="kw">as </span>u16).unwrap();
 
-        <span class="comment">// We don&#39;t represent FwCfgFiles as a struct, as you can&#39;t do that in safe Rust.
+        <span class="comment">// We don't represent FwCfgFiles as a struct, as you can't do that in safe Rust.
         // Therefore, read fields individually.
         </span><span class="kw">let </span>count = {
             <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0u8</span>; <span class="number">4</span>];
@@ -770,7 +772,7 @@
     }
 
     <span class="kw">pub fn </span>find(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>CStr) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="comment">// Safety: this is safe as we don&#39;t leak the iterator.
+        <span class="comment">// Safety: this is safe as we don't leak the iterator.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.dir() }.find(|file| file.name() == name)
     }
 
@@ -787,19 +789,19 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         name: <span class="kw-2">&amp;</span>CStr,
         object: <span class="kw-2">&amp;mut </span>T,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>entry = <span class="self">self</span>.find(name);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = entry {
             <span class="self">self</span>.read_file(<span class="kw-2">&amp;</span>file, object.as_bytes_mut())
         } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="string">&quot;couldn&#39;t find requested file&quot;</span>)
+            <span class="prelude-val">Err</span>(<span class="string">"couldn't find requested file"</span>)
         }
     }
 
     <span class="doccomment">/// Reads the size of the E820 reservation table.
     ///
     /// This table predates the file interface and thus has its own selector.
-    </span><span class="kw">pub fn </span>read_e820_reservation_table_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_e820_reservation_table_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>reservation_count: u32 = <span class="number">0</span>;
         <span class="self">self</span>.write_selector(FwCfgItems::E820ReservationTable <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>reservation_count)<span class="question-mark">?</span>;
@@ -813,7 +815,7 @@
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
-    </span><span class="kw">pub fn </span>read_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file: <span class="kw-2">&amp;</span>DirEntry, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file: <span class="kw-2">&amp;</span>DirEntry, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.write_selector(file.selector())<span class="question-mark">?</span>;
         <span class="kw">let </span>len = min(buf.len(), file.size());
         <span class="kw">if </span><span class="self">self</span>.dma_enabled {
@@ -827,7 +829,7 @@
     <span class="doccomment">/// Reads contents of a file; returns a vector with the bytes read.
     ///
     /// See &lt;read_file&gt; for more information.
-    </span><span class="kw">pub fn </span>read_file_vec(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file: <span class="kw-2">&amp;</span>DirEntry) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_file_vec(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file: <span class="kw-2">&amp;</span>DirEntry) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.write_selector(file.selector())<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; file.size()];
 
@@ -841,7 +843,7 @@
     }
 
     <span class="doccomment">/// Reads the size of the kernel command-line.
-    </span><span class="kw">pub fn </span>read_cmdline_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_cmdline_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cmdline_size: u32 = <span class="number">0</span>;
         <span class="self">self</span>.write_selector(FwCfgItems::CmdlineSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>cmdline_size)<span class="question-mark">?</span>;
@@ -853,7 +855,7 @@
     ///
     /// Returns `None` if the kernel command-line size is 0.
     </span><span class="kw">pub fn </span>get_cmdline_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="kw">let </span>size = <span class="self">self</span>.read_cmdline_size().expect(<span class="string">&quot;couldn&#39;t read cmdline size&quot;</span>);
+        <span class="kw">let </span>size = <span class="self">self</span>.read_cmdline_size().expect(<span class="string">"couldn't read cmdline size"</span>);
         <span class="kw">if </span>size == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
@@ -862,7 +864,7 @@
     }
 
     <span class="doccomment">/// Reads the size of the initial RAM disk.
-    </span><span class="kw">pub fn </span>read_initrd_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_initrd_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>initrd_size: u32 = <span class="number">0</span>;
         <span class="self">self</span>.write_selector(FwCfgItems::InitrdSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>initrd_size)<span class="question-mark">?</span>;
@@ -874,7 +876,7 @@
     ///
     /// Returns `None` if the initial RAM disk size is 0.
     </span><span class="kw">pub fn </span>get_initrd_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="kw">let </span>size = <span class="self">self</span>.read_initrd_size().expect(<span class="string">&quot;couldn&#39;t read initrd size&quot;</span>);
+        <span class="kw">let </span>size = <span class="self">self</span>.read_initrd_size().expect(<span class="string">"couldn't read initrd size"</span>);
         <span class="kw">if </span>size == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
@@ -883,7 +885,7 @@
     }
 
     <span class="doccomment">/// Reads the size of the kernel.
-    </span><span class="kw">pub fn </span>read_kernel_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_kernel_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>kernel_size: u32 = <span class="number">0</span>;
         <span class="self">self</span>.write_selector(FwCfgItems::KernelSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>kernel_size)<span class="question-mark">?</span>;
@@ -895,7 +897,7 @@
     ///
     /// Returns `None` if the kernel size is 0.
     </span><span class="kw">pub fn </span>get_kernel_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="kw">let </span>size = <span class="self">self</span>.read_kernel_size().expect(<span class="string">&quot;couldn&#39;t read kernel size&quot;</span>);
+        <span class="kw">let </span>size = <span class="self">self</span>.read_kernel_size().expect(<span class="string">"couldn't read kernel size"</span>);
         <span class="kw">if </span>size == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
@@ -904,32 +906,32 @@
     }
 
     <span class="doccomment">/// Reads the size of the setup information for the kernel.
-    </span><span class="kw">pub fn </span>read_setup_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>read_setup_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>setup_size: u32 = <span class="number">0</span>;
         <span class="self">self</span>.write_selector(FwCfgItems::SetupSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>setup_size)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(setup_size)
     }
 
-    <span class="doccomment">/// Gets an unnamed file representation of the kernel&#39;s setup information
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel's setup information
     /// using the dedicated selector.
     ///
     /// Returns `None` if the kernel size is 0.
     </span><span class="kw">pub fn </span>get_setup_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
-        <span class="kw">let </span>size = <span class="self">self</span>.read_setup_size().expect(<span class="string">&quot;couldn&#39;t read setup size&quot;</span>);
+        <span class="kw">let </span>size = <span class="self">self</span>.read_setup_size().expect(<span class="string">"couldn't read setup size"</span>);
         <span class="kw">if </span>size == <span class="number">0 </span>{ <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::SetupData)) }
     }
 
-    <span class="kw">fn </span>write_selector(<span class="kw-2">&amp;mut </span><span class="self">self</span>, selector: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>write_selector(<span class="kw-2">&amp;mut </span><span class="self">self</span>, selector: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="comment">// Safety: we make sure the device is available when initializing FwCfg.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.selector.try_write(selector) }
     }
 
-    <span class="kw">fn </span>read&lt;T: AsBytes + FromBytes&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, object: <span class="kw-2">&amp;mut </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>read&lt;T: AsBytes + FromBytes&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, object: <span class="kw-2">&amp;mut </span>T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.read_buf(object.as_bytes_mut())
     }
 
-    <span class="kw">fn </span>read_buf(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>read_buf(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">for </span>i <span class="kw">in </span>buf {
             <span class="comment">// Safety: We make sure that the device is available in `new()`, so reading from
             // the port is safe.
@@ -938,7 +940,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>read_buf_dma(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>read_buf_dma(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = buf.chunks_mut(Size4KiB::SIZE <span class="kw">as </span>usize);
         <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
             <span class="self">self</span>.read_chunk_dma(chunk)<span class="question-mark">?</span>;
@@ -947,9 +949,9 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>read_chunk_dma(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>read_chunk_dma(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span>chunk.len() &gt; <span class="self">self</span>.dma_buf.data[..].len() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;chunk is larger than the DMA buffer&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"chunk is larger than the DMA buffer"</span>);
         }
 
         <span class="comment">// We always use an identity mapping. We use the shared DMA buffer as a
@@ -978,7 +980,7 @@
         <span class="comment">// The control field will be cleared if the DMA operation is complete and
         // successful.
         </span><span class="kw">if </span><span class="self">self</span>.dma_access.control != <span class="number">0 </span>{
-            <span class="prelude-val">Err</span>(<span class="string">&quot;fw_cfg DMA failed&quot;</span>)
+            <span class="prelude-val">Err</span>(<span class="string">"fw_cfg DMA failed"</span>)
         } <span class="kw">else </span>{
             chunk.copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.dma_buf.data[..chunk.len()]);
             <span class="prelude-val">Ok</span>(())
@@ -1001,7 +1003,7 @@
 </span><span class="kw">pub fn </span>find_suitable_dma_address(
     size: usize,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
-) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>padded_size = (size <span class="kw">as </span>u64).checked_next_multiple_of(Size4KiB::SIZE).unwrap();
     e820_table
         .iter()
@@ -1019,7 +1021,7 @@
             </span><span class="prelude-val">Some</span>(PhysAddr::new(end.checked_sub(padded_size).unwrap()).align_down(Size4KiB::SIZE))
         })
         .max_by(PhysAddr::cmp)
-        .ok_or(<span class="string">&quot;no suitable memory available for dma buffer&quot;</span>)
+        .ok_or(<span class="string">"no suitable memory available for dma buffer"</span>)
 }
 
 <span class="doccomment">/// Makes sure that a chunk of memory is valid
@@ -1027,36 +1029,36 @@
     start: VirtAddr,
     size: usize,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>end = start + (size <span class="kw">as </span>u64);
     <span class="kw">if </span>start.as_u64() &lt; Size2MiB::SIZE {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;address falls in the first 2MiB&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"address falls in the first 2MiB"</span>);
     }
     <span class="kw">if </span>end.as_u64() &gt; <span class="kw">crate</span>::TOP_OF_VIRTUAL_MEMORY {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;region ends above the mapped virtual memory&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"region ends above the mapped virtual memory"</span>);
     }
     <span class="kw">if </span>!e820_table.iter().any(|entry| {
         entry.entry_type() == <span class="prelude-val">Some</span>(E820EntryType::RAM)
             &amp;&amp; entry.addr() <span class="kw">as </span>u64 &lt;= start.as_u64()
             &amp;&amp; (entry.addr() + entry.size()) <span class="kw">as </span>u64 &gt;= end.as_u64()
     }) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;region is not backed by physical memory&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"region is not backed by physical memory"</span>);
     }
 
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Ensures that two ranges don&#39;t overlap.
+<span class="doccomment">/// Ensures that two ranges don't overlap.
 </span><span class="kw">pub fn </span>check_non_overlapping(
     range_1_start: VirtAddr,
     range_1_size: usize,
     range_2_start: VirtAddr,
     range_2_size: usize,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>range_1_end = range_1_start + (range_1_size <span class="kw">as </span>u64);
     <span class="kw">let </span>range_2_end = range_2_start + (range_2_size <span class="kw">as </span>u64);
     <span class="kw">if </span>range_1_start &lt; range_2_end &amp;&amp; range_1_end &gt; range_2_start {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;regions overlap&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"regions overlap"</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -1070,7 +1072,7 @@
     control: u32,
     length: u32,
     address: u64,
-    <span class="comment">// Eat up the rest of the memory to ensure we&#39;re the only data structure on this page.
+    <span class="comment">// Eat up the rest of the memory to ensure we're the only data structure on this page.
     </span>padding: [u8; <span class="number">4080</span>],
 }
 <span class="macro">static_assertions::assert_eq_size!</span>(FwCfgDmaAccess, [u8; Size4KiB::SIZE <span class="kw">as </span>usize]);

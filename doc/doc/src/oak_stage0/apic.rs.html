@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/apic.rs`."><title>apic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/apic.rs`."><title>apic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -471,14 +473,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -505,7 +507,7 @@
 ///
 /// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC
 /// Interrupt Command Register Operations) in the AMD64 Architecture
-/// Programmer&#39;s Manual, Volume 2 for more details.
+/// Programmer's Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>InterprocessorInterrupt {
     <span class="doccomment">/// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
     </span><span class="attr">#[allow(clippy::too_many_arguments)]
@@ -518,13 +520,13 @@
         level: Level,
         trigger_mode: TriggerMode,
         destination_shorthand: DestinationShorthand,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
 }
 
 <span class="doccomment">/// APIC Error Status.
 ///
 /// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture
-/// Programmer&#39;s Manual, Volume 2 for more details.
+/// Programmer's Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>ErrorStatus {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags;
     <span class="kw">fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
@@ -532,7 +534,7 @@
 
 <span class="doccomment">/// LAPIC identifier.
 ///
-/// For APIC, it&#39;s 4 bits; xAPIC, 8 bits; x2APIC, 32 bits.
+/// For APIC, it's 4 bits; xAPIC, 8 bits; x2APIC, 32 bits.
 </span><span class="kw">trait </span>ApicId {
     <span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32;
 }
@@ -540,7 +542,7 @@
 <span class="doccomment">/// APIC Version.
 ///
 /// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture
-/// Programmer&#39;s Manual, Volume 2 for more details.
+/// Programmer's Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>ApicVersion {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8);
 }
@@ -548,7 +550,7 @@
 <span class="doccomment">/// APIC spurious interrupt register.
 ///
 /// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture
-/// Programmer&#39;s Manual, Volume 2 for more details.
+/// Programmer's Manual, Volume 2 for more details.
 </span><span class="kw">trait </span>SpuriousInterrupts {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8);
     <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: SpuriousInterruptFlags, vec: u8);
@@ -572,14 +574,14 @@
     /// are interested in.
     ///
     /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC
-    /// Registers) of the AMD64 Architecture Programmer&#39;s Manual, Volume 2.
+    /// Registers) of the AMD64 Architecture Programmer's Manual, Volume 2.
     </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
     </span><span class="kw">struct </span>ApicRegisters {
         registers: [u32; <span class="number">1024</span>],
     }
     <span class="macro">static_assertions::assert_eq_size!</span>(ApicRegisters, [u8; Size4KiB::SIZE <span class="kw">as </span>usize]);
 
-    <span class="comment">// We divide the offset by 4 as we&#39;re indexing by u32&#39;s, not bytes.
+    <span class="comment">// We divide the offset by 4 as we're indexing by u32's, not bytes.
     </span><span class="kw">const </span>APIC_ID_REGISTER_OFFSET: usize = <span class="number">0x020 </span>/ core::mem::size_of::&lt;u32&gt;();
     <span class="kw">const </span>APIC_VERSION_REGISTER_OFFSET: usize = <span class="number">0x30 </span>/ core::mem::size_of::&lt;u32&gt;();
     <span class="kw">const </span>SPURIOUS_INTERRUPT_REGISTER_OFFSET: usize = <span class="number">0x0F0 </span>/ core::mem::size_of::&lt;u32&gt;();
@@ -588,7 +590,7 @@
     <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = <span class="number">0x310 </span>/ core::mem::size_of::&lt;u32&gt;();
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Xapic {
-        mmio_area: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>ApicRegisters,
+        mmio_area: <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>ApicRegisters,
 
         <span class="comment">// APIC base address, we keep track of it as we may need to use the GHCB protocol instead
         // of accessing `mmio_area` directly
@@ -602,7 +604,7 @@
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
                 ghcb.lock()
                     .mmio_read_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()))
-                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+                    .expect(<span class="string">"couldn't read the MSR using the GHCB protocol"</span>)
             } <span class="kw">else </span>{
                 <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
                 </span><span class="kw">unsafe </span>{ (<span class="kw-2">&amp;</span><span class="self">self</span>.mmio_area.registers[register] <span class="kw">as </span><span class="kw-2">*const </span>u32).read_volatile() }
@@ -612,7 +614,7 @@
             <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
                 ghcb.lock()
                     .mmio_write_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()), val)
-                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+                    .expect(<span class="string">"couldn't read the MSR using the GHCB protocol"</span>)
             } <span class="kw">else </span>{
                 <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which
                 // we should have established where the MMIO area is.
@@ -624,7 +626,7 @@
     <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>Xapic {
         <span class="doccomment">/// Read the Local APIC ID register.
         ///
-        /// See Section 16.3.3 in the AMD64 Architecture Programmer&#39;s Manual,
+        /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual,
         /// Volume 2 for the register format.
         </span><span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
             <span class="self">self</span>.read(APIC_ID_REGISTER_OFFSET) &gt;&gt; <span class="number">24
@@ -641,9 +643,9 @@
             level: <span class="kw">super</span>::Level,
             trigger_mode: <span class="kw">super</span>::TriggerMode,
             destination_shorthand: <span class="kw">super</span>::DestinationShorthand,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
             <span class="kw">let </span>destination: u8 =
-                destination.try_into().map_err(|<span class="kw">_</span>| <span class="string">&quot;destination APIC ID too big for xAPIC&quot;</span>)<span class="question-mark">?</span>;
+                destination.try_into().map_err(|<span class="kw">_</span>| <span class="string">"destination APIC ID too big for xAPIC"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.write(INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET, (destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>);
             <span class="self">self</span>.write(
                 INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
@@ -692,19 +694,19 @@
         }
     }
 
-    <span class="comment">// Reserve a 4K chunk of memory -- we don&#39;t really care where, we only care that
-    // we don&#39;t overlap and can change the physical address it points to.
+    <span class="comment">// Reserve a 4K chunk of memory -- we don't really care where, we only care that
+    // we don't overlap and can change the physical address it points to.
     </span><span class="kw">static </span><span class="kw-2">mut </span>APIC_MMIO_AREA: MaybeUninit&lt;ApicRegisters&gt; = MaybeUninit::uninit();
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init(apic_base: PhysAddr) -&gt; Xapic {
         <span class="comment">// Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA
         // virtual address to be somewhere in the first two megabytes.
 
-        // Safety: we&#39;re not dereferencing the pointer, we just want to know where it
+        // Safety: we're not dereferencing the pointer, we just want to know where it
         // landed in virtual memory.
         </span><span class="kw">let </span>vaddr = VirtAddr::from_ptr(<span class="kw">unsafe </span>{ APIC_MMIO_AREA.as_ptr() });
         <span class="kw">if </span>vaddr.as_u64() &gt; Size2MiB::SIZE {
-            <span class="macro">panic!</span>(<span class="string">&quot;APIC_MMIO_AREA virtual address does not land in the first page table&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"APIC_MMIO_AREA virtual address does not land in the first page table"</span>);
         }
         <span class="kw">let </span><span class="kw-2">mut </span>tables = PAGE_TABLE_REFS.get().unwrap().lock();
         tables.pt_0[vaddr.p1_index()].set_addr(
@@ -712,7 +714,7 @@
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE,
         );
         flush_all();
-        <span class="comment">// Safety: we&#39;ve mapped APIC_MMIO_AREA to where the caller claimed it to be.
+        <span class="comment">// Safety: we've mapped APIC_MMIO_AREA to where the caller claimed it to be.
         </span>Xapic { mmio_area: <span class="kw">unsafe </span>{ APIC_MMIO_AREA.assume_init_mut() }, aba: apic_base }
     }
 }
@@ -726,7 +728,7 @@
 
     <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>X2ApicIdRegister {
         <span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::apic_id() }
         }
     }
@@ -741,8 +743,8 @@
             level: <span class="kw">super</span>::Level,
             trigger_mode: <span class="kw">super</span>::TriggerMode,
             destination_shorthand: <span class="kw">super</span>::DestinationShorthand,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{
                 <span class="self">Self</span>::send(
                     vector,
@@ -760,30 +762,30 @@
 
     <span class="kw">impl </span><span class="kw">super</span>::ErrorStatus <span class="kw">for </span>X2ApicErrorStatusRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::read() }
         }
         <span class="kw">fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::clear() }
         }
     }
 
     <span class="kw">impl </span><span class="kw">super</span>::ApicVersion <span class="kw">for </span>X2ApicVersionRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8) {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::read() }
         }
     }
 
     <span class="kw">impl </span><span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>X2ApicSpuriousInterruptRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8) {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::read() }
         }
 
         <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: SpuriousInterruptFlags, vec: u8) {
-            <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
+            <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::write(flags, vec) };
         }
     }
@@ -808,7 +810,7 @@
 }
 
 <span class="kw">impl </span>Lapic {
-    <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>x2apic = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
             ghcb.lock().get_cpuid(CpuidInput { eax: <span class="number">0x0000_0001</span>, ecx: <span class="number">0</span>, xcr0: <span class="number">0</span>, xss: <span class="number">0 </span>})<span class="question-mark">?</span>.ecx
         } <span class="kw">else </span>{
@@ -816,7 +818,7 @@
             </span><span class="kw">unsafe </span>{ __cpuid(<span class="number">0x0000_0001</span>) }.ecx
         } &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>)
             &gt; <span class="number">0</span>;
-        <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for
+        <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
         // explanation of the initialization procedure.
         </span><span class="kw">let </span>(aba, <span class="kw-2">mut </span>flags) = ApicBase::read();
         <span class="kw">if </span>!flags.contains(ApicBaseFlags::AE) {
@@ -830,7 +832,7 @@
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>apic = <span class="kw">if </span>x2apic {
-            <span class="macro">log::info!</span>(<span class="string">&quot;Using x2APIC for AP initialization.&quot;</span>);
+            <span class="macro">log::info!</span>(<span class="string">"Using x2APIC for AP initialization."</span>);
             Lapic {
                 apic_id: <span class="kw">unsafe </span>{ X2ApicIdRegister::apic_id() },
                 interface: Apic::X2apic(
@@ -841,15 +843,15 @@
                 ),
             }
         } <span class="kw">else </span>{
-            <span class="macro">log::info!</span>(<span class="string">&quot;Using xAPIC for AP initialization.&quot;</span>);
+            <span class="macro">log::info!</span>(<span class="string">"Using xAPIC for AP initialization."</span>);
             <span class="kw">let </span>apic = xapic::init(aba);
             Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         <span class="comment">// Version should be between [0x10...0x20).
         </span><span class="kw">let </span>(<span class="kw">_</span>, <span class="kw">_</span>, version) = apic.apic_version().read();
         <span class="kw">if </span>!(<span class="number">0x10</span>..<span class="number">0x20</span>).contains(<span class="kw-2">&amp;</span>version) {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;LAPIC version: {:x}&quot;</span>, version);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;LAPIC version not in valid range&quot;</span>);
+            <span class="macro">log::warn!</span>(<span class="string">"LAPIC version: {:x}"</span>, version);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"LAPIC version not in valid range"</span>);
         }
         <span class="kw">let </span>(flags, vec) = apic.spurious_interrupt_register().read();
         <span class="kw">if </span>!flags.contains(SpuriousInterruptFlags::ASE) {
@@ -887,7 +889,7 @@
     }
 
     <span class="doccomment">/// Sends an INIT IPI to the local APIC specified by `destination`.
-    </span><span class="kw">pub fn </span>send_init_ipi(<span class="kw-2">&amp;mut </span><span class="self">self</span>, destination: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>send_init_ipi(<span class="kw-2">&amp;mut </span><span class="self">self</span>, destination: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.error_status().clear();
         <span class="self">self</span>.interrupt_command().send(
             destination,
@@ -914,13 +916,13 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         destination: u32,
         vector: PhysAddr,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span>!vector.is_aligned(<span class="number">0x1000u64</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;startup vector is not page-aligned&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"startup vector is not page-aligned"</span>);
         }
         <span class="kw">let </span>vector = vector.as_u64();
         <span class="kw">if </span>vector &gt; <span class="number">0x100000 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;startup vector needs to be in the first megabyte of memory&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"startup vector needs to be in the first megabyte of memory"</span>);
         }
         <span class="self">self</span>.error_status().clear();
         <span class="self">self</span>.interrupt_command().send(

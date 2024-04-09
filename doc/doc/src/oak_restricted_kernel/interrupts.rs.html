@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/interrupts.rs`."><title>interrupts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/interrupts.rs`."><title>interrupts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -374,14 +376,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -407,22 +409,22 @@
 <span class="kw">static </span>IDT: Spinlock&lt;InterruptDescriptorTable&gt; = Spinlock::new(InterruptDescriptorTable::new());
 
 <span class="attr">#[naked]
-</span><span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>general_protection_fault_handler(<span class="kw">_</span>: InterruptStackFrame, <span class="kw">_</span>: u64) {
+</span><span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>general_protection_fault_handler(<span class="kw">_</span>: InterruptStackFrame, <span class="kw">_</span>: u64) {
     <span class="kw">unsafe </span>{
         <span class="macro">asm! </span>{
-            <span class="string">&quot;push %rax&quot;</span>,            <span class="comment">// save old rax value
-            </span><span class="string">&quot;mov 16(%rsp), %rax&quot;</span>,   <span class="comment">// rax = rsp + 16 (address of the return RIP)
-            </span><span class="string">&quot;cmpw $0x320F, (%rax)&quot;</span>, <span class="comment">// is RIP pointing to 0x320F (RDMSR)?
-            </span><span class="string">&quot;jne 2f&quot;</span>,               <span class="comment">// if not, jump to label 2
-            </span><span class="string">&quot;add $2, %rax&quot;</span>,         <span class="comment">// increment rax by 2 (size of RDMSR instruction)
-            </span><span class="string">&quot;add $24, %rsp&quot;</span>,        <span class="comment">// drop the saved RAX, error code, and Return IP
-            </span><span class="string">&quot;push %rax&quot;</span>,            <span class="comment">// put Return IP back on the stack for iretq
-            </span><span class="string">&quot;xor %rax, %rax&quot;</span>,       <span class="comment">// zero out RAX
-            </span><span class="string">&quot;xor %rdx, %rdx&quot;</span>,       <span class="comment">// zero out RDX
-            </span><span class="string">&quot;iretq&quot;</span>,                <span class="comment">// and go back claiming we&#39;ve executed the RDMSR
-            </span><span class="string">&quot;2:&quot;</span>,                   <span class="comment">// it wasn&#39;t because of `rdmsr`
-            </span><span class="string">&quot;pop %rax&quot;</span>,             <span class="comment">// restore old rax value. We&#39;re now back at the initial state.
-            </span><span class="string">&quot;jmp {}&quot;</span>,               <span class="comment">// Let the Rust code take care of it. We jmp instead of call, as the
+            <span class="string">"push %rax"</span>,            <span class="comment">// save old rax value
+            </span><span class="string">"mov 16(%rsp), %rax"</span>,   <span class="comment">// rax = rsp + 16 (address of the return RIP)
+            </span><span class="string">"cmpw $0x320F, (%rax)"</span>, <span class="comment">// is RIP pointing to 0x320F (RDMSR)?
+            </span><span class="string">"jne 2f"</span>,               <span class="comment">// if not, jump to label 2
+            </span><span class="string">"add $2, %rax"</span>,         <span class="comment">// increment rax by 2 (size of RDMSR instruction)
+            </span><span class="string">"add $24, %rsp"</span>,        <span class="comment">// drop the saved RAX, error code, and Return IP
+            </span><span class="string">"push %rax"</span>,            <span class="comment">// put Return IP back on the stack for iretq
+            </span><span class="string">"xor %rax, %rax"</span>,       <span class="comment">// zero out RAX
+            </span><span class="string">"xor %rdx, %rdx"</span>,       <span class="comment">// zero out RDX
+            </span><span class="string">"iretq"</span>,                <span class="comment">// and go back claiming we've executed the RDMSR
+            </span><span class="string">"2:"</span>,                   <span class="comment">// it wasn't because of `rdmsr`
+            </span><span class="string">"pop %rax"</span>,             <span class="comment">// restore old rax value. We're now back at the initial state.
+            </span><span class="string">"jmp {}"</span>,               <span class="comment">// Let the Rust code take care of it. We jmp instead of call, as the
                                     // Rust function will call `iretq` instead of `ret` at the end.
             </span>sym general_protection_fault_handler_inner,
             options(att_syntax, noreturn)
@@ -430,47 +432,47 @@
     }
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>general_protection_fault_handler_inner(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>general_protection_fault_handler_inner(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: GENERAL PROTECTION FAULT!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: GENERAL PROTECTION FAULT!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>breakpoint_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">log::error!</span>(<span class="string">&quot;EXCEPTION: BREAKPOINT\n{:#?}&quot;</span>, stack_frame);
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>breakpoint_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">log::error!</span>(<span class="string">"EXCEPTION: BREAKPOINT\n{:#?}"</span>, stack_frame);
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>page_fault_handler(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>page_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: PAGE FAULT&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Faulting virtual address: {:#018x}&quot;</span>, Cr2::read());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: PAGE FAULT"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Faulting virtual address: {:#018x}"</span>, Cr2::read());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>double_fault_handler(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>double_fault_handler(
     stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -&gt; ! {
-    <span class="comment">// We&#39;re not calling `panic!` here because (a) the panic location would be all
+    <span class="comment">// We're not calling `panic!` here because (a) the panic location would be all
     // wrong (the error is not in the fault handler itself as the location would
     // suggest), (b) in theory the panic handler itself could cause a double
     // fault, and (c) we want to be sure that we shut down the machine after us.
     // Note that for double fault handlers the error code will always be 0, so
-    // there&#39;s no point in logging that.
-    </span><span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DOUBLE FAULT&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Code segment: {:#x}&quot;</span>, stack_frame.deref().code_segment);
-    <span class="macro">error!</span>(<span class="string">&quot;Stack pointer: {:#016x}&quot;</span>, stack_frame.deref().stack_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Stack segment: {:#x}&quot;</span>, stack_frame.deref().stack_segment);
-    <span class="macro">error!</span>(<span class="string">&quot;CPU flags: {:#x}&quot;</span>, stack_frame.deref().cpu_flags);
+    // there's no point in logging that.
+    </span><span class="macro">error!</span>(<span class="string">"KERNEL PANIC: DOUBLE FAULT"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Code segment: {:#x}"</span>, stack_frame.deref().code_segment);
+    <span class="macro">error!</span>(<span class="string">"Stack pointer: {:#016x}"</span>, stack_frame.deref().stack_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Stack segment: {:#x}"</span>, stack_frame.deref().stack_segment);
+    <span class="macro">error!</span>(<span class="string">"CPU flags: {:#x}"</span>, stack_frame.deref().cpu_flags);
     shutdown::shutdown();
 }
 
@@ -489,7 +491,7 @@
                 </span><span class="kw">let </span>instruction: u16 =
                     <span class="kw">unsafe </span>{ core::ptr::read_unaligned(stack_frame.rip.as_ptr()) };
                 <span class="kw">if </span>instruction != CPUID_INSTRUCTION {
-                    <span class="macro">panic!</span>(<span class="string">&quot;INSTRUCTION WAS NOT CPUID&quot;</span>);
+                    <span class="macro">panic!</span>(<span class="string">"INSTRUCTION WAS NOT CPUID"</span>);
                 }
 
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(cpuid_page) = CPUID_PAGE.get() {
@@ -505,10 +507,10 @@
                     } <span class="kw">else </span>{
                         <span class="comment">// For now we just log the error so that we can see when this happens.
                         // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
-                        </span><span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: REQUESTED CPUID NOT PRESENT IN CPUID PAGE&quot;</span>);
-                        <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
-                        <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
-                        <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
+                        </span><span class="macro">error!</span>(<span class="string">"KERNEL PANIC: REQUESTED CPUID NOT PRESENT IN CPUID PAGE"</span>);
+                        <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.rip.as_u64());
+                        <span class="macro">error!</span>(<span class="string">"RAX: {:#016x}"</span>, stack_frame.rax);
+                        <span class="macro">error!</span>(<span class="string">"RCX: {:#016x}"</span>, stack_frame.rcx);
                         shutdown::shutdown();
                     }
                 } <span class="kw">else </span>{
@@ -517,125 +519,125 @@
                     // See section 2.3.1 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;
                     // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
                     </span><span class="kw">if </span>stack_frame.rcx != <span class="number">0 </span>|| leaf == <span class="number">0x0000_000D </span>{
-                        <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED&quot;</span>);
-                        <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
-                        <span class="macro">error!</span>(<span class="string">&quot;RAX: {:#016x}&quot;</span>, stack_frame.rax);
-                        <span class="macro">error!</span>(<span class="string">&quot;RCX: {:#016x}&quot;</span>, stack_frame.rcx);
+                        <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED"</span>);
+                        <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.rip.as_u64());
+                        <span class="macro">error!</span>(<span class="string">"RAX: {:#016x}"</span>, stack_frame.rax);
+                        <span class="macro">error!</span>(<span class="string">"RCX: {:#016x}"</span>, stack_frame.rcx);
                         shutdown::shutdown();
                     }
-                    get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">&quot;error reading CPUID&quot;</span>);
+                    get_cpuid_for_vc_exception(leaf, stack_frame).expect(<span class="string">"error reading CPUID"</span>);
                 }
                 <span class="comment">// CPUID instruction is 2 bytes long, so we advance the instruction pointer by
                 // 2.
                 </span>stack_frame.rip += <span class="number">2u64</span>;
             }
             <span class="kw">_ </span>=&gt; {
-                <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: UNHANDLED #VC EXCEPTION&quot;</span>);
-                <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.rip.as_u64());
-                <span class="macro">error!</span>(<span class="string">&quot;Error code: {:#x}&quot;</span>, error_code);
+                <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: UNHANDLED #VC EXCEPTION"</span>);
+                <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.rip.as_u64());
+                <span class="macro">error!</span>(<span class="string">"Error code: {:#x}"</span>, error_code);
                 shutdown::shutdown();
             }
         }
     }
 );
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>divide_error_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DIVIDE BY ZERO!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>divide_error_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: DIVIDE BY ZERO!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>nmi_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: NON-MASKABLE INTERRUPT!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>nmi_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: NON-MASKABLE INTERRUPT!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>overflow_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: OVERFLOW!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>overflow_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: OVERFLOW!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>bound_range_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: BOUND RANGE EXCEEDED!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>bound_range_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: BOUND RANGE EXCEEDED!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>invalid_opcode_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: INVALID OPCODE!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>invalid_opcode_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: INVALID OPCODE!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>device_not_available_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: DEVICE NOT AVAILABLE!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>device_not_available_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: DEVICE NOT AVAILABLE!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: INVALID TSS!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: INVALID TSS!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>segment_not_present_handler(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>segment_not_present_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: SEGMENT NOT PRESENT!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: SEGMENT NOT PRESENT!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>stack_exception_handler(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>stack_exception_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: STACK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: STACK EXCEPTION!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>x87_floating_point_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: X87 FLOATING POINT EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>x87_floating_point_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: X87 FLOATING POINT EXCEPTION!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>alignment_check_handler(
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>alignment_check_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: ALIGNMENT CHECK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
-    <span class="macro">error!</span>(<span class="string">&quot;Error code: {:?}&quot;</span>, error_code);
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: ALIGNMENT CHECK EXCEPTION!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
+    <span class="macro">error!</span>(<span class="string">"Error code: {:?}"</span>, error_code);
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>machine_check_handler(stack_frame: InterruptStackFrame) -&gt; ! {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: MACHINE CHECK EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>machine_check_handler(stack_frame: InterruptStackFrame) -&gt; ! {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: MACHINE CHECK EXCEPTION!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     shutdown::shutdown();
 }
 
-<span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>simd_fp_handler(stack_frame: InterruptStackFrame) {
-    <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!&quot;</span>);
-    <span class="macro">error!</span>(<span class="string">&quot;Instruction pointer: {:#016x}&quot;</span>, stack_frame.deref().instruction_pointer.as_u64());
+<span class="kw">extern </span><span class="string">"x86-interrupt" </span><span class="kw">fn </span>simd_fp_handler(stack_frame: InterruptStackFrame) {
+    <span class="macro">error!</span>(<span class="string">"KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!"</span>);
+    <span class="macro">error!</span>(<span class="string">"Instruction pointer: {:#016x}"</span>, stack_frame.deref().instruction_pointer.as_u64());
     <span class="kw">let </span>mxcsr = read();
-    <span class="macro">error!</span>(<span class="string">&quot;MXCSR: {:?}&quot;</span>, mxcsr);
+    <span class="macro">error!</span>(<span class="string">"MXCSR: {:?}"</span>, mxcsr);
 
     shutdown::shutdown();
 }
 
 <span class="kw">pub fn </span>init_idt_early() {
     <span class="comment">// The full list if interrupts is processor-specific.
-    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer&#39;s Manual,
+    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual,
     // Volume 2 for more details.
     </span><span class="kw">let </span><span class="kw-2">mut </span>idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); <span class="comment">// vector 0
@@ -668,8 +670,8 @@
     </span>}
 
     <span class="comment">// Safety: unfortunately we have to escape from the borrow checker here, as we
-    // know the IDT is &#39;static but the `idt` variable (the mutex lock) is not
-    // &#39;static, so calling `idt.load()` will not work.
+    // know the IDT is 'static but the `idt` variable (the mutex lock) is not
+    // 'static, so calling `idt.load()` will not work.
     </span><span class="kw">unsafe </span>{ idt.load_unsafe() };
 }
 
@@ -695,11 +697,11 @@
         <span class="self">Self </span>{ command: factory.new_writer(base), data: factory.new_writer(base + <span class="number">1</span>) }
     }
 
-    <span class="kw">pub unsafe fn </span>write_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>, command: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub unsafe fn </span>write_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>, command: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.command.try_write(command)
     }
 
-    <span class="kw">pub unsafe fn </span>write_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub unsafe fn </span>write_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.data.try_write(data)
     }
 }
@@ -709,9 +711,9 @@
 /// # Safety
 ///
 /// This uses raw I/O port access to talk to the PIC; the caller has to
-/// guarantee there will not be any adverse effect if there&#39;s no PIC at those
+/// guarantee there will not be any adverse effect if there's no PIC at those
 /// ports.
-</span><span class="kw">pub unsafe fn </span>init_pic8259(sev_status: SevStatus) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub unsafe fn </span>init_pic8259(sev_status: SevStatus) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>io_port_factory = <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
         <span class="kw">crate</span>::ghcb::get_ghcb_port_factory()
     } <span class="kw">else </span>{
@@ -722,7 +724,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>pic1 = Pic::new(<span class="kw-2">&amp;</span>io_port_factory, <span class="number">0xA0</span>);
 
     <span class="comment">// The initialization process is documented in https://wiki.osdev.org/8259_PIC
-    // Tell the PICs we&#39;re going to start intializing them.
+    // Tell the PICs we're going to start intializing them.
     </span>pic0.write_command(<span class="number">0x11</span>)<span class="question-mark">?</span>; <span class="comment">// ICW1_INIT | ICW1_ICW4
     </span>pic1.write_command(<span class="number">0x11</span>)<span class="question-mark">?</span>;
 
@@ -731,14 +733,14 @@
     </span>pic1.write_data(<span class="number">0x28</span>)<span class="question-mark">?</span>; <span class="comment">// PIC1 interrupts start at vector 40
 
     // Byte 2: chanining between PICs.
-    </span>pic0.write_data(<span class="number">4</span>)<span class="question-mark">?</span>; <span class="comment">// PIC0: there&#39;s PIC1 at your IRQ 2
+    </span>pic0.write_data(<span class="number">4</span>)<span class="question-mark">?</span>; <span class="comment">// PIC0: there's PIC1 at your IRQ 2
     </span>pic1.write_data(<span class="number">2</span>)<span class="question-mark">?</span>; <span class="comment">// PIC1: your cascade identity
 
     // Byte 3: operation mode.
     </span>pic0.write_data(<span class="number">0x01</span>)<span class="question-mark">?</span>; <span class="comment">// ICW4_8086
     </span>pic1.write_data(<span class="number">0x01</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Finally, mask all interrupts as we&#39;re not going to use the PICs.
+    <span class="comment">// Finally, mask all interrupts as we're not going to use the PICs.
     </span>pic0.write_data(<span class="number">0xFF</span>)<span class="question-mark">?</span>;
     pic1.write_data(<span class="number">0xFF</span>)<span class="question-mark">?</span>;
 

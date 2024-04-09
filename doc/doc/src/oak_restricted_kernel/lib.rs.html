@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -530,20 +532,20 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Main &#39;kernel&#39; for baremetal Oak Functions.
+</span><span class="doccomment">//! Main 'kernel' for baremetal Oak Functions.
 //!
 //! This code takes care of initializing the x86-64 machine properly and
 //! handing the reins over to the oak_baremetal_runtime. It is in a separate
@@ -579,16 +581,16 @@
 <span class="kw">mod </span>memory;
 <span class="kw">mod </span>mm;
 <span class="kw">mod </span>payload;
-<span class="attr">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"serial_channel"</span>)]
 </span><span class="kw">mod </span>serial;
 <span class="kw">pub mod </span>shutdown;
-<span class="attr">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"simple_io_channel"</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="kw">mod </span>snp;
 <span class="kw">mod </span>syscall;
-<span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"vsock_channel"</span>)]
 </span><span class="kw">mod </span>virtio;
-<span class="attr">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"virtio_console_channel"</span>)]
 </span><span class="kw">mod </span>virtio_console;
 
 <span class="kw">extern crate </span>alloc;
@@ -644,7 +646,7 @@
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
     Spinlock::new(VirtualAddressAllocator::new(Page::range(
         <span class="comment">// Assign 32 TB of virtual memory for this allocator.
-        // Safety: these addresses are constants and thus we know they&#39;re page-aligned.
+        // Safety: these addresses are constants and thus we know they're page-aligned.
         </span><span class="kw">unsafe </span>{
             Page::from_start_address_unchecked(VirtAddr::new_truncate(<span class="number">0xFFFF_C900_0000_0000</span>))
         },
@@ -666,23 +668,23 @@
     }
     logging::init_logging(sev_es_enabled);
 
-    <span class="comment">// Safety: we shouldn&#39;t have anything else but the PICs on the I/O ports.
+    <span class="comment">// Safety: we shouldn't have anything else but the PICs on the I/O ports.
     // If we get an error, we will still try to continue.
     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="kw">unsafe </span>{ interrupts::init_pic8259(sev_status) } {
-        <span class="macro">log::warn!</span>(<span class="string">&quot;error disabling 8259 PIC: {}&quot;</span>, err);
+        <span class="macro">log::warn!</span>(<span class="string">"error disabling 8259 PIC: {}"</span>, err);
     }
 
     <span class="comment">// We need to be done with the boot info struct before intializing memory. For
     // example, the multiboot protocol explicitly states data can be placed
-    // anywhere in memory; therefore, it&#39;s highly likely we will overwrite some
+    // anywhere in memory; therefore, it's highly likely we will overwrite some
     // data after we initialize the heap. args::init_args() caches the arguments
     // (as long they are of reasonable length) in a static variable, allowing us
     // to refer to the args in the future.
     </span><span class="kw">let </span>kernel_args = args::init_args(info.args()).unwrap();
-    <span class="macro">info!</span>(<span class="string">&quot;Kernel boot args: {}&quot;</span>, kernel_args.args());
+    <span class="macro">info!</span>(<span class="string">"Kernel boot args: {}"</span>, kernel_args.args());
 
     <span class="kw">let </span>protocol = info.protocol();
-    <span class="macro">info!</span>(<span class="string">&quot;Boot protocol:  {}&quot;</span>, protocol);
+    <span class="macro">info!</span>(<span class="string">"Boot protocol:  {}"</span>, protocol);
     <span class="kw">let </span>snp_pages = <span class="kw">if </span>sev_snp_enabled {
         <span class="comment">// We have to get the physical addresses of the CPUID pages now while the
         // identity mapping is still in place, but we can only initialize the
@@ -696,14 +698,14 @@
     // at 0x200000.
     </span><span class="kw">let </span>program_headers = <span class="kw">unsafe </span>{ elf::get_phdrs(VirtAddr::new(<span class="number">0x20_0000</span>)) };
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
-    </span><span class="kw">let </span>ramdisk = info.ramdisk().expect(<span class="string">&quot;expected to find a ramdisk&quot;</span>);
+    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
+    </span><span class="kw">let </span>ramdisk = info.ramdisk().expect(<span class="string">"expected to find a ramdisk"</span>);
 
     <span class="comment">// Physical frame allocator
     </span>mm::init(
         info.e820_table(),
         program_headers,
-        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
         </span><span class="kw-2">&amp;</span>ramdisk,
     );
 
@@ -718,12 +720,12 @@
                 flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
             });
         };
-        <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s
+        <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it's
         // safe to load the new page tables.
         </span><span class="kw">let </span>prev_page_table = <span class="kw">unsafe </span>{ PAGE_TABLES.lock().replace(pml4_frame) };
         <span class="macro">assert!</span>(
             prev_page_table.is_none(),
-            <span class="string">&quot;there should be no previous page table during initialization&quot;
+            <span class="string">"there should be no previous page table during initialization"
         </span>);
 
         <span class="comment">// Safety: We just created a page table at this location.
@@ -734,7 +736,7 @@
                     .get()
                     .unwrap()
                     .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
-                    .expect(<span class="string">&quot;page table must map to virtual address&quot;</span>))
+                    .expect(<span class="string">"page table must map to virtual address"</span>))
                 <span class="comment">// Safety: We get a mut pointer here to satisfy the type system. However, the pml4
                 // will not be mutated. This is since while using this pml4 the kernel will not
                 // allocate memory in application space, and since all the kernel space entries of
@@ -743,12 +745,12 @@
                 </span>.as_mut_ptr(),
             )
         };
-        BASE_L4_PAGE_TABLE.set(pml4).expect(<span class="string">&quot;base pml4 not unset&quot;</span>);
+        BASE_L4_PAGE_TABLE.set(pml4).expect(<span class="string">"base pml4 not unset"</span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.
-    // Safety: we know we&#39;re addressing valid memory that contains the correct data
-    // structure, as we&#39;re just translating addresses differently due to the new
+    // Safety: we know we're addressing valid memory that contains the correct data
+    // structure, as we're just translating addresses differently due to the new
     // page tables.
     </span><span class="kw">let </span>info = <span class="kw">unsafe </span>{
         <span class="attr">#[allow(clippy::unnecessary_cast)]
@@ -773,13 +775,13 @@
             <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message
             // encryptor when SEV-SNP is active. Panicking is OK at this point,
             // because these pages are required to support the full features and
-            // we don&#39;t want to run without them.
-            </span>init_snp_pages(snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>), mapper);
+            // we don't want to run without them.
+            </span>init_snp_pages(snp_pages.expect(<span class="string">"missing SNP CPUID and secrets pages"</span>), mapper);
         }
     }
 
     <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit
-    // set) We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
+    // set) We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data
     // structures.
     </span><span class="kw">let </span>guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(<span class="number">2</span>).unwrap();
 
@@ -799,13 +801,13 @@
         <span class="comment">// TODO(#3414): Use the GHCB protocol when it is available.
         </span><span class="kw">for </span>frame <span class="kw">in </span>guest_host_frames {
             change_snp_state_for_frame(<span class="kw-2">&amp;</span>frame, PageAssignment::Shared)
-                .expect(<span class="string">&quot;couldn&#39;t change SNP state for frame&quot;</span>);
+                .expect(<span class="string">"couldn't change SNP state for frame"</span>);
         }
     }
 
     <span class="comment">// Safety: initializing the new heap is safe as the frame allocator guarantees
-    // we&#39;re not overwriting any other memory; writing to the static mut is safe
-    // as we&#39;re in the initialization code and thus there can be no concurrent
+    // we're not overwriting any other memory; writing to the static mut is safe
+    // as we're in the initialization code and thus there can be no concurrent
     // access.
     </span><span class="kw">if </span>GUEST_HOST_HEAP
         .set(
@@ -816,11 +818,11 @@
         )
         .is_err()
     {
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize the guest-host heap&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"couldn't initialize the guest-host heap"</span>);
     }
 
-    <span class="comment">// If we don&#39;t find memory for heap, it&#39;s ok to panic.
-    // We&#39;ll let the heap to grow to 1 TB (1 &lt;&lt; 19 * 2 MiB pages), max.
+    <span class="comment">// If we don't find memory for heap, it's ok to panic.
+    // We'll let the heap to grow to 1 TB (1 &lt;&lt; 19 * 2 MiB pages), max.
     </span><span class="kw">let </span>heap_page_range = VMA_ALLOCATOR.lock().allocate(<span class="number">1 </span>&lt;&lt; <span class="number">19</span>).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
 
@@ -828,13 +830,13 @@
         <span class="kw">let </span>dice_memory_slice = {
             <span class="kw">let </span>dice_data_phys_addr = {
                 <span class="kw">let </span>arg = kernel_args
-                    .get(<span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">&quot;--{}&quot;</span>, oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
-                    .expect(<span class="string">&quot;no dice data address supplied in the kernel args&quot;</span>);
+                    .get(<span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">"--{}"</span>, oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
+                    .expect(<span class="string">"no dice data address supplied in the kernel args"</span>);
                 <span class="kw">let </span>parsed_arg = u64::from_str_radix(
-                    arg.strip_prefix(<span class="string">&quot;0x&quot;</span>).expect(<span class="string">&quot;failed stripping the hex prefix&quot;</span>),
+                    arg.strip_prefix(<span class="string">"0x"</span>).expect(<span class="string">"failed stripping the hex prefix"</span>),
                     <span class="number">16</span>,
                 )
-                .expect(<span class="string">&quot;couldn&#39;t parse address as a hex number&quot;</span>);
+                .expect(<span class="string">"couldn't parse address as a hex number"</span>);
                 PhysAddr::new(parsed_arg)
             };
 
@@ -853,16 +855,16 @@
                         ))
                 };
 
-                entry.entry_type().expect(<span class="string">&quot;failed to get type&quot;</span>)
+                entry.entry_type().expect(<span class="string">"failed to get type"</span>)
                     == oak_linux_boot_params::E820EntryType::RESERVED
                     &amp;&amp; dice_data_fully_contained_in_segment
             }));
 
             <span class="kw">let </span>dice_data_virt_addr = {
                 <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
-                <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+                <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">"failed to get page tables"</span>);
                 pt.translate_physical(dice_data_phys_addr)
-                    .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
+                    .expect(<span class="string">"failed to translate physical dice address"</span>)
             };
 
             <span class="comment">// Safety: the E820 table indicated that this is the corrct memory segment.
@@ -875,24 +877,24 @@
         };
 
         <span class="kw">let </span>dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-            .expect(<span class="string">&quot;failed to read dice data&quot;</span>);
+            .expect(<span class="string">"failed to read dice data"</span>);
 
         <span class="comment">// Overwrite the dice data provided by stage0 after reading.
         </span>dice_memory_slice.zeroize();
 
         <span class="kw">if </span>dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-            <span class="macro">panic!</span>(<span class="string">&quot;dice data loaded from stage0 failed validation&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"dice data loaded from stage0 failed validation"</span>);
         }
         dice_data
     };
 
-    <span class="comment">// Okay. We&#39;ve got page tables and a heap. Set up the &quot;late&quot; IDT, this time with
+    <span class="comment">// Okay. We've got page tables and a heap. Set up the "late" IDT, this time with
     // descriptors for user mode.
     </span><span class="kw">let </span>double_fault_stack = mm::allocate_stack();
     <span class="kw">let </span>privileged_interrupt_stack = mm::allocate_stack();
     <span class="kw">let </span>double_fault_stack_index =
         descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
-    <span class="comment">// Safety: we&#39;ve just loaded a new GDT with a valid IST entry for the double
+    <span class="comment">// Safety: we've just loaded a new GDT with a valid IST entry for the double
     // fault.
     </span><span class="kw">unsafe </span>{
         interrupts::init_idt(double_fault_stack_index);
@@ -901,7 +903,7 @@
     <span class="comment">// Init ACPI, if available.
     </span><span class="kw">let </span><span class="kw-2">mut </span>acpi = <span class="kw">match </span>acpi::Acpi::new(info) {
         <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) =&gt; {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to load ACPI tables: {}&quot;</span>, err);
+            <span class="macro">log::warn!</span>(<span class="string">"Failed to load ACPI tables: {}"</span>, err);
             <span class="prelude-val">None
         </span>}
         <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>acpi) =&gt; {
@@ -910,28 +912,28 @@
         }
     };
 
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
     </span><span class="kw">let </span><span class="kw-2">mut </span>channel =
         get_channel(<span class="kw-2">&amp;</span>kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
     </span><span class="kw">let </span>channel =
         get_channel(<span class="kw-2">&amp;</span>kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
-    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
     </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
         <span class="kw">let </span>virt_addr = {
             <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
-            <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+            <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">"failed to get page tables"</span>);
             pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
-                .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
+                .expect(<span class="string">"failed to translate physical dice address"</span>)
         };
 
         <span class="comment">// Safety:
         // We rely on the firmware to ensure this range is valid and backed by physical
         // memory.
         // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
-        // it didn&#39;t over overwrite the ramdisk range.
+        // it didn't over overwrite the ramdisk range.
         // We excluded this range from the frame allocator so it cannot be used by the
         // heap allocator.
         </span><span class="kw">let </span>slice: <span class="kw-2">&amp;</span>[u8] = <span class="kw">unsafe </span>{
@@ -941,13 +943,13 @@
             )
         };
 
-        <span class="macro">info!</span>(<span class="string">&quot;Copying application from ramdisk...&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Copying application from ramdisk..."</span>);
         <span class="kw">let </span>owned_slice = Box::&lt;[u8]&gt;::from(slice);
         <span class="comment">// Once the application has been copied onto the heap, the original ramdisk
         // location is marked as available.
         </span><span class="kw">let </span>ramdisk_range = <span class="kw">crate</span>::mm::ramdisk_range(<span class="kw-2">&amp;</span>ramdisk);
         <span class="macro">info!</span>(
-            <span class="string">&quot;marking [{:#018x}..{:#018x}) as available&quot;</span>,
+            <span class="string">"marking [{:#018x}..{:#018x}) as available"</span>,
             ramdisk_range.start.start_address().as_u64(),
             ramdisk_range.end.start_address().as_u64()
         );
@@ -956,25 +958,25 @@
         owned_slice
     };
 
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
     </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
         <span class="comment">// We need to load the application binary before we hand the channel over to the
         // syscalls, which expose it to the user space.
-        </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
+        </span><span class="macro">info!</span>(<span class="string">"Loading application binary..."</span>);
         oak_channel::basic_framed::receive_raw::&lt;<span class="kw">dyn </span>Channel&gt;(<span class="kw-2">&amp;mut *</span>channel)
-            .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>)
+            .expect(<span class="string">"failed to load application binary from channel"</span>)
             .into_boxed_slice()
     };
 
-    <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, application_bytes.len());
+    <span class="macro">log::info!</span>(<span class="string">"Binary loaded, size: {}"</span>, application_bytes.len());
 
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
     </span><span class="kw">let </span>(derived_key, restricted_kernel_dice_data) = {
         <span class="kw">let </span>app_digest =
             oak_restricted_kernel_dice::measure_app_digest_sha2_256(<span class="kw-2">&amp;</span>application_bytes);
         <span class="macro">log::info!</span>(
-            <span class="string">&quot;Application digest (sha2-256): {}&quot;</span>,
-            app_digest.map(|x| <span class="macro">alloc::format!</span>(<span class="string">&quot;{:02x}&quot;</span>, x)).join(<span class="string">&quot;&quot;</span>)
+            <span class="string">"Application digest (sha2-256): {}"</span>,
+            app_digest.map(|x| <span class="macro">alloc::format!</span>(<span class="string">"{:02x}"</span>, x)).join(<span class="string">""</span>)
         );
 
         <span class="kw">let </span>derived_key =
@@ -986,66 +988,66 @@
     };
 
     <span class="kw">let </span>application =
-        payload::Application::new(application_bytes).expect(<span class="string">&quot;failed to parse application&quot;</span>);
+        payload::Application::new(application_bytes).expect(<span class="string">"failed to parse application"</span>);
 
     syscall::enable_syscalls(
         channel,
-        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
         </span>syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
         </span>syscall::dice_data::DiceData::Layer1(Box::new(restricted_kernel_dice_data)),
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
         </span>derived_key,
     );
 
     <span class="comment">// Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
     </span><span class="kw">let </span>process = Box::leak(Box::new(<span class="kw">unsafe </span>{
-        Process::from_application(<span class="kw-2">&amp;</span>application).expect(<span class="string">&quot;failed to create process&quot;</span>)
+        Process::from_application(<span class="kw-2">&amp;</span>application).expect(<span class="string">"failed to create process"</span>)
     }));
 
     process.execute()
 }
 
 <span class="attr">#[derive(EnumIter, EnumString)]
-#[strum(ascii_case_insensitive, serialize_all = <span class="string">&quot;snake_case&quot;</span>)]
+#[strum(ascii_case_insensitive, serialize_all = <span class="string">"snake_case"</span>)]
 </span><span class="kw">enum </span>ChannelType {
-    <span class="attr">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"virtio_console_channel"</span>)]
     </span>VirtioConsole,
-    <span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"vsock_channel"</span>)]
     </span>VirtioVsock,
-    <span class="attr">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"serial_channel"</span>)]
     </span>Serial,
-    <span class="attr">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
+    <span class="attr">#[cfg(feature = <span class="string">"simple_io_channel"</span>)]
     </span>SimpleIo,
 }
 
 <span class="doccomment">/// Create a channel for communicating with the Untrusted Launcher.
 </span><span class="attr">#[allow(unused_variables)]
-</span><span class="kw">fn </span>get_channel&lt;<span class="lifetime">&#39;a</span>, A: Allocator + Sync&gt;(
+</span><span class="kw">fn </span>get_channel&lt;<span class="lifetime">'a</span>, A: Allocator + Sync&gt;(
     kernel_args: <span class="kw-2">&amp;</span>args::Args,
-    alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
+    alloc: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>A,
     acpi: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Acpi&gt;,
     sev_status: SevStatus,
-) -&gt; Box&lt;<span class="kw">dyn </span>Channel + <span class="lifetime">&#39;a</span>&gt; {
-    <span class="comment">// If we weren&#39;t told which channel to use, arbitrarily pick the first one in
+) -&gt; Box&lt;<span class="kw">dyn </span>Channel + <span class="lifetime">'a</span>&gt; {
+    <span class="comment">// If we weren't told which channel to use, arbitrarily pick the first one in
     // the `ChannelType` enum. Depending on features that are enabled, this
     // means that the enum acts as kind of a reverse priority list for defaults.
     </span><span class="kw">let </span>chan_type = kernel_args
-        .get(<span class="string">&quot;channel&quot;</span>)
+        .get(<span class="string">"channel"</span>)
         .map(|chan_type| ChannelType::from_str(chan_type).unwrap())
         .unwrap_or_else(|| ChannelType::iter().next().unwrap());
 
     <span class="kw">match </span>chan_type {
-        <span class="attr">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"virtio_console_channel"</span>)]
         </span>ChannelType::VirtioConsole =&gt; Box::new(virtio_console::get_console_channel(
-            acpi.expect(<span class="string">&quot;ACPI not available; unable to use virtio console&quot;</span>),
+            acpi.expect(<span class="string">"ACPI not available; unable to use virtio console"</span>),
         )),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"vsock_channel"</span>)]
         </span>ChannelType::VirtioVsock =&gt; Box::new(virtio::get_vsock_channel(alloc)),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"serial_channel"</span>)]
         </span>ChannelType::Serial =&gt; Box::new(serial::Serial::new()),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"simple_io_channel"</span>)]
         </span>ChannelType::SimpleIo =&gt; Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }
 }
@@ -1053,7 +1055,7 @@
 <span class="doccomment">/// Common panic routine for the kernel. This needs to be wrapped in a
 /// panic_handler function in individual bootloader crates.
 </span><span class="kw">pub fn </span>panic(info: <span class="kw-2">&amp;</span>PanicInfo) -&gt; ! {
-    <span class="macro">error!</span>(<span class="string">&quot;PANIC: {}&quot;</span>, info);
+    <span class="macro">error!</span>(<span class="string">"PANIC: {}"</span>, info);
     shutdown::shutdown();
 }
 </code></pre></div></section></main></body></html>

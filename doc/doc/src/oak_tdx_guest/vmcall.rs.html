@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_tdx_guest/src/vmcall.rs`."><title>vmcall.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_tdx_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_tdx_guest/src/vmcall.rs`."><title>vmcall.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_tdx_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_tdx_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -521,14 +523,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -663,27 +665,27 @@
     // unspecified registers will be clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; failing_gpa,
-            <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) gpa_start,
-            <span class="kw">in</span>(<span class="string">&quot;r13&quot;</span>) gpa_size,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            inout(<span class="string">"r11"</span>) SUB_FUNCTION =&gt; failing_gpa,
+            <span class="kw">in</span>(<span class="string">"r12"</span>) gpa_start,
+            <span class="kw">in</span>(<span class="string">"r13"</span>) gpa_size,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
         <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::MapFailure(PhysAddr::new(failing_gpa)));
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
-    </span><span class="macro">assert_eq!</span>(sub_function_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL&lt;MapGPA&gt; returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(sub_function_result, SUCCESS, <span class="string">"TDG.VP.VMCALL&lt;MapGPA&gt; returned an invalid result"</span>);
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -693,7 +695,7 @@
 /// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
-</span><span class="kw">pub fn </span>call_cpuid(leaf: u32, sub_leaf: u32) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResult, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>call_cpuid(leaf: u32, sub_leaf: u32) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResult, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.CPUID.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">10</span>;
 
@@ -717,7 +719,7 @@
     // R10. The sub-function to call goes into R11. The CPUID leaf goes into R12
     // and the subleaf into R13. The CPUID EAX values is returned in R12, the EBX
     // value in R13, the ECX value in R14 and the EDX value in R15. We zero out all
-    // output registers in the input to make sure old register values don&#39;t
+    // output registers in the input to make sure old register values don't
     // accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
@@ -725,63 +727,63 @@
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
-            inout(<span class="string">&quot;r12&quot;</span>) leaf <span class="kw">as </span>u64 =&gt; eax,
-            inout(<span class="string">&quot;r13&quot;</span>) sub_leaf <span class="kw">as </span>u64 =&gt; ebx,
-            inout(<span class="string">&quot;r14&quot;</span>) <span class="number">0u64 </span>=&gt; ecx,
-            inout(<span class="string">&quot;r15&quot;</span>) <span class="number">0u64 </span>=&gt; edx,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            <span class="kw">in</span>(<span class="string">"r11"</span>) SUB_FUNCTION,
+            inout(<span class="string">"r12"</span>) leaf <span class="kw">as </span>u64 =&gt; eax,
+            inout(<span class="string">"r13"</span>) sub_leaf <span class="kw">as </span>u64 =&gt; ebx,
+            inout(<span class="string">"r14"</span>) <span class="number">0u64 </span>=&gt; ecx,
+            inout(<span class="string">"r15"</span>) <span class="number">0u64 </span>=&gt; edx,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid CPUID request&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid CPUID request"</span>);
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.CPUID&gt; returned an invalid result&quot;
+        <span class="string">"TDG.VP.VMCALL&lt;Instruction.CPUID&gt; returned an invalid result"
     </span>);
 
     <span class="prelude-val">Ok</span>(CpuidResult { eax: eax <span class="kw">as </span>u32, ebx: ebx <span class="kw">as </span>u32, ecx: ecx <span class="kw">as </span>u32, edx: edx <span class="kw">as </span>u32 })
 }
 
 <span class="doccomment">/// Reads a single byte from the specified IO port.
-</span><span class="kw">pub fn </span>io_read_u8(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_read_u8(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_read(port, IoWidth::Io8).map(|data| data <span class="kw">as </span>u8)
 }
 
 <span class="doccomment">/// Reads two bytes from the specified IO port.
-</span><span class="kw">pub fn </span>io_read_u16(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_read_u16(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_read(port, IoWidth::Io16).map(|data| data <span class="kw">as </span>u16)
 }
 
 <span class="doccomment">/// Reads four bytes from the specified IO port.
-</span><span class="kw">pub fn </span>io_read_u32(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_read_u32(port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_read(port, IoWidth::Io32).map(|data| data <span class="kw">as </span>u32)
 }
 
 <span class="doccomment">/// Writes a single byte to the specified IO port.
-</span><span class="kw">pub fn </span>io_write_u8(port: u32, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_write_u8(port: u32, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_write(port, IoWidth::Io8, data <span class="kw">as </span>u64)
 }
 
 <span class="doccomment">/// Writes two bytes to the specified IO port.
-</span><span class="kw">pub fn </span>io_write_u16(port: u32, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_write_u16(port: u32, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_write(port, IoWidth::Io16, data <span class="kw">as </span>u64)
 }
 
 <span class="doccomment">/// Writes four bytes to the specified IO port.
-</span><span class="kw">pub fn </span>io_write_u32(port: u32, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>io_write_u32(port: u32, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     io_write(port, IoWidth::Io32, data <span class="kw">as </span>u64)
 }
 
@@ -810,7 +812,7 @@
 /// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
-</span><span class="kw">fn </span>io_read(port: u32, size: IoWidth) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">fn </span>io_read(port: u32, size: IoWidth) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.IO.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">30</span>;
 
@@ -835,30 +837,30 @@
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; data,
-            <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) size <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r13&quot;</span>) IoDirection::Read <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r14&quot;</span>) port <span class="kw">as </span>u64,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            inout(<span class="string">"r11"</span>) SUB_FUNCTION =&gt; data,
+            <span class="kw">in</span>(<span class="string">"r12"</span>) size <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r13"</span>) IoDirection::Read <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r14"</span>) port <span class="kw">as </span>u64,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;IO read operation failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"IO read operation failed"</span>);
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result&quot;
+        <span class="string">"TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result"
     </span>);
 
     <span class="prelude-val">Ok</span>(data)
@@ -869,7 +871,7 @@
 /// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
-</span><span class="kw">fn </span>io_write(port: u32, size: IoWidth, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">fn </span>io_write(port: u32, size: IoWidth, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.IO.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">30</span>;
     <span class="comment">// The result if the IO operation was invalid.
@@ -896,31 +898,31 @@
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
-            <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) size <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r13&quot;</span>) IoDirection::Write <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r14&quot;</span>) port <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r15&quot;</span>) data,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            <span class="kw">in</span>(<span class="string">"r11"</span>) SUB_FUNCTION,
+            <span class="kw">in</span>(<span class="string">"r12"</span>) size <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r13"</span>) IoDirection::Write <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r14"</span>) port <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r15"</span>) data,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;IO write operation failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"IO write operation failed"</span>);
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result&quot;
+        <span class="string">"TDG.VP.VMCALL&lt;Instruction.IO&gt; returned an invalid result"
     </span>);
 
     <span class="prelude-val">Ok</span>(())
@@ -936,7 +938,7 @@
 ///
 /// Modifying an MSR could impact the execution environment, so the caller must
 /// ensure that the MSR modification will not lead to undefined behavior.
-</span><span class="kw">pub unsafe fn </span>msr_write(msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub unsafe fn </span>msr_write(msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.WRMSR.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">32</span>;
 
@@ -957,29 +959,29 @@
     // that the MSR modification itself is safe.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
-            <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) msr <span class="kw">as </span>u64,
-            <span class="kw">in</span>(<span class="string">&quot;r13&quot;</span>) data,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            <span class="kw">in</span>(<span class="string">"r11"</span>) SUB_FUNCTION,
+            <span class="kw">in</span>(<span class="string">"r12"</span>) msr <span class="kw">as </span>u64,
+            <span class="kw">in</span>(<span class="string">"r13"</span>) data,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;MSR write operation failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"MSR write operation failed"</span>);
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.WRMSR&gt; returned an invalid result&quot;
+        <span class="string">"TDG.VP.VMCALL&lt;Instruction.WRMSR&gt; returned an invalid result"
     </span>);
 
     <span class="prelude-val">Ok</span>(())
@@ -990,7 +992,7 @@
 /// See section 3.10 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
-</span><span class="kw">pub fn </span>msr_read(msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>msr_read(msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for Instruction.RDMSR.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">31</span>;
 
@@ -1012,28 +1014,28 @@
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
-            inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; data,
-            <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) msr <span class="kw">as </span>u64,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+            inout(<span class="string">"r11"</span>) SUB_FUNCTION =&gt; data,
+            <span class="kw">in</span>(<span class="string">"r12"</span>) msr <span class="kw">as </span>u64,
             options(nomem, nostack),
         );
     }
 
     <span class="comment">// According to the spec the top-level result for this sub-function will aways
     // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">&quot;TDG.VP.VMCALL returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
     <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;MSR read operation failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"MSR read operation failed"</span>);
     }
     <span class="comment">// According to the spec this sub-function will always return either 0 or
     // INVALID_OPERAND.
     </span><span class="macro">assert_eq!</span>(
         sub_function_result, SUCCESS,
-        <span class="string">&quot;TDG.VP.VMCALL&lt;Instruction.RDMSR&gt; returned an invalid result&quot;
+        <span class="string">"TDG.VP.VMCALL&lt;Instruction.RDMSR&gt; returned an invalid result"
     </span>);
 
     <span class="prelude-val">Ok</span>(data)

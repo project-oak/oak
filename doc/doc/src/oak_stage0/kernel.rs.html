@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/kernel.rs`."><title>kernel.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/kernel.rs`."><title>kernel.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -229,14 +231,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -251,25 +253,25 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 
-<span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn&#39;t
+<span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn't
 /// supplied via the QEMU fw_cfg device.
 </span><span class="kw">const </span>DEFAULT_KERNEL_START: u64 = <span class="number">0x200000</span>;
 
 <span class="doccomment">/// The default location for loading a compressed (bzImage format) kerne.
 </span><span class="kw">const </span>DEFAULT_BZIMAGE_SATRT: u64 = <span class="number">0x2000000</span>;
 
-<span class="doccomment">/// The default size for the kernel if a kernel wasn&#39;t supplied via the QEMU
+<span class="doccomment">/// The default size for the kernel if a kernel wasn't supplied via the QEMU
 /// fw_cfg device.
 ///
 /// This is an arbitrary value, just to ensure it is non-zero.
 </span><span class="kw">const </span>DEFAULT_KERNEL_SIZE: usize = <span class="number">0x100000</span>;
 
 <span class="doccomment">/// The file path used by Stage0 to read the kernel from the fw_cfg device.
-</span><span class="kw">const </span>KERNEL_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/elf_kernel\0&quot;</span>;
+</span><span class="kw">const </span>KERNEL_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"opt/stage0/elf_kernel\0"</span>;
 
 <span class="doccomment">/// The file path used by Stage0 to read the kernel command-line from the fw_cfg
 /// device.
-</span><span class="kw">const </span>CMDLINE_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/cmdline\0&quot;</span>;
+</span><span class="kw">const </span>CMDLINE_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"opt/stage0/cmdline\0"</span>;
 
 <span class="doccomment">/// The type of kernel that was loaded.
 </span><span class="attr">#[derive(PartialEq)]
@@ -318,25 +320,25 @@
         </span><span class="kw">let </span>size = cmdline_file.size();
         (cmdline_file, size)
     } <span class="kw">else </span>{
-        <span class="kw">let </span>cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect(<span class="string">&quot;invalid c-string&quot;</span>);
+        <span class="kw">let </span>cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect(<span class="string">"invalid c-string"</span>);
         <span class="kw">let </span>cmdline_file = fw_cfg.find(cmdline_path)<span class="question-mark">?</span>;
         <span class="comment">// Make the buffer one byte longer so that the kernel command-line is
         // null-terminated.
         </span><span class="kw">let </span>size = cmdline_file.size() + <span class="number">1</span>;
         (cmdline_file, size)
     };
-    <span class="comment">// Safety: len will always be at least 1 byte, and we don&#39;t care about
-    // alignment. If the allocation fails, we won&#39;t try coercing it into a
+    <span class="comment">// Safety: len will always be at least 1 byte, and we don't care about
+    // alignment. If the allocation fails, we won't try coercing it into a
     // slice.
     </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_size];
-    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf).expect(<span class="string">&quot;could not read cmdline&quot;</span>);
-    <span class="macro">assert_eq!</span>(actual_size, cmdline_file.size(), <span class="string">&quot;cmdline size did not match expected size&quot;</span>);
+    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf).expect(<span class="string">"could not read cmdline"</span>);
+    <span class="macro">assert_eq!</span>(actual_size, cmdline_file.size(), <span class="string">"cmdline size did not match expected size"</span>);
 
     <span class="kw">let </span>cmdline = CString::from_vec_with_nul(buf)
-        .expect(<span class="string">&quot;invalid kernel command-line&quot;</span>)
+        .expect(<span class="string">"invalid kernel command-line"</span>)
         .into_string()
-        .expect(<span class="string">&quot;invalid kernel command-line&quot;</span>);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel cmdline: {}&quot;</span>, cmdline);
+        .expect(<span class="string">"invalid kernel command-line"</span>);
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel cmdline: {}"</span>, cmdline);
     <span class="prelude-val">Some</span>(cmdline)
 }
 
@@ -344,7 +346,7 @@
 ///
 /// We assume that a kernel file provided via the traditional selector is a
 /// compressed kernel using the bzImage format. We assume that a kernel file
-/// provided via the custom filename of &quot;opt/stage0/elf_kernel&quot; is an
+/// provided via the custom filename of "opt/stage0/elf_kernel" is an
 /// uncompressed ELF file.
 ///
 /// If it finds a kernel it returns the information about the kernel, otherwise
@@ -356,7 +358,7 @@
     <span class="kw">let </span>(file, bzimage) = <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = fw_cfg.get_kernel_file() {
         (file, <span class="bool-val">true</span>)
     } <span class="kw">else </span>{
-        <span class="kw">let </span>path = CStr::from_bytes_with_nul(KERNEL_FILE_PATH).expect(<span class="string">&quot;invalid c-string&quot;</span>);
+        <span class="kw">let </span>path = CStr::from_bytes_with_nul(KERNEL_FILE_PATH).expect(<span class="string">"invalid c-string"</span>);
         <span class="kw">let </span>file = fw_cfg.find(path)<span class="question-mark">?</span>;
         (file, <span class="bool-val">false</span>)
     };
@@ -367,16 +369,16 @@
     } <span class="kw">else </span>{
         <span class="comment">// For an Elf kernel we copy the kernel image to a temporary location at the end
         // of available mapped virtual memory where we can parse it.
-        </span>find_suitable_dma_address(size, e820_table).expect(<span class="string">&quot;no suitable DMA address available&quot;</span>)
+        </span>find_suitable_dma_address(size, e820_table).expect(<span class="string">"no suitable DMA address available"</span>)
     };
     <span class="kw">let </span>start_address = <span class="kw">crate</span>::phys_to_virt(dma_address);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image size {}&quot;</span>, size);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image start address {:#018x}&quot;</span>, start_address.as_u64());
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel image size {}"</span>, size);
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel image start address {:#018x}"</span>, start_address.as_u64());
     <span class="comment">// Safety: We checked that the DMA address is suitable and big enough.
     </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(start_address.as_mut_ptr(), size) };
 
-    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">&quot;could not read kernel file&quot;</span>);
-    <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;kernel size did not match expected size&quot;</span>);
+    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">"could not read kernel file"</span>);
+    <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">"kernel size did not match expected size"</span>);
 
     <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
 
@@ -384,7 +386,7 @@
         <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the
         // 64-bit kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
         </span><span class="kw">let </span>entry = start_address + <span class="number">0x200usize</span>;
-        <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
+        <span class="macro">log::debug!</span>(<span class="string">"Kernel entry point {:#018x}"</span>, entry.as_u64());
         <span class="kw">let </span>kernel_type = KernelType::BzImage;
         <span class="prelude-val">Some</span>(KernelInfo { start_address, size, entry, measurement, kernel_type })
     } <span class="kw">else </span>{
@@ -401,11 +403,11 @@
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_end = VirtAddr::new(<span class="number">0</span>);
     <span class="comment">// We expect an uncompressed ELF kernel, so we parse it and lay it out in
     // memory.
-    </span><span class="kw">let </span>file = ElfBytes::&lt;AnyEndian&gt;::minimal_parse(buf).expect(<span class="string">&quot;couldn&#39;t parse kernel header&quot;</span>);
+    </span><span class="kw">let </span>file = ElfBytes::&lt;AnyEndian&gt;::minimal_parse(buf).expect(<span class="string">"couldn't parse kernel header"</span>);
 
     <span class="kw">for </span><span class="kw-2">ref </span>phdr <span class="kw">in </span>file
         .segments()
-        .expect(<span class="string">&quot;couldn&#39;t parse ELF program headers&quot;</span>)
+        .expect(<span class="string">"couldn't parse ELF program headers"</span>)
         .iter()
         .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
     {
@@ -424,9 +426,9 @@
     <span class="kw">let </span>kernel_size = (kernel_end - kernel_start) <span class="kw">as </span>usize;
     <span class="kw">let </span>entry = <span class="kw">crate</span>::phys_to_virt(PhysAddr::new(file.ehdr.e_entry));
     <span class="kw">let </span>kernel_type = KernelType::Elf;
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel size {}&quot;</span>, kernel_size);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel start address {:#018x}&quot;</span>, kernel_start.as_u64());
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel size {}"</span>, kernel_size);
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel start address {:#018x}"</span>, kernel_start.as_u64());
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel entry point {:#018x}"</span>, entry.as_u64());
 
     KernelInfo { start_address: kernel_start, size: kernel_size, entry, measurement, kernel_type }
 }
@@ -436,7 +438,7 @@
     phdr: <span class="kw-2">&amp;</span>ProgramHeader,
     buf: <span class="kw-2">&amp;</span>[u8],
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>file_offset = phdr.p_offset <span class="kw">as </span>usize;
     <span class="kw">let </span>file_length = phdr.p_filesz <span class="kw">as </span>usize;
     <span class="kw">let </span>source = <span class="kw-2">&amp;</span>buf[file_offset..file_offset + file_length];

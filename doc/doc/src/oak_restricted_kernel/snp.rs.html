@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/snp.rs`."><title>snp.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/snp.rs`."><title>snp.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -174,14 +176,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -252,7 +254,7 @@
     }
 
     <span class="kw">if </span>setup_data_ptr.is_null() {
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t find setup data of type CCBlob&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"couldn't find setup data of type CCBlob"</span>);
     }
 
     <span class="comment">// Safety: we have checked that the pointer is not null and at least points to
@@ -267,7 +269,7 @@
     </span><span class="kw">let </span>cc_blob = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>cc_blob_address };
     <span class="kw">let </span>magic = cc_blob.magic;
     <span class="kw">if </span>magic != oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC {
-        <span class="macro">panic!</span>(<span class="string">&quot;CCBlobSevInfo data structure has invalid magic: {}&quot;</span>, magic);
+        <span class="macro">panic!</span>(<span class="string">"CCBlobSevInfo data structure has invalid magic: {}"</span>, magic);
     }
 
     <span class="kw">let </span>cpuid_page_address = PhysAddr::new(cc_blob.cpuid_phys <span class="kw">as </span>u64);
@@ -281,7 +283,7 @@
 /// outside of the expected range are supplied.
 ///
 /// Panicking throughout this functions is OK, because if any of these values
-/// are invalid it means the environment was not set up correctly and we don&#39;t
+/// are invalid it means the environment was not set up correctly and we don't
 /// know how to recover from that.
 </span><span class="kw">pub fn </span>init_snp_pages&lt;T: Translator&gt;(snp_pages: SnpPageAddresses, mapper: <span class="kw-2">&amp;</span>T) {
     <span class="comment">// First make sure the addresses look OK: they are not null, each point to the
@@ -291,42 +293,42 @@
 
     <span class="kw">let </span>cpuid_page_address = mapper
         .translate_physical(snp_pages.cpuid_page_address)
-        .expect(<span class="string">&quot;couldn&#39;t find a valid virtual address for the CPUID page&quot;</span>);
+        .expect(<span class="string">"couldn't find a valid virtual address for the CPUID page"</span>);
     <span class="comment">// Safety: we have checked that the pointer is in the expected valid memory
     // range, not null, and 4KiB page-aligned.
     </span><span class="kw">let </span>cpuid_slice: <span class="kw-2">&amp;</span>[u8] =
         <span class="kw">unsafe </span>{ from_raw_parts(cpuid_page_address.as_ptr(), Size4KiB::SIZE <span class="kw">as </span>usize) };
     CPUID_PAGE
-        .set(CpuidPage::read_from(cpuid_slice).expect(<span class="string">&quot;CPUID page byte slice was invalid&quot;</span>))
-        .expect(<span class="string">&quot;couldn&#39;t set CPUID page&quot;</span>);
-    CPUID_PAGE.get().unwrap().validate().expect(<span class="string">&quot;invalid CPUID page&quot;</span>);
+        .set(CpuidPage::read_from(cpuid_slice).expect(<span class="string">"CPUID page byte slice was invalid"</span>))
+        .expect(<span class="string">"couldn't set CPUID page"</span>);
+    CPUID_PAGE.get().unwrap().validate().expect(<span class="string">"invalid CPUID page"</span>);
 
     <span class="kw">let </span>secrets_page_address = mapper
         .translate_physical(snp_pages.secrets_page_address)
-        .expect(<span class="string">&quot;couldn&#39;t find a valid virtual address for the secrets page&quot;</span>);
+        .expect(<span class="string">"couldn't find a valid virtual address for the secrets page"</span>);
     <span class="comment">// Safety: we have checked that the pointer is in the expected valid memory
     // range, not null, and 4KiB page-aligned.
     </span><span class="kw">let </span>secrets_slice: <span class="kw-2">&amp;</span>[u8] =
         <span class="kw">unsafe </span>{ from_raw_parts(secrets_page_address.as_ptr(), Size4KiB::SIZE <span class="kw">as </span>usize) };
     SECRETS_PAGE
-        .set(SecretsPage::read_from(secrets_slice).expect(<span class="string">&quot;secrets page byte slice was invalid&quot;</span>))
-        .expect(<span class="string">&quot;couldn&#39;t set secrets page&quot;</span>);
-    SECRETS_PAGE.get().unwrap().validate().expect(<span class="string">&quot;invalid secrets page&quot;</span>);
+        .set(SecretsPage::read_from(secrets_slice).expect(<span class="string">"secrets page byte slice was invalid"</span>))
+        .expect(<span class="string">"couldn't set secrets page"</span>);
+    SECRETS_PAGE.get().unwrap().validate().expect(<span class="string">"invalid secrets page"</span>);
 }
 
 <span class="doccomment">/// Panics if the physical address is not the start of a 4KiB page, null, or not
 /// below the maximum expected address.
 </span><span class="kw">fn </span>assert_page_in_valid_range(page: PhysAddr) {
-    <span class="macro">assert!</span>(!page.is_null(), <span class="string">&quot;address is null&quot;</span>);
+    <span class="macro">assert!</span>(!page.is_null(), <span class="string">"address is null"</span>);
     <span class="macro">assert_eq!</span>(
         page.align_down(Size4KiB::SIZE),
         page,
-        <span class="string">&quot;address {:#018x} is not the start of a 4KiB page&quot;</span>,
+        <span class="string">"address {:#018x} is not the start of a 4KiB page"</span>,
         page
     );
     <span class="macro">assert!</span>(
         page &lt; MAX_ADDRESS,
-        <span class="string">&quot;address {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
+        <span class="string">"address {:#018x} is not below the expected maximum address {:#018x}"</span>,
         page,
         MAX_ADDRESS
     );
@@ -335,11 +337,11 @@
 <span class="doccomment">/// Panics if the pointer is null or points to an address that falls outside the
 /// expected range.
 </span><span class="kw">fn </span>assert_pointer_in_valid_range&lt;T&gt;(pointer: <span class="kw-2">*const </span>T) {
-    <span class="macro">assert!</span>(!pointer.is_null(), <span class="string">&quot;pointer is null&quot;</span>);
+    <span class="macro">assert!</span>(!pointer.is_null(), <span class="string">"pointer is null"</span>);
     <span class="kw">let </span>address = VirtAddr::from_ptr(pointer);
     <span class="macro">assert!</span>(
         address.as_u64() &lt; MAX_ADDRESS.as_u64(),
-        <span class="string">&quot;pointer {:#018x} is not below the expected maximum address {:#018x}&quot;</span>,
+        <span class="string">"pointer {:#018x} is not below the expected maximum address {:#018x}"</span>,
         address,
         MAX_ADDRESS
     );

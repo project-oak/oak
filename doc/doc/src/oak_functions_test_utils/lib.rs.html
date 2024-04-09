@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_test_utils/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_test_utils" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_test_utils/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_test_utils" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_functions_test_utils/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -270,14 +272,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -305,7 +307,7 @@
 </span><span class="kw">fn </span>build_wasm_module_path(metadata: <span class="kw-2">&amp;</span>cargo_metadata::Metadata) -&gt; String {
     <span class="kw">let </span>package_name = <span class="kw-2">&amp;</span>metadata.root_package().unwrap().name;
     <span class="comment">// Keep this in sync with `/xtask/src/main.rs`.
-    </span><span class="macro">format!</span>(<span class="string">&quot;{}/bin/{package_name}.wasm&quot;</span>, metadata.workspace_root)
+    </span><span class="macro">format!</span>(<span class="string">"{}/bin/{package_name}.wasm"</span>, metadata.workspace_root)
 }
 
 <span class="doccomment">/// Uses cargo to compile a Rust manifest to Wasm bytes.
@@ -316,30 +318,30 @@
     // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
     </span><span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
         <span class="comment">// `--out-dir` is unstable and requires `-Zunstable-options`.
-        </span><span class="string">&quot;-Zunstable-options&quot;</span>.to_string(),
-        <span class="string">&quot;build&quot;</span>.to_string(),
-        <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>.to_string(),
-        <span class="macro">format!</span>(<span class="string">&quot;--target-dir={}/wasm&quot;</span>, metadata.target_directory),
-        <span class="macro">format!</span>(<span class="string">&quot;--out-dir={}/bin&quot;</span>, metadata.workspace_root),
-        <span class="macro">format!</span>(<span class="string">&quot;--manifest-path={manifest_path}&quot;</span>),
+        </span><span class="string">"-Zunstable-options"</span>.to_string(),
+        <span class="string">"build"</span>.to_string(),
+        <span class="string">"--target=wasm32-unknown-unknown"</span>.to_string(),
+        <span class="macro">format!</span>(<span class="string">"--target-dir={}/wasm"</span>, metadata.target_directory),
+        <span class="macro">format!</span>(<span class="string">"--out-dir={}/bin"</span>, metadata.workspace_root),
+        <span class="macro">format!</span>(<span class="string">"--manifest-path={manifest_path}"</span>),
     ];
 
     <span class="kw">if </span>release {
-        args.push(<span class="string">&quot;--release&quot;</span>.to_string());
+        args.push(<span class="string">"--release"</span>.to_string());
     }
 
-    Command::new(<span class="string">&quot;cargo&quot;</span>)
+    Command::new(<span class="string">"cargo"</span>)
         .args(args)
-        .env_remove(<span class="string">&quot;RUSTFLAGS&quot;</span>)
+        .env_remove(<span class="string">"RUSTFLAGS"</span>)
         .spawn()
-        .context(<span class="string">&quot;couldn&#39;t spawn cargo build&quot;</span>)<span class="question-mark">?
+        .context(<span class="string">"couldn't spawn cargo build"</span>)<span class="question-mark">?
         </span>.wait()
-        .context(<span class="string">&quot;couldn&#39;t wait for cargo build to finish&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">"couldn't wait for cargo build to finish"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>module_path = build_wasm_module_path(<span class="kw-2">&amp;</span>metadata);
-    <span class="macro">info!</span>(<span class="string">&quot;Compiled Wasm module path: {:?}&quot;</span>, module_path);
+    <span class="macro">info!</span>(<span class="string">"Compiled Wasm module path: {:?}"</span>, module_path);
 
-    std::fs::read(module_path).context(<span class="string">&quot;couldn&#39;t read compiled module&quot;</span>)
+    std::fs::read(module_path).context(<span class="string">"couldn't read compiled module"</span>)
 }
 
 <span class="doccomment">/// Serializes the provided map as a contiguous buffer of length-delimited
@@ -350,7 +352,7 @@
         <span class="kw">let </span>entry_proto = oak_proto_rust::oak::oak_functions::lookup_data::Entry { key, value };
         entry_proto
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
-            .expect(<span class="string">&quot;couldn&#39;t encode entry as length delimited&quot;</span>);
+            .expect(<span class="string">"couldn't encode entry as length delimited"</span>);
     }
     buf
 }
@@ -372,20 +374,20 @@
 
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(max_entries_by_chunk * chunk_count) {
         <span class="comment">// Pad to 5 bytes to have 10 byte entries
-        </span><span class="kw">let </span>n = <span class="macro">format!</span>(<span class="string">&quot;{:05}&quot;</span>, i).into_bytes();
+        </span><span class="kw">let </span>n = <span class="macro">format!</span>(<span class="string">"{:05}"</span>, i).into_bytes();
         entries.insert(n.clone(), n);
     }
     entries
 }
 
 <span class="kw">pub fn </span>write_to_temp_file(content: <span class="kw-2">&amp;</span>[u8]) -&gt; tempfile::NamedTempFile {
-    <span class="kw">let </span><span class="kw-2">mut </span>file = tempfile::NamedTempFile::new().expect(<span class="string">&quot;couldn&#39;t create temp file&quot;</span>);
-    file.write_all(content).expect(<span class="string">&quot;couldn&#39;t write content to temp file&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>file = tempfile::NamedTempFile::new().expect(<span class="string">"couldn't create temp file"</span>);
+    file.write_all(content).expect(<span class="string">"couldn't write content to temp file"</span>);
     file
 }
 
 <span class="kw">pub fn </span>free_port() -&gt; u16 {
-    port_check::free_local_port().expect(<span class="string">&quot;couldn&#39;t pick free local port&quot;</span>)
+    port_check::free_local_port().expect(<span class="string">"couldn't pick free local port"</span>)
 }
 
 <span class="doccomment">/// Wrapper around a termination signal [`oneshot::Sender`] and the
@@ -403,8 +405,8 @@
     /// ignores the termination signal), it requires the cooperation of the
     /// task in order to work correctly.
     </span><span class="kw">pub async fn </span>terminate_and_join(<span class="self">self</span>) -&gt; T {
-        <span class="self">self</span>.term_tx.send(()).expect(<span class="string">&quot;couldn&#39;t send signal on termination channel&quot;</span>);
-        <span class="self">self</span>.join_handle.<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39; wait for background task to terminate&quot;</span>)
+        <span class="self">self</span>.term_tx.send(()).expect(<span class="string">"couldn't send signal on termination channel"</span>);
+        <span class="self">self</span>.join_handle.<span class="kw">await</span>.expect(<span class="string">"couldn' wait for background task to terminate"</span>)
     }
 }
 
@@ -413,8 +415,8 @@
 /// returning a [`Background`] instance.
 </span><span class="kw">pub fn </span>background&lt;Out, F&gt;(f: F) -&gt; Background&lt;Out::Output&gt;
 <span class="kw">where
-    </span>Out: Future + Send + <span class="lifetime">&#39;static</span>,
-    Out::Output: Send + <span class="lifetime">&#39;static</span>,
+    </span>Out: Future + Send + <span class="lifetime">'static</span>,
+    Out::Output: Send + <span class="lifetime">'static</span>,
     F: FnOnce(Term) -&gt; Out,
 {
     <span class="kw">let </span>(term_tx, term_rx) = oneshot::channel::&lt;()&gt;();
@@ -428,32 +430,32 @@
 /// Linux binary, and returns the path of the resulting binary.
 </span><span class="kw">pub fn </span>build_rust_crate_linux(crate_name: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;String&gt; {
     <span class="macro">duct::cmd!</span>(
-        <span class="string">&quot;cargo&quot;</span>,
-        <span class="string">&quot;build&quot;</span>,
-        <span class="string">&quot;--target=x86_64-unknown-linux-musl&quot;</span>,
-        <span class="string">&quot;--release&quot;</span>,
-        <span class="macro">format!</span>(<span class="string">&quot;--package={crate_name}&quot;</span>),
+        <span class="string">"cargo"</span>,
+        <span class="string">"build"</span>,
+        <span class="string">"--target=x86_64-unknown-linux-musl"</span>,
+        <span class="string">"--release"</span>,
+        <span class="macro">format!</span>(<span class="string">"--package={crate_name}"</span>),
     )
-    .dir(<span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>))
+    .dir(<span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>))
     .run()
-    .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t compile {crate_name}&quot;</span>))<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">&quot;{}target/x86_64-unknown-linux-musl/release/{crate_name}&quot;</span>, <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)))
+    .context(<span class="macro">format!</span>(<span class="string">"couldn't compile {crate_name}"</span>))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"{}target/x86_64-unknown-linux-musl/release/{crate_name}"</span>, <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>)))
 }
 
 <span class="kw">pub fn </span>build_rust_crate_enclave(crate_name: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;String&gt; {
     <span class="macro">duct::cmd!</span>(
-        <span class="string">&quot;cargo&quot;</span>,
-        <span class="string">&quot;build&quot;</span>,
-        <span class="string">&quot;--target=x86_64-unknown-none&quot;</span>,
-        <span class="string">&quot;--release&quot;</span>,
-        <span class="macro">format!</span>(<span class="string">&quot;--package={crate_name}&quot;</span>),
+        <span class="string">"cargo"</span>,
+        <span class="string">"build"</span>,
+        <span class="string">"--target=x86_64-unknown-none"</span>,
+        <span class="string">"--release"</span>,
+        <span class="macro">format!</span>(<span class="string">"--package={crate_name}"</span>),
     )
-    .dir(<span class="macro">format!</span>(<span class="string">&quot;{}enclave_apps&quot;</span>, <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)))
+    .dir(<span class="macro">format!</span>(<span class="string">"{}enclave_apps"</span>, <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>)))
     .run()
-    .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t compile enclave app {crate_name}&quot;</span>))<span class="question-mark">?</span>;
+    .context(<span class="macro">format!</span>(<span class="string">"couldn't compile enclave app {crate_name}"</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
-        <span class="string">&quot;{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}&quot;</span>,
-        <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)
+        <span class="string">"{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}"</span>,
+        <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>)
     ))
 }
 
@@ -462,22 +464,22 @@
 /// Wasm module, and returns the path of the resulting binary.
 </span><span class="kw">pub fn </span>build_rust_crate_wasm(crate_name: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;String&gt; {
     <span class="macro">duct::cmd!</span>(
-        <span class="string">&quot;cargo&quot;</span>,
-        <span class="string">&quot;build&quot;</span>,
-        <span class="string">&quot;--target=wasm32-unknown-unknown&quot;</span>,
-        <span class="string">&quot;--release&quot;</span>,
-        <span class="macro">format!</span>(<span class="string">&quot;--package={crate_name}&quot;</span>),
+        <span class="string">"cargo"</span>,
+        <span class="string">"build"</span>,
+        <span class="string">"--target=wasm32-unknown-unknown"</span>,
+        <span class="string">"--release"</span>,
+        <span class="macro">format!</span>(<span class="string">"--package={crate_name}"</span>),
     )
-    .dir(<span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>))
+    .dir(<span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>))
     .run()
-    .context(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t compile Wasm module {crate_name}&quot;</span>))<span class="question-mark">?</span>;
+    .context(<span class="macro">format!</span>(<span class="string">"couldn't compile Wasm module {crate_name}"</span>))<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(rust_crate_wasm_out_path(crate_name))
 }
 
 <span class="doccomment">/// Returns the path of the Wasm module generated by the crate identified by the
 /// given package name.
 </span><span class="kw">pub fn </span>rust_crate_wasm_out_path(crate_name: <span class="kw-2">&amp;</span>str) -&gt; String {
-    <span class="macro">format!</span>(<span class="string">&quot;{}target/wasm32-unknown-unknown/release/{crate_name}.wasm&quot;</span>, <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>),)
+    <span class="macro">format!</span>(<span class="string">"{}target/wasm32-unknown-unknown/release/{crate_name}.wasm"</span>, <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>),)
 }
 
 <span class="doccomment">/// Kills all the processes identified by the provided handle.
@@ -517,14 +519,14 @@
 }
 
 <span class="kw">pub async fn </span>make_request(port: u16, request_body: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
-    <span class="kw">let </span>uri = <span class="macro">format!</span>(<span class="string">&quot;http://localhost:{port}/&quot;</span>);
+    <span class="kw">let </span>uri = <span class="macro">format!</span>(<span class="string">"http://localhost:{port}/"</span>);
 
     <span class="comment">// Create client
     </span><span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsClient::new(<span class="kw-2">&amp;</span>uri, <span class="kw-2">&amp;</span>InsecureAttestationVerifier {})
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;couldn&#39;t create client&quot;</span>);
+        </span>.expect(<span class="string">"couldn't create client"</span>);
 
-    client.invoke(request_body).<span class="kw">await</span>.expect(<span class="string">&quot;error response&quot;</span>)
+    client.invoke(request_body).<span class="kw">await</span>.expect(<span class="string">"error response"</span>)
 }
 
 <span class="comment">// Assert that string value of the body of the given response matches the
@@ -532,7 +534,7 @@
 </span><span class="kw">pub fn </span>assert_response_body(response: Response, expected: <span class="kw-2">&amp;</span>str) {
     <span class="kw">let </span>body = response.body().unwrap();
     <span class="macro">assert_eq!</span>(
-        std::str::from_utf8(body).expect(<span class="string">&quot;couldn&#39;t convert response body from utf8&quot;</span>),
+        std::str::from_utf8(body).expect(<span class="string">"couldn't convert response body from utf8"</span>),
         expected
     )
 }

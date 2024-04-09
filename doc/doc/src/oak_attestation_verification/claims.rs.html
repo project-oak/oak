@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation_verification/src/claims.rs`."><title>claims.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation_verification" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation_verification/src/claims.rs`."><title>claims.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation_verification" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_attestation_verification/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -310,14 +312,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -334,27 +336,27 @@
 
 <span class="kw">use </span>oak_proto_rust::oak::HexDigest;
 <span class="kw">use </span>serde::Deserialize;
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>time::OffsetDateTime;
 
 <span class="doccomment">/// Admissible predicate type of in-toto endorsement statements.
-</span><span class="kw">const </span>PREDICATE_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
-<span class="kw">pub const </span>PREDICATE_V2: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v2&quot;</span>;
+</span><span class="kw">const </span>PREDICATE_V1: <span class="kw-2">&amp;</span>str = <span class="string">"https://github.com/project-oak/transparent-release/claim/v1"</span>;
+<span class="kw">pub const </span>PREDICATE_V2: <span class="kw-2">&amp;</span>str = <span class="string">"https://github.com/project-oak/transparent-release/claim/v2"</span>;
 
 <span class="doccomment">/// ClaimType for endorsements. Expected to be used together with `ClaimV1` as
 /// the predicate type in an in-toto statement.
-</span><span class="kw">const </span>ENDORSEMENT_V2: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/endorsement/v2&quot;</span>;
+</span><span class="kw">const </span>ENDORSEMENT_V2: <span class="kw-2">&amp;</span>str = <span class="string">"https://github.com/project-oak/transparent-release/endorsement/v2"</span>;
 
 <span class="doccomment">/// URI representing in-toto statements. We only use V1.
-</span><span class="kw">pub const </span>STATEMENT_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://in-toto.io/Statement/v1&quot;</span>;
+</span><span class="kw">pub const </span>STATEMENT_V1: <span class="kw-2">&amp;</span>str = <span class="string">"https://in-toto.io/Statement/v1"</span>;
 
 <span class="comment">// A map from algorithm name to lowercase hex-encoded value.
 </span><span class="kw">pub type </span>DigestSet = BTreeMap&lt;String, String&gt;;
 
 <span class="doccomment">/// A software artifact identified by its name and a set of artifacts.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Subject {
     <span class="kw">pub </span>name: String,
     <span class="kw">pub </span>digest: DigestSet,
@@ -362,10 +364,10 @@
 
 <span class="doccomment">/// Represents a generic statement that binds a predicate to a subject.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Statement&lt;P&gt; {
     <span class="kw">pub </span>_type: String,
-    <span class="attr">#[serde(rename = <span class="string">&quot;predicateType&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"predicateType"</span>)]
     </span><span class="kw">pub </span>predicate_type: String,
     <span class="kw">pub </span>subject: Vec&lt;Subject&gt;,
     <span class="kw">pub </span>predicate: P,
@@ -381,54 +383,54 @@
 
 <span class="doccomment">/// Detailed content of a claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimPredicate&lt;S&gt; {
     <span class="doccomment">/// URI indicating the type of the claim. It determines the meaning of
     /// `claimSpec` and `evidence`.
-    </span><span class="attr">#[serde(rename = <span class="string">&quot;claimType&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">"claimType"</span>)]
     </span><span class="kw">pub </span>claim_type: String,
     <span class="doccomment">/// A detailed description of the claim, as an optional arbitrary object.
-    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
-    #[serde(rename = <span class="string">&quot;claimSpec&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+    #[serde(rename = <span class="string">"claimSpec"</span>)]
     </span><span class="kw">pub </span>claim_spec: <span class="prelude-ty">Option</span>&lt;S&gt;,
     <span class="comment">// Specifies which evidence field the endorsement targets.
     // The `default` option should be removed once this is in operation.
-    </span><span class="attr">#[serde(default, rename = <span class="string">&quot;usage&quot;</span>)]
+    </span><span class="attr">#[serde(default, rename = <span class="string">"usage"</span>)]
     </span><span class="kw">pub </span>usage: String,
     <span class="doccomment">/// The timestamp (encoded as an Epoch time) when the claim was issued.
-    </span><span class="attr">#[serde(with = <span class="string">&quot;time::serde::rfc3339&quot;</span>)]
-    #[serde(rename = <span class="string">&quot;issuedOn&quot;</span>)]
+    </span><span class="attr">#[serde(with = <span class="string">"time::serde::rfc3339"</span>)]
+    #[serde(rename = <span class="string">"issuedOn"</span>)]
     </span><span class="kw">pub </span>issued_on: OffsetDateTime,
     <span class="doccomment">/// Validity duration of this claim.
-    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
-    #[serde(rename = <span class="string">&quot;validity&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+    #[serde(rename = <span class="string">"validity"</span>)]
     </span><span class="kw">pub </span>validity: <span class="prelude-ty">Option</span>&lt;ClaimValidity&gt;,
     <span class="doccomment">/// A collection of artifacts that support the truth of the claim.
-    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Vec::is_empty&quot;</span>, default)]
-    #[serde(rename = <span class="string">&quot;evidence&quot;</span>)]
+    </span><span class="attr">#[serde(skip_serializing_if = <span class="string">"Vec::is_empty"</span>, default)]
+    #[serde(rename = <span class="string">"evidence"</span>)]
     </span><span class="kw">pub </span>evidence: Vec&lt;ClaimEvidence&gt;,
 }
 
 <span class="doccomment">/// Validity time range of an issued claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimValidity {
     <span class="doccomment">/// The timestamp (encoded as an Epoch time) from which the claim is
     /// effective.
-    </span><span class="attr">#[serde(with = <span class="string">&quot;time::serde::rfc3339&quot;</span>)]
-    #[serde(rename = <span class="string">&quot;notBefore&quot;</span>)]
+    </span><span class="attr">#[serde(with = <span class="string">"time::serde::rfc3339"</span>)]
+    #[serde(rename = <span class="string">"notBefore"</span>)]
     </span><span class="kw">pub </span>not_before: OffsetDateTime,
     <span class="doccomment">/// The timestamp (encoded as an Epoch time) from which the claim no longer
     /// applies to the artifact.
-    </span><span class="attr">#[serde(with = <span class="string">&quot;time::serde::rfc3339&quot;</span>)]
-    #[serde(rename = <span class="string">&quot;notAfter&quot;</span>)]
+    </span><span class="attr">#[serde(with = <span class="string">"time::serde::rfc3339"</span>)]
+    #[serde(rename = <span class="string">"notAfter"</span>)]
     </span><span class="kw">pub </span>not_after: OffsetDateTime,
 }
 
 <span class="doccomment">/// Metadata about an artifact that serves as the evidence for the truth of a
 /// claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimEvidence {
     <span class="doccomment">/// Optional field specifying the role of this evidence within the claim.
     </span><span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -440,7 +442,7 @@
 
 <span class="doccomment">/// Inner type for a simple claim with no further fields.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">"std"</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Claimless {}
 
 <span class="kw">pub type </span>EndorsementStatement = Statement&lt;ClaimPredicate&lt;Claimless&gt;&gt;;
@@ -448,7 +450,7 @@
 <span class="doccomment">/// Converts the given byte array into an endorsement statement.
 </span><span class="kw">pub fn </span>parse_endorsement_statement(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;EndorsementStatement&gt; {
     serde_json::from_slice(bytes)
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;parsing endorsement bytes: {}&quot;</span>, error))
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"parsing endorsement bytes: {}"</span>, error))
 }
 
 <span class="doccomment">/// Checks that the given statement is a valid claim:
@@ -463,10 +465,10 @@
     }
     <span class="kw">if let </span><span class="prelude-val">Some</span>(validity) = <span class="kw-2">&amp;</span>claim.predicate.validity {
         <span class="kw">if </span>validity.not_before &lt; claim.predicate.issued_on {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">&quot;notBefore before issuedOn&quot;</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">"notBefore before issuedOn"</span>)));
         }
         <span class="kw">if </span>validity.not_before &gt; validity.not_after {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">&quot;notBefore after notAfter&quot;</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(InvalidClaimData::Validity(String::from(<span class="string">"notBefore after notAfter"</span>)));
         }
     }
 
@@ -482,14 +484,14 @@
     <span class="kw">match </span><span class="kw-2">&amp;</span>claim.predicate.validity {
         <span class="prelude-val">Some</span>(validity) =&gt; {
             <span class="kw">if </span>validity.not_before.unix_timestamp_nanos() / <span class="number">1000000 </span>&gt; now_utc_millis.into() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;the claim is not yet applicable&quot;</span>)
+                <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is not yet applicable"</span>)
             }
             <span class="kw">if </span>validity.not_after.unix_timestamp_nanos() / <span class="number">1000000 </span>&lt; now_utc_millis.into() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;the claim is no longer applicable&quot;</span>)
+                <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is no longer applicable"</span>)
             }
             <span class="prelude-val">Ok</span>(())
         }
-        <span class="prelude-val">None </span>=&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;the validity field is not set&quot;</span>),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"the validity field is not set"</span>),
     }
 }
 
@@ -509,61 +511,61 @@
     value: <span class="kw-2">&amp;</span>str,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>key {
-        <span class="string">&quot;psha2&quot; </span>=&gt; {
+        <span class="string">"psha2" </span>=&gt; {
             <span class="kw">if </span>!digest.psha2.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.psha2.push_str(value);
         }
-        <span class="string">&quot;sha1&quot; </span>=&gt; {
+        <span class="string">"sha1" </span>=&gt; {
             <span class="kw">if </span>!digest.sha1.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha1.push_str(value);
         }
-        <span class="string">&quot;sha256&quot; </span>| <span class="string">&quot;sha2_256&quot; </span>=&gt; {
+        <span class="string">"sha256" </span>| <span class="string">"sha2_256" </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_256.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha2_256.push_str(value);
         }
-        <span class="string">&quot;sha512&quot; </span>| <span class="string">&quot;sha2_512&quot; </span>=&gt; {
+        <span class="string">"sha512" </span>| <span class="string">"sha2_512" </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_512.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha2_512.push_str(value);
         }
-        <span class="string">&quot;sha3_512&quot; </span>=&gt; {
+        <span class="string">"sha3_512" </span>=&gt; {
             <span class="kw">if </span>!digest.sha3_512.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha3_512.push_str(value);
         }
-        <span class="string">&quot;sha3_384&quot; </span>=&gt; {
+        <span class="string">"sha3_384" </span>=&gt; {
             <span class="kw">if </span>!digest.sha3_384.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha3_384.push_str(value);
         }
-        <span class="string">&quot;sha3_256&quot; </span>=&gt; {
+        <span class="string">"sha3_256" </span>=&gt; {
             <span class="kw">if </span>!digest.sha3_256.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha3_256.push_str(value);
         }
-        <span class="string">&quot;sha3_224&quot; </span>=&gt; {
+        <span class="string">"sha3_224" </span>=&gt; {
             <span class="kw">if </span>!digest.sha3_224.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha3_224.push_str(value);
         }
-        <span class="string">&quot;sha384&quot; </span>| <span class="string">&quot;sha2_384&quot; </span>=&gt; {
+        <span class="string">"sha384" </span>| <span class="string">"sha2_384" </span>=&gt; {
             <span class="kw">if </span>!digest.sha2_384.is_empty() {
-                <span class="macro">anyhow::bail!</span>(<span class="string">&quot;duplicate key {}&quot;</span>, key);
+                <span class="macro">anyhow::bail!</span>(<span class="string">"duplicate key {}"</span>, key);
             }
             digest.sha2_384.push_str(value);
         }
-        <span class="kw">_ </span>=&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unknown digest key in endorsement statement&quot;</span>),
+        <span class="kw">_ </span>=&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"unknown digest key in endorsement statement"</span>),
     }
 
     <span class="prelude-val">Ok</span>(())
@@ -573,7 +575,7 @@
 /// be from the binary or from the attachment.
 </span><span class="kw">pub fn </span>get_digest(claim: <span class="kw-2">&amp;</span>EndorsementStatement) -&gt; anyhow::Result&lt;HexDigest&gt; {
     <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a single endorsement subject, found {}&quot;</span>, claim.subject.len());
+        <span class="macro">anyhow::bail!</span>(<span class="string">"expected a single endorsement subject, found {}"</span>, claim.subject.len());
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>digest = HexDigest::default();
@@ -592,27 +594,27 @@
     <span class="kw">use </span><span class="kw">super</span>::get_digest;
     <span class="kw">use </span><span class="kw">crate</span>::claims::{parse_endorsement_statement, validate_endorsement};
 
-    <span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;testdata/endorsement.json&quot;</span>;
+    <span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"testdata/endorsement.json"</span>;
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_parse_endorsement_statement() {
-        <span class="kw">let </span>endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect(<span class="string">&quot;couldn&#39;t read endorsement file&quot;</span>);
+        <span class="kw">let </span>endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect(<span class="string">"couldn't read endorsement file"</span>);
         <span class="kw">let </span>claim = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement_bytes)
-            .expect(<span class="string">&quot;couldn&#39;t parse bytes into a claim&quot;</span>);
+            .expect(<span class="string">"couldn't parse bytes into a claim"</span>);
 
         <span class="macro">assert!</span>(validate_endorsement(<span class="kw-2">&amp;</span>claim).is_ok())
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_get_claims() {
-        <span class="kw">let </span>endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect(<span class="string">&quot;couldn&#39;t read endorsement file&quot;</span>);
+        <span class="kw">let </span>endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect(<span class="string">"couldn't read endorsement file"</span>);
         <span class="kw">let </span>claim = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement_bytes)
-            .expect(<span class="string">&quot;couldn&#39;t parse bytes into a claim&quot;</span>);
-        <span class="kw">let </span>digest = get_digest(<span class="kw-2">&amp;</span>claim).expect(<span class="string">&quot;failed to get digest from claim&quot;</span>);
+            .expect(<span class="string">"couldn't parse bytes into a claim"</span>);
+        <span class="kw">let </span>digest = get_digest(<span class="kw-2">&amp;</span>claim).expect(<span class="string">"failed to get digest from claim"</span>);
 
         <span class="macro">assert_eq!</span>(
             digest.sha2_256,
-            <span class="string">&quot;18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc&quot;
+            <span class="string">"18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc"
         </span>);
     }
 }

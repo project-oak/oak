@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_orchestrator/src/metrics.rs`."><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_orchestrator/src/metrics.rs`."><title>metrics.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_containers_orchestrator/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -270,14 +272,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -294,7 +296,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::launcher_client::LauncherClient;
 
-<span class="comment">// It&#39;s not dead, it&#39;s just asynchronous.
+<span class="comment">// It's not dead, it's just asynchronous.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>SystemMetrics {
     cpu_seconds_total: ObservableCounter&lt;u64&gt;,
@@ -324,74 +326,74 @@
     <span class="kw">fn </span>new(meter: Meter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             cpu_seconds_total: meter
-                .u64_observable_counter(<span class="string">&quot;cpu_seconds_total&quot;</span>)
-                .with_unit(Unit::new(<span class="string">&quot;seconds&quot;</span>))
+                .u64_observable_counter(<span class="string">"cpu_seconds_total"</span>)
+                .with_unit(Unit::new(<span class="string">"seconds"</span>))
                 .with_callback(<span class="self">Self</span>::cpu_seconds_total)
                 .try_init()<span class="question-mark">?</span>,
             context_switches_total: meter
-                .u64_observable_counter(<span class="string">&quot;context_switches_total&quot;</span>)
+                .u64_observable_counter(<span class="string">"context_switches_total"</span>)
                 .with_callback(<span class="self">Self</span>::context_switches_total)
                 .try_init()<span class="question-mark">?</span>,
             forks_total: meter
-                .u64_observable_counter(<span class="string">&quot;forks_total&quot;</span>)
+                .u64_observable_counter(<span class="string">"forks_total"</span>)
                 .with_callback(<span class="self">Self</span>::forks_total)
                 .try_init()<span class="question-mark">?</span>,
             procs_blocked: meter
-                .u64_observable_gauge(<span class="string">&quot;procs_blocked&quot;</span>)
+                .u64_observable_gauge(<span class="string">"procs_blocked"</span>)
                 .with_callback(<span class="self">Self</span>::procs_blocked)
                 .try_init()<span class="question-mark">?</span>,
             procs_running: meter
-                .u64_observable_gauge(<span class="string">&quot;procs_running&quot;</span>)
+                .u64_observable_gauge(<span class="string">"procs_running"</span>)
                 .with_callback(<span class="self">Self</span>::procs_running)
                 .try_init()<span class="question-mark">?</span>,
             net_recv_bytes: meter
-                .u64_observable_counter(<span class="string">&quot;network_receive_bytes&quot;</span>)
-                .with_unit(Unit::new(<span class="string">&quot;bytes&quot;</span>))
+                .u64_observable_counter(<span class="string">"network_receive_bytes"</span>)
+                .with_unit(Unit::new(<span class="string">"bytes"</span>))
                 .with_callback(<span class="self">Self</span>::net_recv_bytes)
                 .try_init()<span class="question-mark">?</span>,
             net_recv_packets: meter
-                .u64_observable_counter(<span class="string">&quot;network_receive_packets&quot;</span>)
+                .u64_observable_counter(<span class="string">"network_receive_packets"</span>)
                 .with_callback(<span class="self">Self</span>::net_recv_packets)
                 .try_init()<span class="question-mark">?</span>,
             net_recv_errs: meter
-                .u64_observable_counter(<span class="string">&quot;network_receive_errors&quot;</span>)
+                .u64_observable_counter(<span class="string">"network_receive_errors"</span>)
                 .with_callback(<span class="self">Self</span>::net_recv_errs)
                 .try_init()<span class="question-mark">?</span>,
             net_sent_bytes: meter
-                .u64_observable_counter(<span class="string">&quot;network_transmit_bytes&quot;</span>)
-                .with_unit(Unit::new(<span class="string">&quot;bytes&quot;</span>))
+                .u64_observable_counter(<span class="string">"network_transmit_bytes"</span>)
+                .with_unit(Unit::new(<span class="string">"bytes"</span>))
                 .with_callback(<span class="self">Self</span>::net_sent_bytes)
                 .try_init()<span class="question-mark">?</span>,
             net_sent_packets: meter
-                .u64_observable_counter(<span class="string">&quot;network_transmit_packets&quot;</span>)
+                .u64_observable_counter(<span class="string">"network_transmit_packets"</span>)
                 .with_callback(<span class="self">Self</span>::net_sent_packets)
                 .try_init()<span class="question-mark">?</span>,
             net_sent_errs: meter
-                .u64_observable_counter(<span class="string">&quot;network_transmit_errors&quot;</span>)
+                .u64_observable_counter(<span class="string">"network_transmit_errors"</span>)
                 .with_callback(<span class="self">Self</span>::net_sent_errs)
                 .try_init()<span class="question-mark">?</span>,
             mem_total: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_total&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_total"</span>)
                 .with_callback(<span class="self">Self</span>::mem_total)
                 .try_init()<span class="question-mark">?</span>,
             mem_free: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_free&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_free"</span>)
                 .with_callback(<span class="self">Self</span>::mem_free)
                 .try_init()<span class="question-mark">?</span>,
             mem_available: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_available&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_available"</span>)
                 .with_callback(<span class="self">Self</span>::mem_available)
                 .try_init()<span class="question-mark">?</span>,
             mem_buffers: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_buffers&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_buffers"</span>)
                 .with_callback(<span class="self">Self</span>::mem_buffers)
                 .try_init()<span class="question-mark">?</span>,
             mem_cached: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_cached&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_cached"</span>)
                 .with_callback(<span class="self">Self</span>::mem_cached)
                 .try_init()<span class="question-mark">?</span>,
             mem_slab: meter
-                .u64_observable_gauge(<span class="string">&quot;mem_slab&quot;</span>)
+                .u64_observable_gauge(<span class="string">"mem_slab"</span>)
                 .with_callback(<span class="self">Self</span>::mem_slab)
                 .try_init()<span class="question-mark">?</span>,
         })
@@ -402,23 +404,23 @@
 
         <span class="kw">for </span>(cpu, stats) <span class="kw">in </span>stats.cpu_time.iter().enumerate() {
             <span class="kw">let </span>attributes =
-                |mode| [KeyValue::new(<span class="string">&quot;cpu&quot;</span>, cpu.to_string()), KeyValue::new(<span class="string">&quot;mode&quot;</span>, mode)];
+                |mode| [KeyValue::new(<span class="string">"cpu"</span>, cpu.to_string()), KeyValue::new(<span class="string">"mode"</span>, mode)];
 
-            counter.observe(stats.user, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;user&quot;</span>));
-            counter.observe(stats.idle, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;idle&quot;</span>));
-            counter.observe(stats.nice, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;nice&quot;</span>));
-            counter.observe(stats.system, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;system&quot;</span>));
+            counter.observe(stats.user, <span class="kw-2">&amp;</span>attributes(<span class="string">"user"</span>));
+            counter.observe(stats.idle, <span class="kw-2">&amp;</span>attributes(<span class="string">"idle"</span>));
+            counter.observe(stats.nice, <span class="kw-2">&amp;</span>attributes(<span class="string">"nice"</span>));
+            counter.observe(stats.system, <span class="kw-2">&amp;</span>attributes(<span class="string">"system"</span>));
             <span class="kw">if let </span><span class="prelude-val">Some</span>(iowait) = stats.iowait {
-                counter.observe(iowait, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;iowait&quot;</span>));
+                counter.observe(iowait, <span class="kw-2">&amp;</span>attributes(<span class="string">"iowait"</span>));
             }
             <span class="kw">if let </span><span class="prelude-val">Some</span>(irq) = stats.irq {
-                counter.observe(irq, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;irq&quot;</span>));
+                counter.observe(irq, <span class="kw-2">&amp;</span>attributes(<span class="string">"irq"</span>));
             }
             <span class="kw">if let </span><span class="prelude-val">Some</span>(softirq) = stats.softirq {
-                counter.observe(softirq, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;softirq&quot;</span>));
+                counter.observe(softirq, <span class="kw-2">&amp;</span>attributes(<span class="string">"softirq"</span>));
             }
             <span class="kw">if let </span><span class="prelude-val">Some</span>(steal) = stats.steal {
-                counter.observe(steal, <span class="kw-2">&amp;</span>attributes(<span class="string">&quot;steal&quot;</span>));
+                counter.observe(steal, <span class="kw-2">&amp;</span>attributes(<span class="string">"steal"</span>));
             }
         }
     }
@@ -451,7 +453,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.recv_bytes, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.recv_bytes, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -459,7 +461,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.recv_packets, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.recv_packets, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -467,7 +469,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.recv_errs, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.recv_errs, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -475,7 +477,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.sent_bytes, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.sent_bytes, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -483,7 +485,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.sent_packets, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.sent_packets, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -491,7 +493,7 @@
         <span class="kw">let </span>stats = procfs::net::dev_status().unwrap();
 
         <span class="kw">for </span>(interface, stats) <span class="kw">in </span>stats {
-            counter.observe(stats.sent_errs, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">&quot;device&quot;</span>, interface)]);
+            counter.observe(stats.sent_errs, <span class="kw-2">&amp;</span>[KeyValue::new(<span class="string">"device"</span>, interface)]);
         }
     }
 
@@ -534,6 +536,6 @@
         .with_exporter(launcher_client.openmetrics_builder())
         .with_period(Duration::from_secs(<span class="number">60</span>))
         .build()<span class="question-mark">?</span>;
-    SystemMetrics::new(metrics.meter(<span class="string">&quot;oak_containers_orchestrator&quot;</span>))
+    SystemMetrics::new(metrics.meter(<span class="string">"oak_containers_orchestrator"</span>))
 }
 </code></pre></div></section></main></body></html>

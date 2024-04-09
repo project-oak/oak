@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_containers_launcher/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -362,14 +364,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -378,10 +380,10 @@
     <span class="kw">pub mod </span>oak {
         <span class="kw">pub mod </span>containers {
             <span class="attr">#![allow(clippy::return_self_not_must_use)]
-            </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
+            </span><span class="macro">tonic::include_proto!</span>(<span class="string">"oak.containers"</span>);
             <span class="kw">pub mod </span>v1 {
                 <span class="attr">#![allow(clippy::return_self_not_must_use)]
-                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers.v1&quot;</span>);
+                </span><span class="macro">tonic::include_proto!</span>(<span class="string">"oak.containers.v1"</span>);
             }
         }
         <span class="kw">pub use </span>oak_attestation::proto::oak::{attestation, session};
@@ -389,7 +391,7 @@
         <span class="kw">pub mod </span>key_provisioning {
             <span class="kw">pub mod </span>v1 {
                 <span class="attr">#![allow(clippy::return_self_not_must_use)]
-                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.key_provisioning.v1&quot;</span>);
+                </span><span class="macro">tonic::include_proto!</span>(<span class="string">"oak.key_provisioning.v1"</span>);
             }
         }
     }
@@ -434,7 +436,7 @@
 <span class="doccomment">/// The local port that the Orchestrator should be listening on.
 </span><span class="kw">const </span>VM_ORCHESTRATOR_LOCAL_PORT: u16 = <span class="number">4000</span>;
 
-<span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP
+<span class="doccomment">/// The local address that will be forwarded by the VMM to the guest's IP
 /// adress.
 </span><span class="kw">const </span>PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
@@ -470,9 +472,9 @@
 
 <span class="kw">impl </span>Args {
     <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">&quot;{root}oak_containers_system_image/target/image.tar.xz&quot;</span>,).into();
+        <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">"{root}oak_containers_system_image/target/image.tar.xz"</span>,).into();
         <span class="kw">let </span>container_bundle = <span class="macro">format!</span>(
-            <span class="string">&quot;{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar&quot;</span>,
+            <span class="string">"{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar"</span>,
         ).into();
         <span class="self">Self </span>{
             system_image,
@@ -487,7 +489,7 @@
 <span class="kw">pub fn </span>path_exists(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;std::path::PathBuf, String&gt; {
     <span class="kw">let </span>path = std::path::PathBuf::from(s);
     <span class="kw">if </span>!std::fs::metadata(s).map_err(|err| err.to_string())<span class="question-mark">?</span>.is_file() {
-        <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;path does not represent a file&quot;</span>))
+        <span class="prelude-val">Err</span>(String::from(<span class="string">"path does not represent a file"</span>))
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(path)
     }
@@ -517,12 +519,12 @@
                 trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
             }
         }
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted application address not set&quot;</span>))
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"trusted application address not set"</span>))
     }
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>TrustedApplicationAddress {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
             TrustedApplicationAddress::Network(addr) =&gt; addr.fmt(f),
             TrustedApplicationAddress::VirtioVsock(addr) =&gt; addr.fmt(f),
@@ -552,7 +554,7 @@
         <span class="kw">let </span>orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
         <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
-        <span class="macro">log::info!</span>(<span class="string">&quot;Launcher service listening on port {port}&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"Launcher service listening on port {port}"</span>);
         <span class="kw">let </span>(evidence_sender, evidence_receiver) = channel::&lt;Evidence&gt;();
         <span class="kw">let </span>(shutdown_sender, shutdown_receiver) = channel::&lt;()&gt;();
         <span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = channel::&lt;()&gt;();
@@ -569,7 +571,7 @@
         <span class="kw">let </span>trusted_app_channel = <span class="kw">match </span>args.communication_channel {
             ChannelType::Network =&gt; {
                 <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the
-                // server. Since we don&#39;t have a mechanism to pass this port to
+                // server. Since we don't have a mechanism to pass this port to
                 // QEMU we have to unbind it by dropping it. There is a small
                 // window for a race condition, but since the assigned port will
                 // be random the probability of another process grabbing the
@@ -600,7 +602,7 @@
             host_orchestrator_proxy_port,
             <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
-            // provide corresponding hardware manufacturer&#39;s certificates).
+            // provide corresponding hardware manufacturer's certificates).
             </span>endorsed_evidence: <span class="prelude-val">None</span>,
             evidence_receiver: <span class="prelude-val">Some</span>(evidence_receiver),
             app_ready_notifier: <span class="prelude-val">Some</span>(app_notifier_receiver),
@@ -614,16 +616,16 @@
     /// the trusted application.
     ///
     /// This is a host-visible address that the VMM will proxy to the trusted
-    /// application&#39;s service endpoint.
+    /// application's service endpoint.
     ///
     /// This call will wait until the trusted app has notifiied the launcher
     /// once that it is ready via the orchestrator.
     </span><span class="kw">pub async fn </span>get_trusted_app_address(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedApplicationAddress, anyhow::Error&gt; {
-        <span class="comment">// If we haven&#39;t received a ready notification, wait for it.
+        <span class="comment">// If we haven't received a ready notification, wait for it.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.app_ready_notifier.take() {
-            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start
+            <span class="comment">// Set a timeout since we don't want to wait forever if the VM didn't start
             // properly.
             </span>timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).<span class="kw">await</span><span class="question-mark">??</span>;
             <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.trusted_app_channel {
@@ -633,7 +635,7 @@
                 }
                 Channel::VirtioVsock { trusted_app_address } =&gt; {
                     trusted_app_address.replace(VsockAddr::new(
-                        <span class="self">self</span>.vmm.guest_cid().expect(<span class="string">&quot;VMM does not have a guest CID&quot;</span>),
+                        <span class="self">self</span>.vmm.guest_cid().expect(<span class="string">"VMM does not have a guest CID"</span>),
                         VM_LOCAL_PORT.into(),
                     ));
                 }
@@ -645,15 +647,15 @@
     <span class="doccomment">/// Gets the endorsed attestation evidence that the untrusted application
     /// can send to remote clients, which will verify it before connecting.
     </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
-        <span class="comment">// If we haven&#39;t received an attestation evidence, wait for it.
+        <span class="comment">// If we haven't received an attestation evidence, wait for it.
         </span><span class="attr">#[allow(deprecated)]
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.evidence_receiver.take() {
-            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start
+            <span class="comment">// Set a timeout since we don't want to wait forever if the VM didn't start
             // properly.
             </span><span class="kw">let </span>evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
                 .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
-                </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
+                </span>.context(<span class="string">"couldn't get attestation evidence before timeout"</span>)<span class="question-mark">?
+                </span>.context(<span class="string">"no attestation evidence available"</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// Initialize attestation endorsements.
             // TODO(#4074): Add layer endorsements.
@@ -674,7 +676,7 @@
         }
         <span class="self">self</span>.endorsed_evidence
             .clone()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;endorsed evidence is not set&quot;</span>))
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"endorsed evidence is not set"</span>))
     }
 
     <span class="comment">// Gets enclave group keys as part of Key Provisioning.
@@ -685,13 +687,13 @@
         <span class="kw">if </span><span class="self">self</span>.orchestrator_key_provisioning_client.is_none() {
             <span class="comment">// Create Orchestrator Key Provisioning gRPC client.
             </span><span class="kw">let </span>orchestrator_uri =
-                <span class="macro">format!</span>(<span class="string">&quot;http://127.0.0.1:{}&quot;</span>, <span class="self">self</span>.host_orchestrator_proxy_port)
+                <span class="macro">format!</span>(<span class="string">"http://127.0.0.1:{}"</span>, <span class="self">self</span>.host_orchestrator_proxy_port)
                     .parse()
-                    .context(<span class="string">&quot;couldn&#39;t parse orchestrator URI&quot;</span>)<span class="question-mark">?</span>;
+                    .context(<span class="string">"couldn't parse orchestrator URI"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>orchestrator_channel = TonicChannel::builder(orchestrator_uri)
                 .connect()
                 .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t connect to orchestrator&quot;</span>)<span class="question-mark">?</span>;
+                </span>.context(<span class="string">"couldn't connect to orchestrator"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.orchestrator_key_provisioning_client =
                 <span class="prelude-val">Some</span>(KeyProvisioningClient::new(orchestrator_channel));
         }
@@ -699,10 +701,10 @@
         <span class="kw">let </span>get_group_keys_response = <span class="self">self
             </span>.orchestrator_key_provisioning_client
             .clone()
-            .context(<span class="string">&quot;couldn&#39;t get orchestrator key provisioning client&quot;</span>)<span class="question-mark">?
+            .context(<span class="string">"couldn't get orchestrator key provisioning client"</span>)<span class="question-mark">?
             </span>.get_group_keys(request)
             .<span class="kw">await
-            </span>.context(<span class="string">&quot;couldn&#39;t get group keys&quot;</span>)<span class="question-mark">?
+            </span>.context(<span class="string">"couldn't get group keys"</span>)<span class="question-mark">?
             </span>.into_inner();
         <span class="prelude-val">Ok</span>(get_group_keys_response)
     }

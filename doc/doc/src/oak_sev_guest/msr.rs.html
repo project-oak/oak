@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/msr.rs`."><title>msr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/msr.rs`."><title>msr.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_sev_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -803,14 +805,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -880,10 +882,10 @@
 }
 
 <span class="kw">impl </span>GhcbGpa {
-    <span class="kw">pub fn </span>new(gpa: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>new(gpa: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>gpa = gpa <span class="kw">as </span>u64;
         <span class="kw">if </span>gpa &amp; GHCB_INFO_MASK != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;GHCB must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"GHCB must be 4KiB-aligned"</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ gpa })
     }
@@ -915,11 +917,11 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>SevInfoResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>SEV_INFO_RESPONSE_INFO: u64 = <span class="number">0x001</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid SEV information response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid SEV information response"</span>);
         }
         <span class="kw">let </span>max_protocol_version = (msr_value &gt;&gt; <span class="number">48</span>) <span class="kw">as </span>u16;
         <span class="kw">let </span>min_protocol_version = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u16;
@@ -940,7 +942,7 @@
 
 <span class="doccomment">/// Gets information about the supported GHCB MSR protocol versions and the
 /// location of the encryption bit.
-</span><span class="kw">pub fn </span>get_sev_info() -&gt; <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>get_sev_info() -&gt; <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>request = SevInfoRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
@@ -983,24 +985,24 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>CpuidResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>SEV_INFO_RESPONSE_INFO: u64 = <span class="number">0x005</span>;
         <span class="kw">const </span>RESERVED_MASK: u64 = <span class="number">0x3FFFF000</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SEV_INFO_RESPONSE_INFO || msr_value &amp; RESERVED_MASK != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid CPUID response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid CPUID response"</span>);
         }
         <span class="kw">let </span>value = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
         <span class="kw">const </span>REGISTER_MASK: u64 = <span class="number">0xC0000000</span>;
         <span class="kw">let </span>register = CpuidRegister::from_repr(((msr_value &amp; REGISTER_MASK) &gt;&gt; <span class="number">30</span>) <span class="kw">as </span>u8)
-            .ok_or(<span class="string">&quot;invalid register&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or(<span class="string">"invalid register"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ value, register })
     }
 }
 
 <span class="doccomment">/// Gets the value of the specified register that was returned when executing
 /// CPUID for the specified leaf. Sub-leafs are not supported.
-</span><span class="kw">pub fn </span>get_cpuid(request: CpuidRequest) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>get_cpuid(request: CpuidRequest) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
 }
@@ -1010,7 +1012,7 @@
 </span><span class="kw">pub fn </span>get_cpuid_for_vc_exception(
     leaf: u32,
     stack_frame: <span class="kw-2">&amp;mut </span>MutableInterruptStackFrame,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     stack_frame.rax = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Eax })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
 
     stack_frame.rbx = get_cpuid(CpuidRequest { leaf, register: CpuidRegister::Ebx })<span class="question-mark">?</span>.value <span class="kw">as </span>u64;
@@ -1022,7 +1024,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// A request for the hypervisor&#39;s preferred location for the GHCB page.
+<span class="doccomment">/// A request for the hypervisor's preferred location for the GHCB page.
 </span><span class="kw">pub struct </span>PreferredGhcbGpaRequest;
 
 <span class="kw">impl </span>From&lt;PreferredGhcbGpaRequest&gt; <span class="kw">for </span>u64 {
@@ -1038,25 +1040,25 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>PreferredGhcbGpaResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>PREFERRED_GPA_RESPONSE_INFO: u64 = <span class="number">0x011</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != PREFERRED_GPA_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid preferred GHCP GPA response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid preferred GHCP GPA response"</span>);
         }
         <span class="kw">let </span>ghcb_gpa = (msr_value &amp; GCHP_DATA_MASK) <span class="kw">as </span>usize;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ ghcb_gpa })
     }
 }
 
-<span class="doccomment">/// Requests the hypervisor&#39;s preferred location for the GHCB page.
+<span class="doccomment">/// Requests the hypervisor's preferred location for the GHCB page.
 ///
 /// A response of `NO_PREFERRED_GHCB_LOCATION` indicates that the hypervisor
 /// does not have a preferred location.
 ///
 /// The guest must validate that the returned guest-physical address is not part
 /// of its known guest-private memory.
-</span><span class="kw">pub fn </span>get_preferred_ghcb_location() -&gt; <span class="prelude-ty">Result</span>&lt;PreferredGhcbGpaResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>get_preferred_ghcb_location() -&gt; <span class="prelude-ty">Result</span>&lt;PreferredGhcbGpaResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>request = PreferredGhcbGpaRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
@@ -1144,15 +1146,15 @@
 }
 
 <span class="kw">impl </span>SnpPageStateChangeRequest {
-    <span class="kw">pub fn </span>new(page_gpa: usize, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>new(page_gpa: usize, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>page_gpa = page_gpa <span class="kw">as </span>u64;
         <span class="kw">if </span>page_gpa &amp; GHCB_INFO_MASK != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page must be 4KiB-aligned&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"page must be 4KiB-aligned"</span>);
         }
         <span class="comment">// Only 52 bits can be use for an address.
         </span><span class="kw">const </span>ADDRESS_MAX: u64 = (<span class="number">1 </span>&lt;&lt; <span class="number">52</span>) - <span class="number">1</span>;
         <span class="kw">if </span>page_gpa &gt; ADDRESS_MAX {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page address is too high&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"page address is too high"</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ page_gpa, assignment })
     }
@@ -1176,14 +1178,14 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>SnpPageStateChangeResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>SNP_PAGE_STATE_CHANGE_RESPONSE_INFO: u64 = <span class="number">0x015</span>;
         <span class="kw">const </span>RESERVED_MASK: u64 = <span class="number">0xFFFFF000</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != SNP_PAGE_STATE_CHANGE_RESPONSE_INFO
             || msr_value &amp; RESERVED_MASK != <span class="number">0
         </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid SNP Page State Change response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid SNP Page State Change response"</span>);
         }
         <span class="kw">let </span>error_code = (msr_value &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ error_code })
@@ -1195,12 +1197,12 @@
 ///
 /// This is useful if the GHCB has not yet been established, for example if a
 /// page must be shared with the hypervisor to establish the GHCB.
-</span><span class="kw">pub fn </span>change_snp_page_state(request: SnpPageStateChangeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>change_snp_page_state(request: SnpPageStateChangeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     write_protocol_msr_and_exit(request.into());
     <span class="kw">let </span>response: SnpPageStateChangeResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
     <span class="comment">// Ensure that the page state change was successful.
     </span><span class="kw">if </span>response.error_code != <span class="number">0 </span>{
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;page state change failed&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"page state change failed"</span>);
     }
     <span class="prelude-val">Ok</span>(())
 }
@@ -1209,7 +1211,7 @@
 </span><span class="kw">pub fn </span>change_snp_state_for_frame(
     frame: <span class="kw-2">&amp;</span>PhysFrame&lt;Size2MiB&gt;,
     assignment: PageAssignment,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>raw_address = frame.start_address().as_u64();
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">512 </span>{
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(
@@ -1221,7 +1223,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// A request for the hypervisor&#39;s supported features.
+<span class="doccomment">/// A request for the hypervisor's supported features.
 </span><span class="kw">pub struct </span>HypervisorFeatureSupportRequest;
 
 <span class="kw">impl </span>From&lt;HypervisorFeatureSupportRequest&gt; <span class="kw">for </span>u64 {
@@ -1246,19 +1248,19 @@
 }
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>HypervisorFeatureSupportResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO: u64 = <span class="number">0x081</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != HYPERVISOR_FEATURE_SUPPORT_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid Hypervisor Feature Support response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid Hypervisor Feature Support response"</span>);
         }
         HypervisorFeatureSupportResponse::from_bits(msr_value &gt;&gt; <span class="number">12</span>)
-            .ok_or(<span class="string">&quot;invalid Hypervisor Feature Support bitmap&quot;</span>)
+            .ok_or(<span class="string">"invalid Hypervisor Feature Support bitmap"</span>)
     }
 }
 
 <span class="doccomment">/// Requests a bitmap specifying the features supported by the hypervisor.
-</span><span class="kw">pub fn </span>get_hypervisor_feature_support() -&gt; <span class="prelude-ty">Result</span>&lt;HypervisorFeatureSupportResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>get_hypervisor_feature_support() -&gt; <span class="prelude-ty">Result</span>&lt;HypervisorFeatureSupportResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>request = HypervisorFeatureSupportRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
@@ -1275,17 +1277,17 @@
 <span class="kw">pub struct </span>ApResetHoldResponse(bool);
 
 <span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>ApResetHoldResponse {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
-    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">const </span>AP_RESET_HOLD_RESPONSE_INFO: u64 = <span class="number">0x007</span>;
         <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != AP_RESET_HOLD_RESPONSE_INFO {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid AP Reset Hold response&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"value is not a valid AP Reset Hold response"</span>);
         }
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>((msr_value &amp; !GHCB_INFO_MASK) &gt; <span class="number">0</span>))
     }
 }
 
-<span class="kw">pub fn </span>ap_reset_hold() -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">pub fn </span>ap_reset_hold() -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>request = ApResetHoldRequest;
     write_protocol_msr_and_exit(request.into());
     <span class="kw">let </span>response: ApResetHoldResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
@@ -1312,7 +1314,7 @@
 <span class="kw">impl </span>From&lt;TerminationRequest&gt; <span class="kw">for </span>u64 {
     <span class="kw">fn </span>from(request: TerminationRequest) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>info = <span class="number">0x100</span>;
-        <span class="comment">// We use the default reason set (0x0), so don&#39;t set any value for bits 12-15.
+        <span class="comment">// We use the default reason set (0x0), so don't set any value for bits 12-15.
         </span><span class="kw">let </span>reason = (request.reason <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>;
         info | reason
     }
@@ -1445,7 +1447,7 @@
         <span class="kw">let </span>invalid = <span class="number">5u64 </span>| (enc_bit &lt;&lt; <span class="number">24</span>) | (min_version &lt;&lt; <span class="number">32</span>) | (max_version &lt;&lt; <span class="number">48</span>);
         <span class="kw">let </span>valid = <span class="number">1u64 </span>| (enc_bit &lt;&lt; <span class="number">24</span>) | (min_version &lt;&lt; <span class="number">32</span>) | (max_version &lt;&lt; <span class="number">48</span>);
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SevInfoResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>correct: SevInfoResponse = valid.try_into().unwrap();
@@ -1470,7 +1472,7 @@
         <span class="kw">let </span>invalid = <span class="number">5u64 </span>| ((value <span class="kw">as </span>u64) &lt;&lt; <span class="number">32</span>) | ((register <span class="kw">as </span>u64) &lt;&lt; <span class="number">25</span>);
         <span class="kw">let </span>valid = <span class="number">5u64 </span>| ((value <span class="kw">as </span>u64) &lt;&lt; <span class="number">32</span>) | ((register <span class="kw">as </span>u64) &lt;&lt; <span class="number">30</span>);
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;CpuidResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;CpuidResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>correct: CpuidResponse = valid.try_into().unwrap();
@@ -1490,7 +1492,7 @@
         <span class="kw">let </span>invalid = <span class="number">0xFu64 </span>| page;
         <span class="kw">let </span>valid = <span class="number">0x11u64 </span>| page;
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;PreferredGhcbGpaResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;PreferredGhcbGpaResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>correct: PreferredGhcbGpaResponse = valid.try_into().unwrap();
@@ -1543,10 +1545,10 @@
         <span class="kw">let </span>invalid_info = <span class="number">0x16u64 </span>| (error_code &lt;&lt; <span class="number">32</span>);
         <span class="kw">let </span>valid = <span class="number">0x15u64 </span>| (error_code &lt;&lt; <span class="number">32</span>);
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SnpPageStateChangeResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; =
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SnpPageStateChangeResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; =
             invalid_misaligned_data.try_into();
         <span class="macro">assert!</span>(error.is_err());
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SnpPageStateChangeResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid_info.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;SnpPageStateChangeResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid_info.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>correct: SnpPageStateChangeResponse = valid.try_into().unwrap();
@@ -1566,7 +1568,7 @@
         <span class="kw">let </span>invalid = <span class="number">81u64 </span>| (expected.bits() &lt;&lt; <span class="number">12</span>);
         <span class="kw">let </span>valid = <span class="number">0x81u64 </span>| (expected.bits() &lt;&lt; <span class="number">12</span>);
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;HypervisorFeatureSupportResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;HypervisorFeatureSupportResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>correct: HypervisorFeatureSupportResponse = valid.try_into().unwrap();
@@ -1592,7 +1594,7 @@
         <span class="kw">let </span>failure = <span class="number">0x007u64</span>;
         <span class="kw">let </span>success = <span class="number">0x1234007u64</span>;
 
-        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;ApResetHoldResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;ApResetHoldResponse, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; = invalid.try_into();
         <span class="macro">assert!</span>(error.is_err());
 
         <span class="kw">let </span>failure: ApResetHoldResponse = failure.try_into().unwrap();

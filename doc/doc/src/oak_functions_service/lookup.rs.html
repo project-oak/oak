@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_service/src/lookup.rs`."><title>lookup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_service/src/lookup.rs`."><title>lookup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_functions_service/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -381,14 +383,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -435,7 +437,7 @@
     ///
     /// Note, if new data contains a key already present in the existing data,
     /// calling extend overwrites the value.
-    </span><span class="kw">fn </span>extend&lt;<span class="lifetime">&#39;a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8])&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
+    </span><span class="kw">fn </span>extend&lt;<span class="lifetime">'a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8])&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
         <span class="self">self</span>.state = BuilderState::Extending;
         <span class="self">self</span>.data.extend(new_data)
     }
@@ -445,12 +447,12 @@
     }
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">mod </span>mutexes {
     <span class="kw">pub use </span>parking_lot::{Mutex, RwLock};
 }
 
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;std&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"std"</span>))]
 </span><span class="kw">mod </span>mutexes {
     <span class="kw">pub use </span>spinning_top::{RwSpinlock <span class="kw">as </span>RwLock, Spinlock <span class="kw">as </span>Mutex};
 }
@@ -506,16 +508,16 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>extend_next_lookup_data&lt;<span class="lifetime">&#39;a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8])&gt;&gt;(
+    <span class="kw">pub fn </span>extend_next_lookup_data&lt;<span class="lifetime">'a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8])&gt;&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         new_data: T,
     ) {
-        <span class="macro">info!</span>(<span class="string">&quot;Start extending next lookup data&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Start extending next lookup data"</span>);
         {
             <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
             data_builder.extend(new_data);
         }
-        <span class="macro">info!</span>(<span class="string">&quot;Finish extending next lookup data&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Finish extending next lookup data"</span>);
     }
 
     <span class="comment">// Finish building the next lookup data and replace the current lookup data in
@@ -523,7 +525,7 @@
     </span><span class="kw">pub fn </span>finish_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span>data_len;
         <span class="kw">let </span>next_data_len;
-        <span class="macro">info!</span>(<span class="string">&quot;Start replacing lookup data by next lookup data&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Start replacing lookup data by next lookup data"</span>);
         {
             <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
             <span class="kw">let </span>next_data = data_builder.build();
@@ -533,19 +535,19 @@
             <span class="kw-2">*</span>data = Arc::new(next_data);
         }
         <span class="macro">info!</span>(
-            <span class="string">&quot;Finished replacing lookup data with len {} by next lookup data with len {}&quot;</span>,
+            <span class="string">"Finished replacing lookup data with len {} by next lookup data with len {}"</span>,
             data_len, next_data_len
         );
     }
 
     <span class="kw">pub fn </span>abort_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">info!</span>(<span class="string">&quot;Start aborting next lookup data&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Start aborting next lookup data"</span>);
         {
             <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
             <span class="comment">// Clear the builder throwing away the intermediate result.
             </span><span class="kw">let _ </span>= data_builder.build();
         }
-        <span class="macro">info!</span>(<span class="string">&quot;Finish aborting next lookup data&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">"Finish aborting next lookup data"</span>);
     }
 
     <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current
@@ -557,7 +559,7 @@
             keys = data.len();
             LookupData::new(data, <span class="self">self</span>.logger.clone())
         };
-        <span class="macro">info!</span>(<span class="string">&quot;Created lookup data with len: {}&quot;</span>, keys);
+        <span class="macro">info!</span>(<span class="string">"Created lookup data with len: {}"</span>, keys);
         data
     }
 }
@@ -613,7 +615,7 @@
 <span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or
 /// formats it as a numeric vector of bytes otherwise.
 </span><span class="kw">pub fn </span>format_bytes(v: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    alloc::str::from_utf8(v).map(|s| s.to_string()).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, v))
+    alloc::str::from_utf8(v).map(|s| s.to_string()).unwrap_or_else(|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">"{:?}"</span>, v))
 }
 
 <span class="attr">#[cfg(test)]
@@ -734,9 +736,9 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_format_bytes() {
         <span class="comment">// Valid UTF-8 string.
-        </span><span class="macro">assert_eq!</span>(<span class="string">&quot;🚀oak⭐&quot;</span>, format_bytes(<span class="string">&quot;🚀oak⭐&quot;</span>.as_bytes()));
+        </span><span class="macro">assert_eq!</span>(<span class="string">"🚀oak⭐"</span>, format_bytes(<span class="string">"🚀oak⭐"</span>.as_bytes()));
         <span class="comment">// Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
-        </span><span class="macro">assert_eq!</span>(<span class="string">&quot;[0, 159, 146, 150]&quot;</span>, format_bytes(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">159</span>, <span class="number">146</span>, <span class="number">150</span>]));
+        </span><span class="macro">assert_eq!</span>(<span class="string">"[0, 159, 146, 150]"</span>, format_bytes(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">159</span>, <span class="number">146</span>, <span class="number">150</span>]));
     }
 
     <span class="comment">// Create test data with size distinct keys between inclusive start and
@@ -745,7 +747,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>vec: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; =
             Vec::with_capacity((end - start).try_into().unwrap());
         <span class="kw">for </span>i <span class="kw">in </span>start..end {
-            vec.push((<span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).into_bytes(), <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).into_bytes()));
+            vec.push((<span class="macro">format!</span>(<span class="string">"key{}"</span>, i).into_bytes(), <span class="macro">format!</span>(<span class="string">"value{}"</span>, i).into_bytes()));
         }
         vec
     }

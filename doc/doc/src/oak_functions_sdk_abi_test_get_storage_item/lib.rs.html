@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_sdk/tests/lookup_module/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_sdk_abi_test_get_storage_item" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_sdk/tests/lookup_module/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_sdk_abi_test_get_storage_item" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_functions_sdk_abi_test_get_storage_item/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -141,14 +143,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -164,39 +166,39 @@
 
 <span class="kw">type </span>TestFn = <span class="kw">fn</span>(<span class="kw-2">&amp;</span>str) -&gt; ();
 
-<span class="kw">struct </span>TestManager&lt;<span class="lifetime">&#39;a</span>&gt; {
-    tests: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str, TestFn&gt;,
+<span class="kw">struct </span>TestManager&lt;<span class="lifetime">'a</span>&gt; {
+    tests: HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str, TestFn&gt;,
 }
 
-<span class="kw">impl </span>TestManager&lt;<span class="lifetime">&#39;static</span>&gt; {
+<span class="kw">impl </span>TestManager&lt;<span class="lifetime">'static</span>&gt; {
     <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tests: <span class="macro">hashmap! </span>[
-                <span class="string">&quot;ReadWrite&quot; </span>=&gt; <span class="self">Self</span>::test_read_write <span class="kw">as </span>TestFn,
-                <span class="string">&quot;DoubleRead&quot; </span>=&gt; <span class="self">Self</span>::test_double_read <span class="kw">as </span>TestFn,
-                <span class="string">&quot;DoubleWrite&quot; </span>=&gt; <span class="self">Self</span>::test_double_write <span class="kw">as </span>TestFn,
-                <span class="string">&quot;WriteLog&quot; </span>=&gt; <span class="self">Self</span>::test_write_log <span class="kw">as </span>TestFn,
-                <span class="string">&quot;StorageGet&quot; </span>=&gt; <span class="self">Self</span>::test_storage_get <span class="kw">as </span>TestFn,
-                <span class="string">&quot;StorageGetItemNotFound&quot; </span>=&gt; <span class="self">Self</span>::test_storage_get_item_not_found <span class="kw">as </span>TestFn,
-                <span class="string">&quot;LargeKey&quot; </span>=&gt; <span class="self">Self</span>::test_storage_get_item_huge_key <span class="kw">as </span>TestFn,
+                <span class="string">"ReadWrite" </span>=&gt; <span class="self">Self</span>::test_read_write <span class="kw">as </span>TestFn,
+                <span class="string">"DoubleRead" </span>=&gt; <span class="self">Self</span>::test_double_read <span class="kw">as </span>TestFn,
+                <span class="string">"DoubleWrite" </span>=&gt; <span class="self">Self</span>::test_double_write <span class="kw">as </span>TestFn,
+                <span class="string">"WriteLog" </span>=&gt; <span class="self">Self</span>::test_write_log <span class="kw">as </span>TestFn,
+                <span class="string">"StorageGet" </span>=&gt; <span class="self">Self</span>::test_storage_get <span class="kw">as </span>TestFn,
+                <span class="string">"StorageGetItemNotFound" </span>=&gt; <span class="self">Self</span>::test_storage_get_item_not_found <span class="kw">as </span>TestFn,
+                <span class="string">"LargeKey" </span>=&gt; <span class="self">Self</span>::test_storage_get_item_huge_key <span class="kw">as </span>TestFn,
             ],
         }
     }
 
     <span class="kw">fn </span>run_test(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span>request = oak_functions_sdk::read_request()
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t read request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>test_name = String::from_utf8(request).context(<span class="string">&quot;couldn&#39;t parse request&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"couldn't read request: {:?}"</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>test_name = String::from_utf8(request).context(<span class="string">"couldn't parse request"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>test = <span class="self">self
             </span>.tests
             .get(<span class="kw-2">&amp;</span>test_name <span class="kw">as </span><span class="kw-2">&amp;</span>str)
-            .ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t find test: {}&quot;</span>, <span class="kw-2">&amp;</span>test_name))<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"couldn't find test: {}"</span>, <span class="kw-2">&amp;</span>test_name))<span class="question-mark">?</span>;
         test(<span class="kw-2">&amp;</span>test_name);
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>test_read_write(_request: <span class="kw-2">&amp;</span>str) {
-        <span class="kw">let </span>result = oak_functions_sdk::write_response(<span class="string">b&quot;ReadWriteResponse&quot;</span>);
+        <span class="kw">let </span>result = oak_functions_sdk::write_response(<span class="string">b"ReadWriteResponse"</span>);
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
     }
 
@@ -204,10 +206,10 @@
     /// the same value.
     </span><span class="kw">fn </span>test_double_read(first_request_body: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>second_read_request =
-            oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read second request&quot;</span>);
+            oak_functions_sdk::read_request().expect(<span class="string">"couldn't read second request"</span>);
         <span class="macro">assert_eq!</span>(second_read_request, first_request_body.as_bytes());
         <span class="comment">// If assert_eq fails then run_test will return with an empty response body.
-        </span>oak_functions_sdk::write_response(<span class="string">b&quot;DoubleReadResponse&quot;</span>).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
+        </span>oak_functions_sdk::write_response(<span class="string">b"DoubleReadResponse"</span>).expect(<span class="string">"couldn't write response"</span>)
     }
 
     <span class="doccomment">/// Tests that multiple calls to [`oak_functions_sdk::write_response`] will
@@ -215,17 +217,17 @@
     /// in the integration test.
     </span><span class="kw">fn </span>test_double_write(_request: <span class="kw-2">&amp;</span>str) {
         <span class="comment">// First response contains a different value.
-        </span>oak_functions_sdk::write_response(<span class="string">b&quot;FirstResponseInDoubleWrite&quot;</span>)
-            .expect(<span class="string">&quot;couldn&#39;t write first response&quot;</span>);
-        oak_functions_sdk::write_response(<span class="string">b&quot;DoubleWriteResponse&quot;</span>)
-            .expect(<span class="string">&quot;couldn&#39;t write second response&quot;</span>);
+        </span>oak_functions_sdk::write_response(<span class="string">b"FirstResponseInDoubleWrite"</span>)
+            .expect(<span class="string">"couldn't write first response"</span>);
+        oak_functions_sdk::write_response(<span class="string">b"DoubleWriteResponse"</span>)
+            .expect(<span class="string">"couldn't write second response"</span>);
     }
 
     <span class="comment">// TODO(#2417): Test logging of [`oak_functions_sdk::write_log_message`]
     </span><span class="kw">fn </span>test_write_log(request: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>result = oak_functions_sdk::write_log_message(request);
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
-        <span class="kw">let </span>result = oak_functions_sdk::write_response(<span class="string">b&quot;WriteLogResponse&quot;</span>);
+        <span class="kw">let </span>result = oak_functions_sdk::write_response(<span class="string">b"WriteLogResponse"</span>);
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
     }
 
@@ -238,7 +240,7 @@
         <span class="kw">let </span>value = value.unwrap();
         <span class="macro">assert_matches!</span>(value, <span class="prelude-val">Some</span>(<span class="kw">_</span>));
 
-        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value.unwrap()).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
+        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value.unwrap()).expect(<span class="string">"couldn't write response"</span>);
     }
 
     <span class="doccomment">/// Tests [`oak_functions_sdk::storage_get_item`] when the key is not in the
@@ -248,15 +250,15 @@
     </span><span class="kw">fn </span>test_storage_get_item_not_found(key: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>value = oak_functions_sdk::storage_get_item(key.as_bytes());
         <span class="kw">let </span>response_msg = <span class="kw">match </span>value {
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="string">b&quot;No item found&quot;</span>.to_vec(),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="string">b"No item found"</span>.to_vec(),
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>value)) =&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>msg = <span class="string">b&quot;Unexpected item found: value: &quot;</span>.to_vec();
+                <span class="kw">let </span><span class="kw-2">mut </span>msg = <span class="string">b"Unexpected item found: value: "</span>.to_vec();
                 msg.append(<span class="kw-2">&amp;mut </span>value);
                 msg
             }
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="string">b&quot;Unexpected error&quot;</span>.to_vec(),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="string">b"Unexpected error"</span>.to_vec(),
         };
-        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response_msg).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
+        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response_msg).expect(<span class="string">"couldn't write response"</span>)
     }
 
     <span class="doccomment">/// Tests [`oak_functions_sdk::storage_get_item`] when the key is large. The
@@ -266,16 +268,16 @@
         // test.
         </span><span class="kw">let </span>key: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">42u8</span>; <span class="number">1 </span>&lt;&lt; <span class="number">20</span>];
         <span class="kw">let </span>value = oak_functions_sdk::storage_get_item(<span class="kw-2">&amp;</span>key)
-            .expect(<span class="string">&quot;couldn&#39;t receive response&quot;</span>)
-            .expect(<span class="string">&quot;no value found&quot;</span>);
+            .expect(<span class="string">"couldn't receive response"</span>)
+            .expect(<span class="string">"no value found"</span>);
 
-        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
+        oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value).expect(<span class="string">"couldn't write response"</span>);
     }
 }
 
 <span class="attr">#[cfg_attr(not(test), no_mangle)]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
+</span><span class="kw">pub extern </span><span class="string">"C" </span><span class="kw">fn </span>main() {
     <span class="kw">let </span>test_manager = TestManager::new();
-    test_manager.run_test().expect(<span class="string">&quot;couldn&#39;t run test&quot;</span>);
+    test_manager.run_test().expect(<span class="string">"couldn't run test"</span>);
 }
 </code></pre></div></section></main></body></html>

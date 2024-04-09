@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/io.rs`."><title>io.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/io.rs`."><title>io.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_sev_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -291,14 +293,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -319,7 +321,7 @@
 ///
 /// The typical usage is to either create raw instances that peform direct IO on
 /// the ports, or instances that use the GHCB IOIO protocol.
-</span><span class="kw">pub trait </span>IoPortFactory&lt;<span class="lifetime">&#39;a</span>, T, R: PortReader&lt;T&gt; + <span class="lifetime">&#39;a</span>, W: PortWriter&lt;T&gt; + <span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub trait </span>IoPortFactory&lt;<span class="lifetime">'a</span>, T, R: PortReader&lt;T&gt; + <span class="lifetime">'a</span>, W: PortWriter&lt;T&gt; + <span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Creates a new IO port reader instance.
     </span><span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; R;
     <span class="doccomment">/// Creates a new IO port writer instance.
@@ -334,7 +336,7 @@
     ///
     /// This function is unsafe because port access could have unsafe
     /// side-effects.
-    </span><span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+    </span><span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
 }
 
 <span class="doccomment">/// Writer that can be used to write values to a port.
@@ -345,123 +347,123 @@
     ///
     /// This function is unsafe because port access could have unsafe
     /// side-effects.
-    </span><span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+    </span><span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
 }
 
 <span class="doccomment">/// A factory for creating port readers and writers that use the GHCB IOIO
 /// protocol.
 </span><span class="kw">pub struct </span>GhcbIoFactory&lt;
-    <span class="lifetime">&#39;a</span>,
-    R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    <span class="lifetime">'a</span>,
+    R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 &gt; {
-    ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Mutex&lt;R, P&gt;,
+    ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Mutex&lt;R, P&gt;,
     _phantom: PhantomData&lt;G&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; GhcbIoFactory&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; GhcbIoFactory&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">pub fn </span>new(ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Mutex&lt;R, P&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Mutex&lt;R, P&gt;) -&gt; <span class="self">Self </span>{
         GhcbIoFactory { ghcb_protocol, _phantom: PhantomData }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T, R, P, G&gt; IoPortFactory&lt;<span class="lifetime">&#39;a</span>, T, GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;, GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;&gt;
-    <span class="kw">for </span>GhcbIoFactory&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T, R, P, G&gt; IoPortFactory&lt;<span class="lifetime">'a</span>, T, GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;, GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;&gt;
+    <span class="kw">for </span>GhcbIoFactory&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
-    GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
+    GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
 {
-    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; {
+    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt; {
         GhcbIoPort { ghcb_protocol: <span class="self">self</span>.ghcb_protocol, port, _phantom: PhantomData }
     }
 
-    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; {
+    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt; {
         GhcbIoPort { ghcb_protocol: <span class="self">self</span>.ghcb_protocol, port, _phantom: PhantomData }
     }
 }
 
 <span class="doccomment">/// GHCB-based wrapper for a single IO port.
 </span><span class="kw">pub struct </span>GhcbIoPort&lt;
-    <span class="lifetime">&#39;a</span>,
-    R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    <span class="lifetime">'a</span>,
+    R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 &gt; {
-    ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Mutex&lt;R, P&gt;,
+    ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Mutex&lt;R, P&gt;,
     port: u16,
     _phantom: PhantomData&lt;G&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortReader&lt;u8&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortReader&lt;u8&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_read_u8(<span class="self">self</span>.port)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortReader&lt;u16&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortReader&lt;u16&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_read_u16(<span class="self">self</span>.port)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortReader&lt;u32&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortReader&lt;u32&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_read_u32(<span class="self">self</span>.port)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortWriter&lt;u8&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortWriter&lt;u8&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u8(<span class="self">self</span>.port, value)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortWriter&lt;u16&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortWriter&lt;u16&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u16(<span class="self">self</span>.port, value)
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt; PortWriter&lt;u32&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">&#39;a</span>, R, P, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R, P, G&gt; PortWriter&lt;u32&gt; <span class="kw">for </span>GhcbIoPort&lt;<span class="lifetime">'a</span>, R, P, G&gt;
 <span class="kw">where
-    </span>R: RawMutex + <span class="lifetime">&#39;a</span>,
-    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; + <span class="lifetime">&#39;a </span>+ <span class="question-mark">?</span>Sized,
-    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">&#39;a</span>,
+    </span>R: RawMutex + <span class="lifetime">'a</span>,
+    P: AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; + <span class="lifetime">'a </span>+ <span class="question-mark">?</span>Sized,
+    G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized + <span class="lifetime">'a</span>,
 {
-    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb_protocol.lock().as_mut().io_write_u32(<span class="self">self</span>.port, value)
     }
 }
@@ -470,9 +472,9 @@
 /// operations.
 </span><span class="kw">pub struct </span>RawIoPortFactory;
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">&#39;a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>RawIoPortFactory
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">'a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>RawIoPortFactory
 <span class="kw">where
-    </span>T: <span class="lifetime">&#39;a</span>,
+    </span>T: <span class="lifetime">'a</span>,
     Port&lt;T&gt;: PortReader&lt;T&gt;,
     Port&lt;T&gt;: PortWriter&lt;T&gt;,
 {
@@ -489,7 +491,7 @@
 <span class="kw">where
     </span>T: PortRead,
 {
-    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.read())
     }
 }
@@ -498,7 +500,7 @@
 <span class="kw">where
     </span>T: PortWrite,
 {
-    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.write(value);
         <span class="prelude-val">Ok</span>(())
     }
@@ -506,13 +508,13 @@
 
 <span class="doccomment">/// An IO port reader and writer implementation that uses the GHCB IOIO
 /// protocol, static references and a spinlock for synchronisation.
-</span><span class="kw">pub type </span>StaticGhcbIoPort = GhcbIoPort&lt;<span class="lifetime">&#39;static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;, Ghcb&gt;;
+</span><span class="kw">pub type </span>StaticGhcbIoPort = GhcbIoPort&lt;<span class="lifetime">'static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">'static</span>, Ghcb&gt;, Ghcb&gt;;
 
 <span class="doccomment">/// Wrapper implementation that can either create IO ports that perform direct
 /// IO or IO ports that use the GHCB IOIO protocol.
 </span><span class="kw">pub enum </span>PortFactoryWrapper {
     Raw(RawIoPortFactory),
-    Ghcb(GhcbIoFactory&lt;<span class="lifetime">&#39;static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;, Ghcb&gt;),
+    Ghcb(GhcbIoFactory&lt;<span class="lifetime">'static</span>, RawSpinlock, GhcbProtocol&lt;<span class="lifetime">'static</span>, Ghcb&gt;, Ghcb&gt;),
 }
 
 <span class="kw">impl </span>PortFactoryWrapper {
@@ -520,13 +522,13 @@
         PortFactoryWrapper::Raw(RawIoPortFactory)
     }
 
-    <span class="kw">pub fn </span>new_ghcb(ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new_ghcb(ghcb_protocol: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">'static</span>, Ghcb&gt;&gt;) -&gt; <span class="self">Self </span>{
         PortFactoryWrapper::Ghcb(GhcbIoFactory::new(ghcb_protocol))
     }
 }
-<span class="kw">impl</span>&lt;T&gt; IoPortFactory&lt;<span class="lifetime">&#39;static</span>, T, PortWrapper&lt;T&gt;, PortWrapper&lt;T&gt;&gt; <span class="kw">for </span>PortFactoryWrapper
+<span class="kw">impl</span>&lt;T&gt; IoPortFactory&lt;<span class="lifetime">'static</span>, T, PortWrapper&lt;T&gt;, PortWrapper&lt;T&gt;&gt; <span class="kw">for </span>PortFactoryWrapper
 <span class="kw">where
-    </span>T: <span class="lifetime">&#39;static</span>,
+    </span>T: <span class="lifetime">'static</span>,
     PortWrapper&lt;T&gt;: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
     Port&lt;T&gt;: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
     StaticGhcbIoPort: PortReader&lt;T&gt; + PortWriter&lt;T&gt;,
@@ -558,7 +560,7 @@
     </span>Port&lt;T&gt;: PortReader&lt;T&gt;,
     StaticGhcbIoPort: PortReader&lt;T&gt;,
 {
-    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             PortWrapper::Raw(port) =&gt; port.try_read(),
             PortWrapper::Ghcb(port) =&gt; port.try_read(),
@@ -571,7 +573,7 @@
     </span>Port&lt;T&gt;: PortWriter&lt;T&gt;,
     StaticGhcbIoPort: PortWriter&lt;T&gt;,
 {
-    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             PortWrapper::Raw(port) =&gt; port.try_write(value),
             PortWrapper::Ghcb(port) =&gt; port.try_write(value),

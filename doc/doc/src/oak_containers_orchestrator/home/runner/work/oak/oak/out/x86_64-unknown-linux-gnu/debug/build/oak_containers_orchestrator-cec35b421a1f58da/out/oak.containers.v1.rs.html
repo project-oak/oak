@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/work/oak/oak/./out/x86_64-unknown-linux-gnu/debug/build/oak_containers_orchestrator-cec35b421a1f58da/out/oak.containers.v1.rs`."><title>oak.containers.v1.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../../../../../../../../../" data-static-root-path="../../../../../../../../../../../../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../../../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../../../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../../../../../../../../src-files.js"></script><script defer src="../../../../../../../../../../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../../../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/work/oak/oak/./out/x86_64-unknown-linux-gnu/debug/build/oak_containers_orchestrator-cec35b421a1f58da/out/oak.containers.v1.rs`."><title>oak.containers.v1.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../../../../../../../../../" data-static-root-path="../../../../../../../../../../../../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../../../../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../../../../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../../../../../../../../src-files.js"></script><script defer src="../../../../../../../../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../../../../../../../../oak_containers_orchestrator/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../../../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -906,11 +908,11 @@
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>DeriveSessionKeysRequest {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;KeyOrigin&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"KeyOrigin"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>key_origin: i32,
     <span class="doccomment">/// Ephemeral Diffie-Hellman client public key that is needed to derive session
     /// keys.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>serialized_encapsulated_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -918,21 +920,21 @@
 </span><span class="kw">pub struct </span>DeriveSessionKeysResponse {
     <span class="doccomment">/// Session keys for decrypting client requests and encrypting enclave
     /// responses.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>session_keys: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::SessionKeys&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SignRequest {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;KeyOrigin&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"KeyOrigin"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>key_origin: i32,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>message: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SignResponse {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>signature: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::Signature&gt;,
 }
 <span class="doccomment">/// Choice between a key generated by the enclave instance and the key
@@ -949,19 +951,19 @@
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            KeyOrigin::Unspecified =&gt; <span class="string">&quot;KEY_ORIGIN_UNSPECIFIED&quot;</span>,
-            KeyOrigin::Instance =&gt; <span class="string">&quot;INSTANCE&quot;</span>,
-            KeyOrigin::Group =&gt; <span class="string">&quot;GROUP&quot;</span>,
+            KeyOrigin::Unspecified =&gt; <span class="string">"KEY_ORIGIN_UNSPECIFIED"</span>,
+            KeyOrigin::Instance =&gt; <span class="string">"INSTANCE"</span>,
+            KeyOrigin::Group =&gt; <span class="string">"GROUP"</span>,
         }
     }
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
     </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
         <span class="kw">match </span>value {
-            <span class="string">&quot;KEY_ORIGIN_UNSPECIFIED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unspecified),
-            <span class="string">&quot;INSTANCE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Instance),
-            <span class="string">&quot;GROUP&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Group),
+            <span class="string">"KEY_ORIGIN_UNSPECIFIED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unspecified),
+            <span class="string">"INSTANCE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Instance),
+            <span class="string">"GROUP" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Group),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -994,7 +996,7 @@
     <span class="kw">where
         </span>T: tonic::client::GrpcService&lt;tonic::body::BoxBody&gt;,
         T::Error: Into&lt;StdError&gt;,
-        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">&#39;static</span>,
+        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">'static</span>,
         &lt;T::ResponseBody <span class="kw">as </span>Body&gt;::Error: Into&lt;StdError&gt; + Send,
     {
         <span class="kw">pub fn </span>new(inner: T) -&gt; <span class="self">Self </span>{
@@ -1070,19 +1072,19 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.v1.OrchestratorCrypto/DeriveSessionKeys&quot;</span>,
+                <span class="string">"/oak.containers.v1.OrchestratorCrypto/DeriveSessionKeys"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        <span class="string">&quot;oak.containers.v1.OrchestratorCrypto&quot;</span>,
-                        <span class="string">&quot;DeriveSessionKeys&quot;</span>,
+                        <span class="string">"oak.containers.v1.OrchestratorCrypto"</span>,
+                        <span class="string">"DeriveSessionKeys"</span>,
                     ),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
@@ -1098,16 +1100,16 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.v1.OrchestratorCrypto/Sign&quot;</span>,
+                <span class="string">"/oak.containers.v1.OrchestratorCrypto/Sign"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new(<span class="string">&quot;oak.containers.v1.OrchestratorCrypto&quot;</span>, <span class="string">&quot;Sign&quot;</span>));
+                .insert(GrpcMethod::new(<span class="string">"oak.containers.v1.OrchestratorCrypto"</span>, <span class="string">"Sign"</span>));
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
     }
@@ -1118,7 +1120,7 @@
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with OrchestratorCryptoServer.
     </span><span class="attr">#[async_trait]
-    </span><span class="kw">pub trait </span>OrchestratorCrypto: Send + Sync + <span class="lifetime">&#39;static </span>{
+    </span><span class="kw">pub trait </span>OrchestratorCrypto: Send + Sync + <span class="lifetime">'static </span>{
         <span class="doccomment">/// Derives session keys for decrypting client requests and encrypting enclave
         /// responses.
         </span><span class="kw">async fn </span>derive_session_keys(
@@ -1202,22 +1204,22 @@
     <span class="kw">impl</span>&lt;T, B&gt; tonic::codegen::Service&lt;http::Request&lt;B&gt;&gt; <span class="kw">for </span>OrchestratorCryptoServer&lt;T&gt;
     <span class="kw">where
         </span>T: OrchestratorCrypto,
-        B: Body + Send + <span class="lifetime">&#39;static</span>,
-        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">&#39;static</span>,
+        B: Body + Send + <span class="lifetime">'static</span>,
+        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">type </span>Response = http::Response&lt;tonic::body::BoxBody&gt;;
         <span class="kw">type </span>Error = std::convert::Infallible;
         <span class="kw">type </span>Future = BoxFuture&lt;<span class="self">Self</span>::Response, <span class="self">Self</span>::Error&gt;;
         <span class="kw">fn </span>poll_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;,
         ) -&gt; Poll&lt;std::result::Result&lt;(), <span class="self">Self</span>::Error&gt;&gt; {
             Poll::Ready(<span class="prelude-val">Ok</span>(()))
         }
         <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: http::Request&lt;B&gt;) -&gt; <span class="self">Self</span>::Future {
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="kw">match </span>req.uri().path() {
-                <span class="string">&quot;/oak.containers.v1.OrchestratorCrypto/DeriveSessionKeys&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.v1.OrchestratorCrypto/DeriveSessionKeys" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>DeriveSessionKeysSvc&lt;T: OrchestratorCrypto&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;
@@ -1267,7 +1269,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.v1.OrchestratorCrypto/Sign&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.v1.OrchestratorCrypto/Sign" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>SignSvc&lt;T: OrchestratorCrypto&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;
@@ -1317,8 +1319,8 @@
                         <span class="prelude-val">Ok</span>(
                             http::Response::builder()
                                 .status(<span class="number">200</span>)
-                                .header(<span class="string">&quot;grpc-status&quot;</span>, <span class="string">&quot;12&quot;</span>)
-                                .header(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/grpc&quot;</span>)
+                                .header(<span class="string">"grpc-status"</span>, <span class="string">"12"</span>)
+                                .header(<span class="string">"content-type"</span>, <span class="string">"application/grpc"</span>)
                                 .body(empty_body())
                                 .unwrap(),
                         )
@@ -1345,25 +1347,25 @@
         }
     }
     <span class="kw">impl</span>&lt;T: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>_Inner&lt;T&gt; {
-        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{:?}"</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
     <span class="kw">impl</span>&lt;T: OrchestratorCrypto&gt; tonic::server::NamedService
     <span class="kw">for </span>OrchestratorCryptoServer&lt;T&gt; {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.v1.OrchestratorCrypto&quot;</span>;
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"oak.containers.v1.OrchestratorCrypto"</span>;
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetKeyProvisioningRoleResponse {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;KeyProvisioningRole&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"KeyProvisioningRole"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>role: i32,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetGroupKeysResponse {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>group_keys: ::core::option::Option&lt;
         <span class="kw">super</span>::<span class="kw">super</span>::key_provisioning::v1::GroupKeys,
     &gt;,
@@ -1380,19 +1382,19 @@
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            KeyProvisioningRole::Unspecified =&gt; <span class="string">&quot;KEY_PROVISIONING_ROLE_UNSPECIFIED&quot;</span>,
-            KeyProvisioningRole::Leader =&gt; <span class="string">&quot;LEADER&quot;</span>,
-            KeyProvisioningRole::Follower =&gt; <span class="string">&quot;FOLLOWER&quot;</span>,
+            KeyProvisioningRole::Unspecified =&gt; <span class="string">"KEY_PROVISIONING_ROLE_UNSPECIFIED"</span>,
+            KeyProvisioningRole::Leader =&gt; <span class="string">"LEADER"</span>,
+            KeyProvisioningRole::Follower =&gt; <span class="string">"FOLLOWER"</span>,
         }
     }
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
     </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
         <span class="kw">match </span>value {
-            <span class="string">&quot;KEY_PROVISIONING_ROLE_UNSPECIFIED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unspecified),
-            <span class="string">&quot;LEADER&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Leader),
-            <span class="string">&quot;FOLLOWER&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Follower),
+            <span class="string">"KEY_PROVISIONING_ROLE_UNSPECIFIED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unspecified),
+            <span class="string">"LEADER" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Leader),
+            <span class="string">"FOLLOWER" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Follower),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -1423,7 +1425,7 @@
     <span class="kw">where
         </span>T: tonic::client::GrpcService&lt;tonic::body::BoxBody&gt;,
         T::Error: Into&lt;StdError&gt;,
-        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">&#39;static</span>,
+        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">'static</span>,
         &lt;T::ResponseBody <span class="kw">as </span>Body&gt;::Error: Into&lt;StdError&gt; + Send,
     {
         <span class="kw">pub fn </span>new(inner: T) -&gt; <span class="self">Self </span>{
@@ -1503,19 +1505,19 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.v1.HostlibKeyProvisioning/GetKeyProvisioningRole&quot;</span>,
+                <span class="string">"/oak.containers.v1.HostlibKeyProvisioning/GetKeyProvisioningRole"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        <span class="string">&quot;oak.containers.v1.HostlibKeyProvisioning&quot;</span>,
-                        <span class="string">&quot;GetKeyProvisioningRole&quot;</span>,
+                        <span class="string">"oak.containers.v1.HostlibKeyProvisioning"</span>,
+                        <span class="string">"GetKeyProvisioningRole"</span>,
                     ),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
@@ -1540,19 +1542,19 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.v1.HostlibKeyProvisioning/GetGroupKeys&quot;</span>,
+                <span class="string">"/oak.containers.v1.HostlibKeyProvisioning/GetGroupKeys"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        <span class="string">&quot;oak.containers.v1.HostlibKeyProvisioning&quot;</span>,
-                        <span class="string">&quot;GetGroupKeys&quot;</span>,
+                        <span class="string">"oak.containers.v1.HostlibKeyProvisioning"</span>,
+                        <span class="string">"GetGroupKeys"</span>,
                     ),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
@@ -1565,7 +1567,7 @@
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with HostlibKeyProvisioningServer.
     </span><span class="attr">#[async_trait]
-    </span><span class="kw">pub trait </span>HostlibKeyProvisioning: Send + Sync + <span class="lifetime">&#39;static </span>{
+    </span><span class="kw">pub trait </span>HostlibKeyProvisioning: Send + Sync + <span class="lifetime">'static </span>{
         <span class="doccomment">/// Get the enclave role for Key Provisioning.
         /// Could be one of the following:
         ///   - Leader that generates group keys and distributes them.
@@ -1659,22 +1661,22 @@
     <span class="kw">for </span>HostlibKeyProvisioningServer&lt;T&gt;
     <span class="kw">where
         </span>T: HostlibKeyProvisioning,
-        B: Body + Send + <span class="lifetime">&#39;static</span>,
-        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">&#39;static</span>,
+        B: Body + Send + <span class="lifetime">'static</span>,
+        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">type </span>Response = http::Response&lt;tonic::body::BoxBody&gt;;
         <span class="kw">type </span>Error = std::convert::Infallible;
         <span class="kw">type </span>Future = BoxFuture&lt;<span class="self">Self</span>::Response, <span class="self">Self</span>::Error&gt;;
         <span class="kw">fn </span>poll_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;,
         ) -&gt; Poll&lt;std::result::Result&lt;(), <span class="self">Self</span>::Error&gt;&gt; {
             Poll::Ready(<span class="prelude-val">Ok</span>(()))
         }
         <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: http::Request&lt;B&gt;) -&gt; <span class="self">Self</span>::Future {
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="kw">match </span>req.uri().path() {
-                <span class="string">&quot;/oak.containers.v1.HostlibKeyProvisioning/GetKeyProvisioningRole&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.v1.HostlibKeyProvisioning/GetKeyProvisioningRole" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetKeyProvisioningRoleSvc&lt;T: HostlibKeyProvisioning&gt;(
                         <span class="kw">pub </span>Arc&lt;T&gt;,
@@ -1721,7 +1723,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.v1.HostlibKeyProvisioning/GetGroupKeys&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.v1.HostlibKeyProvisioning/GetGroupKeys" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetGroupKeysSvc&lt;T: HostlibKeyProvisioning&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: HostlibKeyProvisioning&gt; tonic::server::UnaryService&lt;()&gt;
@@ -1771,8 +1773,8 @@
                         <span class="prelude-val">Ok</span>(
                             http::Response::builder()
                                 .status(<span class="number">200</span>)
-                                .header(<span class="string">&quot;grpc-status&quot;</span>, <span class="string">&quot;12&quot;</span>)
-                                .header(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/grpc&quot;</span>)
+                                .header(<span class="string">"grpc-status"</span>, <span class="string">"12"</span>)
+                                .header(<span class="string">"content-type"</span>, <span class="string">"application/grpc"</span>)
                                 .body(empty_body())
                                 .unwrap(),
                         )
@@ -1799,13 +1801,13 @@
         }
     }
     <span class="kw">impl</span>&lt;T: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>_Inner&lt;T&gt; {
-        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{:?}"</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
     <span class="kw">impl</span>&lt;T: HostlibKeyProvisioning&gt; tonic::server::NamedService
     <span class="kw">for </span>HostlibKeyProvisioningServer&lt;T&gt; {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.v1.HostlibKeyProvisioning&quot;</span>;
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"oak.containers.v1.HostlibKeyProvisioning"</span>;
     }
 }
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/internal.rs`."><title>internal.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/internal.rs`."><title>internal.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../xtask/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -755,14 +757,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -786,11 +788,11 @@
 
 <span class="attr">#[derive(Parser, Clone)]
 </span><span class="kw">pub struct </span>Opt {
-    <span class="attr">#[arg(long, help = <span class="string">&quot;do not execute commands&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"do not execute commands"</span>)]
     </span><span class="kw">pub </span>dry_run: bool,
-    <span class="attr">#[arg(long, help = <span class="string">&quot;show logs of commands&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"show logs of commands"</span>)]
     </span><span class="kw">pub </span>logs: bool,
-    <span class="attr">#[arg(long, help = <span class="string">&quot;continue execution after error&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"continue execution after error"</span>)]
     </span><span class="kw">pub </span>keep_going: bool,
     <span class="attr">#[command(subcommand)]
     </span><span class="kw">pub </span>cmd: Command,
@@ -811,7 +813,7 @@
     RunCargoUdeps,
     RunCi,
     RunCargoClean,
-    <span class="attr">#[command(about = <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]
+    <span class="attr">#[command(about = <span class="string">"generate bash completion script to stdout"</span>)]
     </span>Completion(Completion),
 }
 
@@ -819,8 +821,8 @@
 </span><span class="kw">pub struct </span>Completion {
     <span class="attr">#[arg(
         long,
-        help = <span class="string">&quot;file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory&quot;</span>,
-        default_value = <span class="string">&quot;.xtask_bash_completion&quot;
+        help = <span class="string">"file name to write xtask_bash_completion with full path; defaults to .xtask_bash_completion in current directory"</span>,
+        default_value = <span class="string">".xtask_bash_completion"
     </span>)]
     </span><span class="kw">pub </span>file_name: PathBuf,
 }
@@ -830,10 +832,10 @@
 </span><span class="kw">pub struct </span>RunOakExampleOpt {
     <span class="attr">#[arg(
         long,
-        help = <span class="string">&quot;name of a single example to run (i.e. the Rust crate name of the Wasm module)&quot;
+        help = <span class="string">"name of a single example to run (i.e. the Rust crate name of the Wasm module)"
     </span>)]
     </span><span class="kw">pub </span>example_name: String,
-    <span class="attr">#[arg(long, help = <span class="string">&quot;path to the lookup data file&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"path to the lookup data file"</span>)]
     </span><span class="kw">pub </span>lookup_data_path: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
@@ -841,18 +843,18 @@
 </span><span class="kw">pub struct </span>BuildClient {
     <span class="attr">#[arg(
         long,
-        help = <span class="string">&quot;client variant: [all, rust, cpp, go, nodejs, none] [default: all]&quot;</span>,
-        default_value = <span class="string">&quot;all&quot;
+        help = <span class="string">"client variant: [all, rust, cpp, go, nodejs, none] [default: all]"</span>,
+        default_value = <span class="string">"all"
     </span>)]
     </span><span class="kw">pub </span>client_variant: String,
     <span class="attr">#[arg(
         long,
-        help = <span class="string">&quot;rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]&quot;
+        help = <span class="string">"rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]"
     </span>)]
     </span><span class="kw">pub </span>client_rust_toolchain: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="attr">#[arg(
         long,
-        help = <span class="string">&quot;rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]&quot;
+        help = <span class="string">"rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
     </span>)]
     </span><span class="kw">pub </span>client_rust_target: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
@@ -869,25 +871,25 @@
     <span class="kw">type </span><span class="prelude-val">Err </span>= String;
     <span class="kw">fn </span>from_str(variant: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
         <span class="kw">match </span>variant {
-            <span class="string">&quot;base&quot; </span>=&gt; <span class="prelude-val">Ok</span>(ServerVariant::Base),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t parse functions server variant {}&quot;</span>, variant)),
+            <span class="string">"base" </span>=&gt; <span class="prelude-val">Ok</span>(ServerVariant::Base),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"couldn't parse functions server variant {}"</span>, variant)),
         }
     }
 }
 
 <span class="kw">impl </span>ServerVariant {
     <span class="comment">// Get path to manifest for the variant.
-    </span><span class="kw">pub fn </span>path_to_manifest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>path_to_manifest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            ServerVariant::Base =&gt; <span class="string">&quot;./oak_functions_launcher&quot;</span>,
+            ServerVariant::Base =&gt; <span class="string">"./oak_functions_launcher"</span>,
         }
     }
 
     <span class="doccomment">/// Get path to the executable server binary for the server variant.
-    </span><span class="kw">pub fn </span>path_to_executable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>path_to_executable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             ServerVariant::Base =&gt; {
-                <span class="string">&quot;./target/x86_64-unknown-linux-musl/release/oak_functions_launcher&quot;
+                <span class="string">"./target/x86_64-unknown-linux-musl/release/oak_functions_launcher"
             </span>}
         }
     }
@@ -895,13 +897,13 @@
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
 </span><span class="kw">pub struct </span>RunTestsOpt {
-    <span class="attr">#[arg(long, help = <span class="string">&quot;Remove generated files after running tests for each crate&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"Remove generated files after running tests for each crate"</span>)]
     </span><span class="kw">pub </span>cleanup: bool,
 }
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
 </span><span class="kw">pub struct </span>RunCargoFuzz {
-    <span class="attr">#[arg(long, help = <span class="string">&quot;name of a specific fuzz-target. If not specified, runs all fuzz targets.&quot;</span>)]
+    <span class="attr">#[arg(long, help = <span class="string">"name of a specific fuzz-target. If not specified, runs all fuzz targets."</span>)]
     </span><span class="kw">pub </span>target_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Additional `libFuzzer` arguments passed through to the binary
     </span><span class="attr">#[arg(last(<span class="bool-val">true</span>))]
@@ -919,10 +921,10 @@
     <span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>dependencies: HashMap&lt;String, Dependency&gt;,
     <span class="attr">#[serde(default)]
-    #[serde(rename = <span class="string">&quot;dev-dependencies&quot;</span>)]
+    #[serde(rename = <span class="string">"dev-dependencies"</span>)]
     </span><span class="kw">pub </span>dev_dependencies: HashMap&lt;String, Dependency&gt;,
     <span class="attr">#[serde(default)]
-    #[serde(rename = <span class="string">&quot;build-dependencies&quot;</span>)]
+    #[serde(rename = <span class="string">"build-dependencies"</span>)]
     </span><span class="kw">pub </span>build_dependencies: HashMap&lt;String, Dependency&gt;,
 }
 
@@ -970,7 +972,7 @@
             .filter(|path| path.is_some())
             .map(|path| {
                 <span class="kw">let </span><span class="kw-2">mut </span>path = PathBuf::from(path.unwrap());
-                path.push(<span class="string">&quot;Cargo.toml&quot;</span>);
+                path.push(<span class="string">"Cargo.toml"</span>);
                 path.to_str().unwrap().to_string()
             })
             .collect()
@@ -1031,7 +1033,7 @@
 /// suitable for annotating the log lines.
 </span><span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Status {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;✓:{},✗:{},⠇:{}&quot;</span>, <span class="self">self</span>.ok, <span class="self">self</span>.error, <span class="self">self</span>.remaining)
+        <span class="macro">write!</span>(f, <span class="string">"✓:{},✗:{},⠇:{}"</span>, <span class="self">self</span>.ok, <span class="self">self</span>.error, <span class="self">self</span>.remaining)
     }
 }
 
@@ -1058,8 +1060,8 @@
     }
 
     <span class="kw">fn </span>header(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}┌[{}]&quot;</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
+        <span class="kw">let </span>margin = <span class="string">"│"</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">"{}┌[{}]"</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
     }
 
     <span class="doccomment">/// Prints a footer that repeats information from the header.
@@ -1067,26 +1069,26 @@
     /// Useful when footer and header are expected to be far away from each
     /// other.
     </span><span class="kw">fn </span>footer_long(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}└[{}]─▶&quot;</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
+        <span class="kw">let </span>margin = <span class="string">"│"</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">"{}└[{}]─▶"</span>, margin, <span class="self">self</span>.prefix.last().unwrap().cyan())
     }
 
     <span class="doccomment">/// Prints a footer that does not repeat information from the header.
     ///
     /// Useful when it follows the header almost immediately.
     </span><span class="kw">fn </span>footer_short(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="kw">let </span>margin = <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;{}└─▶&quot;</span>, margin)
+        <span class="kw">let </span>margin = <span class="string">"│"</span>.repeat(<span class="self">self</span>.depth() - <span class="number">1</span>);
+        <span class="macro">format!</span>(<span class="string">"{}└─▶"</span>, margin)
     }
 
     <span class="kw">fn </span>margin(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="string">&quot;│&quot;</span>.repeat(<span class="self">self</span>.depth())
+        <span class="string">"│"</span>.repeat(<span class="self">self</span>.depth())
     }
 }
 
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>Context {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.prefix.join(<span class="string">&quot; ❯ &quot;</span>))
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.prefix.join(<span class="string">" ❯ "</span>))
     }
 }
 
@@ -1101,9 +1103,9 @@
 <span class="kw">impl </span>std::fmt::Display <span class="kw">for </span>StatusResultValue {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
         <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
-            StatusResultValue::Ok =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;OK&quot;</span>.bold().bright_green()),
-            StatusResultValue::Error =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;ERROR&quot;</span>.bold().bright_red()),
-            StatusResultValue::Skipped =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="string">&quot;SKIPPED&quot;</span>.bold().bright_yellow()),
+            StatusResultValue::Ok =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="string">"OK"</span>.bold().bright_green()),
+            StatusResultValue::Error =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="string">"ERROR"</span>.bold().bright_red()),
+            StatusResultValue::Skipped =&gt; <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="string">"SKIPPED"</span>.bold().bright_yellow()),
         }
     }
 }
@@ -1153,13 +1155,13 @@
     </span>T: IntoIterator,
     T::Item: std::fmt::Display,
 {
-    <span class="macro">format!</span>(<span class="string">&quot;[{}]&quot;</span>, values.into_iter().map(|v| v.to_string()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">&quot;,&quot;</span>))
+    <span class="macro">format!</span>(<span class="string">"[{}]"</span>, values.into_iter().map(|v| v.to_string()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">","</span>))
 }
 
 <span class="doccomment">/// Reads the entire content of the provided future into a vector.
 </span><span class="kw">pub async fn </span>read_to_end&lt;A: AsyncRead + Unpin&gt;(<span class="kw-2">mut </span>io: A) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
-    io.read_to_end(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
+    io.read_to_end(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>.expect(<span class="string">"couldn't read from future"</span>);
     buf
 }
 
@@ -1171,8 +1173,8 @@
     <span class="kw">let </span><span class="kw-2">mut </span>step_result = StepResult::default();
     <span class="kw">fn </span>prefix(run_status: <span class="kw-2">&amp;</span>Status) -&gt; String {
         <span class="kw">let </span>now = chrono::Utc::now();
-        <span class="kw">let </span>time_of_day = now.format(<span class="string">&quot;%H:%M:%S&quot;</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;[{} {}] &quot;</span>, time_of_day, run_status)
+        <span class="kw">let </span>time_of_day = now.format(<span class="string">"%H:%M:%S"</span>);
+        <span class="macro">format!</span>(<span class="string">"[{} {}] "</span>, time_of_day, run_status)
     }
     <span class="kw">match </span>step {
         Step::Single { name, command } =&gt; {
@@ -1180,10 +1182,10 @@
 
             <span class="kw">let </span>start = Instant::now();
 
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
+            <span class="macro">eprintln!</span>(<span class="string">"{}{}"</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
 
             <span class="macro">eprintln!</span>(
-                <span class="string">&quot;{}{} {}&quot;</span>,
+                <span class="string">"{}{} {}"</span>,
                 prefix(<span class="kw-2">&amp;</span>run_status),
                 context.margin(),
                 command.description().blue()
@@ -1196,31 +1198,31 @@
             <span class="kw">let </span>step_failed = status.value == StatusResultValue::Error;
             <span class="kw">if </span>(step_failed || context.opt.logs) &amp;&amp; !status.logs.is_empty() {
                 <span class="macro">eprintln!</span>(
-                    <span class="string">&quot;{}{} {}&quot;</span>,
+                    <span class="string">"{}{} {}"</span>,
                     prefix(<span class="kw-2">&amp;</span>run_status),
                     context.margin(),
-                    <span class="string">&quot;╔════════════════════════&quot;</span>.blue()
+                    <span class="string">"╔════════════════════════"</span>.blue()
                 );
                 <span class="kw">for </span>line <span class="kw">in </span>status.logs.lines() {
                     <span class="macro">eprintln!</span>(
-                        <span class="string">&quot;{}{} {} {}&quot;</span>,
+                        <span class="string">"{}{} {} {}"</span>,
                         prefix(<span class="kw-2">&amp;</span>run_status),
                         context.margin(),
-                        <span class="string">&quot;║&quot;</span>.blue(),
+                        <span class="string">"║"</span>.blue(),
                         line
                     );
                 }
                 <span class="macro">eprintln!</span>(
-                    <span class="string">&quot;{}{} {}&quot;</span>,
+                    <span class="string">"{}{} {}"</span>,
                     prefix(<span class="kw-2">&amp;</span>run_status),
                     context.margin(),
-                    <span class="string">&quot;╚════════════════════════&quot;</span>.blue()
+                    <span class="string">"╚════════════════════════"</span>.blue()
                 );
-                step_result.failed_steps_prefixes.push(<span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, context));
+                step_result.failed_steps_prefixes.push(<span class="macro">format!</span>(<span class="string">"{}"</span>, context));
             }
 
             <span class="macro">eprintln!</span>(
-                <span class="string">&quot;{}{}{} {:.0?}&quot;</span>,
+                <span class="string">"{}{}{} {:.0?}"</span>,
                 prefix(<span class="kw-2">&amp;</span>run_status),
                 context.footer_short(),
                 status.value,
@@ -1232,7 +1234,7 @@
         }
         Step::Multiple { name, steps } =&gt; {
             <span class="kw">let </span>context = context.child(<span class="kw-2">&amp;</span>name);
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}{}&quot;</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
+            <span class="macro">eprintln!</span>(<span class="string">"{}{}"</span>, prefix(<span class="kw-2">&amp;</span>run_status), context.header());
             <span class="kw">let </span>start = Instant::now();
             <span class="kw">for </span>step <span class="kw">in </span>steps {
                 <span class="kw">let </span><span class="kw-2">mut </span>result = run_step(<span class="kw-2">&amp;</span>context, step, run_status.clone()).<span class="kw">await</span>;
@@ -1247,7 +1249,7 @@
             <span class="kw">let </span>end = Instant::now();
             <span class="kw">let </span>elapsed = end.duration_since(start);
             <span class="macro">eprintln!</span>(
-                <span class="string">&quot;{}{}{} {:.0?}&quot;</span>,
+                <span class="string">"{}{}{} {:.0?}"</span>,
                 prefix(<span class="kw-2">&amp;</span>run_status),
                 context.footer_long(),
                 values_to_string(<span class="kw-2">&amp;</span>step_result.values),
@@ -1294,12 +1296,12 @@
 <span class="kw">impl </span>Runnable <span class="kw">for </span>Cmd {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(
-            <span class="string">&quot;{} {}{}&quot;</span>,
+            <span class="string">"{} {}{}"</span>,
             <span class="self">self</span>.executable,
-            <span class="self">self</span>.args.join(<span class="string">&quot; &quot;</span>),
+            <span class="self">self</span>.args.join(<span class="string">" "</span>),
             <span class="self">self</span>.current_dir
                 .as_ref()
-                .map_or(<span class="string">&quot;&quot;</span>.to_string(), |dir| <span class="macro">format!</span>(<span class="string">&quot; (in directory {})&quot;</span>, dir.display()))
+                .map_or(<span class="string">""</span>.to_string(), |dir| <span class="macro">format!</span>(<span class="string">" (in directory {})"</span>, dir.display()))
         )
     }
     <span class="doccomment">/// Run the provided command, printing a status message with the current
@@ -1338,10 +1340,10 @@
                 .stdout(stdout)
                 .stderr(stderr)
                 .spawn()
-                .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
+                .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">"couldn't spawn command: {:?}: {}"</span>, cmd, err));
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = child.id() {
-                PROCESSES.lock().expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>).push(pid <span class="kw">as </span>i32);
+                PROCESSES.lock().expect(<span class="string">"couldn't acquire processes lock"</span>).push(pid <span class="kw">as </span>i32);
             }
 
             Box::new(RunningCmd { child })
@@ -1350,16 +1352,16 @@
 }
 
 <span class="kw">pub fn </span>process_gone(raw_pid: i32) -&gt; bool {
-    <span class="comment">// Shell out to `ps` as there&#39;s no portable Rust equivalent.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>cmd = std::process::Command::new(<span class="string">&quot;ps&quot;</span>);
-    cmd.args([<span class="string">&quot;-p&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, raw_pid)]);
+    <span class="comment">// Shell out to `ps` as there's no portable Rust equivalent.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>cmd = std::process::Command::new(<span class="string">"ps"</span>);
+    cmd.args([<span class="string">"-p"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, raw_pid)]);
     <span class="kw">let </span><span class="kw-2">mut </span>child = cmd
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
-    <span class="kw">let </span>output = child.wait().expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
+        .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">"couldn't spawn command: {:?}: {}"</span>, cmd, err));
+    <span class="kw">let </span>output = child.wait().expect(<span class="string">"couldn't get exit status"</span>);
     <span class="comment">// ps -p has success exit code if the pid exists.
     </span>!output.success()
 }
@@ -1405,7 +1407,7 @@
     }
 
     <span class="kw">async fn </span>result(<span class="kw-2">mut </span><span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; SingleStatusResult {
-        <span class="kw">let </span>output = <span class="self">self</span>.child.wait_with_output().<span class="kw">await</span>.expect(<span class="string">&quot;couldn&#39;t get exit status&quot;</span>);
+        <span class="kw">let </span>output = <span class="self">self</span>.child.wait_with_output().<span class="kw">await</span>.expect(<span class="string">"couldn't get exit status"</span>);
         <span class="kw">let </span>logs = format_logs(<span class="kw-2">&amp;</span>output.stdout, <span class="kw-2">&amp;</span>output.stderr);
         <span class="kw">if </span>output.status.success() {
             SingleStatusResult { value: StatusResultValue::Ok, logs }
@@ -1419,14 +1421,14 @@
     <span class="kw">let </span><span class="kw-2">mut </span>logs = String::new();
     <span class="kw">if </span>!stdout.is_empty() {
         logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;════╡ stdout ╞════\n{}&quot;</span>,
-            std::str::from_utf8(stdout).expect(<span class="string">&quot;couldn&#39;t parse stdout as UTF8&quot;</span>)
+            <span class="string">"════╡ stdout ╞════\n{}"</span>,
+            std::str::from_utf8(stdout).expect(<span class="string">"couldn't parse stdout as UTF8"</span>)
         );
     }
     <span class="kw">if </span>!stderr.is_empty() {
         logs += <span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;════╡ stderr ╞════\n{}&quot;</span>,
-            std::str::from_utf8(stderr).expect(<span class="string">&quot;couldn&#39;t parse stderr as UTF8&quot;</span>)
+            <span class="string">"════╡ stderr ╞════\n{}"</span>,
+            std::str::from_utf8(stderr).expect(<span class="string">"couldn't parse stderr as UTF8"</span>)
         );
     }
     logs
@@ -1465,7 +1467,7 @@
     </span>}
 }
 
-<span class="doccomment">/// Similar to the `vec!` macro, but also allows a &quot;spread&quot; operator syntax
+<span class="doccomment">/// Similar to the `vec!` macro, but also allows a "spread" operator syntax
 /// (`...`) to inline and expand nested iterable values.
 ///
 /// See &lt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax&gt;.
@@ -1504,6 +1506,6 @@
     <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>], ...[<span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
     <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>], <span class="macro">spread!</span>[...[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]].cloned().collect::&lt;Vec&lt;i32&gt;&gt;());
 
-    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>], <span class="macro">spread!</span>[<span class="string">&quot;foo&quot;</span>, <span class="string">&quot;bar&quot;</span>].cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+    <span class="macro">assert_eq!</span>(<span class="macro">vec!</span>[<span class="string">"foo"</span>, <span class="string">"bar"</span>], <span class="macro">spread!</span>[<span class="string">"foo"</span>, <span class="string">"bar"</span>].cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
 }
 </code></pre></div></section></main></body></html>

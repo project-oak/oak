@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/files.rs`."><title>files.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/files.rs`."><title>files.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../xtask/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -217,14 +219,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -236,22 +238,22 @@
 };
 
 <span class="kw">pub fn </span>read_file(path: <span class="kw-2">&amp;</span>Path) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">"couldn't open file"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
-    file.read_to_string(<span class="kw-2">&amp;mut </span>contents).expect(<span class="string">&quot;couldn&#39;t read file contents&quot;</span>);
+    file.read_to_string(<span class="kw-2">&amp;mut </span>contents).expect(<span class="string">"couldn't read file contents"</span>);
     contents
 }
 
 <span class="doccomment">/// Return an iterator of all the first-party and non-ignored files in the
 /// repository, which can be then additionally filtered by the caller.
 </span><span class="kw">pub fn </span>source_files() -&gt; <span class="kw">impl </span>Iterator&lt;Item = PathBuf&gt; {
-    <span class="kw">let </span>walker = walkdir::WalkDir::new(<span class="string">&quot;.&quot;</span>).into_iter();
+    <span class="kw">let </span>walker = walkdir::WalkDir::new(<span class="string">"."</span>).into_iter();
     walker.filter_entry(|e| !is_ignored_entry(e)).filter_map(Result::ok).map(|e| e.into_path())
 }
 
 <span class="kw">pub fn </span>file_contains(path: <span class="kw-2">&amp;</span>Path, pattern: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">if </span>path.is_file() {
-        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">"couldn't open file"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
         <span class="comment">// Content may be non-UTF-8, in which case we just return false.
         </span><span class="kw">if </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents).is_ok() { contents.contains(pattern) } <span class="kw">else </span>{ <span class="bool-val">false </span>}
@@ -265,7 +267,7 @@
     source_files()
         .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_package_file(p))
-        .filter(|p| !p.ends_with(<span class="string">&quot;fuzz/Cargo.toml&quot;</span>))
+        .filter(|p| !p.ends_with(<span class="string">"fuzz/Cargo.toml"</span>))
 }
 
 <span class="doccomment">/// Return an iterator of all known Cargo Manifest files that define workspaces.
@@ -276,80 +278,80 @@
 <span class="doccomment">/// Return whether the provided path refers to a source file in a programming
 /// language.
 </span><span class="kw">pub fn </span>is_source_code_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.cc&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.h&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.rs&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.proto&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.js&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.go&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.java&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".cc"</span>)
+        || filename.ends_with(<span class="string">".h"</span>)
+        || filename.ends_with(<span class="string">".rs"</span>)
+        || filename.ends_with(<span class="string">".proto"</span>)
+        || filename.ends_with(<span class="string">".js"</span>)
+        || filename.ends_with(<span class="string">".go"</span>)
+        || filename.ends_with(<span class="string">".java"</span>)
 }
 
 <span class="doccomment">/// Return whether the provided path refers to a source file that can be
 /// formatted by clang-tidy.
 </span><span class="kw">pub fn </span>is_clang_format_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.cc&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.h&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.proto&quot;</span>)
-        || filename.ends_with(<span class="string">&quot;.java&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".cc"</span>)
+        || filename.ends_with(<span class="string">".h"</span>)
+        || filename.ends_with(<span class="string">".proto"</span>)
+        || filename.ends_with(<span class="string">".java"</span>)
 }
 
 <span class="doccomment">/// Return whether the provided path refers to a Bazel file (`BUILD`,
 /// `WORKSPACE`, or `*.bzl`)
 </span><span class="kw">pub fn </span>is_bazel_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename == <span class="string">&quot;BUILD&quot; </span>|| filename == <span class="string">&quot;WORKSPACE&quot; </span>|| filename.ends_with(<span class="string">&quot;.bzl&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename == <span class="string">"BUILD" </span>|| filename == <span class="string">"WORKSPACE" </span>|| filename.ends_with(<span class="string">".bzl"</span>)
 }
 
 <span class="kw">pub fn </span>is_build_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename == <span class="string">&quot;BUILD&quot;
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename == <span class="string">"BUILD"
 </span>}
 
 <span class="doccomment">/// Return whether the provided path refers to a markdown file (`*.md`)
 </span><span class="kw">pub fn </span>is_markdown_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.md&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".md"</span>)
 }
 
 <span class="kw">pub fn </span>is_dockerfile(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;Dockerfile&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">"Dockerfile"</span>)
 }
 
 <span class="kw">pub fn </span>is_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.toml&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".toml"</span>)
 }
 
 <span class="kw">pub fn </span>is_yaml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.yaml&quot;</span>) || filename.ends_with(<span class="string">&quot;.yml&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".yaml"</span>) || filename.ends_with(<span class="string">".yml"</span>)
 }
 
 <span class="kw">pub fn </span>is_html_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.htm&quot;</span>) || filename.ends_with(<span class="string">&quot;.html&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".htm"</span>) || filename.ends_with(<span class="string">".html"</span>)
 }
 
 <span class="kw">pub fn </span>is_javascript_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.js&quot;</span>) || filename.ends_with(<span class="string">&quot;.mjs&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".js"</span>) || filename.ends_with(<span class="string">".mjs"</span>)
 }
 
 <span class="kw">pub fn </span>is_typescript_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename.ends_with(<span class="string">&quot;.ts&quot;</span>) || filename.ends_with(<span class="string">&quot;.tsx&quot;</span>)
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename.ends_with(<span class="string">".ts"</span>) || filename.ends_with(<span class="string">".tsx"</span>)
 }
 
 <span class="kw">pub fn </span>is_shell_script(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">if </span>path.is_file() {
-        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">&quot;couldn&#39;t open file&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>file = std::fs::File::open(path).expect(<span class="string">"couldn't open file"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>contents = String::new();
         <span class="kw">match </span>file.read_to_string(<span class="kw-2">&amp;mut </span>contents) {
-            <span class="prelude-val">Ok</span>(_size) =&gt; contents.starts_with(<span class="string">&quot;#!&quot;</span>),
+            <span class="prelude-val">Ok</span>(_size) =&gt; contents.starts_with(<span class="string">"#!"</span>),
             <span class="prelude-val">Err</span>(_err) =&gt; <span class="bool-val">false</span>,
         }
     } <span class="kw">else </span>{
@@ -360,14 +362,14 @@
 <span class="doccomment">/// Return whether the provided path refers to a `fuzz` crate for fuzz testing
 /// with `cargo-fuzz`.
 </span><span class="kw">pub fn </span>is_fuzzing_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, path).contains(<span class="string">&quot;/fuzz/&quot;</span>)
+    <span class="macro">format!</span>(<span class="string">"{:?}"</span>, path).contains(<span class="string">"/fuzz/"</span>)
 }
 
 <span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file. Note that it
 /// does not differentiate between workspace-level and crate-level files.
 </span><span class="kw">fn </span>is_cargo_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">&quot;&quot;</span>);
-    filename == <span class="string">&quot;Cargo.toml&quot;
+    <span class="kw">let </span>filename = path.file_name().and_then(|s| s.to_str()).unwrap_or(<span class="string">""</span>);
+    filename == <span class="string">"Cargo.toml"
 </span>}
 
 <span class="doccomment">/// Return whether the provided path refers to a workspace-level `Cargo.toml`
@@ -377,7 +379,7 @@
     // file. A better alternative would be to actually parse the file as `toml`
     // and figure out whether it has a `workspace` section, but it seems
     // overkill for now.
-    </span>file_contains(path, <span class="string">&quot;[workspace]&quot;</span>)
+    </span>file_contains(path, <span class="string">"[workspace]"</span>)
 }
 
 <span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file that defines
@@ -387,44 +389,44 @@
     // file. A better alternative would be to actually parse the file as `toml`
     // and figure out whether it has a `package` section, but it seems overkill
     // for now.
-    </span>file_contains(path, <span class="string">&quot;[package]&quot;</span>)
+    </span>file_contains(path, <span class="string">"[package]"</span>)
 }
 
 <span class="kw">fn </span>is_ignored_entry(entry: <span class="kw-2">&amp;</span>walkdir::DirEntry) -&gt; bool {
     <span class="kw">let </span>path = entry.clone().into_path();
     <span class="comment">// Simple heuristic to try and exclude generated files.
-    </span>is_ignored_path(<span class="kw-2">&amp;</span>path) || file_contains(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;DO NOT {}&quot;</span>, <span class="string">&quot;EDIT&quot;</span>))
+    </span>is_ignored_path(<span class="kw-2">&amp;</span>path) || file_contains(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"DO NOT {}"</span>, <span class="string">"EDIT"</span>))
 }
 
 <span class="doccomment">/// Return whether to ignore the specified path. This is used by the `walker`
 /// package to efficiently avoid descending into blacklisted directories.
 </span><span class="kw">fn </span>is_ignored_path(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
     <span class="kw">let </span>components = path.components().collect::&lt;std::collections::HashSet&lt;<span class="kw">_</span>&gt;&gt;();
-    components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;.git&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-cache&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-bin&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-out&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-oak&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-clang-bin&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-clang-out&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-clang-oak&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-client-bin&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-client-out&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-client-oak&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-emscripten-bin&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-emscripten-out&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-emscripten-oak&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-wasm-bin&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-wasm-out&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-wasm-oak&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;bazel-vscode-target&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;cache&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;cargo-cache&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;node_modules&quot;</span>.as_ref()))
-        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;protoc_out&quot;</span>.as_ref())) <span class="comment">// Code generated by protoc
-        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;dist&quot;</span>.as_ref())) <span class="comment">// Code generated by webpack
-        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;target&quot;</span>.as_ref())) <span class="comment">// Rust artifacts.
-        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">&quot;third_party&quot;</span>.as_ref()))
+    components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">".git"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-cache"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-bin"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-out"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-oak"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-clang-bin"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-clang-out"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-clang-oak"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-client-bin"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-client-out"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-client-oak"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-emscripten-bin"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-emscripten-out"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-emscripten-oak"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-wasm-bin"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-wasm-out"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-wasm-oak"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"bazel-vscode-target"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"cache"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"cargo-cache"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"node_modules"</span>.as_ref()))
+        || components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"protoc_out"</span>.as_ref())) <span class="comment">// Code generated by protoc
+        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"dist"</span>.as_ref())) <span class="comment">// Code generated by webpack
+        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"target"</span>.as_ref())) <span class="comment">// Rust artifacts.
+        </span>|| components.contains(<span class="kw-2">&amp;</span>std::path::Component::Normal(<span class="string">"third_party"</span>.as_ref()))
 }
 
 <span class="kw">pub fn </span>to_string(path: PathBuf) -&gt; String {

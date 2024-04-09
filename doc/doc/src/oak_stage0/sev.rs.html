@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/sev.rs`."><title>sev.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/sev.rs`."><title>sev.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -673,14 +675,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -722,7 +724,7 @@
 
 <span class="kw">use crate</span>::{sev_status, BootAllocator};
 
-<span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
+<span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">'static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
 <span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -733,7 +735,7 @@
 ///
 /// This allocator is inefficient as it will only allocate 4K chunks,
 /// potentially wasting memory. For example, if you allocate two u32-s, although
-/// they could well fit on one page, currently that&#39;d use 8K of memory.
+/// they could well fit on one page, currently that'd use 8K of memory.
 /// That, however, is an implementation detail, and may change in the future.
 </span><span class="attr">#[repr(transparent)]
 </span><span class="kw">struct </span>SharedAllocator&lt;A: Allocator&gt; {
@@ -753,7 +755,7 @@
         <span class="kw">let </span>allocation = <span class="self">self</span>.inner.allocate(layout)<span class="question-mark">?</span>;
         <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
             <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..allocation.len()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
-                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of
+                <span class="comment">// Safety: the allocation has succeeded and the offset won't exceed the size of
                 // the allocation.
                 </span>share_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                     allocation.as_non_null_ptr().as_ptr().add(offset)
@@ -771,7 +773,7 @@
             .pad_to_align();
         <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
             <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..layout.size()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
-                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of
+                <span class="comment">// Safety: the allocation has succeeded and the offset won't exceed the size of
                 // the allocation.
                 </span>unshare_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                     ptr.as_ptr().add(offset)
@@ -783,14 +785,14 @@
 }
 
 <span class="doccomment">/// Stores a data structure on a shared page.
-</span><span class="kw">pub struct </span>Shared&lt;T: <span class="lifetime">&#39;static</span>, A: Allocator&gt; {
+</span><span class="kw">pub struct </span>Shared&lt;T: <span class="lifetime">'static</span>, A: Allocator&gt; {
     inner: Box&lt;T, SharedAllocator&lt;A&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; Shared&lt;T, A&gt; {
     <span class="kw">pub fn </span>new_in(t: T, alloc: A) -&gt; <span class="self">Self
     </span><span class="kw">where
-        </span>A: <span class="lifetime">&#39;static</span>,
+        </span>A: <span class="lifetime">'static</span>,
     {
         <span class="self">Self </span>{ inner: Box::new_in(t, SharedAllocator::new(alloc)) }
     }
@@ -822,7 +824,7 @@
     }
 }
 
-<span class="kw">pub fn </span>init_ghcb(alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator) {
+<span class="kw">pub fn </span>init_ghcb(alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) {
     <span class="kw">let </span>ghcb = Box::leak(Box::new_in(Ghcb::default(), alloc));
     <span class="kw">let </span>ghcb_addr = VirtAddr::from_ptr(ghcb);
 
@@ -831,21 +833,21 @@
     <span class="comment">// SNP requires that the GHCB is registered with the hypervisor.
     </span><span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() <span class="kw">as </span>usize)
-            .expect(<span class="string">&quot;invalid address for GHCB location&quot;</span>);
+            .expect(<span class="string">"invalid address for GHCB location"</span>);
         register_ghcb_location(ghcb_location_request)
-            .expect(<span class="string">&quot;couldn&#39;t register the GHCB address with the hypervisor&quot;</span>);
+            .expect(<span class="string">"couldn't register the GHCB address with the hypervisor"</span>);
     }
 
     ghcb.reset();
 
-    <span class="comment">// We can&#39;t use `.expect()` here as Spinlock doesn&#39;t implement `fmt::Debug`.
+    <span class="comment">// We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
     </span><span class="kw">if </span>GHCB_WRAPPER
         .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
             <span class="prelude-val">Some</span>(PhysAddr::new(vaddr.as_u64()))
         })))
         .is_err()
     {
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize GHCB wrapper&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"couldn't initialize GHCB wrapper"</span>);
     }
 }
 
@@ -876,8 +878,8 @@
     <span class="comment">// SNP requires extra handling beyond just removing the encrypted bit.
     </span><span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Shared)
-            .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
-        change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);
+            .expect(<span class="string">"invalid address for page location"</span>);
+        change_snp_page_state(request).expect(<span class="string">"couldn't change SNP state for page"</span>);
     }
 }
 
@@ -890,8 +892,8 @@
     </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Private)
-            .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
-        change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);
+            .expect(<span class="string">"invalid address for page location"</span>);
+        change_snp_page_state(request).expect(<span class="string">"couldn't change SNP state for page"</span>);
     }
     <span class="comment">// Mark the page as encrypted.
     </span>{
@@ -906,7 +908,7 @@
     <span class="comment">// We have to revalidate the page again after un-sharing it.
     </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = page.pvalidate(<span class="kw-2">&amp;</span>counters::VALIDATED_4K) {
         <span class="kw">if </span>err != InstructionError::ValidationStatusNotUpdated {
-            <span class="macro">panic!</span>(<span class="string">&quot;shared page revalidation failed&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"shared page revalidation failed"</span>);
         }
     }
 }
@@ -916,7 +918,7 @@
 // This trait translates between the page sizes defined in the x86_64 crate
 // (`Size4KiB`, `Size2MiB`) and the sizes defined in `oak_sev_guest` crate
 // (`Page4KiB`, `Page2MiB`). There is no mapping for `Size1GiB` as pages of that
-// size can&#39;t be used for valitation.
+// size can't be used for valitation.
 </span><span class="kw">pub trait </span>ValidatablePageSize {
     <span class="kw">const </span>SEV_PAGE_SIZE: SevPageSize;
 }
@@ -967,10 +969,10 @@
 <span class="kw">where
     </span>F: FnMut(PhysAddr, InstructionError) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt;,
 {
-    <span class="comment">// Create a copy as we&#39;ll be consuming the range as we call `next()`, below.
+    <span class="comment">// Create a copy as we'll be consuming the range as we call `next()`, below.
     </span><span class="kw">let </span><span class="kw-2">mut </span>range = <span class="kw-2">*</span>range;
 
-    <span class="comment">// A page table consists of 512 entries; let&#39;s figure out what the pages would
+    <span class="comment">// A page table consists of 512 entries; let's figure out what the pages would
     // be.
     </span><span class="kw">let </span>start = Page::from_start_address(memory.page.start_address()).unwrap();
     <span class="kw">let </span>pages = Page::&lt;S&gt;::range(start, start + <span class="number">512</span>);
@@ -979,8 +981,8 @@
     // entries than that. Thus, we need to iterate over the range in chunks of
     // 512; the easiest way to do it is to iterate (mutably) over the page
     // directory itself, and for each entry, fetch the next entry in the range.
-    // If we&#39;ve covered everything, `range.next()` will return `None`, and
-    // the count will be zero once we&#39;ve covered everything.
+    // If we've covered everything, `range.next()` will return `None`, and
+    // the count will be zero once we've covered everything.
     </span>memory.page_table.zero();
     <span class="kw">while </span>memory
         .page_table
@@ -992,7 +994,7 @@
         .count()
         &gt; <span class="number">0
     </span>{
-        <span class="comment">// We now know we&#39;ve filled in at least one entry of the page table, and thus
+        <span class="comment">// We now know we've filled in at least one entry of the page table, and thus
         // have something to validate.
         </span>tlb::flush_all();
 
@@ -1059,7 +1061,7 @@
             <span class="kw-2">&amp;</span>counters::VALIDATED_4K,
             |_addr, err| <span class="kw">match </span>err {
                 InstructionError::ValidationStatusNotUpdated =&gt; {
-                    <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
+                    <span class="comment">// We don't treat this as an error. It only happens if SEV-SNP is not enabled,
                     // or it is already validated. See the PVALIDATE instruction in
                     // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
                     </span>counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(<span class="number">1</span>, Ordering::SeqCst);
@@ -1115,7 +1117,7 @@
                     range.pvalidate(pt, encrypted)
                 }
                 InstructionError::ValidationStatusNotUpdated =&gt; {
-                    <span class="comment">// We don&#39;t treat this as an error. It only happens if SEV-SNP is not enabled,
+                    <span class="comment">// We don't treat this as an error. It only happens if SEV-SNP is not enabled,
                     // or it is already validated. See the PVALIDATE instruction in
                     // &lt;https://www.amd.com/system/files/TechDocs/24594.pdf&gt; for more details.
                     </span>counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.fetch_add(<span class="number">1</span>, Ordering::SeqCst);
@@ -1128,17 +1130,17 @@
 }
 
 <span class="kw">trait </span>PageStateChange {
-    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;;
+    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
 }
 
 <span class="kw">impl</span>&lt;S: NotGiantPageSize&gt; PageStateChange <span class="kw">for </span>PhysFrameRange&lt;S&gt; {
-    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Future optimization: do this operation in batches of 253 frames (that&#39;s how
+    <span class="kw">fn </span>page_state_change(<span class="kw-2">&amp;</span><span class="self">self</span>, assignment: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Future optimization: do this operation in batches of 253 frames (that's how
         // many can fit in one PageStateChange request) instead of one at a time.
         </span><span class="kw">for </span>frame <span class="kw">in </span><span class="kw-2">*</span><span class="self">self </span>{
             GHCB_WRAPPER
                 .get()
-                .expect(<span class="string">&quot;GHCB not initialized&quot;</span>)
+                .expect(<span class="string">"GHCB not initialized"</span>)
                 .lock()
                 .page_state_change(frame, assignment)<span class="question-mark">?</span>;
         }
@@ -1150,16 +1152,16 @@
 <span class="doccomment">/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
 /// `RAM`.
 </span><span class="kw">pub fn </span>validate_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], encrypted: u64) {
-    <span class="macro">log::info!</span>(<span class="string">&quot;starting SEV-SNP memory validation&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">"starting SEV-SNP memory validation"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
 
     <span class="comment">// Page directory, for validation with 2 MiB pages.
     </span><span class="kw">let </span><span class="kw-2">mut </span>validation_pd = MappedPage::new(VirtAddr::new(Size1GiB::SIZE)).unwrap();
-    <span class="comment">// For virtual address space, we currently shouldn&#39;t have anything at the second
+    <span class="comment">// For virtual address space, we currently shouldn't have anything at the second
     // gigabyte, so we can map the page to virtual address [1 GiB..2 GiB).
     </span><span class="kw">if </span>page_tables.pdpt[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
-        <span class="macro">panic!</span>(<span class="string">&quot;PDPT[1] is in use&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"PDPT[1] is in use"</span>);
     }
     page_tables.pdpt[<span class="number">1</span>].set_addr(
         PhysAddr::new(<span class="kw-2">&amp;</span>validation_pd.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 | encrypted),
@@ -1172,7 +1174,7 @@
     // [0..2MiB), so it should be safe to put our temporary mappings at
     // [2..4MiB).
     </span><span class="kw">if </span>page_tables.pd_0[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
-        <span class="macro">panic!</span>(<span class="string">&quot;PD_0[1] is in use&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"PD_0[1] is in use"</span>);
     }
     page_tables.pd_0[<span class="number">1</span>].set_addr(
         PhysAddr::new(<span class="kw-2">&amp;</span>validation_pt.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 | encrypted),
@@ -1196,7 +1198,7 @@
 
         <span class="kw">if </span>start_address &gt; limit_address {
             <span class="macro">log::error!</span>(
-                <span class="string">&quot;nonsensical entry in E820 table: [{}, {})&quot;</span>,
+                <span class="string">"nonsensical entry in E820 table: [{}, {})"</span>,
                 entry.addr(),
                 entry.addr() + entry.size()
             );
@@ -1208,10 +1210,10 @@
         </span><span class="kw">let </span>hugepage_start = start_address.align_up(Size2MiB::SIZE);
         <span class="kw">let </span>hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
 
-        <span class="comment">// If start_address == hugepage_start, we&#39;re aligned with 2M address boundary.
+        <span class="comment">// If start_address == hugepage_start, we're aligned with 2M address boundary.
         // Otherwise, we need to process any 4K pages before the alignment.
         // Note that limit_address may be less than hugepage_start, which means that the
-        // E820 entry was less than 2M in size and didn&#39;t cross a 2M boundary.
+        // E820 entry was less than 2M in size and didn't cross a 2M boundary.
         </span><span class="kw">if </span>hugepage_start &gt; start_address {
             <span class="kw">let </span>limit = core::cmp::min(hugepage_start, limit_address);
             <span class="comment">// We know the addresses are aligned to at least 4K, so the unwraps are safe.
@@ -1220,13 +1222,13 @@
                 PhysFrame::from_start_address(limit).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">&quot;failed to validate memory&quot;</span>);
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate memory"</span>);
         }
 
-        <span class="comment">// If hugepage_limit &gt; hugepage_start, we&#39;ve got some contiguous 2M chunks that
+        <span class="comment">// If hugepage_limit &gt; hugepage_start, we've got some contiguous 2M chunks that
         // we can process as hugepages.
         </span><span class="kw">if </span>hugepage_limit &gt; hugepage_start {
-            <span class="comment">// These unwraps can&#39;t fail as we&#39;ve made sure that the addresses are 2
+            <span class="comment">// These unwraps can't fail as we've made sure that the addresses are 2
             // MiB-aligned.
             </span><span class="kw">let </span>range = PhysFrame::&lt;Size2MiB&gt;::range(
                 PhysFrame::from_start_address(hugepage_start).unwrap(),
@@ -1235,7 +1237,7 @@
             range.page_state_change(PageAssignment::Private).unwrap();
             range
                 .pvalidate(<span class="kw-2">&amp;mut </span>validation_pd, <span class="kw-2">&amp;mut </span>validation_pt, encrypted)
-                .expect(<span class="string">&quot;failed to validate memory&quot;</span>);
+                .expect(<span class="string">"failed to validate memory"</span>);
         }
 
         <span class="comment">// And finally, we may have some trailing 4K pages in [hugepage_limit,
@@ -1248,7 +1250,7 @@
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">&quot;failed to validate memory&quot;</span>);
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate memory"</span>);
         }
     }
 
@@ -1261,7 +1263,7 @@
                 </span>&amp;&amp; entry.size() == <span class="number">0x1_0000
                 </span>&amp;&amp; entry.entry_type() == <span class="prelude-val">Some</span>(E820EntryType::RESERVED)
         })
-        .expect(<span class="string">&quot;couldn&#39;t find legacy SMBIOS memory range&quot;</span>);
+        .expect(<span class="string">"couldn't find legacy SMBIOS memory range"</span>);
 
     <span class="comment">// Pvalidate the legacy SMBIOS range since legacy code may scan this range for
     // the SMBIOS entry point table, even if the range is marked as reserved.
@@ -1273,7 +1275,7 @@
         ))
         .unwrap(),
     );
-    range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">&quot;failed to validate SMBIOS memory&quot;</span>);
+    range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate SMBIOS memory"</span>);
 
     <span class="comment">// Safety: the E820 table indicates that this is the correct memory segment.
     </span><span class="kw">let </span>legacy_smbios_range_bytes = <span class="kw">unsafe </span>{
@@ -1288,21 +1290,21 @@
     page_tables.pd_0[<span class="number">1</span>].set_unused();
     page_tables.pdpt[<span class="number">1</span>].set_unused();
     tlb::flush_all();
-    <span class="macro">log::info!</span>(<span class="string">&quot;SEV-SNP memory validation complete.&quot;</span>);
-    <span class="macro">log::info!</span>(<span class="string">&quot;  Validated using 2 MiB pages: {}&quot;</span>, counters::VALIDATED_2M.load(Ordering::SeqCst));
-    <span class="macro">log::info!</span>(<span class="string">&quot;  Validated using 4 KiB pages: {}&quot;</span>, counters::VALIDATED_4K.load(Ordering::SeqCst));
+    <span class="macro">log::info!</span>(<span class="string">"SEV-SNP memory validation complete."</span>);
+    <span class="macro">log::info!</span>(<span class="string">"  Validated using 2 MiB pages: {}"</span>, counters::VALIDATED_2M.load(Ordering::SeqCst));
+    <span class="macro">log::info!</span>(<span class="string">"  Validated using 4 KiB pages: {}"</span>, counters::VALIDATED_4K.load(Ordering::SeqCst));
     <span class="macro">log::info!</span>(
-        <span class="string">&quot;  Valid state not updated: {}&quot;</span>,
+        <span class="string">"  Valid state not updated: {}"</span>,
         counters::ERROR_VALIDATION_STATUS_NOT_UPDATED.load(Ordering::SeqCst)
     );
     <span class="macro">log::info!</span>(
-        <span class="string">&quot;  RMP page size mismatch errors (fallback to 4K): {}&quot;</span>,
+        <span class="string">"  RMP page size mismatch errors (fallback to 4K): {}"</span>,
         counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
     );
 }
 
 <span class="doccomment">/// Initializes the Guest Message encryptor using VMPCK0.
-</span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
     // requirements on the underlying bytes.
     </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
@@ -1320,9 +1322,9 @@
     Response: AsBytes + FromBytes + Message,
 &gt;(
     request: Request,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    <span class="kw">let </span>encryptor = guard.as_mut().ok_or(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>encryptor = guard.as_mut().ok_or(<span class="string">"guest message encryptor is not initialized"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
     <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;
@@ -1336,7 +1338,7 @@
 
     GHCB_WRAPPER
         .get()
-        .ok_or(<span class="string">&quot;GHCB not initialized&quot;</span>)<span class="question-mark">?
+        .ok_or(<span class="string">"GHCB not initialized"</span>)<span class="question-mark">?
         </span>.lock()
         .do_guest_message_request(request_address, response_address)<span class="question-mark">?</span>;
     response_message.validate()<span class="question-mark">?</span>;

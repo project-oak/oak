@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_tdx_guest/src/tdcall.rs`."><title>tdcall.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_tdx_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_tdx_guest/src/tdcall.rs`."><title>tdcall.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_tdx_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_tdx_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -302,14 +304,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -353,13 +355,13 @@
     }
 }
 
-<span class="doccomment">/// Information about the TD&#39;s execution environment.
+<span class="doccomment">/// Information about the TD's execution environment.
 ///
 /// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 </span><span class="kw">pub struct </span>TdInfo {
-    <span class="doccomment">/// The effective GPA width. The &quot;shared&quot; bit is at position gpa_width - 1.
+    <span class="doccomment">/// The effective GPA width. The "shared" bit is at position gpa_width - 1.
     ///
     /// Currently only values of 48 or 52 are possible.
     </span><span class="kw">pub </span>gpa_width: usize,
@@ -371,7 +373,7 @@
     </span><span class="kw">pub </span>max_vcpus: u32,
 }
 
-<span class="doccomment">/// Gets information about the TD&#39;s execution environment by calling the
+<span class="doccomment">/// Gets information about the TD's execution environment by calling the
 /// TDCALL[TDG.VP.INFO] leaf.
 ///
 /// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
@@ -390,28 +392,28 @@
     // R8 contains the number of active or ready vCPUs in bits 0..32 and the
     // maximum number of vCPUs in bits 32..64. R9, R10 and R11 are reserved for
     // future use. We zero out all output registers in the input to make sure old
-    // register values don&#39;t accidentally leak to the hypervisor.
+    // register values don't accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
     // the affected registers are specified, so no unspecified registers will be
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
-            inout(<span class="string">&quot;rcx&quot;</span>) <span class="number">0u64 </span>=&gt; gpa_width,
-            inout(<span class="string">&quot;rdx&quot;</span>) <span class="number">0u64 </span>=&gt; attributes,
-            inout(<span class="string">&quot;r8&quot;</span>) <span class="number">0u64 </span>=&gt; vcpu_info,
-            inout(<span class="string">&quot;r9&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
-            inout(<span class="string">&quot;r10&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
-            inout(<span class="string">&quot;r11&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) LEAF =&gt; result,
+            inout(<span class="string">"rcx"</span>) <span class="number">0u64 </span>=&gt; gpa_width,
+            inout(<span class="string">"rdx"</span>) <span class="number">0u64 </span>=&gt; attributes,
+            inout(<span class="string">"r8"</span>) <span class="number">0u64 </span>=&gt; vcpu_info,
+            inout(<span class="string">"r9"</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
+            inout(<span class="string">"r10"</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
+            inout(<span class="string">"r11"</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
 
             options(nomem, nostack),
         );
     }
     <span class="comment">// According to the spec this instruction will always return 0 in RAX.
-    </span><span class="macro">assert_eq!</span>(result, SUCCESS <span class="kw">as </span>i64, <span class="string">&quot;TDCALL[TDG.VP.INFO] returned an invalid result&quot;</span>);
-    <span class="kw">let </span>attributes = Attributes::from_bits(attributes).expect(<span class="string">&quot;invalid TD attributes&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(result, SUCCESS <span class="kw">as </span>i64, <span class="string">"TDCALL[TDG.VP.INFO] returned an invalid result"</span>);
+    <span class="kw">let </span>attributes = Attributes::from_bits(attributes).expect(<span class="string">"invalid TD attributes"</span>);
     <span class="kw">let </span>(num_vcpus, max_vcpus) = split_u64(vcpu_info);
     TdInfo { gpa_width, attributes, num_vcpus, max_vcpus }
 }
@@ -460,7 +462,7 @@
     // the guest-linear address. R9 returns the guest-physical address. R10
     // returns the instructions length in bits 0..32 and the additional
     // instruction info in bits 32..64. We zero out all output registers in the
-    // input to make sure old register values don&#39;t accidentally leak to the
+    // input to make sure old register values don't accidentally leak to the
     // hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
@@ -468,13 +470,13 @@
     // clobbered.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
-            inout(<span class="string">&quot;rcx&quot;</span>) <span class="number">0u64 </span>=&gt; exit_reason,
-            inout(<span class="string">&quot;rdx&quot;</span>) <span class="number">0u64 </span>=&gt; exit_qualification,
-            inout(<span class="string">&quot;r8&quot;</span>) <span class="number">0u64 </span>=&gt; guest_linear_address,
-            inout(<span class="string">&quot;r9&quot;</span>) <span class="number">0u64 </span>=&gt; guest_physical_address,
-            inout(<span class="string">&quot;r10&quot;</span>) <span class="number">0u64 </span>=&gt; instruction,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) LEAF =&gt; result,
+            inout(<span class="string">"rcx"</span>) <span class="number">0u64 </span>=&gt; exit_reason,
+            inout(<span class="string">"rdx"</span>) <span class="number">0u64 </span>=&gt; exit_qualification,
+            inout(<span class="string">"r8"</span>) <span class="number">0u64 </span>=&gt; guest_linear_address,
+            inout(<span class="string">"r9"</span>) <span class="number">0u64 </span>=&gt; guest_physical_address,
+            inout(<span class="string">"r10"</span>) <span class="number">0u64 </span>=&gt; instruction,
 
             options(nomem, nostack),
         );
@@ -486,9 +488,9 @@
     }
     <span class="comment">// According to the spec this instruction will always return either 0 or
     // NO_VE_INFO in RAX.
-    </span><span class="macro">assert_eq!</span>(result, SUCCESS, <span class="string">&quot;TDCALL[TDG.VP.VEINFO.GET] returned an invalid result&quot;</span>);
+    </span><span class="macro">assert_eq!</span>(result, SUCCESS, <span class="string">"TDCALL[TDG.VP.VEINFO.GET] returned an invalid result"</span>);
 
-    <span class="kw">let </span>exit_reason: u32 = exit_reason.try_into().expect(<span class="string">&quot;invalid exit reason&quot;</span>);
+    <span class="kw">let </span>exit_reason: u32 = exit_reason.try_into().expect(<span class="string">"invalid exit reason"</span>);
     <span class="kw">let </span>(instruction_length, instruction_info) = split_u64(instruction);
 
     <span class="prelude-val">Some</span>(VeInfo {
@@ -571,10 +573,10 @@
     // it will not affect memory that is already in use.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm!</span>(
-            <span class="string">&quot;tdcall&quot;</span>,
-            inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) gpa,
-            <span class="kw">in</span>(<span class="string">&quot;rdx&quot;</span>) page_size,
+            <span class="string">"tdcall"</span>,
+            inout(<span class="string">"rax"</span>) LEAF =&gt; result,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) gpa,
+            <span class="kw">in</span>(<span class="string">"rdx"</span>) page_size,
 
             options(nomem, nostack),
         );
@@ -584,7 +586,7 @@
         <span class="comment">// According to the spec the result will either be 0 (Success) or one of the
         // defined error values.
         </span><span class="kw">return </span><span class="prelude-val">Err</span>(AcceptMemoryError::from_repr(result)
-            .expect(<span class="string">&quot;TDCALL[TDG.MEM.PAGE.ACCEPT] returned an invalid result&quot;</span>));
+            .expect(<span class="string">"TDCALL[TDG.MEM.PAGE.ACCEPT] returned an invalid result"</span>));
     }
 
     <span class="prelude-val">Ok</span>(())

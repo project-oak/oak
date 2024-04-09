@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/payload.rs`."><title>payload.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/payload.rs`."><title>payload.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -227,14 +229,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -258,13 +260,13 @@
 <span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
 
 <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual
-// address space. Well... almost. It&#39;s one page lower than the very end, as
+// address space. Well... almost. It's one page lower than the very end, as
 // otherwise the initial stack pointer would need to be a noncanonical address,
-// so let&#39;s avoid that whole mess by moving down a bit.
+// so let's avoid that whole mess by moving down a bit.
 </span><span class="kw">static </span>APPLICATION_STACK_VIRT_ADDR: u64 = <span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE;
 
 <span class="macro">self_cell!</span>(
-    <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file
+    <span class="doccomment">/// Self-referential struct so that we don't have to parse the ELF file
     /// multiple times.
     </span><span class="kw">struct </span>Binary {
         owner: Box&lt;[u8]&gt;,
@@ -287,7 +289,7 @@
         <span class="prelude-val">Ok</span>(Application {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
-                    .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ELF file: {}&quot;</span>, err))
+                    .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to parse ELF file: {}"</span>, err))
             })<span class="question-mark">?</span>,
         })
     }
@@ -306,13 +308,13 @@
 
     <span class="kw">fn </span>load_segment(<span class="kw-2">&amp;</span><span class="self">self</span>, phdr: <span class="kw-2">&amp;</span>ProgramHeader) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="comment">// In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment
-        // address if it isn&#39;t aligned on a 2 MiB page boundary.
+        // address if it isn't aligned on a 2 MiB page boundary.
         </span><span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
-        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for
+        <span class="comment">// As we've aligned the address down, we may need extra memory to account for
         // the padding.
         </span><span class="kw">let </span>size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) <span class="kw">as </span>usize;
 
-        <span class="comment">// PROT_READ is always implied; it&#39;s not possible to have a page that&#39;s, say,
+        <span class="comment">// PROT_READ is always implied; it's not possible to have a page that's, say,
         // executable but not readable.
         </span><span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
         <span class="kw">if </span>phdr.p_flags &amp; PF_W &gt; <span class="number">0 </span>{
@@ -332,9 +334,9 @@
             prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
-        .expect(<span class="string">&quot;failed to allocate user memory&quot;</span>);
+        .expect(<span class="string">"failed to allocate user memory"</span>);
 
-        <span class="comment">// Safety: we know the target memory is valid as we&#39;ve just allocated it with
+        <span class="comment">// Safety: we know the target memory is valid as we've just allocated it with
         // mmap().
         </span><span class="kw">unsafe </span>{
             core::ptr::copy_nonoverlapping(
@@ -364,7 +366,7 @@
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
-        .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
+        .expect(<span class="string">"failed to allocate memory for user stack"</span>);
 
         <span class="self">self</span>.entry()
     }
@@ -376,13 +378,13 @@
     <span class="kw">let </span>phys_addr = {
         <span class="kw">let </span>addr = pml4 <span class="kw">as </span><span class="kw-2">*const </span>x86_64::structures::paging::PageTable;
         <span class="kw">let </span>pt_guard = <span class="kw">crate</span>::PAGE_TABLES.lock();
-        <span class="kw">let </span>pt = pt_guard.get().context(<span class="string">&quot;failed to get page tables&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>pt = pt_guard.get().context(<span class="string">"failed to get page tables"</span>)<span class="question-mark">?</span>;
         <span class="kw">crate</span>::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
-            .context(<span class="string">&quot;failed to translate virtual page table address&quot;</span>)<span class="question-mark">?
+            .context(<span class="string">"failed to translate virtual page table address"</span>)<span class="question-mark">?
     </span>};
     x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
         .map_err(anyhow::Error::msg)
-        .context(<span class="string">&quot;couldn&#39;t get the physical frame for page table address&quot;</span>)
+        .context(<span class="string">"couldn't get the physical frame for page table address"</span>)
 }
 
 <span class="kw">pub struct </span>Process {
@@ -398,15 +400,15 @@
     /// The application must be built from a valid ELF file representing an Oak
     /// Restricted Application.
     </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
-        <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">&quot;base l4 table should be set&quot;</span>)<span class="question-mark">?</span>.clone();
-        <span class="comment">// Load the process&#39;s page table, so the application can be loaded into its
+        <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">"base l4 table should be set"</span>)<span class="question-mark">?</span>.clone();
+        <span class="comment">// Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
         // application has been mapped into the process pt.
         </span><span class="kw">let </span><span class="kw-2">mut </span>outer_prev_page_table = {
-            <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span>pml4).context(<span class="string">&quot;could not get pml4 frame&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span>pml4).context(<span class="string">"could not get pml4 frame"</span>)<span class="question-mark">?</span>;
             <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
             </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) }
-                .context(<span class="string">&quot;at this point there should be a previous root pt&quot;</span>)<span class="question-mark">?
+                .context(<span class="string">"at this point there should be a previous root pt"</span>)<span class="question-mark">?
                 </span>.into_inner()
         };
 
@@ -414,13 +416,13 @@
         // Oak Restricted Application.
         </span><span class="kw">let </span>entry = <span class="kw">unsafe </span>{ application.map_into_memory() };
 
-        <span class="comment">// We&#39;ve mapped the memory into the process page tables. Let&#39;s revert to the
+        <span class="comment">// We've mapped the memory into the process page tables. Let's revert to the
         // previous page table.
         </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>mapped_prev_pt = outer_prev_page_table.inner().lock();
             <span class="kw">let </span>prev_page_table = mapped_prev_pt.level_4_table();
             <span class="kw">let </span>pml4_frame =
-                identify_pml4_frame(prev_page_table).context(<span class="string">&quot;could not get pml4 frame&quot;</span>)<span class="question-mark">?</span>;
+                identify_pml4_frame(prev_page_table).context(<span class="string">"could not get pml4 frame"</span>)<span class="question-mark">?</span>;
             <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
             </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
         }
@@ -429,22 +431,22 @@
     }
     <span class="doccomment">/// Executes the process.
     </span><span class="kw">pub fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
-        <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span><span class="self">self</span>.pml4).expect(<span class="string">&quot;could not get pml4 frame&quot;</span>);
+        <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span><span class="self">self</span>.pml4).expect(<span class="string">"could not get pml4 frame"</span>);
         <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
         </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
 
         <span class="kw">let </span>entry = <span class="self">self</span>.entry;
-        <span class="macro">log::info!</span>(<span class="string">&quot;Running application&quot;</span>);
+        <span class="macro">log::info!</span>(<span class="string">"Running application"</span>);
         <span class="comment">// Enter Ring 3 and jump to user code.
-        // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the
+        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
         // user to guarantee that the file made sense.
         </span><span class="kw">unsafe </span>{
             <span class="macro">asm! </span>{
-                <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
-                </span><span class="string">&quot;sysretq&quot;</span>,
+                <span class="string">"mov rsp, {}"</span>, <span class="comment">// user stack
+                </span><span class="string">"sysretq"</span>,
                 <span class="kw">in</span>(reg) APPLICATION_STACK_VIRT_ADDR - <span class="number">8</span>,
-                <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) entry.as_u64(), <span class="comment">// initial RIP
-                </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
+                <span class="kw">in</span>(<span class="string">"rcx"</span>) entry.as_u64(), <span class="comment">// initial RIP
+                </span><span class="kw">in</span>(<span class="string">"r11"</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
                 </span>options(noreturn)
             }
         }

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/acpi.rs`."><title>acpi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/acpi.rs`."><title>acpi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -431,14 +433,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -460,24 +462,24 @@
 <span class="kw">use crate</span>::{mm::Translator, PAGE_TABLES};
 
 <span class="doccomment">/// Table of well-known ACPI devices (or, rather, well-known to us)
-</span><span class="kw">const </span>ACPI_GED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ACPI0013&quot;</span>;
-<span class="kw">pub const </span>VIRTIO_MMIO: <span class="kw-2">&amp;</span>str = <span class="string">&quot;LNRO0005&quot;</span>;
-<span class="kw">const </span>SERIAL_PORT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0501&quot;</span>;
-<span class="kw">const </span>PCI_BUS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0A03&quot;</span>;
-<span class="kw">const </span>PCIE_BUS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0A08&quot;</span>;
-<span class="kw">const </span>POWER_BUTTON: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0C0C&quot;</span>;
-<span class="kw">const </span>QEMU_FW_CFG_DEVICE_ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QEMU0002&quot;</span>;
+</span><span class="kw">const </span>ACPI_GED: <span class="kw-2">&amp;</span>str = <span class="string">"ACPI0013"</span>;
+<span class="kw">pub const </span>VIRTIO_MMIO: <span class="kw-2">&amp;</span>str = <span class="string">"LNRO0005"</span>;
+<span class="kw">const </span>SERIAL_PORT: <span class="kw-2">&amp;</span>str = <span class="string">"PNP0501"</span>;
+<span class="kw">const </span>PCI_BUS: <span class="kw-2">&amp;</span>str = <span class="string">"PNP0A03"</span>;
+<span class="kw">const </span>PCIE_BUS: <span class="kw-2">&amp;</span>str = <span class="string">"PNP0A08"</span>;
+<span class="kw">const </span>POWER_BUTTON: <span class="kw-2">&amp;</span>str = <span class="string">"PNP0C0C"</span>;
+<span class="kw">const </span>QEMU_FW_CFG_DEVICE_ID: <span class="kw-2">&amp;</span>str = <span class="string">"QEMU0002"</span>;
 
 <span class="kw">fn </span>description(hid: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span>str {
     <span class="kw">match </span>hid {
-        ACPI_GED =&gt; <span class="string">&quot;ACPI Generic Event Device&quot;</span>,
-        VIRTIO_MMIO =&gt; <span class="string">&quot;Memory-mapped virtio device bus&quot;</span>,
-        SERIAL_PORT =&gt; <span class="string">&quot;16550A-compatible COM Serial Port&quot;</span>,
-        PCI_BUS =&gt; <span class="string">&quot;PCI bus&quot;</span>,
-        PCIE_BUS =&gt; <span class="string">&quot;PCI Express bus&quot;</span>,
-        POWER_BUTTON =&gt; <span class="string">&quot;Power Button Device&quot;</span>,
-        QEMU_FW_CFG_DEVICE_ID =&gt; <span class="string">&quot;QEMU fw_cfg Device&quot;</span>,
-        <span class="kw">_ </span>=&gt; <span class="string">&quot;(unknown device)&quot;</span>,
+        ACPI_GED =&gt; <span class="string">"ACPI Generic Event Device"</span>,
+        VIRTIO_MMIO =&gt; <span class="string">"Memory-mapped virtio device bus"</span>,
+        SERIAL_PORT =&gt; <span class="string">"16550A-compatible COM Serial Port"</span>,
+        PCI_BUS =&gt; <span class="string">"PCI bus"</span>,
+        PCIE_BUS =&gt; <span class="string">"PCI Express bus"</span>,
+        POWER_BUTTON =&gt; <span class="string">"Power Button Device"</span>,
+        QEMU_FW_CFG_DEVICE_ID =&gt; <span class="string">"QEMU fw_cfg Device"</span>,
+        <span class="kw">_ </span>=&gt; <span class="string">"(unknown device)"</span>,
     }
 }
 
@@ -546,7 +548,7 @@
     }
 
     <span class="kw">fn </span>read_io_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u8 {
-        <span class="macro">log::error!</span>(<span class="string">&quot;unexpected call to `read_io_u8`: port {:#x}&quot;</span>, port);
+        <span class="macro">log::error!</span>(<span class="string">"unexpected call to `read_io_u8`: port {:#x}"</span>, port);
         <span class="number">0
     </span>}
 
@@ -572,7 +574,7 @@
 
     <span class="kw">fn </span>read_pci_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, segment: u16, bus: u8, device: u8, function: u8, offset: u16) -&gt; u8 {
         <span class="macro">log::error!</span>(
-            <span class="string">&quot;unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}&quot;</span>,
+            <span class="string">"unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}"</span>,
             segment,
             bus,
             device,
@@ -641,11 +643,11 @@
     }
 }
 
-<span class="kw">trait </span>TableContents&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>contents(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8];
+<span class="kw">trait </span>TableContents&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>contents(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8];
 }
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; TableContents&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>AmlTable {
-    <span class="kw">fn </span>contents(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8] {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; TableContents&lt;<span class="lifetime">'a</span>&gt; <span class="kw">for </span>AmlTable {
+    <span class="kw">fn </span>contents(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8] {
         <span class="kw">let </span>virt_addr = PAGE_TABLES
             .lock()
             .get()
@@ -672,8 +674,8 @@
 ///   - Bits 15..12, 11..8, 7..4, 3..0 (four bits each) encode a hexadecimal
 ///     digit.
 ///
-/// As to what the IDs map to, as the specfication says, look for &quot;Device
-/// Identifier Reference Table &amp; Device Type Code Table&quot; on the PlugPlay forum
+/// As to what the IDs map to, as the specfication says, look for "Device
+/// Identifier Reference Table &amp; Device Type Code Table" on the PlugPlay forum
 /// on CompuServe.
 </span><span class="kw">fn </span>name_from_eisa_id(eisa_id: u64) -&gt; <span class="prelude-ty">Result</span>&lt;String, AmlError&gt; {
     <span class="kw">let </span>eisa_id: u32 = u32::from_be(eisa_id.try_into().map_err(|<span class="kw">_</span>| AmlError::InvalidNameSeg)<span class="question-mark">?</span>);
@@ -706,16 +708,16 @@
     /// ACPI specifications require one of `_HID` or `_ADR` to be present.
     /// See Section 6.1 of the ACPI spec for more details.
     </span><span class="kw">pub fn </span>hid(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>AmlContext) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt; {
-        <span class="kw">let </span>hid = <span class="self">self</span>.invoke(<span class="string">&quot;_HID&quot;</span>, ctx);
+        <span class="kw">let </span>hid = <span class="self">self</span>.invoke(<span class="string">"_HID"</span>, ctx);
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(hid) = hid {
-            <span class="comment">// If the name is an integer, it&#39;s a compressed EISA identifier (yes, really).
+            <span class="comment">// If the name is an integer, it's a compressed EISA identifier (yes, really).
             </span><span class="kw">let </span>hid = <span class="kw">match </span>hid {
                 AmlValue::String(s) =&gt; <span class="prelude-val">Ok</span>(s),
                 AmlValue::Integer(i) =&gt; name_from_eisa_id(i),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(AmlError::InvalidNameSeg),
             }
-            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;error parsing HID value: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"error parsing HID value: {:?}"</span>, err))<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(hid))
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -727,11 +729,11 @@
     /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI
     /// spec for more details.
     </span><span class="kw">pub fn </span>crs(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>AmlContext) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Resource&gt;&gt;&gt; {
-        <span class="kw">let </span>crs = <span class="self">self</span>.invoke(<span class="string">&quot;_CRS&quot;</span>, ctx).map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;error resolving CRS: {:?}&quot;</span>, err));
+        <span class="kw">let </span>crs = <span class="self">self</span>.invoke(<span class="string">"_CRS"</span>, ctx).map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"error resolving CRS: {:?}"</span>, err));
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(crs) = crs {
             <span class="kw">let </span>resources = resource_descriptor_list(<span class="kw-2">&amp;</span>crs)
-                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;error building resource descriptor list: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"error building resource descriptor list: {:?}"</span>, err))<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(resources))
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -760,20 +762,20 @@
         </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">ref </span>dsdt) = acpi.tables.dsdt() {
             acpi.aml
                 .parse_table(dsdt.contents())
-                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ACPI DSDT: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to parse ACPI DSDT: {:?}"</span>, err))<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-            <span class="macro">bail!</span>(<span class="string">&quot;no DSDT found in ACPI tables&quot;</span>);
+            <span class="macro">bail!</span>(<span class="string">"no DSDT found in ACPI tables"</span>);
         }
 
         <span class="kw">for </span>ssdt <span class="kw">in </span>acpi.tables.ssdts() {
             acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
-                <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ACPI SSDT at address {}: {:?}&quot;</span>, ssdt.address, err)
+                <span class="macro">anyhow!</span>(<span class="string">"failed to parse ACPI SSDT at address {}: {:?}"</span>, ssdt.address, err)
             })<span class="question-mark">?</span>;
         }
 
         acpi.aml
             .initialize_objects()
-            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to initialize ACPI AML objects: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to initialize ACPI AML objects: {:?}"</span>, err))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(acpi)
     }
@@ -800,36 +802,36 @@
                 LevelType::Scope =&gt; <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>),
             })
-            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to walk ACPI tables: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to walk ACPI tables: {:?}"</span>, err))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(results)
     }
 
     <span class="kw">pub fn </span>print_devices(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">for </span>device <span class="kw">in </span><span class="self">self</span>.devices()<span class="question-mark">? </span>{
             <span class="kw">if let </span><span class="prelude-val">Some</span>(hid) = device.hid(<span class="kw-2">&amp;mut </span><span class="self">self</span>.aml)<span class="question-mark">? </span>{
-                <span class="macro">log::info!</span>(<span class="string">&quot;ACPI device: {} {:7} {}&quot;</span>, device.name, hid, description(hid.as_str()));
+                <span class="macro">log::info!</span>(<span class="string">"ACPI device: {} {:7} {}"</span>, device.name, hid, description(hid.as_str()));
             } <span class="kw">else </span>{
-                <span class="macro">log::info!</span>(<span class="string">&quot;ACPI device: {} (no HID)&quot;</span>, device.name);
+                <span class="macro">log::info!</span>(<span class="string">"ACPI device: {} (no HID)"</span>, device.name);
             }
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>resources) = device.crs(<span class="kw-2">&amp;mut </span><span class="self">self</span>.aml)<span class="question-mark">? </span>{
                 <span class="kw">for </span>resource <span class="kw">in </span>resources {
                     <span class="kw">match </span>resource {
-                        Resource::Irq(irq) =&gt; <span class="macro">log::info!</span>(<span class="string">&quot;  IRQ: {}&quot;</span>, irq.irq),
+                        Resource::Irq(irq) =&gt; <span class="macro">log::info!</span>(<span class="string">"  IRQ: {}"</span>, irq.irq),
                         Resource::AddressSpace(address) =&gt; {
-                            <span class="macro">log::info!</span>(<span class="string">&quot;  Address space: {:?}&quot;</span>, address)
+                            <span class="macro">log::info!</span>(<span class="string">"  Address space: {:?}"</span>, address)
                         }
                         Resource::MemoryRange(MemoryRangeDescriptor::FixedLocation {
                             is_writable: <span class="kw">_</span>,
                             base_address,
                             range_length,
                         }) =&gt; <span class="macro">log::info!</span>(
-                            <span class="string">&quot;  Memory range: [{:#018x}..{:#018x})&quot;</span>,
+                            <span class="string">"  Memory range: [{:#018x}..{:#018x})"</span>,
                             base_address,
                             base_address + range_length
                         ),
-                        Resource::IOPort(port) =&gt; <span class="macro">log::info!</span>(<span class="string">&quot;  IO port: {:?}&quot;</span>, port),
-                        Resource::Dma(dma) =&gt; <span class="macro">log::info!</span>(<span class="string">&quot;  DMA: {:?}&quot;</span>, dma),
+                        Resource::IOPort(port) =&gt; <span class="macro">log::info!</span>(<span class="string">"  IO port: {:?}"</span>, port),
+                        Resource::Dma(dma) =&gt; <span class="macro">log::info!</span>(<span class="string">"  DMA: {:?}"</span>, dma),
                     }
                 }
             }
@@ -845,7 +847,7 @@
         </span><span class="kw">return unsafe </span>{ AcpiTables::from_rsdp(Handler {}, params.acpi_rsdp_addr <span class="kw">as </span>usize) }
             .map_err(|err| {
                 <span class="macro">anyhow!</span>(
-                    <span class="string">&quot;failed to load ACPI tables from address {:#x} specified in boot params: {:?}&quot;</span>,
+                    <span class="string">"failed to load ACPI tables from address {:#x} specified in boot params: {:?}"</span>,
                     acpi_rsdp_addr,
                     err
                 )
@@ -853,9 +855,9 @@
     }
 
     <span class="comment">// Safety: the EBDA area will be mapped and valid, so this is memory-safe, but
-    // we&#39;re still searching 1 KiB of memory for the signature that may not be
+    // we're still searching 1 KiB of memory for the signature that may not be
     // there or match some random garbage.
     </span><span class="kw">unsafe </span>{ AcpiTables::search_for_rsdp_bios(Handler {}) }
-        .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to load ACPI tables from EBDA: {:?}&quot;</span>, err))
+        .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to load ACPI tables from EBDA: {:?}"</span>, err))
 }
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/mm/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/mm/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -404,14 +406,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -419,11 +421,11 @@
 
 </span><span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
 </span><span class="kw">use </span>oak_linux_boot_params::Ramdisk;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_sev_guest::msr::{get_sev_status, SevStatus};
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
 </span><span class="kw">use </span>x86_64::structures::paging::frame::PhysFrameRange;
 <span class="kw">use </span>x86_64::{
     addr::{align_down, align_up},
@@ -491,7 +493,7 @@
         <span class="kw">const </span>GLOBAL = <span class="number">1 </span>&lt;&lt; <span class="number">8</span>;
         <span class="doccomment">/// Marks the page as encrypted. Ignored under &lt;NoEncryption&gt;.
         ///
-        /// The bit value is hardcoded to be 51 here, but that&#39;s because it&#39;s not possible to
+        /// The bit value is hardcoded to be 51 here, but that's because it's not possible to
         /// represent `ENCRYPTED = 1 &lt;&lt; C` in Rust right now. The actual bit set may not be 51.
         </span><span class="kw">const </span>ENCRYPTED = <span class="number">1 </span>&lt;&lt; <span class="number">51</span>;
         <span class="kw">const </span>NO_EXECUTE = <span class="number">1 </span>&lt;&lt; <span class="number">63</span>;
@@ -574,7 +576,7 @@
 <span class="kw">pub fn </span>init(
     memory_map: <span class="kw-2">&amp;</span>[BootE820Entry],
     program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
-    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)] </span>ramdisk: <span class="kw-2">&amp;</span>Ramdisk,
+    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)] </span>ramdisk: <span class="kw-2">&amp;</span>Ramdisk,
 ) {
     <span class="kw">let </span><span class="kw-2">mut </span>alloc = FRAME_ALLOCATOR.lock();
 
@@ -583,7 +585,7 @@
         .iter()
         .inspect(|e| {
             <span class="macro">info!</span>(
-                <span class="string">&quot;E820 entry: [{:#018x}..{:#018x}) ({}), type {}&quot;</span>,
+                <span class="string">"E820 entry: [{:#018x}..{:#018x}) ({}), type {}"</span>,
                 e.addr(),
                 e.addr() + e.size(),
                 e.size(),
@@ -601,8 +603,8 @@
         })
         .filter(|(start, limit)| limit &gt; start)
         .map(|(start, limit)| {
-            <span class="comment">// Safety: align_down/align_up guarantees we&#39;re aligned to 2 MiB boundaries,
-            // and we know there&#39;s _something_ in the memory range.
+            <span class="comment">// Safety: align_down/align_up guarantees we're aligned to 2 MiB boundaries,
+            // and we know there's _something_ in the memory range.
             </span>PhysFrame::range(
                 PhysFrame::from_start_address(start).unwrap(),
                 PhysFrame::from_start_address(limit).unwrap(),
@@ -644,7 +646,7 @@
         })
         .for_each(|range| {
             <span class="macro">info!</span>(
-                <span class="string">&quot;marking [{:#018x}..{:#018x}) as reserved&quot;</span>,
+                <span class="string">"marking [{:#018x}..{:#018x}) as reserved"</span>,
                 range.start.start_address().as_u64(),
                 range.end.start_address().as_u64()
             );
@@ -652,11 +654,11 @@
         });
 
     <span class="comment">// Thirdly, mark the ramdisk as reserved.
-    </span><span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    </span><span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
     </span>{
         <span class="kw">let </span>ramdisk_range = ramdisk_range(ramdisk);
         <span class="macro">info!</span>(
-            <span class="string">&quot;marking [{:#018x}..{:#018x}) as reserved (ramdisk)&quot;</span>,
+            <span class="string">"marking [{:#018x}..{:#018x}) as reserved (ramdisk)"</span>,
             ramdisk_range.start.start_address().as_u64(),
             ramdisk_range.end.start_address().as_u64()
         );
@@ -664,7 +666,7 @@
     };
 }
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
 </span><span class="kw">pub fn </span>ramdisk_range(ramdisk: <span class="kw-2">&amp;</span>Ramdisk) -&gt; PhysFrameRange&lt;Size2MiB&gt; {
     PhysFrame::range(
         PhysFrame::&lt;x86_64::structures::paging::Size2MiB&gt;::from_start_address(PhysAddr::new(
@@ -680,8 +682,8 @@
 }
 
 <span class="kw">pub fn </span>encryption() -&gt; MemoryEncryption {
-    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let&#39;s assume
-    // it&#39;s bit 51.
+    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let's assume
+    // it's bit 51.
     </span><span class="kw">if </span>get_sev_status().unwrap_or(SevStatus::empty()).contains(SevStatus::SEV_ENABLED) {
         MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } <span class="kw">else </span>{
@@ -704,13 +706,13 @@
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-</span><span class="kw">pub fn </span>initial_pml4(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;PhysFrame, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>initial_pml4(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;PhysFrame, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory
-    // region it&#39;s handing memory out of to be identity mapped. This is true for
+    // region it's handing memory out of to be identity mapped. This is true for
     // the lower 2 GiB after we boot. This reference will no longer be valid
     // after we reload the page tables!
     </span><span class="kw">let </span>pml4_frame: PhysFrame&lt;Size4KiB&gt; =
-        FRAME_ALLOCATOR.lock().allocate_frame().ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
+        FRAME_ALLOCATOR.lock().allocate_frame().ok_or(<span class="string">"couldn't allocate a frame for PML4"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml4_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
     pml4.zero();
 
@@ -724,7 +726,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>fa = FRAME_ALLOCATOR.lock();
         <span class="kw">for </span>entry <span class="kw">in </span>pml4.iter_mut().skip(<span class="number">256</span>) {
             <span class="kw">let </span>pml3_frame: PhysFrame&lt;Size4KiB&gt; =
-                fa.allocate_frame().ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML3&quot;</span>)<span class="question-mark">?</span>;
+                fa.allocate_frame().ok_or(<span class="string">"couldn't allocate a frame for PML3"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>pml3 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml3_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
             pml3.zero();
             entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
@@ -733,7 +735,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_table = EncryptedPageTable::new(pml4, VirtAddr::new(<span class="number">0</span>), encryption());
 
-    <span class="comment">// Safety: these operations are safe as they&#39;re not done on active page tables.
+    <span class="comment">// Safety: these operations are safe as they're not done on active page tables.
     </span><span class="kw">unsafe </span>{
         <span class="comment">// Create a direct map for all physical memory, marking it NO_EXECUTE. The size
         // (128 GB) has been chosen go coincide with the amout of memory our
@@ -751,12 +753,12 @@
                 | PageTableFlags::ENCRYPTED,
             <span class="kw-2">&amp;mut </span>page_table,
         )
-        .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for physical memory&quot;</span>)<span class="question-mark">?</span>;
+        .map_err(|<span class="kw">_</span>| <span class="string">"couldn't set up paging for physical memory"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Mapping for the kernel itself in the upper -2G of memory, based on the
         // mappings (and permissions) in the program header.
         </span>page_tables::create_kernel_map(program_headers, <span class="kw-2">&amp;mut </span>page_table)
-            .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|<span class="kw">_</span>| <span class="string">"couldn't set up paging for the kernel"</span>)<span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(pml4_frame)
@@ -766,7 +768,7 @@
 ///
 /// The stack will be one page (2 MiB) in size, will be allocated in the
 /// VMA_ALLOCATOR area, and will consume two pages: one as a unmapped stack
-/// guard (so that we&#39;d get a page fault if we blow the stack), and one backed
+/// guard (so that we'd get a page fault if we blow the stack), and one backed
 /// by a physical frame as the actual stack.
 ///
 /// The return address is usable as the stack pointer; that is, it points to the
@@ -777,11 +779,11 @@
     </span><span class="kw">let </span>pages = VMA_ALLOCATOR
         .lock()
         .allocate(<span class="number">2</span>)
-        .expect(<span class="string">&quot;unable to allocate virtual memory for syscall stack&quot;</span>);
+        .expect(<span class="string">"unable to allocate virtual memory for syscall stack"</span>);
     <span class="kw">let </span>frame = FRAME_ALLOCATOR
         .lock()
         .allocate_frame()
-        .expect(<span class="string">&quot;unable to allocate physical memory for syscall stack&quot;</span>);
+        .expect(<span class="string">"unable to allocate physical memory for syscall stack"</span>);
     <span class="kw">let </span>stack_page = pages.start + <span class="number">1</span>;
     <span class="kw">unsafe </span>{
         PAGE_TABLES
@@ -798,7 +800,7 @@
                     | PageTableFlags::WRITABLE,
                 PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             )
-            .expect(<span class="string">&quot;failed to update page tables for syscall stack&quot;</span>)
+            .expect(<span class="string">"failed to update page tables for syscall stack"</span>)
             .flush();
     };
 

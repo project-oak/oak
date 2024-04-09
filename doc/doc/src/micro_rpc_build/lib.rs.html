@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `micro_rpc_build/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="micro_rpc_build" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `micro_rpc_build/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="micro_rpc_build" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../micro_rpc_build/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -331,14 +333,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -364,10 +366,10 @@
 }
 
 <span class="kw">impl </span>ReceiverType {
-    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            ReceiverType::RefMutSelf =&gt; <span class="string">&quot;&amp;mut self&quot;</span>,
-            ReceiverType::RefSelf =&gt; <span class="string">&quot;&amp;self&quot;</span>,
+            ReceiverType::RefMutSelf =&gt; <span class="string">"&amp;mut self"</span>,
+            ReceiverType::RefSelf =&gt; <span class="string">"&amp;self"</span>,
         }
     }
 }
@@ -424,7 +426,7 @@
     options: CompileOptions,
 ) {
     protos.iter().for_each(|filename| {
-        <span class="macro">println!</span>(<span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>, filename.as_ref().as_os_str().to_string_lossy())
+        <span class="macro">println!</span>(<span class="string">"cargo:rerun-if-changed={}"</span>, filename.as_ref().as_os_str().to_string_lossy())
     });
     <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
@@ -433,10 +435,10 @@
     }
     config
         <span class="comment">// Use BTreeMap to allow using this function in no-std crates.
-        </span>.btree_map([<span class="string">&quot;.&quot;</span>])
+        </span>.btree_map([<span class="string">"."</span>])
         .bytes(options.bytes)
         .compile_protos(protos, includes)
-        .expect(<span class="string">&quot;couldn&#39;t compile protobuffer schema&quot;</span>);
+        .expect(<span class="string">"couldn't compile protobuffer schema"</span>);
 }
 
 <span class="kw">struct </span>ServiceGenerator {
@@ -445,13 +447,13 @@
 
 <span class="kw">impl </span>prost_build::ServiceGenerator <span class="kw">for </span>ServiceGenerator {
     <span class="kw">fn </span>generate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, service: Service, buf: <span class="kw-2">&amp;mut </span>String) {
-        <span class="kw-2">*</span>buf += <span class="string">&quot;\n&quot;</span>;
+        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
         <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service(<span class="kw-2">&amp;</span>service, <span class="self">self</span>.options.receiver_type)
-            .expect(<span class="string">&quot;couldn&#39;t generate services&quot;</span>);
-        <span class="kw-2">*</span>buf += <span class="string">&quot;\n&quot;</span>;
-        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">false</span>).expect(<span class="string">&quot;couldn&#39;t generate clients&quot;</span>);
-        <span class="kw-2">*</span>buf += <span class="string">&quot;\n&quot;</span>;
-        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">true</span>).expect(<span class="string">&quot;couldn&#39;t generate async clients&quot;</span>);
+            .expect(<span class="string">"couldn't generate services"</span>);
+        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
+        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">false</span>).expect(<span class="string">"couldn't generate clients"</span>);
+        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
+        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">true</span>).expect(<span class="string">"couldn't generate async clients"</span>);
     }
 }
 
@@ -462,34 +464,34 @@
     <span class="kw">let </span>service_name = service_name(service);
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;#[derive(Clone)]&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;pub struct {server_name}&lt;S&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    service: S&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; ::micro_rpc::Transport for {server_name}&lt;S&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    fn invoke(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let response: ::micro_rpc::ResponseWrapper = self&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            .invoke_inner(request_bytes)&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            .into();&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let response_bytes = response.encode_to_vec();&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        Ok(response_bytes)&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; {server_name}&lt;S&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(service: S) -&gt; Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        Self {{ service }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"#[derive(Clone)]"</span>),
+        <span class="macro">format!</span>(<span class="string">"pub struct {server_name}&lt;S&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"    service: S"</span>),
+        <span class="macro">format!</span>(<span class="string">"}}"</span>),
+        <span class="macro">format!</span>(<span class="string">""</span>),
+        <span class="macro">format!</span>(<span class="string">"impl &lt;S: {service_name}&gt; ::micro_rpc::Transport for {server_name}&lt;S&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"    fn invoke(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"        let response: ::micro_rpc::ResponseWrapper = self"</span>),
+        <span class="macro">format!</span>(<span class="string">"            .invoke_inner(request_bytes)"</span>),
+        <span class="macro">format!</span>(<span class="string">"            .into();"</span>),
+        <span class="macro">format!</span>(<span class="string">"        let response_bytes = response.encode_to_vec();"</span>),
+        <span class="macro">format!</span>(<span class="string">"        Ok(response_bytes)"</span>),
+        <span class="macro">format!</span>(<span class="string">"    }}"</span>),
+        <span class="macro">format!</span>(<span class="string">"}}"</span>),
+        <span class="macro">format!</span>(<span class="string">""</span>),
+        <span class="macro">format!</span>(<span class="string">"impl &lt;S: {service_name}&gt; {server_name}&lt;S&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"    pub fn new(service: S) -&gt; Self {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"        Self {{ service }}"</span>),
+        <span class="macro">format!</span>(<span class="string">"    }}"</span>),
         <span class="comment">// invoke_inner returns either a successful response body, or an error represented as Status.
-        </span><span class="macro">format!</span>(<span class="string">&quot;    fn invoke_inner(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::micro_rpc::Status&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        let request = ::micro_rpc::RequestWrapper::decode(request_bytes).map_err(|err| {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            ::micro_rpc::Status::new_with_message(&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                ::micro_rpc::StatusCode::Internal,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                ::micro_rpc::format!(\&quot;Client failed to deserialize the response: {{:?}}\&quot;, err),&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            )&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }})?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        match request.method_id {{&quot;</span>),
+        </span><span class="macro">format!</span>(<span class="string">"    fn invoke_inner(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::micro_rpc::Status&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"        let request = ::micro_rpc::RequestWrapper::decode(request_bytes).map_err(|err| {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"            ::micro_rpc::Status::new_with_message("</span>),
+        <span class="macro">format!</span>(<span class="string">"                ::micro_rpc::StatusCode::Internal,"</span>),
+        <span class="macro">format!</span>(<span class="string">"                ::micro_rpc::format!(\"Client failed to deserialize the response: {{:?}}\", err),"</span>),
+        <span class="macro">format!</span>(<span class="string">"            )"</span>),
+        <span class="macro">format!</span>(<span class="string">"        }})?;"</span>),
+        <span class="macro">format!</span>(<span class="string">"        match request.method_id {{"</span>),
     ]);
     lines.extend(
         service
@@ -497,25 +499,25 @@
             .iter()
             .map(generate_server_handler)
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
-            .context(<span class="string">&quot;couldn&#39;t generate server handler&quot;</span>)<span class="question-mark">?
+            .context(<span class="string">"couldn't generate server handler"</span>)<span class="question-mark">?
             </span>.into_iter()
             .flatten(),
     );
     lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;            _ =&gt; Err(::micro_rpc::Status::new(&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                ::micro_rpc::StatusCode::Unimplemented,&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            ))&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;pub trait {service_name}: Sized {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"            _ =&gt; Err(::micro_rpc::Status::new("</span>),
+        <span class="macro">format!</span>(<span class="string">"                ::micro_rpc::StatusCode::Unimplemented,"</span>),
+        <span class="macro">format!</span>(<span class="string">"            ))"</span>),
+        <span class="macro">format!</span>(<span class="string">"        }}"</span>),
+        <span class="macro">format!</span>(<span class="string">"    }}"</span>),
+        <span class="macro">format!</span>(<span class="string">"}}"</span>),
+        <span class="macro">format!</span>(<span class="string">""</span>),
+        <span class="macro">format!</span>(<span class="string">"pub trait {service_name}: Sized {{"</span>),
     ]);
     lines.extend(
         service.methods.iter().flat_map(|method| generate_service_method(method, receiver_type)),
     );
-    lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
-    <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">&quot;\n&quot;</span>.to_string()).collect())
+    lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">"}}"</span>), <span class="macro">format!</span>(<span class="string">""</span>)]);
+    <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">"\n"</span>.to_string()).collect())
 }
 
 <span class="doccomment">/// Generate the service client Rust objects from the input [`Service`]
@@ -523,19 +525,19 @@
 </span><span class="kw">fn </span>generate_service_client(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; anyhow::Result&lt;String&gt; {
     <span class="kw">let </span>client_name = client_name(service, asynchronous);
     <span class="kw">let </span>transport_trait =
-        <span class="kw">if </span>asynchronous { <span class="string">&quot;::micro_rpc::AsyncTransport&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;::micro_rpc::Transport&quot; </span>};
+        <span class="kw">if </span>asynchronous { <span class="string">"::micro_rpc::AsyncTransport" </span>} <span class="kw">else </span>{ <span class="string">"::micro_rpc::Transport" </span>};
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;pub struct {client_name}&lt;T: {transport_trait}&gt; {{&quot;</span>,),
-        <span class="macro">format!</span>(<span class="string">&quot;    transport: T&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;impl &lt;T: {transport_trait}&gt; {client_name}&lt;T&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(transport: T) -&gt; Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        Self {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            transport&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"pub struct {client_name}&lt;T: {transport_trait}&gt; {{"</span>,),
+        <span class="macro">format!</span>(<span class="string">"    transport: T"</span>),
+        <span class="macro">format!</span>(<span class="string">"}}"</span>),
+        <span class="macro">format!</span>(<span class="string">""</span>),
+        <span class="macro">format!</span>(<span class="string">"impl &lt;T: {transport_trait}&gt; {client_name}&lt;T&gt; {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"    pub fn new(transport: T) -&gt; Self {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"        Self {{"</span>),
+        <span class="macro">format!</span>(<span class="string">"            transport"</span>),
+        <span class="macro">format!</span>(<span class="string">"        }}"</span>),
+        <span class="macro">format!</span>(<span class="string">"    }}"</span>),
     ]);
     lines.extend(
         service
@@ -543,12 +545,12 @@
             .iter()
             .map(|c| generate_client_method(c, asynchronous))
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
-            .context(<span class="string">&quot;couldn&#39;t generate client method&quot;</span>)<span class="question-mark">?
+            .context(<span class="string">"couldn't generate client method"</span>)<span class="question-mark">?
             </span>.into_iter()
             .flatten(),
     );
-    lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
-    <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">&quot;\n&quot;</span>.to_string()).collect())
+    lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">"}}"</span>), <span class="macro">format!</span>(<span class="string">""</span>)]);
+    <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">"\n"</span>.to_string()).collect())
 }
 
 <span class="kw">fn </span>generate_client_method(method: <span class="kw-2">&amp;</span>Method, asynchronous: bool) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt; {
@@ -556,19 +558,19 @@
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>response_type = response_type(method);
     <span class="kw">let </span>method_name = method_name(method);
-    <span class="kw">let </span>fn_modifier = <span class="kw">if </span>asynchronous { <span class="string">&quot;async &quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;&quot; </span>};
+    <span class="kw">let </span>fn_modifier = <span class="kw">if </span>asynchronous { <span class="string">"async " </span>} <span class="kw">else </span>{ <span class="string">"" </span>};
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(
-            <span class="string">&quot;    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;Result&lt;{response_type}, ::micro_rpc::Status&gt;, T::Error&gt; {{&quot;
+            <span class="string">"    pub {fn_modifier}fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;Result&lt;{response_type}, ::micro_rpc::Status&gt;, T::Error&gt; {{"
         </span>),
         <span class="kw">if </span>asynchronous {
             <span class="macro">format!</span>(
-                <span class="string">&quot;        ::micro_rpc::async_client_invoke(&amp;mut self.transport, {method_id}, request).await&quot;
+                <span class="string">"        ::micro_rpc::async_client_invoke(&amp;mut self.transport, {method_id}, request).await"
             </span>)
         } <span class="kw">else </span>{
-            <span class="macro">format!</span>(<span class="string">&quot;        ::micro_rpc::client_invoke(&amp;mut self.transport, {method_id}, request)&quot;</span>)
+            <span class="macro">format!</span>(<span class="string">"        ::micro_rpc::client_invoke(&amp;mut self.transport, {method_id}, request)"</span>)
         },
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"    }}"</span>),
     ])
 }
 
@@ -582,23 +584,23 @@
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>method_name = method_name(method);
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"            {method_id} =&gt; {{"</span>),
         <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
         </span><span class="macro">format!</span>(
-            <span class="string">&quot;                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{&quot;
+            <span class="string">"                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{"
         </span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                    ::micro_rpc::Status::new_with_message(&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::StatusCode::Internal,&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">"                    ::micro_rpc::Status::new_with_message("</span>),
+        <span class="macro">format!</span>(<span class="string">"                        ::micro_rpc::StatusCode::Internal,"</span>),
         <span class="macro">format!</span>(
-            <span class="string">&quot;                        ::micro_rpc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;
+            <span class="string">"                        ::micro_rpc::format!(\"Service failed to deserialize the request: {{:?}}\", err)"
         </span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                    )&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                }})?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(request)?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.encode_to_vec();&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;            }}&quot;</span>,),
+        <span class="macro">format!</span>(<span class="string">"                    )"</span>),
+        <span class="macro">format!</span>(<span class="string">"                }})?;"</span>),
+        <span class="macro">format!</span>(<span class="string">"                let response = self.service.{method_name}(request)?;"</span>),
+        <span class="macro">format!</span>(<span class="string">"                let response_body = response.encode_to_vec();"</span>),
+        <span class="macro">format!</span>(<span class="string">"                Ok(response_body)"</span>),
+        <span class="macro">format!</span>(<span class="string">"            }}"</span>,),
     ])
 }
 
@@ -608,7 +610,7 @@
     <span class="kw">let </span>response_type = response_type(method);
     <span class="kw">let </span>self_type = receiver_type.value();
     <span class="macro">vec!</span>[<span class="macro">format!</span>(
-        <span class="string">&quot;    fn {method_name}({self_type}, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;&quot;
+        <span class="string">"    fn {method_name}({self_type}, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;"
     </span>)]
 }
 
@@ -618,12 +620,12 @@
         .comments
         .leading
         .iter()
-        .filter_map(|line| line.strip_prefix(<span class="string">&quot; method_id: &quot;</span>))
+        .filter_map(|line| line.strip_prefix(<span class="string">" method_id: "</span>))
         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
     <span class="kw">if </span>method_ids.is_empty() {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;no method_id comment on method {}&quot;</span>, method.proto_name,)
+        <span class="macro">anyhow::bail!</span>(<span class="string">"no method_id comment on method {}"</span>, method.proto_name,)
     } <span class="kw">else if </span>method_ids.len() &gt; <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;multiple method_id comments on method {}&quot;</span>, method.proto_name)
+        <span class="macro">anyhow::bail!</span>(<span class="string">"multiple method_id comments on method {}"</span>, method.proto_name)
     } <span class="kw">else </span>{
         <span class="prelude-val">Ok</span>(method_ids[<span class="number">0</span>].parse()<span class="question-mark">?</span>)
     }
@@ -631,12 +633,12 @@
 
 <span class="doccomment">/// The type name of the generated Rust client struct.
 </span><span class="kw">fn </span>client_name(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; String {
-    <span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, service.name, <span class="kw">if </span>asynchronous { <span class="string">&quot;AsyncClient&quot; </span>} <span class="kw">else </span>{ <span class="string">&quot;Client&quot; </span>})
+    <span class="macro">format!</span>(<span class="string">"{}{}"</span>, service.name, <span class="kw">if </span>asynchronous { <span class="string">"AsyncClient" </span>} <span class="kw">else </span>{ <span class="string">"Client" </span>})
 }
 
 <span class="doccomment">/// The type name of the generated Rust server struct.
 </span><span class="kw">fn </span>server_name(service: <span class="kw-2">&amp;</span>Service) -&gt; String {
-    <span class="macro">format!</span>(<span class="string">&quot;{}Server&quot;</span>, service.name)
+    <span class="macro">format!</span>(<span class="string">"{}Server"</span>, service.name)
 }
 
 <span class="doccomment">/// The type name of the generated Rust service struct.

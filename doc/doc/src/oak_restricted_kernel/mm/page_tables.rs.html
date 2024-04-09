@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/mm/page_tables.rs`."><title>page_tables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/mm/page_tables.rs`."><title>page_tables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -327,14 +329,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -372,7 +374,7 @@
     mapper: <span class="kw-2">&amp;mut </span>M,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), MapToError&lt;S&gt;&gt; {
     <span class="kw">for </span>(i, frame) <span class="kw">in </span>range.enumerate() {
-        <span class="comment">// We don&#39;t set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel
+        <span class="comment">// We don't set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel
         // and AMD CPUs behave differently (Intel ignores the `G` bit in parent
         // page table entries, AMD ignores it in lower entries _except_ PML4 and
         // PML5); the `G` bit has semantic meaning only in the lowest level of
@@ -392,10 +394,10 @@
 <span class="doccomment">/// Maps the kernel memory ranges (ie. vaddr in last 2GB of memory), respecting
 /// section permissions.
 ///
-/// Strictly speaking there&#39;s nothing int he ELF file that _requires_ sections
-/// to be page-aligned. It&#39;s entirely possible to have a section with write
+/// Strictly speaking there's nothing int he ELF file that _requires_ sections
+/// to be page-aligned. It's entirely possible to have a section with write
 /// privileges and a section with execute privileges be on the same 4K page --
-/// which would defeat the purpose of restricting the permissions, as we&#39;d have
+/// which would defeat the purpose of restricting the permissions, as we'd have
 /// to go for the lowest common denominator and mark the pages both writable and
 /// executable. For now, calling this function fails if there is any overlap
 /// when using 4K pages.
@@ -404,7 +406,7 @@
 /// 0xFFFF_FFFF_8000_0000, that is, for the memory range where the kernel code
 /// should lie.
 ///
-/// The mappings we create respect the `PF_W` and `PF_X` flags; there&#39;s no way
+/// The mappings we create respect the `PF_W` and `PF_X` flags; there's no way
 /// how to map a page as not readable (but still writable or executable), so
 /// `PF_R` is ignored.
 ///
@@ -440,7 +442,7 @@
                     .unwrap(),
                 ),
                 VirtAddr::new(phdr.p_vaddr),
-                <span class="comment">/* It&#39;s not possible to mark a page not readable, so we ignore PF_R. */
+                <span class="comment">/* It's not possible to mark a page not readable, so we ignore PF_R. */
                 </span>PageTableFlags::PRESENT
                     | PageTableFlags::GLOBAL
                     | PageTableFlags::ENCRYPTED
@@ -460,18 +462,18 @@
 }
 
 <span class="kw">pub struct </span>RootPageTable {
-    inner: EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;,
+    inner: EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">'static</span>, PhysOffset&gt;&gt;,
 }
 
 <span class="kw">impl </span>RootPageTable {
     <span class="kw">pub fn </span>new(
-        pml4: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>PageTable,
+        pml4: <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>PageTable,
         offset: VirtAddr,
         encryption: MemoryEncryption,
     ) -&gt; <span class="self">Self </span>{
         RootPageTable { inner: EncryptedPageTable::new(pml4, offset, encryption) }
     }
-    <span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt; {
+    <span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">'static</span>, PhysOffset&gt;&gt; {
         <span class="self">self</span>.inner
     }
     <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
@@ -513,7 +515,7 @@
         count: usize,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;PageRange&lt;S&gt;&gt; {
         <span class="comment">// This is highly inefficient, but it should be called rarely enough that it
-        // doesn&#39;t matter (famous last words...)
+        // doesn't matter (famous last words...)
         // We assume virtual addresses are 48 bits, with the gap in the middle.
         </span><span class="kw">let </span>limit = Page::containing_address(<span class="kw">if </span>start.start_address().as_u64() &lt; u64::pow(<span class="number">2</span>, <span class="number">47</span>) {
             VirtAddr::new(u64::pow(<span class="number">2</span>, <span class="number">47</span>) - <span class="number">1</span>)
@@ -625,7 +627,7 @@
             Cr3::write(pml4_frame, Cr3Flags::empty());
         };
 
-        <span class="comment">// Safety: we&#39;ve reloaded page tables that place the direct mapping region at
+        <span class="comment">// Safety: we've reloaded page tables that place the direct mapping region at
         // that offset, so the memory location is safe to access now.
         </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{
             <span class="kw-2">&amp;mut *</span>(<span class="kw">super</span>::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()

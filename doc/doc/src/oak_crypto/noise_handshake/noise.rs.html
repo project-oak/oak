@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_crypto/src/noise_handshake/noise.rs`."><title>noise.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_crypto" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_crypto/src/noise_handshake/noise.rs`."><title>noise.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_crypto" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_crypto/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -306,14 +308,14 @@
 <a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -356,8 +358,8 @@
     <span class="kw">pub fn </span>new(handshake_type: HandshakeType) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>chaining_key_in = [<span class="number">0</span>; SYMMETRIC_KEY_LEN];
         <span class="kw">let </span>protocol_name = <span class="kw">match </span>handshake_type {
-            HandshakeType::Nk =&gt; <span class="string">b&quot;Noise_NK_P256_AESGCM_SHA256&quot;</span>,
-            HandshakeType::Nn =&gt; <span class="string">b&quot;Noise_NN_P256_AESGCM_SHA256&quot;</span>,
+            HandshakeType::Nk =&gt; <span class="string">b"Noise_NK_P256_AESGCM_SHA256"</span>,
+            HandshakeType::Nn =&gt; <span class="string">b"Noise_NN_P256_AESGCM_SHA256"</span>,
         };
         chaining_key_in[..protocol_name.len()].copy_from_slice(protocol_name);
         Noise {
@@ -462,10 +464,10 @@
     </span><span class="attr">#[test]
     </span><span class="kw">fn </span>mix_hash() {
         <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nk);
-        noise.mix_hash(<span class="string">&quot;mixHash&quot;</span>.as_bytes());
+        noise.mix_hash(<span class="string">"mixHash"</span>.as_bytes());
         <span class="macro">assert_eq!</span>(
             hex::encode(noise.handshake_hash()),
-            <span class="string">&quot;04d999779401b40a318f8729c99bec79cc15ec375f4a0bb3de1a00965b61d666&quot;
+            <span class="string">"04d999779401b40a318f8729c99bec79cc15ec375f4a0bb3de1a00965b61d666"
         </span>);
     }
 
@@ -479,8 +481,8 @@
             <span class="number">0x1e</span>, <span class="number">0x3f</span>, <span class="number">0x5f</span>, <span class="number">0x20</span>, <span class="number">0xb0</span>, <span class="number">0xea</span>, <span class="number">0x9b</span>, <span class="number">0x2b</span>, <span class="number">0xa0</span>,
         ];
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
-            (HandshakeType::Nk, <span class="string">&quot;53741f8d5a69c11d8f6f0865193f15f6d756b0d209fd7116b400a4a8a39439b8&quot;</span>),
-            (HandshakeType::Nn, <span class="string">&quot;a701b0aa0ab2100dd2679f3c621e5c63cf705f267fbb8273ee305e754ac24bd4&quot;</span>),
+            (HandshakeType::Nk, <span class="string">"53741f8d5a69c11d8f6f0865193f15f6d756b0d209fd7116b400a4a8a39439b8"</span>),
+            (HandshakeType::Nn, <span class="string">"a701b0aa0ab2100dd2679f3c621e5c63cf705f267fbb8273ee305e754ac24bd4"</span>),
         ];
 
         <span class="kw">for </span>(handshake_type, expected_hash) <span class="kw">in </span>handshake_types {
@@ -495,19 +497,19 @@
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
             (
                 HandshakeType::Nk,
-                <span class="string">&quot;fdf1564256dcee03b5babe81df599ec4273c95e4269d747764&quot;</span>,
-                <span class="string">&quot;1cf5b0af5f3365d715e9137382a5fd139a56e25bea8ecdbf3018f42af7432a75&quot;</span>,
+                <span class="string">"fdf1564256dcee03b5babe81df599ec4273c95e4269d747764"</span>,
+                <span class="string">"1cf5b0af5f3365d715e9137382a5fd139a56e25bea8ecdbf3018f42af7432a75"</span>,
             ),
             (
                 HandshakeType::Nn,
-                <span class="string">&quot;7134cc2910f616a55807c422a682fa615382ca6ed049b8755d&quot;</span>,
-                <span class="string">&quot;13334c68c25a7ccfc252a6b924d913390f9de381f3c1b3a2482ef15e5a1a69fc&quot;</span>,
+                <span class="string">"7134cc2910f616a55807c422a682fa615382ca6ed049b8755d"</span>,
+                <span class="string">"13334c68c25a7ccfc252a6b924d913390f9de381f3c1b3a2482ef15e5a1a69fc"</span>,
             ),
         ];
         <span class="kw">for </span>(handshake_type, expected_ciphertext, expected_hash) <span class="kw">in </span>handshake_types {
             <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(handshake_type);
-            noise.mix_key(<span class="string">&quot;encryptAndHash&quot;</span>.as_bytes());
-            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">&quot;plaintext&quot;</span>.as_bytes());
+            noise.mix_key(<span class="string">"encryptAndHash"</span>.as_bytes());
+            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">"plaintext"</span>.as_bytes());
             <span class="macro">assert_eq!</span>(hex::encode(ciphertext), expected_ciphertext);
             <span class="macro">assert_eq!</span>(hex::encode(noise.handshake_hash()), expected_hash);
         }
@@ -518,19 +520,19 @@
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
             (
                 HandshakeType::Nk,
-                <span class="string">&quot;2693c80637c7fd9e686949c46a4d189d41ba7cf74a53a85752&quot;</span>,
-                <span class="string">&quot;b883ed0aa2303502e497c8609a979970bc6292cc316eafa7fc0c434f818b9e01&quot;</span>,
+                <span class="string">"2693c80637c7fd9e686949c46a4d189d41ba7cf74a53a85752"</span>,
+                <span class="string">"b883ed0aa2303502e497c8609a979970bc6292cc316eafa7fc0c434f818b9e01"</span>,
             ),
             (
                 HandshakeType::Nn,
-                <span class="string">&quot;a08c0f422154d8af5d9b5eb184c408b8581348ad7f2c55343a&quot;</span>,
-                <span class="string">&quot;b6e178012f4dfebc73c8d475dc8bec5e2f4d2a2aed29880df182e76301921ec2&quot;</span>,
+                <span class="string">"a08c0f422154d8af5d9b5eb184c408b8581348ad7f2c55343a"</span>,
+                <span class="string">"b6e178012f4dfebc73c8d475dc8bec5e2f4d2a2aed29880df182e76301921ec2"</span>,
             ),
         ];
         <span class="kw">for </span>(handshake_type, expected_ciphertext, expected_hash) <span class="kw">in </span>handshake_types {
             <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(handshake_type);
-            noise.mix_key_and_hash(<span class="string">&quot;encryptAndHash&quot;</span>.as_bytes());
-            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">&quot;plaintext&quot;</span>.as_bytes());
+            noise.mix_key_and_hash(<span class="string">"encryptAndHash"</span>.as_bytes());
+            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">"plaintext"</span>.as_bytes());
             <span class="macro">assert_eq!</span>(hex::encode(ciphertext), expected_ciphertext);
             <span class="macro">assert_eq!</span>(hex::encode(noise.handshake_hash()), expected_hash);
         }
@@ -541,23 +543,23 @@
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
             (
                 HandshakeType::Nk,
-                <span class="string">&quot;fdf1564256dcee03b5babe81df599ec4273c95e4269d747764&quot;</span>,
-                <span class="string">&quot;1cf5b0af5f3365d715e9137382a5fd139a56e25bea8ecdbf3018f42af7432a75&quot;</span>,
+                <span class="string">"fdf1564256dcee03b5babe81df599ec4273c95e4269d747764"</span>,
+                <span class="string">"1cf5b0af5f3365d715e9137382a5fd139a56e25bea8ecdbf3018f42af7432a75"</span>,
             ),
             (
                 HandshakeType::Nn,
-                <span class="string">&quot;7134cc2910f616a55807c422a682fa615382ca6ed049b8755d&quot;</span>,
-                <span class="string">&quot;13334c68c25a7ccfc252a6b924d913390f9de381f3c1b3a2482ef15e5a1a69fc&quot;</span>,
+                <span class="string">"7134cc2910f616a55807c422a682fa615382ca6ed049b8755d"</span>,
+                <span class="string">"13334c68c25a7ccfc252a6b924d913390f9de381f3c1b3a2482ef15e5a1a69fc"</span>,
             ),
         ];
         <span class="kw">for </span>(handshake_type, ciphertext, expected_hash) <span class="kw">in </span>handshake_types {
             <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(handshake_type);
-            noise.mix_key(<span class="string">&quot;encryptAndHash&quot;</span>.as_bytes());
+            noise.mix_key(<span class="string">"encryptAndHash"</span>.as_bytes());
             <span class="comment">// This test uses the values from MixKeyThenEncryptAndHash, but in the
             // other direction.
             </span><span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>hex::decode(ciphertext).unwrap()).unwrap();
-            <span class="comment">// Verify plaintext is hex encoding of &quot;plaintext&quot;.
-            </span><span class="macro">assert_eq!</span>(hex::encode(plaintext), <span class="string">&quot;706c61696e74657874&quot;</span>);
+            <span class="comment">// Verify plaintext is hex encoding of "plaintext".
+            </span><span class="macro">assert_eq!</span>(hex::encode(plaintext), <span class="string">"706c61696e74657874"</span>);
             <span class="macro">assert_eq!</span>(hex::encode(noise.handshake_hash()), expected_hash);
         }
     }
@@ -567,18 +569,18 @@
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
             (
                 HandshakeType::Nk,
-                <span class="string">&quot;1f73215029f964ce0a65ef92eaf97bd67c45feff8e49cca94fdf5050aaf25a58&quot;</span>,
-                <span class="string">&quot;0c7f90f88233858ecbd6492c273ed328acaef75ebcb31fd2f94033c5d296a623&quot;</span>,
+                <span class="string">"1f73215029f964ce0a65ef92eaf97bd67c45feff8e49cca94fdf5050aaf25a58"</span>,
+                <span class="string">"0c7f90f88233858ecbd6492c273ed328acaef75ebcb31fd2f94033c5d296a623"</span>,
             ),
             (
                 HandshakeType::Nn,
-                <span class="string">&quot;886ce6f4c6a6f30d993cfd1dfc1890fdef391fd7a563ca23f9f1842f95e827e3&quot;</span>,
-                <span class="string">&quot;6306ccc2a9ddd378c57a54e312054b779fe4f31dd1fb2f2eb0c0ab43fbb0ed35&quot;</span>,
+                <span class="string">"886ce6f4c6a6f30d993cfd1dfc1890fdef391fd7a563ca23f9f1842f95e827e3"</span>,
+                <span class="string">"6306ccc2a9ddd378c57a54e312054b779fe4f31dd1fb2f2eb0c0ab43fbb0ed35"</span>,
             ),
         ];
         <span class="kw">for </span>(handshake_type, read_key, write_key) <span class="kw">in </span>handshake_types {
             <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(handshake_type);
-            noise.mix_key_and_hash(<span class="string">&quot;split&quot;</span>.as_bytes());
+            noise.mix_key_and_hash(<span class="string">"split"</span>.as_bytes());
             <span class="kw">let </span>keys = noise.traffic_keys();
             <span class="macro">assert_eq!</span>(hex::encode(keys.<span class="number">0</span>), read_key);
             <span class="macro">assert_eq!</span>(hex::encode(keys.<span class="number">1</span>), write_key);
@@ -590,21 +592,21 @@
         <span class="kw">let </span>handshake_types = <span class="macro">vec!</span>[
             (
                 HandshakeType::Nk,
-                <span class="string">&quot;b7235b3d77c9cf5ebb087793b399de2c2276edae52bba5199e&quot;</span>,
-                <span class="string">&quot;db420fd8f9b072eacca4599019303f02b1938fb9096e3b4b063afebc687c9987&quot;</span>,
+                <span class="string">"b7235b3d77c9cf5ebb087793b399de2c2276edae52bba5199e"</span>,
+                <span class="string">"db420fd8f9b072eacca4599019303f02b1938fb9096e3b4b063afebc687c9987"</span>,
             ),
             (
                 HandshakeType::Nn,
-                <span class="string">&quot;3463d641316d5124a77e543a479d26ef08ee9e54e37ceaa7ce&quot;</span>,
-                <span class="string">&quot;1207317206c0c2731dd8a96bb2a41a7eb7794f874c061f3659c8c3f5ecdef0a6&quot;</span>,
+                <span class="string">"3463d641316d5124a77e543a479d26ef08ee9e54e37ceaa7ce"</span>,
+                <span class="string">"1207317206c0c2731dd8a96bb2a41a7eb7794f874c061f3659c8c3f5ecdef0a6"</span>,
             ),
         ];
         <span class="kw">for </span>(handshake_type, expected_ciphertext, expected_hash) <span class="kw">in </span>handshake_types {
             <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(handshake_type);
-            noise.mix_hash(<span class="string">&quot;mixHash&quot;</span>.as_bytes());
-            noise.mix_key(<span class="string">&quot;mixKey&quot;</span>.as_bytes());
-            noise.mix_key_and_hash(<span class="string">&quot;mixKeyAndHash&quot;</span>.as_bytes());
-            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">&quot;plaintext&quot;</span>.as_bytes());
+            noise.mix_hash(<span class="string">"mixHash"</span>.as_bytes());
+            noise.mix_key(<span class="string">"mixKey"</span>.as_bytes());
+            noise.mix_key_and_hash(<span class="string">"mixKeyAndHash"</span>.as_bytes());
+            <span class="kw">let </span>ciphertext = noise.encrypt_and_hash(<span class="string">"plaintext"</span>.as_bytes());
             <span class="macro">assert_eq!</span>(hex::encode(ciphertext), expected_ciphertext);
             <span class="macro">assert_eq!</span>(hex::encode(noise.handshake_hash()), expected_hash);
         }

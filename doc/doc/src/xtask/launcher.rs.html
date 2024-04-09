@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/launcher.rs`."><title>launcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `xtask/src/launcher.rs`."><title>launcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../xtask/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -234,14 +236,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -251,29 +253,29 @@
 //! launcher.
 
 </span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
-    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;mock_lookup_data&quot;</span>]));
-<span class="kw">static </span>STAGE_0_DIR: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;stage0_bin&quot;</span>]));
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"oak_functions_launcher"</span>, <span class="string">"mock_lookup_data"</span>]));
+<span class="kw">static </span>STAGE_0_DIR: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"stage0_bin"</span>]));
 <span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy&lt;PathBuf&gt; =
-    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>]));
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"oak_functions_launcher"</span>]));
 <span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
-    workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;target&quot;</span>, <span class="string">&quot;x86_64-unknown-linux-gnu&quot;</span>, <span class="string">&quot;debug&quot;</span>, <span class="string">&quot;oak_functions_launcher&quot;</span>])
+    workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"target"</span>, <span class="string">"x86_64-unknown-linux-gnu"</span>, <span class="string">"debug"</span>, <span class="string">"oak_functions_launcher"</span>])
 });
 <span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
     workspace_path(<span class="kw-2">&amp;</span>[
-        <span class="string">&quot;oak_restricted_kernel_wrapper&quot;</span>,
-        <span class="string">&quot;target&quot;</span>,
-        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
-        <span class="string">&quot;release&quot;</span>,
-        <span class="string">&quot;oak_restricted_kernel_wrapper_bin&quot;</span>,
+        <span class="string">"oak_restricted_kernel_wrapper"</span>,
+        <span class="string">"target"</span>,
+        <span class="string">"x86_64-unknown-none"</span>,
+        <span class="string">"release"</span>,
+        <span class="string">"oak_restricted_kernel_wrapper_bin"</span>,
     ])
 });
 <span class="kw">static </span>OAK_RESTRICTED_KERNEL_ORCHESTRATOR: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
     workspace_path(<span class="kw-2">&amp;</span>[
-        <span class="string">&quot;enclave_apps&quot;</span>,
-        <span class="string">&quot;target&quot;</span>,
-        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
-        <span class="string">&quot;release&quot;</span>,
-        <span class="string">&quot;oak_orchestrator&quot;</span>,
+        <span class="string">"enclave_apps"</span>,
+        <span class="string">"target"</span>,
+        <span class="string">"x86_64-unknown-none"</span>,
+        <span class="string">"release"</span>,
+        <span class="string">"oak_orchestrator"</span>,
     ])
 });
 
@@ -302,17 +304,17 @@
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be
     /// launched
     </span><span class="kw">pub fn </span>enclave_crate_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;enclave_apps&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name()]).to_str().unwrap().to_string()
+        workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"enclave_apps"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name()]).to_str().unwrap().to_string()
     }
 
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be
     /// launched
     </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         workspace_path(<span class="kw-2">&amp;</span>[
-            <span class="string">&quot;enclave_apps&quot;</span>,
-            <span class="string">&quot;target&quot;</span>,
-            <span class="string">&quot;x86_64-unknown-none&quot;</span>,
-            <span class="string">&quot;debug&quot;</span>,
+            <span class="string">"enclave_apps"</span>,
+            <span class="string">"target"</span>,
+            <span class="string">"x86_64-unknown-none"</span>,
+            <span class="string">"debug"</span>,
             <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name(),
         ])
         .to_str()
@@ -323,22 +325,22 @@
     <span class="doccomment">/// Get the subcommand for launching in this mode
     </span><span class="kw">pub fn </span>subcommand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="macro">vec!</span>[
-            <span class="macro">format!</span>(<span class="string">&quot;--kernel={}&quot;</span>, OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()),
+            <span class="macro">format!</span>(<span class="string">"--kernel={}"</span>, OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()),
             <span class="macro">format!</span>(
-                <span class="string">&quot;--vmm-binary={}&quot;</span>,
-                which::which(<span class="string">&quot;qemu-system-x86_64&quot;</span>).unwrap().to_str().unwrap()
+                <span class="string">"--vmm-binary={}"</span>,
+                which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap().to_str().unwrap()
             ),
-            <span class="string">&quot;--memory-size=256M&quot;</span>.to_string(),
-            <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
-            <span class="macro">format!</span>(<span class="string">&quot;--initrd={}&quot;</span>, OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()),
+            <span class="string">"--memory-size=256M"</span>.to_string(),
+            <span class="macro">format!</span>(<span class="string">"--app-binary={}"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
+            <span class="macro">format!</span>(<span class="string">"--initrd={}"</span>, OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()),
             <span class="macro">format!</span>(
-                <span class="string">&quot;--bios-binary={}&quot;</span>,
+                <span class="string">"--bios-binary={}"</span>,
                 workspace_path(<span class="kw-2">&amp;</span>[
-                    <span class="string">&quot;stage0_bin&quot;</span>,
-                    <span class="string">&quot;target&quot;</span>,
-                    <span class="string">&quot;x86_64-unknown-none&quot;</span>,
-                    <span class="string">&quot;release&quot;</span>,
-                    <span class="string">&quot;oak_stage0.bin&quot;</span>,
+                    <span class="string">"stage0_bin"</span>,
+                    <span class="string">"target"</span>,
+                    <span class="string">"x86_64-unknown-none"</span>,
+                    <span class="string">"release"</span>,
+                    <span class="string">"oak_stage0.bin"</span>,
                 ])
                 .to_str()
                 .unwrap()
@@ -349,27 +351,27 @@
 
 <span class="kw">pub fn </span>build_enclave_binary() -&gt; Step {
     Step::Single {
-        name: <span class="string">&quot;Build enclave binary variants&quot;</span>.to_string(),
+        name: <span class="string">"Build enclave binary variants"</span>.to_string(),
         command: Cmd::new_in_dir(
-            <span class="string">&quot;cargo&quot;</span>,
-            <span class="macro">vec!</span>[<span class="string">&quot;build&quot;</span>, <span class="string">&quot;--release&quot;</span>],
-            Path::new(<span class="kw-2">&amp;</span>App::from_crate_name(<span class="string">&quot;&quot;</span>).enclave_crate_path()),
+            <span class="string">"cargo"</span>,
+            <span class="macro">vec!</span>[<span class="string">"build"</span>, <span class="string">"--release"</span>],
+            Path::new(<span class="kw-2">&amp;</span>App::from_crate_name(<span class="string">""</span>).enclave_crate_path()),
         ),
     }
 }
 
 <span class="kw">pub fn </span>build_stage0() -&gt; Step {
     Step::Single {
-        name: <span class="string">&quot;build stage0&quot;</span>.to_string(),
+        name: <span class="string">"build stage0"</span>.to_string(),
         command: Cmd::new_in_dir(
-            <span class="string">&quot;cargo&quot;</span>,
+            <span class="string">"cargo"</span>,
             <span class="macro">vec!</span>[
-                <span class="string">&quot;objcopy&quot;</span>,
-                <span class="string">&quot;--release&quot;</span>,
-                <span class="string">&quot;--&quot;</span>,
-                <span class="string">&quot;-O&quot;</span>,
-                <span class="string">&quot;binary&quot;</span>,
-                <span class="string">&quot;target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>,
+                <span class="string">"objcopy"</span>,
+                <span class="string">"--release"</span>,
+                <span class="string">"--"</span>,
+                <span class="string">"-O"</span>,
+                <span class="string">"binary"</span>,
+                <span class="string">"target/x86_64-unknown-none/release/oak_stage0.bin"</span>,
             ],
             STAGE_0_DIR.as_path(),
         ),
@@ -379,14 +381,14 @@
 <span class="kw">pub fn </span>build_binary(name: <span class="kw-2">&amp;</span>str, directory: <span class="kw-2">&amp;</span>str) -&gt; Step {
     Step::Single {
         name: name.to_string(),
-        command: Cmd::new_in_dir(<span class="string">&quot;cargo&quot;</span>, <span class="macro">vec!</span>[<span class="string">&quot;build&quot;</span>], Path::new(directory)),
+        command: Cmd::new_in_dir(<span class="string">"cargo"</span>, <span class="macro">vec!</span>[<span class="string">"build"</span>], Path::new(directory)),
     }
 }
 
 <span class="kw">pub fn </span>just_build(just_command: <span class="kw-2">&amp;</span>str) -&gt; Step {
     Step::Single {
-        name: <span class="macro">format!</span>(<span class="string">&quot;build {}&quot;</span>, just_command),
-        command: Cmd::new_in_dir(<span class="string">&quot;just&quot;</span>, <span class="macro">vec!</span>[just_command], workspace_path(<span class="kw-2">&amp;</span>[]).as_path()),
+        name: <span class="macro">format!</span>(<span class="string">"build {}"</span>, just_command),
+        command: Cmd::new_in_dir(<span class="string">"just"</span>, <span class="macro">vec!</span>[just_command], workspace_path(<span class="kw-2">&amp;</span>[]).as_path()),
     }
 }
 
@@ -412,9 +414,9 @@
     lookup_data_path: <span class="kw-2">&amp;</span>str,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, wasm_path),
-        <span class="macro">format!</span>(<span class="string">&quot;--port={}&quot;</span>, port),
-        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, lookup_data_path),
+        <span class="macro">format!</span>(<span class="string">"--wasm={}"</span>, wasm_path),
+        <span class="macro">format!</span>(<span class="string">"--port={}"</span>, port),
+        <span class="macro">format!</span>(<span class="string">"--lookup-data={}"</span>, lookup_data_path),
     ];
     args.append(<span class="kw-2">&amp;mut </span>app.subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
@@ -433,24 +435,24 @@
     lookup_data_path: <span class="kw-2">&amp;</span>str,
 ) -&gt; (<span class="kw">crate</span>::testing::BackgroundStep, u16) {
     <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_stage0()).<span class="kw">await</span>;
-    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">&quot;oak_restricted_kernel_wrapper&quot;</span>)).<span class="kw">await</span>;
-    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">&quot;oak_orchestrator&quot;</span>)).<span class="kw">await</span>;
+    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">"oak_restricted_kernel_wrapper"</span>)).<span class="kw">await</span>;
+    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">"oak_orchestrator"</span>)).<span class="kw">await</span>;
     <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_binary(
-        <span class="string">&quot;build Oak Functions Launcher binary&quot;</span>,
+        <span class="string">"build Oak Functions Launcher binary"</span>,
         <span class="kw">crate</span>::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR.to_str().unwrap(),
     ))
     .<span class="kw">await</span>;
-    <span class="kw">let </span>variant = <span class="kw">crate</span>::launcher::App::from_crate_name(<span class="string">&quot;oak_functions_enclave_app&quot;</span>);
+    <span class="kw">let </span>variant = <span class="kw">crate</span>::launcher::App::from_crate_name(<span class="string">"oak_functions_enclave_app"</span>);
     <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_binary(
-        <span class="string">&quot;build Oak Functions enclave app&quot;</span>,
+        <span class="string">"build Oak Functions enclave app"</span>,
         <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
     ))
     .<span class="kw">await</span>;
 
-    <span class="macro">eprintln!</span>(<span class="string">&quot;using Wasm module {}&quot;</span>, wasm_path);
+    <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {}"</span>, wasm_path);
 
-    <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">&quot;failed to pick a port&quot;</span>);
-    <span class="macro">eprintln!</span>(<span class="string">&quot;using port {}&quot;</span>, port);
+    <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
+    <span class="macro">eprintln!</span>(<span class="string">"using port {}"</span>, port);
 
     <span class="kw">let </span>background = <span class="kw">crate</span>::testing::run_background(
         <span class="kw">crate</span>::launcher::run_oak_functions_launcher_example_with_lookup_data(

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/acpi.rs`."><title>acpi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/acpi.rs`."><title>acpi.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -557,14 +559,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -586,35 +588,35 @@
 <span class="kw">use crate</span>::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 
 <span class="comment">// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The
-// full size of EBDA is 128 KiB, but let&#39;s reserve the whole 1 KiB for the RSDP.
+// full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
 </span><span class="kw">pub const </span>EBDA_SIZE: usize = <span class="number">127 </span>* <span class="number">1024</span>;
-<span class="attr">#[link_section = <span class="string">&quot;.ebda.rsdp&quot;</span>]
+<span class="attr">#[link_section = <span class="string">".ebda.rsdp"</span>]
 </span><span class="kw">static </span><span class="kw-2">mut </span>RSDP: MaybeUninit&lt;Rsdp&gt; = MaybeUninit::uninit();
-<span class="attr">#[link_section = <span class="string">&quot;.ebda&quot;</span>]
+<span class="attr">#[link_section = <span class="string">".ebda"</span>]
 </span><span class="kw">pub static </span><span class="kw-2">mut </span>EBDA: MaybeUninit&lt;[u8; EBDA_SIZE]&gt; = MaybeUninit::uninit();
 
 <span class="comment">// Safety: we include a nul byte at the end of the string, and that is the only
 // nul byte.
 </span><span class="kw">const </span>TABLE_LOADER_FILE_NAME: <span class="kw-2">&amp;</span>CStr =
-    <span class="kw">unsafe </span>{ CStr::from_bytes_with_nul_unchecked(<span class="string">b&quot;etc/table-loader\0&quot;</span>) };
-<span class="kw">const </span>RSDP_FILE_NAME_SUFFIX: <span class="kw-2">&amp;</span>str = <span class="string">&quot;acpi/rsdp&quot;</span>;
-<span class="kw">const </span>ACPI_TABLES_FILE_NAME_SUFFIX: <span class="kw-2">&amp;</span>str = <span class="string">&quot;acpi/tables&quot;</span>;
+    <span class="kw">unsafe </span>{ CStr::from_bytes_with_nul_unchecked(<span class="string">b"etc/table-loader\0"</span>) };
+<span class="kw">const </span>RSDP_FILE_NAME_SUFFIX: <span class="kw-2">&amp;</span>str = <span class="string">"acpi/rsdp"</span>;
+<span class="kw">const </span>ACPI_TABLES_FILE_NAME_SUFFIX: <span class="kw-2">&amp;</span>str = <span class="string">"acpi/tables"</span>;
 
 <span class="kw">const </span>ROMFILE_LOADER_FILESZ: usize = <span class="number">56</span>;
 
 <span class="kw">type </span>RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
-<span class="kw">fn </span>get_file(name: <span class="kw-2">&amp;</span>CStr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">fn </span>get_file(name: <span class="kw-2">&amp;</span>CStr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Safety: we do not have concurrent threads so accessing the static is safe,
     // and even if Allocate has not been called yet, all values are valid for an
     // [u8].
-    </span><span class="kw">let </span>name = name.to_str().map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid file name&quot;</span>)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>name = name.to_str().map_err(|<span class="kw">_</span>| <span class="string">"invalid file name"</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>name.ends_with(RSDP_FILE_NAME_SUFFIX) {
         <span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ RSDP.assume_init_mut().as_bytes_mut() })
     } <span class="kw">else if </span>name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
         <span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ EBDA.assume_init_mut() })
     } <span class="kw">else </span>{
-        <span class="prelude-val">Err</span>(<span class="string">&quot;Unsupported file in table-loader&quot;</span>)
+        <span class="prelude-val">Err</span>(<span class="string">"Unsupported file in table-loader"</span>)
     }
 }
 
@@ -668,16 +670,16 @@
         Zone::from_repr(<span class="self">self</span>.zone)
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>file = fwcfg.find(<span class="self">self</span>.file()).unwrap();
-        <span class="kw">let </span>name = <span class="self">self</span>.file().to_str().map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid file name&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>name = <span class="self">self</span>.file().to_str().map_err(|<span class="kw">_</span>| <span class="string">"invalid file name"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             <span class="comment">// ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
-            // We don&#39;t really care which version we&#39;re dealing with, as long as the data
+            // We don't really care which version we're dealing with, as long as the data
             // structure is one of the two.
             </span><span class="kw">if </span>file.size() &gt; size_of::&lt;Rsdp&gt;() || (file.size() != <span class="number">20 </span>&amp;&amp; file.size() != <span class="number">36</span>) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDP doesn&#39;t match expected size&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"RSDP doesn't match expected size"</span>);
             }
 
             <span class="comment">// Safety: we do not have concurrent threads so accessing the static is safe.
@@ -685,11 +687,11 @@
 
             <span class="comment">// Sanity checks.
             </span><span class="kw">if </span>(buf <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64) &lt; <span class="number">0x80000 </span>|| (buf <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64) &gt; <span class="number">0x81000 </span>{
-                <span class="macro">log::error!</span>(<span class="string">&quot;RSDP address: {:p}&quot;</span>, buf);
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDP address is not within the first 1 KiB of EBDA&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"RSDP address: {:p}"</span>, buf);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"RSDP address is not within the first 1 KiB of EBDA"</span>);
             }
             <span class="kw">if </span>(buf <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64) % <span class="self">self</span>.align <span class="kw">as </span>u64 != <span class="number">0 </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDP address not aligned properly&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"RSDP address not aligned properly"</span>);
             }
 
             fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf.as_bytes_mut())<span class="question-mark">?</span>;
@@ -700,24 +702,24 @@
             </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ EBDA.write(zeroed()) };
 
             <span class="kw">if </span>(buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64) % <span class="self">self</span>.align <span class="kw">as </span>u64 != <span class="number">0 </span>{
-                <span class="macro">log::error!</span>(<span class="string">&quot;ACPI tables address: {:p}, required alignment: {}&quot;</span>, buf, <span class="self">self</span>.align);
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI tables address not aligned properly&quot;</span>);
+                <span class="macro">log::error!</span>(<span class="string">"ACPI tables address: {:p}, required alignment: {}"</span>, buf, <span class="self">self</span>.align);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ACPI tables address not aligned properly"</span>);
             }
             fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf)<span class="question-mark">?</span>;
             acpi_digest.update(buf);
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="string">&quot;Unsupported file in table-loader&quot;</span>)
+            <span class="prelude-val">Err</span>(<span class="string">"Unsupported file in table-loader"</span>)
         }
     }
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>Allocate {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; FmtResult {
-        f.debug_struct(<span class="string">&quot;Allocate&quot;</span>)
-            .field(<span class="string">&quot;file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
-            .field(<span class="string">&quot;align&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.align)
-            .field(<span class="string">&quot;zone&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.zone())
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; FmtResult {
+        f.debug_struct(<span class="string">"Allocate"</span>)
+            .field(<span class="string">"file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
+            .field(<span class="string">"align"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.align)
+            .field(<span class="string">"zone"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.zone())
             .finish()
     }
 }
@@ -746,16 +748,16 @@
         CStr::from_bytes_until_nul(<span class="kw-2">&amp;</span><span class="self">self</span>.src_file).unwrap()
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>dest_file = get_file(<span class="self">self</span>.dest_file())<span class="question-mark">?</span>;
         <span class="kw">let </span>src_file = get_file(<span class="self">self</span>.src_file())<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="self">self</span>.offset <span class="kw">as </span>usize + <span class="self">self</span>.size <span class="kw">as </span>usize &gt; dest_file.len() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Write for COMMAND_ADD_POINTER would overflow destination file&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Write for COMMAND_ADD_POINTER would overflow destination file"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.size &gt; <span class="number">8 </span>|| !<span class="self">self</span>.size.is_power_of_two() {
-            <span class="macro">log::debug!</span>(<span class="string">&quot;size: {}&quot;</span>, <span class="self">self</span>.size);
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;COMMAND_ADD_POINTER has invalid size&quot;</span>);
+            <span class="macro">log::debug!</span>(<span class="string">"size: {}"</span>, <span class="self">self</span>.size);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"COMMAND_ADD_POINTER has invalid size"</span>);
         }
         <span class="kw">let </span><span class="kw-2">mut </span>pointer = <span class="number">0u64</span>;
         pointer.as_bytes_mut()[..<span class="self">self</span>.size <span class="kw">as </span>usize].copy_from_slice(
@@ -770,12 +772,12 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>AddPointer {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; FmtResult {
-        f.debug_struct(<span class="string">&quot;AddPointer&quot;</span>)
-            .field(<span class="string">&quot;dest_file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dest_file())
-            .field(<span class="string">&quot;src_file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_file())
-            .field(<span class="string">&quot;offset&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset)
-            .field(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; FmtResult {
+        f.debug_struct(<span class="string">"AddPointer"</span>)
+            .field(<span class="string">"dest_file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dest_file())
+            .field(<span class="string">"src_file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_file())
+            .field(<span class="string">"offset"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset)
+            .field(<span class="string">"size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size)
             .finish()
     }
 }
@@ -801,14 +803,14 @@
         CStr::from_bytes_until_nul(<span class="kw-2">&amp;</span><span class="self">self</span>.file).unwrap()
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>file = get_file(<span class="self">self</span>.file())<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="self">self</span>.start <span class="kw">as </span>usize &gt; file.len()
             || (<span class="self">self</span>.start + <span class="self">self</span>.length) <span class="kw">as </span>usize &gt; file.len()
             || <span class="self">self</span>.offset <span class="kw">as </span>usize &gt; file.len()
         {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;COMMAND_ADD_CHECKSUM invalid; read or write would overflow file&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"COMMAND_ADD_CHECKSUM invalid; read or write would overflow file"</span>);
         }
 
         <span class="kw">let </span>checksum =
@@ -824,12 +826,12 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>AddChecksum {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; FmtResult {
-        f.debug_struct(<span class="string">&quot;AddChecksum&quot;</span>)
-            .field(<span class="string">&quot;file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
-            .field(<span class="string">&quot;offset&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset)
-            .field(<span class="string">&quot;start&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
-            .field(<span class="string">&quot;length&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.length)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; FmtResult {
+        f.debug_struct(<span class="string">"AddChecksum"</span>)
+            .field(<span class="string">"file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
+            .field(<span class="string">"offset"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.offset)
+            .field(<span class="string">"start"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.start)
+            .field(<span class="string">"length"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.length)
             .finish()
     }
 }
@@ -859,20 +861,20 @@
         CStr::from_bytes_until_nul(<span class="kw-2">&amp;</span><span class="self">self</span>.src_file).unwrap()
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="macro">log::debug!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>);
-        <span class="prelude-val">Err</span>(<span class="string">&quot;COMMAND_WRITE_POINTER is not supported&quot;</span>)
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="macro">log::debug!</span>(<span class="string">"{:?}"</span>, <span class="self">self</span>);
+        <span class="prelude-val">Err</span>(<span class="string">"COMMAND_WRITE_POINTER is not supported"</span>)
     }
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>WritePointer {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; FmtResult {
-        f.debug_struct(<span class="string">&quot;WritePointer&quot;</span>)
-            .field(<span class="string">&quot;dest_file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dest_file())
-            .field(<span class="string">&quot;src_file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_file())
-            .field(<span class="string">&quot;dst_offset&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dst_offset)
-            .field(<span class="string">&quot;src_offset&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_offset)
-            .field(<span class="string">&quot;size&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; FmtResult {
+        f.debug_struct(<span class="string">"WritePointer"</span>)
+            .field(<span class="string">"dest_file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dest_file())
+            .field(<span class="string">"src_file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_file())
+            .field(<span class="string">"dst_offset"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dst_offset)
+            .field(<span class="string">"src_offset"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.src_offset)
+            .field(<span class="string">"size"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.size)
             .finish()
     }
 }
@@ -907,9 +909,9 @@
     pci_window_64: Window&lt;u64&gt;,
 }
 
-<span class="kw">fn </span>populate_firmware_data() -&gt; <span class="prelude-ty">Result</span>&lt;FirmwareData, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">fn </span>populate_firmware_data() -&gt; <span class="prelude-ty">Result</span>&lt;FirmwareData, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// There may be a way how to dynamically determine these values, but for now,
-    // hard-code the expected values as it&#39;s unlikely they will ever change.
+    // hard-code the expected values as it's unlikely they will ever change.
 
     </span><span class="prelude-val">Ok</span>(FirmwareData {
         pci_window_32: Window { base: <span class="number">0xE0000000u32</span>, end: <span class="number">0xFEBFF000u32 </span>},
@@ -922,7 +924,7 @@
         CStr::from_bytes_until_nul(<span class="kw-2">&amp;</span><span class="self">self</span>.file).unwrap()
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>file = get_file(<span class="self">self</span>.file())<span class="question-mark">?</span>;
 
         <span class="kw">if </span>file.len() &lt; <span class="self">self</span>.pci_start_offset_32 <span class="kw">as </span>usize
@@ -939,7 +941,7 @@
             || file.len() - <span class="number">8 </span>&lt; <span class="self">self</span>.pci_length_offset_64 <span class="kw">as </span>usize
             || file.len() &lt; (<span class="number">4 </span>+ <span class="number">4 </span>+ <span class="number">1 </span>+ <span class="number">8 </span>+ <span class="number">8 </span>+ <span class="number">8</span>)
         {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ADD_PCI_HOLES invalid; offsets would overflow file&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ADD_PCI_HOLES invalid; offsets would overflow file"</span>);
         }
 
         <span class="kw">let </span>data: FirmwareData = populate_firmware_data()<span class="question-mark">?</span>;
@@ -973,15 +975,15 @@
 }
 
 <span class="kw">impl </span>Debug <span class="kw">for </span>AddPciHoles {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; FmtResult {
-        f.debug_struct(<span class="string">&quot;AddPciHoles&quot;</span>)
-            .field(<span class="string">&quot;file&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
-            .field(<span class="string">&quot;pci_start_offset_32&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_start_offset_32)
-            .field(<span class="string">&quot;pci_end_offset_32&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_end_offset_32)
-            .field(<span class="string">&quot;pci_valid_offset_64&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_valid_offset_64)
-            .field(<span class="string">&quot;pci_start_offset_64&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_start_offset_64)
-            .field(<span class="string">&quot;pci_end_offset_64&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_end_offset_64)
-            .field(<span class="string">&quot;pci_length_offset_64&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_length_offset_64)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; FmtResult {
+        f.debug_struct(<span class="string">"AddPciHoles"</span>)
+            .field(<span class="string">"file"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.file())
+            .field(<span class="string">"pci_start_offset_32"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_start_offset_32)
+            .field(<span class="string">"pci_end_offset_32"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_end_offset_32)
+            .field(<span class="string">"pci_valid_offset_64"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_valid_offset_64)
+            .field(<span class="string">"pci_start_offset_64"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_start_offset_64)
+            .field(<span class="string">"pci_end_offset_64"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_end_offset_64)
+            .field(<span class="string">"pci_length_offset_64"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.pci_length_offset_64)
             .finish()
     }
 }
@@ -1012,16 +1014,16 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">enum </span>Command&lt;<span class="lifetime">&#39;a</span>&gt; {
-    Allocate(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Allocate),
-    AddPointer(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>AddPointer),
-    AddChecksum(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>AddChecksum),
-    WritePointer(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>WritePointer),
-    AddPciHoles(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>AddPciHoles),
+</span><span class="kw">enum </span>Command&lt;<span class="lifetime">'a</span>&gt; {
+    Allocate(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Allocate),
+    AddPointer(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>AddPointer),
+    AddChecksum(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>AddChecksum),
+    WritePointer(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>WritePointer),
+    AddPciHoles(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>AddPciHoles),
 }
 
-<span class="kw">impl </span>Command&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">impl </span>Command&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             Command::Allocate(allocate) =&gt; allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) =&gt; add_pointer.invoke(),
@@ -1037,7 +1039,7 @@
         CommandTag::from_repr(<span class="self">self</span>.tag)
     }
 
-    <span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Command&lt;<span class="lifetime">&#39;_</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Command&lt;<span class="lifetime">'_</span>&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="comment">// Safety: we extract the value out of the union based on the tag value, which
         // is safe to do.
         </span><span class="kw">match </span><span class="self">self</span>.tag() {
@@ -1052,19 +1054,19 @@
             <span class="prelude-val">Some</span>(CommandTag::AddPciHoles) =&gt; {
                 <span class="prelude-val">Ok</span>(Command::AddPciHoles(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span><span class="self">self</span>.body.pci_holes }))
             }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">&quot;Invalid command tag in table-loader&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="string">"Invalid command tag in table-loader"</span>),
         }
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.tag &gt; CommandTag::VMM_SPECIFIC &amp;&amp; <span class="self">self</span>.tag().is_none() {
-            <span class="macro">log::warn!</span>(<span class="string">&quot;ignoring proprietary ACPI linker command with tag {:#x}&quot;</span>, <span class="self">self</span>.tag);
+            <span class="macro">log::warn!</span>(<span class="string">"ignoring proprietary ACPI linker command with tag {:#x}"</span>, <span class="self">self</span>.tag);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
         <span class="kw">if </span><span class="self">self</span>.tag == <span class="number">0 </span>{
             <span class="comment">// Safety: interpreting the union as a byte array is safe, as it makes no
             // assumptions about the meaning of any of the bytes.
-            </span><span class="macro">log::debug!</span>(<span class="string">&quot;ignoring empty ACPI linker command with body {:?}&quot;</span>, <span class="kw">unsafe </span>{
+            </span><span class="macro">log::debug!</span>(<span class="string">"ignoring empty ACPI linker command with body {:?}"</span>, <span class="kw">unsafe </span>{
                 <span class="kw-2">&amp;</span><span class="self">self</span>.body.padding
             });
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -1079,20 +1081,20 @@
 </span><span class="kw">pub fn </span>build_acpi_tables(
     fwcfg: <span class="kw-2">&amp;mut </span>FwCfg,
     acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>file =
-        fwcfg.find(TABLE_LOADER_FILE_NAME).ok_or(<span class="string">&quot;Could not find &#39;etc/table-loader&#39; in fw_cfg&quot;</span>)<span class="question-mark">?</span>;
+        fwcfg.find(TABLE_LOADER_FILE_NAME).ok_or(<span class="string">"Could not find 'etc/table-loader' in fw_cfg"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>file.size() % core::mem::size_of::&lt;RomfileCommand&gt;() != <span class="number">0 </span>{
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;length of &#39;etc/table-loader&#39; is not a multiple of command struct size&quot;</span>);
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"length of 'etc/table-loader' is not a multiple of command struct size"</span>);
     }
 
     <span class="kw">let </span>buf = fwcfg.read_file_vec(<span class="kw-2">&amp;</span>file)<span class="question-mark">?</span>;
     acpi_digest.update(<span class="kw-2">&amp;</span>buf);
 
-    <span class="comment">// We can&#39;t use zerocopy::FromBytes/AsBytes here, as the fields of the structs
-    // have padding that zerocopy doesn&#39;t support.
-    // Safety: we&#39;re using `size_of` here to ensure that we don&#39;t go over the
+    <span class="comment">// We can't use zerocopy::FromBytes/AsBytes here, as the fields of the structs
+    // have padding that zerocopy doesn't support.
+    // Safety: we're using `size_of` here to ensure that we don't go over the
     // boundaries of the original array.
     </span><span class="kw">let </span>commands = <span class="kw">unsafe </span>{
         core::slice::from_raw_parts(

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/crypto.rs`."><title>crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/crypto.rs`."><title>crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_sev_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -151,14 +153,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -203,7 +205,7 @@
     <span class="doccomment">/// Creates a new instance.
     ///
     /// For now we always assume that VMPCK_0 will be used as the key.
-    </span><span class="kw">pub fn </span>new(key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>new(key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">Self</span>::new_with_sequence_number(key, <span class="number">0</span>)
     }
 
@@ -216,15 +218,15 @@
     </span><span class="kw">pub fn </span>new_with_sequence_number(
         key: <span class="kw-2">&amp;</span>[u8],
         initial_sequence_number: u64,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            cipher: Aes256Gcm::new_from_slice(key).map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid key length&quot;</span>)<span class="question-mark">?</span>,
+            cipher: Aes256Gcm::new_from_slice(key).map_err(|<span class="kw">_</span>| <span class="string">"invalid key length"</span>)<span class="question-mark">?</span>,
             sequence_number: initial_sequence_number,
         })
     }
 
     <span class="doccomment">/// Creates an encrypted payload from the provided message and writes that
-    /// to the target&#39;s payload field. It also updates the target&#39;s header
+    /// to the target's payload field. It also updates the target's header
     /// with the appropriate information: message type, message size and
     /// sequence number.
     ///
@@ -238,7 +240,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw-2">mut </span>message: M,
         destination: <span class="kw-2">&amp;mut </span>GuestMessage,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>buffer = message.as_bytes_mut();
         destination.header.auth_header.message_type = M::get_message_type() <span class="kw">as </span>u8;
         <span class="kw">let </span>message_size = buffer.len();
@@ -252,7 +254,7 @@
         <span class="kw">let </span>auth_tag = <span class="self">self
             </span>.cipher
             .encrypt_in_place_detached(nonce, associated_data, buffer)
-            .map_err(|aes_gcm::Error| <span class="string">&quot;message encryption failed&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|aes_gcm::Error| <span class="string">"message encryption failed"</span>)<span class="question-mark">?</span>;
         <span class="comment">// Only write the payload once we are sure the encryption succeeded.
         </span>destination.payload[<span class="number">0</span>..message_size].copy_from_slice(buffer);
         destination.header.auth_tag[<span class="number">0</span>..auth_tag.len()].copy_from_slice(auth_tag.as_slice());
@@ -268,15 +270,15 @@
     </span><span class="kw">pub fn </span>decrypt_message&lt;M: AsBytes + FromBytes + Message&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         source: <span class="kw-2">&amp;</span>GuestMessage,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;M, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;M, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>result = M::new_zeroed();
         source.validate()<span class="question-mark">?</span>;
         <span class="kw">if </span>M::get_message_type() <span class="kw">as </span>u8 != source.header.auth_header.message_type {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid message type&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid message type"</span>);
         }
         <span class="kw">let </span>sequence_number = source.header.sequence_number;
         <span class="kw">if </span>sequence_number != <span class="self">self</span>.sequence_number + <span class="number">1 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;unexpected sequence numer&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"unexpected sequence numer"</span>);
         }
         <span class="kw">let </span><span class="kw-2">mut </span>iv_bytes = [<span class="number">0u8</span>; IV_SIZE];
         iv_bytes[<span class="number">0</span>..size_of::&lt;u64&gt;()].copy_from_slice(sequence_number.as_bytes());
@@ -284,7 +286,7 @@
         <span class="kw">let </span>associated_data = source.header.auth_header.as_bytes();
         <span class="kw">let </span>buffer = result.as_bytes_mut();
         <span class="kw">if </span>buffer.len() != source.header.auth_header.message_size <span class="kw">as </span>usize {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid message length&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid message length"</span>);
         }
         <span class="comment">// The source message is in memory that is shared with the hypervisor, so we
         // must not decrypt the payload in place. Copy the encrypted payload
@@ -293,7 +295,7 @@
         <span class="kw">let </span>tag = Tag::from_slice(<span class="kw-2">&amp;</span>source.header.auth_tag[<span class="number">0</span>..size_of::&lt;Tag&gt;()]);
         <span class="self">self</span>.cipher
             .decrypt_in_place_detached(nonce, associated_data, buffer, tag)
-            .map_err(|aes_gcm::Error| <span class="string">&quot;couldn&#39;t decrypt message&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|aes_gcm::Error| <span class="string">"couldn't decrypt message"</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.sequence_number += <span class="number">1</span>;
         <span class="prelude-val">Ok</span>(result)
     }

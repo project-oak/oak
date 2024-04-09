@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/syscall/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/syscall/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -281,14 +283,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -302,7 +304,7 @@
 <span class="kw">mod </span>process;
 <span class="kw">mod </span>stdio;
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
 </span><span class="kw">mod </span>switch_process;
 
 <span class="attr">#[cfg(test)]
@@ -312,7 +314,7 @@
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 
 <span class="kw">use </span>oak_channel::Channel;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+<span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
 </span><span class="kw">use </span>oak_restricted_kernel_dice::DerivedKey;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
 <span class="kw">use </span>x86_64::{
@@ -323,7 +325,7 @@
     VirtAddr,
 };
 
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
 </span><span class="kw">use </span><span class="self">self</span>::switch_process::syscall_unstable_switch_proccess;
 <span class="kw">use </span><span class="self">self</span>::{
     fd::{syscall_fsync, syscall_read, syscall_write},
@@ -356,12 +358,12 @@
 <span class="kw">pub fn </span>enable_syscalls(
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
     dice_data: dice_data::DiceData,
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))] </span>derived_key: DerivedKey,
+    <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))] </span>derived_key: DerivedKey,
 ) {
     channel::register(channel);
     stdio::register();
     key::register(
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
         </span>derived_key,
     );
     dice_data::register(dice_data);
@@ -370,7 +372,7 @@
     </span><span class="kw">let </span>kernel_sp = mm::allocate_stack();
 
     <span class="comment">// Store the gsdata structure in the kernel heap.
-    // We need the GsData to stick around statically, so we&#39;ll leak it here.
+    // We need the GsData to stick around statically, so we'll leak it here.
     </span><span class="kw">let </span>gsdata = Box::leak(Box::new(GsData {
         <span class="comment">// Stack grows down, so SP points to the end of the page
         </span>kernel_sp,
@@ -391,7 +393,7 @@
 <span class="doccomment">/// Rust wrapper for system calls.
 ///
 /// This function assumes the 64-bit SysV ABI, not the syscall ABI!
-</span><span class="kw">extern </span><span class="string">&quot;sysv64&quot; </span><span class="kw">fn </span>syscall_handler(
+</span><span class="kw">extern </span><span class="string">"sysv64" </span><span class="kw">fn </span>syscall_handler(
     syscall: usize,
     arg1: usize,
     arg2: usize,
@@ -410,11 +412,11 @@
             syscall_mmap(arg1 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg2, arg3, arg4, arg5 <span class="kw">as </span>i32, arg6)
         }
         <span class="prelude-val">Some</span>(Syscall::Fsync) =&gt; syscall_fsync(arg1 <span class="kw">as </span>i32),
-        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
         </span><span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; {
             syscall_unstable_switch_proccess(arg1 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg2)
         }
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
         </span><span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; Errno::ENOSYS <span class="kw">as </span>isize,
         <span class="prelude-val">None </span>=&gt; Errno::ENOSYS <span class="kw">as </span>isize,
     }
@@ -436,7 +438,7 @@
 /// For the list of system calls that are supported, see the
 /// `oak_restricted_kernel_interface` crate.
 </span><span class="attr">#[naked]
-</span><span class="kw">extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>syscall_entrypoint() {
+</span><span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn </span>syscall_entrypoint() {
     <span class="comment">// When user code uses `SYSCALL`, the following happens (abridged):
     //  - RIP of the instruction following the SYSCALL will be in RCX
     //  - RFLAGS will be saved in R11
@@ -455,104 +457,104 @@
     // Note that (a) this does not preserve RCX and R11, which the user code will
     // take into account, and (b) SYSRET will always go back to ring 3.
     //
-    // See SYSCALL and SYSRET in AMD64 Architecture Programmer&#39;s Manual, Volume 3
+    // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3
     // for more details.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm! </span>{
             <span class="comment">// Switch to the syscall stack
-            </span><span class="string">&quot;swapgs&quot;</span>, <span class="comment">// switch to kernel GS
-            </span><span class="string">&quot;mov gs:[0x8], rsp&quot;</span>, <span class="comment">// save user RSP
-            </span><span class="string">&quot;mov gs:[0x10], rcx&quot;</span>, <span class="comment">// save user RIP
-            </span><span class="string">&quot;mov gs:[0x18], r11&quot;</span>, <span class="comment">// save user RFLAGS
-            </span><span class="string">&quot;mov rsp, gs:[0x0]&quot;</span>, <span class="comment">// switch to kernel stack
+            </span><span class="string">"swapgs"</span>, <span class="comment">// switch to kernel GS
+            </span><span class="string">"mov gs:[0x8], rsp"</span>, <span class="comment">// save user RSP
+            </span><span class="string">"mov gs:[0x10], rcx"</span>, <span class="comment">// save user RIP
+            </span><span class="string">"mov gs:[0x18], r11"</span>, <span class="comment">// save user RFLAGS
+            </span><span class="string">"mov rsp, gs:[0x0]"</span>, <span class="comment">// switch to kernel stack
 
             // Save mutable registers other than RAX, RCX and R11 (the first is trashed for the return value;
             // the latter two are are stored in gsdata).
-            </span><span class="string">&quot;push rsi&quot;</span>,
-            <span class="string">&quot;push rdi&quot;</span>,
-            <span class="string">&quot;push rdx&quot;</span>,
-            <span class="string">&quot;push rbx&quot;</span>,
-            <span class="string">&quot;push r8&quot;</span>,
-            <span class="string">&quot;push r9&quot;</span>,
-            <span class="string">&quot;push r10&quot;</span>,
+            </span><span class="string">"push rsi"</span>,
+            <span class="string">"push rdi"</span>,
+            <span class="string">"push rdx"</span>,
+            <span class="string">"push rbx"</span>,
+            <span class="string">"push r8"</span>,
+            <span class="string">"push r9"</span>,
+            <span class="string">"push r10"</span>,
 
             <span class="comment">// Make sure the stack is 16-byte aligned.
-            </span><span class="string">&quot;sub rsp, 8&quot;</span>,
+            </span><span class="string">"sub rsp, 8"</span>,
 
             <span class="comment">// Back up the AVX registers.
             // TODO(#3329): Update interrupt handler macro to support AVX, SSE or neither.
-            </span><span class="string">&quot;sub rsp, 16*32&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 0*32], YMM0&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 1*32], YMM1&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 2*32], YMM2&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 3*32], YMM3&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 4*32], YMM4&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 5*32], YMM5&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 6*32], YMM6&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 7*32], YMM7&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 8*32], YMM8&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 9*32], YMM9&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 10*32], YMM10&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 11*32], YMM11&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 12*32], YMM12&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 13*32], YMM13&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 14*32], YMM14&quot;</span>,
-            <span class="string">&quot;vmovups [rsp + 15*32], YMM15&quot;</span>,
+            </span><span class="string">"sub rsp, 16*32"</span>,
+            <span class="string">"vmovups [rsp + 0*32], YMM0"</span>,
+            <span class="string">"vmovups [rsp + 1*32], YMM1"</span>,
+            <span class="string">"vmovups [rsp + 2*32], YMM2"</span>,
+            <span class="string">"vmovups [rsp + 3*32], YMM3"</span>,
+            <span class="string">"vmovups [rsp + 4*32], YMM4"</span>,
+            <span class="string">"vmovups [rsp + 5*32], YMM5"</span>,
+            <span class="string">"vmovups [rsp + 6*32], YMM6"</span>,
+            <span class="string">"vmovups [rsp + 7*32], YMM7"</span>,
+            <span class="string">"vmovups [rsp + 8*32], YMM8"</span>,
+            <span class="string">"vmovups [rsp + 9*32], YMM9"</span>,
+            <span class="string">"vmovups [rsp + 10*32], YMM10"</span>,
+            <span class="string">"vmovups [rsp + 11*32], YMM11"</span>,
+            <span class="string">"vmovups [rsp + 12*32], YMM12"</span>,
+            <span class="string">"vmovups [rsp + 13*32], YMM13"</span>,
+            <span class="string">"vmovups [rsp + 14*32], YMM14"</span>,
+            <span class="string">"vmovups [rsp + 15*32], YMM15"</span>,
 
             <span class="comment">// Shuffle around register values to match sysv calling convention, and escape into
             // proper Rust code from the assembly.
-            </span><span class="string">&quot;sub rsp, 8&quot;</span>,
-            <span class="string">&quot;push r9&quot;</span>,
-            <span class="string">&quot;mov r9, r8&quot;</span>,
-            <span class="string">&quot;mov r8, r10&quot;</span>,
-            <span class="string">&quot;mov rcx, rdx&quot;</span>,
-            <span class="string">&quot;mov rdx, rsi&quot;</span>,
-            <span class="string">&quot;mov rsi, rdi&quot;</span>,
-            <span class="string">&quot;mov rdi, rax&quot;</span>,
-            <span class="string">&quot;call {HANDLER}&quot;</span>,
-            <span class="string">&quot;pop r9&quot;</span>,
-            <span class="string">&quot;add rsp, 8&quot;</span>,
+            </span><span class="string">"sub rsp, 8"</span>,
+            <span class="string">"push r9"</span>,
+            <span class="string">"mov r9, r8"</span>,
+            <span class="string">"mov r8, r10"</span>,
+            <span class="string">"mov rcx, rdx"</span>,
+            <span class="string">"mov rdx, rsi"</span>,
+            <span class="string">"mov rsi, rdi"</span>,
+            <span class="string">"mov rdi, rax"</span>,
+            <span class="string">"call {HANDLER}"</span>,
+            <span class="string">"pop r9"</span>,
+            <span class="string">"add rsp, 8"</span>,
 
             <span class="comment">// Restore AVX registers.
-            </span><span class="string">&quot;vmovups YMM0, [rsp + 0*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM1, [rsp + 1*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM2, [rsp + 2*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM3, [rsp + 3*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM4, [rsp + 4*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM5, [rsp + 5*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM6, [rsp + 6*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM7, [rsp + 7*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM8, [rsp + 8*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM9, [rsp + 9*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM10, [rsp + 10*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM11, [rsp + 11*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM12, [rsp + 12*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM13, [rsp + 13*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM14, [rsp + 14*32]&quot;</span>,
-            <span class="string">&quot;vmovups YMM15, [rsp + 15*32]&quot;</span>,
-            <span class="string">&quot;add rsp, 16*32&quot;</span>,
+            </span><span class="string">"vmovups YMM0, [rsp + 0*32]"</span>,
+            <span class="string">"vmovups YMM1, [rsp + 1*32]"</span>,
+            <span class="string">"vmovups YMM2, [rsp + 2*32]"</span>,
+            <span class="string">"vmovups YMM3, [rsp + 3*32]"</span>,
+            <span class="string">"vmovups YMM4, [rsp + 4*32]"</span>,
+            <span class="string">"vmovups YMM5, [rsp + 5*32]"</span>,
+            <span class="string">"vmovups YMM6, [rsp + 6*32]"</span>,
+            <span class="string">"vmovups YMM7, [rsp + 7*32]"</span>,
+            <span class="string">"vmovups YMM8, [rsp + 8*32]"</span>,
+            <span class="string">"vmovups YMM9, [rsp + 9*32]"</span>,
+            <span class="string">"vmovups YMM10, [rsp + 10*32]"</span>,
+            <span class="string">"vmovups YMM11, [rsp + 11*32]"</span>,
+            <span class="string">"vmovups YMM12, [rsp + 12*32]"</span>,
+            <span class="string">"vmovups YMM13, [rsp + 13*32]"</span>,
+            <span class="string">"vmovups YMM14, [rsp + 14*32]"</span>,
+            <span class="string">"vmovups YMM15, [rsp + 15*32]"</span>,
+            <span class="string">"add rsp, 16*32"</span>,
 
             <span class="comment">// Undo stack alignment.
-            </span><span class="string">&quot;add rsp, 8&quot;</span>,
+            </span><span class="string">"add rsp, 8"</span>,
             <span class="comment">// Restore scratch registers.
-            </span><span class="string">&quot;pop r10&quot;</span>,
-            <span class="string">&quot;pop r9&quot;</span>,
-            <span class="string">&quot;pop r8&quot;</span>,
-            <span class="string">&quot;pop rbx&quot;</span>,
-            <span class="string">&quot;pop rdx&quot;</span>,
-            <span class="string">&quot;pop rdi&quot;</span>,
-            <span class="string">&quot;pop rsi&quot;</span>,
+            </span><span class="string">"pop r10"</span>,
+            <span class="string">"pop r9"</span>,
+            <span class="string">"pop r8"</span>,
+            <span class="string">"pop rbx"</span>,
+            <span class="string">"pop rdx"</span>,
+            <span class="string">"pop rdi"</span>,
+            <span class="string">"pop rsi"</span>,
 
             <span class="comment">// Restore user values in preparation for SYSRET.
-            // We don&#39;t save the kernel stack value; we&#39;ll just overwrite what&#39;s there next time
+            // We don't save the kernel stack value; we'll just overwrite what's there next time
             // a syscall is invoked.
-            </span><span class="string">&quot;mov rsp, gs:[0x8]&quot;</span>, <span class="comment">// restore user RSP
-            </span><span class="string">&quot;mov rcx, gs:[0x10]&quot;</span>, <span class="comment">// restore user RIP
-            </span><span class="string">&quot;mov r11, gs:[0x18]&quot;</span>, <span class="comment">// restore user RFLAGS
-            </span><span class="string">&quot;swapgs&quot;</span>, <span class="comment">// restore user GS
+            </span><span class="string">"mov rsp, gs:[0x8]"</span>, <span class="comment">// restore user RSP
+            </span><span class="string">"mov rcx, gs:[0x10]"</span>, <span class="comment">// restore user RIP
+            </span><span class="string">"mov r11, gs:[0x18]"</span>, <span class="comment">// restore user RFLAGS
+            </span><span class="string">"swapgs"</span>, <span class="comment">// restore user GS
 
             // Back to user code in Ring 3.
-            </span><span class="string">&quot;sysretq&quot;</span>,
+            </span><span class="string">"sysretq"</span>,
             HANDLER = sym syscall_handler,
             options(noreturn)
         }

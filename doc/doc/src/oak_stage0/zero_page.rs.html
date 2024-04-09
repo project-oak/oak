@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/zero_page.rs`."><title>zero_page.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/zero_page.rs`."><title>zero_page.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -579,14 +581,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -631,7 +633,7 @@
         // See https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header for more details.
         </span>zero_page.hdr.type_of_loader = <span class="number">0xFF</span>; <span class="comment">// loader type undefined
         </span>zero_page.hdr.boot_flag = <span class="number">0xAA55</span>; <span class="comment">// magic number
-        </span>zero_page.hdr.header = <span class="number">0x53726448</span>; <span class="comment">// Magic &quot;HdrS&quot; string
+        </span>zero_page.hdr.header = <span class="number">0x53726448</span>; <span class="comment">// Magic "HdrS" string
         </span>zero_page.hdr.kernel_alignment = <span class="number">0x1000000</span>; <span class="comment">// Magic number from crosvm source.
 
         </span>ZeroPage { inner: zero_page }
@@ -653,21 +655,21 @@
             <span class="comment">// We temporarily copy the setup data to the end of available mapped virtual
             // memory.
             </span><span class="kw">let </span>start = find_suitable_dma_address(size, <span class="self">self</span>.inner.e820_table())
-                .expect(<span class="string">&quot;no suitable DMA address available&quot;</span>);
+                .expect(<span class="string">"no suitable DMA address available"</span>);
             <span class="kw">let </span>address = <span class="kw">crate</span>::phys_to_virt(start);
 
             <span class="comment">// Safety: we have confirmed that the memory is backed by physical RAM and not
             // currently used for anything else. We will overwrite all of it, so
             // it does not have to be initialized.
             </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(address.as_mut_ptr(), size) };
-            <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">&quot;could not read setup data&quot;</span>);
-            <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;setup data did not match expected size&quot;</span>);
+            <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">"could not read setup data"</span>);
+            <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">"setup data did not match expected size"</span>);
             <span class="comment">// The initial ram disk location and size are not constant. We will overwrite it
             // later anyway, so we overwrite it with zeros before measuring so
             // we can get consistent measurement. See &lt;https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html&gt; for
             // information on the  field offsets.
-            </span><span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x218</span>..<span class="number">0x21C</span>]).expect(<span class="string">&quot;invalid slice for initrd location&quot;</span>) = <span class="number">0</span>;
-            <span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x21C</span>..<span class="number">0x220</span>]).expect(<span class="string">&quot;invalid slice for initrd size&quot;</span>) = <span class="number">0</span>;
+            </span><span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x218</span>..<span class="number">0x21C</span>]).expect(<span class="string">"invalid slice for initrd location"</span>) = <span class="number">0</span>;
+            <span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x21C</span>..<span class="number">0x220</span>]).expect(<span class="string">"invalid slice for initrd size"</span>) = <span class="number">0</span>;
 
             <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
 
@@ -692,15 +694,15 @@
     <span class="doccomment">/// Fills the E820 memory map (layout of the physical memory of the machine)
     /// in the zero page.
     ///
-    /// We first try to read &quot;etc/e820&quot; via the QEMU fw_cfg interface, and if
+    /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
     /// that is not available, fall back to querying RTC NVRAM.
     </span><span class="kw">pub fn </span>fill_e820_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) {
         <span class="comment">// Try to load the E820 table from fw_cfg.
-        // Safety: BootE820Entry has the same structure as what qemu uses, and we&#39;re
+        // Safety: BootE820Entry has the same structure as what qemu uses, and we're
         // limiting ourselves to up to 128 entries.
         </span><span class="kw">let </span>len_bytes = <span class="kw">unsafe </span>{
             fw_cfg.read_file_by_name(
-                CStr::from_bytes_with_nul(<span class="string">b&quot;etc/e820\0&quot;</span>).unwrap(),
+                CStr::from_bytes_with_nul(<span class="string">b"etc/e820\0"</span>).unwrap(),
                 <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table,
             )
         };
@@ -712,14 +714,14 @@
                 e820_entries
             }
             <span class="prelude-val">Err</span>(err) =&gt; {
-                <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to read &#39;etc/e820&#39;: {}, failing back to CMOS&quot;</span>, err);
+                <span class="macro">log::warn!</span>(<span class="string">"Failed to read 'etc/e820': {}, failing back to CMOS"</span>, err);
 
-                <span class="comment">// We don&#39;t support the early reservation entries, so panic if there are any.
+                <span class="comment">// We don't support the early reservation entries, so panic if there are any.
                 </span><span class="kw">if </span>fw_cfg.read_e820_reservation_table_size().unwrap_or(<span class="number">0</span>) &gt; <span class="number">0 </span>{
-                    <span class="macro">panic!</span>(<span class="string">&quot;QEMU_E820_RESERVATION_TABLE was not empty!&quot;</span>);
+                    <span class="macro">panic!</span>(<span class="string">"QEMU_E820_RESERVATION_TABLE was not empty!"</span>);
                 }
 
-                build_e820_from_nvram(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table).expect(<span class="string">&quot;failed to read from CMOS&quot;</span>)
+                build_e820_from_nvram(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table).expect(<span class="string">"failed to read from CMOS"</span>)
             }
         };
 
@@ -737,7 +739,7 @@
 
         <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.inner.e820_table() {
             <span class="macro">log::debug!</span>(
-                <span class="string">&quot;early E820 entry: [{:#018x}-{:#018x}), len {}, type {}&quot;</span>,
+                <span class="string">"early E820 entry: [{:#018x}-{:#018x}), len {}, type {}"</span>,
                 entry.addr(),
                 entry.addr() + entry.size(),
                 entry.size(),
@@ -786,7 +788,7 @@
                         BootE820Entry::new(
                             entry.end(),
                             overlapping.end() - entry.end(),
-                            overlapping.entry_type().expect(<span class="string">&quot;invalid entry type&quot;</span>),
+                            overlapping.entry_type().expect(<span class="string">"invalid entry type"</span>),
                         ),
                         index <span class="kw">as </span>u8,
                     );
@@ -845,7 +847,7 @@
                 </span><span class="kw">let </span>new_entry = BootE820Entry::new(
                     end,
                     entry.end() - end,
-                    entry.entry_type().expect(<span class="string">&quot;invalid entry type&quot;</span>),
+                    entry.entry_type().expect(<span class="string">"invalid entry type"</span>),
                 );
                 entry.set_size(start - entry.addr());
                 <span class="self">self</span>.inner.e820_table[index] = entry;
@@ -888,7 +890,7 @@
     /// page.
     </span><span class="kw">pub fn </span>set_cmdline&lt;T: AsRef&lt;str&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cmdline: T) {
         <span class="kw">let </span>cmdline =
-            CString::new(cmdline.as_ref().as_bytes()).expect(<span class="string">&quot;invalid kernel command-line&quot;</span>);
+            CString::new(cmdline.as_ref().as_bytes()).expect(<span class="string">"invalid kernel command-line"</span>);
         <span class="kw">let </span>source = cmdline.as_bytes_with_nul();
         <span class="comment">// Create and leak a buffer in the boot allocator so that it can outlive Stage
         // 0.
@@ -904,7 +906,7 @@
 
     <span class="doccomment">/// Adds a header to the list of setup headers.
     ///
-    /// `setup_data` needs to be mutable because underneath the covers it&#39;s a
+    /// `setup_data` needs to be mutable because underneath the covers it's a
     /// C-style linked list, and we need to assign the pointer to the next
     /// value in the list to the `next` field in its header.
     </span><span class="kw">pub fn </span>add_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, setup_data: <span class="kw-2">&amp;mut </span>oak_linux_boot_params::CCSetupData) {
@@ -931,21 +933,21 @@
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and
 /// `qemu_cfg_e820()` in &lt;https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c&gt;),
 /// but &lt;https://wiki.osdev.org/Detecting_Memory_%28x86%29&gt; is also a good read on the topic.
-</span><span class="kw">fn </span>build_e820_from_nvram(e820_table: <span class="kw-2">&amp;mut </span>[BootE820Entry]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="comment">// Safety: (a) fw_cfg is available, so we&#39;re running under QEMU(ish) and (b)
+</span><span class="kw">fn </span>build_e820_from_nvram(e820_table: <span class="kw-2">&amp;mut </span>[BootE820Entry]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="comment">// Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b)
     // there was no pre-built E820 table in fw_cfg; thus, we can reasonably
-    // expect CMOS to available, as that&#39;s what SeaBIOS would use in that
+    // expect CMOS to available, as that's what SeaBIOS would use in that
     // situation to build the E820 table.
     </span><span class="kw">let </span><span class="kw-2">mut </span>cmos = <span class="kw">unsafe </span>{ Cmos::new() };
     <span class="kw">let </span><span class="kw-2">mut </span>rs = cmos.low_ram_size()<span class="question-mark">?</span>;
     <span class="kw">let </span>high = cmos.high_ram_size()<span class="question-mark">?</span>;
 
     <span class="kw">if </span>rs &lt;= <span class="number">0x100000 </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;not enough RAM available: only {rs} bytes&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"not enough RAM available: only {rs} bytes"</span>);
     }
 
     <span class="comment">// Time to put all that we know together.
-    // First, we&#39;ll leave the top 256K just below the 4G mark reserved for the BIOS
+    // First, we'll leave the top 256K just below the 4G mark reserved for the BIOS
     // itself. Second, leave the last 4 pages of low memory as reserved just
     // below the BIOS area as reserved; according to SeaBIOS, KVM stores some
     // data structures there. Thus, the maximum memory we can have under 4G is

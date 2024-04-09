@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -417,14 +419,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -488,10 +490,10 @@
 </span><span class="attr">#[cfg_attr(not(test), global_allocator)]
 </span><span class="kw">static </span>SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
-<span class="attr">#[link_section = <span class="string">&quot;.boot&quot;</span>]
+<span class="attr">#[link_section = <span class="string">".boot"</span>]
 #[no_mangle]
 </span><span class="kw">static </span><span class="kw-2">mut </span>SEV_SECRETS: MaybeUninit&lt;oak_sev_guest::secrets::SecretsPage&gt; = MaybeUninit::uninit();
-<span class="attr">#[link_section = <span class="string">&quot;.boot&quot;</span>]
+<span class="attr">#[link_section = <span class="string">".boot"</span>]
 #[no_mangle]
 </span><span class="kw">static </span>SEV_CPUID: MaybeUninit&lt;oak_sev_guest::cpuid::CpuidPage&gt; = MaybeUninit::uninit();
 
@@ -500,8 +502,8 @@
 
 <span class="kw">static </span>ENCRYPTED: OnceCell&lt;u64&gt; = OnceCell::new();
 
-<span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
-    <span class="attr">#[link_name = <span class="string">&quot;stack_start&quot;</span>]
+<span class="kw">extern </span><span class="string">"C" </span>{
+    <span class="attr">#[link_name = <span class="string">"stack_start"</span>]
     </span><span class="kw">static </span>BOOT_STACK_POINTER: c_void;
 }
 
@@ -525,11 +527,11 @@
 ) -&gt; ! {
     <span class="macro">asm!</span>(
         <span class="comment">// Boot stack pointer
-        </span><span class="string">&quot;mov {1}, %rsp&quot;</span>,
+        </span><span class="string">"mov {1}, %rsp"</span>,
         <span class="comment">// Zero page address
-        </span><span class="string">&quot;mov {2}, %rsi&quot;</span>,
+        </span><span class="string">"mov {2}, %rsi"</span>,
         <span class="comment">// ...and away we go!
-        </span><span class="string">&quot;jmp *{0}&quot;</span>,
+        </span><span class="string">"jmp *{0}"</span>,
         <span class="kw">in</span>(reg) entry_point.as_u64(),
         <span class="kw">in</span>(reg) <span class="kw-2">&amp;</span>BOOT_STACK_POINTER <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64,
         <span class="kw">in</span>(reg) Box::leak(zero_page),
@@ -537,8 +539,8 @@
     );
 }
 
-<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that&#39;s safe to read even if the CPU
-/// doesn&#39;t support it.
+<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU
+/// doesn't support it.
 ///
 /// Initialized in the bootstrap assembly code.
 </span><span class="kw">pub fn </span>sev_status() -&gt; SevStatus {
@@ -547,7 +549,7 @@
     </span><span class="attr">#[no_mangle]
     </span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
 
-    <span class="comment">// Safety: we don&#39;t allow mutation and this is initialized in the bootstrap
+    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
 }
@@ -564,33 +566,33 @@
 
     paging::init_page_table_refs(encrypted);
 
-    <span class="comment">// If we&#39;re under SEV-ES or SNP, we need a GHCB block for communication (SNP
+    <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
     </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         sev::init_ghcb(<span class="kw-2">&amp;</span>BOOT_ALLOC);
     }
 
     logging::init_logging();
-    <span class="macro">log::info!</span>(<span class="string">&quot;starting...&quot;</span>);
-    <span class="macro">log::info!</span>(<span class="string">&quot;Enabled SEV features: {:?}&quot;</span>, sev_status());
+    <span class="macro">log::info!</span>(<span class="string">"starting..."</span>);
+    <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
 
-    ENCRYPTED.set(encrypted).expect(<span class="string">&quot;encrypted bit already initialized&quot;</span>);
+    ENCRYPTED.set(encrypted).expect(<span class="string">"encrypted bit already initialized"</span>);
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we&#39;re using an originally
+        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we're using an originally
         // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
         // If we get CPUID reads working, we may want to check that MTRR is
         // supported, but only if we want to support very old processors.
         // However, note that, this branch is only executed if
-        // we have encryption, and this wouldn&#39;t be true for very old processors.
+        // we have encryption, and this wouldn't be true for very old processors.
         </span><span class="kw">unsafe </span>{
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
     }
 
-    <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg
+    <span class="comment">// Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">&quot;fw_cfg device not found!&quot;</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>zero_page = Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
 
@@ -608,7 +610,7 @@
 
     <span class="kw">let </span>(cs, ds) = create_gdt(gdt);
     gdt.load();
-    <span class="comment">// Safety: we&#39;ve set up the valid data structures in create_gdt, above.
+    <span class="comment">// Safety: we've set up the valid data structures in create_gdt, above.
     </span><span class="kw">unsafe </span>{
         CS::set_reg(cs);
         DS::set_reg(ds);
@@ -635,8 +637,8 @@
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="comment">// Initialize the Guest Message encryptor for generating attestation reports and
         // a unique device secret.
-        </span>sev::init_guest_message_encryptor().expect(<span class="string">&quot;couldn&#39;t initialize guest message encryptor&quot;</span>);
-        <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its
+        </span>sev::init_guest_message_encryptor().expect(<span class="string">"couldn't initialize guest message encryptor"</span>);
+        <span class="comment">// Safety: we're only interested in the pointer value of SEV_SECRETS, not its
         // contents.
         </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
             oak_linux_boot_params::CCBlobSevInfo::new(
@@ -660,7 +662,7 @@
 
     <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If
     // it works, extract the entry point address from there; if there is no
-    // valid ELF header at that address, assume it&#39;s code, and jump there
+    // valid ELF header at that address, assume it's code, and jump there
     // directly. Safety: this assumes the kernel is loaded at the given address.
     </span><span class="kw">let </span>header = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(entry.as_u64() <span class="kw">as </span><span class="kw-2">*const </span>elf::file::Elf64_Ehdr) };
     <span class="kw">if </span>header.e_ident[<span class="number">0</span>] == elf::abi::ELFMAG0
@@ -684,7 +686,7 @@
     acpi_sha2_256_digest[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
-        <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>, err);
+        <span class="macro">log::warn!</span>(<span class="string">"Failed to bootstrap APs: {}. APs may not be properly initialized."</span>, err);
     }
 
     <span class="comment">// Register the AP Jump Table, if required.
@@ -693,7 +695,7 @@
         </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
         <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
             <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don&#39;t care about the contents of the secrets page beyond writing
+            // Safety: we don't care about the contents of the secrets page beyond writing
             // our jump table address into it.
             </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
             secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
@@ -702,7 +704,7 @@
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
                 ghcb.lock()
                     .set_ap_jump_table(PhysAddr::new(jump_table_pa))
-                    .expect(<span class="string">&quot;failed to set AP Jump Table&quot;</span>);
+                    .expect(<span class="string">"failed to set AP Jump Table"</span>);
             }
         }
     }
@@ -717,12 +719,12 @@
 
     <span class="kw">let </span>memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>, hex::encode(kernel_info.measurement));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: sha2-256:{}&quot;</span>, hex::encode(setup_data_sha2_256_digest));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel command-line: {}&quot;</span>, cmdline);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: sha2-256:{}&quot;</span>, hex::encode(ram_disk_sha2_256_digest));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: sha2-256:{}&quot;</span>, hex::encode(acpi_sha2_256_digest));
-    <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: sha2-256:{}&quot;</span>, hex::encode(memory_map_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel command-line: {}"</span>, cmdline);
+    <span class="macro">log::debug!</span>(<span class="string">"Initial RAM disk digest: sha2-256:{}"</span>, hex::encode(ram_disk_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"ACPI table generation digest: sha2-256:{}"</span>, hex::encode(acpi_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"E820 table digest: sha2-256:{}"</span>, hex::encode(memory_map_sha2_256_digest));
 
     <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line length.
     </span><span class="kw">let </span>cmdline_max_len = <span class="number">256</span>;
@@ -763,21 +765,21 @@
     ));
 
     <span class="comment">// Append the DICE data address to the kernel command-line.
-    </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">&quot;--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}&quot;</span>);
+    </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}"</span>);
     <span class="kw">let </span>cmdline = <span class="kw">if </span>kernel_info.kernel_type == KernelType::Elf {
-        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don&#39;t
+        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don't
         // append the extra parameter.
         </span>cmdline
     } <span class="kw">else if </span>cmdline.is_empty() {
         extra
-    } <span class="kw">else if </span>cmdline.contains(<span class="string">&quot;--&quot;</span>) {
-        <span class="macro">format!</span>(<span class="string">&quot;{} {}&quot;</span>, cmdline, extra)
+    } <span class="kw">else if </span>cmdline.contains(<span class="string">"--"</span>) {
+        <span class="macro">format!</span>(<span class="string">"{} {}"</span>, cmdline, extra)
     } <span class="kw">else </span>{
-        <span class="macro">format!</span>(<span class="string">&quot;{} -- {}&quot;</span>, cmdline, extra)
+        <span class="macro">format!</span>(<span class="string">"{} -- {}"</span>, cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
 
-    <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
+    <span class="macro">log::info!</span>(<span class="string">"jumping to kernel at {:#018x}"</span>, entry.as_u64());
 
     <span class="comment">// Clean-ups we need to do just before we jump to the kernel proper: clean up
     // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
@@ -796,9 +798,9 @@
 <span class="doccomment">/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a
 /// panic_handler function in individual binary crates.
 </span><span class="kw">pub fn </span>panic(info: <span class="kw-2">&amp;</span>PanicInfo) -&gt; ! {
-    <span class="macro">log::error!</span>(<span class="string">&quot;{}&quot;</span>, info);
+    <span class="macro">log::error!</span>(<span class="string">"{}"</span>, info);
 
-    <span class="comment">// Trigger a breakpoint exception. As we don&#39;t have a #BP handler, this will
+    <span class="comment">// Trigger a breakpoint exception. As we don't have a #BP handler, this will
     // triple fault and terminate the program.
     </span>int3();
 

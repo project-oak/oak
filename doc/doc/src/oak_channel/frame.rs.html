@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_channel/src/frame.rs`."><title>frame.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_channel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_channel/src/frame.rs`."><title>frame.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_channel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_channel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -169,14 +171,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -225,18 +227,18 @@
 <span class="doccomment">/// Rust implementation of the Frame structure defined in
 /// `/oak_channel/SPEC.md`.
 </span><span class="attr">#[derive(Clone, Default, Debug)]
-</span><span class="kw">pub struct </span>Frame&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>Frame&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub </span>flags: Flags,
-    <span class="kw">pub </span>body: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
+    <span class="kw">pub </span>body: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
 }
 
-<span class="kw">impl </span>Frame&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>Frame&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>write&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
         <span class="kw">let </span>frame_length = {
-            <span class="kw">let </span>length = BODY_OFFSET.checked_add(<span class="self">self</span>.body.len()).expect(<span class="string">&quot;body length overflow&quot;</span>);
+            <span class="kw">let </span>length = BODY_OFFSET.checked_add(<span class="self">self</span>.body.len()).expect(<span class="string">"body length overflow"</span>);
             Length::try_from(length).map_err(|_error| {
                 anyhow::Error::msg(<span class="macro">format!</span>(
-                    <span class="string">&quot;could convert the frame length usize to {:?}&quot;</span>,
+                    <span class="string">"could convert the frame length usize to {:?}"</span>,
                     core::any::type_name::&lt;Length&gt;()
                 ))
             })<span class="question-mark">?
@@ -258,17 +260,17 @@
         <span class="self">Self </span>{ inner: socket }
     }
 
-    <span class="kw">pub fn </span>read_frame&lt;<span class="lifetime">&#39;a</span>&gt;(
+    <span class="kw">pub fn </span>read_frame&lt;<span class="lifetime">'a</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        message_buffer: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>BytesMut,
-    ) -&gt; anyhow::Result&lt;(Frame&lt;<span class="lifetime">&#39;a</span>&gt;, Timer)&gt; {
+        message_buffer: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>BytesMut,
+    ) -&gt; anyhow::Result&lt;(Frame&lt;<span class="lifetime">'a</span>&gt;, Timer)&gt; {
         {
             <span class="kw">let </span><span class="kw-2">mut </span>padding_bytes = [<span class="number">0</span>; PADDING_SIZE];
             <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>padding_bytes)<span class="question-mark">?</span>;
         };
-        <span class="comment">// As the read() above can block indefinitely we&#39;ll start measuring the time it
-        // took to read the data _after_ we&#39;ve read the padding bytes. Strictly
-        // speaking we should start measuring the time as we&#39;re reading the
+        <span class="comment">// As the read() above can block indefinitely we'll start measuring the time it
+        // took to read the data _after_ we've read the padding bytes. Strictly
+        // speaking we should start measuring the time as we're reading the
         // first padding byte, but this should be close enough to get a rough
         // idea.
         </span><span class="kw">let </span>timer = Timer::new_rdtsc();
@@ -277,10 +279,10 @@
             <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>length_bytes)<span class="question-mark">?</span>;
             <span class="kw">let </span>length = Length::from_le_bytes(length_bytes).into();
             <span class="kw">if </span>length &lt;= BODY_OFFSET {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">&quot;frame is too small&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"frame is too small"</span>));
             };
             <span class="kw">if </span>length &gt; MAX_SIZE {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">&quot;frame exceeds the maximum frame size&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"frame exceeds the maximum frame size"</span>));
             };
             length
         };
@@ -292,7 +294,7 @@
 
         <span class="kw">let </span>body = {
             <span class="kw">let </span>body_length: usize =
-                length.checked_sub(BODY_OFFSET).expect(<span class="string">&quot;body length underflow&quot;</span>);
+                length.checked_sub(BODY_OFFSET).expect(<span class="string">"body length underflow"</span>);
             <span class="kw">let </span>tail = message_buffer.len();
             <span class="comment">// Lack of capacity indicates corrupted frames and causes panic.
             </span>message_buffer.put_bytes(<span class="number">0x00</span>, body_length);
@@ -310,9 +312,9 @@
     }
 }
 
-<span class="kw">pub fn </span>bytes_into_frames(data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;Frame&lt;<span class="lifetime">&#39;_</span>&gt;&gt;&gt; {
+<span class="kw">pub fn </span>bytes_into_frames(data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;Frame&lt;<span class="lifetime">'_</span>&gt;&gt;&gt; {
     <span class="kw">if </span>data.is_empty() {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;cannot convert empty payloads into frames&quot;</span>)
+        <span class="macro">anyhow::bail!</span>(<span class="string">"cannot convert empty payloads into frames"</span>)
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>frames: Vec&lt;Frame&gt; = data
@@ -322,13 +324,13 @@
 
     frames
         .first_mut()
-        .expect(<span class="string">&quot;there should always be at least one frame&quot;</span>)
+        .expect(<span class="string">"there should always be at least one frame"</span>)
         .flags
         .set(Flags::START, <span class="bool-val">true</span>);
 
     frames
         .last_mut()
-        .expect(<span class="string">&quot;there should always be at least one frame&quot;</span>)
+        .expect(<span class="string">"there should always be at least one frame"</span>)
         .flags
         .set(Flags::END, <span class="bool-val">true</span>);
 

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/acpi_tables.rs`."><title>acpi_tables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/acpi_tables.rs`."><title>acpi_tables.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -527,14 +529,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -556,7 +558,7 @@
 </span><span class="attr">#[derive(FromZeroes, FromBytes, AsBytes)]
 #[repr(C, packed)]
 </span><span class="kw">pub struct </span>Rsdp {
-    <span class="doccomment">/// Signature: &quot;RSD PTR &quot; (note the trailing space).
+    <span class="doccomment">/// Signature: "RSD PTR " (note the trailing space).
     </span>signature: [u8; <span class="number">8</span>],
 
     <span class="doccomment">/// Checksum for fields defined in the ACPI 1.0 specification.
@@ -589,27 +591,27 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(Rsdp, [u8; <span class="number">36usize</span>]);
 
 <span class="kw">impl </span>Rsdp {
-    <span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">if </span><span class="kw-2">&amp;</span><span class="self">self</span>.signature != <span class="string">b&quot;RSD PTR &quot; </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDP signature&quot;</span>);
+    <span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="kw">if </span><span class="kw-2">&amp;</span><span class="self">self</span>.signature != <span class="string">b"RSD PTR " </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid RSDP signature"</span>);
         }
         <span class="kw">let </span>len = <span class="kw">if </span><span class="self">self</span>.revision &gt; <span class="number">2 </span>{ <span class="self">self</span>.length } <span class="kw">else </span>{ <span class="number">20 </span>} <span class="kw">as </span>usize;
 
         <span class="kw">if </span>len &gt; size_of::&lt;Rsdp&gt;() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid RSDP size&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid RSDP size"</span>);
         }
 
         <span class="kw">let </span>checksum = <span class="self">self</span>.as_bytes()[..<span class="number">20</span>].iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
 
         <span class="kw">if </span>checksum != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDP checksum&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid RSDP checksum"</span>);
         }
 
         <span class="kw">if </span><span class="self">self</span>.revision &gt; <span class="number">2 </span>{
             <span class="kw">let </span>checksum = <span class="self">self</span>.as_bytes().iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
 
             <span class="kw">if </span>checksum != <span class="number">0 </span>{
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDP extended checksum&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid RSDP extended checksum"</span>);
             }
         }
 
@@ -621,19 +623,19 @@
             </span>&amp;&amp; ((<span class="self">self</span>.rsdt_address <span class="kw">as </span>usize) &lt; ebda_base
                 || (<span class="self">self</span>.rsdt_address <span class="kw">as </span>usize) &gt;= ebda_base + EBDA_SIZE)
         {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid RSDT address: does not point to within EBDA&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid RSDT address: does not point to within EBDA"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.xsdt_address &gt; <span class="number">0
             </span>&amp;&amp; ((<span class="self">self</span>.xsdt_address <span class="kw">as </span>usize) &lt; ebda_base
                 || (<span class="self">self</span>.xsdt_address <span class="kw">as </span>usize) &gt;= ebda_base + EBDA_SIZE)
         {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid XSDT address: does not point to within EBDA&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid XSDT address: does not point to within EBDA"</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>rsdt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rsdt&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>rsdt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Rsdt&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.rsdt_address == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         } <span class="kw">else </span>{
@@ -641,7 +643,7 @@
         }
     }
 
-    <span class="kw">pub fn </span>xsdt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Xsdt&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>xsdt(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Xsdt&gt;, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.xsdt_address == <span class="number">0 </span>{
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         } <span class="kw">else </span>{
@@ -694,11 +696,11 @@
     </span><span class="kw">pub fn </span>signature(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="comment">// Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
         </span>core::str::from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.signature)
-            .expect(<span class="string">&quot;invalid ACPI table signature; not valid UTF-8&quot;</span>)
+            .expect(<span class="string">"invalid ACPI table signature; not valid UTF-8"</span>)
     }
 
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re never dereferencing this pointer.
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Safety: we're never dereferencing this pointer.
         </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
         <span class="kw">let </span>ebda = ebda_base..ebda_base + EBDA_SIZE;
         <span class="kw">let </span>table = {
@@ -707,14 +709,14 @@
         };
 
         <span class="kw">if </span>!ebda.contains(<span class="kw-2">&amp;</span>table.start) || !ebda.contains(<span class="kw-2">&amp;</span>table.end) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI table falls outside EBDA&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ACPI table falls outside EBDA"</span>);
         }
 
-        <span class="comment">// Safety: we&#39;ve ensured that the table is within EBDA.
+        <span class="comment">// Safety: we've ensured that the table is within EBDA.
         </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice::from_raw_parts(table.start <span class="kw">as </span><span class="kw-2">*const </span>u8, <span class="self">self</span>.length <span class="kw">as </span>usize) };
         <span class="kw">let </span>checksum = data.iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
         <span class="kw">if </span>checksum != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI table checksum invalid&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ACPI table checksum invalid"</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -727,37 +729,37 @@
 </span><span class="attr">#[repr(C, packed)]
 </span><span class="kw">pub struct </span>Rsdt {
     header: DescriptionHeader,
-    <span class="comment">// The RSDT contains an array of pointers to other tables, but unfortunately this can&#39;t be
+    <span class="comment">// The RSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust.
 </span>}
 
 <span class="kw">impl </span>Rsdt {
-    <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8; <span class="number">4</span>] = <span class="string">b&quot;RSDT&quot;</span>;
+    <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8; <span class="number">4</span>] = <span class="string">b"RSDT"</span>;
 
-    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdt, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re checking that it&#39;s a valid XSDT in `validate()`.
+    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Rsdt, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Safety: we're checking that it's a valid XSDT in `validate()`.
         </span><span class="kw">let </span>rsdt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>addr.as_ptr::&lt;Rsdt&gt;() };
         rsdt.validate()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(rsdt)
     }
 
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.header.validate()<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="self">self</span>.header.signature != <span class="kw-2">*</span><span class="self">Self</span>::SIGNATURE {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid signature for RSDT table&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid signature for RSDT table"</span>);
         }
 
         <span class="kw">if </span>(<span class="self">self</span>.header.length <span class="kw">as </span>usize - size_of::&lt;DescriptionHeader&gt;()) % size_of::&lt;u32&gt;() != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDT invalid: entries size not a multiple of pointer size&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"RSDT invalid: entries size not a multiple of pointer size"</span>);
         }
 
-        <span class="comment">// Safety: we&#39;re never dereferencing the pointer.
+        <span class="comment">// Safety: we're never dereferencing the pointer.
         </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
         <span class="kw">for </span><span class="kw-2">&amp;</span>entry <span class="kw">in </span><span class="self">self</span>.entries() {
             <span class="kw">let </span>ptr: usize = entry <span class="kw">as </span>usize;
             <span class="kw">if </span>!(ebda_base..ebda_base + EBDA_SIZE).contains(<span class="kw-2">&amp;</span>ptr) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDT invalid: entry points outside EBDA&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"RSDT invalid: entry points outside EBDA"</span>);
             }
         }
         <span class="prelude-val">Ok</span>(())
@@ -765,7 +767,7 @@
 
     <span class="kw">fn </span>entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u32] {
         <span class="kw">let </span>entries_base = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize + size_of::&lt;DescriptionHeader&gt;();
-        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in
+        <span class="comment">// Safety: we've validated that the address and length makes sense in
         // `validate()`.
         </span><span class="kw">unsafe </span>{
             slice::from_raw_parts(
@@ -776,10 +778,10 @@
     }
 
     <span class="doccomment">/// Finds a table based on the signature, if it is present.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="kw-2">&amp;</span>[u8; <span class="number">4</span>]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>DescriptionHeader&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, table: <span class="kw-2">&amp;</span>[u8; <span class="number">4</span>]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>DescriptionHeader&gt; {
         <span class="self">self</span>.entries().iter().find_map(|<span class="kw-2">&amp;</span>entry| {
             <span class="kw">let </span>ptr = entry <span class="kw">as </span>usize;
-            <span class="kw">let </span>entry: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>DescriptionHeader = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span>DescriptionHeader) };
+            <span class="kw">let </span>entry: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>DescriptionHeader = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(ptr <span class="kw">as </span><span class="kw-2">*const </span>DescriptionHeader) };
             <span class="kw">if </span>entry.signature == <span class="kw-2">*</span>table { <span class="prelude-val">Some</span>(entry) } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
         })
     }
@@ -790,12 +792,12 @@
 /// An entry address in XSDT has 8 bytes, but they are placed from table offset
 /// 36 and not 8-byte aligned. This wrapper handles the unaligned access.
 </span><span class="attr">#[repr(C)]
-</span><span class="kw">pub struct </span>XsdtEntryPtr&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>XsdtEntryPtr&lt;<span class="lifetime">'a</span>&gt; {
     addr: [u8; <span class="number">8</span>],
-    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>DescriptionHeader&gt;,
+    _phantom: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>DescriptionHeader&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; XsdtEntryPtr&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; XsdtEntryPtr&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>raw_val(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="comment">// As per Section 5.2 in the ACPI specification 6.5,
         // Address is little endian.
@@ -803,7 +805,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Deref <span class="kw">for </span>XsdtEntryPtr&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Deref <span class="kw">for </span>XsdtEntryPtr&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">type </span>Target = DescriptionHeader;
 
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>DescriptionHeader {
@@ -818,38 +820,38 @@
 </span><span class="attr">#[repr(C, packed)]
 </span><span class="kw">pub struct </span>Xsdt {
     header: DescriptionHeader,
-    <span class="comment">// The XSDT contains an array of pointers to other tables, but unfortunately this can&#39;t be
+    <span class="comment">// The XSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust.
 </span>}
 
 <span class="kw">impl </span>Xsdt {
-    <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8; <span class="number">4</span>] = <span class="string">b&quot;XSDT&quot;</span>;
+    <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8; <span class="number">4</span>] = <span class="string">b"XSDT"</span>;
 
-    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Xsdt, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re checking that it&#39;s a valid XSDT in `validate()`.
+    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Xsdt, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Safety: we're checking that it's a valid XSDT in `validate()`.
         </span><span class="kw">let </span>xsdt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>addr.as_ptr::&lt;Xsdt&gt;() };
         xsdt.validate()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(xsdt)
     }
 
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.header.validate()<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="self">self</span>.header.signature != <span class="kw-2">*</span><span class="self">Self</span>::SIGNATURE {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid signature for XSDT table&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid signature for XSDT table"</span>);
         }
 
         <span class="kw">if </span>(<span class="self">self</span>.header.length <span class="kw">as </span>usize - size_of::&lt;DescriptionHeader&gt;()) % size_of::&lt;usize&gt;() != <span class="number">0
         </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;XSDT invalid: entries size not a multiple of pointer size&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"XSDT invalid: entries size not a multiple of pointer size"</span>);
         }
 
-        <span class="comment">// Safety: we&#39;re never dereferencing the pointer.
+        <span class="comment">// Safety: we're never dereferencing the pointer.
         </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
         <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.entries() {
             <span class="kw">let </span>ptr = entry.raw_val() <span class="kw">as </span>usize;
             <span class="kw">if </span>!(ebda_base..ebda_base + EBDA_SIZE).contains(<span class="kw-2">&amp;</span>ptr) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;XSDT invalid: entry points outside EBDA&quot;</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"XSDT invalid: entry points outside EBDA"</span>);
             }
         }
         <span class="prelude-val">Ok</span>(())
@@ -857,7 +859,7 @@
 
     <span class="kw">pub fn </span>entries(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[XsdtEntryPtr] {
         <span class="kw">let </span>entries_base = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize + size_of::&lt;DescriptionHeader&gt;();
-        <span class="comment">// Safety: we&#39;ve validated that the address and length makes sense in
+        <span class="comment">// Safety: we've validated that the address and length makes sense in
         // `validate()`. XsdtEntryPtr is 1-byte aligned.
         </span><span class="kw">unsafe </span>{
             slice::from_raw_parts(
@@ -906,7 +908,7 @@
     <span class="doccomment">/// Multiple APIC flags.
     </span>flags: MadtFlags,
     <span class="comment">// This is followed by a dynamic number of variable-length interrupt controller structures,
-    // which unfortunately can&#39;t be expressed in safe Rust.
+    // which unfortunately can't be expressed in safe Rust.
 </span>}
 
 <span class="attr">#[derive(Clone, Copy, Debug)]
@@ -917,8 +919,8 @@
 }
 
 <span class="kw">impl </span>ControllerHeader {
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re never dereferencing this pointer.
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Safety: we're never dereferencing this pointer.
         </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
         <span class="kw">let </span>ebda = ebda_base..ebda_base + EBDA_SIZE;
         <span class="kw">let </span>structure = {
@@ -927,7 +929,7 @@
         };
 
         <span class="kw">if </span>!ebda.contains(<span class="kw-2">&amp;</span>structure.start) || !ebda.contains(<span class="kw-2">&amp;</span>structure.end) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI interrupt data structure falls outside EBDA&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ACPI interrupt data structure falls outside EBDA"</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -942,7 +944,7 @@
     <span class="doccomment">/// Deprecated; maps to a Processor object in the ACPI tree.
     </span>processor_uid: u8,
 
-    <span class="doccomment">/// Processor&#39;s local APIC ID.
+    <span class="doccomment">/// Processor's local APIC ID.
     </span><span class="kw">pub </span>apic_id: u8,
 
     <span class="doccomment">/// Local APIC flags.
@@ -952,13 +954,13 @@
 <span class="kw">impl </span>ProcessorLocalApic {
     <span class="kw">pub const </span>STRUCTURE_TYPE: u8 = <span class="number">0</span>;
 
-    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span>ControllerHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span>ControllerHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span>header.structure_type != <span class="self">Self</span>::STRUCTURE_TYPE {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;structure is not Processor Local APIC Structure&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"structure is not Processor Local APIC Structure"</span>);
         }
         header.validate()<span class="question-mark">?</span>;
 
-        <span class="comment">// Safety: we&#39;re verified that the structure type is correct.
+        <span class="comment">// Safety: we're verified that the structure type is correct.
         </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(header <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) })
     }
 }
@@ -971,7 +973,7 @@
     <span class="doccomment">/// Reserverd, must be zero.
     </span>_reserved: u16,
 
-    <span class="doccomment">/// The processor&#39;s local X2APIC ID.
+    <span class="doccomment">/// The processor's local X2APIC ID.
     </span><span class="kw">pub </span>x2apic_id: u32,
 
     <span class="doccomment">/// Local APIC flags.
@@ -987,56 +989,56 @@
 <span class="kw">impl </span>ProcessorLocalX2Apic {
     <span class="kw">pub const </span>STRUCTURE_TYPE: u8 = <span class="number">9</span>;
 
-    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span>ControllerHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span>ControllerHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span>header.structure_type != <span class="self">Self</span>::STRUCTURE_TYPE {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;structure is not Processor Local X2APIC Structure&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"structure is not Processor Local X2APIC Structure"</span>);
         }
         header.validate()<span class="question-mark">?</span>;
 
-        <span class="comment">// Safety: we&#39;re verified that the structure type is correct.
+        <span class="comment">// Safety: we're verified that the structure type is correct.
         </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(header <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span><span class="kw-2">*const </span><span class="self">Self</span>) })
     }
 }
 
 <span class="kw">impl </span>Madt {
-    <span class="kw">pub const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8; <span class="number">4</span>] = <span class="string">b&quot;APIC&quot;</span>;
+    <span class="kw">pub const </span>SIGNATURE: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8; <span class="number">4</span>] = <span class="string">b"APIC"</span>;
 
-    <span class="kw">pub fn </span>new(hdr: <span class="kw-2">&amp;</span>DescriptionHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Madt, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re checking that it&#39;s a valid XSDT in `validate()`.
+    <span class="kw">pub fn </span>new(hdr: <span class="kw-2">&amp;</span>DescriptionHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Madt, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="comment">// Safety: we're checking that it's a valid XSDT in `validate()`.
         </span><span class="kw">let </span>madt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(hdr <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span><span class="kw-2">*const </span>Madt) };
         madt.validate()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(madt)
     }
 
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.header.validate()<span class="question-mark">?</span>;
 
         <span class="kw">if </span><span class="self">self</span>.header.signature != <span class="kw-2">*</span><span class="self">Self</span>::SIGNATURE {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid signature for MADT table&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"Invalid signature for MADT table"</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MadtIterator&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MadtIterator&lt;<span class="lifetime">'_</span>&gt; {
         MadtIterator { madt: <span class="self">self</span>, offset: size_of::&lt;Madt&gt;() }
     }
 }
 
-<span class="kw">pub struct </span>MadtIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    madt: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Madt,
+<span class="kw">pub struct </span>MadtIterator&lt;<span class="lifetime">'a</span>&gt; {
+    madt: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Madt,
     offset: usize,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>MadtIterator&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ControllerHeader;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>MadtIterator&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>ControllerHeader;
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">if </span><span class="self">self</span>.offset + size_of::&lt;ControllerHeader&gt;() &gt; <span class="self">self</span>.madt.header.length <span class="kw">as </span>usize {
-            <span class="comment">// we&#39;d overflow the MADT structure; nothing more to read
+            <span class="comment">// we'd overflow the MADT structure; nothing more to read
             </span><span class="kw">return </span><span class="prelude-val">None</span>;
         }
-        <span class="comment">// Safety: now we know that at least reading the header won&#39;t overflow the data
+        <span class="comment">// Safety: now we know that at least reading the header won't overflow the data
         // structure.
         </span><span class="kw">let </span>header = <span class="kw">unsafe </span>{
             <span class="kw-2">&amp;*</span>((<span class="self">self</span>.madt <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8).add(<span class="self">self</span>.offset) <span class="kw">as </span><span class="kw-2">*const </span>ControllerHeader)

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/work/oak/oak/./out/x86_64-unknown-linux-gnu/debug/build/oak_containers_orchestrator-cec35b421a1f58da/out/oak.containers.rs`."><title>oak.containers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../../../../../../../../../../../../" data-static-root-path="../../../../../../../../../../../../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../../../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../../../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../../../../../../../../src-files.js"></script><script defer src="../../../../../../../../../../../../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../../../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/work/oak/oak/./out/x86_64-unknown-linux-gnu/debug/build/oak_containers_orchestrator-cec35b421a1f58da/out/oak.containers.rs`."><title>oak.containers.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../../../../../../../../../" data-static-root-path="../../../../../../../../../../../../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../../../../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../../../../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../../../../../../../../src-files.js"></script><script defer src="../../../../../../../../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../../../../../../../../oak_containers_orchestrator/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../../../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1027,7 +1029,7 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetImageResponse {
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>image_chunk: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1035,13 +1037,13 @@
 </span><span class="kw">pub struct </span>GetApplicationConfigResponse {
     <span class="doccomment">/// Arbitrary config that the container can retrieve from the orchestrator.
     /// Included in the attestation measurements conducted by the orchestrator.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SendAttestationEvidenceRequest {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
 }
 <span class="doccomment">/// Generated client implementations.
@@ -1070,7 +1072,7 @@
     <span class="kw">where
         </span>T: tonic::client::GrpcService&lt;tonic::body::BoxBody&gt;,
         T::Error: Into&lt;StdError&gt;,
-        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">&#39;static</span>,
+        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">'static</span>,
         &lt;T::ResponseBody <span class="kw">as </span>Body&gt;::Error: Into&lt;StdError&gt; + Send,
     {
         <span class="kw">pub fn </span>new(inner: T) -&gt; <span class="self">Self </span>{
@@ -1146,16 +1148,16 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Launcher/GetOakSystemImage&quot;</span>,
+                <span class="string">"/oak.containers.Launcher/GetOakSystemImage"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new(<span class="string">&quot;oak.containers.Launcher&quot;</span>, <span class="string">&quot;GetOakSystemImage&quot;</span>));
+                .insert(GrpcMethod::new(<span class="string">"oak.containers.Launcher"</span>, <span class="string">"GetOakSystemImage"</span>));
             <span class="self">self</span>.inner.server_streaming(req, path, codec).<span class="kw">await
         </span>}
         <span class="doccomment">/// Provides orchestrator with the trusted container image.
@@ -1172,17 +1174,17 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Launcher/GetContainerBundle&quot;</span>,
+                <span class="string">"/oak.containers.Launcher/GetContainerBundle"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(<span class="string">&quot;oak.containers.Launcher&quot;</span>, <span class="string">&quot;GetContainerBundle&quot;</span>),
+                    GrpcMethod::new(<span class="string">"oak.containers.Launcher"</span>, <span class="string">"GetContainerBundle"</span>),
                 );
             <span class="self">self</span>.inner.server_streaming(req, path, codec).<span class="kw">await
         </span>}
@@ -1202,17 +1204,17 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Launcher/GetApplicationConfig&quot;</span>,
+                <span class="string">"/oak.containers.Launcher/GetApplicationConfig"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(<span class="string">&quot;oak.containers.Launcher&quot;</span>, <span class="string">&quot;GetApplicationConfig&quot;</span>),
+                    GrpcMethod::new(<span class="string">"oak.containers.Launcher"</span>, <span class="string">"GetApplicationConfig"</span>),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
@@ -1230,17 +1232,17 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Launcher/SendAttestationEvidence&quot;</span>,
+                <span class="string">"/oak.containers.Launcher/SendAttestationEvidence"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(<span class="string">&quot;oak.containers.Launcher&quot;</span>, <span class="string">&quot;SendAttestationEvidence&quot;</span>),
+                    GrpcMethod::new(<span class="string">"oak.containers.Launcher"</span>, <span class="string">"SendAttestationEvidence"</span>),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
@@ -1256,16 +1258,16 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Launcher/NotifyAppReady&quot;</span>,
+                <span class="string">"/oak.containers.Launcher/NotifyAppReady"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new(<span class="string">&quot;oak.containers.Launcher&quot;</span>, <span class="string">&quot;NotifyAppReady&quot;</span>));
+                .insert(GrpcMethod::new(<span class="string">"oak.containers.Launcher"</span>, <span class="string">"NotifyAppReady"</span>));
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
     }
@@ -1296,7 +1298,7 @@
     <span class="kw">where
         </span>T: tonic::client::GrpcService&lt;tonic::body::BoxBody&gt;,
         T::Error: Into&lt;StdError&gt;,
-        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">&#39;static</span>,
+        T::ResponseBody: Body&lt;Data = Bytes&gt; + Send + <span class="lifetime">'static</span>,
         &lt;T::ResponseBody <span class="kw">as </span>Body&gt;::Error: Into&lt;StdError&gt; + Send,
     {
         <span class="kw">pub fn </span>new(inner: T) -&gt; <span class="self">Self </span>{
@@ -1372,19 +1374,19 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Orchestrator/GetApplicationConfig&quot;</span>,
+                <span class="string">"/oak.containers.Orchestrator/GetApplicationConfig"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
-                        <span class="string">&quot;oak.containers.Orchestrator&quot;</span>,
-                        <span class="string">&quot;GetApplicationConfig&quot;</span>,
+                        <span class="string">"oak.containers.Orchestrator"</span>,
+                        <span class="string">"GetApplicationConfig"</span>,
                     ),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
@@ -1401,17 +1403,17 @@
                 </span>.map_err(|e| {
                     tonic::Status::new(
                         tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                        <span class="macro">format!</span>(<span class="string">"Service was not ready: {}"</span>, e.into()),
                     )
                 })<span class="question-mark">?</span>;
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Orchestrator/NotifyAppReady&quot;</span>,
+                <span class="string">"/oak.containers.Orchestrator/NotifyAppReady"</span>,
             );
             <span class="kw">let </span><span class="kw-2">mut </span>req = request.into_request();
             req.extensions_mut()
                 .insert(
-                    GrpcMethod::new(<span class="string">&quot;oak.containers.Orchestrator&quot;</span>, <span class="string">&quot;NotifyAppReady&quot;</span>),
+                    GrpcMethod::new(<span class="string">"oak.containers.Orchestrator"</span>, <span class="string">"NotifyAppReady"</span>),
                 );
             <span class="self">self</span>.inner.unary(req, path, codec).<span class="kw">await
         </span>}
@@ -1423,13 +1425,13 @@
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with LauncherServer.
     </span><span class="attr">#[async_trait]
-    </span><span class="kw">pub trait </span>Launcher: Send + Sync + <span class="lifetime">&#39;static </span>{
+    </span><span class="kw">pub trait </span>Launcher: Send + Sync + <span class="lifetime">'static </span>{
         <span class="doccomment">/// Server streaming response type for the GetOakSystemImage method.
         </span><span class="kw">type </span>GetOakSystemImageStream: tonic::codegen::tokio_stream::Stream&lt;
                 Item = std::result::Result&lt;<span class="kw">super</span>::GetImageResponse, tonic::Status&gt;,
             &gt;
             + Send
-            + <span class="lifetime">&#39;static</span>;
+            + <span class="lifetime">'static</span>;
         <span class="doccomment">/// Provides stage1 with the Oak system image (which contains the Linux
         /// distribution and the orchestrator binary).
         </span><span class="kw">async fn </span>get_oak_system_image(
@@ -1444,7 +1446,7 @@
                 Item = std::result::Result&lt;<span class="kw">super</span>::GetImageResponse, tonic::Status&gt;,
             &gt;
             + Send
-            + <span class="lifetime">&#39;static</span>;
+            + <span class="lifetime">'static</span>;
         <span class="doccomment">/// Provides orchestrator with the trusted container image.
         </span><span class="kw">async fn </span>get_container_bundle(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1544,22 +1546,22 @@
     <span class="kw">impl</span>&lt;T, B&gt; tonic::codegen::Service&lt;http::Request&lt;B&gt;&gt; <span class="kw">for </span>LauncherServer&lt;T&gt;
     <span class="kw">where
         </span>T: Launcher,
-        B: Body + Send + <span class="lifetime">&#39;static</span>,
-        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">&#39;static</span>,
+        B: Body + Send + <span class="lifetime">'static</span>,
+        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">type </span>Response = http::Response&lt;tonic::body::BoxBody&gt;;
         <span class="kw">type </span>Error = std::convert::Infallible;
         <span class="kw">type </span>Future = BoxFuture&lt;<span class="self">Self</span>::Response, <span class="self">Self</span>::Error&gt;;
         <span class="kw">fn </span>poll_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;,
         ) -&gt; Poll&lt;std::result::Result&lt;(), <span class="self">Self</span>::Error&gt;&gt; {
             Poll::Ready(<span class="prelude-val">Ok</span>(()))
         }
         <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: http::Request&lt;B&gt;) -&gt; <span class="self">Self</span>::Future {
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="kw">match </span>req.uri().path() {
-                <span class="string">&quot;/oak.containers.Launcher/GetOakSystemImage&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Launcher/GetOakSystemImage" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetOakSystemImageSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::ServerStreamingService&lt;()&gt;
@@ -1601,7 +1603,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.Launcher/GetContainerBundle&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Launcher/GetContainerBundle" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetContainerBundleSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::ServerStreamingService&lt;()&gt;
@@ -1643,7 +1645,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.Launcher/GetApplicationConfig&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Launcher/GetApplicationConfig" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetApplicationConfigSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::UnaryService&lt;()&gt;
@@ -1685,7 +1687,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.Launcher/SendAttestationEvidence&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Launcher/SendAttestationEvidence" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>SendAttestationEvidenceSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;
@@ -1734,7 +1736,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.Launcher/NotifyAppReady&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Launcher/NotifyAppReady" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>NotifyAppReadySvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::UnaryService&lt;()&gt;
@@ -1780,8 +1782,8 @@
                         <span class="prelude-val">Ok</span>(
                             http::Response::builder()
                                 .status(<span class="number">200</span>)
-                                .header(<span class="string">&quot;grpc-status&quot;</span>, <span class="string">&quot;12&quot;</span>)
-                                .header(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/grpc&quot;</span>)
+                                .header(<span class="string">"grpc-status"</span>, <span class="string">"12"</span>)
+                                .header(<span class="string">"content-type"</span>, <span class="string">"application/grpc"</span>)
                                 .body(empty_body())
                                 .unwrap(),
                         )
@@ -1808,12 +1810,12 @@
         }
     }
     <span class="kw">impl</span>&lt;T: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>_Inner&lt;T&gt; {
-        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{:?}"</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::NamedService <span class="kw">for </span>LauncherServer&lt;T&gt; {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.Launcher&quot;</span>;
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"oak.containers.Launcher"</span>;
     }
 }
 <span class="doccomment">/// Generated server implementations.
@@ -1822,7 +1824,7 @@
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
     <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with OrchestratorServer.
     </span><span class="attr">#[async_trait]
-    </span><span class="kw">pub trait </span>Orchestrator: Send + Sync + <span class="lifetime">&#39;static </span>{
+    </span><span class="kw">pub trait </span>Orchestrator: Send + Sync + <span class="lifetime">'static </span>{
         <span class="doccomment">/// Exposes the previously loaded trusted application config to the
         /// application, which may choose to retrieve it.
         </span><span class="kw">async fn </span>get_application_config(
@@ -1905,22 +1907,22 @@
     <span class="kw">impl</span>&lt;T, B&gt; tonic::codegen::Service&lt;http::Request&lt;B&gt;&gt; <span class="kw">for </span>OrchestratorServer&lt;T&gt;
     <span class="kw">where
         </span>T: Orchestrator,
-        B: Body + Send + <span class="lifetime">&#39;static</span>,
-        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">&#39;static</span>,
+        B: Body + Send + <span class="lifetime">'static</span>,
+        B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">type </span>Response = http::Response&lt;tonic::body::BoxBody&gt;;
         <span class="kw">type </span>Error = std::convert::Infallible;
         <span class="kw">type </span>Future = BoxFuture&lt;<span class="self">Self</span>::Response, <span class="self">Self</span>::Error&gt;;
         <span class="kw">fn </span>poll_ready(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+            _cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;,
         ) -&gt; Poll&lt;std::result::Result&lt;(), <span class="self">Self</span>::Error&gt;&gt; {
             Poll::Ready(<span class="prelude-val">Ok</span>(()))
         }
         <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: http::Request&lt;B&gt;) -&gt; <span class="self">Self</span>::Future {
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="kw">match </span>req.uri().path() {
-                <span class="string">&quot;/oak.containers.Orchestrator/GetApplicationConfig&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Orchestrator/GetApplicationConfig" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>GetApplicationConfigSvc&lt;T: Orchestrator&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Orchestrator&gt; tonic::server::UnaryService&lt;()&gt;
@@ -1962,7 +1964,7 @@
                     };
                     Box::pin(fut)
                 }
-                <span class="string">&quot;/oak.containers.Orchestrator/NotifyAppReady&quot; </span>=&gt; {
+                <span class="string">"/oak.containers.Orchestrator/NotifyAppReady" </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
                     </span><span class="kw">struct </span>NotifyAppReadySvc&lt;T: Orchestrator&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Orchestrator&gt; tonic::server::UnaryService&lt;()&gt;
@@ -2008,8 +2010,8 @@
                         <span class="prelude-val">Ok</span>(
                             http::Response::builder()
                                 .status(<span class="number">200</span>)
-                                .header(<span class="string">&quot;grpc-status&quot;</span>, <span class="string">&quot;12&quot;</span>)
-                                .header(<span class="string">&quot;content-type&quot;</span>, <span class="string">&quot;application/grpc&quot;</span>)
+                                .header(<span class="string">"grpc-status"</span>, <span class="string">"12"</span>)
+                                .header(<span class="string">"content-type"</span>, <span class="string">"application/grpc"</span>)
                                 .body(empty_body())
                                 .unwrap(),
                         )
@@ -2036,12 +2038,12 @@
         }
     }
     <span class="kw">impl</span>&lt;T: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>_Inner&lt;T&gt; {
-        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+            <span class="macro">write!</span>(f, <span class="string">"{:?}"</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
     <span class="kw">impl</span>&lt;T: Orchestrator&gt; tonic::server::NamedService <span class="kw">for </span>OrchestratorServer&lt;T&gt; {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.Orchestrator&quot;</span>;
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"oak.containers.Orchestrator"</span>;
     }
 }
 </code></pre></div></section></main></body></html>

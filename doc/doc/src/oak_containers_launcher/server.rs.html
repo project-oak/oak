@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher/src/server.rs`."><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher/src/server.rs`."><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_containers_launcher/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -287,14 +289,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -337,7 +339,7 @@
     GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
 };
 
-<span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let&#39;s stay
+<span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let's stay
 // comfortably below that by limiting responses to 3MiB.
 </span><span class="kw">const </span>MAX_RESPONSE_SIZE: usize = <span class="number">3 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
 
@@ -378,7 +380,7 @@
                         image_chunk: buffer[..bytes_read].to_vec()
                     }
                 } <span class="kw">else </span>{
-                    <span class="comment">// the file has been fully read, there&#39;s nothing left to
+                    <span class="comment">// the file has been fully read, there's nothing left to
                     // send
                     </span><span class="kw">break</span>;
                 }
@@ -406,7 +408,7 @@
                         image_chunk: buffer[..bytes_read].to_vec()
                     }
                 } <span class="kw">else </span>{
-                    <span class="comment">// the file has been fully read, there&#39;s nothing left to
+                    <span class="comment">// the file has been fully read, there's nothing left to
                     // send
                     </span><span class="kw">break</span>;
                 }
@@ -431,23 +433,23 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request = request.into_inner();
         <span class="kw">let </span>evidence = request.dice_evidence.ok_or_else(|| {
-            tonic::Status::internal(<span class="string">&quot;send_attestation_evidence_request doesn&#39;t have evidence&quot;</span>)
+            tonic::Status::internal(<span class="string">"send_attestation_evidence_request doesn't have evidence"</span>)
         })<span class="question-mark">?</span>;
 
         <span class="self">self</span>.evidence_sender
             .lock()
             .map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(
-                    <span class="string">&quot;couldn&#39;t get exclusive access to attestation evidence sender: {err}&quot;
+                    <span class="string">"couldn't get exclusive access to attestation evidence sender: {err}"
                 </span>))
             })<span class="question-mark">?
             </span>.take()
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(<span class="string">&quot;app has already sent an attestation evidence&quot;</span>)
+                tonic::Status::invalid_argument(<span class="string">"app has already sent an attestation evidence"</span>)
             })<span class="question-mark">?
             </span>.send(evidence)
             .map_err(|_err| {
-                tonic::Status::internal(<span class="string">&quot;couldn&#39;t send attestation evidence&quot;</span>.to_string())
+                tonic::Status::internal(<span class="string">"couldn't send attestation evidence"</span>.to_string())
             })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
@@ -457,15 +459,15 @@
             .lock()
             .map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(
-                    <span class="string">&quot;couldn&#39;t get exclusive access to notification channel: {err}&quot;
+                    <span class="string">"couldn't get exclusive access to notification channel: {err}"
                 </span>))
             })<span class="question-mark">?
             </span>.take()
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(<span class="string">&quot;app has already sent a ready notification&quot;</span>)
+                tonic::Status::invalid_argument(<span class="string">"app has already sent a ready notification"</span>)
             })<span class="question-mark">?
             </span>.send(())
-            .map_err(|_err| tonic::Status::internal(<span class="string">&quot;couldn&#39;t send notification&quot;</span>.to_string()))<span class="question-mark">?</span>;
+            .map_err(|_err| tonic::Status::internal(<span class="string">"couldn't send notification"</span>.to_string()))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 }
@@ -488,7 +490,7 @@
         _request: Request&lt;()&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetGroupKeysResponse&gt;, tonic::Status&gt; {
         <span class="comment">// TODO(#4442): Implement sending group keys to the orchestrator.
-        </span><span class="prelude-val">Err</span>(tonic::Status::unimplemented(<span class="string">&quot;Key Provisioning is not implemented&quot;</span>))
+        </span><span class="prelude-val">Err</span>(tonic::Status::unimplemented(<span class="string">"Key Provisioning is not implemented"</span>))
     }
 }
 
@@ -499,7 +501,7 @@
         request: Request&lt;ExportMetricsServiceRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;ExportMetricsServiceResponse&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request = request.into_inner();
-        <span class="macro">log::debug!</span>(<span class="string">&quot;metrics: {:?}&quot;</span>, request);
+        <span class="macro">log::debug!</span>(<span class="string">"metrics: {:?}"</span>, request);
         <span class="prelude-val">Ok</span>(Response::new(ExportMetricsServiceResponse { partial_success: <span class="prelude-val">None </span>}))
     }
 }
@@ -519,7 +521,7 @@
                             .attributes
                             .iter()
                             .find_map(|x| {
-                                <span class="kw">if </span>x.key == <span class="string">&quot;_SYSTEMD_UNIT&quot; </span>{ x.value.as_ref() } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
+                                <span class="kw">if </span>x.key == <span class="string">"_SYSTEMD_UNIT" </span>{ x.value.as_ref() } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
                             })
                             .and_then(|value| value.value.as_ref())
                             .and_then(|value| <span class="kw">match </span>value {
@@ -536,7 +538,7 @@
                             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
                         })
                         .unwrap_or_default();
-                    <span class="macro">println!</span>(<span class="string">&quot;{}: {}&quot;</span>, unit, body);
+                    <span class="macro">println!</span>(<span class="string">"{}: {}"</span>, unit, body);
                 }
             }
         }
@@ -568,6 +570,6 @@
         .add_service(LogsServiceServer::from_arc(server_impl))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await
-        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
+        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"server error: {:?}"</span>, error))
 }
 </code></pre></div></section></main></body></html>

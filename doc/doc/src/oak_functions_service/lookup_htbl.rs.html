@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_service/src/lookup_htbl.rs`."><title>lookup_htbl.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_functions_service/src/lookup_htbl.rs`."><title>lookup_htbl.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_functions_service/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -681,14 +683,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -703,7 +705,7 @@
 //! table with far less memory overhead per k/v pair (21 bytes vs ~128 bytes for
 //! hashbrown&lt;Bytes, Bytes&gt;).  Speed for k/v lookups is ~90ns on manual tests.
 //!
-//! The hash table consists of 2 vectors.  The first is a table of &quot;entries&quot;,
+//! The hash table consists of 2 vectors.  The first is a table of "entries",
 //! which is a packed array of entries with the following layout:
 //!
 //! ```ignore
@@ -711,7 +713,7 @@
 //!    data_index: u40,  // A 5-byte index, so we support up to 1TiB of data.
 //! ```
 //!
-//! This is a &quot;swiss&quot; table meaning that instead of the usual &quot;buckets&quot; of
+//! This is a "swiss" table meaning that instead of the usual "buckets" of
 //! entries, the entries are collapsed into the hash table itself.  By adding a
 //! 1-byte hash, we can eliminate 99.6% of key comparisons to the wrong keys.
 //! This is important for speed because comparing keys causes a page fault
@@ -773,7 +775,7 @@
     </span>used_data: usize,
     used_entries: usize,
     hash_secret: u64, <span class="comment">// For defense against DDoS, and some defense vs cache timing.
-    // A &quot;data index&quot; is a 5-byte value where the upper bits select the chunk, and the lower bits
+    // A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits
     // index into the chunk to find a k/v pair.  The chunk index is data_index &gt;&gt; CHUNK_BITS.
     // The index within the chunk is data_index &amp; CHUNK_MASK.  CHUNK_BITS defines how large a
     // chunk is, which is computed as 2^CHUNK_BITS.  To change the chunk size, just change
@@ -810,7 +812,7 @@
         <span class="self">self</span>.used_entries = <span class="number">0usize</span>;
         <span class="self">self</span>.hash_secret = OsRng.next_u64();
         <span class="kw">if </span><span class="self">self</span>.hash_secret == <span class="number">0u64 </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;There is something very wrong with OsRng&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"There is something very wrong with OsRng"</span>);
         }
         <span class="comment">// Set chunk size such that we have chunk sizes about 1/10th the size of the
         // entries table.
@@ -829,7 +831,7 @@
     // hash_byte).
     </span><span class="kw">fn </span>lookup(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; LookupResult {
         <span class="kw">if </span><span class="self">self</span>.table.is_empty() {
-            <span class="macro">panic!</span>(<span class="string">&quot;Check for emtpy before calling lookup&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"Check for emtpy before calling lookup"</span>);
         }
         <span class="kw">let </span>key_hash: u64 = hash(key, <span class="self">self</span>.hash_secret);
         <span class="comment">// The lower 32-bites are used in reduce to compute the table index, and values
@@ -839,7 +841,7 @@
         </span><span class="kw">let </span>key_hash_byte = (key_hash &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u8;
         <span class="kw">let </span><span class="kw-2">mut </span>table_index = reduce(key_hash, <span class="self">self</span>.table.len());
         <span class="comment">// To quickly find the correct entry, we skip entries that have hash_byte values
-        // that don&#39;t match the key&#39;s hash.  This avoids 99.6% of cache misses
+        // that don't match the key's hash.  This avoids 99.6% of cache misses
         // caused comparing the key to the wrong key.  Once we found an entry
         // with a matching hash byte, we then compare the two keys, and return
         // Found if they match.  Otherwise, we start back at the top of the loop.
@@ -955,7 +957,7 @@
                         entry.hash_byte = hash_byte;
                         write_index(<span class="kw-2">&amp;mut </span>entry, raw_index);
                     }
-                    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;New table should not already have this key&quot;</span>),
+                    <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"New table should not already have this key"</span>),
                 }
             }
         }
@@ -998,7 +1000,7 @@
     }
 
     <span class="doccomment">/// This is like HashMap::extend.
-    </span><span class="kw">pub fn </span>extend&lt;<span class="lifetime">&#39;a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8])&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
+    </span><span class="kw">pub fn </span>extend&lt;<span class="lifetime">'a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8])&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
         <span class="kw">for </span>(key, value) <span class="kw">in </span>new_data {
             <span class="self">self</span>.insert(key, value);
         }
@@ -1020,13 +1022,13 @@
     }
 }
 
-<span class="kw">pub struct </span>LookupHtblIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    htbl: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>LookupHtbl,
+<span class="kw">pub struct </span>LookupHtblIter&lt;<span class="lifetime">'a</span>&gt; {
+    htbl: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>LookupHtbl,
     table_index: usize,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Iterator <span class="kw">for </span>LookupHtblIter&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]);
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Iterator <span class="kw">for </span>LookupHtblIter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
         <span class="kw">loop </span>{
@@ -1052,9 +1054,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>LookupHtbl {
-    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]);
-    <span class="kw">type </span>IntoIter = LookupHtblIter&lt;<span class="lifetime">&#39;a</span>&gt;;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; IntoIterator <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'a </span>LookupHtbl {
+    <span class="kw">type </span>Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
+    <span class="kw">type </span>IntoIter = LookupHtblIter&lt;<span class="lifetime">'a</span>&gt;;
 
     <span class="comment">// Required method
     </span><span class="kw">fn </span>into_iter(<span class="self">self</span>) -&gt; <span class="self">Self</span>::IntoIter {
@@ -1177,7 +1179,7 @@
                 table.insert(<span class="kw-2">&amp;</span>key_bytes, <span class="kw-2">&amp;</span>value);
                 num_keys += <span class="number">1</span>;
             } <span class="kw">else </span>{
-                <span class="macro">panic!</span>(<span class="string">&quot;Should not already have this key&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"Should not already have this key"</span>);
             }
         }
         <span class="kw">let </span><span class="kw-2">mut </span>hits = <span class="number">0</span>;
@@ -1199,8 +1201,8 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_for_loop() {
-        <span class="kw">let </span>keys = [<span class="string">&quot;key1&quot;</span>.as_bytes(), <span class="string">&quot;key2&quot;</span>.as_bytes(), <span class="string">&quot;key3&quot;</span>.as_bytes()];
-        <span class="kw">let </span>values = [<span class="string">&quot;value1&quot;</span>.as_bytes(), <span class="string">&quot;value2&quot;</span>.as_bytes(), <span class="string">&quot;value3&quot;</span>.as_bytes()];
+        <span class="kw">let </span>keys = [<span class="string">"key1"</span>.as_bytes(), <span class="string">"key2"</span>.as_bytes(), <span class="string">"key3"</span>.as_bytes()];
+        <span class="kw">let </span>values = [<span class="string">"value1"</span>.as_bytes(), <span class="string">"value2"</span>.as_bytes(), <span class="string">"value3"</span>.as_bytes()];
         <span class="kw">let </span><span class="kw-2">mut </span>table = LookupHtbl::default();
         table.reserve(<span class="number">3</span>);
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
@@ -1279,10 +1281,10 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_dumplicate_key() {
         <span class="kw">let </span><span class="kw-2">mut </span>table = LookupHtbl::default();
-        table.insert(<span class="string">&quot;key&quot;</span>.as_bytes(), <span class="string">&quot;value1&quot;</span>.as_bytes());
-        <span class="macro">assert!</span>(table.get(<span class="string">&quot;key&quot;</span>.as_bytes()) == <span class="prelude-val">Some</span>(<span class="string">&quot;value1&quot;</span>.as_bytes()));
-        table.insert(<span class="string">&quot;key&quot;</span>.as_bytes(), <span class="string">&quot;value2&quot;</span>.as_bytes());
-        <span class="macro">assert!</span>(table.get(<span class="string">&quot;key&quot;</span>.as_bytes()) == <span class="prelude-val">Some</span>(<span class="string">&quot;value2&quot;</span>.as_bytes()));
+        table.insert(<span class="string">"key"</span>.as_bytes(), <span class="string">"value1"</span>.as_bytes());
+        <span class="macro">assert!</span>(table.get(<span class="string">"key"</span>.as_bytes()) == <span class="prelude-val">Some</span>(<span class="string">"value1"</span>.as_bytes()));
+        table.insert(<span class="string">"key"</span>.as_bytes(), <span class="string">"value2"</span>.as_bytes());
+        <span class="macro">assert!</span>(table.get(<span class="string">"key"</span>.as_bytes()) == <span class="prelude-val">Some</span>(<span class="string">"value2"</span>.as_bytes()));
     }
 
     <span class="comment">// The RNG function should act like a random oracle, in which case the odds of
@@ -1301,7 +1303,7 @@
             <span class="kw">let </span>target = r.rand64();
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0usize</span>..(<span class="number">1usize </span>&lt;&lt; loop_power) {
                 <span class="kw">if </span>r.rand64() == target {
-                    <span class="macro">panic!</span>(<span class="string">&quot;Sequence too short {:#x}&quot;</span>, i);
+                    <span class="macro">panic!</span>(<span class="string">"Sequence too short {:#x}"</span>, i);
                 }
             }
         }
@@ -1353,7 +1355,7 @@
                 // cryptographic strength hash function.  For example, with
                 // the old ahash function, I was seeing sequence lengths of 3.5, and this
                 // significantly slowed down lookups.
-                </span><span class="macro">panic!</span>(<span class="string">&quot;tweak {}: ave seq len = {}&quot;</span>, tweak, ave_seq_len);
+                </span><span class="macro">panic!</span>(<span class="string">"tweak {}: ave seq len = {}"</span>, tweak, ave_seq_len);
             }
         }
     }

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/ghcb.rs`."><title>ghcb.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_guest/src/ghcb.rs`."><title>ghcb.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_guest" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_sev_guest/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -740,14 +742,14 @@
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
-// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -937,22 +939,22 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsMut&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, G&gt; AsMut&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;
 <span class="kw">where
     </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt; {
+    </span><span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt; {
         <span class="self">self
     </span>}
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsRef&lt;GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, G&gt; AsRef&lt;GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;&gt; <span class="kw">for </span>GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;
 <span class="kw">where
     </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
 {
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt; {
+    </span><span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt; {
         <span class="self">self
     </span>}
 }
@@ -1059,20 +1061,20 @@
 }
 
 <span class="doccomment">/// Implementation of the GHCB protocol using the wrapped GHCB data structure.
-</span><span class="kw">pub struct </span>GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G: AsMut&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized&gt; {
-    ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G,
+</span><span class="kw">pub struct </span>GhcbProtocol&lt;<span class="lifetime">'a</span>, G: AsMut&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized&gt; {
+    ghcb: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>G,
     gpa: PhysAddr,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; GhcbProtocol&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, G&gt; GhcbProtocol&lt;<span class="lifetime">'a</span>, G&gt;
 <span class="kw">where
     </span>G: AsMut&lt;Ghcb&gt; + AsRef&lt;Ghcb&gt; + <span class="question-mark">?</span>Sized,
 {
-    <span class="kw">pub fn </span>new&lt;VP: Translator&gt;(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>G, translate: VP) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new&lt;VP: Translator&gt;(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>G, translate: VP) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>virtual_address = VirtAddr::from_ptr(ghcb.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Ghcb);
         <span class="comment">// Crashing is OK if we cannot find the physical address for the GHCB.
         </span><span class="kw">let </span>gpa = translate(virtual_address)
-            .expect(<span class="string">&quot;couldn&#39;t translate the GHCB virtual address to a physical address&quot;</span>);
+            .expect(<span class="string">"couldn't translate the GHCB virtual address to a physical address"</span>);
         <span class="self">Self </span>{ ghcb, gpa }
     }
 
@@ -1092,7 +1094,7 @@
         register_ghcb_location(RegisterGhcbGpaRequest::new(<span class="self">self</span>.get_gpa().as_u64() <span class="kw">as </span>usize)<span class="question-mark">?</span>)
     }
 
-    <span class="kw">pub fn </span>set_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, jump_table: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>set_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, jump_table: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
             ghcb.sw_exit_info_1 = <span class="number">0</span>; <span class="comment">// SET
@@ -1100,7 +1102,7 @@
         })
     }
 
-    <span class="kw">pub fn </span>get_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>get_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
             ghcb.sw_exit_info_1 = <span class="number">1</span>; <span class="comment">// GET
@@ -1114,7 +1116,7 @@
     /// protocol.
     ///
     /// See Section 4.1.5 in &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>mmio_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>mmio_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1143,7 +1145,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         destination: PhysAddr,
         value: u32,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1162,7 +1164,7 @@
     <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_write_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_write_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1177,7 +1179,7 @@
     <span class="doccomment">/// Read an 8 bit number from an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_read_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_read_u8(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1191,7 +1193,7 @@
     <span class="doccomment">/// Writes a 16 bit number to an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_write_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_write_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1206,7 +1208,7 @@
     <span class="doccomment">/// Read a 16 bit number from an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_read_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_read_u16(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1220,7 +1222,7 @@
     <span class="doccomment">/// Writes a 32 bit number to an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16, data: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1235,7 +1237,7 @@
     <span class="doccomment">/// Read a 32 bit number from an IO port via the IOIO protocol.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>io_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>io_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
 
         <span class="self">self</span>.call(|ghcb| {
@@ -1247,7 +1249,7 @@
     }
 
     <span class="doccomment">/// Calls a CPUID function for the given input using the GHCB protocol.
-    </span><span class="kw">pub fn </span>get_cpuid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: CpuidInput) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidOutput, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>get_cpuid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: CpuidInput) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidOutput, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
             ghcb.sw_exit_info_1 = <span class="number">0</span>;
@@ -1255,7 +1257,7 @@
             ghcb.rax = request.eax <span class="kw">as </span>u64;
             ghcb.rcx = request.ecx <span class="kw">as </span>u64;
             ghcb.xcr0 = request.xcr0;
-            <span class="comment">// We don&#39;t set the value for XSS , as it is not supported for SEV-ES (v1 of the
+            <span class="comment">// We don't set the value for XSS , as it is not supported for SEV-ES (v1 of the
             // GHCB protocol). We can use the CPUID page when SEV-SNP is enabled so
             // this function will only be used with SEV-ES.
             </span>ghcb.valid_bitmap |= ValidBitmap::RAX | ValidBitmap::RCX | ValidBitmap::XCR0;
@@ -1272,7 +1274,7 @@
     <span class="doccomment">/// Writes a value to the specified model-specific register.
     ///
     /// See section 4.1.3 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>msr_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>msr_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
             ghcb.sw_exit_info_1 = <span class="number">1</span>;
@@ -1288,7 +1290,7 @@
     <span class="doccomment">/// Reads a value from the specified model-specific register.
     ///
     /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
-    </span><span class="kw">pub fn </span>msr_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>msr_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32) -&gt; <span class="prelude-ty">Result</span>&lt;u64, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_MSR_PROT;
             ghcb.sw_exit_info_1 = <span class="number">0</span>;
@@ -1311,7 +1313,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_address: PhysAddr,
         response_address: PhysAddr,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.call(|ghcb| {
             ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
             ghcb.sw_exit_info_1 = request_address.as_u64();
@@ -1321,7 +1323,7 @@
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
-            </span><span class="prelude-val">Err</span>(<span class="string">&quot;guest message response indicates an error&quot;</span>)
+            </span><span class="prelude-val">Err</span>(<span class="string">"guest message response indicates an error"</span>)
         }
     }
 
@@ -1332,7 +1334,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         frame: PhysFrame&lt;S&gt;,
         assignment: PageAssignment,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>page_state_change = PageStateChange::new_zeroed();
         page_state_change.header.cur_entry = <span class="number">0</span>;
         page_state_change.header.end_entry = <span class="number">0</span>;
@@ -1345,17 +1347,17 @@
             ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
             page_state_change
                 .write_to(<span class="kw-2">&amp;mut </span>ghcb.shared_buffer)
-                .expect(<span class="string">&quot;Unexpected length mismatch between PSC request and GHCB shared buffer&quot;</span>);
+                .expect(<span class="string">"Unexpected length mismatch between PSC request and GHCB shared buffer"</span>);
             ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
         })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_ref();
         <span class="kw">let </span>page_state_change = PageStateChange::read_from(<span class="kw-2">&amp;</span>ghcb.shared_buffer)
-            .ok_or(<span class="string">&quot;Unexpected length mismatch between PSC request and GHCB shared buffer&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or(<span class="string">"Unexpected length mismatch between PSC request and GHCB shared buffer"</span>)<span class="question-mark">?</span>;
         <span class="comment">// If cur_entry did not move past end_entry, SW_EXITINFO2 will contain
         // additional information. For now, we just return a generic error.
         </span><span class="kw">if </span>page_state_change.header.cur_entry &lt;= page_state_change.header.end_entry {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;cur_entry did not move!&quot;</span>);
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"cur_entry did not move!"</span>);
         };
         <span class="comment">// According to documentation the `current_page` field in each
         // `PageStateChangeEntry` struct should change to show that a page has been
@@ -1364,7 +1366,7 @@
     }
 
     <span class="doccomment">/// Simple wrapper for operations that rely on the GHCB.
-    </span><span class="kw">fn </span>call&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, func: F) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;
+    </span><span class="kw">fn </span>call&lt;F&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, func: F) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;
     <span class="kw">where
         </span>F: FnOnce(<span class="kw-2">&amp;mut </span>Ghcb),
     {
@@ -1377,7 +1379,7 @@
 
     <span class="doccomment">/// Sets the address of the GHCB, exits to the hypervisor, and checks the
     /// return value when execution resumes.
-    </span><span class="kw">fn </span>do_vmg_exit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">fn </span>do_vmg_exit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
         <span class="comment">// Use a memory fence to ensure all writes happen before we hand over to the
         // VMM.
@@ -1387,7 +1389,7 @@
         // read from the GHCB.
         </span>core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
-        <span class="comment">// The mask for extracting the hypervisor&#39;s return value from the sw_exit_info_1
+        <span class="comment">// The mask for extracting the hypervisor's return value from the sw_exit_info_1
         // field.
         </span><span class="kw">const </span>SW_EXIT_INFO_1_RETURN_MASK: u64 = <span class="number">0xffff_ffff</span>;
 
@@ -1395,7 +1397,7 @@
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="comment">// For now we treat all non-zero return values as unrecoverable errors.
-            </span><span class="prelude-val">Err</span>(<span class="string">&quot;VMGEXIT call returned an error&quot;</span>)
+            </span><span class="prelude-val">Err</span>(<span class="string">"VMGEXIT call returned an error"</span>)
         }
     }
 }
@@ -1449,7 +1451,7 @@
         </span>entry |= <span class="kw">match </span>S::SIZE {
             Size4KiB::SIZE =&gt; (SevPageSize::Page4KiB <span class="kw">as </span>u64) &lt;&lt; <span class="number">56</span>,
             Size2MiB::SIZE =&gt; (SevPageSize::Page2MiB <span class="kw">as </span>u64) &lt;&lt; <span class="number">56</span>,
-            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;Unexpected non-giant page size (not 4 KiB or 2 MiB)&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">"Unexpected non-giant page size (not 4 KiB or 2 MiB)"</span>),
         };
         <span class="comment">// [55:52]: Page operation.
         </span>entry |= (value.page_operation <span class="kw">as </span>u64) &lt;&lt; <span class="number">52</span>;
@@ -1463,14 +1465,14 @@
 }
 
 <span class="kw">impl</span>&lt;S: NotGiantPageSize&gt; TryFrom&lt;u64&gt; <span class="kw">for </span>PageStateChangeEntry&lt;S&gt; {
-    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
 
     <span class="kw">fn </span>try_from(value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="kw">let </span>page_operation = PageAssignment::from_repr(((value &amp; <span class="number">0x10_0000_0000_0000</span>) &gt;&gt; <span class="number">52</span>) <span class="kw">as </span>u8)
-            .ok_or(<span class="string">&quot;Invalid page assignment field value&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or(<span class="string">"Invalid page assignment field value"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>address = PhysAddr::new(value &amp; <span class="number">0x000F_FFFF_FFFF_F000</span>);
         <span class="kw">let </span>gfn =
-            PhysFrame::from_start_address(address).map_err(|<span class="kw">_</span>| <span class="string">&quot;Frame address not aligned&quot;</span>)<span class="question-mark">?</span>;
+            PhysFrame::from_start_address(address).map_err(|<span class="kw">_</span>| <span class="string">"Frame address not aligned"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>current_page = (value &amp; <span class="number">0x0FFF</span>) <span class="kw">as </span>u16;
 
         <span class="prelude-val">Ok</span>(PageStateChangeEntry { page_operation, gfn, current_page })
