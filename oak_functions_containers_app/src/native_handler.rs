@@ -34,7 +34,7 @@ struct RequestContext {
 }
 
 thread_local! {
-    static CONTEXT: RefCell<Option<RequestContext>> = RefCell::new(None);
+    static CONTEXT: RefCell<Option<RequestContext>> = const { RefCell::new(None) };
 }
 
 // Callbacks for the C side.

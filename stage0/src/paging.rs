@@ -15,6 +15,7 @@
 //
 
 use alloc::boxed::Box;
+use core::ptr::addr_of_mut;
 
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
@@ -62,10 +63,10 @@ pub fn init_page_table_refs(encrypted: u64) {
     // Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
-    let pml4 = unsafe { &mut PML4 };
-    let pdpt = unsafe { &mut PDPT };
-    let pd_0 = unsafe { &mut PD_0 };
-    let pd_3 = unsafe { &mut PD_3 };
+    let pml4 = unsafe { &mut *addr_of_mut!(PML4) };
+    let pdpt = unsafe { &mut *addr_of_mut!(PDPT) };
+    let pd_0 = unsafe { &mut *addr_of_mut!(PD_0) };
+    let pd_3 = unsafe { &mut *addr_of_mut!(PD_3) };
 
     // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we
     // can share individual 4KiB pages with the hypervisor as needed. We are
