@@ -47,6 +47,11 @@ _oak_start:
     movq (%rax), %rdx                  # rdx = *rax
     movq %rdx, 4080(%rax)              # rax[510] = rdx
 
+    # Enable PGE (https://wiki.osdev.org/CPU_Registers_x86-64#CR4)
+    movq %cr4, %rax
+    orq $0b10000000, %rax
+    movq %rax, %cr4
+
     # Finally, trigger a full TLB flush by overwriting CR3, even if it is the same value.
     movq %rbx, %cr3
 
