@@ -15,7 +15,7 @@ the guest Linux distribution and the Orchestrator.
 
 ## Base System Image Tools
 
-`build-base.sh` and `base_iamge.Dockerfile`
+`build-base.sh` and `base_iamge.Dockerfile` and some `BUILD` targets
 
 This directory contains files needed to rebuild the base image used by the
 system container.
@@ -25,3 +25,8 @@ operating system, network configuration, and service enablements.
 
 This image is used to build the system container image with `oci_rules`,
 avoiding the need for Docker when rebuilding a system image container.
+
+To update the base image and push it:
+
+1. ./oak_containers_system_image/build-base.sh
+2. bazel run oak_containers_system_image:push_base
