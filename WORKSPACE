@@ -300,7 +300,7 @@ rust_register_toolchains(
     edition = "2021",
     versions = [
         "1.76.0",
-        "nightly/2023-11-15",
+        "nightly/2024-02-01",
     ],
 )
 
@@ -486,7 +486,7 @@ crates_repository(
             version = "*",
         ),
     },
-    rust_version = "nightly/2023-11-15",
+    rust_version = "nightly/2024-02-01",
     supported_platform_triples = ["x86_64-unknown-linux-gnu"],
 )
 

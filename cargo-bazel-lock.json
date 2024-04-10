@@ -1,5 +1,5 @@
 {
-  "checksum": "967533bb81a653f366fc2502c26407b5044c39ae8aea4a3f336d1ed582cfa00b",
+  "checksum": "77726cfbf575c3e909925f926eca3ade4e7a33c67fcf75bfd9474aacd91dec39",
   "crates": {
     "aead 0.5.2": {
       "name": "aead",
@@ -2109,7 +2109,7 @@
               "target": "primeorder"
             },
             {
-              "id": "prost 0.12.3",
+              "id": "prost 0.12.4",
               "target": "prost"
             },
             {
@@ -3627,60 +3627,6 @@
         },
         "edition": "2018",
         "version": "0.11.0"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "itertools 0.12.1": {
-      "name": "itertools",
-      "version": "0.12.1",
-      "package_url": "https://github.com/rust-itertools/itertools",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/itertools/0.12.1/download",
-          "sha256": "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "itertools",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": false,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "itertools",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "use_alloc"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "either 1.10.0",
-              "target": "either"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.12.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -5426,14 +5372,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "prost 0.12.3": {
+    "prost 0.12.4": {
       "name": "prost",
-      "version": "0.12.3",
+      "version": "0.12.4",
       "package_url": "https://github.com/tokio-rs/prost",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/prost/0.12.3/download",
-          "sha256": "146c289cda302b98a28d40c8b3b90498d6e526dd24ac2ecea73e4e491685b94a"
+          "url": "https://static.crates.io/crates/prost/0.12.4/download",
+          "sha256": "d0f5d036824e4761737860779c906171497f6d55681139d8312388f8fe398922"
         }
       },
       "targets": [
@@ -5457,6 +5403,7 @@
         ],
         "crate_features": {
           "common": [
+            "derive",
             "prost-derive"
           ],
           "selects": {}
@@ -5480,7 +5427,7 @@
           ],
           "selects": {}
         },
-        "version": "0.12.3"
+        "version": "0.12.4"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -5561,7 +5508,7 @@
               "target": "prettyplease"
             },
             {
-              "id": "prost 0.12.3",
+              "id": "prost 0.12.4",
               "target": "prost"
             },
             {
@@ -5632,7 +5579,7 @@
               "target": "anyhow"
             },
             {
-              "id": "itertools 0.12.1",
+              "id": "itertools 0.11.0",
               "target": "itertools"
             },
             {
@@ -5691,7 +5638,7 @@
         "deps": {
           "common": [
             {
-              "id": "prost 0.12.3",
+              "id": "prost 0.12.4",
               "target": "prost"
             }
           ],
@@ -9270,7 +9217,7 @@
     "p384 0.13.0",
     "pkcs8 0.10.2",
     "primeorder 0.13.6",
-    "prost 0.12.3",
+    "prost 0.12.4",
     "prost-build 0.12.3",
     "rand_core 0.6.4",
     "regex 1.10.4",
