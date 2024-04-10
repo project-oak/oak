@@ -112,6 +112,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // which may no longer be valid.
     set_error_handler(|err| eprintln!("oak_functions_containers_app: OTLP error: {}", err))?;
 
+    // This is a hack to get _some_ logging out of the binary, and should be
+    // replaced with proper OTLP logging (or logging to journald, or something) in
+    // the not too distant future. Debug logging is also only enabled for the
+    // `oak_functions_service` module as Tonic tends to be rather chatty if
+    // you enable debug logs everywhere; also, this could end up in a feedback
+    // loop as if we create a RPC do do the debug logging, it'll mean the RPC
+    // itself will generate more debug logs, which in turn will be sent via a
+    // RPC, and the cycle continues.
+    stderrlog::new().module("oak_functions_service").verbosity(log::Level::Debug).init().unwrap();
+
     let metrics = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(launcher_client.openmetrics_builder())

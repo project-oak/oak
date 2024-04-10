@@ -28,7 +28,8 @@ cargo build \
     --target=x86_64-unknown-linux-musl \
     --profile=release-lto \
     --bin=oak_functions_containers_insecure_app \
-    --features=allow_sensitive_logging \
+    --no-default-features \
+    --features=native,allow_sensitive_logging \
     -Zunstable-options \
     --out-dir=./target/
 

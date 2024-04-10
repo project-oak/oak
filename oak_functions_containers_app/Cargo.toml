@@ -30,6 +30,7 @@ oak_functions_service = { workspace = true, default-features = false, features =
 ] }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }
+log = "*"
 micro_rpc = { workspace = true }
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
@@ -46,6 +47,7 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
 ] }
 ouroboros = { version = "*", optional = true }
 prost = "*"
+stderrlog = "*"
 tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
