@@ -34,21 +34,21 @@ use oak_proto_rust::oak::{
         attestation_results::Status, binary_reference_value, endorsements, expected_digests,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_expected_value, text_reference_value, AmdAttestationReport,
-        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        AmdSevExpectedValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
         EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
+        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
         KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
         OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
-        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues, SystemLayerData,
-        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
-        VerificationSkipped,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -348,7 +348,7 @@ fn verify_cb(
 /// Verifies the AMD SEV attestation report.
 fn verify_amd_sev_attestation_report(
     attestation_report_values: &AmdAttestationReport,
-    reference_values: &AmdSevReferenceValues,
+    expected_values: &AmdSevExpectedValues,
 ) -> anyhow::Result<()> {
     // Stage 0 only destroys VMPCK0, so we only trust attestation reports that were
     // generated in VMPL0.
@@ -358,12 +358,12 @@ fn verify_amd_sev_attestation_report(
         attestation_report_values.vmpl
     );
 
-    if !reference_values.allow_debug && attestation_report_values.debug {
+    if !expected_values.allow_debug && attestation_report_values.debug {
         anyhow::bail!("debug mode not allowed");
     }
 
     match (
-        reference_values.min_tcb_version.as_ref(),
+        expected_values.min_tcb_version.as_ref(),
         attestation_report_values.reported_tcb.as_ref(),
     ) {
         (Some(min_tcb_version), Some(reported_tcb_version)) => {
@@ -407,13 +407,13 @@ fn verify_amd_sev_attestation_report(
 /// Verifies the Intel TDX attestation report.
 fn verify_intel_tdx_attestation_report(
     _attestation_report_values: &IntelTdxAttestationReport,
-    _reference_values: &IntelTdxReferenceValues,
+    _expected_values: &IntelTdxExpectedValues,
 ) -> anyhow::Result<()> {
     anyhow::bail!("needs implementation")
 }
 
 /// Verifies insecure attestation.
-fn verify_insecure(_reference_values: &InsecureReferenceValues) -> anyhow::Result<()> {
+fn verify_insecure(_expected_values: &InsecureExpectedValues) -> anyhow::Result<()> {
     Ok(())
 }
 
@@ -464,19 +464,44 @@ fn verify_root_attestation_signature(
     }
 }
 
-/// Verifies the measurement values of the root layer containing the attestation
-/// report.
-fn verify_root_layer(
+fn get_root_layer_expected_values(
     now_utc_millis: i64,
-    values: &RootLayerData,
     endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
+) -> anyhow::Result<RootLayerExpectedValues> {
+    // Propagate each of the existing reference value for a TEE platform to the
+    // corresponding expected value.
+
+    let amd_sev = if let Some(amd_sev_values) = reference_values.amd_sev.as_ref() {
+        let stage0_expected = get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.stage0.as_ref()),
+            amd_sev_values.stage0.as_ref().context("stage0 binary reference values not found")?,
+        )?;
+        Some(AmdSevExpectedValues {
+            stage0_expected: Some(stage0_expected),
+            min_tcb_version: amd_sev_values.min_tcb_version.clone(),
+            allow_debug: amd_sev_values.allow_debug,
+        })
+    } else {
+        None
+    };
+
+    let intel_tdx = reference_values.intel_tdx.as_ref().map(|_| IntelTdxExpectedValues {});
+    let insecure = reference_values.insecure.as_ref().map(|_| InsecureExpectedValues {});
+
+    Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
+}
+
+fn compare_root_layer_measurement_digets(
+    values: &RootLayerData,
+    expected_values: &RootLayerExpectedValues,
 ) -> anyhow::Result<()> {
     match (
         values.report.as_ref(),
-        reference_values.amd_sev.as_ref(),
-        reference_values.intel_tdx.as_ref(),
-        reference_values.insecure.as_ref(),
+        expected_values.amd_sev.as_ref(),
+        expected_values.intel_tdx.as_ref(),
+        expected_values.insecure.as_ref(),
     ) {
         (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
             // See b/327069120: We don't have the correct digest in the endorsement
@@ -486,14 +511,12 @@ fn verify_root_layer(
                 sha2_384: report_values.initial_measurement.to_vec(),
                 ..Default::default()
             };
-            verify_measurement_digest(
+            compare_measurement_digest(
                 &measurement,
-                now_utc_millis,
-                endorsements.and_then(|value| value.stage0.as_ref()),
                 amd_sev_values
-                    .stage0
+                    .stage0_expected
                     .as_ref()
-                    .context("stage0 binary reference values not found")?,
+                    .context("no stage0 epxected value provided")?,
             )?;
             verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
@@ -511,6 +534,17 @@ fn verify_root_layer(
             "invalid combination of root layer reference values and endorsed evidence"
         )),
     }
+}
+/// Verifies the measurement values of the root layer containing the attestation
+/// report.
+fn verify_root_layer(
+    now_utc_millis: i64,
+    values: &RootLayerData,
+    endorsements: Option<&RootLayerEndorsements>,
+    reference_values: &RootLayerReferenceValues,
+) -> anyhow::Result<()> {
+    let expected = get_root_layer_expected_values(now_utc_millis, endorsements, reference_values)?;
+    compare_root_layer_measurement_digets(values, &expected)
 }
 
 /// Verifies the measurement values of the kernel layer, which is common to both

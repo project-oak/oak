@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -42,6 +43,31 @@ message ExpectedDigests {
     RawDigests digests = 2;
   }
 }
+
+message RootLayerExpectedValues {
+  // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+  // Verification is skipped when not running in a TEE.
+  AmdSevExpectedValues amd_sev = 1;
+  IntelTdxExpectedValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This
+  // can be used when not running in a TEE or when the client is agnostic about
+  // the platform and doesn't care about the hardware verification.
+  InsecureExpectedValues insecure = 3;
+}
+
+message AmdSevExpectedValues {
+  ExpectedDigests stage0_expected = 1;
+
+  // Minimum accepted versions of all TCB components.
+  TcbVersion min_tcb_version = 2;
+
+  // If true, will skip the check that the TEE is not in debug mode.
+  bool allow_debug = 3;
+}
+
+message IntelTdxExpectedValues {}
+
+message InsecureExpectedValues {}
 
 message ExpectedRegex {
   string value = 1;
