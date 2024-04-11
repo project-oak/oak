@@ -198,6 +198,7 @@
                 jq
                 libelf
                 perl
+                strip-nondeterminism
                 glibc
                 glibc.static
                 ncurses
@@ -231,6 +232,7 @@
                 cpio
                 glibc
                 glibc.static
+                strip-nondeterminism
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
