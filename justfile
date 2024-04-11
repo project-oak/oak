@@ -70,8 +70,17 @@ oak_restricted_kernel_simple_io_init_rd_bin:
 oak_restricted_kernel_simple_io_init_rd_wrapper: oak_restricted_kernel_simple_io_init_rd_bin
     just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io_init_rd
 
-stage0_bin:
-    env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
+stage0_bin output_bin_path="stage0_bin/target/x86_64-unknown-none/release/stage0_bin":
+    env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary ../{{output_bin_path}}
+
+stage0_provenance_subjects vcpu_count="1,2,4,8,16,32,64" provenance_subjects_dir="stage0_bin/bin/subjects":
+    rm --recursive --force {{provenance_subjects_dir}}
+    mkdir -p {{provenance_subjects_dir}}
+    just stage0_bin {{provenance_subjects_dir}}/stage0_bin
+    cargo run --package=snp_measurement --quiet -- \
+        --vcpu-count={{vcpu_count}} \
+        --stage0-rom={{provenance_subjects_dir}}/stage0_bin \
+        --attestation-measurements-output-dir={{provenance_subjects_dir}}
 
 stage1_cpio:
     env --chdir=oak_containers_stage1 make
