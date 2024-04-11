@@ -22,6 +22,9 @@
 
 extern crate alloc;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 #[cfg(feature = "std")]
 use std::time::Instant;
@@ -31,7 +34,7 @@ use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
-use wasmtime::{self, Store};
+use wasmtime::Store;
 
 use crate::{
     logger::{OakLogger, StandaloneLogger},

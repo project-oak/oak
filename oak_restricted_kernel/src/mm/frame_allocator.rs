@@ -99,6 +99,12 @@ impl<const N: usize> PhysicalMemoryAllocator<N> {
     }
 }
 
+impl<const N: usize> Default for PhysicalMemoryAllocator<N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 unsafe impl<const N: usize> FrameAllocator<Size2MiB> for PhysicalMemoryAllocator<N> {
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
         self.large_frames.allocate_frame()
@@ -138,8 +144,6 @@ impl<const N: usize> FrameDeallocator<Size4KiB> for PhysicalMemoryAllocator<N> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-
-    use x86_64::{structures::paging::PageSize, PhysAddr};
 
     use super::*;
 

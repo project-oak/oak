@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 #![feature(let_chains)]
 
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 pub mod amd;
 pub mod claims;

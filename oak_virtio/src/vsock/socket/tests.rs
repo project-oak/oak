@@ -23,7 +23,6 @@ use super::*;
 use crate::{
     test::{identity_map, inverse_identity_map, new_valid_transport, TestingTransport},
     vsock::{HOST_CID, QUEUE_SIZE},
-    Read, Write,
 };
 
 const GUEST_CID: u64 = 3;

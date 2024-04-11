@@ -16,7 +16,7 @@
 
 #![no_std]
 
-use core::{fmt::Write, result::Result};
+use core::fmt::Write;
 
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 

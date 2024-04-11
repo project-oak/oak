@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![feature(never_type)]
 #![feature(new_uninit)]
 #![feature(unwrap_infallible)]

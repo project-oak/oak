@@ -14,9 +14,6 @@
 // limitations under the License.
 //
 
-extern crate alloc;
-
-use alloc::vec::Vec;
 use std::fs;
 
 use oak_attestation_verification::{

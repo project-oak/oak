@@ -610,11 +610,11 @@ fn read_status_msr() -> u64 {
 
 #[cfg(test)]
 mod tests {
-    //! These tests check the conversion logic between convenience request and
-    //! response structs, and the u64 values used for the MSR protocol.
-    //!
-    //! See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for details of
-    //! how the requests and responses are represented as u64 values.
+    // These tests check the conversion logic between convenience request and
+    // response structs, and the u64 values used for the MSR protocol.
+    //
+    // See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for details of
+    // how the requests and responses are represented as u64 values.
 
     use super::*;
 

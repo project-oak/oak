@@ -56,6 +56,7 @@ trait InterprocessorInterrupt {
 /// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture
 /// Programmer's Manual, Volume 2 for more details.
 trait ErrorStatus {
+    #[allow(unused)]
     fn read(&self) -> ApicErrorFlags;
     fn clear(&mut self);
 }

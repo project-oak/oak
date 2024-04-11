@@ -32,6 +32,7 @@ impl Verifier for p256::ecdsa::VerifyingKey {
     }
 }
 
+#[allow(unused)]
 struct VerifierKeyHandle {
     inner: p256::ecdsa::VerifyingKey,
 }

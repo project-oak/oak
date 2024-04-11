@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use core::{
-    ops::{BitAnd, Not},
-    option::Option,
-};
+use core::ops::{BitAnd, Not};
 
 use bitvec::{order::Lsb0, prelude::BitArray};
 use x86_64::structures::paging::{
@@ -215,7 +212,8 @@ impl<S: PageSize, const N: usize> FrameDeallocator<S> for BitmapAllocator<S, N> 
 
 #[cfg(test)]
 mod tests {
-    extern crate std;
+    use std::{format, prelude::rust_2021::*, vec};
+
     use assertables::*;
     use x86_64::{structures::paging::Size4KiB, PhysAddr};
 

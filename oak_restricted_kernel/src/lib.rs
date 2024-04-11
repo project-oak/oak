@@ -29,7 +29,7 @@
 //!     crate.
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(array_chunks)]
@@ -62,10 +62,13 @@ mod virtio;
 #[cfg(feature = "virtio_console_channel")]
 mod virtio_console;
 
+#[cfg(test)]
+extern crate std;
+
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, option::Option, panic::PanicInfo, pin::Pin, str::FromStr};
+use core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
 use linked_list_allocator::LockedHeap;
 use log::{error, info};

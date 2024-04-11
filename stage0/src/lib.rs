@@ -31,10 +31,10 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
 use x86_64::{
-    instructions::{hlt, interrupts::int3, segmentation::Segment},
+    instructions::{hlt, interrupts::int3},
     registers::segmentation::*,
     structures::{
-        gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
+        gdt::{Descriptor, GlobalDescriptorTable},
         idt::InterruptDescriptorTable,
         paging::{PageSize, Size1GiB},
     },

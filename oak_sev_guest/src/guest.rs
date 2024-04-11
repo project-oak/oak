@@ -68,6 +68,12 @@ impl GuestMessage {
     }
 }
 
+impl Default for GuestMessage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// The authenticated subsection of the header used for an encrypted guest
 /// request message.
 ///
@@ -188,6 +194,12 @@ impl GuestMessageHeader {
             return Err("invalid message size");
         }
         Ok(())
+    }
+}
+
+impl Default for GuestMessageHeader {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -333,6 +345,12 @@ impl KeyRequest {
     }
 }
 
+impl Default for KeyRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Message for KeyRequest {
     fn get_message_type() -> MessageType {
         MessageType::KeyRequest
@@ -462,6 +480,12 @@ impl AttestationRequest {
     }
 }
 
+impl Default for AttestationRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Message for AttestationRequest {
     fn get_message_type() -> MessageType {
         MessageType::ReportRequest
@@ -565,8 +589,8 @@ pub trait Message {
 
 #[cfg(test)]
 mod tests {
-    //! Test to check the getters and setters for the bit fields of the
-    //! `key_select` field in the `KeyRequest` struct.
+    // Test to check the getters and setters for the bit fields of the
+    // `key_select` field in the `KeyRequest` struct.
 
     use strum::IntoEnumIterator;
 

@@ -18,7 +18,6 @@ use core::{
     alloc::{GlobalAlloc, Layout},
     ops::Deref,
     ptr::NonNull,
-    result::Result,
 };
 
 use linked_list_allocator::{Heap, LockedHeap};

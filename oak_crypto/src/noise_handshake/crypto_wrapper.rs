@@ -30,20 +30,18 @@ pub const P256_SCALAR_LEN: usize = 32;
 
 use alloc::vec::Vec;
 
-use aes_gcm::{self, AeadInPlace, KeyInit};
+use aes_gcm::{AeadInPlace, KeyInit};
 use ecdsa;
-use hkdf;
 use p256::ecdsa::signature::Signer;
-use pkcs8::{self, DecodePrivateKey, EncodePrivateKey};
+use pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use primeorder::{
-    self,
     elliptic_curve::{
         ops::{Mul, MulByGenerator},
         sec1::{FromEncodedPoint, ToEncodedPoint},
     },
     Field, PrimeField,
 };
-use sha2::{self, Digest};
+use sha2::Digest;
 
 use crate::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 

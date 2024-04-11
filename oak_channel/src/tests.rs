@@ -18,7 +18,7 @@
 
 extern crate std;
 
-use alloc::{boxed::Box, collections::VecDeque, vec};
+use alloc::{collections::VecDeque, vec};
 
 use super::*;
 use crate::message::{Message, RequestMessage};

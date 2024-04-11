@@ -126,6 +126,7 @@ impl FrameDeallocator<Size4KiB> for EncryptedFrameAllocator {
 ///
 /// This is useful in situations where we do not expect any new allocations to
 /// take place.
+#[allow(unused)]
 struct FailAllocator {}
 unsafe impl<S: PageSize> FrameAllocator<S> for FailAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {

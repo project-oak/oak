@@ -17,7 +17,6 @@
 //! Utilities to handle encoded keys and certificates
 
 use alloc::{format, string::String, vec::Vec};
-use core::result::Result;
 
 /// Extracts the bytes used to encode a CBOR object from a slice that might
 /// include unused bytes by deserializing and re-serializing the encoded CBOR

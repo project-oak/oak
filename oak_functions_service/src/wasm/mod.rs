@@ -17,6 +17,8 @@
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod api;
 #[cfg(test)]

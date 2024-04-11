@@ -22,7 +22,7 @@
 extern crate alloc;
 
 use alloc::{collections::VecDeque, vec::Vec};
-use core::{alloc::Allocator, result::Result};
+use core::alloc::Allocator;
 
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 use x86_64::{PhysAddr, VirtAddr};
