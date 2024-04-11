@@ -18,11 +18,17 @@ syntax = "proto3";
 
 package oak.functions.testing;
 
+import "proto/micro_rpc/options.proto";
+
 service TestModule {
   // method_id: 0
-  rpc Lookup(LookupRequest) returns (LookupResponse) {}
+  rpc Lookup(LookupRequest) returns (LookupResponse) {
+    option (.oak.micro_rpc.method_id) = 0;
+  }
   // method_id: 1
-  rpc EchoAndPanic(EchoAndPanicRequest) returns (EchoAndPanicResponse) {}
+  rpc EchoAndPanic(EchoAndPanicRequest) returns (EchoAndPanicResponse) {
+    option (.oak.micro_rpc.method_id) = 1;
+  }
 }
 
 message LookupRequest {

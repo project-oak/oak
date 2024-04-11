@@ -42,6 +42,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],
     data = [
+        "//oak_containers/proto:interfaces_proto",
         "//proto:digest_proto",
         "//proto/attestation:attachment_proto",
         "//proto/attestation:dice_proto",
