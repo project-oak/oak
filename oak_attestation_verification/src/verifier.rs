@@ -32,25 +32,26 @@ use oak_dice::cert::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements, expected_digests,
-        extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
-        root_layer_data::Report, text_expected_value, text_reference_value, AmdAttestationReport,
-        AmdSevExpectedValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
-        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
-        BinaryReferenceValue, CbData, CbEndorsements, CbExpectedValues, CbReferenceValues,
-        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerExpectedValues,
-        ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements, Evidence,
-        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExtractedEvidence,
-        FakeAttestationReport, InsecureExpectedValues, IntelTdxAttestationReport,
-        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
-        KernelLayerData, KernelLayerEndorsements, KernelLayerExpectedValues,
-        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
-        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
-        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
-        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        expected_values, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
+        reference_values, root_layer_data::Report, text_expected_value, text_reference_value,
+        AmdAttestationReport, AmdSevExpectedValues, ApplicationKeys, ApplicationLayerData,
+        ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
+        CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
+        ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
+        EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
+        ExpectedStringLiterals, ExpectedValues, ExtractedEvidence, FakeAttestationReport,
+        InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
+        KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
+        OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
+        VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -140,45 +141,70 @@ pub fn verify(
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
 
     // Ensure the extracted measurements match the endorsements.
-    match (
-        endorsements.r#type.as_ref(),
-        reference_values.r#type.as_ref(),
-        extracted_evidence.evidence_values.as_ref(),
-    ) {
+    let expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)?;
+    compare_expected_values(&extracted_evidence, &expected_values)?;
+
+    Ok(extracted_evidence)
+}
+
+fn get_expected_values(
+    now_utc_millis: i64,
+    endorsements: &Endorsements,
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<ExpectedValues> {
+    match (endorsements.r#type.as_ref(), reference_values.r#type.as_ref()) {
         (
             Some(endorsements::Type::OakRestrictedKernel(ends)),
             Some(reference_values::Type::OakRestrictedKernel(rvs)),
-            Some(EvidenceValues::OakRestrictedKernel(values)),
         ) => {
             let expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)?;
-            compare_oak_restricted_kernel_measurement_digests(values, &expected)
+            Ok(ExpectedValues {
+                r#type: Some(expected_values::Type::OakRestrictedKernel(expected)),
+            })
         }
         (
             Some(endorsements::Type::OakContainers(ends)),
             Some(reference_values::Type::OakContainers(rvs)),
-            Some(EvidenceValues::OakContainers(values)),
         ) => {
             let expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)?;
-            compare_oak_containers_measurement_digests(values, &expected)
+            Ok(ExpectedValues { r#type: Some(expected_values::Type::OakContainers(expected)) })
         }
-        (
-            Some(endorsements::Type::Cb(ends)),
-            Some(reference_values::Type::Cb(rvs)),
-            Some(EvidenceValues::Cb(values)),
-        ) => {
+        (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             let expected = get_cb_expected_values(now_utc_millis, ends, rvs)?;
-            compare_cb_measurement_digests(values, &expected)
+            Ok(ExpectedValues { r#type: Some(expected_values::Type::Cb(expected)) })
         }
         // Evidence, endorsements and reference values must exist and reflect the same chain type.
-        (None, _, _) => anyhow::bail!("Endorsements are empty"),
-        (_, None, _) => anyhow::bail!("Reference values are empty"),
-        (_, _, None) => anyhow::bail!("Extracted evidence values are empty"),
-        (Some(_), Some(_), Some(_)) => {
+        (None, _) => anyhow::bail!("Endorsements are empty"),
+        (_, None) => anyhow::bail!("Reference values are empty"),
+        (Some(_), Some(_)) => {
             anyhow::bail!("Mismatch between evidence, endorsements and reference values")
         }
-    }?;
+    }
+}
 
-    Ok(extracted_evidence)
+fn compare_expected_values(
+    extracted_evidence: &ExtractedEvidence,
+    expected_values: &ExpectedValues,
+) -> anyhow::Result<()> {
+    match (extracted_evidence.evidence_values.as_ref(), expected_values.r#type.as_ref()) {
+        (
+            Some(EvidenceValues::OakRestrictedKernel(values)),
+            Some(expected_values::Type::OakRestrictedKernel(expected)),
+        ) => compare_oak_restricted_kernel_measurement_digests(values, expected),
+        (
+            Some(EvidenceValues::OakContainers(values)),
+            Some(expected_values::Type::OakContainers(expected)),
+        ) => compare_oak_containers_measurement_digests(values, expected),
+        (Some(EvidenceValues::Cb(values)), Some(expected_values::Type::Cb(expected))) => {
+            compare_cb_measurement_digests(values, expected)
+        }
+        // Evidence, endorsements and reference values must exist and reflect the same chain type.
+        (None, _) => anyhow::bail!("Reference values are empty"),
+        (_, None) => anyhow::bail!("Expected values are empty"),
+        (Some(_), Some(_)) => {
+            anyhow::bail!("Mismatch between evidence, endorsements and reference values")
+        }
+    }
 }
 
 /// Verifies signatures of the certificates in the DICE chain and extracts the
