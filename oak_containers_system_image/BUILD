@@ -13,10 +13,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 package(
     licenses = ["notice"],
+)
+
+filegroup(
+    name = "rust_bins",
+    srcs = [
+        "target/image_binaries/oak_containers_orchestrator",
+        "target/image_binaries/oak_containers_syslogd",
+    ],
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
+)
+
+pkg_tar(
+    name = "rust_bins_tar",
+    srcs = [":rust_bins"],
+    package_dir = "/usr/bin",
+    strip_prefix = "/oak_containers_system_image/target/image_binaries",
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
+)
+
+oci_image(
+    name = "oak_containers_system_image_oci_image",
+    base = "@oak_containers_sysimage_base",
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
+    tars = [":rust_bins_tar"],
+)
+
+oci_runtime_bundle(
+    name = "oak_containers_system_image",
+    image = ":oak_containers_system_image_oci_image",
+    rootfs_only = True,
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
 )
 
 ### Base Image Update Targets

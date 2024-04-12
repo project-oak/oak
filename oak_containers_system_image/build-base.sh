@@ -27,6 +27,9 @@ docker build . --tag=oak-containers-sysimage-base:latest --file base_image.Docke
 # _not_ what we want.)
 readonly NEW_DOCKER_CONTAINER_ID="$(docker create oak-containers-sysimage-base:latest)"
 
+# Hack, as Docker doesn't give us a `/etc/hosts` which means `localhost` won't resovle.
+tar --append --file=target/image.tar --directory=files etc/hosts
+
 # We export a plain tarball.
 # The oak_containers_sysimage_base oci_image rule will use this tarball to
 # create an OCI image that it can then push to Google artifact registry.
