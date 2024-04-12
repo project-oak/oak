@@ -65,7 +65,7 @@ mod virtio_console;
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, option::Option, panic::PanicInfo, pin::Pin, str::FromStr};
 
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
@@ -109,7 +109,7 @@ pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
 /// Level 4 page table that is free in application space, but has all entries
 /// for kernel space populated. It can be used to create free page tables for
 /// applications, that maintain correct mapping in kernel space.
-pub static BASE_L4_PAGE_TABLE: OnceCell<PageTable> = OnceCell::new();
+pub static BASE_L4_PAGE_TABLE: OnceCell<Pin<Box<PageTable>>> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -197,7 +197,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
             "there should be no previous page table during initialization"
         );
 
-        // Safety: We just created a page table at this location.
+        // Safety: We just created a page table at this location on the heap.
         let pml4: PageTable = unsafe {
             *Box::from_raw(
                 (PAGE_TABLES
@@ -214,7 +214,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 .as_mut_ptr(),
             )
         };
-        BASE_L4_PAGE_TABLE.set(pml4).expect("base pml4 not unset");
+        BASE_L4_PAGE_TABLE.set(Box::pin(pml4)).expect("base pml4 not unset");
     };
 
     // Re-map boot params to the new virtual address.

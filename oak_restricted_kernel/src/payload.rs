@@ -15,7 +15,7 @@
 //
 
 use alloc::boxed::Box;
-use core::arch::asm;
+use core::{arch::asm, pin::Pin};
 
 use anyhow::{anyhow, Context, Result};
 use goblin::{
@@ -160,7 +160,7 @@ pub fn identify_pml4_frame(
 }
 
 pub struct Process {
-    pml4: x86_64::structures::paging::PageTable,
+    pml4: Pin<Box<x86_64::structures::paging::PageTable, alloc::alloc::Global>>,
     entry: VirtAddr,
 }
 

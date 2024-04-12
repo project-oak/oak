@@ -293,6 +293,7 @@ impl CurrentRootPageTable {
     /// Safety: The new page tables must keep the identity mapping at -2GB
     /// (kernel space) intact.
     pub unsafe fn replace(&mut self, pml4_frame: PhysFrame) -> Option<RootPageTable> {
+        log::debug!("Writing new frame to Cr3: {:?}", pml4_frame);
         // This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
         unsafe {
