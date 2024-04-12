@@ -121,12 +121,28 @@ pub fn exit(status: i32) -> ! {
 }
 
 #[no_mangle]
-pub extern "C" fn sys_unstable_switch_proccess(buf: *const c_void, count: c_size_t) {
-    unsafe { syscall!(Syscall::UnstableSwitchProcess, buf, count) };
+pub extern "C" fn sys_unstable_create_proccess(buf: *const c_void, count: c_size_t) -> c_ssize_t {
+    unsafe { syscall!(Syscall::UnstableCreateProcess, buf, count) }
 }
 
-pub fn unstable_switch_proccess(buf: &[u8]) -> ! {
-    sys_unstable_switch_proccess(buf.as_ptr() as *const c_void, buf.len());
+pub fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
+    let ret = sys_unstable_create_proccess(buf.as_ptr() as *const c_void, buf.len());
+    if ret <= 0 {
+        Err(Errno::from_repr(ret).unwrap_or_else(|| {
+            panic!("unexpected error from unstable_create_proccess syscall: {}", ret)
+        }))
+    } else {
+        Ok(ret.try_into().expect("pid could not be represented as isize"))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn sys_unstable_switch_proccess(pid: c_size_t) {
+    unsafe { syscall!(Syscall::UnstableSwitchProcess, pid) };
+}
+
+pub fn unstable_switch_proccess(pid: usize) -> ! {
+    sys_unstable_switch_proccess(pid);
     unreachable!();
 }
 

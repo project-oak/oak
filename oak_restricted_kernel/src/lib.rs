@@ -124,6 +124,30 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
         },
     )));
 
+static PROCCESSES: Processes = Processes { list: Spinlock::new(alloc::vec::Vec::new()) };
+
+struct Processes {
+    list: Spinlock<alloc::vec::Vec<Process>>,
+}
+
+impl Processes {
+    /// # Safety
+    ///
+    /// Caller must ensure to no lock is currently being held.
+    unsafe fn add(&self, process: Process) -> usize {
+        self.list.force_unlock();
+        let mut processes = self.list.lock();
+        let pid: usize = processes.len();
+        processes.push(process);
+        log::debug!("Created process (pid: {})", pid);
+        pid
+    }
+    fn execute(&self, pid: usize) -> ! {
+        log::debug!("Executing process (pid: {})", pid);
+        self.list.lock().get_mut(pid).expect("PID not mapped to a process").execute()
+    }
+}
+
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> ! {
     avx::enable_avx();
@@ -471,11 +495,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
-    let process = Box::leak(Box::new(unsafe {
-        Process::from_application(&application).expect("failed to create process")
-    }));
+    let pid = unsafe { Process::from_application(&application).expect("failed to create process") };
 
-    process.execute()
+    PROCCESSES.execute(pid)
 }
 
 #[derive(EnumIter, EnumString)]

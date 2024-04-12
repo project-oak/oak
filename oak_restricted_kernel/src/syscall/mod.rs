@@ -23,6 +23,8 @@ mod process;
 mod stdio;
 
 #[cfg(feature = "initrd")]
+mod create_process;
+#[cfg(feature = "initrd")]
 mod switch_process;
 
 #[cfg(test)]
@@ -44,7 +46,10 @@ use x86_64::{
 };
 
 #[cfg(feature = "initrd")]
-use self::switch_process::syscall_unstable_switch_proccess;
+use self::{
+    create_process::syscall_unstable_create_proccess,
+    switch_process::syscall_unstable_switch_proccess,
+};
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
@@ -131,9 +136,13 @@ extern "sysv64" fn syscall_handler(
         }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
         #[cfg(feature = "initrd")]
-        Some(Syscall::UnstableSwitchProcess) => {
-            syscall_unstable_switch_proccess(arg1 as *mut c_void, arg2)
+        Some(Syscall::UnstableCreateProcess) => {
+            syscall_unstable_create_proccess(arg1 as *mut c_void, arg2)
         }
+        #[cfg(feature = "initrd")]
+        Some(Syscall::UnstableSwitchProcess) => syscall_unstable_switch_proccess(arg1),
+        #[cfg(not(feature = "initrd"))]
+        Some(Syscall::UnstableCreateProcess) => Errno::ENOSYS as isize,
         #[cfg(not(feature = "initrd"))]
         Some(Syscall::UnstableSwitchProcess) => Errno::ENOSYS as isize,
         None => Errno::ENOSYS as isize,

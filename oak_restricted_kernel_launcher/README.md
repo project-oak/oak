@@ -18,7 +18,7 @@ must be built.
 
 ```shell
 # Stage0, the restricted kernel, and an enclave app may be built like so:
-just stage0_bin oak_restricted_kernel_wrapper oak_orchestrator && \
+just stage0_bin oak_restricted_kernel_wrapper oak_orchestrator oak_echo_raw_enclave_app && \
 
 # After building dependencies, an enclave app may be run like so:
 RUST_LOG=DEBUG \
