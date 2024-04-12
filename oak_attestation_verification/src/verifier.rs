@@ -36,20 +36,21 @@ use oak_proto_rust::oak::{
         root_layer_data::Report, text_expected_value, text_reference_value, AmdAttestationReport,
         AmdSevExpectedValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
-        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
-        ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureExpectedValues,
-        IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
-        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
-        VerificationSkipped,
+        BinaryReferenceValue, CbData, CbEndorsements, CbExpectedValues, CbReferenceValues,
+        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerExpectedValues,
+        ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements, Evidence,
+        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExtractedEvidence,
+        FakeAttestationReport, InsecureExpectedValues, IntelTdxAttestationReport,
+        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
+        KernelLayerData, KernelLayerEndorsements, KernelLayerExpectedValues,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -148,17 +149,26 @@ pub fn verify(
             Some(endorsements::Type::OakRestrictedKernel(ends)),
             Some(reference_values::Type::OakRestrictedKernel(rvs)),
             Some(EvidenceValues::OakRestrictedKernel(values)),
-        ) => verify_oak_restricted_kernel(now_utc_millis, values, ends, rvs),
+        ) => {
+            let expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)?;
+            compare_oak_restricted_kernel_measurement_digests(values, &expected)
+        }
         (
             Some(endorsements::Type::OakContainers(ends)),
             Some(reference_values::Type::OakContainers(rvs)),
             Some(EvidenceValues::OakContainers(values)),
-        ) => verify_oak_containers(now_utc_millis, values, ends, rvs),
+        ) => {
+            let expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)?;
+            compare_oak_containers_measurement_digests(values, &expected)
+        }
         (
             Some(endorsements::Type::Cb(ends)),
             Some(reference_values::Type::Cb(rvs)),
             Some(EvidenceValues::Cb(values)),
-        ) => verify_cb(now_utc_millis, values, ends, rvs),
+        ) => {
+            let expected = get_cb_expected_values(now_utc_millis, ends, rvs)?;
+            compare_cb_measurement_digests(values, &expected)
+        }
         // Evidence, endorsements and reference values must exist and reflect the same chain type.
         (None, _, _) => anyhow::bail!("Endorsements are empty"),
         (_, None, _) => anyhow::bail!("Reference values are empty"),
@@ -241,113 +251,143 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
     extract_evidence(evidence)
 }
 
-/// Validates the values extracted from the evidence against the reference
-/// values and endorsements for Oak Restricted Kernel applications.
-fn verify_oak_restricted_kernel(
+fn get_oak_restricted_kernel_expected_values(
     now_utc_millis: i64,
-    values: &OakRestrictedKernelData,
     endorsements: &OakRestrictedKernelEndorsements,
     reference_values: &OakRestrictedKernelReferenceValues,
-) -> anyhow::Result<()> {
-    verify_root_layer(
-        now_utc_millis,
-        values.root_layer.as_ref().context("no root layer evidence values")?,
-        endorsements.root_layer.as_ref(),
-        reference_values.root_layer.as_ref().context("no root layer reference values")?,
-    )
-    .context("root layer verification failed")?;
+) -> anyhow::Result<OakRestrictedKernelExpectedValues> {
+    Ok(OakRestrictedKernelExpectedValues {
+        root_layer: Some(get_root_layer_expected_values(
+            now_utc_millis,
+            endorsements.root_layer.as_ref(),
+            reference_values.root_layer.as_ref().context("no root layer reference values")?,
+        )?),
+        kernel_layer: Some(get_kernel_layer_expected_values(
+            now_utc_millis,
+            endorsements.kernel_layer.as_ref(),
+            reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
+        )?),
+        application_layer: Some(get_application_layer_expected_values(
+            now_utc_millis,
+            endorsements.application_layer.as_ref(),
+            reference_values
+                .application_layer
+                .as_ref()
+                .context("no application layer reference values")?,
+        )?),
+    })
+}
 
-    let kernel_layer_expected_values = get_kernel_layer_expected_values(
-        now_utc_millis,
-        endorsements.kernel_layer.as_ref(),
-        reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
-    )
-    .context("failed to get kernel layer expected values")?;
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Kernel applications.
+fn compare_oak_restricted_kernel_measurement_digests(
+    values: &OakRestrictedKernelData,
+    expected: &OakRestrictedKernelExpectedValues,
+) -> anyhow::Result<()> {
+    compare_root_layer_measurement_digets(
+        values.root_layer.as_ref().context("no root layer evidence values")?,
+        expected.root_layer.as_ref().context("no root layer expected avlues")?,
+    )?;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
-        &kernel_layer_expected_values,
+        expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
     )?;
 
-    let expected = get_application_layer_expected_values(
-        now_utc_millis,
-        endorsements.application_layer.as_ref(),
-        reference_values
-            .application_layer
-            .as_ref()
-            .context("no application layer reference values")?,
-    )?;
     compare_application_layer_measurement_digests(
         values.application_layer.as_ref().context("no applications layer evidence values")?,
-        &expected,
+        expected.application_layer.as_ref().context("no application layer expected_values")?,
     )
     .context("application layer verification failed")
 }
 
-/// Validates the values extracted from the evidence against the reference
-/// values and endorsements for Oak Restricted Containers applications.
-fn verify_oak_containers(
+fn get_oak_containers_expected_values(
     now_utc_millis: i64,
-    values: &OakContainersData,
     endorsements: &OakContainersEndorsements,
     reference_values: &OakContainersReferenceValues,
-) -> anyhow::Result<()> {
-    verify_root_layer(
-        now_utc_millis,
-        values.root_layer.as_ref().context("no root layer evidence values")?,
-        endorsements.root_layer.as_ref(),
-        reference_values.root_layer.as_ref().context("no root layer reference values")?,
-    )
-    .context("root layer verification failed")?;
+) -> anyhow::Result<OakContainersExpectedValues> {
+    Ok(OakContainersExpectedValues {
+        root_layer: Some(get_root_layer_expected_values(
+            now_utc_millis,
+            endorsements.root_layer.as_ref(),
+            reference_values.root_layer.as_ref().context("no root layer reference values")?,
+        )?),
+        kernel_layer: Some(get_kernel_layer_expected_values(
+            now_utc_millis,
+            endorsements.kernel_layer.as_ref(),
+            reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
+        )?),
+        system_layer: Some(get_system_layer_expected_values(
+            now_utc_millis,
+            endorsements.system_layer.as_ref(),
+            reference_values
+                .system_layer
+                .as_ref()
+                .context("no application layer reference values")?,
+        )?),
+        container_layer: Some(get_container_layer_expected_values(
+            now_utc_millis,
+            endorsements.container_layer.as_ref(),
+            reference_values
+                .container_layer
+                .as_ref()
+                .context("no kernel layer reference values")?,
+        )?),
+    })
+}
 
-    let kernel_layer_expected_values = get_kernel_layer_expected_values(
-        now_utc_millis,
-        endorsements.kernel_layer.as_ref(),
-        reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
-    )
-    .context("failed to get kernel layer expected values")?;
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for Oak Restricted Containers applications.
+fn compare_oak_containers_measurement_digests(
+    values: &OakContainersData,
+    expected: &OakContainersExpectedValues,
+) -> anyhow::Result<()> {
+    compare_root_layer_measurement_digets(
+        values.root_layer.as_ref().context("no root layer evidence values")?,
+        expected.root_layer.as_ref().context("no root layer expected avlues")?,
+    )?;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
-        &kernel_layer_expected_values,
+        expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
     )?;
 
-    let expected = get_system_layer_expected_values(
-        now_utc_millis,
-        endorsements.system_layer.as_ref(),
-        reference_values.system_layer.as_ref().context("no system layer reference values")?,
-    )?;
     compare_system_layer_measurement_digests(
         values.system_layer.as_ref().context("no system layer evidence values")?,
-        &expected,
+        expected.system_layer.as_ref().context("no system layer expected_values")?,
     )
     .context("system layer verification failed")?;
 
-    let expected = get_container_layer_expected_values(
-        now_utc_millis,
-        endorsements.container_layer.as_ref(),
-        reference_values.container_layer.as_ref().context("no containers layer values")?,
-    )?;
     compare_container_layer_measurement_digests(
         values.container_layer.as_ref().context("no container layer evidence values")?,
-        &expected,
+        expected.container_layer.as_ref().context("no system layer expected_values")?,
     )
     .context("container layer verification failed")
 }
 
-/// Validates the values extracted from the evidence against the reference
-/// values and endorsements for CB workloads.
-fn verify_cb(
+fn get_cb_expected_values(
     now_utc_millis: i64,
-    values: &CbData,
     endorsements: &CbEndorsements,
     reference_values: &CbReferenceValues,
+) -> anyhow::Result<CbExpectedValues> {
+    Ok(CbExpectedValues {
+        root_layer: Some(get_root_layer_expected_values(
+            now_utc_millis,
+            endorsements.root_layer.as_ref(),
+            reference_values.root_layer.as_ref().context("no root layer reference values")?,
+        )?),
+    })
+}
+
+/// Validates the values extracted from the evidence against the reference
+/// values and endorsements for CB workloads.
+fn compare_cb_measurement_digests(
+    values: &CbData,
+    expected: &CbExpectedValues,
 ) -> anyhow::Result<()> {
-    verify_root_layer(
-        now_utc_millis,
+    compare_root_layer_measurement_digets(
         values.root_layer.as_ref().context("no root layer evidence values")?,
-        endorsements.root_layer.as_ref(),
-        reference_values.root_layer.as_ref().context("no root layer reference values")?,
+        expected.root_layer.as_ref().context("no root layer expected avlues")?,
     )
     .context("root layer verification failed")?;
 
@@ -543,17 +583,6 @@ fn compare_root_layer_measurement_digets(
             "invalid combination of root layer reference values and endorsed evidence"
         )),
     }
-}
-/// Verifies the measurement values of the root layer containing the attestation
-/// report.
-fn verify_root_layer(
-    now_utc_millis: i64,
-    values: &RootLayerData,
-    endorsements: Option<&RootLayerEndorsements>,
-    reference_values: &RootLayerReferenceValues,
-) -> anyhow::Result<()> {
-    let expected = get_root_layer_expected_values(now_utc_millis, endorsements, reference_values)?;
-    compare_root_layer_measurement_digets(values, &expected)
 }
 
 fn get_kernel_layer_expected_values(

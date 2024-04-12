@@ -44,15 +44,14 @@ message ExpectedDigests {
   }
 }
 
-message RootLayerExpectedValues {
-  // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
-  // Verification is skipped when not running in a TEE.
-  AmdSevExpectedValues amd_sev = 1;
-  IntelTdxExpectedValues intel_tdx = 2;
-  // When insecure is set no verification of the TEE platform is performed. This
-  // can be used when not running in a TEE or when the client is agnostic about
-  // the platform and doesn't care about the hardware verification.
-  InsecureExpectedValues insecure = 3;
+// The expected values for kernel image and setup data, computed from previously
+// provided endorsements and reference values.
+message KernelExpectedValues {
+  // Allowable digests for the image.
+  ExpectedDigests image = 1;
+
+  // Allowable digests for the setup data.
+  ExpectedDigests setup_data = 2;
 }
 
 message AmdSevExpectedValues {
@@ -89,14 +88,15 @@ message TextExpectedValue {
   }
 }
 
-// The expected values for kernel image and setup data, computed from previously
-// provided endorsements and reference values.
-message KernelExpectedValues {
-  // Allowable digests for the image.
-  ExpectedDigests image = 1;
-
-  // Allowable digests for the setup data.
-  ExpectedDigests setup_data = 2;
+message RootLayerExpectedValues {
+  // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+  // Verification is skipped when not running in a TEE.
+  AmdSevExpectedValues amd_sev = 1;
+  IntelTdxExpectedValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This
+  // can be used when not running in a TEE or when the client is agnostic about
+  // the platform and doesn't care about the hardware verification.
+  InsecureExpectedValues insecure = 3;
 }
 
 // Reference values of the kernel layer, as measured by stage0.
@@ -137,4 +137,42 @@ message ApplicationLayerExpectedValues {
   // The allowable digest values for a configuration passed to the application
   // binary.
   ExpectedDigests configuration = 2;
+}
+
+// Represents digest of application task config.
+message CBApplicationLayerExpectedValues {
+  // Verifies the application task config.
+  ExpectedDigests binary = 1;
+}
+
+// Represents digest of application task config.
+message CBSystemLayerExpectedValues {
+  // Verifies the application task config.
+  ExpectedDigests system_image = 1;
+  TextExpectedValue system_cmd_line = 2;
+}
+
+message OakRestrictedKernelExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+  KernelLayerExpectedValues kernel_layer = 2;
+  ApplicationLayerExpectedValues application_layer = 3;
+}
+
+message OakContainersExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+  KernelLayerExpectedValues kernel_layer = 2;
+  SystemLayerExpectedValues system_layer = 3;
+  ContainerLayerExpectedValues container_layer = 4;
+}
+
+message CBExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+}
+
+message ExpectedValues {
+  oneof type {
+    OakRestrictedKernelExpectedValues oak_restricted_kernel = 1;
+    OakContainersExpectedValues oak_containers = 2;
+    CBExpectedValues cb = 3;
+  }
 }
