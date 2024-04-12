@@ -1227,6 +1227,40 @@
 <a href="#1225" id="1225">1225</a>
 <a href="#1226" id="1226">1226</a>
 <a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
+<a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
+<a href="#1237" id="1237">1237</a>
+<a href="#1238" id="1238">1238</a>
+<a href="#1239" id="1239">1239</a>
+<a href="#1240" id="1240">1240</a>
+<a href="#1241" id="1241">1241</a>
+<a href="#1242" id="1242">1242</a>
+<a href="#1243" id="1243">1243</a>
+<a href="#1244" id="1244">1244</a>
+<a href="#1245" id="1245">1245</a>
+<a href="#1246" id="1246">1246</a>
+<a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1263,21 +1297,21 @@
         attestation_results::Status, binary_reference_value, endorsements, expected_digests,
         extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
         root_layer_data::Report, text_expected_value, text_reference_value, AmdAttestationReport,
-        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
+        AmdSevExpectedValues, ApplicationKeys, ApplicationLayerData, ApplicationLayerEndorsements,
         ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
         EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
-        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelAttachment,
+        ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
         KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
         OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
-        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues, SystemLayerData,
-        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
-        VerificationSkipped,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -1577,7 +1611,7 @@
 <span class="doccomment">/// Verifies the AMD SEV attestation report.
 </span><span class="kw">fn </span>verify_amd_sev_attestation_report(
     attestation_report_values: <span class="kw-2">&amp;</span>AmdAttestationReport,
-    reference_values: <span class="kw-2">&amp;</span>AmdSevReferenceValues,
+    expected_values: <span class="kw-2">&amp;</span>AmdSevExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="comment">// Stage 0 only destroys VMPCK0, so we only trust attestation reports that were
     // generated in VMPL0.
@@ -1587,12 +1621,12 @@
         attestation_report_values.vmpl
     );
 
-    <span class="kw">if </span>!reference_values.allow_debug &amp;&amp; attestation_report_values.debug {
+    <span class="kw">if </span>!expected_values.allow_debug &amp;&amp; attestation_report_values.debug {
         <span class="macro">anyhow::bail!</span>(<span class="string">"debug mode not allowed"</span>);
     }
 
     <span class="kw">match </span>(
-        reference_values.min_tcb_version.as_ref(),
+        expected_values.min_tcb_version.as_ref(),
         attestation_report_values.reported_tcb.as_ref(),
     ) {
         (<span class="prelude-val">Some</span>(min_tcb_version), <span class="prelude-val">Some</span>(reported_tcb_version)) =&gt; {
@@ -1636,13 +1670,13 @@
 <span class="doccomment">/// Verifies the Intel TDX attestation report.
 </span><span class="kw">fn </span>verify_intel_tdx_attestation_report(
     _attestation_report_values: <span class="kw-2">&amp;</span>IntelTdxAttestationReport,
-    _reference_values: <span class="kw-2">&amp;</span>IntelTdxReferenceValues,
+    _expected_values: <span class="kw-2">&amp;</span>IntelTdxExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="macro">anyhow::bail!</span>(<span class="string">"needs implementation"</span>)
 }
 
 <span class="doccomment">/// Verifies insecure attestation.
-</span><span class="kw">fn </span>verify_insecure(_reference_values: <span class="kw-2">&amp;</span>InsecureReferenceValues) -&gt; anyhow::Result&lt;()&gt; {
+</span><span class="kw">fn </span>verify_insecure(_expected_values: <span class="kw-2">&amp;</span>InsecureExpectedValues) -&gt; anyhow::Result&lt;()&gt; {
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -1693,19 +1727,44 @@
     }
 }
 
-<span class="doccomment">/// Verifies the measurement values of the root layer containing the attestation
-/// report.
-</span><span class="kw">fn </span>verify_root_layer(
+<span class="kw">fn </span>get_root_layer_expected_values(
     now_utc_millis: i64,
-    values: <span class="kw-2">&amp;</span>RootLayerData,
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RootLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
+) -&gt; anyhow::Result&lt;RootLayerExpectedValues&gt; {
+    <span class="comment">// Propagate each of the existing reference value for a TEE platform to the
+    // corresponding expected value.
+
+    </span><span class="kw">let </span>amd_sev = <span class="kw">if let </span><span class="prelude-val">Some</span>(amd_sev_values) = reference_values.amd_sev.as_ref() {
+        <span class="kw">let </span>stage0_expected = get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.stage0.as_ref()),
+            amd_sev_values.stage0.as_ref().context(<span class="string">"stage0 binary reference values not found"</span>)<span class="question-mark">?</span>,
+        )<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(AmdSevExpectedValues {
+            stage0_expected: <span class="prelude-val">Some</span>(stage0_expected),
+            min_tcb_version: amd_sev_values.min_tcb_version.clone(),
+            allow_debug: amd_sev_values.allow_debug,
+        })
+    } <span class="kw">else </span>{
+        <span class="prelude-val">None
+    </span>};
+
+    <span class="kw">let </span>intel_tdx = reference_values.intel_tdx.as_ref().map(|<span class="kw">_</span>| IntelTdxExpectedValues {});
+    <span class="kw">let </span>insecure = reference_values.insecure.as_ref().map(|<span class="kw">_</span>| InsecureExpectedValues {});
+
+    <span class="prelude-val">Ok</span>(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
+}
+
+<span class="kw">fn </span>compare_root_layer_measurement_digets(
+    values: <span class="kw-2">&amp;</span>RootLayerData,
+    expected_values: <span class="kw-2">&amp;</span>RootLayerExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>(
         values.report.as_ref(),
-        reference_values.amd_sev.as_ref(),
-        reference_values.intel_tdx.as_ref(),
-        reference_values.insecure.as_ref(),
+        expected_values.amd_sev.as_ref(),
+        expected_values.intel_tdx.as_ref(),
+        expected_values.insecure.as_ref(),
     ) {
         (<span class="prelude-val">Some</span>(Report::SevSnp(report_values)), <span class="prelude-val">Some</span>(amd_sev_values), <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
             <span class="comment">// See b/327069120: We don't have the correct digest in the endorsement
@@ -1715,14 +1774,12 @@
                 sha2_384: report_values.initial_measurement.to_vec(),
                 ..Default::default()
             };
-            verify_measurement_digest(
+            compare_measurement_digest(
                 <span class="kw-2">&amp;</span>measurement,
-                now_utc_millis,
-                endorsements.and_then(|value| value.stage0.as_ref()),
                 amd_sev_values
-                    .stage0
+                    .stage0_expected
                     .as_ref()
-                    .context(<span class="string">"stage0 binary reference values not found"</span>)<span class="question-mark">?</span>,
+                    .context(<span class="string">"no stage0 epxected value provided"</span>)<span class="question-mark">?</span>,
             )<span class="question-mark">?</span>;
             verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
@@ -1740,6 +1797,17 @@
             <span class="string">"invalid combination of root layer reference values and endorsed evidence"
         </span>)),
     }
+}
+<span class="doccomment">/// Verifies the measurement values of the root layer containing the attestation
+/// report.
+</span><span class="kw">fn </span>verify_root_layer(
+    now_utc_millis: i64,
+    values: <span class="kw-2">&amp;</span>RootLayerData,
+    endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RootLayerEndorsements&gt;,
+    reference_values: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>expected = get_root_layer_expected_values(now_utc_millis, endorsements, reference_values)<span class="question-mark">?</span>;
+    compare_root_layer_measurement_digets(values, <span class="kw-2">&amp;</span>expected)
 }
 
 <span class="doccomment">/// Verifies the measurement values of the kernel layer, which is common to both
