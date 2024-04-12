@@ -23,34 +23,52 @@ oak_functions_insecure_enclave_app:
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
-_wrap_kernel kernel_bin_prefix:
-    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_bin_prefix}}_bin cargo build --release
-    rust-objcopy --output-target=binary oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
-    rm -rf oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
-    mkdir -p oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
+# Builds a variant of the restricted kernel and creates a bzImage of it.
+# Then creates provenance subjects for it.
+restricted_kernel_bzimage_and_provenance_subjects kernel_bin_prefix:
+    env \
+        --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_bin_prefix}}_bin cargo build \
+        --release
+    mkdir \
+        --parents \
+        ./oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
+    rust-objcopy \
+        --output-target=binary \
+        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper \
+        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
+    just bzimage_provenance_subjects \
+        {{kernel_bin_prefix}} \
+        ./oak_restricted_kernel_wrapper/bin/{{kernel_bin_prefix}}/subjects \
+        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
+
+# Create provenance subjects for a kernel bzImage, by extracting the setup data
+# and image from it. Places them alongside the bzImage in the output directory.
+bzimage_provenance_subjects kernel_name output_dir_provenance_subjects bzimage_path:
+    rm --recursive --force {{output_dir_provenance_subjects}}
+    mkdir --parents {{output_dir_provenance_subjects}}
+    cargo run --package=oak_kernel_measurement -- \
+        --kernel={{bzimage_path}} \
+        --kernel-setup-data-output="{{output_dir_provenance_subjects}}/{{kernel_name}}_setup_data" \
+        --kernel-image-output="{{output_dir_provenance_subjects}}/{{kernel_name}}_image"
     cp \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin \
-        oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/bzimage
-    cargo run --package oak_kernel_measurement -- \
-        --kernel=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/bzimage \
-        --kernel-setup-data-output=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/kernel_setup_data \
-        --kernel-image-output=oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}/kernel_image
+        --preserve=timestamps \
+        {{bzimage_path}} \
+        {{output_dir_provenance_subjects}}/{{kernel_name}}_bzimage
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
-    just _wrap_kernel oak_restricted_kernel
+    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel
 
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
 oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
-    just _wrap_kernel oak_restricted_kernel_simple_io
+    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io
 
 oak_restricted_kernel_simple_io_init_rd_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel,initrd --bin=oak_restricted_kernel_simple_io_init_rd_bin
 
 oak_restricted_kernel_simple_io_init_rd_wrapper: oak_restricted_kernel_simple_io_init_rd_bin
-    just _wrap_kernel oak_restricted_kernel_simple_io_init_rd
-
+    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io_init_rd
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
@@ -60,6 +78,10 @@ stage1_cpio:
 
 oak_containers_kernel:
     env --chdir=oak_containers_kernel make
+    just bzimage_provenance_subjects \
+        oak_containers_kernel \
+        oak_containers_kernel/bin/subjects \
+        oak_containers_kernel/target/bzImage
 
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh

@@ -1,5 +1,4 @@
-# Uses the container-based SLSA3 generator to build the binary and its
-# provenance. Then uploads binary and provenance to Ent.
+# Container-based SLSA provenance generator that works with multiple provenance subjects.
 name: Build SLSA3 Provenance
 
 on:
