@@ -94,6 +94,31 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -116,6 +141,7 @@
 
 <span class="kw">use </span>std::path::PathBuf;
 
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>page::PageInfo;
@@ -136,8 +162,13 @@
     </span>stage0_rom: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
     <span class="attr">#[arg(long, help = <span class="string">"Whether the firwmare is shadowed to support legacy boot"</span>)]
     </span>legacy_boot: bool,
-    <span class="attr">#[arg(long, help = <span class="string">"The number of vCPUs available to the VM at boot"</span>, default_value_t = <span class="number">1</span>)]
-    </span>vcpu_count: usize,
+    <span class="attr">#[arg(long, help = <span class="string">"The number of vCPUs available to the VM at boot"</span>, default_values_t = [<span class="number">1</span>]</span>, value_delimiter = <span class="string">','</span>, num_args = <span class="number">1</span>..)]
+    vcpu_count: Vec&lt;usize&gt;,
+    <span class="attr">#[arg(
+        long,
+        help = <span class="string">"The dir to output the predicted attestation measurements as binary files to"
+    </span>)]
+    </span>attestation_measurements_output_dir: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 }
 
 <span class="kw">impl </span>Cli {
@@ -154,18 +185,18 @@
 
     <span class="kw">let </span>stage0 = load_stage0(cli.stage0_path())<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>page_info = PageInfo::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>base_page_info = PageInfo::new();
 
     <span class="comment">// Add the Stage 0 firmware ROM image.
-    </span>page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
+    </span>base_page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
     <span class="kw">if </span>cli.legacy_boot {
         <span class="comment">// Add the legacy boot shadow of the Stage 0 firmware ROM image.
-        </span>page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+        </span>base_page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
     }
 
     <span class="kw">for </span>snp_page <span class="kw">in </span>stage0.get_snp_pages() {
         <span class="kw">for </span>page_number <span class="kw">in </span><span class="number">0</span>..snp_page.page_count {
-            page_info.update_from_snp_page(
+            base_page_info.update_from_snp_page(
                 snp_page.page_type.clone(),
                 snp_page.start_address + (page_number <span class="kw">as </span>u64) * Size4KiB::SIZE,
             );
@@ -173,19 +204,38 @@
     }
 
     <span class="comment">// The boot vCPU has the default VMSA configured.
-    </span>page_info.update_from_vmsa(<span class="kw-2">&amp;</span>get_boot_vmsa(), VMSA_ADDRESS);
+    </span>base_page_info.update_from_vmsa(<span class="kw-2">&amp;</span>get_boot_vmsa(), VMSA_ADDRESS);
 
     <span class="comment">// Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset
     // block table in the firmware.
     </span><span class="kw">let </span>sev_es_reset_block = stage0.get_sev_es_reset_block();
     <span class="kw">let </span>ap_vmsa = get_ap_vmsa(<span class="kw-2">&amp;</span>sev_es_reset_block);
-    <span class="kw">for _ in </span><span class="number">1</span>..cli.vcpu_count {
-        page_info.update_from_vmsa(<span class="kw-2">&amp;</span>ap_vmsa, VMSA_ADDRESS);
+    <span class="comment">// Derive measurements for each vCPU counts specified.
+    </span><span class="kw">for </span>vcpu_count <span class="kw">in </span>cli.vcpu_count {
+        <span class="kw">let </span><span class="kw-2">mut </span>page_info = base_page_info.clone();
+        <span class="comment">// Iterate through all vCPUs up to the specified count.
+        </span><span class="kw">for _ in </span><span class="number">1</span>..vcpu_count {
+            page_info.update_from_vmsa(<span class="kw-2">&amp;</span>ap_vmsa, VMSA_ADDRESS);
+        }
+
+        <span class="macro">trace!</span>(<span class="string">"raw measurement for {} vCPU: {:?}"</span>, vcpu_count, page_info.digest_cur);
+
+        <span class="macro">println!</span>(
+            <span class="string">"Attestation Measurement {} vCPU: {}"</span>,
+            vcpu_count,
+            hex::encode(page_info.digest_cur)
+        );
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>path) = cli.attestation_measurements_output_dir.clone() {
+            path.push(<span class="macro">format!</span>(
+                <span class="string">"sha2_384_measurement_of_initial_memory_with_stage0_and_{:02}_vcpu"</span>,
+                vcpu_count
+            ));
+            std::fs::write(path, page_info.digest_cur)
+                .context(<span class="string">"couldn't write attestation measurement"</span>)<span class="question-mark">?</span>;
+        }
     }
 
-    <span class="macro">trace!</span>(<span class="string">"raw measurement: {:?}"</span>, page_info.digest_cur);
-
-    <span class="macro">println!</span>(<span class="string">"Attestation Measurement: {}"</span>, hex::encode(page_info.digest_cur));
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

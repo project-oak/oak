@@ -238,7 +238,7 @@
 ///
 /// See table 67 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes)]
+#[derive(Debug, AsBytes, Clone)]
 </span><span class="kw">pub struct </span>PageInfo {
     <span class="doccomment">/// The current measurement up to this point.
     </span><span class="kw">pub </span>digest_cur: [u8; <span class="number">48</span>],
@@ -373,7 +373,7 @@
 <span class="doccomment">/// Whether the page is part of an initial migration image (IMI).
 ///
 /// For now we assume we won't have any IMI pages.
-</span><span class="attr">#[derive(Debug, FromRepr, AsBytes)]
+</span><span class="attr">#[derive(Debug, FromRepr, AsBytes, Clone)]
 #[repr(u8)]
 </span><span class="kw">enum </span>ImiPage {
     <span class="doccomment">/// The page is not an IMI page.
