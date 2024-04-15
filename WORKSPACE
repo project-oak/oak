@@ -321,6 +321,7 @@ crates_repository(
     cargo_lockfile = "//:Cargo.bazel.lock",  # In Cargo-free mode this is used as output, not input.
     lockfile = "//:cargo-bazel-lock.json",  # Shares most contents with cargo_lockfile.
     packages = {
+        "acpi": crate.spec(version = "*"),
         "aes-gcm": crate.spec(
             default_features = False,
             features = [
@@ -329,10 +330,16 @@ crates_repository(
             ],
             version = "*",
         ),
+        "aml": crate.spec(version = "*"),
         "anyhow": crate.spec(
             default_features = False,
             version = "*",
         ),
+        "arrayvec": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
+        "assertables": crate.spec(version = "*"),
         "async-trait": crate.spec(
             default_features = False,
             version = "*",
@@ -344,6 +351,10 @@ crates_repository(
             version = "0.21",
         ),
         "bitflags": crate.spec(version = "*"),
+        "bitvec": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
         "bytes": crate.spec(version = "*"),
         "ciborium": crate.spec(
             default_features = False,
@@ -375,6 +386,15 @@ crates_repository(
             features = ["rdrand"],
             version = "*",
         ),
+        "goblin": crate.spec(
+            default_features = False,
+            features = [
+                "elf32",
+                "elf64",
+                "endian_fd",
+            ],
+            version = "*",
+        ),
         "hex": crate.spec(
             default_features = False,
             features = ["alloc"],
@@ -389,6 +409,13 @@ crates_repository(
             features = [
                 "alloc",
                 "x25519",
+            ],
+            version = "*",
+        ),
+        "libm": crate.spec(version = "*"),
+        "linked_list_allocator": crate.spec(
+            features = [
+                "alloc_ref",
             ],
             version = "*",
         ),
@@ -447,6 +474,7 @@ crates_repository(
             default_features = False,
             version = "0.9.6",
         ),
+        "self_cell": crate.spec(version = "*"),
         "serde": crate.spec(
             default_features = False,
             features = ["derive"],
@@ -477,12 +505,14 @@ crates_repository(
             ],
             version = "0.3.28",
         ),
+        "uart_16550": crate.spec(version = "*"),
+        "virtio-drivers": crate.spec(version = "*"),
         "x509-cert": crate.spec(
             default_features = False,
             features = ["pem"],
             version = "0.2.5",
         ),
-        "x86_64": crate.spec(version = "*"),
+        "x86_64": crate.spec(version = "0.14"),
         "zerocopy": crate.spec(
             default_features = False,
             features = ["derive"],
