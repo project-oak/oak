@@ -14,7 +14,7 @@ readonly IMAGE_BINARIES_DIRECTORY=./target/image_binaries
 mkdir --parent "$IMAGE_BINARIES_DIRECTORY"
 
 env \
-  --chdir=enclave_apps/key_xor_test_app \
+  --chdir=../enclave_apps/key_xor_test_app \
   cargo \
   build \
   --release
