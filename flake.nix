@@ -233,6 +233,13 @@
                 glibc.static
               ];
             };
+            systemImageProvenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+                bazelShell
+              ];
+              packages = [ ];
+            };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {
               inputsFrom = [
