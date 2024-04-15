@@ -27,6 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
+          - buildconfigs_full_provenance/stage0_bin.toml
           - buildconfigs_full_provenance/oak_containers_kernel.toml
           - buildconfigs_full_provenance/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.toml
 
