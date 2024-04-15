@@ -593,6 +593,30 @@
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
 <a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -660,6 +684,12 @@
     <span class="doccomment">/// Checks that header is valid.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="self">self</span>.header.validate()
+    }
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>GuestMessage {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
     }
 }
 
@@ -783,6 +813,12 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid message size"</span>);
         }
         <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>GuestMessageHeader {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
     }
 }
 
@@ -928,6 +964,12 @@
     }
 }
 
+<span class="kw">impl </span>Default <span class="kw">for </span>KeyRequest {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
+    }
+}
+
 <span class="kw">impl </span>Message <span class="kw">for </span>KeyRequest {
     <span class="kw">fn </span>get_message_type() -&gt; MessageType {
         MessageType::KeyRequest
@@ -1057,6 +1099,12 @@
     }
 }
 
+<span class="kw">impl </span>Default <span class="kw">for </span>AttestationRequest {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
+    }
+}
+
 <span class="kw">impl </span>Message <span class="kw">for </span>AttestationRequest {
     <span class="kw">fn </span>get_message_type() -&gt; MessageType {
         MessageType::ReportRequest
@@ -1160,8 +1208,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="doccomment">//! Test to check the getters and setters for the bit fields of the
-    //! `key_select` field in the `KeyRequest` struct.
+    <span class="comment">// Test to check the getters and setters for the bit fields of the
+    // `key_select` field in the `KeyRequest` struct.
 
     </span><span class="kw">use </span>strum::IntoEnumIterator;
 

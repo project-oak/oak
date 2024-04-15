@@ -205,8 +205,6 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -239,20 +237,18 @@
 
 <span class="kw">use </span>alloc::vec::Vec;
 
-<span class="kw">use </span>aes_gcm::{<span class="self">self</span>, AeadInPlace, KeyInit};
+<span class="kw">use </span>aes_gcm::{AeadInPlace, KeyInit};
 <span class="kw">use </span>ecdsa;
-<span class="kw">use </span>hkdf;
 <span class="kw">use </span>p256::ecdsa::signature::Signer;
-<span class="kw">use </span>pkcs8::{<span class="self">self</span>, DecodePrivateKey, EncodePrivateKey};
+<span class="kw">use </span>pkcs8::{DecodePrivateKey, EncodePrivateKey};
 <span class="kw">use </span>primeorder::{
-    <span class="self">self</span>,
     elliptic_curve::{
         ops::{Mul, MulByGenerator},
         sec1::{FromEncodedPoint, ToEncodedPoint},
     },
     Field, PrimeField,
 };
-<span class="kw">use </span>sha2::{<span class="self">self</span>, Digest};
+<span class="kw">use </span>sha2::Digest;
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 

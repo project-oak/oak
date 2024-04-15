@@ -522,6 +522,8 @@
 <a href="#520" id="520">520</a>
 <a href="#521" id="521">521</a>
 <a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -541,6 +543,8 @@
 </span><span class="doccomment">//! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 </span><span class="kw">extern crate </span>alloc;
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+</span><span class="kw">extern crate </span>std;
 
 <span class="kw">pub mod </span>api;
 <span class="attr">#[cfg(test)]

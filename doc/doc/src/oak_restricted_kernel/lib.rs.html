@@ -529,6 +529,9 @@
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
 <a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -560,7 +563,7 @@
 //!     crate.
 //!   * Call `start_kernel` from the entry point of the bootloader.
 
-</span><span class="attr">#![cfg_attr(not(test), no_std)]
+</span><span class="attr">#![no_std]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(array_chunks)]
@@ -593,10 +596,13 @@
 <span class="attr">#[cfg(feature = <span class="string">"virtio_console_channel"</span>)]
 </span><span class="kw">mod </span>virtio_console;
 
+<span class="attr">#[cfg(test)]
+</span><span class="kw">extern crate </span>std;
+
 <span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{marker::Sync, option::Option, panic::PanicInfo, pin::Pin, str::FromStr};
+<span class="kw">use </span>core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};

@@ -500,6 +500,9 @@
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
 <a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -524,6 +527,9 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
+<span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+</span><span class="kw">extern crate </span>std;
+
 <span class="kw">use </span>alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">use </span>std::time::Instant;
@@ -533,7 +539,7 @@
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
 <span class="kw">use </span>spinning_top::Spinlock;
-<span class="kw">use </span>wasmtime::{<span class="self">self</span>, Store};
+<span class="kw">use </span>wasmtime::Store;
 
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},

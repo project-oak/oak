@@ -449,10 +449,10 @@
 <span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
-    instructions::{hlt, interrupts::int3, segmentation::Segment},
+    instructions::{hlt, interrupts::int3},
     registers::segmentation::<span class="kw-2">*</span>,
     structures::{
-        gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
+        gdt::{Descriptor, GlobalDescriptorTable},
         idt::InterruptDescriptorTable,
         paging::{PageSize, Size1GiB},
     },

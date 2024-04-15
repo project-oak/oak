@@ -143,6 +143,9 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -159,11 +162,14 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
+</span><span class="attr">#![no_std]
 #![allow(rustdoc::private_intra_doc_links)]
 #![feature(array_chunks)]
 
-#[cfg(feature = <span class="string">"client"</span>)]
+#[cfg(feature = <span class="string">"std"</span>)]
+</span><span class="kw">extern crate </span>std;
+
+<span class="attr">#[cfg(feature = <span class="string">"client"</span>)]
 </span><span class="kw">pub mod </span>client;
 
 <span class="kw">pub mod </span>basic_framed;

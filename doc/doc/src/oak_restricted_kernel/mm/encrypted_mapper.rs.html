@@ -704,6 +704,7 @@
 <a href="#702" id="702">702</a>
 <a href="#703" id="703">703</a>
 <a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -832,6 +833,7 @@
 ///
 /// This is useful in situations where we do not expect any new allocations to
 /// take place.
+</span><span class="attr">#[allow(unused)]
 </span><span class="kw">struct </span>FailAllocator {}
 <span class="kw">unsafe impl</span>&lt;S: PageSize&gt; FrameAllocator&lt;S&gt; <span class="kw">for </span>FailAllocator {
     <span class="kw">fn </span>allocate_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PhysFrame&lt;S&gt;&gt; {

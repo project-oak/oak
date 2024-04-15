@@ -27,6 +27,8 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -43,10 +45,12 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![cfg_attr(not(test), no_std)]
+</span><span class="attr">#![no_std]
 #![feature(let_chains)]
 
 </span><span class="kw">extern crate </span>alloc;
+<span class="attr">#[cfg(test)]
+</span><span class="kw">extern crate </span>std;
 
 <span class="kw">pub mod </span>amd;
 <span class="kw">pub mod </span>claims;
