@@ -13,8 +13,11 @@ readonly IMAGE_BINARIES_DIRECTORY=./target/image_binaries
 
 mkdir --parent "$IMAGE_BINARIES_DIRECTORY"
 
-# build the orchestrator binary
-cargo build --package=oak_containers_orchestrator --profile=release-lto --target=x86_64-unknown-linux-musl -Z unstable-options --out-dir=./target
+env \
+  --chdir=enclave_apps/key_xor_test_app \
+  cargo \
+  build \
+  --release
 # cargo build --package=oak_containers_syslogd --release -Z unstable-options --out-dir=./target
 
 # # We need to patch the binary to set the interpreter to the correct location, but we can't do it in-place, as that would
