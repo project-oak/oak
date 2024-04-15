@@ -636,19 +636,13 @@ fn run_cargo_clean() -> Step {
 fn run_bazel_build() -> Step {
     Step::Single {
         name: "bazel build".to_string(),
-        command: Cmd::new(
-            "bazel",
-            ["build", "--build_tag_filters=-noci", "--", "//java/...:all", "//cc/...:all"],
-        ),
+        command: Cmd::new("bazel", ["build", "--build_tag_filters=-noci", "--", "//...:all"]),
     }
 }
 
 fn run_bazel_test() -> Step {
     Step::Single {
         name: "bazel test".to_string(),
-        command: Cmd::new(
-            "bazel",
-            ["build", "--build_tag_filters=-noci", "--", "//java/...:all", "//cc/...:all"],
-        ),
+        command: Cmd::new("bazel", ["build", "--build_tag_filters=-noci", "--", "//...:all"]),
     }
 }
