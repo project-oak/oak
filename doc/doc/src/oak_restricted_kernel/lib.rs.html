@@ -596,7 +596,7 @@
 <span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>core::{marker::Sync, option::Option, panic::PanicInfo, pin::Pin, str::FromStr};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
@@ -640,7 +640,7 @@
 <span class="doccomment">/// Level 4 page table that is free in application space, but has all entries
 /// for kernel space populated. It can be used to create free page tables for
 /// applications, that maintain correct mapping in kernel space.
-</span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;PageTable&gt; = OnceCell::new();
+</span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;Pin&lt;Box&lt;PageTable&gt;&gt;&gt; = OnceCell::new();
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
@@ -728,7 +728,7 @@
             <span class="string">"there should be no previous page table during initialization"
         </span>);
 
-        <span class="comment">// Safety: We just created a page table at this location.
+        <span class="comment">// Safety: We just created a page table at this location on the heap.
         </span><span class="kw">let </span>pml4: PageTable = <span class="kw">unsafe </span>{
             <span class="kw-2">*</span>Box::from_raw(
                 (PAGE_TABLES
@@ -745,7 +745,7 @@
                 </span>.as_mut_ptr(),
             )
         };
-        BASE_L4_PAGE_TABLE.set(pml4).expect(<span class="string">"base pml4 not unset"</span>);
+        BASE_L4_PAGE_TABLE.set(Box::pin(pml4)).expect(<span class="string">"base pml4 not unset"</span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.

@@ -243,7 +243,7 @@
 //
 
 </span><span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>core::arch::asm;
+<span class="kw">use </span>core::{arch::asm, pin::Pin};
 
 <span class="kw">use </span>anyhow::{anyhow, Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>goblin::{
@@ -388,7 +388,7 @@
 }
 
 <span class="kw">pub struct </span>Process {
-    pml4: x86_64::structures::paging::PageTable,
+    pml4: Pin&lt;Box&lt;x86_64::structures::paging::PageTable, alloc::alloc::Global&gt;&gt;,
     entry: VirtAddr,
 }
 

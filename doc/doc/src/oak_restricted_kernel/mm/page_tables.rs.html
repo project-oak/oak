@@ -326,6 +326,7 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -621,6 +622,7 @@
     /// Safety: The new page tables must keep the identity mapping at -2GB
     /// (kernel space) intact.
     </span><span class="kw">pub unsafe fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pml4_frame: PhysFrame) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
+        <span class="macro">log::debug!</span>(<span class="string">"Writing new frame to Cr3: {:?}"</span>, pml4_frame);
         <span class="comment">// This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
         </span><span class="kw">unsafe </span>{
