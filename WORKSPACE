@@ -337,6 +337,7 @@ crates_repository(
             default_features = False,
             version = "*",
         ),
+        "atomic_refcell": crate.spec(version = "*"),
         "base64": crate.spec(
             default_features = False,
             features = ["alloc"],

@@ -1,5 +1,5 @@
 {
-  "checksum": "77726cfbf575c3e909925f926eca3ade4e7a33c67fcf75bfd9474aacd91dec39",
+  "checksum": "db59e6a0aa94d517328e27e236fd81e7de8ab8b57b3b659618c648a6cfcced8e",
   "crates": {
     "aead 0.5.2": {
       "name": "aead",
@@ -386,6 +386,51 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "atomic_refcell 0.1.13": {
+      "name": "atomic_refcell",
+      "version": "0.1.13",
+      "package_url": "https://github.com/bholley/atomic_refcell",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/atomic_refcell/0.1.13/download",
+          "sha256": "41e67cd8309bbd06cd603a9e693a784ac2e5d1e955f11286e355089fcab3047c"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "atomic_refcell",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "atomic_refcell",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.1.13"
+      },
+      "license": "Apache-2.0/MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE.APACHE"
     },
     "autocfg 1.2.0": {
       "name": "autocfg",
@@ -2039,6 +2084,10 @@
             {
               "id": "anyhow 1.0.81",
               "target": "anyhow"
+            },
+            {
+              "id": "atomic_refcell 0.1.13",
+              "target": "atomic_refcell"
             },
             {
               "id": "base64 0.21.7",
@@ -9200,6 +9249,7 @@
     "aes-gcm 0.10.3",
     "anyhow 1.0.81",
     "async-trait 0.1.79",
+    "atomic_refcell 0.1.13",
     "base64 0.21.7",
     "bitflags 2.5.0",
     "bytes 1.6.0",
