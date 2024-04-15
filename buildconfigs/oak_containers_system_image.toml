@@ -10,6 +10,7 @@ command = [
   "--chdir=oak_containers_system_image",
   "cargo",
   "build",
+  "--package=oak_containers_orchestrator",
   "--release",
 ]
 artifact_path = "./oak_containers_system_image/target/image.tar.xz"
