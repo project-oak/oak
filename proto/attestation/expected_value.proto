@@ -99,6 +99,23 @@ message KernelExpectedValues {
   ExpectedDigests setup_data = 2;
 }
 
+// Reference values of the kernel layer, as measured by stage0.
+message KernelLayerExpectedValues {
+  // Verifies the kernel based on endorsement.
+  KernelExpectedValues kernel = 1;
+
+  // Verifies the kernel command line, i.e. the parameters passed to the
+  // kernel on boot.
+  TextExpectedValue kernel_cmd_line_text = 2;
+
+  // Verifies the stage1 binary if running as Oak Containers.
+  ExpectedDigests init_ram_fs = 3;
+
+  ExpectedDigests memory_map = 4;
+
+  ExpectedDigests acpi = 5;
+}
+
 // The expected binary digests for a system layer image.
 message SystemLayerExpectedValues {
   // The allowable digest values for a system layer image.

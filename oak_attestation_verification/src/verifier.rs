@@ -42,13 +42,14 @@ use oak_proto_rust::oak::{
         ExpectedStringLiterals, ExtractedEvidence, FakeAttestationReport, InsecureExpectedValues,
         IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
         KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
-        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
-        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
-        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersData,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
+        VerificationSkipped,
     },
     HexDigest, RawDigest,
 };
@@ -256,13 +257,17 @@ fn verify_oak_restricted_kernel(
     )
     .context("root layer verification failed")?;
 
-    verify_kernel_layer(
+    let kernel_layer_expected_values = get_kernel_layer_expected_values(
         now_utc_millis,
-        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         endorsements.kernel_layer.as_ref(),
         reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
     )
-    .context("kernel layer verification failed")?;
+    .context("failed to get kernel layer expected values")?;
+
+    compare_kernel_layer_measurement_digests(
+        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
+        &kernel_layer_expected_values,
+    )?;
 
     let expected = get_application_layer_expected_values(
         now_utc_millis,
@@ -295,13 +300,17 @@ fn verify_oak_containers(
     )
     .context("root layer verification failed")?;
 
-    verify_kernel_layer(
+    let kernel_layer_expected_values = get_kernel_layer_expected_values(
         now_utc_millis,
-        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         endorsements.kernel_layer.as_ref(),
         reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
     )
-    .context("kernel layer verification failed")?;
+    .context("failed to get kernel layer expected values")?;
+
+    compare_kernel_layer_measurement_digests(
+        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
+        &kernel_layer_expected_values,
+    )?;
 
     let expected = get_system_layer_expected_values(
         now_utc_millis,
@@ -547,90 +556,119 @@ fn verify_root_layer(
     compare_root_layer_measurement_digets(values, &expected)
 }
 
-/// Verifies the measurement values of the kernel layer, which is common to both
-/// the Oak Restricted Kernel and Oak Containers setups.
-fn verify_kernel_layer(
+fn get_kernel_layer_expected_values(
     now_utc_millis: i64,
-    values: &KernelLayerData,
     endorsements: Option<&KernelLayerEndorsements>,
     reference_values: &KernelLayerReferenceValues,
+) -> anyhow::Result<KernelLayerExpectedValues> {
+    Ok(KernelLayerExpectedValues {
+        kernel: Some(
+            get_kernel_expected_values(
+                now_utc_millis,
+                endorsements.and_then(|value| value.kernel.as_ref()),
+                reference_values.kernel.as_ref().context("no kernel reference value")?,
+            )
+            .context("failed to get kernel expected values")?,
+        ),
+
+        // TODO: b/331252282 - Remove temporary workaround for cmd line.
+        kernel_cmd_line_text: Some(
+            get_text_expected_values(
+                now_utc_millis,
+                reference_values
+                    .kernel_cmd_line_text
+                    .as_ref()
+                    .context("no kernel command line text reference values")?,
+                endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
+            )
+            .context("failed to get kernel cmd line expected value")?,
+        ),
+
+        init_ram_fs: Some(
+            get_expected_measurement_digest(
+                now_utc_millis,
+                endorsements.and_then(|value| value.init_ram_fs.as_ref()),
+                reference_values
+                    .init_ram_fs
+                    .as_ref()
+                    .context("no initial RAM disk reference value")?,
+            )
+            .context("failed to get initramfs expected value")?,
+        ),
+
+        memory_map: Some(
+            get_expected_measurement_digest(
+                now_utc_millis,
+                endorsements.and_then(|value| value.memory_map.as_ref()),
+                reference_values.memory_map.as_ref().context("no memory map reference value")?,
+            )
+            .context("failed to get memory map expected value")?,
+        ),
+
+        acpi: Some(
+            get_expected_measurement_digest(
+                now_utc_millis,
+                endorsements.and_then(|value| value.acpi.as_ref()),
+                reference_values.acpi.as_ref().context("no ACPI reference value")?,
+            )
+            .context("failed to get ACPI table expected value")?,
+        ),
+    })
+}
+
+/// Verifies the measurement values of the kernel layer, which is common to both
+/// the Oak Restricted Kernel and Oak Containers setups.
+fn compare_kernel_layer_measurement_digests(
+    values: &KernelLayerData,
+    expected: &KernelLayerExpectedValues,
 ) -> anyhow::Result<()> {
-    let expected = get_kernel_expected_values(
-        now_utc_millis,
-        endorsements.and_then(|value| value.kernel.as_ref()),
-        reference_values.kernel.as_ref().context("no kernel reference value")?,
-    )?;
+    let expected_kernel_values = expected.kernel.as_ref().context("no kernel expected values")?;
+
     compare_measurement_digest(
         values.kernel_image.as_ref().context("no kernel evidence value")?,
-        &expected
+        expected_kernel_values
             .image
-            .ok_or_else(|| anyhow::anyhow!("expected values contained no image digests"))?,
+            .as_ref()
+            .context("expected values contained no image digests")?,
     )
     .context("kernel image failed verification")?;
+
     compare_measurement_digest(
         values.kernel_setup_data.as_ref().context("no kernel setup data evidence value")?,
-        &expected
+        expected_kernel_values
             .setup_data
-            .ok_or_else(|| anyhow::anyhow!("expected values contained no setup_data digests"))?,
+            .as_ref()
+            .context("expected values contained no setup_data digests")?,
     )
     .context("kernel setup data failed verification")?;
 
     // TODO: b/331252282 - Remove temporary workaround for cmd line.
-    if let Some(kernel_raw_cmd_line) = values.kernel_raw_cmd_line.as_ref()
-        && kernel_raw_cmd_line.len() < 256
-    {
-        let expected = get_text_expected_values(
-            now_utc_millis,
-            reference_values
-                .kernel_cmd_line_text
-                .as_ref()
-                .context("no kernel command line text reference values")?,
-            endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
-        )
-        .context("failed to get expected kernel cmd line value")?;
+    match (&values.kernel_raw_cmd_line, &expected.kernel_cmd_line_text) {
+        // We support the skipped value, whether the kernel cmd line text is valid or not.
+        // Skipping is a way to work around the cmd line length limit.
+        (_, Some(TextExpectedValue { r#type: Some(text_expected_value::Type::Skipped(_)) })) => {
+            Ok(())
+        }
 
-        compare_text_value(kernel_raw_cmd_line.as_str(), &expected)?;
-    } else {
-        // Support invalid kernel_raw_cmd_line but only if the corresponding reference
-        // value is set to skip. This is a temporary workaround until all clients are
-        // migrated.
-        anyhow::ensure!(
-            matches!(
-                reference_values
-                    .kernel_cmd_line_text
-                    .as_ref()
-                    .expect("no kernel command line text reference values")
-                    .r#type
-                    .as_ref(),
-                Some(text_reference_value::Type::Skip(_))
-            ),
-            "No valid kernel_raw_cmd_line provided"
-        )
-    }
+        // If a kernel cmd line is provided, it must be shorter than 256 bytes.
+        (Some(kernel_raw_cmd_line), Some(expected)) if kernel_raw_cmd_line.len() < 256 => {
+            compare_text_value(kernel_raw_cmd_line.as_str(), expected)
+        }
+        _ => Err(anyhow::anyhow!("No valid kernel_raw_cmd_line provided")),
+    }?;
 
-    verify_measurement_digest(
-        values.init_ram_fs.as_ref().context("no initial RAM disk evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.init_ram_fs.as_ref()),
-        reference_values.init_ram_fs.as_ref().context("no initial RAM disk reference value")?,
+    compare_measurement_digest(
+        values.init_ram_fs.as_ref().context("no initramfs value provided")?,
+        expected.init_ram_fs.as_ref().context("no initramfs expected value provided")?,
+    )?;
+    compare_measurement_digest(
+        values.memory_map.as_ref().context("no memory_map value provided")?,
+        expected.memory_map.as_ref().context("no memory_map expected value provided")?,
+    )?;
+    compare_measurement_digest(
+        values.acpi.as_ref().context("no ACPI table value provided")?,
+        expected.acpi.as_ref().context("no ACPI table expected value provided")?,
     )
-    .context("initial RAM disk failed verification")?;
-
-    verify_measurement_digest(
-        values.memory_map.as_ref().context("no memory map evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.memory_map.as_ref()),
-        reference_values.memory_map.as_ref().context("no memory map reference value")?,
-    )
-    .context("memory map failed verification")?;
-
-    verify_measurement_digest(
-        values.acpi.as_ref().context("no ACPI evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.acpi.as_ref()),
-        reference_values.acpi.as_ref().context("no ACPI reference value")?,
-    )
-    .context("ACPI table building commands failed verification")
 }
 
 fn get_system_layer_expected_values(
@@ -723,18 +761,6 @@ fn compare_container_layer_measurement_digests(
         expected.config.as_ref().context("no expected config value")?,
     )
     .context("container config failed verification")
-}
-
-/// Verifies the measurement digest value against a reference value and an
-/// optional transparent release endorsement.
-fn verify_measurement_digest(
-    measurement: &RawDigest,
-    now_utc_millis: i64,
-    endorsement: Option<&TransparentReleaseEndorsement>,
-    reference_value: &BinaryReferenceValue,
-) -> anyhow::Result<()> {
-    let expected = get_expected_measurement_digest(now_utc_millis, endorsement, reference_value)?;
-    compare_measurement_digest(measurement, &expected)
 }
 
 // Generate the expected measurement digest values for the provided endorsement
