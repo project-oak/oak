@@ -236,6 +236,7 @@
             systemImageProvenance = with pkgs; mkShell {
               inputsFrom = [
                 rust
+                bazelShell
               ];
               packages = [ ];
             };
