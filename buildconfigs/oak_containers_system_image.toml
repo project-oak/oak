@@ -4,10 +4,8 @@
 command = [
   "nix",
   "develop",
-  ".#systemImageProvenance",
+  ".#stage1Provenance",
   "--command",
-  "env",
-  "--chdir=oak_containers_system_image",
   "cargo",
   "build",
   "--package=oak_containers_orchestrator",
