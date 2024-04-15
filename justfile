@@ -93,7 +93,7 @@ oak_containers_kernel:
         oak_containers_kernel/target/bzImage
 
 oak_containers_system_image:
-    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
+    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 make
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
