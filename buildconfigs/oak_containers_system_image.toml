@@ -4,7 +4,7 @@
 command = [
   "nix",
   "develop",
-  ".#stage1Provenance",
+  ".#systemImageProvenance",
   "--command",
   "cargo",
   "build",
