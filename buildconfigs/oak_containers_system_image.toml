@@ -4,11 +4,9 @@
 command = [
   "nix",
   "develop",
-  ".#containers",
+  ".#systemImageProvenance",
   "--command",
-  "cargo",
-  "build",
-  "--package=oak_containers_orchestrator",
-  "--release",
+  "just",
+  "oak_containers_system_image",
 ]
 artifact_path = "./oak_containers_system_image/target/image.tar.xz"
