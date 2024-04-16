@@ -226,6 +226,7 @@
             stage1Provenance = with pkgs; mkShell {
               inputsFrom = [
                 rust
+                bazelShell
               ];
               packages = [
                 cpio
