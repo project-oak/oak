@@ -226,7 +226,6 @@
             stage1Provenance = with pkgs; mkShell {
               inputsFrom = [
                 rust
-                bazelShell
               ];
               packages = [
                 cpio
@@ -237,10 +236,7 @@
             systemImageProvenance = with pkgs; mkShell {
               inputsFrom = [
                 rust
-              ];
-              packages = [
-                bazel
-                bazel-buildtools
+                bazelShell
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
