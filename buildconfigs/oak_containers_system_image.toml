@@ -4,7 +4,7 @@
 command = [
   "nix",
   "develop",
-  ".#systemImageProvenance",
+  ".#containers",
   "--command",
   "just",
   "oak_containers_system_image",
