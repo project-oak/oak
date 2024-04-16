@@ -75,7 +75,7 @@ jobs:
       actions: read
       id-token: write
       contents: write # For uploading provenances.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v1.10.0
+    uses: jul-sh/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@unpatched
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development'
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
