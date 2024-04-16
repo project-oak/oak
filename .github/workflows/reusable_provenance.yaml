@@ -81,7 +81,7 @@ jobs:
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
       config-path: ${{ inputs.build-config-path }}
       provenance-name: attestation.intoto
-      compile-builder: false
+      compile-builder: true
 
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment for each binary on the PR.
