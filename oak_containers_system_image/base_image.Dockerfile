@@ -36,7 +36,7 @@ RUN (LAST_DAY="$(awk -F: '$1=="root"{print $3}' /etc/shadow)"; \
     && rm -rf /usr/share/{doc,info,man} /var/cache/ldconfig/aux-cache
 
 # Copy config files
-COPY files /
+COPY --chmod=0755 files /
 
 # Prepare network
 RUN systemctl enable systemd-networkd

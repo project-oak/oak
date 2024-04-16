@@ -194,6 +194,7 @@
                 curl
                 docker
                 elfutils
+                fakeroot
                 flex
                 jq
                 libelf

@@ -15,11 +15,7 @@ cd "$SCRIPTS_DIR"
 
 mkdir --parent target
 
-# Fix the file permissions that will be loaded into the system image, as Git doesn't track them.
-# Unfortunately we can't do it in Dockerfile (with `COPY --chown`), as that requires BuildKit.
-chmod --recursive a+rX files
-
-docker build . --tag=oak-containers-sysimage-base:latest --file base_image.Dockerfile
+docker buildx build . --tag=oak-containers-sysimage-base:latest --file base_image.Dockerfile
 
 # We need to actually create a container, otherwise we won't be able to use
 # `docker export` that gives us a filesystem image.
@@ -35,8 +31,21 @@ docker export "$NEW_DOCKER_CONTAINER_ID" > target/base-image.tar
 
 docker rm "$NEW_DOCKER_CONTAINER_ID"
 
-# Hack, as Docker doesn't give us a `/etc/hosts` which means `localhost` won't resolve.
-tar --append --file=target/base-image.tar --directory=files etc/hosts
+# Repackage base-image.tar so that entries are in a consistent order and have a
+# consistent mtime. fakeroot ensures that file permissions are maintained, even
+# when not building as root.
+#
+# Note that it's necessary to overwrite `/etc/hosts` because Docker always
+# produces an empty file, which means `localhost` won't resolve. Performing the
+# copy in this step (vs appending to the tar) ensures that the file permissions
+# don't change -- regardless of the permissions of `files/etc/hosts`.
+sandbox="$(mktemp -d)"
+fakeroot -- sh -c "\
+  tar --extract --file target/base-image.tar --directory \"${sandbox}\" \
+  && cp files/etc/hosts \"${sandbox}/etc/hosts\" \
+  && tar --create --sort=name --file target/base-image.tar --mtime='2000-01-01Z' \
+     --numeric-owner --directory \"${sandbox}\" ."
+rm -rf -- "$sandbox"
 
 set +o xtrace
 printf "\n\nIf you want to push this newly created base, run:\n"
