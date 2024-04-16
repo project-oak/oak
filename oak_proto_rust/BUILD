@@ -40,7 +40,6 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
-    crate_features = ["bazel"],
     data = [
         "//oak_containers/proto:interfaces_proto",
         "//proto:digest_proto",

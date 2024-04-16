@@ -44,11 +44,7 @@ pub mod oak {
     pub mod crypto {
         pub mod v1 {
             #![allow(dead_code)]
-            #[cfg(not(feature = "bazel"))]
             include_proto!("oak.crypto.v1");
-
-            #[cfg(feature = "bazel")]
-            pub use ::crypto_proto::crypto::v1::*;
         }
     }
 
