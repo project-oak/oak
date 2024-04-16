@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     generate_grpc_code(
-        &["../oak_containers/proto/interfaces.proto", "../proto/session/messages.proto"],
+        &["../proto/session/messages.proto"],
         &[".."],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;

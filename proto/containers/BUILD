@@ -16,6 +16,7 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -49,6 +50,27 @@ proto_library(
         "//proto/key_provisioning:key_provisioning_proto",
         "@com_google_protobuf//:empty_proto",
     ],
+)
+
+proto_library(
+    name = "interfaces_proto",
+    srcs = ["interfaces.proto"],
+    deps = [
+        "//proto/attestation:evidence_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "interfaces_cc_proto",
+    deps = [":interfaces_proto"],
+)
+
+cc_grpc_library(
+    name = "interfaces_cc_grpc",
+    srcs = [":interfaces_proto"],
+    grpc_only = True,
+    deps = [":interfaces_cc_proto"],
 )
 
 build_test(

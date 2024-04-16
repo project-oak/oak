@@ -26,8 +26,8 @@
 #include "cc/containers/sdk/common.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "oak_containers/proto/interfaces.grpc.pb.h"
-#include "oak_containers/proto/interfaces.pb.h"
+#include "proto/containers/interfaces.grpc.pb.h"
+#include "proto/containers/interfaces.pb.h"
 
 namespace oak::containers::sdk {
 

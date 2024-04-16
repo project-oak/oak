@@ -41,7 +41,6 @@ cargo_build_script(
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
     data = [
-        "//oak_containers/proto:interfaces_proto",
         "//proto:digest_proto",
         "//proto/attestation:attachment_proto",
         "//proto/attestation:dice_proto",
@@ -51,6 +50,7 @@ cargo_build_script(
         "//proto/attestation:reference_value_proto",
         "//proto/attestation:tcb_version_proto",
         "//proto/attestation:verification_proto",
+        "//proto/containers:interfaces_proto",
         "//proto/crypto:crypto_proto",
         "//proto/crypto:crypto_rust_prost",
         "//proto/oak_functions:abi_proto",

@@ -16,7 +16,6 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
-        "../oak_containers/proto/interfaces.proto",
         "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
@@ -24,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/attestation/evidence.proto",
         "../proto/attestation/reference_value.proto",
         "../proto/attestation/verification.proto",
+        "../proto/containers/interfaces.proto",
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/lookup_data.proto",
