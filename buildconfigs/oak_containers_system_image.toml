@@ -1,0 +1,12 @@
+# This is the static build configuration that we use with the docker-based SLSA3 generator for
+# building the `stage1` binary, and its provenance.
+# See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
+command = [
+  "nix",
+  "develop",
+  ".#systemImageProvenance",
+  "--command",
+  "just",
+  "oak_containers_system_image",
+]
+artifact_path = "./oak_containers_system_image/target/image.tar.xz"
