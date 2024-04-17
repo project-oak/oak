@@ -53,7 +53,7 @@ use oak_proto_rust::oak::{
         TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
         VerificationSkipped,
     },
-    HexDigest, RawDigest,
+    RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
@@ -71,7 +71,7 @@ use crate::{
     endorsement::verify_binary_endorsement,
     util::{
         hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
-        raw_digest_from_contents, raw_to_hex_digest, MatchResult,
+        raw_digest_from_contents, raw_to_hex_digest,
     },
 };
 
@@ -310,7 +310,7 @@ fn compare_oak_restricted_kernel_measurement_digests(
     values: &OakRestrictedKernelData,
     expected: &OakRestrictedKernelExpectedValues,
 ) -> anyhow::Result<()> {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
         expected.root_layer.as_ref().context("no root layer expected values")?,
     )?;
@@ -368,7 +368,7 @@ fn compare_oak_containers_measurement_digests(
     values: &OakContainersData,
     expected: &OakContainersExpectedValues,
 ) -> anyhow::Result<()> {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
         expected.root_layer.as_ref().context("no root layer expected avlues")?,
     )?;
@@ -411,7 +411,7 @@ fn compare_cb_measurement_digests(
     values: &CbData,
     expected: &CbExpectedValues,
 ) -> anyhow::Result<()> {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
         expected.root_layer.as_ref().context("no root layer expected avlues")?,
     )
@@ -567,7 +567,7 @@ fn get_root_layer_expected_values(
     Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
 }
 
-fn compare_root_layer_measurement_digets(
+fn compare_root_layer_measurement_digests(
     values: &RootLayerData,
     expected_values: &RootLayerExpectedValues,
 ) -> anyhow::Result<()> {
@@ -867,7 +867,7 @@ fn compare_measurement_digest(
         Some(expected_digests::Type::Digests(digests)) => digests
             .digests
             .iter()
-            .find(|expected| verify_raw_digests(measurement, expected).is_ok())
+            .find(|expected| is_raw_digest_match(measurement, expected).is_ok())
             .map(|_| ())
             .ok_or(anyhow::anyhow!("measurement digest does not match any reference values")),
         None => Err(anyhow::anyhow!("empty expected value")),
@@ -897,7 +897,7 @@ fn get_verified_kernel_attachment(
     }
     let expected_digest = get_digest(&parsed_statement)?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    verify_hex_digests(&actual_digest, &expected_digest)?;
+    is_hex_digest_match(&actual_digest, &expected_digest)?;
     KernelAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))
 }
@@ -958,26 +958,6 @@ fn get_kernel_expected_values(
             })
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
-    }
-}
-
-fn verify_hex_digests(actual: &HexDigest, expected: &HexDigest) -> anyhow::Result<()> {
-    match is_hex_digest_match(actual, expected) {
-        MatchResult::SAME => Ok(()),
-        MatchResult::DIFFERENT => {
-            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
-        }
-        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
-    }
-}
-
-fn verify_raw_digests(actual: &RawDigest, expected: &RawDigest) -> anyhow::Result<()> {
-    match is_raw_digest_match(actual, expected) {
-        MatchResult::SAME => Ok(()),
-        MatchResult::DIFFERENT => {
-            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
-        }
-        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
     }
 }
 

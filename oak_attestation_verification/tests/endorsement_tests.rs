@@ -19,16 +19,13 @@ use std::fs;
 use oak_attestation_verification::{
     claims::parse_endorsement_statement,
     endorsement::{
-        verify_binary_digest, verify_binary_endorsement, verify_endorsement_statement,
-        verify_endorser_public_key,
+        verify_binary_endorsement, verify_endorsement_statement, verify_endorser_public_key,
     },
     rekor::{verify_rekor_log_entry, verify_rekor_signature},
-    util::{convert_pem_to_raw, MatchResult},
+    util::convert_pem_to_raw,
 };
-use oak_proto_rust::oak::HexDigest;
 
 // The digest of the endorsement under ENDORSEMENT_PATH.
-const BINARY_DIGEST: &str = "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc";
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
@@ -50,10 +47,6 @@ struct TestData {
     rekor_public_key: Vec<u8>,
 }
 
-fn create_hex_digest() -> HexDigest {
-    HexDigest { sha2_256: BINARY_DIGEST.to_owned(), ..Default::default() }
-}
-
 fn load_testdata() -> TestData {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
     let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
@@ -69,40 +62,6 @@ fn load_testdata() -> TestData {
         convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
 
     TestData { endorsement, signature, log_entry, endorser_public_key, rekor_public_key }
-}
-
-#[test]
-fn test_verify_binary_digest_same() {
-    let testdata = load_testdata();
-    let expected = create_hex_digest();
-    let result = verify_binary_digest(&testdata.endorsement, &expected);
-    assert!(result.is_ok_and(|m| m == MatchResult::SAME));
-}
-
-#[test]
-fn test_verify_binary_digest_different() {
-    let testdata = load_testdata();
-    let expected = HexDigest {
-        psha2: BINARY_DIGEST.to_owned(),
-        sha1: BINARY_DIGEST.to_owned(),
-        sha2_256: "00000bad000digestb91bd22ee4c976420f8f0c6a895fd083dcb0d0000000000".to_owned(),
-        sha2_512: BINARY_DIGEST.to_owned(),
-        sha3_512: BINARY_DIGEST.to_owned(),
-        sha3_384: BINARY_DIGEST.to_owned(),
-        sha3_256: BINARY_DIGEST.to_owned(),
-        sha3_224: BINARY_DIGEST.to_owned(),
-        sha2_384: BINARY_DIGEST.to_owned(),
-    };
-    let result = verify_binary_digest(&testdata.endorsement, &expected);
-    assert!(result.is_ok_and(|m| m == MatchResult::DIFFERENT));
-}
-
-#[test]
-fn test_verify_binary_digest_undecidable() {
-    let testdata = load_testdata();
-    let empty = HexDigest { ..Default::default() };
-    let result = verify_binary_digest(&testdata.endorsement, &empty);
-    assert!(result.is_ok_and(|m| m == MatchResult::UNDECIDABLE));
 }
 
 #[test]

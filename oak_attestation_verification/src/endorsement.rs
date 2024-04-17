@@ -17,28 +17,15 @@
 //! Verifies binary endorsements as coming from Transparent Release.
 
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_proto_rust::oak::HexDigest;
 
 use crate::{
     claims::{
-        get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+        parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
     },
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
-    util::{
-        convert_pem_to_raw, equal_keys, is_hex_digest_match, verify_signature_raw, MatchResult,
-    },
+    util::{convert_pem_to_raw, equal_keys, verify_signature_raw},
 };
-
-/// Compares the digest contained in the endorsement against the given one.
-pub fn verify_binary_digest(
-    endorsement: &[u8],
-    expected: &HexDigest,
-) -> anyhow::Result<MatchResult> {
-    let statement = parse_endorsement_statement(endorsement)?;
-    let actual = get_digest(&statement)?;
-    Ok(is_hex_digest_match(&actual, expected))
-}
 
 /// Verifies the binary endorsement against log entry and public keys.
 pub fn verify_binary_endorsement(
