@@ -75,7 +75,12 @@ jobs:
       actions: read
       id-token: write
       contents: write # For uploading provenances.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v1.10.0
+    # We are using a patched version that emits stdout and stderr as the build progresses, rather than waiting until the very end to
+    # read everything in. This works around some issues we encountered when the
+    # output is very large. If our patch is eventually accepted upstream (or any other fix), we can switch back to using the main
+    # repository.
+    # See: https://github.com/slsa-framework/slsa-github-generator/issues/3571
+    uses: jul-sh/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@oak
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development'
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
