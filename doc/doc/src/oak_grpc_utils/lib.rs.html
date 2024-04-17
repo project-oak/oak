@@ -132,7 +132,7 @@
 /// imported paths in `.proto` files must be specified relative to this path.
 </span><span class="kw">pub fn </span>generate_grpc_code(
     protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
-    include: <span class="kw">impl </span>AsRef&lt;Path&gt;,
+    include: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
     options: CodegenOptions,
 ) -&gt; std::io::Result&lt;()&gt; {
     set_protoc_env_if_unset();
@@ -158,7 +158,7 @@
     <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(protos, <span class="kw-2">&amp;</span>[include])
+    config.compile(protos, include)
 }
 
 <span class="kw">fn </span>set_protoc_env_if_unset() {
