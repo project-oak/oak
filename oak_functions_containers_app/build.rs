@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/attestation/evidence.proto",
             "../proto/oak_functions/service/oak_functions.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions {
             build_server: true,
             // The client is only used in the integration test.
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     generate_grpc_code(
         &["../oak_containers/proto/interfaces.proto", "../proto/session/messages.proto"],
-        "..",
+        &[".."],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;
 

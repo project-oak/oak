@@ -46,7 +46,7 @@ impl ExternPath {
 /// imported paths in `.proto` files must be specified relative to this path.
 pub fn generate_grpc_code(
     protos: &[impl AsRef<Path>],
-    include: impl AsRef<Path>,
+    include: &[impl AsRef<Path>],
     options: CodegenOptions,
 ) -> std::io::Result<()> {
     set_protoc_env_if_unset();
@@ -72,7 +72,7 @@ pub fn generate_grpc_code(
     for extern_path in options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(protos, &[include])
+    config.compile(protos, include)
 }
 
 fn set_protoc_env_if_unset() {

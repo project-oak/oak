@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/oak_functions/application_config.proto",
             "../proto/oak_functions/service/oak_functions.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;
 

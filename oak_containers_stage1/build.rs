@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/crypto/crypto.proto",
             "../proto/session/messages.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;
     Ok(())

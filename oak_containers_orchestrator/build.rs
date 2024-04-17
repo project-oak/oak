@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/containers/hostlib_key_provisioning.proto",
             "../proto/session/messages.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions { build_server: true, build_client: true, ..Default::default() },
     )?;
 

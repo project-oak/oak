@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../oak_containers_hello_world_trusted_app/proto/interface.proto",
             "../proto/crypto/crypto.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions { build_server: true, ..Default::default() },
     )?;
 
