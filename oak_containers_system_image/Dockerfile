@@ -3,6 +3,16 @@ FROM debian@${debian_snapshot}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Install debian packages, pinning to the same snapshot as the base image.
+# This takes advantage of the fact that the base image contains the snapshot
+# URL as a comment in /etc/apt/sources.list.d/debian.sources, with a switch
+# to snapshot-cloudflare in case it has higher availability.
+# NOTE: using a debian snapshot is disabled here due to potential flakiness;
+# it should be re-enabled for comparison with base_image.Dockerfile.
+# RUN sed -i -e '/^URIs/d' \
+#     -e '/^# http:\/\/snapshot/{s/#/URIs:/;s/snapshot/snapshot-cloudflare/}' \
+#     -e '/^Signed-By/a\Check-Valid-Until: no' \
+#     /etc/apt/sources.list.d/debian.sources
 RUN apt-get --yes update \
   && apt-get install --yes --no-install-recommends \
   systemd systemd-sysv dbus udev runc \
