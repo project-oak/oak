@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
@@ -69,9 +70,27 @@ filegroup(
     tags = ["noci"],
 )
 
+# Defines labels added to :oak_containers_sysimage_base. When built with
+# `--stamp`, overrides in `stamp_substitutions` override those in
+# `substitutions`; `stamp_substitutions` can access workspace status values
+# (https://bazel.build/docs/user-manual#workspace-status) populated by bazel or
+# //bazel:workspace_status_command.sh. Labels must conform to
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md.
+expand_template(
+    name = "oak_containers_sysimage_base_labels",
+    out = "oak_containers_sysimage_base_labels.txt",
+    stamp_substitutions = {"{revision}": "{{STABLE_GIT_COMMIT}}"},
+    substitutions = {"{revision}": "unknown"},
+    template = [
+        "org.opencontainers.image.source=https://github.com/project-oak/oak",
+        "org.opencontainers.image.revision={revision}",
+    ],
+)
+
 oci_image(
     name = "oak_containers_sysimage_base",
     architecture = "amd64",
+    labels = ":oak_containers_sysimage_base_labels",
     os = "linux",
     # This rule will fail until build-base.sh has been run
     tags = ["noci"],

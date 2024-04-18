@@ -32,7 +32,7 @@ avoiding the need for Docker when rebuilding a system image container.
 To update the base image and push it:
 
 1. ./oak_containers_system_image/build-base.sh
-2. bazel run oak_containers_system_image:push_base
+2. bazel run --stamp oak_containers_system_image:push_base
 
 ## Bazel-Based System Image Tools
 

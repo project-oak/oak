@@ -263,6 +263,10 @@ oci_pull(
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
 )
 
+load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
+
+register_expand_template_toolchains()
+
 load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()
