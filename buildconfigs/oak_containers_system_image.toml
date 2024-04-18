@@ -2,11 +2,12 @@
 # building the `stage1` binary, and its provenance.
 # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
 command = [
+  "--volume=/var/run/docker.sock:/var/run/docker.sock",
   "nix",
   "develop",
   ".#systemImageProvenance",
   "--command",
   "just",
-  "oak_containers_system_image",
+  "oak_containers_system_base_image",
 ]
 artifact_path = "./oak_containers_system_image/target/image.tar.xz"

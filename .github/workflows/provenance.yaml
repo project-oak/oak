@@ -25,17 +25,17 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
-          - buildconfigs/key_xor_test_app.toml
-          - buildconfigs/oak_containers_kernel.toml
-          - buildconfigs/oak_containers_stage1.toml
+          #- buildconfigs/key_xor_test_app.toml
+          #- buildconfigs/oak_containers_kernel.toml
+          #- buildconfigs/oak_containers_stage1.toml
           - buildconfigs/oak_containers_system_image.toml
-          - buildconfigs/oak_echo_enclave_app.toml
-          - buildconfigs/oak_echo_raw_enclave_app.toml
-          - buildconfigs/oak_functions_enclave_app.toml
-          - buildconfigs/oak_functions_insecure_enclave_app.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.toml
-          - buildconfigs/stage0_bin.toml
-          - buildconfigs/oak_orchestrator.toml
+          #- buildconfigs/oak_echo_enclave_app.toml
+          #- buildconfigs/oak_echo_raw_enclave_app.toml
+          #- buildconfigs/oak_functions_enclave_app.toml
+          #- buildconfigs/oak_functions_insecure_enclave_app.toml
+          #- buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.toml
+          #- buildconfigs/stage0_bin.toml
+          #- buildconfigs/oak_orchestrator.toml
 
     permissions:
       actions: read

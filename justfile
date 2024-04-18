@@ -95,6 +95,9 @@ oak_containers_kernel:
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
+oak_containers_system_base_image:
+    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build-base.sh
+
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
     # If it fails with SIGSEGV, try running again.

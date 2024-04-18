@@ -240,7 +240,9 @@
                 rust
                 bazelShell
               ];
-              packages = [ ];
+              packages = [
+                docker
+               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {
