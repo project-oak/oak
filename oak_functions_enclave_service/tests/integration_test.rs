@@ -61,6 +61,7 @@ fn new_service_for_testing() -> OakFunctionsService<
                 .expect("failed to create EncryptionKeyHandle"),
         ),
         None,
+        Default::default(),
     )
 }
 

@@ -44,6 +44,7 @@ where
 {
     evidence_provider: EP,
     encryption_key_handle: Arc<EKH>,
+    instance_config: H::HandlerConfig,
     instance: OnceCell<OakFunctionsInstance<H>>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
@@ -58,8 +59,15 @@ where
         evidence_provider: EP,
         encryption_key_handle: Arc<EKH>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
+        instance_config: H::HandlerConfig,
     ) -> Self {
-        Self { evidence_provider, encryption_key_handle, instance: OnceCell::new(), observer }
+        Self {
+            evidence_provider,
+            encryption_key_handle,
+            instance_config,
+            instance: OnceCell::new(),
+            observer,
+        }
     }
     fn get_instance(&self) -> Result<&OakFunctionsInstance<H>, micro_rpc::Status> {
         self.instance.get().ok_or_else(|| {
@@ -88,7 +96,11 @@ where
                 "already initialized",
             )),
             None => {
-                let instance = OakFunctionsInstance::new(&request, self.observer.clone())?;
+                let instance = OakFunctionsInstance::new(
+                    &request,
+                    self.observer.clone(),
+                    self.instance_config.clone(),
+                )?;
                 if self.instance.set(instance).is_err() {
                     return Err(micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::FailedPrecondition,

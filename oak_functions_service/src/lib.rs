@@ -58,8 +58,10 @@ pub trait Observer {
 
 pub trait Handler {
     type HandlerType: Handler;
+    type HandlerConfig: Default + Send + Sync + Clone;
 
     fn new_handler(
+        config: Self::HandlerConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,

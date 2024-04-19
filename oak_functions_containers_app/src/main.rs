@@ -84,11 +84,12 @@ where
 
     match handler_type {
         HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-            app_serve::<WasmtimeHandler>(stream, encryption_key_handle, meter).await
+            app_serve::<WasmtimeHandler>(stream, encryption_key_handle, meter, Default::default())
+                .await
         }
         HandlerType::HandlerNative => {
             if cfg!(feature = "native") {
-                app_serve::<NativeHandler>(stream, encryption_key_handle, meter).await
+                app_serve::<NativeHandler>(stream, encryption_key_handle, meter, ()).await
             } else {
                 panic!(
                     "Application config specified `native` handler type, but this binary does not support that feature"

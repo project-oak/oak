@@ -233,8 +233,13 @@ fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -
         oak_functions_test_utils::build_rust_crate_wasm(wasm_module_name).unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler =
-        H::new_handler(&wasm_module_bytes, lookup_data_manager.clone(), None).unwrap();
+    let wasm_handler = H::new_handler(
+        H::HandlerConfig::default(),
+        &wasm_module_bytes,
+        lookup_data_manager.clone(),
+        None,
+    )
+    .unwrap();
 
     TestState { wasm_handler, lookup_data_manager }
 }

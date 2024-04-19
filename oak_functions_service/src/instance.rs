@@ -40,18 +40,18 @@ impl<H: Handler> OakFunctionsInstance<H> {
     pub fn new(
         request: &InitializeRequest,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
+        config: H::HandlerConfig,
     ) -> Result<Self, micro_rpc::Status> {
         let lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         let wasm_handler =
-            H::new_handler(&request.wasm_module, lookup_data_manager.clone(), observer).map_err(
-                |err| {
+            H::new_handler(config, &request.wasm_module, lookup_data_manager.clone(), observer)
+                .map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         format!("couldn't initialize Wasm handler: {:?}", err),
                     )
-                },
-            )?;
+                })?;
         Ok(Self { lookup_data_manager, wasm_handler })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].

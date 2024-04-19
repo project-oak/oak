@@ -65,6 +65,7 @@ pub mod proto {
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<H: Handler> {
+    instance_config: H::HandlerConfig,
     instance: OnceLock<OakFunctionsInstance<H>>,
     encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -72,10 +73,11 @@ pub struct OakFunctionsContainersService<H: Handler> {
 
 impl<H: Handler> OakFunctionsContainersService<H> {
     pub fn new(
+        instance_config: H::HandlerConfig,
         encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
-        Self { instance: OnceLock::new(), encryption_key_handle, observer }
+        Self { instance_config, instance: OnceLock::new(), encryption_key_handle, observer }
     }
 
     fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
@@ -120,8 +122,12 @@ where
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
             None => {
-                let instance = OakFunctionsInstance::new(&request, self.observer.clone())
-                    .map_err(map_status)?;
+                let instance = OakFunctionsInstance::new(
+                    &request,
+                    self.observer.clone(),
+                    self.instance_config.clone(),
+                )
+                .map_err(map_status)?;
                 if self.instance.set(instance).is_err() {
                     return Err(tonic::Status::failed_precondition("already initialized"));
                 }
@@ -383,6 +389,7 @@ pub async fn serve<H>(
     >,
     encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     meter: Meter,
+    handler_config: H::HandlerConfig,
 ) -> anyhow::Result<()>
 where
     H: Handler + 'static,
@@ -408,6 +415,7 @@ where
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
             OakFunctionsServer::new(OakFunctionsContainersService::<H>::new(
+                handler_config,
                 Arc::from(encryption_key_handle),
                 Some(Arc::new(OtelObserver::new(meter))),
             ))

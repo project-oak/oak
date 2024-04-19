@@ -58,6 +58,7 @@ async fn test_lookup() {
         stream,
         Box::new(encryption_key),
         NoopMeterProvider::new().meter(""),
+        Default::default(),
     ));
 
     let mut oak_functions_client: OakFunctionsClient<tonic::transport::channel::Channel> = {

@@ -185,6 +185,7 @@ impl NativeHandler {
 
 impl Handler for NativeHandler {
     type HandlerType = NativeHandler;
+    type HandlerConfig = ();
 
     /// Creates a new native handler.
     ///
@@ -195,6 +196,7 @@ impl Handler for NativeHandler {
     /// adheres to the semantics we require. This method should really be
     /// marked `unsafe` because of that.
     fn new_handler(
+        _config: (),
         module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,

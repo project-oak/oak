@@ -386,6 +386,9 @@ impl<'a> OakCaller<'a> {
     }
 }
 
+#[derive(Clone, Default)]
+pub struct WasmConfig {}
+
 // A request handler with a Wasm module for handling multiple requests.
 pub struct WasmHandler {
     wasm_module: Arc<wasmi::Module>,
@@ -441,8 +444,10 @@ impl WasmHandler {
 
 impl Handler for WasmHandler {
     type HandlerType = WasmHandler;
+    type HandlerConfig = WasmConfig;
 
     fn new_handler(
+        _config: WasmConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
