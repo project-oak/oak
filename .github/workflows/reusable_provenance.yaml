@@ -79,7 +79,7 @@ jobs:
     # current release does not include fix for the action deadlocking.
     # Ref: https://github.com/slsa-framework/slsa-github-generator/issues/3571
     # TODO: b/335461780 - Switch to using a released tag once there is one that includes the fix.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v2.0.0-rc.0
+    uses: jblebrun/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v1.11.0
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development'
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
