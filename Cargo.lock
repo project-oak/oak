@@ -2309,6 +2309,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_explain"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hex",
+ "oak_proto_rust",
+ "sha2",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_attestation_integration_tests"
 version = "0.1.0"
 dependencies = [
