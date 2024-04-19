@@ -141,3 +141,14 @@ kokoro_run_tests: all_ensure_no_std
 
 clang-tidy:
     bazel build --config=clang-tidy //cc/...
+
+bazel-ci:
+    # The --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
+    #
+    # The --show_result leads to all of the built packages being logged at the
+    # end, so we can visually verify that CI tasks are building everythign we want.
+    #
+    # --build_tag_filters=-noci allow us to skip broken/flaky/specialized test
+    # targets during CI builds by adding tags = ["noci"]
+    bazel build --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
+    bazel test  --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all

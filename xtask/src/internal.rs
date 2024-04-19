@@ -51,7 +51,6 @@ pub enum Command {
     RunTests,
     RunCargoClippy,
     RunCargoTests(RunTestsOpt),
-    RunBazelTests,
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,

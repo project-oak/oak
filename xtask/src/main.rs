@@ -98,7 +98,6 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt),
-        Command::RunBazelTests => run_bazel_tests(),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
         Command::Format => format(),
         Command::CheckFormat => check_format(),
@@ -126,7 +125,7 @@ fn cleanup() {
 fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
-        steps: vec![run_cargo_tests(&RunTestsOpt { cleanup: false }), run_bazel_tests()],
+        steps: vec![run_cargo_tests(&RunTestsOpt { cleanup: false })],
     }
 }
 
@@ -134,13 +133,6 @@ fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
         steps: vec![run_cargo_test(opt), run_cargo_doc()],
-    }
-}
-
-fn run_bazel_tests() -> Step {
-    Step::Multiple {
-        name: "bazel tests".to_string(),
-        steps: vec![run_bazel_build(), run_bazel_test()],
     }
 }
 
@@ -630,19 +622,5 @@ fn run_cargo_clean() -> Step {
                 ),
             })
             .collect(),
-    }
-}
-
-fn run_bazel_build() -> Step {
-    Step::Single {
-        name: "bazel build".to_string(),
-        command: Cmd::new("bazel", ["build", "--build_tag_filters=-noci", "--", "//...:all"]),
-    }
-}
-
-fn run_bazel_test() -> Step {
-    Step::Single {
-        name: "bazel test".to_string(),
-        command: Cmd::new("bazel", ["build", "--build_tag_filters=-noci", "--", "//...:all"]),
     }
 }
