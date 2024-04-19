@@ -259,7 +259,7 @@ oci_pull(
 
 oci_pull(
     name = "oak_containers_sysimage_base",
-    digest = "sha256:c75cc6fa76fcf2af3129cd783ce31e8c1557277fd9a07333c270fc8e56ae8db3",
+    digest = "sha256:a0770fe3c246cf54112179011907c6bc5c2948c302d01c289cdda855e6f66702",
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
 )
 
