@@ -502,7 +502,6 @@
 <a href="#500" id="500">500</a>
 <a href="#501" id="501">501</a>
 <a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -718,9 +717,9 @@
     </span><span class="kw">fn </span>instantiate(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&gt;,
-        module: Arc&lt;wasmtime::Module&gt;,
+        module: <span class="kw-2">&amp;</span>wasmtime::Module,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;wasmtime::Instance, micro_rpc::Status&gt; {
-        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module).map_err(|err| {
+        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module).map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 <span class="macro">format!</span>(<span class="string">"could not instantiate Wasm module: {:?}"</span>, err),
@@ -888,9 +887,9 @@
 
 <span class="comment">// A request handler with a Wasm module for handling multiple requests.
 </span><span class="kw">pub struct </span>WasmtimeHandler {
-    wasm_module: Arc&lt;wasmtime::Module&gt;,
+    wasm_module: wasmtime::Module,
     linker: OakLinker,
-    wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
+    wasm_api_factory: Box&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
     logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
     <span class="attr">#[cfg_attr(not(feature = <span class="string">"std"</span>), allow(dead_code))]
     </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -899,24 +898,24 @@
 <span class="kw">impl </span>WasmtimeHandler {
     <span class="kw">pub fn </span>create(
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-        wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
-        logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
+        wasm_api_factory: Box&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
+        logger: Box&lt;<span class="kw">dyn </span>OakLogger&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>config = wasmtime::Config::new();
         config.cranelift_opt_level(wasmtime::OptLevel::Speed);
         <span class="kw">let </span>engine = wasmtime::Engine::new(<span class="kw-2">&amp;</span>config)
             .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't create Wasmtime engine: {:?}"</span>, err))<span class="question-mark">?</span>;
-        <span class="kw">let </span>module = wasmtime::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
+        <span class="kw">let </span>wasm_module = wasmtime::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
             .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't load module from buffer: {:?}"</span>, err))<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>linker = OakLinker::new(module.engine());
+        <span class="kw">let </span>linker = OakLinker::new(wasm_module.engine());
 
         <span class="prelude-val">Ok</span>(WasmtimeHandler {
-            wasm_module: Arc::new(module),
+            wasm_module,
             linker,
             wasm_api_factory,
-            logger,
+            logger: Arc::from(logger),
             observer,
         })
     }
@@ -930,8 +929,8 @@
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;WasmtimeHandler&gt; {
-        <span class="kw">let </span>logger = Arc::new(StandaloneLogger);
-        <span class="kw">let </span>wasm_api_factory = Arc::new(StdWasmApiFactory { lookup_data_manager });
+        <span class="kw">let </span>logger = Box::new(StandaloneLogger);
+        <span class="kw">let </span>wasm_api_factory = Box::new(StdWasmApiFactory { lookup_data_manager });
 
         <span class="self">Self</span>::create(wasm_module_bytes, wasm_api_factory, logger, observer)
     }
@@ -939,15 +938,14 @@
     <span class="kw">fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
         <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
         </span><span class="kw">let </span>now = Instant::now();
-        <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
 
         <span class="kw">let </span>request = invoke_request.body;
         <span class="kw">let </span>response = Arc::new(Spinlock::new(Vec::new()));
         <span class="kw">let </span><span class="kw-2">mut </span>wasm_api = <span class="self">self</span>.wasm_api_factory.create_wasm_api(request, response.clone());
         <span class="kw">let </span>user_state = UserState::new(wasm_api.transport(), <span class="self">self</span>.logger.clone());
         <span class="comment">// For isolated requests we need to create a new store for every request.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmtime::Store::new(module.engine(), user_state);
-        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmtime::Store::new(<span class="self">self</span>.wasm_module.engine(), user_state);
+        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span><span class="self">self</span>.wasm_module)<span class="question-mark">?</span>;
 
         <span class="comment">// Does not work in wasmtime
         // #[cfg(not(feature = "deny_sensitive_logging"))]
