@@ -312,17 +312,17 @@ fn compare_oak_restricted_kernel_measurement_digests(
 ) -> anyhow::Result<()> {
     compare_root_layer_measurement_digets(
         values.root_layer.as_ref().context("no root layer evidence values")?,
-        expected.root_layer.as_ref().context("no root layer expected avlues")?,
+        expected.root_layer.as_ref().context("no root layer expected values")?,
     )?;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
-        expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
+        expected.kernel_layer.as_ref().context("no kernel layer expected values")?,
     )?;
 
     compare_application_layer_measurement_digests(
         values.application_layer.as_ref().context("no applications layer evidence values")?,
-        expected.application_layer.as_ref().context("no application layer expected_values")?,
+        expected.application_layer.as_ref().context("no application layer expected values")?,
     )
     .context("application layer verification failed")
 }
@@ -472,8 +472,7 @@ fn verify_amd_sev_attestation_report(
             );
         }
         (Some(_), None) => anyhow::bail!("no reported TCB version in the attestation report"),
-        // TODO: b/330845085 - stop accepting missing reference values when all clients are updated.
-        (None, _) => {}
+        (None, _) => anyhow::bail!("no min TCB version reference value"),
     }
 
     Ok(())
