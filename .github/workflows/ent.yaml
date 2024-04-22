@@ -1,0 +1,87 @@
+name: Ent
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+# cc
+# xx
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  xtask:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - id: 'info'
+        name: 'info'
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+
+          gcloud --version
+          gsutil --version
+
+      # - id: 'upload-file'
+      #   name: 'upload files'
+      #   uses: 'google-github-actions/upload-cloud-storage@v2'
+      #   with:
+      #     process_gcloudignore: false
+      #     path: './buildconfigs'
+      #     destination: 'oak-bins/${{ github.sha }}/${{ github.action }}-${{ github.run_id }}-${{ github.run_attempt }}'
+
+      - id: 'index-files'
+        name: 'index files'
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+
+          bin_name=oak-bins
+          destination='${{ github.sha }}/${{ github.action }}-${{ github.run_id }}-${{ github.run_attempt }}'
+
+          IFS=,
+          files=(./buildconfigs/*)
+          echo $files
+          for file in "${files[@]}"; do
+            base_file_name=$(basename ${file})
+            echo $file
+            gsutil cp $file "gs://${bin_name}/${destination}/${base_file_name}"
+            # https://storage.googleapis.com/oak-bins/16df3ddbf14af9b0c5839aece766fb72fcc1c240/upload-file-8754169623-1/buildconfigs/key_xor_test_app.toml
+            # xxy
+            file_url="https://storage.googleapis.com/${bin_name}/${destination}/${base_file_name}"
+            body=$(cat <<EOF
+          {
+            "url": "${file_url}"
+          }
+          EOF
+          )
+            echo $body
+            curl --fail \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data "${body}" \
+              https://api.static.space/v1/snapshot
+          done
+          unset IFS
