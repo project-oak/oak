@@ -72,6 +72,8 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -132,8 +134,10 @@
 
 <span class="kw">pub trait </span>Handler {
     <span class="kw">type </span>HandlerType: Handler;
+    <span class="kw">type </span>HandlerConfig: Default + Send + Sync + Clone;
 
     <span class="kw">fn </span>new_handler(
+        config: <span class="self">Self</span>::HandlerConfig,
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,

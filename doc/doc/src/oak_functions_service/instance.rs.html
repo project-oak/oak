@@ -159,18 +159,18 @@
     </span><span class="kw">pub fn </span>new(
         request: <span class="kw-2">&amp;</span>InitializeRequest,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
+        config: H::HandlerConfig,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, micro_rpc::Status&gt; {
         <span class="kw">let </span>lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         <span class="kw">let </span>wasm_handler =
-            H::new_handler(<span class="kw-2">&amp;</span>request.wasm_module, lookup_data_manager.clone(), observer).map_err(
-                |err| {
+            H::new_handler(config, <span class="kw-2">&amp;</span>request.wasm_module, lookup_data_manager.clone(), observer)
+                .map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         <span class="macro">format!</span>(<span class="string">"couldn't initialize Wasm handler: {:?}"</span>, err),
                     )
-                },
-            )<span class="question-mark">?</span>;
+                })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ lookup_data_manager, wasm_handler })
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].

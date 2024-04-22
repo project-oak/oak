@@ -524,6 +524,11 @@
 <a href="#522" id="522">522</a>
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -912,6 +917,9 @@
     }
 }
 
+<span class="attr">#[derive(Clone, Default)]
+</span><span class="kw">pub struct </span>WasmConfig {}
+
 <span class="comment">// A request handler with a Wasm module for handling multiple requests.
 </span><span class="kw">pub struct </span>WasmHandler {
     wasm_module: Arc&lt;wasmi::Module&gt;,
@@ -967,8 +975,10 @@
 
 <span class="kw">impl </span>Handler <span class="kw">for </span>WasmHandler {
     <span class="kw">type </span>HandlerType = WasmHandler;
+    <span class="kw">type </span>HandlerConfig = WasmConfig;
 
     <span class="kw">fn </span>new_handler(
+        _config: WasmConfig,
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,

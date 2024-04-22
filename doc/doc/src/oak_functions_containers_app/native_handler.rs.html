@@ -256,6 +256,8 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -443,6 +445,7 @@
 
 <span class="kw">impl </span>Handler <span class="kw">for </span>NativeHandler {
     <span class="kw">type </span>HandlerType = NativeHandler;
+    <span class="kw">type </span>HandlerConfig = ();
 
     <span class="doccomment">/// Creates a new native handler.
     ///
@@ -453,6 +456,7 @@
     /// adheres to the semantics we require. This method should really be
     /// marked `unsafe` because of that.
     </span><span class="kw">fn </span>new_handler(
+        _config: (),
         module_bytes: <span class="kw-2">&amp;</span>[u8],
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
