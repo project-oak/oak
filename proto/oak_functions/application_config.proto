@@ -40,6 +40,63 @@ message VsockCommunicationChannel {
   uint32 port = 1;
 }
 
+// Settings specific to the Wasmtime engine.
+//
+// These fields are explicitly marked as `optional` so that we could detect
+// their presence (as sometimes you do want to specify zero as a value). If a
+// field is left unspecified, it will leave whatever Wasmtime has as the
+// default.
+//
+// See https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html for more
+// details.
+message WasmtimeConfig {
+  // See
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.PoolingAllocationConfig.html
+  // for a description of the various fields.
+  message PoolingAllocationConfig {
+    optional uint32 max_unused_warm_slots = 1;
+    optional uint64 linear_memory_keep_resident = 2;
+    optional uint64 table_keep_resident = 3;
+    optional uint32 total_component_instances = 4;
+    optional uint64 max_component_instance_size = 5;
+    optional uint32 max_core_instances_per_component = 6;
+    optional uint32 max_memories_per_component = 7;
+    optional uint32 max_tables_per_component = 8;
+    optional uint32 total_memories = 9;
+    optional uint32 total_tables = 10;
+    optional uint32 total_stacks = 11;
+    optional uint32 total_core_instances = 12;
+    optional uint32 max_core_instance_size = 13;
+    optional uint32 max_tables_per_module = 14;
+    optional uint32 table_elements = 15;
+    optional uint32 max_memories_per_module = 16;
+    optional uint64 memory_pages = 17;
+    // Will set to `auto` if enabled.
+    optional bool memory_protection_keys = 18;
+    optional uint64 max_memory_protection_keys = 19;
+  }
+
+  // If specified, switches to a pooling allocation strategy. If not specified,
+  // leaves as default (on demand).
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.allocation_strategy
+  PoolingAllocationConfig pooling_strategy = 2;
+
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_maximum_size
+  optional uint64 static_memory_maximum_size = 3;
+
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.static_memory_guard_size
+  optional uint64 static_memory_guard_size = 4;
+
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_guard_size
+  optional uint64 dynamic_memory_guard_size = 5;
+
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.dynamic_memory_reserved_for_growth
+  optional uint64 dynamic_memory_reserved_for_growth = 6;
+
+  // https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.memory_init_cow
+  optional bool memory_init_cow = 7;
+}
+
 message ApplicationConfig {
   // How to load the provided module.
   HandlerType handler_type = 1;
@@ -55,4 +112,9 @@ message ApplicationConfig {
     TcpCommunicationChannel tcp_channel = 2;
     VsockCommunicationChannel vsock_channel = 3;
   }
+
+  // Configuration for the Wasmtime engine, if that is used.
+  // Currently only used when running on Oak Containers; this field is ignored
+  // if we're using the wasmi or native engines.
+  WasmtimeConfig wasmtime_config = 4;
 }

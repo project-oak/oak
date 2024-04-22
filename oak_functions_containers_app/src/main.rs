@@ -32,7 +32,7 @@ use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::{
     proto::oak::functions::config::{
         application_config::CommunicationChannel, ApplicationConfig, HandlerType,
-        TcpCommunicationChannel,
+        TcpCommunicationChannel, WasmtimeConfig,
     },
     wasm::wasmtime::WasmtimeHandler,
 };
@@ -65,6 +65,7 @@ struct Args {
 async fn serve<S>(
     addr: S,
     handler_type: HandlerType,
+    handler_config: Option<WasmtimeConfig>,
     stream: Box<
         dyn tokio_stream::Stream<
                 Item = Result<
@@ -84,8 +85,13 @@ where
 
     match handler_type {
         HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-            app_serve::<WasmtimeHandler>(stream, encryption_key_handle, meter, Default::default())
-                .await
+            app_serve::<WasmtimeHandler>(
+                stream,
+                encryption_key_handle,
+                meter,
+                handler_config.unwrap_or_default(),
+            )
+            .await
         }
         HandlerType::HandlerNative => {
             if cfg!(feature = "native") {
@@ -228,6 +234,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serve(
                     addr,
                     application_config.handler_type(),
+                    application_config.wasmtime_config,
                     Box::new(TcpListenerStream::new(listener)),
                     encryption_key_handle,
                     meter,
@@ -244,6 +251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serve(
                     addr,
                     application_config.handler_type(),
+                    application_config.wasmtime_config,
                     Box::new(listener.incoming()),
                     encryption_key_handle,
                     meter,

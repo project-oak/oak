@@ -34,11 +34,12 @@ use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
-use wasmtime::Store;
+use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
+    proto::oak::functions::config::WasmtimeConfig,
     wasm::{api::StdWasmApiFactory, WasmApiFactory},
     Handler, Observer,
 };
@@ -381,9 +382,6 @@ impl<'a> OakCaller<'a> {
     }
 }
 
-#[derive(Clone, Default)]
-pub struct WasmtimeConfig {}
-
 // A request handler with a Wasm module for handling multiple requests.
 pub struct WasmtimeHandler {
     wasm_module: wasmtime::Module,
@@ -394,15 +392,74 @@ pub struct WasmtimeHandler {
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
+macro_rules! maybe_set {
+    ($target:ident, $source:ident, [$( $field:ident $(as $ty:ty)?),+ ]) => {
+        $(
+            if let Some($field) = $source.$field {
+                $target.$field($field $(as $ty)?);
+            }
+        )*
+    };
+}
+
 impl WasmtimeHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
+        config_proto: WasmtimeConfig,
         wasm_api_factory: Box<dyn WasmApiFactory + Send + Sync>,
         logger: Box<dyn OakLogger>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self> {
         let mut config = wasmtime::Config::new();
         config.cranelift_opt_level(wasmtime::OptLevel::Speed);
+
+        if let Some(pooling_config_proto) = config_proto.pooling_strategy {
+            let mut pooling_config = PoolingAllocationConfig::default();
+            maybe_set!(
+                pooling_config,
+                pooling_config_proto,
+                [
+                    max_unused_warm_slots,
+                    linear_memory_keep_resident as usize,
+                    table_keep_resident as usize,
+                    total_component_instances,
+                    max_component_instance_size as usize,
+                    max_core_instances_per_component,
+                    max_memories_per_component,
+                    max_tables_per_component,
+                    total_memories,
+                    total_tables,
+                    total_stacks,
+                    total_core_instances,
+                    max_core_instance_size as usize,
+                    max_tables_per_module,
+                    table_elements,
+                    max_memories_per_module,
+                    memory_pages,
+                    max_memory_protection_keys as usize
+                ]
+            );
+            if let Some(mpk) = pooling_config_proto.memory_protection_keys {
+                if mpk {
+                    pooling_config.memory_protection_keys(wasmtime::MpkEnabled::Auto);
+                }
+            }
+
+            config
+                .allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(pooling_config));
+        }
+        maybe_set!(
+            config,
+            config_proto,
+            [
+                static_memory_maximum_size,
+                static_memory_guard_size,
+                dynamic_memory_guard_size,
+                dynamic_memory_reserved_for_growth,
+                memory_init_cow
+            ]
+        );
+
         let engine = wasmtime::Engine::new(&config)
             .map_err(|err| anyhow::anyhow!("couldn't create Wasmtime engine: {:?}", err))?;
         let wasm_module = wasmtime::Module::new(&engine, wasm_module_bytes)
@@ -425,7 +482,7 @@ impl Handler for WasmtimeHandler {
     type HandlerConfig = WasmtimeConfig;
 
     fn new_handler(
-        _config: WasmtimeConfig,
+        config: WasmtimeConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -433,7 +490,7 @@ impl Handler for WasmtimeHandler {
         let logger = Box::new(StandaloneLogger);
         let wasm_api_factory = Box::new(StdWasmApiFactory { lookup_data_manager });
 
-        Self::create(wasm_module_bytes, wasm_api_factory, logger, observer)
+        Self::create(wasm_module_bytes, config, wasm_api_factory, logger, observer)
     }
 
     fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
