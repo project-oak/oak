@@ -126,13 +126,13 @@ jobs:
           EOF
 
       - name: Download the built artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
           path: downloads
 
       - name: Download the DSSE document
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name:
             ${{ needs.generate_provenance.outputs.attestations-download-name }}
@@ -179,13 +179,13 @@ jobs:
 
     steps:
       - name: Download the built artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
           path: downloads
 
       - name: Download the DSSE document
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name:
             ${{ needs.generate_provenance.outputs.attestations-download-name }}
