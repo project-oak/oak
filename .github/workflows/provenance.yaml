@@ -55,3 +55,4 @@ jobs:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
       # Secret key corresponding to `ent-public-key` above, used to sign Ent tags.
       ENT_SECRET_KEY: ${{ secrets.ENT_SECRET_KEY }}
+      GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
