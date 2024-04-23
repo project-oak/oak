@@ -19,6 +19,8 @@ on:
       # of a binary to its provenance.
       ENT_SECRET_KEY:
         required: true
+      GCP_SERVICE_ACCOUNT_KEY_JSON:
+        required: true
 
 jobs:
   get_inputs:
@@ -38,7 +40,7 @@ jobs:
 
     steps:
       - name: Mount main branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Parse build config
         id: parse-build-config
@@ -101,6 +103,23 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+
+      - name: 'Set up Google Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: 'Google Cloud info'
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          gcloud --version
+          gsutil --version
+
       # See https://github.com/google/ent
       - name: Download Ent CLI
         if: steps.cache-ent.outputs.cache-hit != 'true'
@@ -139,7 +158,7 @@ jobs:
           path: downloads
 
       - name: Debug step - Display structure of downloaded files
-        run: ls -R
+        run: ls --recursive
         working-directory: downloads
 
       - name: Upload binary, provenance, signed tag to Ent
@@ -154,6 +173,9 @@ jobs:
           set -o nounset
           set -o xtrace
           set -o pipefail
+
+          bucket_name=oak-bins
+
           provenance_file="attestation.intoto"
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             provenance_file="${provenance_file}.build.slsa"
@@ -168,6 +190,27 @@ jobs:
           ent tag set --public-key=${{ inputs.ent-public-key }} \
             --label="provenance_${GITHUB_SHA}_${package_name}" \
             --target=${provenance_digest}
+
+          # Upload the file directly to a dedicated GCS bucket.
+          binary_path="binary/${GITHUB_SHA}/${package_name}/$(basename ${binary_file})"
+          gsutil cp "${binary_file}" "gs://${bucket_name}/${binary_path}"
+          binary_url="https://storage.googleapis.com/${bucket_name}/${binary_path}"
+          # Index the file via http://static.space so that, regardless of the GCS bucket and path,
+          # it may be easily located by its digest.
+          curl --fail \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "{ \"url\": \"${binary_url}\" }" \
+            https://api.static.space/v1/snapshot
+
+          provenance_path="provenance/${GITHUB_SHA}/${package_name}/$(basename ${provenance_file})"
+          gsutil cp "${provenance_file}" "gs://${bucket_name}/${provenance_path}"
+          provenance_url="https://storage.googleapis.com/${bucket_name}/${provenance_path}"
+          curl --fail \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "{ \"url\": \"${provenance_url}\" }" \
+            https://api.static.space/v1/snapshot
 
   # Debug step similar to `upload_provenance`, but runs on pull-request events.
   # Differs from `upload_provenance` in that it does not publish the binary
@@ -192,7 +235,7 @@ jobs:
           path: downloads
 
       - name: Display structure after downloading the files (debug step)
-        run: ls -R
+        run: ls --recursive
         working-directory: downloads
 
       - name: Print binary digest
