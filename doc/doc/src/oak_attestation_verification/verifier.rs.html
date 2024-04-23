@@ -1341,7 +1341,6 @@
 <a href="#1339" id="1339">1339</a>
 <a href="#1340" id="1340">1340</a>
 <a href="#1341" id="1341">1341</a>
-<a href="#1342" id="1342">1342</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1656,17 +1655,17 @@
 ) -&gt; anyhow::Result&lt;()&gt; {
     compare_root_layer_measurement_digets(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
-        expected.root_layer.as_ref().context(<span class="string">"no root layer expected avlues"</span>)<span class="question-mark">?</span>,
+        expected.root_layer.as_ref().context(<span class="string">"no root layer expected values"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context(<span class="string">"no kernel layer evidence values"</span>)<span class="question-mark">?</span>,
-        expected.kernel_layer.as_ref().context(<span class="string">"no kernel layer expected_values"</span>)<span class="question-mark">?</span>,
+        expected.kernel_layer.as_ref().context(<span class="string">"no kernel layer expected values"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>;
 
     compare_application_layer_measurement_digests(
         values.application_layer.as_ref().context(<span class="string">"no applications layer evidence values"</span>)<span class="question-mark">?</span>,
-        expected.application_layer.as_ref().context(<span class="string">"no application layer expected_values"</span>)<span class="question-mark">?</span>,
+        expected.application_layer.as_ref().context(<span class="string">"no application layer expected values"</span>)<span class="question-mark">?</span>,
     )
     .context(<span class="string">"application layer verification failed"</span>)
 }
@@ -1816,8 +1815,7 @@
             );
         }
         (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">None</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"no reported TCB version in the attestation report"</span>),
-        <span class="comment">// TODO: b/330845085 - stop accepting missing reference values when all clients are updated.
-        </span>(<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; {}
+        (<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"no min TCB version reference value"</span>),
     }
 
     <span class="prelude-val">Ok</span>(())
