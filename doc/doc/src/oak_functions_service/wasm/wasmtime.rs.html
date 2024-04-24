@@ -507,6 +507,63 @@
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
 <a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -543,11 +600,12 @@
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
 <span class="kw">use </span>spinning_top::Spinlock;
-<span class="kw">use </span>wasmtime::Store;
+<span class="kw">use </span>wasmtime::{PoolingAllocationConfig, Store};
 
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
+    proto::oak::functions::config::WasmtimeConfig,
     wasm::{api::StdWasmApiFactory, WasmApiFactory},
     Handler, Observer,
 };
@@ -890,9 +948,6 @@
     }
 }
 
-<span class="attr">#[derive(Clone, Default)]
-</span><span class="kw">pub struct </span>WasmtimeConfig {}
-
 <span class="comment">// A request handler with a Wasm module for handling multiple requests.
 </span><span class="kw">pub struct </span>WasmtimeHandler {
     wasm_module: wasmtime::Module,
@@ -903,15 +958,74 @@
     </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
+<span class="macro">macro_rules! </span>maybe_set {
+    (<span class="macro-nonterminal">$target</span>:ident, <span class="macro-nonterminal">$source</span>:ident, [$( <span class="macro-nonterminal">$field</span>:ident $(<span class="kw">as </span><span class="macro-nonterminal">$ty</span>:ty)<span class="question-mark">?</span>),+ ]) =&gt; {
+        $(
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="macro-nonterminal">$field</span>) = <span class="macro-nonterminal">$source</span>.<span class="macro-nonterminal">$field </span>{
+                <span class="macro-nonterminal">$target</span>.<span class="macro-nonterminal">$field</span>(<span class="macro-nonterminal">$field </span>$(<span class="kw">as </span><span class="macro-nonterminal">$ty</span>)<span class="question-mark">?</span>);
+            }
+        )*
+    };
+}
+
 <span class="kw">impl </span>WasmtimeHandler {
     <span class="kw">pub fn </span>create(
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
+        config_proto: WasmtimeConfig,
         wasm_api_factory: Box&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
         logger: Box&lt;<span class="kw">dyn </span>OakLogger&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>config = wasmtime::Config::new();
         config.cranelift_opt_level(wasmtime::OptLevel::Speed);
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(pooling_config_proto) = config_proto.pooling_strategy {
+            <span class="kw">let </span><span class="kw-2">mut </span>pooling_config = PoolingAllocationConfig::default();
+            <span class="macro">maybe_set!</span>(
+                pooling_config,
+                pooling_config_proto,
+                [
+                    max_unused_warm_slots,
+                    linear_memory_keep_resident <span class="kw">as </span>usize,
+                    table_keep_resident <span class="kw">as </span>usize,
+                    total_component_instances,
+                    max_component_instance_size <span class="kw">as </span>usize,
+                    max_core_instances_per_component,
+                    max_memories_per_component,
+                    max_tables_per_component,
+                    total_memories,
+                    total_tables,
+                    total_stacks,
+                    total_core_instances,
+                    max_core_instance_size <span class="kw">as </span>usize,
+                    max_tables_per_module,
+                    table_elements,
+                    max_memories_per_module,
+                    memory_pages,
+                    max_memory_protection_keys <span class="kw">as </span>usize
+                ]
+            );
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(mpk) = pooling_config_proto.memory_protection_keys {
+                <span class="kw">if </span>mpk {
+                    pooling_config.memory_protection_keys(wasmtime::MpkEnabled::Auto);
+                }
+            }
+
+            config
+                .allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(pooling_config));
+        }
+        <span class="macro">maybe_set!</span>(
+            config,
+            config_proto,
+            [
+                static_memory_maximum_size,
+                static_memory_guard_size,
+                dynamic_memory_guard_size,
+                dynamic_memory_reserved_for_growth,
+                memory_init_cow
+            ]
+        );
+
         <span class="kw">let </span>engine = wasmtime::Engine::new(<span class="kw-2">&amp;</span>config)
             .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't create Wasmtime engine: {:?}"</span>, err))<span class="question-mark">?</span>;
         <span class="kw">let </span>wasm_module = wasmtime::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
@@ -934,7 +1048,7 @@
     <span class="kw">type </span>HandlerConfig = WasmtimeConfig;
 
     <span class="kw">fn </span>new_handler(
-        _config: WasmtimeConfig,
+        config: WasmtimeConfig,
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
         lookup_data_manager: Arc&lt;LookupDataManager&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -942,7 +1056,7 @@
         <span class="kw">let </span>logger = Box::new(StandaloneLogger);
         <span class="kw">let </span>wasm_api_factory = Box::new(StdWasmApiFactory { lookup_data_manager });
 
-        <span class="self">Self</span>::create(wasm_module_bytes, wasm_api_factory, logger, observer)
+        <span class="self">Self</span>::create(wasm_module_bytes, config, wasm_api_factory, logger, observer)
     }
 
     <span class="kw">fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
