@@ -1065,7 +1065,7 @@ struct ApplicationKeyValues {
 
 /// Extracts measurements, public keys and other attestation-related values from
 /// the evidence.
-fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
+pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let evidence_values =
         Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
     let ApplicationKeyValues { encryption_public_key, signing_public_key } =
