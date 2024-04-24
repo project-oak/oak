@@ -1321,26 +1321,6 @@
 <a href="#1319" id="1319">1319</a>
 <a href="#1320" id="1320">1320</a>
 <a href="#1321" id="1321">1321</a>
-<a href="#1322" id="1322">1322</a>
-<a href="#1323" id="1323">1323</a>
-<a href="#1324" id="1324">1324</a>
-<a href="#1325" id="1325">1325</a>
-<a href="#1326" id="1326">1326</a>
-<a href="#1327" id="1327">1327</a>
-<a href="#1328" id="1328">1328</a>
-<a href="#1329" id="1329">1329</a>
-<a href="#1330" id="1330">1330</a>
-<a href="#1331" id="1331">1331</a>
-<a href="#1332" id="1332">1332</a>
-<a href="#1333" id="1333">1333</a>
-<a href="#1334" id="1334">1334</a>
-<a href="#1335" id="1335">1335</a>
-<a href="#1336" id="1336">1336</a>
-<a href="#1337" id="1337">1337</a>
-<a href="#1338" id="1338">1338</a>
-<a href="#1339" id="1339">1339</a>
-<a href="#1340" id="1340">1340</a>
-<a href="#1341" id="1341">1341</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1396,7 +1376,7 @@
         TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
         VerificationSkipped,
     },
-    HexDigest, RawDigest,
+    RawDigest,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>prost::Message;
@@ -1414,7 +1394,7 @@
     endorsement::verify_binary_endorsement,
     util::{
         hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
-        raw_digest_from_contents, raw_to_hex_digest, MatchResult,
+        raw_digest_from_contents, raw_to_hex_digest,
     },
 };
 
@@ -1653,7 +1633,7 @@
     values: <span class="kw-2">&amp;</span>OakRestrictedKernelData,
     expected: <span class="kw-2">&amp;</span>OakRestrictedKernelExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.root_layer.as_ref().context(<span class="string">"no root layer expected values"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>;
@@ -1711,7 +1691,7 @@
     values: <span class="kw-2">&amp;</span>OakContainersData,
     expected: <span class="kw-2">&amp;</span>OakContainersExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.root_layer.as_ref().context(<span class="string">"no root layer expected avlues"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>;
@@ -1754,7 +1734,7 @@
     values: <span class="kw-2">&amp;</span>CbData,
     expected: <span class="kw-2">&amp;</span>CbExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    compare_root_layer_measurement_digets(
+    compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.root_layer.as_ref().context(<span class="string">"no root layer expected avlues"</span>)<span class="question-mark">?</span>,
     )
@@ -1910,7 +1890,7 @@
     <span class="prelude-val">Ok</span>(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
 }
 
-<span class="kw">fn </span>compare_root_layer_measurement_digets(
+<span class="kw">fn </span>compare_root_layer_measurement_digests(
     values: <span class="kw-2">&amp;</span>RootLayerData,
     expected_values: <span class="kw-2">&amp;</span>RootLayerExpectedValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
@@ -2210,7 +2190,7 @@
         <span class="prelude-val">Some</span>(expected_digests::Type::Digests(digests)) =&gt; digests
             .digests
             .iter()
-            .find(|expected| verify_raw_digests(measurement, expected).is_ok())
+            .find(|expected| is_raw_digest_match(measurement, expected).is_ok())
             .map(|<span class="kw">_</span>| ())
             .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">"measurement digest does not match any reference values"</span>)),
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"empty expected value"</span>)),
@@ -2240,7 +2220,7 @@
     }
     <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement)<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
-    verify_hex_digests(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest)<span class="question-mark">?</span>;
+    is_hex_digest_match(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest)<span class="question-mark">?</span>;
     KernelAttachment::decode(<span class="kw-2">&amp;*</span>endorsement.subject)
         .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't parse kernel attachment"</span>))
 }
@@ -2301,26 +2281,6 @@
             })
         }
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"empty binary reference value"</span>)),
-    }
-}
-
-<span class="kw">fn </span>verify_hex_digests(actual: <span class="kw-2">&amp;</span>HexDigest, expected: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">match </span>is_hex_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
-        }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
-    }
-}
-
-<span class="kw">fn </span>verify_raw_digests(actual: <span class="kw-2">&amp;</span>RawDigest, expected: <span class="kw-2">&amp;</span>RawDigest) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">match </span>is_raw_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
-        }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
     }
 }
 

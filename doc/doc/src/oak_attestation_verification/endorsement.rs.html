@@ -96,19 +96,6 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -128,28 +115,15 @@
 </span><span class="doccomment">//! Verifies binary endorsements as coming from Transparent Release.
 
 </span><span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>oak_proto_rust::oak::HexDigest;
 
 <span class="kw">use crate</span>::{
     claims::{
-        get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+        parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
     },
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
-    util::{
-        convert_pem_to_raw, equal_keys, is_hex_digest_match, verify_signature_raw, MatchResult,
-    },
+    util::{convert_pem_to_raw, equal_keys, verify_signature_raw},
 };
-
-<span class="doccomment">/// Compares the digest contained in the endorsement against the given one.
-</span><span class="kw">pub fn </span>verify_binary_digest(
-    endorsement: <span class="kw-2">&amp;</span>[u8],
-    expected: <span class="kw-2">&amp;</span>HexDigest,
-) -&gt; anyhow::Result&lt;MatchResult&gt; {
-    <span class="kw">let </span>statement = parse_endorsement_statement(endorsement)<span class="question-mark">?</span>;
-    <span class="kw">let </span>actual = get_digest(<span class="kw-2">&amp;</span>statement)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(is_hex_digest_match(<span class="kw-2">&amp;</span>actual, expected))
-}
 
 <span class="doccomment">/// Verifies the binary endorsement against log entry and public keys.
 </span><span class="kw">pub fn </span>verify_binary_endorsement(
