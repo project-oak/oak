@@ -796,7 +796,7 @@ fn get_container_layer_expected_values(
     let config = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("container bundle reference value")?,
+        reference_values.configuration.as_ref().context("container config reference value")?,
     )?);
     Ok(ContainerLayerExpectedValues { bundle, config })
 }
