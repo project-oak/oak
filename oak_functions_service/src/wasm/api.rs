@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, format, rc::Rc, sync::Arc, vec::Vec};
+use core::cell::Cell;
 
 use log::Level;
 use oak_functions_sdk::proto::oak::functions::wasm::v1::{
@@ -22,7 +23,6 @@ use oak_functions_sdk::proto::oak::functions::wasm::v1::{
     LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, StdWasmApi,
     StdWasmApiServer, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
-use spinning_top::Spinlock;
 
 use super::{WasmApi, WasmApiFactory};
 use crate::{
@@ -38,11 +38,7 @@ pub struct StdWasmApiFactory {
 }
 
 impl WasmApiFactory for StdWasmApiFactory {
-    fn create_wasm_api(
-        &self,
-        request: Vec<u8>,
-        response: Arc<Spinlock<Vec<u8>>>,
-    ) -> Box<dyn WasmApi> {
+    fn create_wasm_api(&self, request: Vec<u8>, response: Rc<Cell<Vec<u8>>>) -> Box<dyn WasmApi> {
         Box::new(StdWasmApiImpl {
             lookup_data: self.lookup_data_manager.create_lookup_data(),
             logger: Arc::new(StandaloneLogger),
@@ -63,7 +59,7 @@ pub struct StdWasmApiImpl {
     /// Current request, as received from the client.
     request: Vec<u8>,
     /// Current response, as received from the Wasm module.
-    response: Arc<Spinlock<Vec<u8>>>,
+    response: Rc<Cell<Vec<u8>>>,
 }
 
 impl StdWasmApi for StdWasmApiImpl {
@@ -79,7 +75,8 @@ impl StdWasmApi for StdWasmApiImpl {
         req: WriteResponseRequest,
     ) -> Result<WriteResponseResponse, micro_rpc::Status> {
         self.logger.log_sensitive(Level::Debug, "invoked write_response");
-        *self.response.lock() = req.body;
+        self.response.set(req.body);
+
         Ok(WriteResponseResponse::default())
     }
 

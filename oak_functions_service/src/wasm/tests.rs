@@ -16,11 +16,11 @@
 
 extern crate test;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{rc::Rc, sync::Arc, vec::Vec};
+use core::cell::Cell;
 
 use byteorder::{ByteOrder, LittleEndian};
 use oak_functions_abi::Request;
-use spinning_top::Spinlock;
 
 use super::{
     api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
@@ -157,7 +157,7 @@ fn create_test_state() -> TestState {
             .expect("couldn't create WasmHandler");
 
     let request = Vec::new();
-    let response = Arc::new(Spinlock::new(Vec::new()));
+    let response = Rc::new(Cell::new(Vec::new()));
     let mut wasm_api = api_factory.create_wasm_api(request.clone(), response.clone());
 
     let user_state = UserState::new(wasm_api.transport(), logger.clone());

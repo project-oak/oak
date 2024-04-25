@@ -45,3 +45,7 @@ oak_functions_test_utils = { workspace = true }
 pprof = { version = "*", features = ["flamegraph", "criterion"] }
 rand = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }
+
+[package.metadata.cargo-udeps.ignore]
+# spinning_top is used in no_std builds, but these happen in a separate workspace, so cargo-udeps thinks it's unused.
+normal = ["spinning_top"]
