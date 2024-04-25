@@ -64,17 +64,6 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
-dependencies = [
- "getrandom",
- "once_cell",
- "version_check",
-]
-
-[[package]]
-name = "ahash"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c3a9648d43b9cd48db467b3f87fdd6e146bcc88ab0180006cef2179fe11d01"
@@ -100,6 +89,12 @@ name = "aliasable"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
+
+[[package]]
+name = "allocator-api2"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
 name = "aml"
@@ -521,7 +516,9 @@ checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "wasm-bindgen",
  "windows-targets 0.48.5",
 ]
 
@@ -1541,9 +1538,6 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash 0.7.8",
-]
 
 [[package]]
 name = "hashbrown"
@@ -1551,7 +1545,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
- "ahash 0.8.7",
+ "ahash",
 ]
 
 [[package]]
@@ -1560,7 +1554,8 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
- "ahash 0.8.7",
+ "ahash",
+ "allocator-api2",
 ]
 
 [[package]]
@@ -1790,7 +1785,7 @@ version = "0.11.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "321f0f839cd44a4686e9504b0a62b4d69a50b62072144c71c68f5873c167b8d9"
 dependencies = [
- "ahash 0.8.7",
+ "ahash",
  "indexmap 2.1.0",
  "is-terminal",
  "itoa",
@@ -1892,7 +1887,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.12.3",
+ "hashbrown 0.14.3",
  "http",
  "log",
  "maplit",
@@ -2314,6 +2309,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_explain"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hex",
+ "oak_proto_rust",
+ "sha2",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_attestation_integration_tests"
 version = "0.1.0"
 dependencies = [
@@ -2386,6 +2392,7 @@ dependencies = [
  "oak_containers_sdk",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "prost",
  "prost-types",
  "tokio",
@@ -2407,6 +2414,7 @@ dependencies = [
  "oak_containers_launcher",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "once_cell",
  "prost",
  "tokio",
@@ -2489,6 +2497,7 @@ dependencies = [
  "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "prost",
  "prost-types",
  "tokio",
@@ -2568,7 +2577,7 @@ dependencies = [
  "hex",
  "hkdf",
  "hpke",
- "micro_rpc_build",
+ "oak_proto_rust",
  "p256",
  "pkcs8",
  "primeorder",
@@ -2636,7 +2645,7 @@ name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.12.3",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2694,6 +2703,7 @@ dependencies = [
  "clap",
  "http",
  "libloading",
+ "log",
  "micro_rpc",
  "oak_attestation",
  "oak_containers_orchestrator",
@@ -2704,11 +2714,13 @@ dependencies = [
  "oak_functions_service",
  "oak_functions_test_utils",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "ouroboros",
  "prost",
+ "stderrlog",
  "tempfile",
  "tikv-jemallocator",
  "tokio",
@@ -2781,7 +2793,7 @@ dependencies = [
  "command-fds",
  "env_logger",
  "futures",
- "hashbrown 0.12.3",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2846,7 +2858,7 @@ dependencies = [
  "byteorder",
  "criterion",
  "criterion-macro",
- "hashbrown 0.12.3",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2941,7 +2953,7 @@ dependencies = [
  "bmrng",
  "clap",
  "command-fds",
- "hashbrown 0.12.3",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -3072,6 +3084,7 @@ dependencies = [
  "oak_crypto",
  "oak_dice",
  "oak_enclave_runtime_support",
+ "oak_proto_rust",
  "oak_restricted_kernel_dice",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk_proc_macro",
@@ -3703,9 +3716,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "146c289cda302b98a28d40c8b3b90498d6e526dd24ac2ecea73e4e491685b94a"
+checksum = "d0f5d036824e4761737860779c906171497f6d55681139d8312388f8fe398922"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -3735,12 +3748,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb6c9a1dd1def8e2124d17e83a20af56f1570d6c2d2bd9e266ccb768df3840e"
+checksum = "19de2de2a00075bf566bee3bd4db014b11587e84184d3f7a791bc17f1a8e9e48"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.48",
@@ -4038,9 +4051,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.22.2"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e87c9956bd9807afa1f77e0f7594af32566e830e088a5576d27c5b6f30f49d41"
+checksum = "bf4ef73721ac7bcd79b2b315da7779d8fc09718c6b3d2d1b2d94850eb8c18432"
 dependencies = [
  "log",
  "ring",
@@ -4461,6 +4474,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "stderrlog"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61c910772f992ab17d32d6760e167d2353f4130ed50e796752689556af07dc6b"
+dependencies = [
+ "chrono",
+ "is-terminal",
+ "log",
+ "termcolor",
+ "thread_local",
+]
+
+[[package]]
 name = "str_stack"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4630,6 +4656,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bab24d30b911b2376f3a13cc2cd443142f0c81dda04c118693e35b3835757755"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4647,6 +4682,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
+]
+
+[[package]]
+name = "thread_local"
+version = "1.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b9ef9bad013ada3808854ceac7b46812a6465ba368859a37e2100283d2d719c"
+dependencies = [
+ "cfg-if",
+ "once_cell",
 ]
 
 [[package]]

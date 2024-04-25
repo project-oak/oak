@@ -21,6 +21,7 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
+use oak_proto_rust::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse};
 
 use crate::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
@@ -28,7 +29,6 @@ use crate::{
         deserialize_nonce, generate_random_nonce, setup_base_sender, RecipientContext,
         SenderContext, OAK_HPKE_INFO,
     },
-    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 
 /// Encryptor object for encrypting client requests that will be sent to the

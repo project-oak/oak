@@ -22,7 +22,6 @@ use std::{
 
 use clap::Parser;
 use log::info;
-use serde_json::{self};
 
 #[derive(Parser, Clone)]
 #[command(about = "Oak Model Evaluation Runner")]

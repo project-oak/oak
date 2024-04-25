@@ -64,8 +64,18 @@ if [[ -e "/dev/vsock" ]]; then
 fi
 
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
-if [[ -z "${CI:-}" ]]; then
-  docker_run_flags+=('--interactive')
+if [[ -n "${CI:-}" ]]; then
+  # When a CI environment variable is present, assume that we only have basic log output.
+  docker_run_flags+=(
+    # Prevent ANSI escape sequences in Nix; prevents a large amount of log noise
+    # during package download.
+    '--env=NO_COLOR=true'
+  )
+else
+  # When no CI environment variable is present, assume that we have an interactive TTY.
+  docker_run_flags+=(
+    '--interactive'
+  )
 fi
 
 # Run the provided command.

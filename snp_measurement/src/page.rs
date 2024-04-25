@@ -35,7 +35,7 @@ const PAGE_INFO_SIZE: usize = 112;
 ///
 /// See table 67 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes)]
+#[derive(Debug, AsBytes, Clone)]
 pub struct PageInfo {
     /// The current measurement up to this point.
     pub digest_cur: [u8; 48],
@@ -170,7 +170,7 @@ impl Default for PageInfo {
 /// Whether the page is part of an initial migration image (IMI).
 ///
 /// For now we assume we won't have any IMI pages.
-#[derive(Debug, FromRepr, AsBytes)]
+#[derive(Debug, FromRepr, AsBytes, Clone)]
 #[repr(u8)]
 enum ImiPage {
     /// The page is not an IMI page.

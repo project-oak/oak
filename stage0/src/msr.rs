@@ -309,6 +309,7 @@ impl X2ApicErrorStatusRegister {
 }
 
 impl X2ApicErrorStatusRegister {
+    #[allow(unused)]
     pub unsafe fn read() -> ApicErrorFlags {
         let val = Self::MSR.read();
         ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())

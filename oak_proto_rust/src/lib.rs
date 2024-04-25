@@ -12,8 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Prost generated code cannot build on its own: it needs a manually crafted
-// module structure to include! it.
+// This module provides a uniform way to import crypto protos regardless of
+// building with cargo or bazel.
+
+// Prost generated code cannot build on its own: it needs to be
+// included into a manually crafted module structure. With crypto_rust_prost,
+// this is not needed.
+
+// TODO: b/333064338 - Remove this crate once we've stopped using cargo.
 
 #![no_std]
 #![feature(never_type)]
@@ -32,6 +38,13 @@ pub mod oak {
         pub mod v1 {
             #![allow(clippy::large_enum_variant)]
             include_proto!("oak.attestation.v1");
+        }
+    }
+
+    pub mod crypto {
+        pub mod v1 {
+            #![allow(dead_code)]
+            include_proto!("oak.crypto.v1");
         }
     }
 

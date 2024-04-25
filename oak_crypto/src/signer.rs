@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-pub use crate::proto::oak::crypto::v1::Signature;
+use oak_proto_rust::oak::crypto::v1::Signature;
 
 pub trait Signer {
     fn sign(&self, message: &[u8]) -> Signature;

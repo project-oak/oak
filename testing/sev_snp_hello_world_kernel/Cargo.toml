@@ -13,7 +13,7 @@ members = ["."]
 lazy_static = { version = "*", features = ["spin_no_std"] }
 lock_api = "*"
 log = "*"
-oak_linux_boot_params = { path = "../../linux_boot_params" }
+oak_linux_boot_params = { path = "../../oak_linux_boot_params" }
 spinning_top = "*"
 x86_64 = "*"
 oak_sev_guest = { path = "../../oak_sev_guest", default-features = false }

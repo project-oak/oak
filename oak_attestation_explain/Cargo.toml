@@ -1,0 +1,14 @@
+[package]
+name = "oak_attestation_explain"
+version = "0.1.0"
+authors = ["Juliette Pluto <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+anyhow = { version = "*", default-features = false }
+hex = { version = "*", default-features = false, features = ["alloc"] }
+oak_proto_rust = { workspace = true }
+sha2 = { version = "*", default-features = false }
+zerocopy = { version = "*", features = ["derive"] }

@@ -20,11 +20,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for loading the system image.
     generate_grpc_code(
         &[
-            "../oak_containers/proto/interfaces.proto",
+            "../proto/containers/interfaces.proto",
             "../proto/crypto/crypto.proto",
             "../proto/session/messages.proto",
         ],
-        "..",
+        &[".."],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;
     Ok(())

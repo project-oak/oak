@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 use tonic::transport::Channel;
 
 use crate::proto::oak::session::v1::{

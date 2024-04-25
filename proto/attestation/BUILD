@@ -88,6 +88,7 @@ proto_library(
     srcs = ["expected_value.proto"],
     deps = [
         ":reference_value_proto",
+        ":tcb_version_proto",
         "//proto:digest_proto",
     ],
 )

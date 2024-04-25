@@ -26,7 +26,7 @@
 #include "cc/containers/sdk/common.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/support/status.h"
-#include "oak_containers/proto/interfaces.pb.h"
+#include "proto/containers/interfaces.pb.h"
 
 namespace oak::containers::sdk {
 

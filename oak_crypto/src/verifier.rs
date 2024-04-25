@@ -15,13 +15,14 @@
 //
 
 use anyhow::Context;
+use oak_proto_rust::oak::crypto::v1::Signature;
 
 pub trait Verifier {
-    fn verify(&self, message: &[u8], signature: &crate::signer::Signature) -> anyhow::Result<()>;
+    fn verify(&self, message: &[u8], signature: &Signature) -> anyhow::Result<()>;
 }
 
 impl Verifier for p256::ecdsa::VerifyingKey {
-    fn verify(&self, message: &[u8], signature: &crate::signer::Signature) -> anyhow::Result<()> {
+    fn verify(&self, message: &[u8], signature: &Signature) -> anyhow::Result<()> {
         let parsed_signature = p256::ecdsa::Signature::from_slice(&signature.signature)
             .map_err(anyhow::Error::msg)
             .context("could not parse signature")?;
@@ -31,12 +32,13 @@ impl Verifier for p256::ecdsa::VerifyingKey {
     }
 }
 
+#[allow(unused)]
 struct VerifierKeyHandle {
     inner: p256::ecdsa::VerifyingKey,
 }
 
 impl Verifier for VerifierKeyHandle {
-    fn verify(&self, message: &[u8], signature: &crate::signer::Signature) -> anyhow::Result<()> {
+    fn verify(&self, message: &[u8], signature: &Signature) -> anyhow::Result<()> {
         self.inner.verify(message, signature)
     }
 }

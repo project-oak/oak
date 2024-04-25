@@ -18,6 +18,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 use anyhow::Context;
 use async_trait::async_trait;
+use oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
@@ -26,7 +27,6 @@ use crate::{
         generate_kem_key_pair, setup_base_recipient, Deserializable, PrivateKey, RecipientContext,
         Serializable, OAK_HPKE_INFO,
     },
-    proto::oak::crypto::v1::EncryptedRequest,
     EMPTY_ASSOCIATED_DATA,
 };
 

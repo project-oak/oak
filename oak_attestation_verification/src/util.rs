@@ -132,54 +132,121 @@ pub enum MatchResult {
     SAME = 0,
     DIFFERENT = 1,
     UNDECIDABLE = 2,
+    CONTRADICTORY = 3,
 }
 
-/// Compares two binary arrays byte per byte.
-fn match_strings(a: &str, b: &str) -> MatchResult {
-    if a != b {
-        return MatchResult::DIFFERENT;
-    }
-    MatchResult::SAME
-}
+/// Compares two digests instances for equality.
+///
+/// All available fields in both inputs are taken into account for the decision.
+/// If it is undesirable to include the weak sha1 hash in the decision simply
+/// remove it from either input.
+///
+/// SAME if underlying binaries are the same, DIFFERENT if they differ.
+/// UNDECIDABLE if the constellation in the protos doesn't provide enough
+/// information, CONTRADICTORY if the constellation suggest same and different
+/// at the same time. UNDECIDABLE and CONTRADICTORY usually point to problems
+/// which are unlikely to be addressable at run time.
+pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
+    let mut same = 0;
+    let mut different = 0;
 
-/// Compares two hex digests.
-pub fn is_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
     if !a.psha2.is_empty() && !b.psha2.is_empty() {
-        return match_strings(&a.psha2, &b.psha2);
+        if a.psha2 == b.psha2 {
+            same += 1;
+        } else {
+            different += 1;
+        }
+    }
+    if !a.sha1.is_empty() && !b.sha1.is_empty() {
+        if a.sha1 == b.sha1 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha2_256.is_empty() && !b.sha2_256.is_empty() {
-        return match_strings(&a.sha2_256, &b.sha2_256);
+        if a.sha2_256 == b.sha2_256 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha2_512.is_empty() && !b.sha2_512.is_empty() {
-        return match_strings(&a.sha2_512, &b.sha2_512);
+        if a.sha2_512 == b.sha2_512 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha3_512.is_empty() && !b.sha3_512.is_empty() {
-        return match_strings(&a.sha3_512, &b.sha3_512);
+        if a.sha3_512 == b.sha3_512 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha3_384.is_empty() && !b.sha3_384.is_empty() {
-        return match_strings(&a.sha3_384, &b.sha3_384);
+        if a.sha3_384 == b.sha3_384 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha3_256.is_empty() && !b.sha3_256.is_empty() {
-        return match_strings(&a.sha3_256, &b.sha3_256);
+        if a.sha3_256 == b.sha3_256 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha3_224.is_empty() && !b.sha3_224.is_empty() {
-        return match_strings(&a.sha3_224, &b.sha3_224);
+        if a.sha3_224 == b.sha3_224 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
     if !a.sha2_384.is_empty() && !b.sha2_384.is_empty() {
-        return match_strings(&a.sha2_384, &b.sha2_384);
+        if a.sha2_384 == b.sha2_384 {
+            same += 1;
+        } else {
+            different += 1;
+        }
     }
 
-    // Nit: Put the weak hash to the end of comparisons.
-    if !a.sha1.is_empty() && !b.sha1.is_empty() {
-        return match_strings(&a.sha1, &b.sha1);
+    #[allow(clippy::collapsible_else_if)]
+    if same > 0 {
+        if different > 0 { MatchResult::CONTRADICTORY } else { MatchResult::SAME }
+    } else {
+        if different > 0 { MatchResult::DIFFERENT } else { MatchResult::UNDECIDABLE }
     }
-
-    MatchResult::UNDECIDABLE
 }
 
 /// Compares two raw digests.
-pub fn is_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
-    is_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b))
+pub fn get_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
+    get_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b))
+}
+
+pub fn is_hex_digest_match(actual: &HexDigest, expected: &HexDigest) -> anyhow::Result<()> {
+    match get_hex_digest_match(actual, expected) {
+        MatchResult::SAME => Ok(()),
+        MatchResult::DIFFERENT => {
+            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
+        }
+        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
+        MatchResult::CONTRADICTORY => Err(anyhow::anyhow!("hash collision")),
+    }
+}
+
+pub fn is_raw_digest_match(actual: &RawDigest, expected: &RawDigest) -> anyhow::Result<()> {
+    match get_raw_digest_match(actual, expected) {
+        MatchResult::SAME => Ok(()),
+        MatchResult::DIFFERENT => {
+            Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
+        }
+        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
+        MatchResult::CONTRADICTORY => Err(anyhow::anyhow!("hash collision")),
+    }
 }
 
 /// Converts raw digest to hex digest.

@@ -44,8 +44,8 @@ cc_library(
     hdrs = ["orchestrator_client.h"],
     deps = [
         ":common",
-        "//oak_containers/proto:interfaces_cc_grpc",
-        "//oak_containers/proto:interfaces_cc_proto",
+        "//proto/containers:interfaces_cc_grpc",
+        "//proto/containers:interfaces_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![feature(never_type)]
 #![feature(new_uninit)]
 #![feature(unwrap_infallible)]
@@ -41,8 +41,7 @@ pub mod proto {
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_proto_rust::oak::attestation;
+        pub use oak_proto_rust::oak::{attestation, crypto};
     }
 }
 
@@ -59,8 +58,10 @@ pub trait Observer {
 
 pub trait Handler {
     type HandlerType: Handler;
+    type HandlerConfig: Default + Send + Sync + Clone;
 
     fn new_handler(
+        config: Self::HandlerConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,

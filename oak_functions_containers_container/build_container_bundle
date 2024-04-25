@@ -10,7 +10,8 @@ set -o xtrace
 set -o pipefail
 
 readonly OCI_IMAGE_FILE="./target/oak_functions_container_oci_image.tar"
-set -e
+readonly OCI_INSECURE_IMAGE_FILE="./target/oak_functions_insecure_container_oci_image.tar"
+
 rm --recursive --force ./target
 mkdir --parents ./target
 
@@ -18,6 +19,17 @@ cargo build \
     --package=oak_functions_containers_app \
     --target=x86_64-unknown-linux-musl \
     --profile=release-lto \
+    --bin=oak_functions_containers_app \
+    -Zunstable-options \
+    --out-dir=./target/
+
+cargo build \
+    --package=oak_functions_containers_app \
+    --target=x86_64-unknown-linux-musl \
+    --profile=release-lto \
+    --bin=oak_functions_containers_insecure_app \
+    --no-default-features \
+    --features=native,allow_sensitive_logging \
     -Zunstable-options \
     --out-dir=./target/
 
@@ -34,3 +46,15 @@ docker buildx \
 ../scripts/export_container_bundle \
     -c "${OCI_IMAGE_FILE}" \
     -o ./target/oak_functions_container_oci_filesystem_bundle.tar
+
+docker buildx \
+    --builder="${BUILDER}" \
+    build \
+    --tag=latest \
+    --file=Dockerfile.insecure \
+    --output="type=oci,dest=${OCI_INSECURE_IMAGE_FILE}" \
+    .
+
+../scripts/export_container_bundle \
+    -c "${OCI_INSECURE_IMAGE_FILE}" \
+    -o ./target/oak_functions_insecure_container_oci_filesystem_bundle.tar

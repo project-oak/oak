@@ -21,8 +21,7 @@ pub mod proto {
                 tonic::include_proto!("oak.functions.config");
             }
         }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_proto_rust::oak::attestation;
+        pub use oak_proto_rust::oak::{attestation, crypto};
     }
 }
 

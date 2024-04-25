@@ -17,6 +17,8 @@
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod api;
 #[cfg(test)]
@@ -384,6 +386,9 @@ impl<'a> OakCaller<'a> {
     }
 }
 
+#[derive(Clone, Default)]
+pub struct WasmConfig {}
+
 // A request handler with a Wasm module for handling multiple requests.
 pub struct WasmHandler {
     wasm_module: Arc<wasmi::Module>,
@@ -439,8 +444,10 @@ impl WasmHandler {
 
 impl Handler for WasmHandler {
     type HandlerType = WasmHandler;
+    type HandlerConfig = WasmConfig;
 
     fn new_handler(
+        _config: WasmConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -464,6 +471,7 @@ impl Handler for WasmHandler {
         let mut store = wasmi::Store::new(module.engine(), user_state);
         let instance = self.linker.instantiate(&mut store, module)?;
 
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         instance.exports(&store).for_each(|export| {
             store
                 .data()
@@ -486,18 +494,21 @@ impl Handler for WasmHandler {
         // included in the metric.
         #[cfg(feature = "std")]
         let now = Instant::now();
+        #[allow(unused)]
         let result = main.call(&mut store, ());
         #[cfg(feature = "std")]
         if let Some(ref observer) = self.observer {
             observer.wasm_invocation(now.elapsed());
         }
 
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
         );
 
-        let response_bytes = response.lock().clone();
+        let response_bytes = core::mem::take(response.lock().as_mut());
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store
             .data()
             .logger

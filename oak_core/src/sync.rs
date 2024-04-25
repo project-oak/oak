@@ -80,6 +80,12 @@ impl<T> OnceCell<T> {
     }
 }
 
+impl<T> Default for OnceCell<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Safety: It is safe to share references across threads since the inner value
 // will only be set while an exclusive lock is held and only once. Until it is
 // set there can be no shared references to it, and once it is set, and there

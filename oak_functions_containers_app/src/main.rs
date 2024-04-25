@@ -17,6 +17,7 @@ use std::{
     error::Error,
     fmt::Display,
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    num::{NonZeroU16, NonZeroU32},
     sync::Arc,
     time::Duration,
 };
@@ -32,7 +33,7 @@ use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::{
     proto::oak::functions::config::{
         application_config::CommunicationChannel, ApplicationConfig, HandlerType,
-        TcpCommunicationChannel,
+        TcpCommunicationChannel, WasmtimeConfig,
     },
     wasm::wasmtime::WasmtimeHandler,
 };
@@ -65,6 +66,7 @@ struct Args {
 async fn serve<S>(
     addr: S,
     handler_type: HandlerType,
+    handler_config: Option<WasmtimeConfig>,
     stream: Box<
         dyn tokio_stream::Stream<
                 Item = Result<
@@ -84,11 +86,17 @@ where
 
     match handler_type {
         HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-            app_serve::<WasmtimeHandler>(stream, encryption_key_handle, meter).await
+            app_serve::<WasmtimeHandler>(
+                stream,
+                encryption_key_handle,
+                meter,
+                handler_config.unwrap_or_default(),
+            )
+            .await
         }
         HandlerType::HandlerNative => {
             if cfg!(feature = "native") {
-                app_serve::<NativeHandler>(stream, encryption_key_handle, meter).await
+                app_serve::<NativeHandler>(stream, encryption_key_handle, meter, ()).await
             } else {
                 panic!(
                     "Application config specified `native` handler type, but this binary does not support that feature"
@@ -111,6 +119,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use eprintln here, as normal logging would go through the OTLP connection,
     // which may no longer be valid.
     set_error_handler(|err| eprintln!("oak_functions_containers_app: OTLP error: {}", err))?;
+
+    // This is a hack to get _some_ logging out of the binary, and should be
+    // replaced with proper OTLP logging (or logging to journald, or something) in
+    // the not too distant future. Debug logging is also only enabled for the
+    // `oak_functions_service` module as Tonic tends to be rather chatty if
+    // you enable debug logs everywhere; also, this could end up in a feedback
+    // loop as if we create a RPC do do the debug logging, it'll mean the RPC
+    // itself will generate more debug logs, which in turn will be sent via a
+    // RPC, and the cycle continues.
+    stderrlog::new().module("oak_functions_service").verbosity(log::Level::Debug).init().unwrap();
 
     let metrics = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
@@ -200,47 +218,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let server_handle = tokio::spawn(async move {
-        let default_channel = CommunicationChannel::TcpChannel(TcpCommunicationChannel::default());
-        let communication_config =
-            application_config.communication_channel.as_ref().unwrap_or(&default_channel);
+    let handler_type = application_config.handler_type();
+    let wasmtime_config = application_config.wasmtime_config;
+    let communication_channel = application_config
+        .communication_channel
+        .unwrap_or_else(|| CommunicationChannel::TcpChannel(TcpCommunicationChannel::default()));
 
-        match communication_config {
-            CommunicationChannel::TcpChannel(config) => {
-                let mut config = config.clone();
-                if config.port == 0 {
-                    config.port = OAK_FUNCTIONS_CONTAINERS_APP_PORT.into();
-                }
-                let addr =
-                    SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port.try_into()?);
-                let listener = TcpListener::bind(addr).await?;
-                serve(
-                    addr,
-                    application_config.handler_type(),
-                    Box::new(TcpListenerStream::new(listener)),
-                    encryption_key_handle,
-                    meter,
-                )
-                .await
-            }
-            CommunicationChannel::VsockChannel(config) => {
-                let mut config = config.clone();
-                if config.port == 0 {
-                    config.port = OAK_FUNCTIONS_CONTAINERS_APP_PORT.into();
-                }
-                let addr = VsockAddr::new(tokio_vsock::VMADDR_CID_ANY, config.port);
-                let listener = VsockListener::bind(addr)?;
-                serve(
-                    addr,
-                    application_config.handler_type(),
-                    Box::new(listener.incoming()),
-                    encryption_key_handle,
-                    meter,
-                )
-                .await
-            }
+    let server_handle = match communication_channel {
+        CommunicationChannel::TcpChannel(config) => {
+            let port = NonZeroU16::new(config.port.try_into()?)
+                .map_or(OAK_FUNCTIONS_CONTAINERS_APP_PORT, Into::into);
+            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
+            let listener = TcpListener::bind(addr).await?;
+            tokio::spawn(serve(
+                addr,
+                handler_type,
+                wasmtime_config,
+                Box::new(TcpListenerStream::new(listener)),
+                encryption_key_handle,
+                meter,
+            ))
         }
-    });
+        CommunicationChannel::VsockChannel(config) => {
+            let port = NonZeroU32::new(config.port)
+                .map_or(OAK_FUNCTIONS_CONTAINERS_APP_PORT.into(), Into::into);
+            let addr = VsockAddr::new(tokio_vsock::VMADDR_CID_ANY, port);
+            let listener = VsockListener::bind(addr)?;
+            tokio::spawn(serve(
+                addr,
+                handler_type,
+                wasmtime_config,
+                Box::new(listener.incoming()),
+                encryption_key_handle,
+                meter,
+            ))
+        }
+    };
 
     client.notify_app_ready().await.context("failed to notify that app is ready")?;
 

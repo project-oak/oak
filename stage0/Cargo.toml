@@ -16,7 +16,7 @@ linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 oak_core = { path = "../oak_core", default-features = false }
 oak_dice = { workspace = true }
 oak_stage0_dice = { workspace = true }
-oak_linux_boot_params = { path = "../linux_boot_params" }
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
 oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
 oak_sev_snp_attestation_report = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }

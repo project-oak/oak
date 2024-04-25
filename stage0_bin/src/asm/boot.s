@@ -203,8 +203,8 @@ no_encryption:
     mov ${pml4}, %eax
     mov %eax, %cr3
 
-    # PAE + PGE
-    mov $0b10100000, %eax
+    # PAE
+    mov $0b100000, %eax
     mov %eax, %cr4
 
     # Read EFER, enable LME

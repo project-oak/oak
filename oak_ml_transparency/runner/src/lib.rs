@@ -16,7 +16,7 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String};
+use alloc::collections::BTreeMap;
 use std::{
     fs::{remove_file, File},
     io::{self, Read, Write},
@@ -30,7 +30,7 @@ use oak_attestation_verification::claims::{
     ClaimPredicate, Statement, Subject, PREDICATE_V2, STATEMENT_V1,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{self, Value};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 

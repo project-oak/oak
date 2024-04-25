@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use std::vec::Vec;
-
 use anyhow::{anyhow, Context};
 use oak_crypto::encryptor::ClientEncryptor;
 

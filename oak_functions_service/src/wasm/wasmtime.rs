@@ -22,6 +22,9 @@
 
 extern crate alloc;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 #[cfg(feature = "std")]
 use std::time::Instant;
@@ -31,11 +34,12 @@ use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
-use wasmtime::{self, Store};
+use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
+    proto::oak::functions::config::WasmtimeConfig,
     wasm::{api::StdWasmApiFactory, WasmApiFactory},
     Handler, Observer,
 };
@@ -210,9 +214,9 @@ impl OakLinker {
     fn instantiate(
         &self,
         mut store: &mut Store<UserState>,
-        module: Arc<wasmtime::Module>,
+        module: &wasmtime::Module,
     ) -> Result<wasmtime::Instance, micro_rpc::Status> {
-        let instance = self.linker.instantiate(&mut store, &module).map_err(|err| {
+        let instance = self.linker.instantiate(&mut store, module).map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 format!("could not instantiate Wasm module: {:?}", err),
@@ -380,34 +384,94 @@ impl<'a> OakCaller<'a> {
 
 // A request handler with a Wasm module for handling multiple requests.
 pub struct WasmtimeHandler {
-    wasm_module: Arc<wasmtime::Module>,
+    wasm_module: wasmtime::Module,
     linker: OakLinker,
-    wasm_api_factory: Arc<dyn WasmApiFactory + Send + Sync>,
+    wasm_api_factory: Box<dyn WasmApiFactory + Send + Sync>,
     logger: Arc<dyn OakLogger>,
     #[cfg_attr(not(feature = "std"), allow(dead_code))]
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
+macro_rules! maybe_set {
+    ($target:ident, $source:ident, [$( $field:ident $(as $ty:ty)?),+ ]) => {
+        $(
+            if let Some($field) = $source.$field {
+                $target.$field($field $(as $ty)?);
+            }
+        )*
+    };
+}
+
 impl WasmtimeHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        wasm_api_factory: Arc<dyn WasmApiFactory + Send + Sync>,
-        logger: Arc<dyn OakLogger>,
+        config_proto: WasmtimeConfig,
+        wasm_api_factory: Box<dyn WasmApiFactory + Send + Sync>,
+        logger: Box<dyn OakLogger>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self> {
-        let config = wasmtime::Config::new();
+        let mut config = wasmtime::Config::new();
+        config.cranelift_opt_level(wasmtime::OptLevel::Speed);
+
+        if let Some(pooling_config_proto) = config_proto.pooling_strategy {
+            let mut pooling_config = PoolingAllocationConfig::default();
+            maybe_set!(
+                pooling_config,
+                pooling_config_proto,
+                [
+                    max_unused_warm_slots,
+                    linear_memory_keep_resident as usize,
+                    table_keep_resident as usize,
+                    total_component_instances,
+                    max_component_instance_size as usize,
+                    max_core_instances_per_component,
+                    max_memories_per_component,
+                    max_tables_per_component,
+                    total_memories,
+                    total_tables,
+                    total_stacks,
+                    total_core_instances,
+                    max_core_instance_size as usize,
+                    max_tables_per_module,
+                    table_elements,
+                    max_memories_per_module,
+                    memory_pages,
+                    max_memory_protection_keys as usize
+                ]
+            );
+            if let Some(mpk) = pooling_config_proto.memory_protection_keys {
+                if mpk {
+                    pooling_config.memory_protection_keys(wasmtime::MpkEnabled::Auto);
+                }
+            }
+
+            config
+                .allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(pooling_config));
+        }
+        maybe_set!(
+            config,
+            config_proto,
+            [
+                static_memory_maximum_size,
+                static_memory_guard_size,
+                dynamic_memory_guard_size,
+                dynamic_memory_reserved_for_growth,
+                memory_init_cow
+            ]
+        );
+
         let engine = wasmtime::Engine::new(&config)
             .map_err(|err| anyhow::anyhow!("couldn't create Wasmtime engine: {:?}", err))?;
-        let module = wasmtime::Module::new(&engine, wasm_module_bytes)
+        let wasm_module = wasmtime::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
-        let linker = OakLinker::new(module.engine());
+        let linker = OakLinker::new(wasm_module.engine());
 
         Ok(WasmtimeHandler {
-            wasm_module: Arc::new(module),
+            wasm_module,
             linker,
             wasm_api_factory,
-            logger,
+            logger: Arc::from(logger),
             observer,
         })
     }
@@ -415,32 +479,34 @@ impl WasmtimeHandler {
 
 impl Handler for WasmtimeHandler {
     type HandlerType = WasmtimeHandler;
+    type HandlerConfig = WasmtimeConfig;
 
     fn new_handler(
+        config: WasmtimeConfig,
         wasm_module_bytes: &[u8],
         lookup_data_manager: Arc<LookupDataManager>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<WasmtimeHandler> {
-        let logger = Arc::new(StandaloneLogger);
-        let wasm_api_factory = Arc::new(StdWasmApiFactory { lookup_data_manager });
+        let logger = Box::new(StandaloneLogger);
+        let wasm_api_factory = Box::new(StdWasmApiFactory { lookup_data_manager });
 
-        Self::create(wasm_module_bytes, wasm_api_factory, logger, observer)
+        Self::create(wasm_module_bytes, config, wasm_api_factory, logger, observer)
     }
 
     fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
         #[cfg(feature = "std")]
         let now = Instant::now();
-        let module = self.wasm_module.clone();
 
         let request = invoke_request.body;
         let response = Arc::new(Spinlock::new(Vec::new()));
         let mut wasm_api = self.wasm_api_factory.create_wasm_api(request, response.clone());
         let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
         // For isolated requests we need to create a new store for every request.
-        let mut store = wasmtime::Store::new(module.engine(), user_state);
-        let instance = self.linker.instantiate(&mut store, module)?;
+        let mut store = wasmtime::Store::new(self.wasm_module.engine(), user_state);
+        let instance = self.linker.instantiate(&mut store, &self.wasm_module)?;
 
         // Does not work in wasmtime
+        // #[cfg(not(feature = "deny_sensitive_logging"))]
         // instance.exports(&store).for_each(|export| {
         //     store
         //         .data()
@@ -463,18 +529,21 @@ impl Handler for WasmtimeHandler {
         // included in the metric.
         #[cfg(feature = "std")]
         let now = Instant::now();
+        #[allow(unused)]
         let result = main.call(&mut store, ());
         #[cfg(feature = "std")]
         if let Some(ref observer) = self.observer {
             observer.wasm_invocation(now.elapsed());
         }
 
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
         );
 
-        let response_bytes = response.lock().clone();
+        let response_bytes = core::mem::take(response.lock().as_mut());
+        #[cfg(not(feature = "deny_sensitive_logging"))]
         store
             .data()
             .logger

@@ -238,8 +238,6 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec::Vec;
-
     use super::*;
 
     #[derive(Clone)]

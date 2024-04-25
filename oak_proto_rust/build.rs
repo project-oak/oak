@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/attestation/evidence.proto",
         "../proto/attestation/reference_value.proto",
         "../proto/attestation/verification.proto",
+        "../proto/containers/interfaces.proto",
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/lookup_data.proto",
@@ -30,12 +31,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = prost_build::Config::new();
     config
         .btree_map(["."]) // Support no-std proto maps
-        .compile_protos(&proto_paths, &[".."])
+        .compile_protos(
+            &proto_paths,
+            &[
+                "..",
+                // We need to include the well-known protos ourselves
+                "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
+                "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
+            ],
+        )
         .expect("proto compilation failed");
 
     micro_rpc_build::compile(
-        &["../proto/oak_functions/testing.proto"],
-        &[".."],
+        &["../proto/oak_functions/testing.proto", "../proto/crypto/crypto.proto"],
+        &[
+            "..",
+            // We need to include the well-known protos ourselves
+            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
+        ],
         Default::default(),
     );
 

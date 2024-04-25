@@ -14,4 +14,4 @@ export XDG_RUNTIME_DIR=/var/run
 cd "$(dirname "$0")/.."
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command ./scripts/xtask run-bazel-tests
+./scripts/docker_run nix develop .#ci --command just bazel-ci

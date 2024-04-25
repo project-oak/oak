@@ -1,0 +1,40 @@
+# Container-based SLSA provenance generator that works with multiple provenance subjects.
+# Does not upload provenances to ENT, as to the existing logic for
+# importing provenances as part of transparent release, which does not yet
+# support mulitple subjects and expects specific ENT tag names.
+# TODO: b/333745447 - Merge with .github/workflows/provenance.yaml
+name: Build Full SLSA3 Provenances
+
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build_binary:
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
+
+    # We use the same job template to generate provenances for multiple binaries.
+    strategy:
+      fail-fast: false
+      matrix:
+        buildconfig:
+          - buildconfigs_full_provenance/stage0_bin.toml
+          - buildconfigs_full_provenance/oak_containers_kernel.toml
+          - buildconfigs_full_provenance/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.toml
+
+    permissions:
+      actions: read
+      id-token: write
+      contents: write # For uploading provenances.
+    uses: ./.github/workflows/reusable_full_provenance.yaml
+    with:
+      build-config-path: ${{ matrix.buildconfig }}

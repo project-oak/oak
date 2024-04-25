@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/attestation/tcb_version.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -53,6 +54,68 @@ message KernelExpectedValues {
   ExpectedDigests setup_data = 2;
 }
 
+message AmdSevExpectedValues {
+  ExpectedDigests stage0_expected = 1;
+
+  // Minimum accepted versions of all TCB components.
+  TcbVersion min_tcb_version = 2;
+
+  // If true, will skip the check that the TEE is not in debug mode.
+  bool allow_debug = 3;
+}
+
+message IntelTdxExpectedValues {}
+
+message InsecureExpectedValues {}
+
+message ExpectedRegex {
+  string value = 1;
+}
+
+message ExpectedStringLiterals {
+  repeated string value = 1;
+}
+
+message TextExpectedValue {
+  oneof type {
+    // If the reference value was set to SkipVerification, we represent that
+    // here.
+    VerificationSkipped skipped = 1;
+
+    ExpectedRegex regex = 2;
+
+    ExpectedStringLiterals string_literals = 3;
+  }
+}
+
+message RootLayerExpectedValues {
+  // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+  // Verification is skipped when not running in a TEE.
+  AmdSevExpectedValues amd_sev = 1;
+  IntelTdxExpectedValues intel_tdx = 2;
+  // When insecure is set no verification of the TEE platform is performed. This
+  // can be used when not running in a TEE or when the client is agnostic about
+  // the platform and doesn't care about the hardware verification.
+  InsecureExpectedValues insecure = 3;
+}
+
+// Reference values of the kernel layer, as measured by stage0.
+message KernelLayerExpectedValues {
+  // Verifies the kernel based on endorsement.
+  KernelExpectedValues kernel = 1;
+
+  // Verifies the kernel command line, i.e. the parameters passed to the
+  // kernel on boot.
+  TextExpectedValue kernel_cmd_line_text = 2;
+
+  // Verifies the stage1 binary if running as Oak Containers.
+  ExpectedDigests init_ram_fs = 3;
+
+  ExpectedDigests memory_map = 4;
+
+  ExpectedDigests acpi = 5;
+}
+
 // The expected binary digests for a system layer image.
 message SystemLayerExpectedValues {
   // The allowable digest values for a system layer image.
@@ -74,4 +137,42 @@ message ApplicationLayerExpectedValues {
   // The allowable digest values for a configuration passed to the application
   // binary.
   ExpectedDigests configuration = 2;
+}
+
+// Represents digest of application task config.
+message CBApplicationLayerExpectedValues {
+  // Verifies the application task config.
+  ExpectedDigests binary = 1;
+}
+
+// Represents digest of application task config.
+message CBSystemLayerExpectedValues {
+  // Verifies the application task config.
+  ExpectedDigests system_image = 1;
+  TextExpectedValue system_cmd_line = 2;
+}
+
+message OakRestrictedKernelExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+  KernelLayerExpectedValues kernel_layer = 2;
+  ApplicationLayerExpectedValues application_layer = 3;
+}
+
+message OakContainersExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+  KernelLayerExpectedValues kernel_layer = 2;
+  SystemLayerExpectedValues system_layer = 3;
+  ContainerLayerExpectedValues container_layer = 4;
+}
+
+message CBExpectedValues {
+  RootLayerExpectedValues root_layer = 1;
+}
+
+message ExpectedValues {
+  oneof type {
+    OakRestrictedKernelExpectedValues oak_restricted_kernel = 1;
+    OakContainersExpectedValues oak_containers = 2;
+    CBExpectedValues cb = 3;
+  }
 }

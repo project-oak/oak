@@ -64,7 +64,7 @@
               includeSystemImages = false;
             }).androidsdk;
           rustToolchain =
-            pkgs.rust-bin.nightly."2023-11-15".default.override {
+            pkgs.rust-bin.nightly."2024-02-01".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -194,10 +194,12 @@
                 curl
                 docker
                 elfutils
+                fakeroot
                 flex
                 jq
                 libelf
                 perl
+                strip-nondeterminism
                 glibc
                 glibc.static
                 ncurses
@@ -231,7 +233,15 @@
                 cpio
                 glibc
                 glibc.static
+                strip-nondeterminism
               ];
+            };
+            systemImageProvenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+                bazelShell
+              ];
+              packages = [ ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {

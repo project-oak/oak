@@ -1,9 +1,0 @@
-command = [
-  "nix",
-  "develop",
-  ".#rust",
-  "--command",
-  "just",
-  "oak_restricted_kernel_simple_io_wrapper",
-]
-artifact_path = "./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin"

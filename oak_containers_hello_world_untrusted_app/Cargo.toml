@@ -16,6 +16,7 @@ log = "*"
 oak_client = { workspace = true }
 oak_containers_launcher = { workspace = true }
 oak_crypto = { workspace = true }
+oak_proto_rust = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",

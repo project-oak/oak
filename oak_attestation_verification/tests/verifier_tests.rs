@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{fs, string::String};
+use std::fs;
 
 use oak_attestation_verification::{
     util::convert_pem_to_raw,

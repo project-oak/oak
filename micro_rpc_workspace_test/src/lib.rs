@@ -40,8 +40,8 @@ fn micro_rpc_dep_test() {
 #[test]
 fn oak_crypto_dep_test() {
     let request_wrapper = proto::oak::test::TestRequestWrapper {
-        encrypted_request: Some(oak_crypto::proto::oak::crypto::v1::EncryptedRequest {
-            encrypted_message: Some(oak_crypto::proto::oak::crypto::v1::AeadEncryptedMessage {
+        encrypted_request: Some(oak_proto_rust::oak::crypto::v1::EncryptedRequest {
+            encrypted_message: Some(oak_proto_rust::oak::crypto::v1::AeadEncryptedMessage {
                 associated_data: vec![],
                 nonce: vec![],
                 ciphertext: vec![],

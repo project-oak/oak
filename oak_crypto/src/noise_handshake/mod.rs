@@ -26,7 +26,6 @@ mod noise;
 mod tests;
 
 use alloc::vec::Vec;
-use core::result::Result;
 
 pub use crate::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,

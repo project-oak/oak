@@ -12,6 +12,7 @@ oak_grpc_utils = { workspace = true }
 anyhow = "*"
 async-trait = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
+oak_proto_rust = { workspace = true }
 oak_crypto = { workspace = true }
 prost = "*"
 prost-types = "*"

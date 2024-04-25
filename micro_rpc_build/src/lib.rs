@@ -52,6 +52,14 @@ pub struct CompileOptions {
 
     /// Specifies externally provided Protobuf packages or types.
     pub extern_paths: Vec<ExternPath>,
+
+    /// Configures the code generator to include type names.
+    ///
+    /// Message types will implement `Name` trait, which provides type and
+    /// package name. This is needed for encoding messages as `Any` type.
+    ///
+    /// See https://docs.rs/prost-build/0.12.4/prost_build/struct.Config.html#method.enable_type_names
+    pub enable_type_names: bool,
 }
 
 #[derive(Default, Clone)]
@@ -100,6 +108,9 @@ pub fn compile(
     config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
     for extern_path in options.extern_paths {
         config.extern_path(extern_path.proto_path, extern_path.rust_path);
+    }
+    if options.enable_type_names {
+        config.enable_type_names();
     }
     config
         // Use BTreeMap to allow using this function in no-std crates.

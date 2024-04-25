@@ -18,3 +18,7 @@ build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
 
 # Use nightly rustc by default
 build --@rules_rust//rust/toolchain/channel=nightly
+
+# Use a custom workspace status command so that the git revision is included in
+# stamped binaries.
+build --workspace_status_command=bazel/workspace_status_command.sh

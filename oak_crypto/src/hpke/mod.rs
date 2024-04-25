@@ -23,12 +23,10 @@ use hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
 pub use hpke::{Deserializable, Serializable};
+use oak_proto_rust::oak::crypto::v1::SessionKeys;
 use rand_core::{OsRng, RngCore};
 
-use crate::{
-    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-    proto::oak::crypto::v1::SessionKeys,
-};
+use crate::hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES};
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;

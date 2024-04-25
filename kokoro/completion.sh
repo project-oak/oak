@@ -15,4 +15,3 @@ cd "$(dirname "$0")/.."
 
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#ci --command ./scripts/xtask completion
-

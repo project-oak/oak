@@ -20,6 +20,7 @@ mod vmsa;
 
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::Parser;
 use log::trace;
 use page::PageInfo;
@@ -40,8 +41,13 @@ struct Cli {
     stage0_rom: Option<PathBuf>,
     #[arg(long, help = "Whether the firwmare is shadowed to support legacy boot")]
     legacy_boot: bool,
-    #[arg(long, help = "The number of vCPUs available to the VM at boot", default_value_t = 1)]
-    vcpu_count: usize,
+    #[arg(long, help = "The number of vCPUs available to the VM at boot", default_values_t = [1], value_delimiter = ',', num_args = 1..)]
+    vcpu_count: Vec<usize>,
+    #[arg(
+        long,
+        help = "The dir to output the predicted attestation measurements as binary files to"
+    )]
+    attestation_measurements_output_dir: Option<PathBuf>,
 }
 
 impl Cli {
@@ -58,18 +64,18 @@ fn main() -> anyhow::Result<()> {
 
     let stage0 = load_stage0(cli.stage0_path())?;
 
-    let mut page_info = PageInfo::new();
+    let mut base_page_info = PageInfo::new();
 
     // Add the Stage 0 firmware ROM image.
-    page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
+    base_page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
     if cli.legacy_boot {
         // Add the legacy boot shadow of the Stage 0 firmware ROM image.
-        page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+        base_page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
     }
 
     for snp_page in stage0.get_snp_pages() {
         for page_number in 0..snp_page.page_count {
-            page_info.update_from_snp_page(
+            base_page_info.update_from_snp_page(
                 snp_page.page_type.clone(),
                 snp_page.start_address + (page_number as u64) * Size4KiB::SIZE,
             );
@@ -77,18 +83,37 @@ fn main() -> anyhow::Result<()> {
     }
 
     // The boot vCPU has the default VMSA configured.
-    page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
+    base_page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
 
     // Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset
     // block table in the firmware.
     let sev_es_reset_block = stage0.get_sev_es_reset_block();
     let ap_vmsa = get_ap_vmsa(&sev_es_reset_block);
-    for _ in 1..cli.vcpu_count {
-        page_info.update_from_vmsa(&ap_vmsa, VMSA_ADDRESS);
+    // Derive measurements for each vCPU counts specified.
+    for vcpu_count in cli.vcpu_count {
+        let mut page_info = base_page_info.clone();
+        // Iterate through all vCPUs up to the specified count.
+        for _ in 1..vcpu_count {
+            page_info.update_from_vmsa(&ap_vmsa, VMSA_ADDRESS);
+        }
+
+        trace!("raw measurement for {} vCPU: {:?}", vcpu_count, page_info.digest_cur);
+
+        println!(
+            "Attestation Measurement {} vCPU: {}",
+            vcpu_count,
+            hex::encode(page_info.digest_cur)
+        );
+
+        if let Some(mut path) = cli.attestation_measurements_output_dir.clone() {
+            path.push(format!(
+                "sha2_384_measurement_of_initial_memory_with_stage0_and_{:02}_vcpu",
+                vcpu_count
+            ));
+            std::fs::write(path, page_info.digest_cur)
+                .context("couldn't write attestation measurement")?;
+        }
     }
 
-    trace!("raw measurement: {:?}", page_info.digest_cur);
-
-    println!("Attestation Measurement: {}", hex::encode(page_info.digest_cur));
     Ok(())
 }

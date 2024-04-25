@@ -26,14 +26,14 @@ jobs:
       matrix:
         buildconfig:
           - buildconfigs/key_xor_test_app.toml
-          - buildconfigs/oak_containers_kernel_bzimage.toml
-          - buildconfigs/oak_containers_stage1_cpio.toml
+          - buildconfigs/oak_containers_kernel.toml
+          - buildconfigs/oak_containers_stage1.toml
+          - buildconfigs/oak_containers_system_image.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/oak_functions_insecure_enclave_app.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_wrapper.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper.toml
+          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.toml
           - buildconfigs/stage0_bin.toml
           - buildconfigs/oak_orchestrator.toml
 
@@ -55,3 +55,4 @@ jobs:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
       # Secret key corresponding to `ent-public-key` above, used to sign Ent tags.
       ENT_SECRET_KEY: ${{ secrets.ENT_SECRET_KEY }}
+      GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}

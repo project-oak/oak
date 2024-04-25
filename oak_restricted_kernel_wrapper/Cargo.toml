@@ -11,7 +11,7 @@ members = ["."]
 
 [dependencies]
 elf = { version = "*", default-features = false }
-oak_linux_boot_params = { path = "../linux_boot_params" }
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
 x86_64 = "*"
 
 [profile.dev]

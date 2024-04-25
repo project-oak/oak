@@ -14,9 +14,12 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![allow(rustdoc::private_intra_doc_links)]
 #![feature(array_chunks)]
+
+#[cfg(feature = "std")]
+extern crate std;
 
 #[cfg(feature = "client")]
 pub mod client;

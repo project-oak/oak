@@ -5,8 +5,12 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["native"]
+default = ["native", "deny_sensitive_logging"]
 native = ["dep:libloading", "dep:tempfile", "dep:ouroboros"]
+deny_sensitive_logging = ["oak_functions_service/deny_sensitive_logging"]
+# Feature allow_sensitive_logging is not actually used in the code. It is only used as a
+# required feature to differentiate between the two binaries.
+allow_sensitive_logging = []
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }
@@ -21,8 +25,12 @@ oak_containers_orchestrator = { workspace = true }
 oak_containers_sdk = { workspace = true }
 oak_debug_service = { workspace = true }
 oak_functions_abi = { workspace = true }
-oak_functions_service = { workspace = true, features = ["std"] }
+oak_functions_service = { workspace = true, default-features = false, features = [
+  "std",
+] }
 oak_crypto = { workspace = true }
+oak_proto_rust = { workspace = true }
+log = "*"
 micro_rpc = { workspace = true }
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
@@ -39,6 +47,7 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
 ] }
 ouroboros = { version = "*", optional = true }
 prost = "*"
+stderrlog = "*"
 tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
@@ -52,3 +61,16 @@ tracing = "*"
 [dev-dependencies]
 oak_functions_test_utils = { workspace = true }
 xtask = { workspace = true }
+
+[[bin]]
+name = "oak_functions_containers_app"
+test = false
+bench = false
+required-features = ["deny_sensitive_logging"]
+
+[[bin]]
+name = "oak_functions_containers_insecure_app"
+path = "src/main.rs"
+test = false
+bench = false
+required-features = ["allow_sensitive_logging"]
