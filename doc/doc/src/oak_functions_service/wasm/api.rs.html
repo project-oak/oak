@@ -151,9 +151,6 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -170,7 +167,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, format, rc::Rc, sync::Arc, vec::Vec};
+<span class="kw">use </span>core::cell::Cell;
 
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>oak_functions_sdk::proto::oak::functions::wasm::v1::{
@@ -178,7 +176,6 @@
     LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, StdWasmApi,
     StdWasmApiServer, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
-<span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="kw">use super</span>::{WasmApi, WasmApiFactory};
 <span class="kw">use crate</span>::{
@@ -194,11 +191,7 @@
 }
 
 <span class="kw">impl </span>WasmApiFactory <span class="kw">for </span>StdWasmApiFactory {
-    <span class="kw">fn </span>create_wasm_api(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Vec&lt;u8&gt;,
-        response: Arc&lt;Spinlock&lt;Vec&lt;u8&gt;&gt;&gt;,
-    ) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt; {
+    <span class="kw">fn </span>create_wasm_api(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Vec&lt;u8&gt;, response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt; {
         Box::new(StdWasmApiImpl {
             lookup_data: <span class="self">self</span>.lookup_data_manager.create_lookup_data(),
             logger: Arc::new(StandaloneLogger),
@@ -219,7 +212,7 @@
     <span class="doccomment">/// Current request, as received from the client.
     </span>request: Vec&lt;u8&gt;,
     <span class="doccomment">/// Current response, as received from the Wasm module.
-    </span>response: Arc&lt;Spinlock&lt;Vec&lt;u8&gt;&gt;&gt;,
+    </span>response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>StdWasmApi <span class="kw">for </span>StdWasmApiImpl {
@@ -235,7 +228,8 @@
         req: WriteResponseRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;WriteResponseResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">"invoked write_response"</span>);
-        <span class="kw-2">*</span><span class="self">self</span>.response.lock() = req.body;
+        <span class="self">self</span>.response.set(req.body);
+
         <span class="prelude-val">Ok</span>(WriteResponseResponse::default())
     }
 

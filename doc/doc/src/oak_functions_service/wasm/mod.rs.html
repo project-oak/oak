@@ -521,14 +521,6 @@
 <a href="#519" id="519">519</a>
 <a href="#520" id="520">520</a>
 <a href="#521" id="521">521</a>
-<a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -558,7 +550,8 @@
 <span class="attr">#[cfg(feature = <span class="string">"wasmtime"</span>)]
 </span><span class="kw">pub mod </span>wasmtime;
 
-<span class="kw">use </span>alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+<span class="kw">use </span>alloc::{boxed::Box, format, rc::Rc, string::ToString, sync::Arc, vec::Vec};
+<span class="kw">use </span>core::cell::Cell;
 <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">use </span>std::time::Instant;
 
@@ -567,7 +560,6 @@
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
-<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>wasmi::Store;
 
 <span class="kw">use crate</span>::{
@@ -936,11 +928,7 @@
 /// the server, while each instance of the created [`WasmApi`] is expected to
 /// live for the lifetime of a single request.
 </span><span class="kw">pub trait </span>WasmApiFactory {
-    <span class="kw">fn </span>create_wasm_api(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Vec&lt;u8&gt;,
-        response: Arc&lt;Spinlock&lt;Vec&lt;u8&gt;&gt;&gt;,
-    ) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt;;
+    <span class="kw">fn </span>create_wasm_api(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Vec&lt;u8&gt;, response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt;;
 }
 
 <span class="doccomment">/// A trait for Wasm APIs that can be called from Wasm modules.
@@ -995,55 +983,51 @@
         <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
 
         <span class="kw">let </span>request = invoke_request.body;
-        <span class="kw">let </span>response = Arc::new(Spinlock::new(Vec::new()));
-        <span class="kw">let </span><span class="kw-2">mut </span>wasm_api = <span class="self">self</span>.wasm_api_factory.create_wasm_api(request, response.clone());
-        <span class="kw">let </span>user_state = UserState::new(wasm_api.transport(), <span class="self">self</span>.logger.clone());
-        <span class="comment">// For isolated requests we need to create a new store for every request.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
-        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module)<span class="question-mark">?</span>;
+        <span class="kw">let </span>response = Rc::new(Cell::new(Vec::new()));
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>wasm_api = <span class="self">self</span>.wasm_api_factory.create_wasm_api(request, response.clone());
+            <span class="kw">let </span>user_state = UserState::new(wasm_api.transport(), <span class="self">self</span>.logger.clone());
+            <span class="comment">// For isolated requests we need to create a new store for every request.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
+            <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module)<span class="question-mark">?</span>;
 
-        <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
-        </span>instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
-            store
-                .data()
-                .logger
-                .log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"instance exports: {:?}"</span>, export))
-        });
+            <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
+            </span>instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
+                <span class="self">self</span>.logger.log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"instance exports: {:?}"</span>, export))
+            });
 
-        <span class="comment">// Invokes the Wasm module by calling main.
-        </span><span class="kw">let </span>main = instance
-            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
-            .expect(<span class="string">"couldn't get `main` export"</span>);
+            <span class="comment">// Invokes the Wasm module by calling main.
+            </span><span class="kw">let </span>main = instance
+                .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
+                .expect(<span class="string">"couldn't get `main` export"</span>);
 
-        <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
-            observer.wasm_initialization(now.elapsed());
+            <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
+                observer.wasm_initialization(now.elapsed());
+            }
+
+            <span class="comment">// Warning: if we implement constant-time execution policies, this metric can
+            // leak the real execution time, so be sure that any time padding is
+            // included in the metric.
+            </span><span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+            </span><span class="kw">let </span>now = Instant::now();
+            <span class="attr">#[allow(unused)]
+            </span><span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
+            <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
+                observer.wasm_invocation(now.elapsed());
+            }
+
+            <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
+            </span><span class="self">self</span>.logger.log_sensitive(
+                Level::Info,
+                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"running Wasm module completed with result: {:?}"</span>, result),
+            );
         }
-
-        <span class="comment">// Warning: if we implement constant-time execution policies, this metric can
-        // leak the real execution time, so be sure that any time padding is
-        // included in the metric.
-        </span><span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
-        </span><span class="kw">let </span>now = Instant::now();
-        <span class="attr">#[allow(unused)]
-        </span><span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
-        <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
-            observer.wasm_invocation(now.elapsed());
-        }
-
+        <span class="kw">let </span>response_bytes =
+            Rc::into_inner(response).expect(<span class="string">"response should have no references"</span>).into_inner();
         <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
-        </span>store.data().logger.log_sensitive(
-            Level::Info,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"running Wasm module completed with result: {:?}"</span>, result),
-        );
-
-        <span class="kw">let </span>response_bytes = core::mem::take(response.lock().as_mut());
-        <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
-        </span>store
-            .data()
-            .logger
-            .log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"response bytes: {:?}"</span>, response_bytes));
+        </span><span class="self">self</span>.logger.log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"response bytes: {:?}"</span>, response_bytes));
 
         <span class="kw">let </span>invoke_response =
             Response::create(oak_functions_abi::StatusCode::Success, response_bytes);
