@@ -261,6 +261,66 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -278,23 +338,19 @@
 //
 
 </span><span class="attr">#![no_std]
-#![feature(iter_intersperse)]
-</span><span class="comment">// Rust's behavior around multiline strings an identation is slightly counterintuitive.
-// for easier assembly of multiline descriptions each individual line is described
-// as a string, and variables are inserted on the line as needed. To interact with
-// this more easily, each line is produce with format, allowing the easier insertion
-// of variables in lines that require them.
-</span><span class="attr">#![allow(clippy::useless_format)]
 
 </span><span class="kw">extern crate </span>alloc;
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">extern crate </span>std;
 
 <span class="kw">use </span>alloc::{format, string::String};
 
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        root_layer_data::Report, KernelLayerData, OakContainersData, OakRestrictedKernelData,
-        RootLayerData, SystemLayerData,
+        root_layer_data::Report, ApplicationLayerData, KernelLayerData, OakContainersData,
+        OakRestrictedKernelData, RootLayerData, SystemLayerData,
     },
     RawDigest,
 };
@@ -328,10 +384,10 @@
         <span class="kw">let </span>tee_report = <span class="self">self
             </span>.root_layer
             .as_ref()
-            .context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?
+            .context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?
             </span>.report
             .as_ref()
-            .context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>tee_name = get_tee_name(tee_report);
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Restricted Kernel Stack in a {} TEE"</span>, tee_name))
     }
@@ -342,10 +398,10 @@
         <span class="kw">let </span>tee_report = <span class="self">self
             </span>.root_layer
             .clone()
-            .context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?
+            .context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?
             </span>.report
             .clone()
-            .context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>tee_name = get_tee_name(<span class="kw-2">&amp;</span>tee_report);
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Conatiners Stack in a {} TEE"</span>, tee_name))
     }
@@ -359,20 +415,21 @@
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>RootLayerData {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">match </span><span class="self">self</span>.report.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">? </span>{
+        <span class="kw">match </span><span class="self">self</span>.report.as_ref().context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">? </span>{
             Report::SevSnp(report) =&gt; {
                 <span class="kw">let </span>initial_memory_sha256_digest =
                     SNPInitialMemoryMeasurement::try_from(report.initial_measurement.as_slice())<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>([
-                    <span class="macro">format!</span>(<span class="string">"Initial memory digest: {}"</span>, initial_memory_sha256_digest.display_hash()),
-                    <span class="macro">format!</span>(<span class="string">""</span>),
-                    <span class="macro">format!</span>(<span class="string">"{}"</span>, initial_memory_sha256_digest.display_hash_explaination()),
-                    <span class="macro">format!</span>(<span class="string">""</span>),
-                    <span class="macro">format!</span>(
-                        <span class="string">"One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:"
-                    </span>),
-                    <span class="macro">format!</span>(<span class="string">"{}"</span>, initial_memory_sha256_digest.provenance_link()),
-                ].into_iter().intersperse(<span class="string">"\n"</span>.to_string()).collect())
+                <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
+                    <span class="string">"Initial memory digest: {}
+
+{}
+
+One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:
+{}"</span>,
+                    initial_memory_sha256_digest.display_hash(),
+                    initial_memory_sha256_digest.display_hash_explaination(),
+                    initial_memory_sha256_digest.provenance_link()
+                ))
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(anyhow::Error::msg(
                 <span class="string">"human readable description not yet implemented for this type of TEE"</span>,
@@ -389,34 +446,47 @@
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>KernelLayerData {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span>kernel_image_digest: ArtifactDigestSha2_256 =
-            <span class="self">self</span>.kernel_image.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>).and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )<span class="question-mark">?</span>;
-        <span class="kw">let </span>init_ram_fs_digest: ArtifactDigestSha2_256 =
-            <span class="self">self</span>.init_ram_fs.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>).and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>([
-            <span class="macro">format!</span>(<span class="string">"Kernel Image: {}"</span>, kernel_image_digest.display_hash()),
-            <span class="macro">format!</span>(
-                <span class="string">"Kernel Setup Data: {}"</span>,
-                ArtifactDigestSha2_256::try_from(
-                    <span class="self">self</span>.kernel_setup_data.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?
-                </span>)<span class="question-mark">?
-                </span>.display_hash()
-            ),
-            <span class="macro">format!</span>(
-                <span class="string">"Kernel Command Line: {}"</span>,
-                <span class="self">self</span>.kernel_raw_cmd_line.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>)<span class="question-mark">?
-            </span>),
-            <span class="macro">format!</span>(<span class="string">"Initial RAM Disk: {}"</span>, init_ram_fs_digest.display_hash()),
-            <span class="macro">format!</span>(<span class="string">""</span>),
-            <span class="macro">format!</span>(
-                <span class="string">"One or more SLSA provenances mapping this layer's attestation digests to source code should be available on rekor. They can be obtained with the following search:"
-            </span>),
-            <span class="macro">format!</span>(<span class="string">"{}"</span>, kernel_image_digest.provenance_link()),
-        ].into_iter().intersperse(<span class="string">"\n"</span>.to_string()).collect())
+        <span class="kw">let </span>kernel_image_digest: ArtifactDigestSha2_256 = <span class="self">self
+            </span>.kernel_image
+            .as_ref()
+            .context(<span class="string">"unexpectedly unset kernel_image proto field"</span>)
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>init_ram_fs_digest: ArtifactDigestSha2_256 = <span class="self">self
+            </span>.init_ram_fs
+            .as_ref()
+            .context(<span class="string">"unexpectedly unset init_ram_fs proto field"</span>)
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>digests = <span class="macro">format!</span>(
+            <span class="string">"Kernel Image: {}
+Kernel Setup Data: {}
+Kernel Command Line: {}
+Initial RAM Disk: {}"</span>,
+            kernel_image_digest.display_hash(),
+            ArtifactDigestSha2_256::try_from(
+                <span class="self">self</span>.kernel_setup_data
+                    .as_ref()
+                    .context(<span class="string">"unexpectedly unset kernel_setup_data proto field"</span>)<span class="question-mark">?
+            </span>)<span class="question-mark">?
+            </span>.display_hash(),
+            <span class="self">self</span>.kernel_raw_cmd_line
+                .as_ref()
+                .context(<span class="string">"unexpectedly unset kernel_raw_cmd_line proto field"</span>)<span class="question-mark">?</span>,
+            init_ram_fs_digest.display_hash()
+        );
+
+        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
+            <span class="string">"{}
+
+One or more SLSA provenances mapping this layer's attestation digests to source code should be available on rekor. They can be obtained with the following search:
+{}"</span>,
+            digests,
+            kernel_image_digest.provenance_link()
+        ))
     }
 }
 
@@ -428,24 +498,74 @@
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>SystemLayerData {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span>system_image_digest =
-            <span class="self">self</span>.system_image.as_ref().context(<span class="string">"unexpectedly unset proto field"</span>).and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>([<span class="macro">format!</span>(<span class="string">"Initial RAM Disk: {}"</span>, system_image_digest.display_hash()),
-        <span class="macro">format!</span>(<span class="string">""</span>),
-        <span class="macro">format!</span>(
-            <span class="string">"One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:"
-        </span>),
-        <span class="macro">format!</span>(<span class="string">"{}"</span>, system_image_digest.provenance_link())].into_iter().intersperse(<span class="string">"\n"</span>.to_string()).collect())
+        <span class="kw">let </span>system_image_digest = <span class="self">self
+            </span>.system_image
+            .as_ref()
+            .context(<span class="string">"unexpectedly unset system_image proto field"</span>)
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
+            <span class="string">"System image digest: {}
+System image provenance: {}"</span>,
+            system_image_digest.display_hash(),
+            system_image_digest.provenance_link(),
+        ))
+    }
+}
+
+<span class="kw">impl </span>HumanReadableTitle <span class="kw">for </span>ApplicationLayerData {
+    <span class="kw">fn </span>title(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="string">"Application Layer"</span>.to_string())
+    }
+}
+
+<span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ApplicationLayerData {
+    <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
+        <span class="kw">let </span>digests = {
+            <span class="kw">let </span>binary_digest =
+                <span class="self">self</span>.binary.as_ref().context(<span class="string">"unexpectedly unset binary proto field"</span>).and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )<span class="question-mark">?</span>;
+
+            <span class="comment">// Restricted Kernel Applications do not use a config, no digest is included in
+            // the evidence.
+            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(config_digest) =
+                <span class="self">self</span>.config.as_ref().context(<span class="string">"unexpectedly unset config proto field"</span>).and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )
+            {
+                <span class="macro">format!</span>(
+                    <span class="string">"Binary digest: {}
+Binary provenance: {}
+Config digest: {}
+Config provenance: {}"</span>,
+                    binary_digest.display_hash(),
+                    binary_digest.provenance_link(),
+                    config_digest.display_hash(),
+                    config_digest.provenance_link()
+                )
+            } <span class="kw">else </span>{
+                <span class="macro">format!</span>(
+                    <span class="string">"Binary digest: {}
+Binary provenance: {}"</span>,
+                    binary_digest.display_hash(),
+                    binary_digest.provenance_link(),
+                )
+            }
+        };
+
+        <span class="prelude-val">Ok</span>(digests)
     }
 }
 
 <span class="kw">trait </span>OakDigestDisplay {
-    <span class="doccomment">/// Print a hash in the following format: [alg]:[hash]. The algorithm
+    <span class="doccomment">/// String of the hash in the following format: [alg]:[hash]. The algorithm
     /// descripter follows fieldnames of the proto-message: oak.RawDigest
     /// struct.
     </span><span class="kw">fn </span>display_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String;
+
+    <span class="kw">fn </span>provenance_link(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String;
 }
 
 <span class="doccomment">/// Convience struct that maintains type safety determinig the length of the
@@ -458,7 +578,10 @@
     <span class="kw">type </span>Error = anyhow::Error;
 
     <span class="kw">fn </span>try_from(value: <span class="kw-2">&amp;</span>RawDigest) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        value.sha2_256.as_slice().try_into()
+        <span class="kw">match </span>value.sha2_256.as_slice() {
+            [] =&gt; <span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"no sha2_256 hash found"</span>)),
+            <span class="kw">_ </span>=&gt; value.sha2_256.as_slice().try_into(),
+        }
     }
 }
 
@@ -470,16 +593,13 @@
     }
 }
 
-<span class="kw">impl </span>ArtifactDigestSha2_256 {
+<span class="kw">impl </span>OakDigestDisplay <span class="kw">for </span>ArtifactDigestSha2_256 {
     <span class="comment">// # TODO: b/335458726 - Stop permitting unexported code once mod is completed.
     </span><span class="attr">#[allow(dead_code)]
-    </span><span class="kw">pub fn </span>provenance_link(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    </span><span class="kw">fn </span>provenance_link(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(<span class="string">"https://search.sigstore.dev/?hash={}"</span>, hex::encode(<span class="self">self</span>.<span class="number">0</span>))
     }
-    <span class="doccomment">/// Print a hash in the following format: [alg]:[hash]. The algorithm
-    /// descripter follows fieldnames of the proto-message: oak.RawDigest
-    /// struct.
-    </span><span class="kw">fn </span>display_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="kw">fn </span>display_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(<span class="string">"sha2-256:{}"</span>, hex::encode(<span class="self">self</span>.<span class="number">0</span>.as_slice()))
     }
 }
@@ -503,14 +623,14 @@
             { hex::encode(<span class="self">self</span>.<span class="number">0</span>.as_slice()) }
         )
     }
-    <span class="doccomment">/// Print a hash in the following format: [alg]:[hash]. The algorithm
-    /// descripter follows fieldnames of the proto-message: oak.RawDigest
-    /// struct.
-    </span><span class="kw">fn </span>display_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+}
+
+<span class="kw">impl </span>OakDigestDisplay <span class="kw">for </span>SNPInitialMemoryMeasurement {
+    <span class="kw">fn </span>display_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="self">self</span>.sha2_256().display_hash()
     }
 
-    <span class="kw">pub fn </span>provenance_link(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="kw">fn </span>provenance_link(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="macro">format!</span>(<span class="string">"https://search.sigstore.dev/?hash={}"</span>, hex::encode(<span class="self">self</span>.sha2_256().<span class="number">0</span>))
     }
 }
