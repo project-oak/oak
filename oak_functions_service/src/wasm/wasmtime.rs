@@ -30,7 +30,6 @@ use core::cell::Cell;
 #[cfg(feature = "std")]
 use std::time::Instant;
 
-use byteorder::{ByteOrder, LittleEndian};
 use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
@@ -80,7 +79,9 @@ macro_rules! stub_wasm_function {
         $linker.func_wrap(
             stringify!($function_mod),
             stringify!($function_name),
+            #[allow(unused_variables)]
             |caller: wasmtime::Caller<'_, UserState>, $(_: $t),*| {
+                #[cfg(not(feature = "deny_sensitive_logging"))]
                 caller
                     .data()
                     .log_error(concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name)));
@@ -312,7 +313,7 @@ impl<'a> OakCaller<'a> {
     /// Reads the buffer starting at address `buf_ptr` with length `buf_len`
     /// from the Wasm memory.
     fn read_buffer(
-        &mut self,
+        &self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -> Result<Vec<u8>, StatusCode> {
@@ -320,7 +321,7 @@ impl<'a> OakCaller<'a> {
         let buf_ptr = buf_ptr
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmtime API");
-        self.memory.read(&mut self.caller, buf_ptr, &mut buf).map_err(|err| {
+        self.memory.read(&self.caller, buf_ptr, &mut buf).map_err(|err| {
             self.data().log_error(&format!("Unable to read buffer from guest memory: {:?}", err));
             StatusCode::InvalidArgument
         })?;
@@ -364,9 +365,8 @@ impl<'a> OakCaller<'a> {
     /// Helper function to write the u32 `value` at the `address` of the Wasm
     /// memory.
     fn write_u32(&mut self, value: u32, address: AbiPointer) -> Result<(), StatusCode> {
-        let value_bytes = &mut [0; 4];
-        LittleEndian::write_u32(value_bytes, value);
-        self.write_buffer(value_bytes, address).map_err(|err| {
+        let value_bytes = value.to_le_bytes();
+        self.write_buffer(&value_bytes, address).map_err(|err| {
             self.data()
                 .log_error(&format!("Unable to write u32 value into guest memory: {:?}", err));
             StatusCode::InvalidArgument
@@ -377,7 +377,7 @@ impl<'a> OakCaller<'a> {
         self.caller.data_mut()
     }
 
-    fn data(&mut self) -> &UserState {
+    fn data(&self) -> &UserState {
         self.caller.data()
     }
 }
