@@ -2315,6 +2315,7 @@ dependencies = [
  "anyhow",
  "hex",
  "oak_proto_rust",
+ "prost",
  "sha2",
  "zerocopy",
 ]

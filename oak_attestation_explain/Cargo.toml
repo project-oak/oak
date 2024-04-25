@@ -12,3 +12,8 @@ hex = { version = "*", default-features = false, features = ["alloc"] }
 oak_proto_rust = { workspace = true }
 sha2 = { version = "*", default-features = false }
 zerocopy = { version = "*", features = ["derive"] }
+
+[dev-dependencies]
+prost = { workspace = true, default-features = false, features = [
+  "prost-derive",
+] }
