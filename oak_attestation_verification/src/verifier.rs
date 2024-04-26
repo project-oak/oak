@@ -1116,8 +1116,11 @@ struct ApplicationKeyValues {
 }
 
 /// Extracts measurements, public keys and other attestation-related values from
-/// the evidence.
-fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
+/// the evidence without verifying it. For most usecases, this function should
+/// not be used. Instead use the [`verify`] function, which verifies the
+/// attestation and only returns evidence upon successful verification. Hence
+/// marked as dangerous.
+pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let evidence_values =
         Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
     let ApplicationKeyValues { encryption_public_key, signing_public_key } =

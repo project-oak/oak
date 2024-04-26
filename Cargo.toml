@@ -7,6 +7,7 @@ members = [
   "micro_rpc_tests",
   "oak_attestation",
   "oak_attestation_explain",
+  "oak_attestation_explain_cli",
   "oak_attestation_integration_tests",
   "oak_attestation_verification",
   "oak_channel",
@@ -95,6 +96,7 @@ benchmark = { path = "./oak_functions/examples/benchmark/module" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation = { path = "./oak_attestation" }
+oak_attestation_explain = { path = "./oak_attestation_explain" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
