@@ -174,16 +174,15 @@ clang-tidy:
 bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio"
 
 bazel-ci:
-    # The --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
-    #
-    # The --show_result leads to all of the built packages being logged at the
-    # end, so we can visually verify that CI tasks are building everythign we want.
-    #
-    # --build_tag_filters=-noci allow us to skip broken/flaky/specialized test
-    # targets during CI builds by adding tags = ["noci"]
-    bazel build --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
-    bazel test  --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
-    bazel run oak_proto_rust:verify_generated
+    bazel build --config=unsafe-fast-presubmit -- //...:all
+    bazel test --config=unsafe-fast-presubmit -- //...:all
 
     # Some crates also need to be built for x86_64-unknown-none.
-    bazel build --platforms=//:x86_64-unknown-none --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- {{bare_metal_crates}}
+    bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- {{bare_metal_crates}}
+
+# Temporary target to help debugging Bazel remote cache with more detailed logs.
+# It should be deleted when debugging is completed.
+# TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.
+bazel-cache-test:
+    mkdir --parents target
+    bazel test --config=unsafe-fast-presubmit --build_event_text_file=./target/bazel_bep_1.txt --execution_log_binary_file=./target/bazel_exec_1.log -- //cc/bazel_cache_test:test

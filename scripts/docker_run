@@ -14,8 +14,6 @@ docker_run_flags=(
   '--rm'
   '--tty'
   '--env=TERM=xterm-256color'
-  '--env=BAZEL_REMOTE_CACHE_ENABLED'
-  '--env=BAZEL_GOOGLE_CREDENTIALS'
   '--env=OAK_KVM_TESTS'
   '--env=RUST_BACKTRACE'
   '--env=RUST_LOGS'

@@ -22,3 +22,52 @@ build --@rules_rust//rust/toolchain/channel=nightly
 # Use a custom workspace status command so that the git revision is included in
 # stamped binaries.
 build --workspace_status_command=bazel/workspace_status_command.sh
+
+# CI specific config. This config should be safe to use from any presubmit and postsubmit jobs.
+
+# Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
+# and avoid attempting to parallelize steps that are actually serialized by Bazel.
+build:ci --block_for_lock=false
+# Useful to determine how long individual steps are taking in CI.
+build:ci --show_timestamps
+
+# --build_tag_filters=-noci allow us to skip broken/flaky/specialized test
+# targets during CI builds by adding tags = ["noci"]
+build:ci --build_tag_filters=-noci
+
+# --show_result leads to all of the built packages being logged at the
+# end, so we can visually verify that CI tasks are building everything we want.
+build:ci --show_result=1000000
+
+# --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
+build:ci --noshow_progress
+build:ci --curses=no
+
+# The unsafe-fast-presubmit config should only be used in presubmits steps that do not produce
+# binaries that need to be released or trusted (e.g. TEE applications). This is because it enables
+# using a remote cache, which in general may not be considered trustworthy.
+
+# Inherit from the ci config.
+build:unsafe-fast-presubmit --config=ci
+build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
+build:unsafe-fast-presubmit --remote_upload_local_results=false
+
+# Use a custom local bazelrc if present.
+#
+# To set up remote cache write credentials:
+# - navigate to https://pantheon.corp.google.com/iam-admin/serviceaccounts?project=oak-ci
+# - click on "Create Service Account"
+#   + use your @google.com username as the service account name (e.g. "tzn")
+#   + leave the service account ID as is (e.g. "tzn-110")
+#   + leave the service account description empty
+# - grant the "Storage Object Admin" role to the newly created account
+# - click on "Create Key", then select "JSON"
+# - save the generated key as the file referenced below, within the project directory
+#   + make sure to not check it in to git, check your `.gitignore` configuration
+# - create a .local.bazelrc file in the repo root containing the following:
+#
+# ```
+# build:unsafe-fast-presubmit --google_credentials=./.oak_remote_cache_key.json
+# build:unsafe-fast-presubmit --remote_upload_local_results=true
+# ```
+try-import ./.local.bazelrc
