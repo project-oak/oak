@@ -519,8 +519,6 @@
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
 <a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -556,7 +554,6 @@
 </span><span class="kw">use </span>std::time::Instant;
 
 <span class="kw">use </span>api::StdWasmApiFactory;
-<span class="kw">use </span>byteorder::{ByteOrder, LittleEndian};
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
@@ -839,7 +836,7 @@
     <span class="doccomment">/// Reads the buffer starting at address `buf_ptr` with length `buf_len`
     /// from the Wasm memory.
     </span><span class="kw">fn </span>read_buffer(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, StatusCode&gt; {
@@ -847,7 +844,7 @@
         <span class="kw">let </span>buf_ptr = buf_ptr
             .try_into()
             .expect(<span class="string">"failed to convert AbiPointer to usize as required by wasmi API"</span>);
-        <span class="self">self</span>.memory.read(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller, buf_ptr, <span class="kw-2">&amp;mut </span>buf).map_err(|err| {
+        <span class="self">self</span>.memory.read(<span class="kw-2">&amp;</span><span class="self">self</span>.caller, buf_ptr, <span class="kw-2">&amp;mut </span>buf).map_err(|err| {
             <span class="self">self</span>.data().log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Unable to read buffer from guest memory: {:?}"</span>, err));
             StatusCode::InvalidArgument
         })<span class="question-mark">?</span>;
@@ -891,9 +888,8 @@
     <span class="doccomment">/// Helper function to write the u32 `value` at the `address` of the Wasm
     /// memory.
     </span><span class="kw">fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32, address: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt; {
-        <span class="kw">let </span>value_bytes = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">4</span>];
-        LittleEndian::write_u32(value_bytes, value);
-        <span class="self">self</span>.write_buffer(value_bytes, address).map_err(|err| {
+        <span class="kw">let </span>value_bytes = value.to_le_bytes();
+        <span class="self">self</span>.write_buffer(<span class="kw-2">&amp;</span>value_bytes, address).map_err(|err| {
             <span class="self">self</span>.data()
                 .log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Unable to write u32 value into guest memory: {:?}"</span>, err));
             StatusCode::InvalidArgument
@@ -904,7 +900,7 @@
         <span class="self">self</span>.caller.data_mut()
     }
 
-    <span class="kw">fn </span>data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UserState {
+    <span class="kw">fn </span>data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UserState {
         <span class="self">self</span>.caller.data()
     }
 }

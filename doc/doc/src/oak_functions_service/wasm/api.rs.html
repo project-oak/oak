@@ -151,6 +151,19 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -167,7 +180,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, format, rc::Rc, sync::Arc, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, rc::Rc, sync::Arc, vec::Vec};
 <span class="kw">use </span>core::cell::Cell;
 
 <span class="kw">use </span>log::Level;
@@ -180,7 +193,7 @@
 <span class="kw">use super</span>::{WasmApi, WasmApiFactory};
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, limit, LookupData, LookupDataManager},
+    lookup::{LookupData, LookupDataManager},
 };
 
 <span class="doccomment">/// The main purpose of this factory is to allow creating a new instance of the
@@ -194,7 +207,7 @@
     <span class="kw">fn </span>create_wasm_api(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Vec&lt;u8&gt;, response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt; {
         Box::new(StdWasmApiImpl {
             lookup_data: <span class="self">self</span>.lookup_data_manager.create_lookup_data(),
-            logger: Arc::new(StandaloneLogger),
+            logger: Rc::new(StandaloneLogger),
             request,
             response,
         })
@@ -208,7 +221,7 @@
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>StdWasmApiImpl {
     lookup_data: LookupData,
-    logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
+    logger: Rc&lt;<span class="kw">dyn </span>OakLogger&gt;,
     <span class="doccomment">/// Current request, as received from the client.
     </span>request: Vec&lt;u8&gt;,
     <span class="doccomment">/// Current response, as received from the Wasm module.
@@ -233,9 +246,11 @@
         <span class="prelude-val">Ok</span>(WriteResponseResponse::default())
     }
 
-    <span class="kw">fn </span>log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: LogRequest) -&gt; <span class="prelude-ty">Result</span>&lt;LogResponse, ::micro_rpc::Status&gt; {
+    <span class="attr">#[allow(unused_variables)]
+    </span><span class="kw">fn </span>log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: LogRequest) -&gt; <span class="prelude-ty">Result</span>&lt;LogResponse, ::micro_rpc::Status&gt; {
         <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">"invoked log"</span>);
-        <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"[Wasm] {}"</span>, request.message));
+        <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
+        </span><span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">"[Wasm] {}"</span>, request.message));
         <span class="prelude-val">Ok</span>(LogResponse::default())
     }
 
@@ -245,24 +260,32 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;LookupDataResponse, ::micro_rpc::Status&gt; {
         <span class="comment">// The request is the key to lookup.
         </span><span class="kw">let </span>key = request.key;
-        <span class="kw">let </span>key_to_log = limit(<span class="kw-2">&amp;</span>key, <span class="number">512</span>);
-        <span class="self">self</span>.logger.log_sensitive(
-            Level::Debug,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lookup_data(): key: {}"</span>, format_bytes(key_to_log)),
-        );
+
+        <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
+        </span>{
+            <span class="kw">let </span>key_to_log = <span class="kw">crate</span>::lookup::limit(<span class="kw-2">&amp;</span>key, <span class="number">512</span>);
+            <span class="self">self</span>.logger.log_sensitive(
+                Level::Debug,
+                <span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">"lookup_data(): key: {}"</span>, <span class="kw">crate</span>::lookup::format_bytes(key_to_log)),
+            );
+        }
         <span class="kw">let </span>value = <span class="self">self</span>.lookup_data.get(<span class="kw-2">&amp;</span>key);
 
         <span class="comment">// Log found value.
+        </span><span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
         </span>value.as_ref().map_or_else(
             || {
                 <span class="self">self</span>.logger.log_sensitive(Level::Debug, <span class="string">"storage_get_item(): value not found"</span>);
             },
             |value| {
                 <span class="comment">// Truncate value for logging.
-                </span><span class="kw">let </span>value_to_log = limit(value, <span class="number">512</span>);
+                </span><span class="kw">let </span>value_to_log = <span class="kw">crate</span>::lookup::limit(value, <span class="number">512</span>);
                 <span class="self">self</span>.logger.log_sensitive(
                     Level::Debug,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"storage_get_item(): value: {}"</span>, format_bytes(value_to_log)),
+                    <span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(
+                        <span class="string">"storage_get_item(): value: {}"</span>,
+                        <span class="kw">crate</span>::lookup::format_bytes(value_to_log)
+                    ),
                 );
             },
         );
@@ -277,8 +300,11 @@
         <span class="comment">// The request contains the keys to lookup.
         </span><span class="kw">let </span>keys = request.keys;
 
-        <span class="self">self</span>.logger
-            .log_sensitive(Level::Debug, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lookup_data_multi(): {} keys"</span>, keys.len()));
+        <span class="attr">#[cfg(not(feature = <span class="string">"deny_sensitive_logging"</span>))]
+        </span><span class="self">self</span>.logger.log_sensitive(
+            Level::Debug,
+            <span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(<span class="string">"lookup_data_multi(): {} keys"</span>, keys.len()),
+        );
 
         <span class="kw">let </span>values: Vec&lt;BytesValue&gt; = keys
             .iter()
