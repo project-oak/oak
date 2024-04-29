@@ -26,15 +26,17 @@ use alloc::{format, string::String};
 use anyhow::{Context, Result};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        root_layer_data::Report, ApplicationLayerData, KernelLayerData, OakContainersData,
-        OakRestrictedKernelData, RootLayerData, SystemLayerData,
+        root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
+        KernelLayerData, KernelLayerReferenceValues, OakContainersData,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelReferenceValues,
+        RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
     },
     RawDigest,
 };
 use sha2::{Digest, Sha256};
 use zerocopy::{FromBytes, FromZeroes};
 
-use crate::alloc::string::ToString;
+use crate::alloc::{borrow::ToOwned, string::ToString};
 
 fn get_tee_name(tee_report: &Report) -> &'static str {
     match tee_report {
@@ -66,7 +68,13 @@ impl HumanReadableTitle for OakRestrictedKernelData {
             .as_ref()
             .context("unexpectedly unset report proto field")?;
         let tee_name = get_tee_name(tee_report);
-        Ok(format!("Oak Restricted Kernel Stack in a {} TEE", tee_name))
+        Ok(format!("Evidence of the Oak Restricted Kernel Stack in a {} TEE", tee_name))
+    }
+}
+
+impl HumanReadableTitle for OakRestrictedKernelReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Reference values for the Oak Restricted Kernel Stack".to_owned())
     }
 }
 
@@ -80,13 +88,19 @@ impl HumanReadableTitle for OakContainersData {
             .clone()
             .context("unexpectedly unset report proto field")?;
         let tee_name = get_tee_name(&tee_report);
-        Ok(format!("Oak Conatiners Stack in a {} TEE", tee_name))
+        Ok(format!("Evidence of the Oak Conatiners Stack in a {} TEE", tee_name))
+    }
+}
+
+impl HumanReadableTitle for OakContainersReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Reference values for the Oak Conatiners Stack".to_owned())
     }
 }
 
 impl HumanReadableTitle for RootLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Root Layer".to_string())
+        Ok("Root Layer [Evidence]".to_string())
     }
 }
 
@@ -112,9 +126,21 @@ Initial Memory [Provenance]: {}",
     }
 }
 
+impl HumanReadableTitle for RootLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Root Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for RootLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
+    }
+}
+
 impl HumanReadableTitle for KernelLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Kernel Layer".to_string())
+        Ok("Kernel Layer [Evidence]".to_string())
     }
 }
 
@@ -170,9 +196,21 @@ Inital RAM Disk [Provenance]: {}",
     }
 }
 
+impl HumanReadableTitle for KernelLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Kernel Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for KernelLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
+    }
+}
+
 impl HumanReadableTitle for SystemLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("System Layer".to_string())
+        Ok("System Layer [Evidence]".to_string())
     }
 }
 
@@ -194,9 +232,21 @@ System Image [Provenance]: {}",
     }
 }
 
+impl HumanReadableTitle for SystemLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("System Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for SystemLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
+    }
+}
+
 impl HumanReadableTitle for ApplicationLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Application Layer".to_string())
+        Ok("Application Layer [Evidence]".to_string())
     }
 }
 
@@ -236,6 +286,18 @@ Binary [Provenance]: {}",
         };
 
         Ok(digests)
+    }
+}
+
+impl HumanReadableTitle for ApplicationLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Application Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for ApplicationLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
     }
 }
 

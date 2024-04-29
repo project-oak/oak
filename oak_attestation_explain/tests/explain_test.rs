@@ -39,7 +39,7 @@ fn produces_expected_explaination() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
             assert_eq!(
                 restricted_kernel_evidence.title().unwrap(),
-                format!("Oak Restricted Kernel Stack in a {} TEE", "AMD SEV-SNP")
+                format!("Evidence of the Oak Restricted Kernel Stack in a {} TEE", "AMD SEV-SNP")
             );
             match restricted_kernel_evidence {
                 OakRestrictedKernelData {
