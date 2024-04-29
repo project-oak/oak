@@ -1,3 +1,5 @@
+cargo-features = ["trim-paths"]
+
 [workspace]
 resolver = "2"
 members = [
@@ -78,6 +80,10 @@ exclude = [
   "testing/sev_snp_hello_world_kernel",
   "third_party/rust-hypervisor-firmware-virtio",
 ]
+
+[profile.release]
+strip = "debuginfo" # Debug info is not always deterministic.
+trim-paths = "all"  # Remove path prefixes outside the workspace root.
 
 # Special version of release that enables more aggressive optimizations.
 # See https://doc.rust-lang.org/cargo/reference/profiles.html for more details.

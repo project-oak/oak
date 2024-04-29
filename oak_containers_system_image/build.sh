@@ -23,8 +23,9 @@ cp ./target/oak_containers_syslogd "$IMAGE_BINARIES_DIRECTORY"
 cp ./target/oak_containers_orchestrator "$IMAGE_BINARIES_DIRECTORY"
 
 # When built under nix the interpreter points to some Nix-specific location that doesn't exist on a regular Linux host, therefore
-# we need to manually patch the binary to set it back to the normal regular location.
-patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 "./$IMAGE_BINARIES_DIRECTORY/"oak_containers_syslogd
+# we need to manually patch the binary to set it back to the normal regular location. The RUNPATH ELF section also contains
+# Nix-specific locations (in a non-deterministic order) and can be removed.
+patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" "./$IMAGE_BINARIES_DIRECTORY/"oak_containers_syslogd
 
 bazel build oak_containers_system_image
 
