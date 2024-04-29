@@ -49,27 +49,23 @@ fn produces_expected_explaination() {
                 } => {
                     assert_eq!(
                         root_layer.description().unwrap(),
-                        r#"Initial memory digest: sha2-256:519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22
-
+                        r#"Initial Memory [Digest]: sha2-256:519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22
 ⓘ The firmware attestation digest is the sha2-256 hash of the sha2-386 hash of the initial memory state taken by the AMD SoC. The original sha2-386 hash of the initial memory is: sha2-384:5a5cd76580dd3f0e9cc69ddfe7a6120919c02c3e376317bb3cc6de40a66e60683d380d966664d83fcd124f83f878d2ec.
-
-One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:
-https://search.sigstore.dev/?hash=519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22"#
+Initial Memory [Provenance]: https://search.sigstore.dev/?hash=519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22"#
                     );
                     assert_eq!(
                         kernel_layer.description().unwrap(),
-                        r#"Kernel Image: sha2-256:bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743
-Kernel Setup Data: sha2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+                        r#"Kernel Image [Digest]: sha2-256:bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743
+Kernel Setup Data [Digest]: sha2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+Kernel Image/Setup-Data [Provenance]: https://search.sigstore.dev/?hash=bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743
 Kernel Command Line: console=ttyS0
-Initial RAM Disk: sha2-256:0000000000000000000000000000000000000000000000000000000000000000
-
-One or more SLSA provenances mapping this layer's attestation digests to source code should be available on rekor. They can be obtained with the following search:
-https://search.sigstore.dev/?hash=bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743"#
+Initial RAM Disk [Digest]: sha2-256:0000000000000000000000000000000000000000000000000000000000000000
+Inital RAM Disk [Provenance]: https://search.sigstore.dev/?hash=0000000000000000000000000000000000000000000000000000000000000000"#
                     );
                     assert_eq!(
                         application_layer.description().unwrap(),
-                        r#"Binary digest: sha2-256:b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040
-Binary provenance: https://search.sigstore.dev/?hash=b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040"#
+                        r#"Binary [Digest]: sha2-256:b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040
+Binary [Provenance]: https://search.sigstore.dev/?hash=b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040"#
                     );
                 }
                 _ => panic!("evidence values unexpectedly unset"),

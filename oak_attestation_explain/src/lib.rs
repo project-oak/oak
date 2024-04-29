@@ -97,12 +97,9 @@ impl HumanReadableExplanation for RootLayerData {
                 let initial_memory_sha256_digest =
                     SNPInitialMemoryMeasurement::try_from(report.initial_measurement.as_slice())?;
                 Ok(format!(
-                    "Initial memory digest: {}
-
+                    "Initial Memory [Digest]: {}
 {}
-
-One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:
-{}",
+Initial Memory [Provenance]: {}",
                     initial_memory_sha256_digest.display_hash(),
                     initial_memory_sha256_digest.display_hash_explaination(),
                     initial_memory_sha256_digest.provenance_link()
@@ -130,19 +127,10 @@ impl HumanReadableExplanation for KernelLayerData {
             .and_then(|digest| {
                 ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
             })?;
-        let init_ram_fs_digest: ArtifactDigestSha2_256 = self
-            .init_ram_fs
-            .as_ref()
-            .context("unexpectedly unset init_ram_fs proto field")
-            .and_then(|digest| {
-                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-            })?;
 
-        let digests = format!(
-            "Kernel Image: {}
-Kernel Setup Data: {}
-Kernel Command Line: {}
-Initial RAM Disk: {}",
+        let bz_image_description = format!(
+            "Kernel Image [Digest]: {}
+Kernel Setup Data [Digest]: {}",
             kernel_image_digest.display_hash(),
             ArtifactDigestSha2_256::try_from(
                 self.kernel_setup_data
@@ -150,19 +138,34 @@ Initial RAM Disk: {}",
                     .context("unexpectedly unset kernel_setup_data proto field")?
             )?
             .display_hash(),
+        );
+        let kernel_commandline = format!(
+            "Kernel Command Line: {}",
             self.kernel_raw_cmd_line
                 .as_ref()
                 .context("unexpectedly unset kernel_raw_cmd_line proto field")?,
-            init_ram_fs_digest.display_hash()
         );
+        let init_ram_fs_digest: ArtifactDigestSha2_256 = self
+            .init_ram_fs
+            .as_ref()
+            .context("unexpectedly unset init_ram_fs proto field")
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })?;
+        let initial_ramdisk_description =
+            format!("Initial RAM Disk [Digest]: {}", init_ram_fs_digest.display_hash());
 
         Ok(format!(
             "{}
-
-One or more SLSA provenances mapping this layer's attestation digests to source code should be available on rekor. They can be obtained with the following search:
-{}",
-            digests,
-            kernel_image_digest.provenance_link()
+Kernel Image/Setup-Data [Provenance]: {}
+{}
+{}
+Inital RAM Disk [Provenance]: {}",
+            bz_image_description,
+            kernel_image_digest.provenance_link(),
+            kernel_commandline,
+            initial_ramdisk_description,
+            init_ram_fs_digest.provenance_link()
         ))
     }
 }
@@ -183,8 +186,8 @@ impl HumanReadableExplanation for SystemLayerData {
                 ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
             })?;
         Ok(format!(
-            "System image digest: {}
-System image provenance: {}",
+            "System Image [Digest]: {}
+System Image [Provenance]: {}",
             system_image_digest.display_hash(),
             system_image_digest.provenance_link(),
         ))
@@ -213,10 +216,10 @@ impl HumanReadableExplanation for ApplicationLayerData {
                 )
             {
                 format!(
-                    "Binary digest: {}
-Binary provenance: {}
-Config digest: {}
-Config provenance: {}",
+                    "Binary [Digest]: {}
+Binary [Provenance]: {}
+Config [Digest]: {}
+Config [Provenance]: {}",
                     binary_digest.display_hash(),
                     binary_digest.provenance_link(),
                     config_digest.display_hash(),
@@ -224,8 +227,8 @@ Config provenance: {}",
                 )
             } else {
                 format!(
-                    "Binary digest: {}
-Binary provenance: {}",
+                    "Binary [Digest]: {}
+Binary [Provenance]: {}",
                     binary_digest.display_hash(),
                     binary_digest.provenance_link(),
                 )
