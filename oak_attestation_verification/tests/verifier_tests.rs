@@ -820,3 +820,446 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
 }
+
+#[test]
+fn containers_invalid_boot_loader_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    // The boot loader version can never reach 256, since it is represented as a u8
+    // in the attestation report.
+    oc.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .boot_loader = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_microcode_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    // The microcode version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
+    oc.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .microcode = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_tcb_snp_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    // The SNP version can never reach 256, since it is represented as a u8 in the
+    // attestation report.
+    oc.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .snp = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_tcb_tee_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    // The TEE version can never reach 256, since it is represented as a u8 in the
+    // attestation report.
+    oc.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .tee = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_stage0_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .stage0
+        .as_mut()
+        .expect("no stage 0 measurement")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_384
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_acpi_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .acpi
+        .as_mut()
+        .expect("no acpi value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_init_ram_fs_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .init_ram_fs
+        .as_mut()
+        .expect("no init RAM fs value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_kernel_cmd_line_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel_cmd_line_text
+        .as_mut()
+        .expect("no kernel command-line value")
+        .r#type
+        .as_mut()
+        .expect("no text reference value")
+    {
+        text_reference_value::Type::StringLiterals(strings) => {
+            strings.value.clear();
+            strings.value.push("wrong".to_owned());
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_kernel_image_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel
+        .as_mut()
+        .expect("no kernel value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        kernel_binary_reference_value::Type::Digests(digests) => {
+            digests
+                .image
+                .as_mut()
+                .expect("no kernel image")
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_kernel_setup_data_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel
+        .as_mut()
+        .expect("no kernel value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        kernel_binary_reference_value::Type::Digests(digests) => {
+            digests
+                .setup_data
+                .as_mut()
+                .expect("no kernel setup data")
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_system_image_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .system_layer
+        .as_mut()
+        .expect("no system layer")
+        .system_image
+        .as_mut()
+        .expect("no system image value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_container_bundle_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .container_layer
+        .as_mut()
+        .expect("no container layer")
+        .binary
+        .as_mut()
+        .expect("no container bundle value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn containers_invalid_container_config_fails() {
+    let evidence = create_containers_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let mut reference_values = base_reference_values.clone();
+    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakContainers(oc) => oc,
+        _ => panic!("wrong reference value type"),
+    };
+    match oc
+        .container_layer
+        .as_mut()
+        .expect("no container layer")
+        .configuration
+        .as_mut()
+        .expect("no container config value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
