@@ -29,32 +29,32 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 
 # Copy the generated binaries to Placer. The timestamps are used to convey
 # the creation time.
+#
+# System image deps (oak_containers_orchestrator, oak_containers_syslogd)
+# are tracked to monitor their reproducibility. They are expected to be
+# imported transiently into google3 for the sake of provenance verification
+# (i.e., do Kokoro and GitHub produce identical results).
 readonly generated_binaries=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/bzImage
     ./oak_containers_kernel/cmd_line_regex.txt
+    ./oak_containers_orchestrator/target/oak_containers_orchestrator
+    ./oak_containers_syslogd/target/oak_containers_syslogd
     ./oak_containers_system_image/target/image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_insecure_container_oci_filesystem_bundle.tar
-
-    # We track these binaries so that we can monitor their reproducibility, while b/311651716 is completed.
-    # We do not expect to import them in google3, since they are part of the system image, which is
-    # not reproducibly buildable yet.
-    ./oak_containers_system_image/target/oak_containers_orchestrator
-    ./oak_containers_system_image/target/oak_containers_syslogd
 )
 readonly binary_names=(
     oak_containers_stage1
     oak_containers_kernel
     oak_containers_kernel_cmd_line_regex
+    oak_containers_orchestrator
+    oak_containers_syslogd
     oak_containers_system_image
     oak_containers_hello_world_container
     oak_functions_container
     oak_functions_insecure_container
-
-    oak_containers_orchestrator
-    oak_containers_syslogd
 )
 for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
