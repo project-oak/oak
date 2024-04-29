@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["to_attestation_results","verify","verify_dice_chain"]};
+window.SIDEBAR_ITEMS = {"fn":["extract_evidence","to_attestation_results","verify","verify_dice_chain"]};

@@ -1393,6 +1393,9 @@
 <a href="#1391" id="1391">1391</a>
 <a href="#1392" id="1392">1392</a>
 <a href="#1393" id="1393">1393</a>
+<a href="#1394" id="1394">1394</a>
+<a href="#1395" id="1395">1395</a>
+<a href="#1396" id="1396">1396</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -2511,8 +2514,11 @@
 }
 
 <span class="doccomment">/// Extracts measurements, public keys and other attestation-related values from
-/// the evidence.
-</span><span class="kw">fn </span>extract_evidence(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
+/// the evidence without verifying it. For most usecases, this function should
+/// not be used. Instead use the [`verify`] function, which verifies the
+/// attestation and only returns evidence upon successful verification. Hence
+/// marked as dangerous.
+</span><span class="kw">pub fn </span>extract_evidence(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
     <span class="kw">let </span>evidence_values =
         <span class="prelude-val">Some</span>(extract_evidence_values(evidence).context(<span class="string">"couldn't extract evidence values"</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>ApplicationKeyValues { encryption_public_key, signing_public_key } =
