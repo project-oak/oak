@@ -826,9 +826,8 @@ fn containers_invalid_boot_loader_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -853,9 +852,8 @@ fn containers_invalid_microcode_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -880,9 +878,8 @@ fn containers_invalid_tcb_snp_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -907,9 +904,8 @@ fn containers_invalid_tcb_tee_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -934,9 +930,8 @@ fn containers_invalid_stage0_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -974,9 +969,8 @@ fn containers_invalid_acpi_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1011,9 +1005,8 @@ fn containers_invalid_init_ram_fs_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1048,9 +1041,8 @@ fn containers_invalid_kernel_cmd_line_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1080,9 +1072,8 @@ fn containers_invalid_kernel_image_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1119,9 +1110,8 @@ fn containers_invalid_kernel_setup_data_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1158,9 +1148,8 @@ fn containers_invalid_system_image_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1195,9 +1184,8 @@ fn containers_invalid_container_bundle_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1232,9 +1220,8 @@ fn containers_invalid_container_config_fails() {
     let evidence = create_containers_evidence();
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
-    let base_reference_values = reference_values_from_evidence(extracted_evidence);
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
-    let mut reference_values = base_reference_values.clone();
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
@@ -1261,5 +1248,384 @@ fn containers_invalid_container_config_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_boot_loader_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    // The boot loader version can never reach 256, since it is represented as a u8
+    // in the attestation report.
+    rk.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .boot_loader = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_microcode_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    // The microcode version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
+    rk.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .microcode = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_tcb_snp_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    // The SNP version can never reach 256, since it is represented as a u8 in the
+    // attestation report.
+    rk.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .snp = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_tcb_tee_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    // The TEE version can never reach 256, since it is represented as a u8 in the
+    // attestation report.
+    rk.root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .min_tcb_version
+        .as_mut()
+        .expect("no TCB version")
+        .tee = 256;
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_stage0_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .root_layer
+        .as_mut()
+        .expect("no root layer")
+        .amd_sev
+        .as_mut()
+        .expect("invalid TEE platform")
+        .stage0
+        .as_mut()
+        .expect("no stage 0 measurement")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_384
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_acpi_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .acpi
+        .as_mut()
+        .expect("no acpi value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_init_ram_fs_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .init_ram_fs
+        .as_mut()
+        .expect("no init RAM fs value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_kernel_cmd_line_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel_cmd_line_text
+        .as_mut()
+        .expect("no kernel command-line value")
+        .r#type
+        .as_mut()
+        .expect("no text reference value")
+    {
+        text_reference_value::Type::StringLiterals(strings) => {
+            strings.value.clear();
+            strings.value.push("wrong".to_owned());
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_kernel_image_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel
+        .as_mut()
+        .expect("no kernel value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        kernel_binary_reference_value::Type::Digests(digests) => {
+            digests
+                .image
+                .as_mut()
+                .expect("no kernel image")
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_kernel_setup_data_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .kernel_layer
+        .as_mut()
+        .expect("no kernel layer")
+        .kernel
+        .as_mut()
+        .expect("no kernel value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        kernel_binary_reference_value::Type::Digests(digests) => {
+            digests
+                .setup_data
+                .as_mut()
+                .expect("no kernel setup data")
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_invalid_application_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    match rk
+        .application_layer
+        .as_mut()
+        .expect("no application layer")
+        .binary
+        .as_mut()
+        .expect("no application binary value")
+        .r#type
+        .as_mut()
+        .expect("no binary reference value")
+    {
+        binary_reference_value::Type::Digests(digests) => {
+            digests
+                .digests
+                .as_mut_slice()
+                .first_mut()
+                .expect("no digest")
+                .sha2_256
+                .as_mut_slice()[5] ^= 255;
+        }
+        _ => panic!("wrong reference value type."),
+    };
+    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn restricted_kernel_application_config_fails() {
+    let evidence = create_rk_evidence();
+    let endorsements = create_rk_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
+        reference_values::Type::OakRestrictedKernel(rk) => rk,
+        _ => panic!("wrong reference value type"),
+    };
+    rk.application_layer.as_mut().expect("no application layer").configuration.replace(
+        BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                digests: vec![RawDigest { sha2_256: vec![1; 32], ..Default::default() }],
+            })),
+        },
+    );
     assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
 }
