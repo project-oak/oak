@@ -2871,6 +2871,7 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "criterion",
  "criterion-macro",
  "hashbrown 0.14.3",

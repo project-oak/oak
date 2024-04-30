@@ -32,6 +32,7 @@ use oak_functions_enclave_service::{
     },
     OakFunctionsService,
 };
+use oak_functions_service::proto::oak::functions::extend_next_lookup_data_request::Data;
 use oak_proto_rust::oak::{
     crypto::v1::EncryptedRequest,
     oak_functions::testing::{EchoAndPanicRequest, TestModuleClient},
@@ -231,7 +232,7 @@ fn it_should_support_lookup_data() {
         }],
     };
 
-    let request = ExtendNextLookupDataRequest { chunk: Some(chunk) };
+    let request = ExtendNextLookupDataRequest { data: Some(Data::Chunk(chunk)) };
 
     client.extend_next_lookup_data(&request).into_ok().unwrap();
     client.finish_next_lookup_data(&FinishNextLookupDataRequest {}).into_ok().unwrap();

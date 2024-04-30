@@ -117,7 +117,16 @@ message LookupDataChunk {
 // If the definition of ExtendNextLookupData changes, the estimation of the size
 // when serialized in the Oak Functions Launcher needs to change, too.
 message ExtendNextLookupDataRequest {
-  LookupDataChunk chunk = 1;
+  oneof data {
+    LookupDataChunk chunk = 1;
+
+    // Experimental: a serialized array of varint-prefixed `LookupDataEntry`
+    // values. See
+    // https://docs.rs/prost/latest/prost/fn.decode_length_delimiter.html for
+    // more details; the hope here is that by serializing one entry at a time we
+    // can be more efficient.
+    bytes length_delimited_entries = 2 [ctype = CORD];
+  }
 }
 
 message ExtendNextLookupDataResponse {}

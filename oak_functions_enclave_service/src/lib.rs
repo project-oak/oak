@@ -27,10 +27,10 @@ pub use oak_functions_service::proto;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
-        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
-        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
-        OakFunctions, ReserveRequest, ReserveResponse,
+        extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
+        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+        FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
+        InvokeResponse, LookupDataChunk, OakFunctions, ReserveRequest, ReserveResponse,
     },
     Handler, Observer,
 };
@@ -164,7 +164,12 @@ where
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         log::debug!(
             "called extend_next_lookup_data (items: {})",
-            request.chunk.as_ref().map(|c| c.items.len()).unwrap_or(0)
+            request.data.as_ref().map_or(0, |data| {
+                match data {
+                    Data::Chunk(chunk) => chunk.items.len() as isize,
+                    Data::LengthDelimitedEntries(_) => -1,
+                }
+            })
         );
         self.get_instance()?.extend_next_lookup_data(request)
     }

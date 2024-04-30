@@ -24,8 +24,8 @@ use ubyte::ByteUnit;
 use crate::{
     channel::ConnectorHandle,
     proto::oak::functions::{
-        Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
-        LookupDataEntry, OakFunctionsAsyncClient,
+        extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+        FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
 
@@ -48,7 +48,7 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     async fn extend(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
         let _ = self
             .inner
-            .extend_next_lookup_data(&ExtendNextLookupDataRequest { chunk })
+            .extend_next_lookup_data(&ExtendNextLookupDataRequest { data: chunk.map(Data::Chunk) })
             .await
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))?;

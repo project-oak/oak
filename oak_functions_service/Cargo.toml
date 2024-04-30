@@ -38,6 +38,7 @@ wasmtime = { version = "*", optional = true }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+bytes = "*"
 criterion = "0.5"
 criterion-macro = "0.4"
 oak_functions_test_utils = { workspace = true }

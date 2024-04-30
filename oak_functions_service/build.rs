@@ -25,7 +25,10 @@ fn main() {
         &[".."],
         micro_rpc_build::CompileOptions {
             receiver_type: ReceiverType::RefSelf,
-            bytes: vec![".oak.functions.LookupDataEntry".to_string()],
+            bytes: vec![
+                ".oak.functions.LookupDataEntry".to_string(),
+                ".oak.functions.ExtendNextLookupDataRequest".to_string(),
+            ],
             ..Default::default()
         },
     );
