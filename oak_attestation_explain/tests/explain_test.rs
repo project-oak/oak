@@ -19,19 +19,20 @@ use std::fs;
 
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
 use oak_proto_rust::oak::attestation::v1::{
-    extracted_evidence::EvidenceValues, ExtractedEvidence, OakRestrictedKernelData,
+    extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData,
 };
 use prost::Message;
 
 // TODO: b/334900893 - Generate extracted evidence programatically.
-const RK_EXTRACTED_EVIDENCE_PATH: &str = "testdata/rk_extracted_evidence.binarypb";
+const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
 
 #[test]
 fn produces_expected_explaination() {
     let mut extracted_evidence = {
-        let serialized =
-            fs::read(RK_EXTRACTED_EVIDENCE_PATH).expect("could not read extracted evidence");
-        ExtractedEvidence::decode(serialized.as_slice()).expect("could not decode evidence")
+        let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read extracted evidence");
+        let evidence = Evidence::decode(serialized.as_slice()).expect("could not decode evidence");
+        oak_attestation_verification::verifier::extract_evidence(&evidence)
+            .expect("could not extract evidence")
     };
 
     eprintln!("{:?}", extracted_evidence.evidence_values);
@@ -39,7 +40,7 @@ fn produces_expected_explaination() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
             assert_eq!(
                 restricted_kernel_evidence.title().unwrap(),
-                format!("Evidence of the Oak Restricted Kernel Stack in a {} TEE", "AMD SEV-SNP")
+                format!("Oak Restricted Kernel Stack in a {} TEE", "AMD SEV-SNP")
             );
             match restricted_kernel_evidence {
                 OakRestrictedKernelData {
@@ -49,23 +50,23 @@ fn produces_expected_explaination() {
                 } => {
                     assert_eq!(
                         root_layer.description().unwrap(),
-                        r#"Initial Memory [Digest]: sha2-256:519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22
-ⓘ The firmware attestation digest is the sha2-256 hash of the sha2-386 hash of the initial memory state taken by the AMD SoC. The original sha2-386 hash of the initial memory is: sha2-384:5a5cd76580dd3f0e9cc69ddfe7a6120919c02c3e376317bb3cc6de40a66e60683d380d966664d83fcd124f83f878d2ec.
-Initial Memory [Provenance]: https://search.sigstore.dev/?hash=519bb2bd42afa2dd8cb3ca88aed6a8aea8905ee371f5e64b4aae03c7cec99a22"#
+                        r#"Firmware [Digest]: SHA2-256:33d5453b09e16ed0d6deb7c9f076b66b92a1b472d89534034717143554f6746d
+ⓘ The firmware attestation digest is the SHA2-256 hash of the SHA2-384 hash of the initial memory state taken by the AMD SoC. The original SHA2-384 hash of the initial memory is: SHA2-384:6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a.
+Firmware [Provenances]: https://search.sigstore.dev/?hash=33d5453b09e16ed0d6deb7c9f076b66b92a1b472d89534034717143554f6746d"#
                     );
                     assert_eq!(
                         kernel_layer.description().unwrap(),
-                        r#"Kernel Image [Digest]: sha2-256:bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743
-Kernel Setup Data [Digest]: sha2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
-Kernel Image/Setup-Data [Provenance]: https://search.sigstore.dev/?hash=bb149e581ed858d4269acf844ca9ceb00162f2e2aa2e2061072462a05e0c8743
-Kernel Command Line: console=ttyS0
-Initial RAM Disk [Digest]: sha2-256:0000000000000000000000000000000000000000000000000000000000000000
-Inital RAM Disk [Provenance]: https://search.sigstore.dev/?hash=0000000000000000000000000000000000000000000000000000000000000000"#
+                        r#"Kernel Image [Digest]: SHA2-256:ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+Kernel Setup Data [Digest]: SHA2-256:4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+Kernel Image/Setup-Data [Provenances]: https://search.sigstore.dev/?hash=ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+Kernel Command Line [String]: console=ttyS0
+Initial RAM Disk [Digest]: SHA2-256:daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+Inital RAM Disk [Provenances]: https://search.sigstore.dev/?hash=daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8"#
                     );
                     assert_eq!(
                         application_layer.description().unwrap(),
-                        r#"Binary [Digest]: sha2-256:b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040
-Binary [Provenance]: https://search.sigstore.dev/?hash=b5cae5b9b92104f7ebc08b7cd7dc9f2fb191ebd5db7041421f2f885b777d5040"#
+                        r#"Binary [Digest]: SHA2-256:7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb
+Binary [Provenances]: https://search.sigstore.dev/?hash=7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb"#
                     );
                 }
                 _ => panic!("evidence values unexpectedly unset"),

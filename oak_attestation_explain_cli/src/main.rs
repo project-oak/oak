@@ -27,7 +27,7 @@ use prost::Message;
 #[group(skip)]
 pub struct Params {
     /// Path to the evidence to inspect.
-    #[arg(long, value_parser = path_exists, default_value = "oak_attestation_verification/testdata/rk_evidence.binarypb")]
+    #[arg(long, value_parser = path_exists, default_value = "oak_attestation_explain/testdata/rk_evidence.binarypb")]
     pub evidence: PathBuf,
 }
 
@@ -53,10 +53,6 @@ fn main() {
 
     match extracted_evidence.evidence_values.take() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
-            assert_eq!(
-                restricted_kernel_evidence.title().unwrap(),
-                format!("Oak Restricted Kernel Stack in a {} TEE", "AMD SEV-SNP")
-            );
             match restricted_kernel_evidence {
                 OakRestrictedKernelData {
                     root_layer: Some(root_layer),

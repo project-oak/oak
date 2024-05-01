@@ -17,3 +17,4 @@ zerocopy = { version = "*", features = ["derive"] }
 prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
+oak_attestation_verification = { workspace = true }
