@@ -378,6 +378,32 @@
 <a href="#376" id="376">376</a>
 <a href="#377" id="377">377</a>
 <a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -440,6 +466,11 @@
         <span class="self">self</span>.data.extend(new_data)
     }
 
+    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], val: <span class="kw-2">&amp;</span>[u8]) {
+        <span class="self">self</span>.state = BuilderState::Extending;
+        <span class="self">self</span>.data.insert(key, val);
+    }
+
     <span class="kw">fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional_entries: usize) {
         <span class="self">self</span>.data.reserve(additional_entries)
     }
@@ -447,12 +478,25 @@
 
 <span class="attr">#[cfg(feature = <span class="string">"std"</span>)]
 </span><span class="kw">mod </span>mutexes {
-    <span class="kw">pub use </span>parking_lot::{Mutex, RwLock};
+    <span class="kw">pub use </span>parking_lot::{Mutex, MutexGuard, RwLock};
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">"std"</span>))]
 </span><span class="kw">mod </span>mutexes {
-    <span class="kw">pub use </span>spinning_top::{RwSpinlock <span class="kw">as </span>RwLock, Spinlock <span class="kw">as </span>Mutex};
+    <span class="kw">pub use </span>spinning_top::{
+        guard::SpinlockGuard <span class="kw">as </span>MutexGuard, RwSpinlock <span class="kw">as </span>RwLock, Spinlock <span class="kw">as </span>Mutex,
+    };
+}
+
+<span class="doccomment">/// RAII data structure that holds an exclusive lock for multiple insertions.
+</span><span class="kw">pub struct </span>LookupDataInserter&lt;<span class="lifetime">'a</span>&gt; {
+    lock: mutexes::MutexGuard&lt;<span class="lifetime">'a</span>, DataBuilder&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; LookupDataInserter&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], val: <span class="kw-2">&amp;</span>[u8]) {
+        <span class="self">self</span>.lock.insert(key, val);
+    }
 }
 
 <span class="doccomment">/// Utility for managing lookup data.
@@ -504,6 +548,14 @@
         <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
         data_builder.reserve(additional_entries <span class="kw">as </span>usize);
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub fn </span>inserter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LookupDataInserter&lt;<span class="lifetime">'_</span>&gt; {
+        LookupDataInserter { lock: <span class="self">self</span>.data_builder.lock() }
+    }
+
+    <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], val: <span class="kw-2">&amp;</span>[u8]) {
+        <span class="self">self</span>.data_builder.lock().insert(key, val);
     }
 
     <span class="kw">pub fn </span>extend_next_lookup_data&lt;<span class="lifetime">'a</span>, T: IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8], <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8])&gt;&gt;(

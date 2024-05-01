@@ -214,8 +214,8 @@
 <span class="kw">use crate</span>::{
     channel::ConnectorHandle,
     proto::oak::functions::{
-        Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
-        LookupDataEntry, OakFunctionsAsyncClient,
+        extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+        FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
 
@@ -238,7 +238,7 @@
     <span class="kw">async fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let _ </span>= <span class="self">self
             </span>.inner
-            .extend_next_lookup_data(<span class="kw-2">&amp;</span>ExtendNextLookupDataRequest { chunk })
+            .extend_next_lookup_data(<span class="kw-2">&amp;</span>ExtendNextLookupDataRequest { data: chunk.map(Data::Chunk) })
             .<span class="kw">await
             </span>.flatten()
             .map_err(|err| <span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">"error handling client request: {:?}"</span>, err)))<span class="question-mark">?</span>;

@@ -374,6 +374,22 @@
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -419,8 +435,24 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ExtendNextLookupDataRequest {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>chunk: ::core::option::Option&lt;LookupDataChunk&gt;,
+    <span class="attr">#[prost(oneof = <span class="string">"extend_next_lookup_data_request::Data"</span>, tags = <span class="string">"1, 2"</span>)]
+    </span><span class="kw">pub </span>data: ::core::option::Option&lt;extend_next_lookup_data_request::Data&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `ExtendNextLookupDataRequest`.
+</span><span class="kw">pub mod </span>extend_next_lookup_data_request {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Data {
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>Chunk(<span class="kw">super</span>::LookupDataChunk),
+        <span class="doccomment">/// Experimental: a serialized array of varint-prefixed `LookupDataEntry`
+        /// values. See
+        /// &lt;https://docs.rs/prost/latest/prost/fn.decode_length_delimiter.html&gt; for
+        /// more details; the hope here is that by serializing one entry at a time we
+        /// can be more efficient.
+        </span><span class="attr">#[prost(bytes, tag = <span class="string">"2"</span>)]
+        </span>LengthDelimitedEntries(::prost::alloc::vec::Vec&lt;u8&gt;),
+    }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -117,6 +117,86 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -137,14 +217,16 @@
 
 <span class="kw">use </span>micro_rpc::{Status, Vec};
 <span class="kw">use </span>oak_functions_abi::Request;
+<span class="kw">use </span>prost::Message;
 
 <span class="kw">use crate</span>::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     proto::oak::functions::{
-        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
-        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
+        extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
+        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+        FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,
+        ReserveRequest, ReserveResponse,
     },
     Handler, Observer,
 };
@@ -183,12 +265,22 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
-        <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.as_ref().ok_or(
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                <span class="string">"no chunk in extend request"</span>,
-            ),
-        )<span class="question-mark">?</span>));
+        <span class="kw">let </span>data = request.data.ok_or(micro_rpc::Status::new_with_message(
+            micro_rpc::StatusCode::InvalidArgument,
+            <span class="string">"no chunk in extend request"</span>,
+        ))<span class="question-mark">?</span>;
+        <span class="kw">match </span>data {
+            Data::Chunk(<span class="kw-2">ref </span>chunk) =&gt; {
+                <span class="self">self</span>.lookup_data_manager.extend_next_lookup_data(to_data(chunk))
+            }
+            Data::LengthDelimitedEntries(<span class="kw-2">mut </span>data) =&gt; {
+                <span class="kw">while let </span><span class="prelude-val">Ok</span>(entry) = LookupDataEntry::decode_length_delimited(<span class="kw-2">&amp;mut </span>data) {
+                    <span class="comment">// Grabbing the mutex for each insert seems to be faster than grabbing the mutex
+                    // before the while loop.
+                    </span><span class="self">self</span>.lookup_data_manager.insert(<span class="kw-2">&amp;</span>entry.key, <span class="kw-2">&amp;</span>entry.value)
+                }
+            }
+        }
         <span class="prelude-val">Ok</span>(ExtendNextLookupDataResponse {})
     }
 
@@ -233,5 +325,73 @@
 <span class="comment">// Helper function to convert [`LookupDataChunk`] to [`Data`].
 </span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span>LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8])&gt; {
     chunk.items.iter().map(|entry| (entry.key.as_ref(), entry.value.as_ref()))
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>bytes::{Bytes, BytesMut};
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::wasm::{WasmConfig, WasmHandler};
+
+    <span class="kw">static </span>ITEMS: [LookupDataEntry; <span class="number">2</span>] = [
+        LookupDataEntry { key: Bytes::from_static(<span class="string">b"key1"</span>), value: Bytes::from_static(<span class="string">b"value1"</span>) },
+        LookupDataEntry { key: Bytes::from_static(<span class="string">b"key2"</span>), value: Bytes::from_static(<span class="string">b"value2"</span>) },
+    ];
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_extend_chunk() {
+        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm(<span class="string">"echo"</span>).unwrap();
+        <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
+
+        <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
+            <span class="kw-2">&amp;</span>InitializeRequest { wasm_module, constant_response_size: <span class="number">0 </span>},
+            <span class="prelude-val">None</span>,
+            WasmConfig::default(),
+        )
+        .unwrap();
+
+        instance
+            .extend_next_lookup_data(ExtendNextLookupDataRequest {
+                data: <span class="prelude-val">Some</span>(Data::Chunk(LookupDataChunk { items: ITEMS.clone().into() })),
+            })
+            .unwrap();
+        instance.finish_next_lookup_data(FinishNextLookupDataRequest {}).unwrap();
+        <span class="kw">let </span>lookup_data = instance.lookup_data_manager.create_lookup_data();
+        <span class="kw">for </span>LookupDataEntry { key, value } <span class="kw">in </span><span class="kw-2">&amp;</span>ITEMS {
+            <span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value[..]), lookup_data.get(key));
+        }
+        <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, lookup_data.get(<span class="string">b"key3"</span>));
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_extend_entries() {
+        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm(<span class="string">"echo"</span>).unwrap();
+        <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
+
+        <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
+            <span class="kw-2">&amp;</span>InitializeRequest { wasm_module, constant_response_size: <span class="number">0 </span>},
+            <span class="prelude-val">None</span>,
+            WasmConfig::default(),
+        )
+        .unwrap();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>entries = BytesMut::new();
+        <span class="kw">for </span>item <span class="kw">in </span><span class="kw-2">&amp;</span>ITEMS {
+            item.encode_length_delimited(<span class="kw-2">&amp;mut </span>entries).unwrap();
+        }
+
+        instance
+            .extend_next_lookup_data(ExtendNextLookupDataRequest {
+                data: <span class="prelude-val">Some</span>(Data::LengthDelimitedEntries(entries.into())),
+            })
+            .unwrap();
+        instance.finish_next_lookup_data(FinishNextLookupDataRequest {}).unwrap();
+        <span class="kw">let </span>lookup_data = instance.lookup_data_manager.create_lookup_data();
+        <span class="kw">for </span>LookupDataEntry { key, value } <span class="kw">in </span><span class="kw-2">&amp;</span>ITEMS {
+            <span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>value[..]), lookup_data.get(key));
+        }
+        <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, lookup_data.get(<span class="string">b"key3"</span>));
+    }
 }
 </code></pre></div></section></main></body></html>

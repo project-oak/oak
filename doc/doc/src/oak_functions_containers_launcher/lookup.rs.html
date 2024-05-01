@@ -181,6 +181,7 @@
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -204,6 +205,7 @@
 <span class="kw">use </span>ubyte::ByteUnit;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
+    extend_next_lookup_data_request::Data,
     oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, Empty,
     ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
 };
@@ -227,7 +229,7 @@
     <span class="kw">async fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let _ </span>= <span class="self">self
             </span>.inner
-            .extend_next_lookup_data(ExtendNextLookupDataRequest { chunk })
+            .extend_next_lookup_data(ExtendNextLookupDataRequest { data: chunk.map(Data::Chunk) })
             .<span class="kw">await
             </span>.map_err(|err| <span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">"error handling client request: {:?}"</span>, err)))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
