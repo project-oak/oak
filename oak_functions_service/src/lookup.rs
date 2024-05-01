@@ -60,6 +60,11 @@ impl DataBuilder {
         self.data.extend(new_data)
     }
 
+    fn insert(&mut self, key: &[u8], val: &[u8]) {
+        self.state = BuilderState::Extending;
+        self.data.insert(key, val);
+    }
+
     fn reserve(&mut self, additional_entries: usize) {
         self.data.reserve(additional_entries)
     }
@@ -67,12 +72,25 @@ impl DataBuilder {
 
 #[cfg(feature = "std")]
 mod mutexes {
-    pub use parking_lot::{Mutex, RwLock};
+    pub use parking_lot::{Mutex, MutexGuard, RwLock};
 }
 
 #[cfg(not(feature = "std"))]
 mod mutexes {
-    pub use spinning_top::{RwSpinlock as RwLock, Spinlock as Mutex};
+    pub use spinning_top::{
+        guard::SpinlockGuard as MutexGuard, RwSpinlock as RwLock, Spinlock as Mutex,
+    };
+}
+
+/// RAII data structure that holds an exclusive lock for multiple insertions.
+pub struct LookupDataInserter<'a> {
+    lock: mutexes::MutexGuard<'a, DataBuilder>,
+}
+
+impl<'a> LookupDataInserter<'a> {
+    pub fn insert(&mut self, key: &[u8], val: &[u8]) {
+        self.lock.insert(key, val);
+    }
 }
 
 /// Utility for managing lookup data.
@@ -124,6 +142,14 @@ impl LookupDataManager {
         let mut data_builder = self.data_builder.lock();
         data_builder.reserve(additional_entries as usize);
         Ok(())
+    }
+
+    pub fn inserter(&self) -> LookupDataInserter<'_> {
+        LookupDataInserter { lock: self.data_builder.lock() }
+    }
+
+    pub fn insert(&self, key: &[u8], val: &[u8]) {
+        self.data_builder.lock().insert(key, val);
     }
 
     pub fn extend_next_lookup_data<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(

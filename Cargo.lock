@@ -2315,6 +2315,22 @@ dependencies = [
  "anyhow",
  "hex",
  "oak_proto_rust",
+ "prost",
+ "sha2",
+ "zerocopy",
+]
+
+[[package]]
+name = "oak_attestation_explain_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "hex",
+ "oak_attestation_explain",
+ "oak_attestation_verification",
+ "oak_proto_rust",
+ "prost",
  "sha2",
  "zerocopy",
 ]
@@ -2855,7 +2871,7 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "byteorder",
+ "bytes",
  "criterion",
  "criterion-macro",
  "hashbrown 0.14.3",

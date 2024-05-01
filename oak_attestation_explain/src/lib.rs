@@ -15,30 +15,28 @@
 //
 
 #![no_std]
-#![feature(iter_intersperse)]
-// Rust's behavior around multiline strings an identation is slightly counterintuitive.
-// for easier assembly of multiline descriptions each individual line is described
-// as a string, and variables are inserted on the line as needed. To interact with
-// this more easily, each line is produce with format, allowing the easier insertion
-// of variables in lines that require them.
-#![allow(clippy::useless_format)]
 
 extern crate alloc;
+
+#[cfg(test)]
+extern crate std;
 
 use alloc::{format, string::String};
 
 use anyhow::{Context, Result};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        root_layer_data::Report, KernelLayerData, OakContainersData, OakRestrictedKernelData,
-        RootLayerData, SystemLayerData,
+        root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
+        KernelLayerData, KernelLayerReferenceValues, OakContainersData,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelReferenceValues,
+        RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
     },
     RawDigest,
 };
 use sha2::{Digest, Sha256};
 use zerocopy::{FromBytes, FromZeroes};
 
-use crate::alloc::string::ToString;
+use crate::alloc::{borrow::ToOwned, string::ToString};
 
 fn get_tee_name(tee_report: &Report) -> &'static str {
     match tee_report {
@@ -65,12 +63,18 @@ impl HumanReadableTitle for OakRestrictedKernelData {
         let tee_report = self
             .root_layer
             .as_ref()
-            .context("unexpectedly unset proto field")?
+            .context("unexpectedly unset root_layer proto field")?
             .report
             .as_ref()
-            .context("unexpectedly unset proto field")?;
+            .context("unexpectedly unset report proto field")?;
         let tee_name = get_tee_name(tee_report);
-        Ok(format!("Oak Restricted Kernel Stack in a {} TEE", tee_name))
+        Ok(format!("Evidence of the Oak Restricted Kernel Stack in a {} TEE", tee_name))
+    }
+}
+
+impl HumanReadableTitle for OakRestrictedKernelReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Reference values for the Oak Restricted Kernel Stack".to_owned())
     }
 }
 
@@ -79,37 +83,41 @@ impl HumanReadableTitle for OakContainersData {
         let tee_report = self
             .root_layer
             .clone()
-            .context("unexpectedly unset proto field")?
+            .context("unexpectedly unset root_layer proto field")?
             .report
             .clone()
-            .context("unexpectedly unset proto field")?;
+            .context("unexpectedly unset report proto field")?;
         let tee_name = get_tee_name(&tee_report);
-        Ok(format!("Oak Conatiners Stack in a {} TEE", tee_name))
+        Ok(format!("Evidence of the Oak Conatiners Stack in a {} TEE", tee_name))
+    }
+}
+
+impl HumanReadableTitle for OakContainersReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Reference values for the Oak Conatiners Stack".to_owned())
     }
 }
 
 impl HumanReadableTitle for RootLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Root Layer".to_string())
+        Ok("Root Layer [Evidence]".to_string())
     }
 }
 
 impl HumanReadableExplanation for RootLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        match self.report.as_ref().context("unexpectedly unset proto field")? {
+        match self.report.as_ref().context("unexpectedly unset report proto field")? {
             Report::SevSnp(report) => {
                 let initial_memory_sha256_digest =
                     SNPInitialMemoryMeasurement::try_from(report.initial_measurement.as_slice())?;
-                Ok([
-                    format!("Initial memory digest: {}", initial_memory_sha256_digest.display_hash()),
-                    format!(""),
-                    format!("{}", initial_memory_sha256_digest.display_hash_explaination()),
-                    format!(""),
-                    format!(
-                        "One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:"
-                    ),
-                    format!("{}", initial_memory_sha256_digest.provenance_link()),
-                ].into_iter().intersperse("\n".to_string()).collect())
+                Ok(format!(
+                    "Initial Memory [Digest]: {}
+{}
+Initial Memory [Provenance]: {}",
+                    initial_memory_sha256_digest.display_hash(),
+                    initial_memory_sha256_digest.display_hash_explaination(),
+                    initial_memory_sha256_digest.provenance_link()
+                ))
             }
             _ => Err(anyhow::Error::msg(
                 "human readable description not yet implemented for this type of TEE",
@@ -118,71 +126,188 @@ impl HumanReadableExplanation for RootLayerData {
     }
 }
 
+impl HumanReadableTitle for RootLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Root Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for RootLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
+    }
+}
+
 impl HumanReadableTitle for KernelLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Kernel Layer".to_string())
+        Ok("Kernel Layer [Evidence]".to_string())
     }
 }
 
 impl HumanReadableExplanation for KernelLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let kernel_image_digest: ArtifactDigestSha2_256 =
-            self.kernel_image.as_ref().context("unexpectedly unset proto field").and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )?;
-        let init_ram_fs_digest: ArtifactDigestSha2_256 =
-            self.init_ram_fs.as_ref().context("unexpectedly unset proto field").and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )?;
-        Ok([
-            format!("Kernel Image: {}", kernel_image_digest.display_hash()),
-            format!(
-                "Kernel Setup Data: {}",
-                ArtifactDigestSha2_256::try_from(
-                    self.kernel_setup_data.as_ref().context("unexpectedly unset proto field")?
-                )?
-                .display_hash()
-            ),
-            format!(
-                "Kernel Command Line: {}",
-                self.kernel_raw_cmd_line.as_ref().context("unexpectedly unset proto field")?
-            ),
-            format!("Initial RAM Disk: {}", init_ram_fs_digest.display_hash()),
-            format!(""),
-            format!(
-                "One or more SLSA provenances mapping this layer's attestation digests to source code should be available on rekor. They can be obtained with the following search:"
-            ),
-            format!("{}", kernel_image_digest.provenance_link()),
-        ].into_iter().intersperse("\n".to_string()).collect())
+        let kernel_image_digest: ArtifactDigestSha2_256 = self
+            .kernel_image
+            .as_ref()
+            .context("unexpectedly unset kernel_image proto field")
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })?;
+
+        let bz_image_description = format!(
+            "Kernel Image [Digest]: {}
+Kernel Setup Data [Digest]: {}",
+            kernel_image_digest.display_hash(),
+            ArtifactDigestSha2_256::try_from(
+                self.kernel_setup_data
+                    .as_ref()
+                    .context("unexpectedly unset kernel_setup_data proto field")?
+            )?
+            .display_hash(),
+        );
+        let kernel_commandline = format!(
+            "Kernel Command Line: {}",
+            self.kernel_raw_cmd_line
+                .as_ref()
+                .context("unexpectedly unset kernel_raw_cmd_line proto field")?,
+        );
+        let init_ram_fs_digest: ArtifactDigestSha2_256 = self
+            .init_ram_fs
+            .as_ref()
+            .context("unexpectedly unset init_ram_fs proto field")
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })?;
+        let initial_ramdisk_description =
+            format!("Initial RAM Disk [Digest]: {}", init_ram_fs_digest.display_hash());
+
+        Ok(format!(
+            "{}
+Kernel Image/Setup-Data [Provenance]: {}
+{}
+{}
+Inital RAM Disk [Provenance]: {}",
+            bz_image_description,
+            kernel_image_digest.provenance_link(),
+            kernel_commandline,
+            initial_ramdisk_description,
+            init_ram_fs_digest.provenance_link()
+        ))
+    }
+}
+
+impl HumanReadableTitle for KernelLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Kernel Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for KernelLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
     }
 }
 
 impl HumanReadableTitle for SystemLayerData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("System Layer".to_string())
+        Ok("System Layer [Evidence]".to_string())
     }
 }
 
 impl HumanReadableExplanation for SystemLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let system_image_digest =
-            self.system_image.as_ref().context("unexpectedly unset proto field").and_then(
-                |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-            )?;
-        Ok([format!("Initial RAM Disk: {}", system_image_digest.display_hash()),
-        format!(""),
-        format!(
-            "One or more SLSA provenances mapping this layer's attestation digest to source code should be available on rekor. They can be obtained with the following search:"
-        ),
-        format!("{}", system_image_digest.provenance_link())].into_iter().intersperse("\n".to_string()).collect())
+        let system_image_digest = self
+            .system_image
+            .as_ref()
+            .context("unexpectedly unset system_image proto field")
+            .and_then(|digest| {
+                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+            })?;
+        Ok(format!(
+            "System Image [Digest]: {}
+System Image [Provenance]: {}",
+            system_image_digest.display_hash(),
+            system_image_digest.provenance_link(),
+        ))
+    }
+}
+
+impl HumanReadableTitle for SystemLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("System Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for SystemLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
+    }
+}
+
+impl HumanReadableTitle for ApplicationLayerData {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Application Layer [Evidence]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for ApplicationLayerData {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        let digests = {
+            let binary_digest =
+                self.binary.as_ref().context("unexpectedly unset binary proto field").and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )?;
+
+            // Restricted Kernel Applications do not use a config, no digest is included in
+            // the evidence.
+            if let Ok(config_digest) =
+                self.config.as_ref().context("unexpectedly unset config proto field").and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )
+            {
+                format!(
+                    "Binary [Digest]: {}
+Binary [Provenance]: {}
+Config [Digest]: {}
+Config [Provenance]: {}",
+                    binary_digest.display_hash(),
+                    binary_digest.provenance_link(),
+                    config_digest.display_hash(),
+                    config_digest.provenance_link()
+                )
+            } else {
+                format!(
+                    "Binary [Digest]: {}
+Binary [Provenance]: {}",
+                    binary_digest.display_hash(),
+                    binary_digest.provenance_link(),
+                )
+            }
+        };
+
+        Ok(digests)
+    }
+}
+
+impl HumanReadableTitle for ApplicationLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Application Layer [Reference Values]".to_string())
+    }
+}
+
+impl HumanReadableExplanation for ApplicationLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        Ok(format!("{:?}", self))
     }
 }
 
 trait OakDigestDisplay {
-    /// Print a hash in the following format: [alg]:[hash]. The algorithm
+    /// String of the hash in the following format: [alg]:[hash]. The algorithm
     /// descripter follows fieldnames of the proto-message: oak.RawDigest
     /// struct.
     fn display_hash(&self) -> String;
+
+    fn provenance_link(&self) -> String;
 }
 
 /// Convience struct that maintains type safety determinig the length of the
@@ -195,7 +320,10 @@ impl TryFrom<&RawDigest> for ArtifactDigestSha2_256 {
     type Error = anyhow::Error;
 
     fn try_from(value: &RawDigest) -> Result<Self, Self::Error> {
-        value.sha2_256.as_slice().try_into()
+        match value.sha2_256.as_slice() {
+            [] => Err(anyhow::Error::msg("no sha2_256 hash found")),
+            _ => value.sha2_256.as_slice().try_into(),
+        }
     }
 }
 
@@ -207,15 +335,12 @@ impl TryFrom<&[u8]> for ArtifactDigestSha2_256 {
     }
 }
 
-impl ArtifactDigestSha2_256 {
+impl OakDigestDisplay for ArtifactDigestSha2_256 {
     // # TODO: b/335458726 - Stop permitting unexported code once mod is completed.
     #[allow(dead_code)]
-    pub fn provenance_link(&self) -> String {
+    fn provenance_link(&self) -> String {
         format!("https://search.sigstore.dev/?hash={}", hex::encode(self.0))
     }
-    /// Print a hash in the following format: [alg]:[hash]. The algorithm
-    /// descripter follows fieldnames of the proto-message: oak.RawDigest
-    /// struct.
     fn display_hash(&self) -> String {
         format!("sha2-256:{}", hex::encode(self.0.as_slice()))
     }
@@ -240,14 +365,14 @@ impl SNPInitialMemoryMeasurement {
             { hex::encode(self.0.as_slice()) }
         )
     }
-    /// Print a hash in the following format: [alg]:[hash]. The algorithm
-    /// descripter follows fieldnames of the proto-message: oak.RawDigest
-    /// struct.
+}
+
+impl OakDigestDisplay for SNPInitialMemoryMeasurement {
     fn display_hash(&self) -> String {
         self.sha2_256().display_hash()
     }
 
-    pub fn provenance_link(&self) -> String {
+    fn provenance_link(&self) -> String {
         format!("https://search.sigstore.dev/?hash={}", hex::encode(self.sha2_256().0))
     }
 }

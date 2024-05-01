@@ -92,8 +92,21 @@ oak_containers_kernel:
         oak_containers_kernel/bin/subjects \
         oak_containers_kernel/target/bzImage
 
-oak_containers_system_image:
+# TODO: b/337258843 - The build.sh independently builds the dependencies.
+# Make build.sh use just output after once more checking that they are identical.
+oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
+
+oak_containers_orchestrator:
+   env --chdir=oak_containers_orchestrator \
+       cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
+       -Z unstable-options --out-dir=target
+
+oak_containers_syslogd:
+   env --chdir=oak_containers_syslogd \
+       cargo build --release -Z unstable-options --out-dir=target
+   patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
+       oak_containers_syslogd/target/oak_containers_syslogd
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:

@@ -241,7 +241,9 @@
                 rust
                 bazelShell
               ];
-              packages = [ ];
+              packages = [
+                elfutils
+              ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {

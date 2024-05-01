@@ -18,14 +18,16 @@ use alloc::{format, sync::Arc};
 
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
+use prost::Message;
 
 use crate::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     proto::oak::functions::{
-        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
-        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
+        extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
+        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+        FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,
+        ReserveRequest, ReserveResponse,
     },
     Handler, Observer,
 };
@@ -64,12 +66,22 @@ impl<H: Handler> OakFunctionsInstance<H> {
         &self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager.extend_next_lookup_data(to_data(request.chunk.as_ref().ok_or(
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                "no chunk in extend request",
-            ),
-        )?));
+        let data = request.data.ok_or(micro_rpc::Status::new_with_message(
+            micro_rpc::StatusCode::InvalidArgument,
+            "no chunk in extend request",
+        ))?;
+        match data {
+            Data::Chunk(ref chunk) => {
+                self.lookup_data_manager.extend_next_lookup_data(to_data(chunk))
+            }
+            Data::LengthDelimitedEntries(mut data) => {
+                while let Ok(entry) = LookupDataEntry::decode_length_delimited(&mut data) {
+                    // Grabbing the mutex for each insert seems to be faster than grabbing the mutex
+                    // before the while loop.
+                    self.lookup_data_manager.insert(&entry.key, &entry.value)
+                }
+            }
+        }
         Ok(ExtendNextLookupDataResponse {})
     }
 
@@ -114,4 +126,72 @@ impl<H: Handler> OakFunctionsInstance<H> {
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
 fn to_data(chunk: &LookupDataChunk) -> impl Iterator<Item = (&[u8], &[u8])> {
     chunk.items.iter().map(|entry| (entry.key.as_ref(), entry.value.as_ref()))
+}
+
+#[cfg(test)]
+mod tests {
+    use bytes::{Bytes, BytesMut};
+
+    use super::*;
+    use crate::wasm::{WasmConfig, WasmHandler};
+
+    static ITEMS: [LookupDataEntry; 2] = [
+        LookupDataEntry { key: Bytes::from_static(b"key1"), value: Bytes::from_static(b"value1") },
+        LookupDataEntry { key: Bytes::from_static(b"key2"), value: Bytes::from_static(b"value2") },
+    ];
+
+    #[test]
+    fn test_extend_chunk() {
+        let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_module = std::fs::read(wasm_module_path).unwrap();
+
+        let instance = OakFunctionsInstance::<WasmHandler>::new(
+            &InitializeRequest { wasm_module, constant_response_size: 0 },
+            None,
+            WasmConfig::default(),
+        )
+        .unwrap();
+
+        instance
+            .extend_next_lookup_data(ExtendNextLookupDataRequest {
+                data: Some(Data::Chunk(LookupDataChunk { items: ITEMS.clone().into() })),
+            })
+            .unwrap();
+        instance.finish_next_lookup_data(FinishNextLookupDataRequest {}).unwrap();
+        let lookup_data = instance.lookup_data_manager.create_lookup_data();
+        for LookupDataEntry { key, value } in &ITEMS {
+            assert_eq!(Some(&value[..]), lookup_data.get(key));
+        }
+        assert_eq!(None, lookup_data.get(b"key3"));
+    }
+
+    #[test]
+    fn test_extend_entries() {
+        let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_module = std::fs::read(wasm_module_path).unwrap();
+
+        let instance = OakFunctionsInstance::<WasmHandler>::new(
+            &InitializeRequest { wasm_module, constant_response_size: 0 },
+            None,
+            WasmConfig::default(),
+        )
+        .unwrap();
+
+        let mut entries = BytesMut::new();
+        for item in &ITEMS {
+            item.encode_length_delimited(&mut entries).unwrap();
+        }
+
+        instance
+            .extend_next_lookup_data(ExtendNextLookupDataRequest {
+                data: Some(Data::LengthDelimitedEntries(entries.into())),
+            })
+            .unwrap();
+        instance.finish_next_lookup_data(FinishNextLookupDataRequest {}).unwrap();
+        let lookup_data = instance.lookup_data_manager.create_lookup_data();
+        for LookupDataEntry { key, value } in &ITEMS {
+            assert_eq!(Some(&value[..]), lookup_data.get(key));
+        }
+        assert_eq!(None, lookup_data.get(b"key3"));
+    }
 }

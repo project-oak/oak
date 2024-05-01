@@ -1,3 +1,5 @@
+cargo-features = ["trim-paths"]
+
 [workspace]
 resolver = "2"
 members = [
@@ -7,6 +9,7 @@ members = [
   "micro_rpc_tests",
   "oak_attestation",
   "oak_attestation_explain",
+  "oak_attestation_explain_cli",
   "oak_attestation_integration_tests",
   "oak_attestation_verification",
   "oak_channel",
@@ -78,6 +81,10 @@ exclude = [
   "third_party/rust-hypervisor-firmware-virtio",
 ]
 
+[profile.release]
+strip = "debuginfo" # Debug info is not always deterministic.
+trim-paths = "all"  # Remove path prefixes outside the workspace root.
+
 # Special version of release that enables more aggressive optimizations.
 # See https://doc.rust-lang.org/cargo/reference/profiles.html for more details.
 [profile.release-lto]
@@ -95,6 +102,7 @@ benchmark = { path = "./oak_functions/examples/benchmark/module" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation = { path = "./oak_attestation" }
+oak_attestation_explain = { path = "./oak_attestation_explain" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }

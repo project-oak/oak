@@ -25,15 +25,14 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, format, rc::Rc, string::ToString, sync::Arc, vec::Vec};
+use core::cell::Cell;
 #[cfg(feature = "std")]
 use std::time::Instant;
 
-use byteorder::{ByteOrder, LittleEndian};
 use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
-use spinning_top::Spinlock;
 use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
@@ -80,7 +79,9 @@ macro_rules! stub_wasm_function {
         $linker.func_wrap(
             stringify!($function_mod),
             stringify!($function_name),
+            #[allow(unused_variables)]
             |caller: wasmtime::Caller<'_, UserState>, $(_: $t),*| {
+                #[cfg(not(feature = "deny_sensitive_logging"))]
                 caller
                     .data()
                     .log_error(concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name)));
@@ -312,7 +313,7 @@ impl<'a> OakCaller<'a> {
     /// Reads the buffer starting at address `buf_ptr` with length `buf_len`
     /// from the Wasm memory.
     fn read_buffer(
-        &mut self,
+        &self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -> Result<Vec<u8>, StatusCode> {
@@ -320,7 +321,7 @@ impl<'a> OakCaller<'a> {
         let buf_ptr = buf_ptr
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmtime API");
-        self.memory.read(&mut self.caller, buf_ptr, &mut buf).map_err(|err| {
+        self.memory.read(&self.caller, buf_ptr, &mut buf).map_err(|err| {
             self.data().log_error(&format!("Unable to read buffer from guest memory: {:?}", err));
             StatusCode::InvalidArgument
         })?;
@@ -364,9 +365,8 @@ impl<'a> OakCaller<'a> {
     /// Helper function to write the u32 `value` at the `address` of the Wasm
     /// memory.
     fn write_u32(&mut self, value: u32, address: AbiPointer) -> Result<(), StatusCode> {
-        let value_bytes = &mut [0; 4];
-        LittleEndian::write_u32(value_bytes, value);
-        self.write_buffer(value_bytes, address).map_err(|err| {
+        let value_bytes = value.to_le_bytes();
+        self.write_buffer(&value_bytes, address).map_err(|err| {
             self.data()
                 .log_error(&format!("Unable to write u32 value into guest memory: {:?}", err));
             StatusCode::InvalidArgument
@@ -377,7 +377,7 @@ impl<'a> OakCaller<'a> {
         self.caller.data_mut()
     }
 
-    fn data(&mut self) -> &UserState {
+    fn data(&self) -> &UserState {
         self.caller.data()
     }
 }
@@ -498,56 +498,53 @@ impl Handler for WasmtimeHandler {
         let now = Instant::now();
 
         let request = invoke_request.body;
-        let response = Arc::new(Spinlock::new(Vec::new()));
-        let mut wasm_api = self.wasm_api_factory.create_wasm_api(request, response.clone());
-        let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
-        // For isolated requests we need to create a new store for every request.
-        let mut store = wasmtime::Store::new(self.wasm_module.engine(), user_state);
-        let instance = self.linker.instantiate(&mut store, &self.wasm_module)?;
+        let response = Rc::new(Cell::new(Vec::new()));
+        {
+            let mut wasm_api = self.wasm_api_factory.create_wasm_api(request, response.clone());
+            let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
+            // For isolated requests we need to create a new store for every request.
+            let mut store = wasmtime::Store::new(self.wasm_module.engine(), user_state);
+            let instance = self.linker.instantiate(&mut store, &self.wasm_module)?;
 
-        // Does not work in wasmtime
-        // #[cfg(not(feature = "deny_sensitive_logging"))]
-        // instance.exports(&store).for_each(|export| {
-        //     store
-        //         .data()
-        //         .logger
-        //         .log_sensitive(Level::Info, &format!("instance exports: {:?}",
-        // export)) });
+            // Does not work in wasmtime
+            // #[cfg(not(feature = "deny_sensitive_logging"))]
+            // instance.exports(&store).for_each(|export| {
+            //     self.logger.log_sensitive(Level::Info, &format!("instance exports: {:?}",
+            // export)) });
 
-        // Invokes the Wasm module by calling main.
-        let main = instance
-            .get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME)
-            .expect("couldn't get `main` export");
+            // Invokes the Wasm module by calling main.
+            let main = instance
+                .get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME)
+                .expect("couldn't get `main` export");
 
-        #[cfg(feature = "std")]
-        if let Some(ref observer) = self.observer {
-            observer.wasm_initialization(now.elapsed());
+            #[cfg(feature = "std")]
+            if let Some(ref observer) = self.observer {
+                observer.wasm_initialization(now.elapsed());
+            }
+
+            // Warning: if we implement constant-time execution policies, this metric can
+            // leak the real execution time, so be sure that any time padding is
+            // included in the metric.
+            #[cfg(feature = "std")]
+            let now = Instant::now();
+            #[allow(unused)]
+            let result = main.call(&mut store, ());
+            #[cfg(feature = "std")]
+            if let Some(ref observer) = self.observer {
+                observer.wasm_invocation(now.elapsed());
+            }
+
+            #[cfg(not(feature = "deny_sensitive_logging"))]
+            self.logger.log_sensitive(
+                Level::Info,
+                &format!("running Wasm module completed with result: {:?}", result),
+            );
         }
 
-        // Warning: if we implement constant-time execution policies, this metric can
-        // leak the real execution time, so be sure that any time padding is
-        // included in the metric.
-        #[cfg(feature = "std")]
-        let now = Instant::now();
-        #[allow(unused)]
-        let result = main.call(&mut store, ());
-        #[cfg(feature = "std")]
-        if let Some(ref observer) = self.observer {
-            observer.wasm_invocation(now.elapsed());
-        }
-
+        let response_bytes =
+            Rc::into_inner(response).expect("response should have no references").into_inner();
         #[cfg(not(feature = "deny_sensitive_logging"))]
-        store.data().logger.log_sensitive(
-            Level::Info,
-            &format!("running Wasm module completed with result: {:?}", result),
-        );
-
-        let response_bytes = core::mem::take(response.lock().as_mut());
-        #[cfg(not(feature = "deny_sensitive_logging"))]
-        store
-            .data()
-            .logger
-            .log_sensitive(Level::Info, &format!("response bytes: {:?}", response_bytes));
+        self.logger.log_sensitive(Level::Info, &format!("response bytes: {:?}", response_bytes));
 
         let invoke_response =
             Response::create(oak_functions_abi::StatusCode::Success, response_bytes);

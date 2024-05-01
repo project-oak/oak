@@ -27,7 +27,9 @@ jobs:
         buildconfig:
           - buildconfigs/key_xor_test_app.toml
           - buildconfigs/oak_containers_kernel.toml
+          - buildconfigs/oak_containers_orchestrator.toml
           - buildconfigs/oak_containers_stage1.toml
+          - buildconfigs/oak_containers_syslogd.toml
           - buildconfigs/oak_containers_system_image.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml

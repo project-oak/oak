@@ -41,17 +41,17 @@ use oak_proto_rust::oak::{
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
         EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
         ExpectedStringLiterals, ExpectedValues, ExtractedEvidence, FakeAttestationReport,
-        InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
-        KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData,
-        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
-        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
-        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
-        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
-        VerificationSkipped,
+        FirmwareAttachment, InsecureExpectedValues, IntelTdxAttestationReport,
+        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
+        KernelLayerData, KernelLayerEndorsements, KernelLayerExpectedValues,
+        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
+        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
+        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -370,7 +370,7 @@ fn compare_oak_containers_measurement_digests(
 ) -> anyhow::Result<()> {
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
-        expected.root_layer.as_ref().context("no root layer expected avlues")?,
+        expected.root_layer.as_ref().context("no root layer expected values")?,
     )?;
 
     compare_kernel_layer_measurement_digests(
@@ -413,7 +413,7 @@ fn compare_cb_measurement_digests(
 ) -> anyhow::Result<()> {
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
-        expected.root_layer.as_ref().context("no root layer expected avlues")?,
+        expected.root_layer.as_ref().context("no root layer expected values")?,
     )
     .context("root layer verification failed")?;
 
@@ -547,7 +547,7 @@ fn get_root_layer_expected_values(
     // corresponding expected value.
 
     let amd_sev = if let Some(amd_sev_values) = reference_values.amd_sev.as_ref() {
-        let stage0_expected = get_expected_measurement_digest(
+        let stage0_expected = get_stage0_expected_values(
             now_utc_millis,
             endorsements.and_then(|value| value.stage0.as_ref()),
             amd_sev_values.stage0.as_ref().context("stage0 binary reference values not found")?,
@@ -578,9 +578,6 @@ fn compare_root_layer_measurement_digests(
         expected_values.insecure.as_ref(),
     ) {
         (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
-            // See b/327069120: We don't have the correct digest in the endorsement
-            // to compare the stage0 measurement yet. This will fail UNLESS the stage0
-            // reference value is set to `skip {}`.
             let measurement = RawDigest {
                 sha2_384: report_values.initial_measurement.to_vec(),
                 ..Default::default()
@@ -590,8 +587,9 @@ fn compare_root_layer_measurement_digests(
                 amd_sev_values
                     .stage0_expected
                     .as_ref()
-                    .context("no stage0 epxected value provided")?,
-            )?;
+                    .context("no stage0 expected value provided")?,
+            )
+            .context("stage0 measurement values failed verification")?;
             verify_amd_sev_attestation_report(report_values, amd_sev_values)
         }
         (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
@@ -714,15 +712,18 @@ fn compare_kernel_layer_measurement_digests(
     compare_measurement_digest(
         values.init_ram_fs.as_ref().context("no initramfs value provided")?,
         expected.init_ram_fs.as_ref().context("no initramfs expected value provided")?,
-    )?;
+    )
+    .context("initramfs value failed verification")?;
     compare_measurement_digest(
         values.memory_map.as_ref().context("no memory_map value provided")?,
         expected.memory_map.as_ref().context("no memory_map expected value provided")?,
-    )?;
+    )
+    .context("memory_map value failed verification")?;
     compare_measurement_digest(
         values.acpi.as_ref().context("no ACPI table value provided")?,
         expected.acpi.as_ref().context("no ACPI table expected value provided")?,
     )
+    .context("ACPI table value failed verification")
 }
 
 fn get_system_layer_expected_values(
@@ -869,8 +870,77 @@ fn compare_measurement_digest(
             .iter()
             .find(|expected| is_raw_digest_match(measurement, expected).is_ok())
             .map(|_| ())
-            .ok_or(anyhow::anyhow!("measurement digest does not match any reference values")),
+            .ok_or(anyhow::anyhow!(
+                "measurement digest {:?} does not match any reference values",
+                measurement
+            )),
         None => Err(anyhow::anyhow!("empty expected value")),
+    }
+}
+
+// Extract the stage0 data from the provided Endorsement
+// It will only be returned if the endorsement was verified.
+fn get_verified_stage0_attachment(
+    now_utc_millis: i64,
+    endorsement: &TransparentReleaseEndorsement,
+    public_keys: &EndorsementReferenceValue,
+) -> anyhow::Result<FirmwareAttachment> {
+    verify_binary_endorsement(
+        now_utc_millis,
+        &endorsement.endorsement,
+        &endorsement.endorsement_signature,
+        &endorsement.rekor_log_entry,
+        &public_keys.endorser_public_key,
+        &public_keys.rekor_public_key,
+    )?;
+    // Parse endorsement statement and verify attachment digest.
+    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
+    if parsed_statement.predicate.usage != "firmware" {
+        anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
+    }
+    let expected_digest = get_digest(&parsed_statement)?;
+    let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
+    is_hex_digest_match(&actual_digest, &expected_digest)?;
+    FirmwareAttachment::decode(&*endorsement.subject)
+        .map_err(|_| anyhow::anyhow!("couldn't parse stage0 attachment"))
+}
+
+// Get the expected values from the provided TransparentReleaseEndorsement.
+// The endorsement is expected to contain a subject that can be deserialized as
+// a FirmwareAttachment.
+// The subject itself will be verified, and then the expected digests (each
+// corresponding to a number of vCPU, any of them a valid match for the digest
+// in the evidence).
+fn get_stage0_expected_values(
+    now_utc_millis: i64,
+    endorsement: Option<&TransparentReleaseEndorsement>,
+    reference_value: &BinaryReferenceValue,
+) -> anyhow::Result<ExpectedDigests> {
+    match reference_value.r#type.as_ref() {
+        Some(binary_reference_value::Type::Skip(_)) => Ok(ExpectedDigests {
+            r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
+        }),
+        Some(binary_reference_value::Type::Endorsement(public_keys)) => {
+            let firmware_attachment = get_verified_stage0_attachment(
+                now_utc_millis,
+                endorsement.context("matching endorsement not found for reference value")?,
+                public_keys,
+            )?;
+
+            Ok(into_expected_digests(
+                firmware_attachment
+                    .configs
+                    .values()
+                    .map(|digest| hex_to_raw_digest(digest).unwrap())
+                    .collect::<Vec<RawDigest>>()
+                    .as_slice(),
+            ))
+        }
+        Some(binary_reference_value::Type::Digests(expected_digests)) => {
+            Ok(into_expected_digests(expected_digests.digests.as_slice()))
+        }
+
+        None => Err(anyhow::anyhow!("empty stage0 reference value")),
     }
 }
 
@@ -878,10 +948,9 @@ fn compare_measurement_digest(
 // It will only be returned if the endorsement was verified.
 fn get_verified_kernel_attachment(
     now_utc_millis: i64,
-    endorsement: Option<&TransparentReleaseEndorsement>,
+    endorsement: &TransparentReleaseEndorsement,
     public_keys: &EndorsementReferenceValue,
 ) -> anyhow::Result<KernelAttachment> {
-    let endorsement = endorsement.context("matching endorsement not found for reference value")?;
     verify_binary_endorsement(
         now_utc_millis,
         &endorsement.endorsement,
@@ -893,7 +962,7 @@ fn get_verified_kernel_attachment(
     // Parse endorsement statement and verify attachment digest.
     let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
     if parsed_statement.predicate.usage != "kernel" {
-        anyhow::bail!("unexpected endorsement usage");
+        anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
     }
     let expected_digest = get_digest(&parsed_statement)?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
@@ -923,8 +992,11 @@ fn get_kernel_expected_values(
             }),
         }),
         Some(kernel_binary_reference_value::Type::Endorsement(public_keys)) => {
-            let kernel_attachment =
-                get_verified_kernel_attachment(now_utc_millis, endorsement, public_keys)?;
+            let kernel_attachment = get_verified_kernel_attachment(
+                now_utc_millis,
+                endorsement.context("matching endorsement not found for reference value")?,
+                public_keys,
+            )?;
             let expected_image = kernel_attachment
                 .image
                 .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
@@ -1044,8 +1116,11 @@ struct ApplicationKeyValues {
 }
 
 /// Extracts measurements, public keys and other attestation-related values from
-/// the evidence.
-fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
+/// the evidence without verifying it. For most usecases, this function should
+/// not be used. Instead use the [`verify`] function, which verifies the
+/// attestation and only returns evidence upon successful verification. Hence
+/// marked as dangerous.
+pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let evidence_values =
         Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
     let ApplicationKeyValues { encryption_public_key, signing_public_key } =

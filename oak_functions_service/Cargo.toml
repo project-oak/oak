@@ -17,7 +17,6 @@ required-features = ["wasmtime"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-byteorder = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 prost = { workspace = true }
@@ -39,9 +38,14 @@ wasmtime = { version = "*", optional = true }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+bytes = "*"
 criterion = "0.5"
 criterion-macro = "0.4"
 oak_functions_test_utils = { workspace = true }
 pprof = { version = "*", features = ["flamegraph", "criterion"] }
 rand = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }
+
+[package.metadata.cargo-udeps.ignore]
+# spinning_top is used in no_std builds, but these happen in a separate workspace, so cargo-udeps thinks it's unused.
+normal = ["spinning_top"]
