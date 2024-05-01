@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, format};
+use alloc::{boxed::Box, format , string::String};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
@@ -41,6 +41,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::AsBytes;
+// use prost::Message;
 
 use crate::{alloc::string::ToString, kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
@@ -60,6 +61,10 @@ mod pic;
 mod sev;
 mod smp;
 mod zero_page;
+
+pub mod eventlog {
+    include!(concat!(env!("OUT_DIR"), "/eventlog.rs"));
+}
 
 type Measurement = [u8; 32];
 
@@ -339,6 +344,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
         ),
         &crate::BOOT_ALLOC,
     ));
+    let event = generate_event_log();
+    log::info!("event tage = {}", event.tag.unwrap());
     // Reserve the memory containing the DICE data.
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,
@@ -413,4 +420,12 @@ fn io_port_factory() -> PortFactoryWrapper {
     } else {
         PortFactoryWrapper::new_raw()
     }
+}
+
+fn generate_event_log(/*measurement: Measurement*/) -> eventlog::Event {
+    let mut event = eventlog::Event::default();
+    let str  = String::new();
+    let m = Some(str);
+    event.tag = m;
+    event
 }

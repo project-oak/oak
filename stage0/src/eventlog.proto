@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package eventlog;
+
+import "google/protobuf/any.proto";
+
+// Represents an event intended for inclusion in attestation.
+// For example, in an attested measured boot, each event is a reference to the
+// code identity of the boot layer being launched next.
+// An Event message must have a canonical serialization and contain what's
+// necessary for an attestation verifier to verify the Event against a Reference
+// Value.
+message Event {
+  // Represents what is contains in the event. For example, the tag for
+  // TaskConfig for the Layer 2 is "layer2".
+  optional string tag = 1;
+  optional google.protobuf.Any event = 2;
+}
+
+// A sequence of Events intended for inclusion in attestation evidence.
+message EventLog {
+  repeated Event events = 1;
+}
