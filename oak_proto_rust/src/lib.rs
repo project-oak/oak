@@ -21,29 +21,31 @@
 
 // TODO: b/333064338 - Remove this crate once we've stopped using cargo.
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
 
-// Inlined from tonic::include_proto in order to cut dependency on tonic.
 macro_rules! include_proto {
     ($package: tt) => {
         include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
+        #[cfg(feature = "json")]
+        include!(concat!(env!("OUT_DIR"), "/", $package, ".serde.rs"));
     };
 }
 
 pub mod oak {
+    // Do not lint generated code.
+    #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
+
     include_proto!("oak");
 
     pub mod attestation {
         pub mod v1 {
-            #![allow(clippy::large_enum_variant)]
             include_proto!("oak.attestation.v1");
         }
     }
 
     pub mod crypto {
         pub mod v1 {
-            #![allow(dead_code)]
             include_proto!("oak.crypto.v1");
         }
     }

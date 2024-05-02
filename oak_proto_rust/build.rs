@@ -16,6 +16,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
+        "../proto/crypto/crypto.proto",
         "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
@@ -28,20 +29,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/lookup_data.proto",
         "../proto/session/session.proto",
+        "../proto/oak_functions/service/oak_functions.proto",
+        "../proto/oak_functions/testing.proto",
     ];
     let mut config = prost_build::Config::new();
+
+    config.btree_map(["."]);
+
+    #[cfg(feature = "json")]
+    let descriptor_path =
+        std::path::PathBuf::from(std::env::var("OUT_DIR").expect("could not get OUT_DIR"))
+            .join("proto_descriptor.bin");
+
+    #[cfg(feature = "json")]
     config
-        .btree_map(["."]) // Support no-std proto maps
-        .compile_protos(
-            &proto_paths,
-            &[
-                "..",
-                // We need to include the well-known protos ourselves
-                "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
-                "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
-            ],
-        )
+        // Save descriptors to file
+        .file_descriptor_set_path(&descriptor_path)
+        // Map in pbjson-types
+        .compile_well_known_types()
+        .extern_path(".google.protobuf", "::pbjson_types");
+
+    config
+        .compile_protos(&proto_paths, &[
+            "..",
+            // We need to include the well-known protos ourselves
+            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
+            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
+        ])
         .expect("proto compilation failed");
+
+    #[cfg(feature = "json")]
+    pbjson_build::Builder::new()
+        .register_descriptors(
+            &std::fs::read(descriptor_path).expect("failed to read descriptor_set"),
+        )?
+        .preserve_proto_field_names()
+        .build(&["."])?;
 
     micro_rpc_build::compile(
         &["../proto/oak_functions/testing.proto", "../proto/crypto/crypto.proto"],

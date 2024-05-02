@@ -4,12 +4,22 @@ version = "0.0.1"
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = []
+std = []
+# Generate code to support proto3 JSON mappings with serde, allowing protos to
+# be serialized to JSON.
+json = ["pbjson", "pbjson-build", "serde", "std"]
+
 [dependencies]
 micro_rpc = { workspace = true }
 prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
+pbjson = { version = "*", optional = true }
+serde = { version = "*", features = ["derive"], optional = true }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
 prost-build = { workspace = true }
+pbjson-build = { version = "*", optional = true }

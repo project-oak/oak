@@ -1832,6 +1832,15 @@ dependencies = [
 
 [[package]]
 name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
@@ -2313,10 +2322,14 @@ name = "oak_attestation_explain"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.13.1",
  "hex",
  "oak_attestation_verification",
+ "oak_attestation_verification_test_utils",
  "oak_proto_rust",
  "prost",
+ "serde",
+ "serde_json",
  "sha2",
  "zerocopy",
 ]
@@ -3003,8 +3016,11 @@ version = "0.0.1"
 dependencies = [
  "micro_rpc",
  "micro_rpc_build",
+ "pbjson",
+ "pbjson-build",
  "prost",
  "prost-build",
+ "serde",
 ]
 
 [[package]]
@@ -3124,7 +3140,7 @@ name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 1.0.109",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -3451,6 +3467,28 @@ name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
+
+[[package]]
+name = "pbjson"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1030c719b0ec2a2d25a5df729d6cff1acf3cc230bf766f4f97833591f7577b90"
+dependencies = [
+ "base64 0.21.7",
+ "serde",
+]
+
+[[package]]
+name = "pbjson-build"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2580e33f2292d34be285c5bc3dba5259542b083cfad6037b6d70345f24dcb735"
+dependencies = [
+ "heck",
+ "itertools 0.11.0",
+ "prost",
+ "prost-types",
+]
 
 [[package]]
 name = "pem-rfc7468"

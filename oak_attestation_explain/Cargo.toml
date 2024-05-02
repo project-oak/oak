@@ -9,12 +9,16 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
-oak_proto_rust = { workspace = true }
+oak_proto_rust = { workspace = true, features = ["json"] }
 sha2 = { version = "*", default-features = false }
 zerocopy = { version = "*", features = ["derive"] }
+base64 = { version = "*" }
+serde = { version = "*" }
+serde_json = { version = "*" }
 
 [dev-dependencies]
 prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
 oak_attestation_verification = { workspace = true }
+oak_attestation_verification_test_utils = { workspace = true }
