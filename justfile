@@ -105,8 +105,13 @@ oak_containers_orchestrator:
 oak_containers_syslogd:
    env --chdir=oak_containers_syslogd \
        cargo build --release -Z unstable-options --out-dir=target
+   # We can't patch the binary in-place, as that would confuse cargo.
+   # Therefore we copy it to a new location and patch there.
+   cp \
+       oak_containers_syslogd/target/oak_containers_syslogd \
+       oak_containers_syslogd/target/oak_containers_syslogd_patched
    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-       oak_containers_syslogd/target/oak_containers_syslogd
+       oak_containers_syslogd/target/oak_containers_syslogd_patched
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:

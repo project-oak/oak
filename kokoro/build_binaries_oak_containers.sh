@@ -39,7 +39,7 @@ readonly generated_binaries=(
     ./oak_containers_kernel/target/bzImage
     ./oak_containers_kernel/cmd_line_regex.txt
     ./oak_containers_orchestrator/target/oak_containers_orchestrator
-    ./oak_containers_syslogd/target/oak_containers_syslogd
+    ./oak_containers_syslogd/target/oak_containers_syslogd_patched
     ./oak_containers_system_image/target/image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar

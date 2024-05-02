@@ -6,4 +6,4 @@ command = [
   "just",
   "oak_containers_syslogd",
 ]
-artifact_path = "./oak_containers_syslogd/target/oak_containers_syslogd"
+artifact_path = "./oak_containers_syslogd/target/oak_containers_syslogd_patched"
