@@ -92,26 +92,37 @@ oak_containers_kernel:
         oak_containers_kernel/bin/subjects \
         oak_containers_kernel/target/bzImage
 
-# TODO: b/337258843 - The build.sh independently builds the dependencies.
-# Make build.sh use just output after once more checking that they are identical.
 oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
-    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
+    # Copy dependencies into bazel build.
+    mkdir --parents oak_containers_system_image/target/image_binaries
+    cp --preserve=timestamps \
+        oak_containers_orchestrator/target/oak_containers_orchestrator \
+        oak_containers_system_image/target/image_binaries/oak_containers_orchestrator
+    cp --preserve=timestamps \
+        oak_containers_syslogd/target/oak_containers_syslogd_patched \
+        oak_containers_system_image/target/image_binaries/oak_containers_syslogd
+    # Build and compress.
+    bazel build oak_containers_system_image
+    cp --preserve=timestamps \
+        bazel-bin/oak_containers_system_image/oak_containers_system_image.tar \
+        oak_containers_system_image/target/image.tar
+    xz --force oak_containers_system_image/target/image.tar
 
 oak_containers_orchestrator:
-   env --chdir=oak_containers_orchestrator \
-       cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
-       -Z unstable-options --out-dir=target
+    env --chdir=oak_containers_orchestrator \
+        cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
+        -Z unstable-options --out-dir=target
 
 oak_containers_syslogd:
-   env --chdir=oak_containers_syslogd \
-       cargo build --release -Z unstable-options --out-dir=target
-   # We can't patch the binary in-place, as that would confuse cargo.
-   # Therefore we copy it to a new location and patch there.
-   cp \
-       oak_containers_syslogd/target/oak_containers_syslogd \
-       oak_containers_syslogd/target/oak_containers_syslogd_patched
-   patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-       oak_containers_syslogd/target/oak_containers_syslogd_patched
+    env --chdir=oak_containers_syslogd \
+        cargo build --release -Z unstable-options --out-dir=target
+    # We can't patch the binary in-place, as that would confuse cargo.
+    # Therefore we copy it to a new location and patch there.
+    cp \
+        oak_containers_syslogd/target/oak_containers_syslogd \
+        oak_containers_syslogd/target/oak_containers_syslogd_patched
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
+        oak_containers_syslogd/target/oak_containers_syslogd_patched
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
