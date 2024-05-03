@@ -33,7 +33,7 @@ use crate::{
 };
 
 pub struct OakFunctionsInstance<H: Handler> {
-    lookup_data_manager: Arc<LookupDataManager>,
+    lookup_data_manager: Arc<LookupDataManager<16>>,
     wasm_handler: H::HandlerType,
 }
 

@@ -33,11 +33,11 @@ use crate::{
 /// The main purpose of this factory is to allow creating a new instance of the
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable
 /// snapshot of the current lookup data.
-pub struct StdWasmApiFactory {
-    pub lookup_data_manager: Arc<LookupDataManager>,
+pub struct StdWasmApiFactory<const S: usize> {
+    pub lookup_data_manager: Arc<LookupDataManager<S>>,
 }
 
-impl WasmApiFactory for StdWasmApiFactory {
+impl<const S: usize> WasmApiFactory for StdWasmApiFactory<S> {
     fn create_wasm_api(&self, request: Vec<u8>, response: Rc<Cell<Vec<u8>>>) -> Box<dyn WasmApi> {
         Box::new(StdWasmApiImpl {
             lookup_data: self.lookup_data_manager.create_lookup_data(),
@@ -53,8 +53,8 @@ impl WasmApiFactory for StdWasmApiFactory {
 /// There are probably more locks than necessary here, it should be possible to
 /// reduce them in the future.
 #[derive(Clone)]
-pub struct StdWasmApiImpl {
-    lookup_data: LookupData,
+pub struct StdWasmApiImpl<const S: usize> {
+    lookup_data: LookupData<S>,
     logger: Rc<dyn OakLogger>,
     /// Current request, as received from the client.
     request: Vec<u8>,
@@ -62,7 +62,7 @@ pub struct StdWasmApiImpl {
     response: Rc<Cell<Vec<u8>>>,
 }
 
-impl StdWasmApi for StdWasmApiImpl {
+impl<const S: usize> StdWasmApi for StdWasmApiImpl<S> {
     fn read_request(
         &mut self,
         _: ReadRequestRequest,
@@ -157,7 +157,7 @@ impl StdWasmApi for StdWasmApiImpl {
     }
 }
 
-impl WasmApi for StdWasmApiImpl {
+impl<const S: usize> WasmApi for StdWasmApiImpl<S> {
     fn transport(&mut self) -> Box<dyn micro_rpc::Transport<Error = !>> {
         Box::new(StdWasmApiServer::new(self.clone()))
     }

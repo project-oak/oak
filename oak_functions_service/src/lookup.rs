@@ -55,6 +55,7 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data,
     /// calling extend overwrites the value.
+    #[allow(unused)]
     fn extend<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data)
@@ -72,25 +73,12 @@ impl DataBuilder {
 
 #[cfg(feature = "std")]
 mod mutexes {
-    pub use parking_lot::{Mutex, MutexGuard, RwLock};
+    pub use parking_lot::{Mutex, RwLock};
 }
 
 #[cfg(not(feature = "std"))]
 mod mutexes {
-    pub use spinning_top::{
-        guard::SpinlockGuard as MutexGuard, RwSpinlock as RwLock, Spinlock as Mutex,
-    };
-}
-
-/// RAII data structure that holds an exclusive lock for multiple insertions.
-pub struct LookupDataInserter<'a> {
-    lock: mutexes::MutexGuard<'a, DataBuilder>,
-}
-
-impl<'a> LookupDataInserter<'a> {
-    pub fn insert(&mut self, key: &[u8], val: &[u8]) {
-        self.lock.insert(key, val);
-    }
+    pub use spinning_top::{RwSpinlock as RwLock, Spinlock as Mutex};
 }
 
 /// Utility for managing lookup data.
@@ -109,22 +97,29 @@ impl<'a> LookupDataInserter<'a> {
 ///
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
-pub struct LookupDataManager {
-    data: mutexes::RwLock<Arc<Data>>,
-    // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
-    // data builder.
-    data_builder: mutexes::Mutex<DataBuilder>,
+pub struct LookupDataManager<const S: usize> {
+    data: mutexes::RwLock<[Arc<Data>; S]>,
+    // The outer RwLock guards the DataBuilder-s themselves; while inserting data you need a read
+    // lock on the outer RwLock, but when finalizing lookup data you need to grab a write lock.
+    // The inner lock guards the contents of the DataBuilder, ensuring that we add data from only
+    // one thread at a time.
+    data_builder: mutexes::RwLock<[mutexes::Mutex<DataBuilder>; S]>,
     logger: Arc<dyn OakLogger>,
 }
 
-impl LookupDataManager {
+impl<const S: usize> LookupDataManager<S> {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
+        if S > 1 {
+            info!("Splitting lookup data hashmap into {}.", S);
+        }
         Self {
-            data: mutexes::RwLock::new(Arc::new(Data::default())),
+            data: mutexes::RwLock::new([(); S].map(|()| Arc::new(Data::default()))),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            data_builder: mutexes::Mutex::new(DataBuilder::default()),
+            data_builder: mutexes::RwLock::new(
+                [(); S].map(|()| mutexes::Mutex::new(DataBuilder::default())),
+            ),
             logger,
         }
     }
@@ -139,17 +134,15 @@ impl LookupDataManager {
     }
 
     pub fn reserve(&self, additional_entries: u64) -> anyhow::Result<()> {
-        let mut data_builder = self.data_builder.lock();
-        data_builder.reserve(additional_entries as usize);
+        // We're assuming uniform distribution here.
+        let entries_per_shard = additional_entries as usize / S;
+        self.data_builder.read().iter().for_each(|db| db.lock().reserve(entries_per_shard));
         Ok(())
     }
 
-    pub fn inserter(&self) -> LookupDataInserter<'_> {
-        LookupDataInserter { lock: self.data_builder.lock() }
-    }
-
     pub fn insert(&self, key: &[u8], val: &[u8]) {
-        self.data_builder.lock().insert(key, val);
+        let index = crate::lookup_htbl::hash(key, 0) as usize % S;
+        self.data_builder.read()[index].lock().insert(key, val);
     }
 
     pub fn extend_next_lookup_data<'a, T: IntoIterator<Item = (&'a [u8], &'a [u8])>>(
@@ -157,9 +150,10 @@ impl LookupDataManager {
         new_data: T,
     ) {
         info!("Start extending next lookup data");
-        {
-            let mut data_builder = self.data_builder.lock();
-            data_builder.extend(new_data);
+        let builder = self.data_builder.read();
+        for (k, v) in new_data {
+            let index = crate::lookup_htbl::hash(k, 0) as usize % S;
+            builder[index].lock().insert(k, v);
         }
         info!("Finish extending next lookup data");
     }
@@ -167,16 +161,16 @@ impl LookupDataManager {
     // Finish building the next lookup data and replace the current lookup data in
     // place.
     pub fn finish_next_lookup_data(&self) {
-        let data_len;
-        let next_data_len;
+        let data_len: usize;
+        let next_data_len: usize;
         info!("Start replacing lookup data by next lookup data");
         {
-            let mut data_builder = self.data_builder.lock();
-            let next_data = data_builder.build();
-            next_data_len = next_data.len();
+            let mut data_builder = self.data_builder.write();
+            let next_data = data_builder.each_mut().map(|builder| builder.lock().build());
+            next_data_len = next_data.iter().map(|htbl| htbl.len()).sum();
             let mut data = self.data.write();
-            data_len = data.len();
-            *data = Arc::new(next_data);
+            data_len = data.iter().map(|htbl| htbl.len()).sum();
+            *data = next_data.map(Arc::new);
         }
         info!(
             "Finished replacing lookup data with len {} by next lookup data with len {}",
@@ -187,20 +181,20 @@ impl LookupDataManager {
     pub fn abort_next_lookup_data(&self) {
         info!("Start aborting next lookup data");
         {
-            let mut data_builder = self.data_builder.lock();
+            let mut data_builder = self.data_builder.write();
             // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
+            let _ = data_builder.each_mut().map(|builder| builder.lock().build());
         }
         info!("Finish aborting next lookup data");
     }
 
     /// Creates a new `LookupData` instance with a reference to the current
     /// backing data.
-    pub fn create_lookup_data(&self) -> LookupData {
-        let keys;
+    pub fn create_lookup_data(&self) -> LookupData<S> {
+        let keys: usize;
         let data = {
             let data = self.data.read().clone();
-            keys = data.len();
+            keys = data.iter().map(|data| data.len()).sum();
             LookupData::new(data, self.logger.clone())
         };
         info!("Created lookup data with len: {}", keys);
@@ -210,29 +204,30 @@ impl LookupDataManager {
 
 /// Provides access to shared lookup data.
 #[derive(Clone)]
-pub struct LookupData {
-    data: Arc<Data>,
+pub struct LookupData<const S: usize> {
+    data: [Arc<Data>; S],
     logger: Arc<dyn OakLogger>,
 }
 
-impl LookupData {
-    fn new(data: Arc<Data>, logger: Arc<dyn OakLogger>) -> Self {
+impl<const S: usize> LookupData<S> {
+    fn new(data: [Arc<Data>; S], logger: Arc<dyn OakLogger>) -> Self {
         Self { data, logger }
     }
 
     /// Gets an individual entry from the backing data.
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
-        self.data.get(key)
+        let index = crate::lookup_htbl::hash(key, 0) as usize % S;
+        self.data[index].get(key)
     }
 
     /// Gets the number of entries in the backing data.
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.data.iter().map(|data| data.len()).sum()
     }
 
     /// Whether the backing data is empty.
     pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
+        self.data.iter().all(|data| data.is_empty())
     }
 
     /// Logs an error message.
@@ -278,7 +273,7 @@ mod tests {
     fn test_lookup_data_instance_consistency() {
         // Ensure that the data for a specific lookup data instance remains consistent
         // even if the data in the manager has been updated.
-        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
+        let manager = LookupDataManager::<1>::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
@@ -298,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_one_chunk() {
-        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
+        let manager = LookupDataManager::<1>::new_empty(Arc::new(TestLogger));
         reserve_and_extend_test_data(&manager, 0, 2);
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
@@ -306,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_two_chunks() {
-        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
+        let manager = LookupDataManager::<1>::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(4).unwrap();
@@ -328,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_four_chunks() {
-        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
+        let manager = LookupDataManager::<1>::new_empty(Arc::new(TestLogger));
 
         manager.reserve(7).unwrap();
         manager.extend_next_lookup_data(
@@ -353,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_abort_by_sender() {
-        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
+        let manager = LookupDataManager::<1>::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(2).unwrap();
@@ -394,7 +389,11 @@ mod tests {
         vec
     }
 
-    fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
+    fn reserve_and_extend_test_data<const S: usize>(
+        manager: &LookupDataManager<S>,
+        start: i32,
+        end: i32,
+    ) {
         manager.reserve((end - start) as u64).unwrap();
         manager.extend_next_lookup_data(
             create_test_data(start, end).iter().map(|(k, v)| (k.as_ref(), v.as_ref())),

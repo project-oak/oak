@@ -223,7 +223,7 @@ fn create_test_data(start: i32, end: i32) -> HashMap<Vec<u8>, Vec<u8>> {
 
 struct TestState<H: Handler> {
     wasm_handler: H::HandlerType,
-    lookup_data_manager: Arc<LookupDataManager>,
+    lookup_data_manager: Arc<LookupDataManager<16>>,
 }
 
 fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -> TestState<H> {

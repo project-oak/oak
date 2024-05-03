@@ -41,7 +41,7 @@ async fn test_native_handler() {
     .expect("failed to read test library");
 
     let logger = Arc::new(StandaloneLogger);
-    let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger));
+    let lookup_data_manager = Arc::new(LookupDataManager::<1>::new_empty(logger));
     lookup_data_manager
         .extend_next_lookup_data([("key_0".as_bytes(), "value_0".as_bytes())].into_iter());
 

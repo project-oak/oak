@@ -443,7 +443,7 @@ impl Handler for WasmHandler {
     fn new_handler(
         _config: WasmConfig,
         wasm_module_bytes: &[u8],
-        lookup_data_manager: Arc<LookupDataManager>,
+        lookup_data_manager: Arc<LookupDataManager<16>>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<WasmHandler> {
         let logger = Arc::new(StandaloneLogger);

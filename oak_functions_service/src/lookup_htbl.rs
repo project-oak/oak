@@ -454,7 +454,7 @@ fn hash_u64(v: u64, hash_secret: u64) -> u64 {
 }
 
 #[inline]
-fn hash(v: &[u8], hash_secret: u64) -> u64 {
+pub fn hash(v: &[u8], hash_secret: u64) -> u64 {
     let mut i = 0usize;
     let mut val = 0u64;
     let mut bytes = [0u8; 8];
