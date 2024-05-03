@@ -29,7 +29,7 @@ use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
-use prost::Name;
+use prost::{Message, Name};
 use prost_types::Any;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -314,19 +314,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
 
-    let mut stage0event = eventlog::Stage0Measurements::default();
-    stage0event.kernel_measurement = Some(kernel_info.measurement.as_bytes().to_vec());
-    stage0event.acpi_digest = Some(acpi_sha2_256_digest.as_bytes().to_vec());
-    stage0event.memory_map_digest = Some(memory_map_sha2_256_digest.as_bytes().to_vec());
-    stage0event.ram_disk_digest = Some(ram_disk_sha2_256_digest.as_bytes().to_vec());
-    stage0event.setup_data_digest = Some(setup_data_sha2_256_digest.as_bytes().to_vec());
-    stage0event.kernel_cmdline = Some(cmdline);
-    let event_log = Box::leak(Box::new_in(
-        generate_event_log(stage0event),
-        &crate::BOOT_ALLOC,
-    ));
-    log::info!("event tag = {:?}", event_log);
-
     // TODO: b/331252282 - Remove temporary workaround for cmd line length.
     let cmdline_max_len = 256;
     let measurements = oak_stage0_dice::Measurements {
@@ -365,10 +352,24 @@ pub fn rust64_start(encrypted: u64) -> ! {
         dice_data.as_bytes().len(),
         E820EntryType::RESERVED,
     ));
+
+    // Generate Stage0 Event Log data.
+    let mut stage0event = eventlog::Stage0Measurements::default();
+    stage0event.kernel_measurement = Some(kernel_info.measurement.as_bytes().to_vec());
+    stage0event.acpi_digest = Some(acpi_sha2_256_digest.as_bytes().to_vec());
+    stage0event.memory_map_digest = Some(memory_map_sha2_256_digest.as_bytes().to_vec());
+    stage0event.ram_disk_digest = Some(ram_disk_sha2_256_digest.as_bytes().to_vec());
+    stage0event.setup_data_digest = Some(setup_data_sha2_256_digest.as_bytes().to_vec());
+    stage0event.kernel_cmdline = Some(cmdline.clone());
+    let event_log = Box::leak(Box::new_in(
+        generate_event_log(stage0event),
+        &crate::BOOT_ALLOC,
+    ));
+    log::info!("event tag = {:?}", event_log);
     // Reserve memory containing Eventlog Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        event_log.as_bytes().as_ptr() as usize,
-        event_log.as_bytes().len(),
+        event_log.encode_to_vec().as_bytes().as_ptr() as usize,
+        event_log.encode_to_vec().as_bytes().len(),
         E820EntryType::RESERVED,
     ));
 
