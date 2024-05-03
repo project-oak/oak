@@ -56,6 +56,7 @@ cargo_build_script(
         "//proto/oak_functions:abi_proto",
         "//proto/oak_functions:lookup_data_proto",
         "//proto/oak_functions:testing_proto",
+        "//proto/session:session_proto",
         "@com_google_protobuf//:protoc",
     ],
     deps = [

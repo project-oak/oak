@@ -3127,6 +3127,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_session"
+version = "0.1.0"
+
+[[package]]
 name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [

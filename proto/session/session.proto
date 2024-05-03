@@ -1,0 +1,76 @@
+//
+// Copyright 2024 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.session.v1;
+
+import "proto/session/messages.proto";
+
+option java_multiple_files = true;
+option java_package = "com.google.oak.session.v1";
+
+// Request message for the remote attestation.
+message AttestRequest {
+  repeated oak.session.v1.EndorsedEvidence endorsed_evidence = 1;
+}
+
+// Request message for the remote attestation.
+message AttestResponse {
+  repeated oak.session.v1.EndorsedEvidence endorsed_evidence = 1;
+}
+
+// Request message for the crypto handshake request needed to establish a set of
+// session keys.
+message HandshakeRequest {
+  // Noise Protocol ephemeral public key 'e'.
+  // <http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>
+  bytes ephemeral_public_key = 1;
+  // Payload encrypted with the current chaining key.
+  bytes ciphertext = 2;
+}
+
+// Response message for the crypto handshake request needed to establish a set
+// of session keys.
+message HandshakeResponse {
+  // Noise Protocol ephemeral public key 'e'.
+  // <http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>
+  bytes ephemeral_public_key = 1;
+  // Payload encrypted with the current chaining key.
+  bytes ciphertext = 2;
+}
+
+// Request message for the Oak protocol attested secure session.
+// This message is a wrapper containing different message types including:
+// attestation, handshake and encrypted data exchange.
+message SessionRequest {
+  oneof request {
+    AttestRequest attest_request = 1;
+    HandshakeRequest handshake_request = 2;
+    bytes ciphertext = 3;
+  }
+}
+
+// Response message for the Oak protocol attested secure session.
+// This message is a wrapper containing different message types including:
+// attestation, handshake and encrypted data exchange.
+message SessionResponse {
+  oneof response {
+    AttestResponse attest_response = 1;
+    HandshakeResponse handshake_response = 2;
+    bytes ciphertext = 3;
+  }
+}

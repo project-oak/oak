@@ -102,6 +102,12 @@ java_grpc_library(
     deps = [":service_unary_java_proto"],
 )
 
+proto_library(
+    name = "session_proto",
+    srcs = ["session.proto"],
+    deps = [":messages_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
@@ -110,5 +116,6 @@ build_test(
         ":service_streaming_java_grpc",
         ":service_unary_cc_grpc",
         ":service_unary_java_grpc",
+        ":session_proto",
     ],
 )

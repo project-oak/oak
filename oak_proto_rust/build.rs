@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/lookup_data.proto",
+        "../proto/session/session.proto",
     ];
     let mut config = prost_build::Config::new();
     config
