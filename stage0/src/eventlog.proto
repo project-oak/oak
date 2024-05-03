@@ -4,6 +4,22 @@ package eventlog;
 
 import "google/protobuf/any.proto";
 
+// All the related measurements for Stage 0.
+message Stage0Measurements {
+  // Kernel setup data digest.
+  optional bytes setup_data_digest = 1;
+  // Kernel digest.
+  optional bytes kernel_measurement = 2;
+  // Initial RAM disk digest.
+  optional bytes ram_disk_digest = 3;
+  // E820 table digest
+  optional bytes memory_map_digest = 4;
+  // ACPI table generation digest
+  optional bytes acpi_digest = 5;
+  // Kernel Command line.
+  optional string kernel_cmdline = 6;
+}
+
 // Represents an event intended for inclusion in attestation.
 // For example, in an attested measured boot, each event is a reference to the
 // code identity of the boot layer being launched next.
