@@ -29,6 +29,7 @@ rust_library(
         ":build",
         "//micro_rpc",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
     ],
 )
 
@@ -45,6 +46,7 @@ cargo_build_script(
         "//proto/attestation:attachment_proto",
         "//proto/attestation:dice_proto",
         "//proto/attestation:endorsement_proto",
+        "//proto/attestation:eventlog_proto",
         "//proto/attestation:evidence_proto",
         "//proto/attestation:expected_value_proto",
         "//proto/attestation:reference_value_proto",

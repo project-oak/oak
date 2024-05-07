@@ -146,6 +146,17 @@ java_proto_library(
     deps = [":verification_proto"],
 )
 
+proto_library(
+    name = "eventlog_proto",
+    srcs = ["eventlog.proto"],
+    deps = ["@com_google_protobuf//:any_proto"],
+)
+
+cc_proto_library(
+    name = "eventlog_cc_proto",
+    deps = [":eventlog_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
@@ -155,6 +166,8 @@ build_test(
         ":dice_proto",
         ":dice_cc_proto",
         ":dice_java_proto",
+        ":eventlog_proto",
+        ":eventlog_cc_proto",
         ":endorsement_proto",
         ":endorsement_cc_proto",
         ":endorsement_java_proto",

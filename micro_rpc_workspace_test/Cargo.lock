@@ -524,6 +524,7 @@ dependencies = [
  "micro_rpc_build",
  "prost",
  "prost-build",
+ "prost-types",
 ]
 
 [[package]]

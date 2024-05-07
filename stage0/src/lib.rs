@@ -21,14 +21,19 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, format};
+use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+use oak_proto_rust::{
+    oak::attestation::v1::{Event, EventLog, Stage0Measurements},
+    well_known::any_from_msg,
+};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3},
@@ -81,6 +86,8 @@ static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::un
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
+
+const PAGE_SIZE: usize = 4096;
 
 static ENCRYPTED: OnceCell<u64> = OnceCell::new();
 
@@ -301,6 +308,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     let memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
+    // Generate Stage0 Event Log data.
+    let stage0event = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+        kernel_measurement: kernel_info.measurement.as_bytes().to_vec(),
+        acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
+        memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
+        ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
+        setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
+        kernel_cmdline: cmdline.clone(),
+    };
+
+    let event_log_proto = generate_event_log(stage0event);
+
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
     log::debug!("Kernel command-line: {}", cmdline);
@@ -343,6 +362,23 @@ pub fn rust64_start(encrypted: u64) -> ! {
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,
         dice_data.as_bytes().len(),
+        E820EntryType::RESERVED,
+    ));
+
+    // Write Eventlog data to memory.
+    let mut event_log = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
+    // Ensure that Eventlog is not too big. The 8 bytes are reserved for the size of
+    // the encoded eventlog proto.
+    assert!(event_log_proto.encoded_len() < PAGE_SIZE - 8);
+    // First copy the size of the encoded proto in Little Endian format. Then copy
+    // the actual EventLog.
+    event_log.extend_from_slice(event_log_proto.encoded_len().to_le_bytes().as_slice());
+    event_log.extend_from_slice(event_log_proto.encode_to_vec().as_bytes());
+    let event_log_data = event_log.leak();
+    // Reserve memory containing Eventlog Data.
+    zero_page.insert_e820_entry(BootE820Entry::new(
+        event_log_data.as_bytes().as_ptr() as usize,
+        PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
 
@@ -413,4 +449,14 @@ fn io_port_factory() -> PortFactoryWrapper {
     } else {
         PortFactoryWrapper::new_raw()
     }
+}
+
+fn generate_event_log(measurements: Stage0Measurements) -> EventLog {
+    let tag = String::from("Stage0");
+    let any = any_from_msg(&measurements);
+    let event = Event { tag, event: Some(any.unwrap()) };
+    log::info!("Any:{:?}", event.event.clone().unwrap());
+    let mut eventlog = EventLog::default();
+    eventlog.events.push(event);
+    eventlog
 }

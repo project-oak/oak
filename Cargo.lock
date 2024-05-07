@@ -3026,8 +3026,10 @@ dependencies = [
  "micro_rpc_build",
  "pbjson",
  "pbjson-build",
+ "pbjson-types",
  "prost",
  "prost-build",
+ "prost-types",
  "serde",
 ]
 
@@ -3207,10 +3209,12 @@ dependencies = [
  "oak_core",
  "oak_dice",
  "oak_linux_boot_params",
+ "oak_proto_rust",
  "oak_sev_guest",
  "oak_sev_snp_attestation_report",
  "oak_stage0_dice",
  "p256",
+ "prost",
  "rand_core",
  "sev_serial",
  "sha2",
@@ -3500,6 +3504,21 @@ dependencies = [
  "itertools 0.11.0",
  "prost",
  "prost-types",
+]
+
+[[package]]
+name = "pbjson-types"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18f596653ba4ac51bdecbb4ef6773bc7f56042dc13927910de1684ad3d32aa12"
+dependencies = [
+ "bytes",
+ "chrono",
+ "pbjson",
+ "pbjson-build",
+ "prost",
+ "prost-build",
+ "serde",
 ]
 
 [[package]]
@@ -3811,7 +3830,7 @@ checksum = "c55e02e35260070b6f716a2423c2ff1c3bb1642ddca6f99e1f26d06268a0e2d2"
 dependencies = [
  "bytes",
  "heck",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",

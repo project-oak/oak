@@ -9,7 +9,7 @@ default = []
 std = []
 # Generate code to support proto3 JSON mappings with serde, allowing protos to
 # be serialized to JSON.
-json = ["pbjson", "pbjson-build", "serde", "std"]
+json = ["pbjson", "pbjson-types", "pbjson-build", "serde", "std"]
 
 [dependencies]
 micro_rpc = { workspace = true }
@@ -17,7 +17,9 @@ prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
 pbjson = { version = "*", optional = true }
+pbjson-types = { version = "*", optional = true }
 serde = { version = "*", features = ["derive"], optional = true }
+prost-types = { version = "*", default-features = false }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }

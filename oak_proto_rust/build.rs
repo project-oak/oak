@@ -14,6 +14,24 @@
 // limitations under the License.
 //
 
+const INCLUDED_PROTOS: [&str; 13] = [
+    "..",
+    // We need to include the well-known protos ourselves
+    // From: https://github.com/grpc/grpc/blob/cac1f2727e6975d6bb7426898c97916faa91bdaa/bazel/protobuf.bzl#L21C1-L21C24
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/any_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/api_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/compiler_plugin_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/duration_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/field_mask_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/source_context_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/struct_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/timestamp_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/type_proto",
+    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/wrappers_proto",
+];
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
         "../proto/crypto/crypto.proto",
@@ -21,6 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
         "../proto/attestation/expected_value.proto",
+        "../proto/attestation/eventlog.proto",
         "../proto/attestation/evidence.proto",
         "../proto/attestation/reference_value.proto",
         "../proto/attestation/verification.proto",
@@ -36,6 +55,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     config.btree_map(["."]);
 
+    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_JSON");
+
     #[cfg(feature = "json")]
     let descriptor_path =
         std::path::PathBuf::from(std::env::var("OUT_DIR").expect("could not get OUT_DIR"))
@@ -49,14 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile_well_known_types()
         .extern_path(".google.protobuf", "::pbjson_types");
 
-    config
-        .compile_protos(&proto_paths, &[
-            "..",
-            // We need to include the well-known protos ourselves
-            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
-            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
-        ])
-        .expect("proto compilation failed");
+    config.compile_protos(&proto_paths, &INCLUDED_PROTOS).expect("proto compilation failed");
 
     #[cfg(feature = "json")]
     pbjson_build::Builder::new()
@@ -68,11 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     micro_rpc_build::compile(
         &["../proto/oak_functions/testing.proto", "../proto/crypto/crypto.proto"],
-        &[
-            "..",
-            // We need to include the well-known protos ourselves
-            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
-        ],
+        &INCLUDED_PROTOS,
         Default::default(),
     );
 
