@@ -181,3 +181,4 @@ bazel-ci:
     # targets during CI builds by adding tags = ["noci"]
     bazel build --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
     bazel test  --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
+    bazel run oak_proto_rust:verify_generated

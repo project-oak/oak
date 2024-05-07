@@ -64,3 +64,15 @@ cargo_build_script(
         "@oak_crates_index//:prost-build",
     ],
 )
+
+sh_binary(
+    name = "copy_generated",
+    srcs = [":copy_generated.sh"],
+    data = [":build"],
+)
+
+sh_binary(
+    name = "verify_generated",
+    srcs = [":verify_generated.sh"],
+    data = [":build"],
+)
