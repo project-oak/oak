@@ -1,5 +1,5 @@
 {
-  "checksum": "36a99d9fae61a9b35aea1e4d7340b5fd9558e250c63b8497f018d6a3c4bc46f4",
+  "checksum": "1b2ad9ccca817b835a7a65e45ecd0338b46d42dd095646c6c46e2cd0b551c4c5",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -2907,6 +2907,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "std"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [],
           "selects": {
@@ -4281,6 +4287,15 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [],
+          "selects": {
+            "x86_64-unknown-none": [
+              "extra_traits",
+              "std"
+            ]
+          }
+        },
         "deps": {
           "common": [
             {
@@ -6993,12 +7008,15 @@
         "crate_features": {
           "common": [
             "alloc",
-            "default",
             "fs",
-            "std",
-            "use-libc-auxv"
+            "std"
           ],
-          "selects": {}
+          "selects": {
+            "x86_64-unknown-linux-gnu": [
+              "default",
+              "use-libc-auxv"
+            ]
+          }
         },
         "deps": {
           "common": [
@@ -10367,12 +10385,15 @@
     "aarch64-pc-windows-gnullvm": [],
     "cfg(all(any(target_os = \"android\", target_os = \"linux\"), any(rustix_use_libc, miri, not(all(target_os = \"linux\", target_endian = \"little\", any(target_arch = \"arm\", all(target_arch = \"aarch64\", target_pointer_width = \"64\"), target_arch = \"riscv64\", all(rustix_use_experimental_asm, target_arch = \"powerpc64\"), all(rustix_use_experimental_asm, target_arch = \"mips\"), all(rustix_use_experimental_asm, target_arch = \"mips32r6\"), all(rustix_use_experimental_asm, target_arch = \"mips64\"), all(rustix_use_experimental_asm, target_arch = \"mips64r6\"), target_arch = \"x86\", all(target_arch = \"x86_64\", target_pointer_width = \"64\")))))))": [],
     "cfg(all(not(curve25519_dalek_backend = \"fiat\"), not(curve25519_dalek_backend = \"serial\"), target_arch = \"x86_64\"))": [
-      "x86_64-unknown-linux-gnu"
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
     ],
     "cfg(all(not(rustix_use_libc), not(miri), target_os = \"linux\", target_endian = \"little\", any(target_arch = \"arm\", all(target_arch = \"aarch64\", target_pointer_width = \"64\"), target_arch = \"riscv64\", all(rustix_use_experimental_asm, target_arch = \"powerpc64\"), all(rustix_use_experimental_asm, target_arch = \"mips\"), all(rustix_use_experimental_asm, target_arch = \"mips32r6\"), all(rustix_use_experimental_asm, target_arch = \"mips64\"), all(rustix_use_experimental_asm, target_arch = \"mips64r6\"), target_arch = \"x86\", all(target_arch = \"x86_64\", target_pointer_width = \"64\"))))": [
       "x86_64-unknown-linux-gnu"
     ],
-    "cfg(all(not(windows), any(rustix_use_libc, miri, not(all(target_os = \"linux\", target_endian = \"little\", any(target_arch = \"arm\", all(target_arch = \"aarch64\", target_pointer_width = \"64\"), target_arch = \"riscv64\", all(rustix_use_experimental_asm, target_arch = \"powerpc64\"), all(rustix_use_experimental_asm, target_arch = \"mips\"), all(rustix_use_experimental_asm, target_arch = \"mips32r6\"), all(rustix_use_experimental_asm, target_arch = \"mips64\"), all(rustix_use_experimental_asm, target_arch = \"mips64r6\"), target_arch = \"x86\", all(target_arch = \"x86_64\", target_pointer_width = \"64\")))))))": [],
+    "cfg(all(not(windows), any(rustix_use_libc, miri, not(all(target_os = \"linux\", target_endian = \"little\", any(target_arch = \"arm\", all(target_arch = \"aarch64\", target_pointer_width = \"64\"), target_arch = \"riscv64\", all(rustix_use_experimental_asm, target_arch = \"powerpc64\"), all(rustix_use_experimental_asm, target_arch = \"mips\"), all(rustix_use_experimental_asm, target_arch = \"mips32r6\"), all(rustix_use_experimental_asm, target_arch = \"mips64\"), all(rustix_use_experimental_asm, target_arch = \"mips64r6\"), target_arch = \"x86\", all(target_arch = \"x86_64\", target_pointer_width = \"64\")))))))": [
+      "x86_64-unknown-none"
+    ],
     "cfg(all(target_arch = \"aarch64\", target_env = \"msvc\", not(windows_raw_dylib)))": [],
     "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [],
     "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [],
@@ -10384,13 +10405,16 @@
     ],
     "cfg(all(target_arch = \"x86_64\", target_env = \"msvc\", not(windows_raw_dylib)))": [],
     "cfg(any(target_arch = \"aarch64\", target_arch = \"x86_64\", target_arch = \"x86\"))": [
-      "x86_64-unknown-linux-gnu"
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
     ],
     "cfg(any(target_arch = \"x86\", target_arch = \"x86_64\"))": [
-      "x86_64-unknown-linux-gnu"
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
     ],
     "cfg(any(target_arch = \"x86_64\", target_arch = \"x86\"))": [
-      "x86_64-unknown-linux-gnu"
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
     ],
     "cfg(any(unix, target_os = \"wasi\"))": [
       "x86_64-unknown-linux-gnu"
@@ -10401,7 +10425,8 @@
     "cfg(curve25519_dalek_backend = \"fiat\")": [],
     "cfg(target_arch = \"spirv\")": [],
     "cfg(target_arch = \"x86_64\")": [
-      "x86_64-unknown-linux-gnu"
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
     ],
     "cfg(target_os = \"hermit\")": [],
     "cfg(target_os = \"wasi\")": [],
@@ -10412,6 +10437,9 @@
     "x86_64-pc-windows-gnullvm": [],
     "x86_64-unknown-linux-gnu": [
       "x86_64-unknown-linux-gnu"
+    ],
+    "x86_64-unknown-none": [
+      "x86_64-unknown-none"
     ]
   },
   "direct_deps": [

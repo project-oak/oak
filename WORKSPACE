@@ -295,23 +295,54 @@ gcc_register_toolchain(
     target_arch = ARCHS.x86_64,
 )
 
-# Rust support
+# --- Rust support ---
+
+load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies", "rules_cc_toolchains")
+
+rules_cc_dependencies()
+
+rules_cc_toolchains()
+
+register_toolchains(
+    "//bazel/toolchains:x86_64_unknown_none_toolchain",
+)
+
+# rules_rust
+
+_RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
+
+_RUST_VERSIONS = [
+    "1.76.0",
+    _RUST_NIGHTLY_VERSION,
+]
+
 http_archive(
     name = "rules_rust",
     integrity = "sha256-ww398ehv1QZQp26mRbOkXy8AZnsGGHpoXpVU4WfKl+4=",
     urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.40.0/rules_rust-v0.40.0.tar.gz"],
 )
 
-load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains", "rust_repository_set")
 
 rules_rust_dependencies()
 
 rust_register_toolchains(
     edition = "2021",
-    versions = [
-        "1.76.0",
-        "nightly/2024-02-01",
-    ],
+    versions = _RUST_VERSIONS,
+)
+
+# Creates remote repositories for Rust toolchains, required for cross-compiling.
+rust_repository_set(
+    name = "rust_toolchain_repo",
+    edition = "2021",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    extra_target_triples = {
+        "x86_64-unknown-none": [
+            "@platforms//cpu:x86_64",
+            "@platforms//os:none",
+        ],
+    },
+    versions = _RUST_VERSIONS,
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
@@ -320,6 +351,7 @@ crate_universe_dependencies(bootstrap = True)
 
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 
+# Default crate repository - some crates may require std.
 crates_repository(
     name = "oak_crates_index",
     cargo_lockfile = "//:Cargo.bazel.lock",  # In Cargo-free mode this is used as output, not input.
@@ -527,13 +559,57 @@ crates_repository(
             version = "*",
         ),
     },
-    rust_version = "nightly/2024-02-01",
-    supported_platform_triples = ["x86_64-unknown-linux-gnu"],
+    rust_version = _RUST_NIGHTLY_VERSION,
+    # We request bare metal support. Because of feature unification, some creates
+    # in this repository may end up requiring std, thus not being compatible
+    # for x86_64-unknown-none. When that happens, we move the dependency to the
+    # oak_no_std_crates_index repository.
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+    ],
 )
 
 load("@oak_crates_index//:defs.bzl", "crate_repositories")
 
 crate_repositories()
+
+# All creates in this repository must support no_std.
+crates_repository(
+    name = "oak_no_std_crates_index",
+    cargo_lockfile = "//:Cargo_no_std.bazel.lock",  # In Cargo-free mode this is used as output, not input.
+    lockfile = "//:cargo-no-std-bazel-lock.json",  # Shares most contents with cargo_lockfile.
+    packages = {
+        "anyhow": crate.spec(
+            default_features = False,
+            features = [],
+            version = "*",
+        ),
+        "bytes": crate.spec(
+            default_features = False,  # bytes crate has "std" in its default feature set.
+            version = "*",
+        ),
+        "bitflags": crate.spec(
+            package = "bitflags",
+            version = "*",
+        ),
+        "getrandom": crate.spec(
+            default_features = False,
+            # rdrand is required to support x64_64-unknown-none.
+            features = ["rdrand"],
+            version = "*",
+        ),
+        "x86_64": crate.spec(version = "*"),
+    },
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).
+        "x86_64-unknown-none",
+    ],
+)
+
+load("@oak_no_std_crates_index//:defs.bzl", no_std_crate_repositories = "crate_repositories")
+
+no_std_crate_repositories()
 
 load("//bazel/tools/prost:deps.bzl", "prost_toolchain_crates")
 
