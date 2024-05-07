@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LookupHtbl","LookupHtblIter"]};
+window.SIDEBAR_ITEMS = {"fn":["hash"],"struct":["LookupHtbl","LookupHtblIter"]};

@@ -199,11 +199,11 @@
 <span class="doccomment">/// The main purpose of this factory is to allow creating a new instance of the
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable
 /// snapshot of the current lookup data.
-</span><span class="kw">pub struct </span>StdWasmApiFactory {
-    <span class="kw">pub </span>lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+</span><span class="kw">pub struct </span>StdWasmApiFactory&lt;<span class="kw">const </span>S: usize&gt; {
+    <span class="kw">pub </span>lookup_data_manager: Arc&lt;LookupDataManager&lt;S&gt;&gt;,
 }
 
-<span class="kw">impl </span>WasmApiFactory <span class="kw">for </span>StdWasmApiFactory {
+<span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; WasmApiFactory <span class="kw">for </span>StdWasmApiFactory&lt;S&gt; {
     <span class="kw">fn </span>create_wasm_api(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Vec&lt;u8&gt;, response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt; {
         Box::new(StdWasmApiImpl {
             lookup_data: <span class="self">self</span>.lookup_data_manager.create_lookup_data(),
@@ -219,8 +219,8 @@
 /// There are probably more locks than necessary here, it should be possible to
 /// reduce them in the future.
 </span><span class="attr">#[derive(Clone)]
-</span><span class="kw">pub struct </span>StdWasmApiImpl {
-    lookup_data: LookupData,
+</span><span class="kw">pub struct </span>StdWasmApiImpl&lt;<span class="kw">const </span>S: usize&gt; {
+    lookup_data: LookupData&lt;S&gt;,
     logger: Rc&lt;<span class="kw">dyn </span>OakLogger&gt;,
     <span class="doccomment">/// Current request, as received from the client.
     </span>request: Vec&lt;u8&gt;,
@@ -228,7 +228,7 @@
     </span>response: Rc&lt;Cell&lt;Vec&lt;u8&gt;&gt;&gt;,
 }
 
-<span class="kw">impl </span>StdWasmApi <span class="kw">for </span>StdWasmApiImpl {
+<span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; StdWasmApi <span class="kw">for </span>StdWasmApiImpl&lt;S&gt; {
     <span class="kw">fn </span>read_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         <span class="kw">_</span>: ReadRequestRequest,
@@ -323,7 +323,7 @@
     }
 }
 
-<span class="kw">impl </span>WasmApi <span class="kw">for </span>StdWasmApiImpl {
+<span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; WasmApi <span class="kw">for </span>StdWasmApiImpl&lt;S&gt; {
     <span class="kw">fn </span>transport(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt; {
         Box::new(StdWasmApiServer::new(<span class="self">self</span>.clone()))
     }

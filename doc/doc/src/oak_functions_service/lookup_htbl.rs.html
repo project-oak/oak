@@ -1136,7 +1136,7 @@
 }
 
 <span class="attr">#[inline]
-</span><span class="kw">fn </span>hash(v: <span class="kw-2">&amp;</span>[u8], hash_secret: u64) -&gt; u64 {
+</span><span class="kw">pub fn </span>hash(v: <span class="kw-2">&amp;</span>[u8], hash_secret: u64) -&gt; u64 {
     <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0usize</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>val = <span class="number">0u64</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">8</span>];

@@ -964,7 +964,7 @@
     <span class="kw">fn </span>new_handler(
         _config: WasmConfig,
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-        lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+        lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;WasmHandler&gt; {
         <span class="kw">let </span>logger = Arc::new(StandaloneLogger);

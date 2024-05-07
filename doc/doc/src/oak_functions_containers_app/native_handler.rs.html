@@ -290,7 +290,7 @@
 <span class="kw">struct </span>RequestContext {
     request: Vec&lt;u8&gt;,
     response: Vec&lt;u8&gt;,
-    lookup_data: LookupData,
+    lookup_data: LookupData&lt;<span class="number">16</span>&gt;,
 }
 
 <span class="macro">thread_local! </span>{
@@ -389,7 +389,7 @@
 <span class="doccomment">/// Variant of a Handler that dynamically loads a `.so` file and invokes native
 /// code to handle requests from there.
 </span><span class="kw">pub struct </span>NativeHandler {
-    lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+    lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
 
     <span class="attr">#[allow(dead_code)]
     </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -458,7 +458,7 @@
     </span><span class="kw">fn </span>new_handler(
         _config: (),
         module_bytes: <span class="kw-2">&amp;</span>[u8],
-        lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+        lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;NativeHandler&gt; {
         <span class="kw">let </span>directory = tempdir().context(<span class="string">"could not create temporary directory"</span>)<span class="question-mark">?</span>;
