@@ -63,6 +63,8 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,30 +88,32 @@
 
 // TODO: b/333064338 - Remove this crate once we've stopped using cargo.
 
-</span><span class="attr">#![no_std]
+</span><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
 #![feature(never_type)]
 
-</span><span class="comment">// Inlined from tonic::include_proto in order to cut dependency on tonic.
 </span><span class="macro">macro_rules! </span>include_proto {
     (<span class="macro-nonterminal">$package</span>: tt) =&gt; {
         <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">"OUT_DIR"</span>), <span class="macro">concat!</span>(<span class="string">"/"</span>, <span class="macro-nonterminal">$package</span>, <span class="string">".rs"</span>)));
+        <span class="attr">#[cfg(feature = <span class="string">"json"</span>)]
+        </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">"OUT_DIR"</span>), <span class="string">"/"</span>, <span class="macro-nonterminal">$package</span>, <span class="string">".serde.rs"</span>));
     };
 }
 
 <span class="kw">pub mod </span>oak {
-    <span class="macro">include_proto!</span>(<span class="string">"oak"</span>);
+    <span class="comment">// Do not lint generated code.
+    </span><span class="attr">#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
+
+    </span><span class="macro">include_proto!</span>(<span class="string">"oak"</span>);
 
     <span class="kw">pub mod </span>attestation {
         <span class="kw">pub mod </span>v1 {
-            <span class="attr">#![allow(clippy::large_enum_variant)]
-            </span><span class="macro">include_proto!</span>(<span class="string">"oak.attestation.v1"</span>);
+            <span class="macro">include_proto!</span>(<span class="string">"oak.attestation.v1"</span>);
         }
     }
 
     <span class="kw">pub mod </span>crypto {
         <span class="kw">pub mod </span>v1 {
-            <span class="attr">#![allow(dead_code)]
-            </span><span class="macro">include_proto!</span>(<span class="string">"oak.crypto.v1"</span>);
+            <span class="macro">include_proto!</span>(<span class="string">"oak.crypto.v1"</span>);
         }
     }
 
