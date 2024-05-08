@@ -20,3 +20,39 @@ extern crate alloc;
 
 #[cfg(test)]
 extern crate std;
+
+pub mod attestation;
+pub mod config;
+mod session;
+
+pub use session::{ClientSession, ServerSession, Session};
+
+/// Trait that represents a state-machine for protocol message generation.
+/// Incoming and outgoing messages are represented as generic arguments `I` and
+/// `O`.
+///
+/// This trait can be used to implement bidirectional streams, meaning that
+/// there doesn't have to be a one-to-one correspondence between incoming and
+/// outgoing messages.
+///
+/// If one of the methods returns an error, it means that there was a protocol
+/// error and the session needs to be restarted (because the state-machine is in
+/// an incorrect state).
+pub trait ProtocolEngine<I, O> {
+    /// Puts a message received from the peer into the state-machine changing
+    /// its state.
+    ///
+    /// Method returns `Result<Option<()>>` with the corresponding outcomes:
+    /// - `Ok(None)`: No incoming messages were expected
+    /// - `Ok(Some(()))`: An incoming message was accepted by the state-machine
+    /// - `Err`: Protocol error
+    fn put_incoming_message(&mut self, incoming_message: &I) -> anyhow::Result<Option<()>>;
+
+    /// Creates a next message that needs to be sent to the peer.
+    ///
+    /// Method returns `Result<Option<()>>` with the corresponding outcomes:
+    /// - `Ok(None)`: No outgoing messages
+    /// - `Ok(Some(O))`: An outgoing message that needs to be sent to the peer
+    /// - `Err`: Protocol error
+    fn get_outgoing_message(&mut self) -> anyhow::Result<Option<O>>;
+}
