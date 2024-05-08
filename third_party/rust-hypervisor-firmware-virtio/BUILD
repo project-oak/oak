@@ -25,8 +25,8 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "@oak_crates_index//:atomic_refcell",
-        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:log",
-        "@oak_crates_index//:x86_64",
+        "@oak_no_std_crates_index//:x86_64",
+        "@oak_no_std_crates_index//:bitflags",
     ],
 )

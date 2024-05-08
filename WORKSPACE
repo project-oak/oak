@@ -593,6 +593,7 @@ crates_repository(
             package = "bitflags",
             version = "*",
         ),
+        "x86_64": crate.spec(version = "*"),
     },
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).

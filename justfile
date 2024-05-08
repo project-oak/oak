@@ -171,6 +171,8 @@ kokoro_run_tests: all_ensure_no_std
 clang-tidy:
     bazel build --config=clang-tidy //cc/...
 
+bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio"
+
 bazel-ci:
     # The --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
     #
@@ -184,4 +186,4 @@ bazel-ci:
     bazel run oak_proto_rust:verify_generated
 
     # Some crates also need to be built for x86_64-unknown-none.
-    bazel build --platforms=//:x86_64-unknown-none --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //oak_linux_boot_params //oak_channel //oak_core
+    bazel build --platforms=//:x86_64-unknown-none --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- {{bare_metal_crates}}

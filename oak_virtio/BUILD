@@ -26,10 +26,10 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:log",
         "@oak_crates_index//:strum",
-        "@oak_crates_index//:x86_64",
+        "@oak_no_std_crates_index//:anyhow",
+        "@oak_no_std_crates_index//:bitflags",
+        "@oak_no_std_crates_index//:x86_64",
     ],
 )
