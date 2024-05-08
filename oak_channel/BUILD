@@ -26,9 +26,18 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_core",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:bytes",
+        # "@oak_crates_index//:anyhow",
         "@oak_crates_index//:static_assertions",
-    ],
+    ] + select({
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:anyhow",
+            "@oak_no_std_crates_index//:bitflags",
+            "@oak_no_std_crates_index//:bytes",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:anyhow",
+            "@oak_crates_index//:bitflags",
+            "@oak_crates_index//:bytes",
+        ],
+    }),
 )

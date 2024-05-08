@@ -593,13 +593,6 @@ crates_repository(
             package = "bitflags",
             version = "*",
         ),
-        "getrandom": crate.spec(
-            default_features = False,
-            # rdrand is required to support x64_64-unknown-none.
-            features = ["rdrand"],
-            version = "*",
-        ),
-        "x86_64": crate.spec(version = "*"),
     },
     supported_platform_triples = [
         "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).

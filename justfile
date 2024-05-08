@@ -182,3 +182,6 @@ bazel-ci:
     bazel build --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
     bazel test  --noshow_progress --curses=no --build_tag_filters=-noci -- //...:all
     bazel run oak_proto_rust:verify_generated
+
+    # Some crates also need to be built for x86_64-unknown-none.
+    bazel build --platforms=//:x86_64-unknown-none --show_result=1000000 --noshow_progress --curses=no --build_tag_filters=-noci -- //oak_linux_boot_params //oak_channel //oak_core
