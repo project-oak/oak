@@ -69,11 +69,17 @@ cargo_build_script(
 sh_binary(
     name = "copy_generated",
     srcs = [":copy_generated.sh"],
-    data = [":build"],
+    data = [
+        ":build",
+        ":oak_proto_rust",
+    ],
 )
 
 sh_binary(
     name = "verify_generated",
     srcs = [":verify_generated.sh"],
-    data = [":build"],
+    data = [
+        ":build",
+        ":oak_proto_rust",
+    ],
 )
