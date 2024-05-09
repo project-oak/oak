@@ -70,7 +70,18 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
         #[no_mangle]
         fn _start() -> ! {
             oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
-            oak_restricted_kernel_sdk::utils::log::set_max_level(oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug);
+            // Set the default. Applications may overwrite the log level by calling
+            // this function again.
+            oak_restricted_kernel_sdk::utils::log::set_max_level(
+                // Performance optimization. The current restricted kernel logger
+                // logs over a serial port. This is slow in general, and extremely
+                // slow on SEV-SNP.
+                if cfg!(debug_assertions) {
+                    oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug
+                } else {
+                    oak_restricted_kernel_sdk::utils::log::LevelFilter::Warn
+                }
+            );
             oak_restricted_kernel_sdk::utils::log::info!("In main!");
             #entry_fn_name();
         }
