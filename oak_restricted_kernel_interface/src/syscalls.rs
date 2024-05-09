@@ -85,7 +85,7 @@ pub enum Syscall {
     ///   - arg0 (c_int): error code
     /// Oak Restricted Kernel considerations:
     ///   We don't expect the user process to terminate, so this triggers a
-    /// kernel panic, no matter   the error code.
+    /// kernel panic, no matter the error code.
     Exit = 60,
 
     /// Flush a file descriptor.
@@ -96,14 +96,21 @@ pub enum Syscall {
     ///   a value of <errno::Errno> on failure; 0, otherwise.
     Fsync = 74,
 
-    /// Terminates the calling process and executes the supplied ELF binary
-    /// instead.
+    /// Create new process from ELF file, without starting it.
     ///
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
     ///   - arg1 (c_size_t): size of the buffer
     /// Returns:
-    ///   a value of <errno::Errno> on failure; 0, otherwise.
+    ///   a value of <errno::Errno> on failure; Otherwise the PID of the new
+    /// process.
+    UnstableCreateProcess = UNSTABLE_SYSCALL_SPACE,
+
+    /// Terminates the calling process and switches the active execution context
+    /// to the process with the provided PID.
+    ///
+    /// Arguments:
+    ///   - arg0 (c_size_t): PID of the process.
     UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + 1,
 }
 

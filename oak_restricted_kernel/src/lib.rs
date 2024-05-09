@@ -36,6 +36,7 @@
 #![feature(lazy_cell)]
 #![feature(naked_functions)]
 #![feature(c_size_t)]
+#![feature(never_type)]
 
 mod acpi;
 mod args;
@@ -70,6 +71,7 @@ extern crate alloc;
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
+use anyhow::Context;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -126,6 +128,33 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
             Page::from_start_address_unchecked(VirtAddr::new_truncate(0xFFFF_E900_0000_0000))
         },
     )));
+
+static PROCCESSES: Processes = Processes { list: Spinlock::new(alloc::vec::Vec::new()) };
+
+struct Processes {
+    list: Spinlock<alloc::vec::Vec<Process>>,
+}
+
+impl Processes {
+    fn add(&self, process: Process) -> usize {
+        // Safety: the list is only locked in the execute method. In this
+        // case a lock is aquired but never dropped (since execution switches
+        // to the application). However while it's still held, this mutable handle
+        // cannot be used again, as the kernel is can only resume execution via
+        // an unrelated syscall handler that does not have the mutable in scope. Hence
+        // we can safely force unlock.
+        unsafe { self.list.force_unlock() }
+        let mut processes = self.list.lock();
+        let pid: usize = processes.len();
+        processes.push(process);
+        log::debug!("Created process (pid: {})", pid);
+        pid
+    }
+    fn execute(&self, pid: usize) -> Result<!, anyhow::Error> {
+        log::debug!("Executing process (pid: {})", pid);
+        self.list.lock().get(pid).context("PID not mapped to a process")?.execute()
+    }
+}
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) -> ! {
@@ -430,11 +459,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
-    let process = Box::leak(Box::new(unsafe {
-        Process::from_application(&application).expect("failed to create process")
-    }));
+    let pid = unsafe { Process::from_application(&application).expect("failed to create process") };
 
-    process.execute()
+    PROCCESSES.execute(pid).expect("failed to execute initial process")
 }
 
 #[derive(EnumIter, EnumString)]

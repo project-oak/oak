@@ -22,6 +22,7 @@ pub mod mmap;
 mod process;
 mod stdio;
 
+mod create_process;
 mod switch_process;
 
 #[cfg(test)]
@@ -41,6 +42,7 @@ use x86_64::{
 };
 
 use self::{
+    create_process::syscall_unstable_create_proccess,
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
     process::syscall_exit,
@@ -119,9 +121,10 @@ extern "sysv64" fn syscall_handler(
             syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
         }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
-        Some(Syscall::UnstableSwitchProcess) => {
-            syscall_unstable_switch_proccess(arg1 as *mut c_void, arg2)
+        Some(Syscall::UnstableCreateProcess) => {
+            syscall_unstable_create_proccess(arg1 as *mut c_void, arg2)
         }
+        Some(Syscall::UnstableSwitchProcess) => syscall_unstable_switch_proccess(arg1),
         None => Errno::ENOSYS as isize,
     }
 }

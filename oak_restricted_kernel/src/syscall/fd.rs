@@ -77,9 +77,9 @@ pub fn unregister(fd: Fd) -> Option<Box<dyn FileDescriptor>> {
 }
 
 pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
-    // We should validate that the pointer and count are valid, as these come from
-    // userspace and therefore are not to be trusted, but right now everything
-    // is in kernel space so there is nothing to check.
+    // Safety: we should validate that the pointer and count are valid, as these
+    // come from userspace and therefore are not to be trusted, but right now
+    // everything is in kernel space so there is nothing to check.
     let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS
@@ -90,9 +90,9 @@ pub fn syscall_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
 }
 
 pub fn syscall_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
-    // We should validate that the pointer and count are valid, as these come from
-    // userspace and therefore are not to be trusted, but right now everything
-    // is in kernel space so there is nothing to check.
+    // Safety: we should validate that the pointer and count are valid, as these
+    // come from userspace and therefore are not to be trusted, but right now
+    // everything is in kernel space so there is nothing to check.
     let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
 
     FILE_DESCRIPTORS
