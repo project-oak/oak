@@ -15,6 +15,7 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,6 +25,11 @@ package(
 proto_library(
     name = "messages_proto",
     srcs = ["messages.proto"],
+)
+
+cc_proto_library(
+    name = "messages_cc_proto",
+    deps = [":messages_proto"],
 )
 
 proto_library(
@@ -41,6 +47,7 @@ build_test(
     name = "build_test",
     targets = [
         ":messages_proto",
+        ":messages_cc_proto",
         ":messages_java_proto",
     ],
 )

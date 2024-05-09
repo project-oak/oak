@@ -15,33 +15,18 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
 
 proto_library(
-    name = "oak_functions_proto",
-    srcs = ["oak_functions.proto"],
-    deps = [
-        "//proto/attestation:evidence_proto",
-        "//proto/crypto:crypto_proto",
-        "//proto/micro_rpc:options_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "oak_functions_cc_proto",
-    deps = [":oak_functions_proto"],
+    name = "profile_proto",
+    srcs = ["profile.proto"],
 )
 
 build_test(
     name = "build_test",
-    targets = [
-        ":oak_functions_proto",
-        ":oak_functions_cc_proto",
-    ],
+    targets = [":profile_proto"],
 )

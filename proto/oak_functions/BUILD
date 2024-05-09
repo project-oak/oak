@@ -15,6 +15,7 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
@@ -35,8 +36,23 @@ java_proto_library(
 )
 
 proto_library(
+    name = "application_config_proto",
+    srcs = ["application_config.proto"],
+)
+
+cc_proto_library(
+    name = "application_config_cc_proto",
+    deps = [":application_config_proto"],
+)
+
+proto_library(
     name = "lookup_data_proto",
     srcs = ["lookup_data.proto"],
+)
+
+cc_proto_library(
+    name = "lookup_data_cc_proto",
+    deps = [":lookup_data_proto"],
 )
 
 proto_library(
@@ -50,5 +66,10 @@ build_test(
     targets = [
         ":abi_proto",
         ":abi_java_proto",
+        ":application_config_proto",
+        ":application_config_cc_proto",
+        ":lookup_data_proto",
+        ":lookup_data_cc_proto",
+        ":testing_proto",
     ],
 )

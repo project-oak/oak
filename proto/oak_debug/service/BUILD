@@ -24,24 +24,23 @@ package(
 )
 
 proto_library(
-    name = "oak_functions_proto",
-    srcs = ["oak_functions.proto"],
+    name = "oak_debug_proto",
+    srcs = ["oak_debug.proto"],
     deps = [
-        "//proto/attestation:evidence_proto",
-        "//proto/crypto:crypto_proto",
-        "//proto/micro_rpc:options_proto",
+        "//third_party/google:profile_proto",
+        "@com_google_protobuf//:duration_proto",
     ],
 )
 
 cc_proto_library(
-    name = "oak_functions_cc_proto",
-    deps = [":oak_functions_proto"],
+    name = "oak_debug_cc_proto",
+    deps = [":oak_debug_proto"],
 )
 
 build_test(
     name = "build_test",
     targets = [
-        ":oak_functions_proto",
-        ":oak_functions_cc_proto",
+        ":oak_debug_proto",
+        ":oak_debug_cc_proto",
     ],
 )
