@@ -25,7 +25,7 @@ rust_library(
     name = "oak_restricted_kernel_interface",
     srcs = glob(["src/**"]),
     deps = [
-        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:strum",
+        "@oak_no_std_crates_index//:bitflags",
     ],
 )
