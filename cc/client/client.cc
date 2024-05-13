@@ -52,7 +52,7 @@ constexpr absl::string_view kEmptyAssociatedData = "";
 
 absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     std::unique_ptr<TransportWrapper> transport,
-    AttestationVerifier& verifier) {
+    const AttestationVerifier& verifier) {
   absl::StatusOr<EndorsedEvidence> endorsed_evidence =
       transport->GetEndorsedEvidence();
   if (!endorsed_evidence.ok()) {

@@ -39,7 +39,7 @@ class OakClient {
   // and creating an encrypted channel.
   static absl::StatusOr<std::unique_ptr<OakClient>> Create(
       std::unique_ptr<::oak::transport::TransportWrapper> transport,
-      ::oak::attestation::verification::AttestationVerifier& verifier);
+      const ::oak::attestation::verification::AttestationVerifier& verifier);
 
   // Invoke the provided method by fetching and verifying the attested enclave
   // public key, and then using it to encrypt the request body.
