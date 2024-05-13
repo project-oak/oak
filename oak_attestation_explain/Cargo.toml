@@ -14,7 +14,7 @@ sha2 = { version = "*", default-features = false }
 zerocopy = { version = "*", features = ["derive"] }
 base64 = { version = "*" }
 serde = { version = "*" }
-serde_json = { version = "*" }
+serde_yaml = { version = "*" }
 
 [dev-dependencies]
 prost = { workspace = true, default-features = false, features = [

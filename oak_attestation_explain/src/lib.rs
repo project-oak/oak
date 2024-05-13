@@ -52,9 +52,9 @@ pub trait HumanReadableExplanation {
 }
 
 // Adapt the JSON mapping of reference values to make it human readable.
-fn make_reference_value_json_human_readable(value: &mut serde_json::Value) {
-    fn modify_node(value: &mut serde_json::Value) {
-        if let serde_json::Value::Object(map) = value {
+fn make_reference_values_human_readable(value: &mut serde_yaml::Value) {
+    fn modify_node(value: &mut serde_yaml::Value) {
+        if let serde_yaml::Value::Mapping(map) = value {
             // Some referene values are nested under a value key. Remove
             // for human readability.
             if map.len() == 1
@@ -68,37 +68,38 @@ fn make_reference_value_json_human_readable(value: &mut serde_json::Value) {
             // Simplify by rmeoving the first nesting.
             if map.len() == 1
                 && let Some(digests) = map.get_mut("digests")
-                && matches!(digests, serde_json::Value::Object(_))
+                && matches!(digests, serde_yaml::Value::Mapping(_))
             {
                 *value = digests.clone();
                 return;
             }
 
             // Print digest hashes with hex encoding.
-            if serde_json::from_value::<RawDigest>(serde_json::Value::Object(map.clone())).is_ok() {
+            if serde_yaml::from_value::<RawDigest>(serde_yaml::Value::Mapping(map.clone())).is_ok()
+            {
                 map.iter_mut().for_each(|(_key, hash_value)| {
                     // The proto3 JSON mapping spec uses base64 encoding.
                     let base64_encoded_hash =
                         hash_value.as_str().expect("validated as string in prior conditional");
                     let hash =
                         base64::decode(base64_encoded_hash).expect("invalid base64 digest hash");
-                    *hash_value = serde_json::Value::String(hex::encode(hash));
+                    *hash_value = serde_yaml::Value::String(hex::encode(hash));
                 })
             };
         }
     }
 
     // Performs operation on every node in a potentially nested JSON tree.
-    fn for_each_node<F>(value: &mut serde_json::Value, operator: &F)
+    fn for_each_node<F>(value: &mut serde_yaml::Value, operator: &F)
     where
-        F: Fn(&mut serde_json::Value),
+        F: Fn(&mut serde_yaml::Value),
     {
         operator(value);
         match value {
-            serde_json::Value::Object(map) => {
+            serde_yaml::Value::Mapping(map) => {
                 map.iter_mut().for_each(|(_, v)| for_each_node(v, operator))
             }
-            serde_json::Value::Array(arr) => {
+            serde_yaml::Value::Sequence(arr) => {
                 arr.iter_mut().for_each(|v| for_each_node(v, operator))
             }
             _ => {}
@@ -136,9 +137,9 @@ impl HumanReadableTitle for ReferenceValues {
 
 impl HumanReadableExplanation for ReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -218,9 +219,9 @@ impl HumanReadableTitle for RootLayerReferenceValues {
 
 impl HumanReadableExplanation for RootLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -290,9 +291,9 @@ impl HumanReadableTitle for KernelLayerReferenceValues {
 
 impl HumanReadableExplanation for KernelLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -328,9 +329,9 @@ impl HumanReadableTitle for SystemLayerReferenceValues {
 
 impl HumanReadableExplanation for SystemLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -387,9 +388,9 @@ impl HumanReadableTitle for ApplicationLayerReferenceValues {
 
 impl HumanReadableExplanation for ApplicationLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -435,9 +436,9 @@ impl HumanReadableTitle for ContainerLayerReferenceValues {
 
 impl HumanReadableExplanation for ContainerLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_value_json_human_readable(&mut json_representation);
-        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut json_representation);
+        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
     }
 }
 

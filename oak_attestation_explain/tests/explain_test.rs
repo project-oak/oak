@@ -92,81 +92,42 @@ fn produces_expected_reference_values_explaination() {
 
     assert_eq!(
         reference_values.description().expect("could not get reference values description"),
-        "{
-  \"oak_restricted_kernel\": {
-    \"application_layer\": {
-      \"binary\": {
-        \"digests\": [
-          {
-            \"sha2_256\": \"7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb\"
-          }
-        ]
-      },
-      \"configuration\": {
-        \"skip\": {}
-      }
-    },
-    \"kernel_layer\": {
-      \"acpi\": {
-        \"digests\": [
-          {
-            \"sha2_256\": \"64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953\"
-          }
-        ]
-      },
-      \"init_ram_fs\": {
-        \"digests\": [
-          {
-            \"sha2_256\": \"daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8\"
-          }
-        ]
-      },
-      \"kernel\": {
-        \"image\": {
-          \"digests\": [
-            {
-              \"sha2_256\": \"ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8\"
-            }
-          ]
-        },
-        \"setup_data\": {
-          \"digests\": [
-            {
-              \"sha2_256\": \"4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1\"
-            }
-          ]
-        }
-      },
-      \"kernel_cmd_line_text\": {
-        \"string_literals\": [
-          \"console=ttyS0\"
-        ]
-      },
-      \"memory_map\": {
-        \"digests\": [
-          {
-            \"sha2_256\": \"1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08\"
-          }
-        ]
-      }
-    },
-    \"root_layer\": {
-      \"amd_sev\": {
-        \"min_tcb_version\": {
-          \"boot_loader\": 3,
-          \"microcode\": 209,
-          \"snp\": 20
-        },
-        \"stage0\": {
-          \"digests\": [
-            {
-              \"sha2_384\": \"6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a\"
-            }
-          ]
-        }
-      }
-    }
-  }
-}"
+        "oak_restricted_kernel:
+  root_layer:
+    amd_sev:
+      min_tcb_version:
+        boot_loader: 3
+        snp: 20
+        microcode: 209
+      stage0:
+        digests:
+        - sha2_384: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
+  kernel_layer:
+    kernel:
+      image:
+        digests:
+        - sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+      setup_data:
+        digests:
+        - sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+    kernel_cmd_line_text:
+      string_literals:
+      - console=ttyS0
+    init_ram_fs:
+      digests:
+      - sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+    memory_map:
+      digests:
+      - sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
+    acpi:
+      digests:
+      - sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
+  application_layer:
+    binary:
+      digests:
+      - sha2_256: 7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb
+    configuration:
+      skip: {}
+"
     );
 }

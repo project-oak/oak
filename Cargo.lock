@@ -2329,7 +2329,7 @@ dependencies = [
  "oak_proto_rust",
  "prost",
  "serde",
- "serde_json",
+ "serde_yaml",
  "sha2",
  "zerocopy",
 ]
@@ -2343,6 +2343,7 @@ dependencies = [
  "hex",
  "oak_attestation_explain",
  "oak_attestation_verification",
+ "oak_attestation_verification_test_utils",
  "oak_proto_rust",
  "prost",
  "sha2",

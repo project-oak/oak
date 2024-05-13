@@ -18,6 +18,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
+use oak_attestation_verification_test_utils::reference_values_from_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData,
 };
@@ -40,8 +41,31 @@ fn path_exists(s: &str) -> Result<PathBuf, String> {
     }
 }
 
+fn title(title: &str) -> String {
+    format!(
+        "
+
+
+
+# {}
+",
+        title
+    )
+}
+
+fn segment_title(title: &str, description: &str) -> String {
+    format!(
+        "
+
+## {}
+{}
+",
+        title, description
+    )
+}
+
 fn main() {
-    let mut extracted_evidence = {
+    let extracted_evidence = {
         let Params { evidence } = Params::parse();
         let evidence = {
             let serialized = fs::read(evidence).expect("could not read evidence");
@@ -51,7 +75,9 @@ fn main() {
         oak_attestation_verification::verifier::extract_evidence(&evidence).unwrap()
     };
 
-    match extracted_evidence.evidence_values.take() {
+    print!("{}", title("Evidence:"));
+
+    match extracted_evidence.evidence_values.clone().take() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
             match restricted_kernel_evidence {
                 OakRestrictedKernelData {
@@ -60,37 +86,25 @@ fn main() {
                     application_layer: Some(application_layer),
                 } => {
                     print!(
-                        "
-
-
-####################
-{}
-
-{}",
-                        root_layer.title().unwrap(),
-                        root_layer.description().unwrap()
+                        "{}",
+                        segment_title(
+                            &root_layer.title().unwrap(),
+                            &root_layer.description().unwrap()
+                        )
                     );
                     print!(
-                        "
-
-
-####################
-{}
-
-{}",
-                        kernel_layer.title().unwrap(),
-                        kernel_layer.description().unwrap()
+                        "{}",
+                        segment_title(
+                            &kernel_layer.title().unwrap(),
+                            &kernel_layer.description().unwrap(),
+                        )
                     );
                     print!(
-                        "
-
-
-####################
-{}
-
-{}",
-                        application_layer.title().unwrap(),
-                        application_layer.description().unwrap()
+                        "{}",
+                        segment_title(
+                            &application_layer.title().unwrap(),
+                            &application_layer.description().unwrap(),
+                        )
                     );
                     println!();
                 }
@@ -98,5 +112,15 @@ fn main() {
             }
         }
         _ => panic!("not restricted kernel evidence"),
-    }
+    };
+
+    let reference_values = reference_values_from_evidence(extracted_evidence);
+
+    print!("{}", title("Reference values that describe this evidence:"));
+
+    print!(
+        "{}
+        ",
+        reference_values.description().expect("could not get reference values description")
+    )
 }

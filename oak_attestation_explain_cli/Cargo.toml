@@ -16,3 +16,4 @@ oak_attestation_explain = { workspace = true }
 prost = { workspace = true }
 sha2 = { version = "*", default-features = false }
 zerocopy = { version = "*", features = ["derive"] }
+oak_attestation_verification_test_utils = { workspace = true }
