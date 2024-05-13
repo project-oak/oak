@@ -1002,13 +1002,18 @@ pub struct AmdAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
     #[prost(bytes = "vec", tag = "1")]
     pub report_data: ::prost::alloc::vec::Vec<u8>,
-    /// Current TCB Version.
+    /// This represents the actual, up-to-date TCB version of the currently running
+    /// SEV-SNP firmware. It reflects the latest security patches and updates
+    /// applied to the firmware.
     #[prost(message, optional, tag = "2")]
     pub current_tcb: ::core::option::Option<TcbVersion>,
-    /// Reported TCB version (the version can be lower than current_tcb in case of
-    /// a provisional update. See
+    /// This is the TCB version reported in attestation reports. It can be set
+    /// independently from the current_tcb by the hypervisor. This allows for a
+    /// smoother transition when updating firmware, giving guest owners time to
+    /// retrieve new VCEK certificates before switching to a new VCEK derived from
+    /// the updated TCB.
+    /// See Section 3.4 of the AMD SEV-SNP specification:
     /// <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf>
-    /// (Section 3.4) for more detail).
     #[prost(message, optional, tag = "7")]
     pub reported_tcb: ::core::option::Option<TcbVersion>,
     /// Whether the VM was booted in debug mode.
