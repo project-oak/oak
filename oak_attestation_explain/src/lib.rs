@@ -27,10 +27,10 @@ use anyhow::{Context, Result};
 use oak_proto_rust::oak::{
     attestation::v1::{
         root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
-        KernelLayerData, KernelLayerReferenceValues, OakContainersData,
-        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelReferenceValues,
-        ReferenceValues, RootLayerData, RootLayerReferenceValues, SystemLayerData,
-        SystemLayerReferenceValues,
+        ContainerLayerData, ContainerLayerReferenceValues, KernelLayerData,
+        KernelLayerReferenceValues, OakContainersData, OakContainersReferenceValues,
+        OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
     },
     RawDigest,
 };
@@ -386,6 +386,54 @@ impl HumanReadableTitle for ApplicationLayerReferenceValues {
 }
 
 impl HumanReadableExplanation for ApplicationLayerReferenceValues {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_value_json_human_readable(&mut json_representation);
+        serde_json::to_string_pretty(&json_representation).map_err(anyhow::Error::msg)
+    }
+}
+
+impl HumanReadableTitle for ContainerLayerData {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Container Layer".to_string())
+    }
+}
+
+impl HumanReadableExplanation for ContainerLayerData {
+    fn description(&self) -> Result<String, anyhow::Error> {
+        let digests = {
+            let bundle_digest =
+                self.bundle.as_ref().context("unexpectedly unset binary proto field").and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )?;
+
+            if let Ok(config_digest) =
+                self.config.as_ref().context("unexpectedly unset config proto field").and_then(
+                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
+                )
+            {
+                format!(
+                    "Container Bundle [Digest]: {}
+Config [Digest]: {}",
+                    bundle_digest.display_hash(),
+                    config_digest.display_hash(),
+                )
+            } else {
+                format!("Container Bundle [Digest]: {}", bundle_digest.display_hash(),)
+            }
+        };
+
+        Ok(digests)
+    }
+}
+
+impl HumanReadableTitle for ContainerLayerReferenceValues {
+    fn title(&self) -> Result<String, anyhow::Error> {
+        Ok("Container Layer".to_string())
+    }
+}
+
+impl HumanReadableExplanation for ContainerLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
         let mut json_representation = serde_json::to_value(self).map_err(anyhow::Error::msg)?;
         make_reference_value_json_human_readable(&mut json_representation);
