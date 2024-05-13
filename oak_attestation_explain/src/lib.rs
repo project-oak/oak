@@ -39,6 +39,10 @@ use zerocopy::{FromBytes, FromZeroes};
 
 use crate::alloc::{borrow::ToOwned, string::ToString};
 
+const AMD_SEV_SNP_TITLE: &str = "AMD SEV-SNP";
+const INTEL_TDX_TITLE: &str = "Intel TDX";
+const INSECURE_TEE_TITLE: &str = "FAKE INSECURE";
+
 /// Provides human readable explanations for attestation data.
 pub trait HumanReadableTitle {
     /// Concise title, eg. "Oak Containers Stack in a AMD SEV-SNP TEE".
@@ -111,11 +115,33 @@ fn make_reference_values_human_readable(value: &mut serde_yaml::Value) {
     for_each_node(value, &modify_node);
 }
 
-fn get_tee_name(tee_report: &Report) -> &'static str {
-    match tee_report {
-        Report::SevSnp(_) => "AMD SEV-SNP",
-        Report::Tdx(_) => "Intel TDX",
-        Report::Fake(_) => "UNSAFE FAKE",
+fn get_tee_name_from_root_layer_evidence(
+    root_layer: &RootLayerData,
+) -> Result<&'static str, anyhow::Error> {
+    match root_layer.report.as_ref().context("unexpectedly unset report proto field")? {
+        Report::SevSnp(_) => Ok(AMD_SEV_SNP_TITLE),
+        Report::Tdx(_) => Ok(INTEL_TDX_TITLE),
+        Report::Fake(_) => Ok(INSECURE_TEE_TITLE),
+    }
+}
+
+fn get_tee_name_from_root_layer_reference_values(
+    root_layer_reference_values: &RootLayerReferenceValues,
+) -> Result<String, anyhow::Error> {
+    match root_layer_reference_values {
+        RootLayerReferenceValues { insecure: Some(_), .. } => Ok(INSECURE_TEE_TITLE.to_owned()),
+        RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: Some(_), insecure: None } => {
+            Ok(format!("{} or {}", AMD_SEV_SNP_TITLE, INTEL_TDX_TITLE))
+        }
+        RootLayerReferenceValues { amd_sev: None, intel_tdx: Some(_), insecure: None } => {
+            Ok(INTEL_TDX_TITLE.to_owned())
+        }
+        RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: None, insecure: None } => {
+            Ok(AMD_SEV_SNP_TITLE.to_owned())
+        }
+        RootLayerReferenceValues { amd_sev: None, intel_tdx: None, insecure: None } => {
+            Err(anyhow::Error::msg("no TEE value found in the reference values"))
+        }
     }
 }
 
@@ -145,41 +171,37 @@ impl HumanReadableExplanation for ReferenceValues {
 
 impl HumanReadableTitle for OakRestrictedKernelData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        let tee_report = self
-            .root_layer
-            .as_ref()
-            .context("unexpectedly unset root_layer proto field")?
-            .report
-            .as_ref()
-            .context("unexpectedly unset report proto field")?;
-        let tee_name = get_tee_name(tee_report);
+        let root_layer =
+            self.root_layer.clone().context("unexpectedly unset root_layer proto field")?;
+        let tee_name = get_tee_name_from_root_layer_evidence(&root_layer)?;
         Ok(format!("Oak Restricted Kernel Stack in a {} TEE", tee_name))
     }
 }
 
 impl HumanReadableTitle for OakRestrictedKernelReferenceValues {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Oak Restricted Kernel Stack".to_owned())
+        let root_layer =
+            self.root_layer.as_ref().context("unexpectedly unset root_layer proto field")?;
+        let tee_name = get_tee_name_from_root_layer_reference_values(root_layer)?;
+        Ok(format!("Oak Restricted Kernel Stack in a {} TEE", tee_name))
     }
 }
 
 impl HumanReadableTitle for OakContainersData {
     fn title(&self) -> Result<String, anyhow::Error> {
-        let tee_report = self
-            .root_layer
-            .clone()
-            .context("unexpectedly unset root_layer proto field")?
-            .report
-            .clone()
-            .context("unexpectedly unset report proto field")?;
-        let tee_name = get_tee_name(&tee_report);
-        Ok(format!("Evidence of the Oak Conatiners Stack in a {} TEE", tee_name))
+        let root_layer =
+            self.root_layer.clone().context("unexpectedly unset root_layer proto field")?;
+        let tee_name = get_tee_name_from_root_layer_evidence(&root_layer)?;
+        Ok(format!("Oak Containers Stack in a {} TEE", tee_name))
     }
 }
 
 impl HumanReadableTitle for OakContainersReferenceValues {
     fn title(&self) -> Result<String, anyhow::Error> {
-        Ok("Oak Conatiners Stack".to_owned())
+        let root_layer =
+            self.root_layer.as_ref().context("unexpectedly unset root_layer proto field")?;
+        let tee_name = get_tee_name_from_root_layer_reference_values(root_layer)?;
+        Ok(format!("Oak Containers Stack in a {} TEE", tee_name))
     }
 }
 
