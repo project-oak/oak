@@ -1,0 +1,138 @@
+name: Build and attest all
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build_attest_all:
+    strategy:
+      fail-fast: false
+      matrix:
+        buildconfig:
+          - buildconfigs/key_xor_test_app.sh
+          - buildconfigs/oak_containers_kernel.sh
+          - buildconfigs/oak_containers_orchestrator.sh
+          - buildconfigs/oak_containers_stage1.sh
+          - buildconfigs/oak_containers_syslogd.sh
+          - buildconfigs/oak_containers_system_image.sh
+          - buildconfigs/oak_echo_enclave_app.sh
+          - buildconfigs/oak_echo_raw_enclave_app.sh
+          - buildconfigs/oak_functions_enclave_app.sh
+          - buildconfigs/oak_functions_insecure_enclave_app.sh
+          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.sh
+          - buildconfigs/stage0_bin.sh
+          - buildconfigs/oak_orchestrator.sh
+
+    permissions:
+      actions: read
+      id-token: write
+      attestations: write
+      contents: read
+
+    runs-on: ubuntu-20.04
+
+    steps:
+      # Needed for GCS upload.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+
+      # Needed for GCS upload.
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Mount main branch
+        uses: actions/checkout@v4
+
+      - name: Parse buildconfig
+        id: parse
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+          source ${{ matrix.buildconfig }}
+          echo "package-name=${PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "binary-path=${BINARY_PATH}" >> "${GITHUB_OUTPUT}"
+          echo "subject-path=${SUBJECT_PATH}" >> "${GITHUB_OUTPUT}"
+
+      - name: Show values
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+          echo "package_name: ${{ steps.parse.outputs.package-name }}"
+          echo "binary_path: ${{ steps.parse.outputs.binary-path }}"
+          echo "subject_path: ${{ steps.parse.outputs.subject-path }}"
+          echo "GITHUB_SHA: ${GITHUB_SHA}"
+
+      - name: Build
+        id: build
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+          source ${{ matrix.buildconfig }}
+          export RUST_BACKTRACE=1
+          export RUST_LOG=debug
+          export XDG_RUNTIME_DIR=/var/run
+          scripts/docker_pull
+          scripts/docker_run "${BUILD_COMMAND[@]}"
+
+      - name: Show build artifact
+        run: |
+          echo "${{ steps.parse.outputs.binary-path }}"
+          ls -la "${{ steps.parse.outputs.binary-path }}"
+
+      - name: Attest
+        id: attest
+        uses: actions/attest-build-provenance@v1.1.1
+        with:
+          subject-path: ${{ steps.parse.outputs.subject-path }}
+
+      - name: Show bundle
+        run: |
+          echo "${{ steps.attest.outputs.bundle-path }}"
+          ls -la "${{ steps.attest.outputs.bundle-path }}"
+
+      # Upload binary and provenance to GCS and index via http://static.space
+      # so that, regardless of the GCS bucket and path, it can easily be
+      # located by its digest.
+      - name: Upload
+        id: upload
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+
+          bucket=oak-bins
+          package_name=${{ steps.parse.outputs.package-name }}
+          binary_path=${{ steps.parse.outputs.binary-path }}
+          provenance_path=${{ steps.attest.outputs.bundle-path }}
+
+          gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/$(basename ${binary_path})"
+          gcs_provenance_path="provenance/${GITHUB_SHA}/${package_name}/$(basename ${provenance_path})"
+          binary_url="https://storage.googleapis.com/${bucket}/${binary_path}"
+          provenance_url="https://storage.googleapis.com/${bucket}/${provenance_path}"
+
+          gsutil cp "${binary_path}" "gs://${bucket}/${gcs_binary_path}"
+          gsutil cp "${provenance_path}" "gs://${bucket}/${gcs_provenance_path}"
+
+          curl --fail \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "{ \"url\": \"${binary_url}\" }" \
+            https://api.static.space/v1/snapshot
+          curl --fail \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "{ \"url\": \"${provenance_url}\" }" \
+            https://api.static.space/v1/snapshot
