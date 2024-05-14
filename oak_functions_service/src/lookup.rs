@@ -20,6 +20,7 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
+use core::array;
 
 use log::{info, Level};
 
@@ -98,7 +99,7 @@ mod mutexes {
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
 pub struct LookupDataManager<const S: usize> {
-    data: mutexes::RwLock<[Arc<Data>; S]>,
+    data: mutexes::RwLock<Arc<[Data; S]>>,
     // The outer RwLock guards the DataBuilder-s themselves; while inserting data you need a read
     // lock on the outer RwLock, but when finalizing lookup data you need to grab a write lock.
     // The inner lock guards the contents of the DataBuilder, ensuring that we add data from only
@@ -114,12 +115,12 @@ impl<const S: usize> LookupDataManager<S> {
             info!("Splitting lookup data hashmap into {}.", S);
         }
         Self {
-            data: mutexes::RwLock::new([(); S].map(|()| Arc::new(Data::default()))),
+            data: mutexes::RwLock::new(Arc::new(array::from_fn(|_| Data::default()))),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            data_builder: mutexes::RwLock::new(
-                [(); S].map(|()| mutexes::Mutex::new(DataBuilder::default())),
-            ),
+            data_builder: mutexes::RwLock::new(array::from_fn(|_| {
+                mutexes::Mutex::new(DataBuilder::default())
+            })),
             logger,
         }
     }
@@ -170,7 +171,7 @@ impl<const S: usize> LookupDataManager<S> {
             next_data_len = next_data.iter().map(|htbl| htbl.len()).sum();
             let mut data = self.data.write();
             data_len = data.iter().map(|htbl| htbl.len()).sum();
-            *data = next_data.map(Arc::new);
+            *data = Arc::new(next_data);
         }
         info!(
             "Finished replacing lookup data with len {} by next lookup data with len {}",
@@ -205,12 +206,12 @@ impl<const S: usize> LookupDataManager<S> {
 /// Provides access to shared lookup data.
 #[derive(Clone)]
 pub struct LookupData<const S: usize> {
-    data: [Arc<Data>; S],
+    data: Arc<[Data; S]>,
     logger: Arc<dyn OakLogger>,
 }
 
 impl<const S: usize> LookupData<S> {
-    fn new(data: [Arc<Data>; S], logger: Arc<dyn OakLogger>) -> Self {
+    fn new(data: Arc<[Data; S]>, logger: Arc<dyn OakLogger>) -> Self {
         Self { data, logger }
     }
 
