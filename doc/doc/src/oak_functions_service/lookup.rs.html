@@ -403,6 +403,7 @@
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
 <a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -425,6 +426,7 @@
     sync::Arc,
     vec::Vec,
 };
+<span class="kw">use </span>core::array;
 
 <span class="kw">use </span>log::{info, Level};
 
@@ -503,7 +505,7 @@
 /// In the future we may replace both the mutex and the hash map with something
 /// like RCU.
 </span><span class="kw">pub struct </span>LookupDataManager&lt;<span class="kw">const </span>S: usize&gt; {
-    data: mutexes::RwLock&lt;[Arc&lt;Data&gt;; S]&gt;,
+    data: mutexes::RwLock&lt;Arc&lt;[Data; S]&gt;&gt;,
     <span class="comment">// The outer RwLock guards the DataBuilder-s themselves; while inserting data you need a read
     // lock on the outer RwLock, but when finalizing lookup data you need to grab a write lock.
     // The inner lock guards the contents of the DataBuilder, ensuring that we add data from only
@@ -519,12 +521,12 @@
             <span class="macro">info!</span>(<span class="string">"Splitting lookup data hashmap into {}."</span>, S);
         }
         <span class="self">Self </span>{
-            data: mutexes::RwLock::new([(); S].map(|()| Arc::new(Data::default()))),
+            data: mutexes::RwLock::new(Arc::new(array::from_fn(|<span class="kw">_</span>| Data::default()))),
             <span class="comment">// Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
-            </span>data_builder: mutexes::RwLock::new(
-                [(); S].map(|()| mutexes::Mutex::new(DataBuilder::default())),
-            ),
+            </span>data_builder: mutexes::RwLock::new(array::from_fn(|<span class="kw">_</span>| {
+                mutexes::Mutex::new(DataBuilder::default())
+            })),
             logger,
         }
     }
@@ -575,7 +577,7 @@
             next_data_len = next_data.iter().map(|htbl| htbl.len()).sum();
             <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="self">self</span>.data.write();
             data_len = data.iter().map(|htbl| htbl.len()).sum();
-            <span class="kw-2">*</span>data = next_data.map(Arc::new);
+            <span class="kw-2">*</span>data = Arc::new(next_data);
         }
         <span class="macro">info!</span>(
             <span class="string">"Finished replacing lookup data with len {} by next lookup data with len {}"</span>,
@@ -610,12 +612,12 @@
 <span class="doccomment">/// Provides access to shared lookup data.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>LookupData&lt;<span class="kw">const </span>S: usize&gt; {
-    data: [Arc&lt;Data&gt;; S],
+    data: Arc&lt;[Data; S]&gt;,
     logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; LookupData&lt;S&gt; {
-    <span class="kw">fn </span>new(data: [Arc&lt;Data&gt;; S], logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(data: Arc&lt;[Data; S]&gt;, logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ data, logger }
     }
 
