@@ -526,6 +526,7 @@
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -580,9 +581,9 @@
 }
 
 <span class="comment">// Adapt the JSON mapping of reference values to make it human readable.
-</span><span class="kw">fn </span>make_reference_value_json_human_readable(value: <span class="kw-2">&amp;mut </span>serde_json::Value) {
-    <span class="kw">fn </span>modify_node(value: <span class="kw-2">&amp;mut </span>serde_json::Value) {
-        <span class="kw">if let </span>serde_json::Value::Object(map) = value {
+</span><span class="kw">fn </span>make_reference_values_human_readable(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
+    <span class="kw">fn </span>modify_node(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
+        <span class="kw">if let </span>serde_yaml::Value::Mapping(map) = value {
             <span class="comment">// Some referene values are nested under a value key. Remove
             // for human readability.
             </span><span class="kw">if </span>map.len() == <span class="number">1
@@ -596,37 +597,38 @@
             // Simplify by rmeoving the first nesting.
             </span><span class="kw">if </span>map.len() == <span class="number">1
                 </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(digests) = map.get_mut(<span class="string">"digests"</span>)
-                &amp;&amp; <span class="macro">matches!</span>(digests, serde_json::Value::Object(<span class="kw">_</span>))
+                &amp;&amp; <span class="macro">matches!</span>(digests, serde_yaml::Value::Mapping(<span class="kw">_</span>))
             {
                 <span class="kw-2">*</span>value = digests.clone();
                 <span class="kw">return</span>;
             }
 
             <span class="comment">// Print digest hashes with hex encoding.
-            </span><span class="kw">if </span>serde_json::from_value::&lt;RawDigest&gt;(serde_json::Value::Object(map.clone())).is_ok() {
+            </span><span class="kw">if </span>serde_yaml::from_value::&lt;RawDigest&gt;(serde_yaml::Value::Mapping(map.clone())).is_ok()
+            {
                 map.iter_mut().for_each(|(_key, hash_value)| {
                     <span class="comment">// The proto3 JSON mapping spec uses base64 encoding.
                     </span><span class="kw">let </span>base64_encoded_hash =
                         hash_value.as_str().expect(<span class="string">"validated as string in prior conditional"</span>);
                     <span class="kw">let </span>hash =
                         base64::decode(base64_encoded_hash).expect(<span class="string">"invalid base64 digest hash"</span>);
-                    <span class="kw-2">*</span>hash_value = serde_json::Value::String(hex::encode(hash));
+                    <span class="kw-2">*</span>hash_value = serde_yaml::Value::String(hex::encode(hash));
                 })
             };
         }
     }
 
     <span class="comment">// Performs operation on every node in a potentially nested JSON tree.
-    </span><span class="kw">fn </span>for_each_node&lt;F&gt;(value: <span class="kw-2">&amp;mut </span>serde_json::Value, operator: <span class="kw-2">&amp;</span>F)
+    </span><span class="kw">fn </span>for_each_node&lt;F&gt;(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value, operator: <span class="kw-2">&amp;</span>F)
     <span class="kw">where
-        </span>F: Fn(<span class="kw-2">&amp;mut </span>serde_json::Value),
+        </span>F: Fn(<span class="kw-2">&amp;mut </span>serde_yaml::Value),
     {
         operator(value);
         <span class="kw">match </span>value {
-            serde_json::Value::Object(map) =&gt; {
+            serde_yaml::Value::Mapping(map) =&gt; {
                 map.iter_mut().for_each(|(<span class="kw">_</span>, v)| for_each_node(v, operator))
             }
-            serde_json::Value::Array(arr) =&gt; {
+            serde_yaml::Value::Sequence(arr) =&gt; {
                 arr.iter_mut().for_each(|v| for_each_node(v, operator))
             }
             <span class="kw">_ </span>=&gt; {}
@@ -664,9 +666,9 @@
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -746,9 +748,9 @@ Firmware [Provenances]: {}"</span>,
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>RootLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -818,9 +820,9 @@ Inital RAM Disk [Provenances]: {}"</span>,
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>KernelLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -856,9 +858,9 @@ System Image [Provenances]: {}"</span>,
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>SystemLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -915,9 +917,9 @@ Binary [Provenances]: {}"</span>,
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ApplicationLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -963,9 +965,9 @@ Config [Digest]: {}"</span>,
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ContainerLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_json::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_value_json_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
-        serde_json::to_string_pretty(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
+        <span class="kw">let </span><span class="kw-2">mut </span>json_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>json_representation);
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>json_representation).map_err(anyhow::Error::msg)
     }
 }
 
