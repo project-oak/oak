@@ -639,6 +639,9 @@ pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
     // request attestation reports or derived sealing keys for VMPL0. This stops
     // later boot stages from creating counterfeit DICE chains.
     key.zeroize();
+    // The sev-guest driver in the upstream kernel does not initialize with such
+    // an empty vmpck. So we fill it up with 0xFF.
+    key.fill(0xFF);
     Ok(())
 }
 
