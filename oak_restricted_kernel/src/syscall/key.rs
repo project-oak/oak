@@ -29,17 +29,10 @@ struct DerivedKeyState {
 
 enum DerivedKeyDescriptor {
     Readable(DerivedKeyState),
-    #[cfg(feature = "initrd")]
     Writeable(DerivedKeyState),
 }
 
 impl DerivedKeyDescriptor {
-    #[cfg(not(feature = "initrd"))]
-    fn new(key: DerivedKey) -> Self {
-        Self::Readable(DerivedKeyState { index: 0, data: key })
-    }
-
-    #[cfg(feature = "initrd")]
     fn new() -> Self {
         Self::Writeable(DerivedKeyState::default())
     }
@@ -48,7 +41,6 @@ impl DerivedKeyDescriptor {
 impl FileDescriptor for DerivedKeyDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
         match self {
-            #[cfg(feature = "initrd")]
             DerivedKeyDescriptor::Writeable(_write_state) => Err(Errno::EINVAL),
             DerivedKeyDescriptor::Readable(read_state) => {
                 let data_as_slice = read_state.data.as_mut_slice();
@@ -62,7 +54,6 @@ impl FileDescriptor for DerivedKeyDescriptor {
     fn write(&mut self, buf: &[u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
         match self {
             DerivedKeyDescriptor::Readable(_read_state) => Err(Errno::EINVAL),
-            #[cfg(feature = "initrd")]
             DerivedKeyDescriptor::Writeable(write_state) => {
                 let data_as_slice =
                     <DerivedKey as zerocopy::AsBytes>::as_bytes_mut(&mut write_state.data);
@@ -97,14 +88,8 @@ impl FileDescriptor for DerivedKeyDescriptor {
 }
 
 /// Registers a file descriptor for reading a derived key (0x21)
-pub fn register(#[cfg(not(feature = "initrd"))] key: DerivedKey) {
-    super::fd::register(
-        DERIVED_KEY_FD,
-        Box::new(DerivedKeyDescriptor::new(
-            #[cfg(not(feature = "initrd"))]
-            key,
-        )),
-    )
-    .map_err(|_| ()) // throw away the box
-    .expect("DerivedKeyDescriptor already registered");
+pub fn register() {
+    super::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new()))
+        .map_err(|_| ()) // throw away the box
+        .expect("DerivedKeyDescriptor already registered");
 }

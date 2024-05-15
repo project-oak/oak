@@ -58,14 +58,8 @@ bzimage_provenance_subjects kernel_name output_dir_provenance_subjects bzimage_p
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
     just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel
 
-oak_restricted_kernel_simple_io_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
-
-oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
-    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io
-
 oak_restricted_kernel_simple_io_init_rd_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel,initrd --bin=oak_restricted_kernel_simple_io_init_rd_bin
+    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_init_rd_bin
 
 oak_restricted_kernel_simple_io_init_rd_wrapper: oak_restricted_kernel_simple_io_init_rd_bin
     just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io_init_rd
@@ -160,7 +154,7 @@ all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_v
 
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin oak_restricted_kernel_simple_io_wrapper oak_restricted_kernel_simple_io_init_rd_wrapper stage0_bin
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_init_rd_wrapper stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'

@@ -6,10 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["vsock_channel", "initrd"]
-# Ability to load an application from initrd, the measurement of which was already taken by stage0.
-# In this case, instead of creating a dice layer, the kernel will expose stage0 dice data to the application.
-initrd = []
+default = ["vsock_channel"]
 virtio_console_channel = ["virtio-drivers"]
 vsock_channel = ["oak_virtio"]
 serial_channel = ["uart_16550"]

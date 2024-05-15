@@ -23,7 +23,6 @@ use zeroize::Zeroize;
 use super::fd::{copy_max_slice, FileDescriptor};
 
 pub enum DiceData {
-    #[cfg(feature = "initrd")]
     Layer0(Box<Stage0DiceData>),
     Layer1(Box<RestrictedKernelDiceData>),
 }
@@ -31,7 +30,6 @@ pub enum DiceData {
 impl DiceData {
     fn as_mut_slice(&mut self) -> &mut [u8] {
         match self {
-            #[cfg(feature = "initrd")]
             DiceData::Layer0(stage0_dice_data) => {
                 <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data)
             }
@@ -47,7 +45,6 @@ struct ReadState {
     index: usize,
 }
 
-#[cfg(feature = "initrd")]
 struct WriteState {
     data: RestrictedKernelDiceData,
     index: usize,
@@ -55,7 +52,6 @@ struct WriteState {
 
 enum DiceDataDescriptor {
     Readable(Box<ReadState>),
-    #[cfg(feature = "initrd")]
     Writeable(Box<WriteState>),
 }
 
@@ -68,7 +64,6 @@ impl DiceDataDescriptor {
 impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
         match self {
-            #[cfg(feature = "initrd")]
             DiceDataDescriptor::Writeable(_write_state) => Err(Errno::EINVAL),
             DiceDataDescriptor::Readable(read_state) => {
                 let data_as_slice = read_state.data.as_mut_slice();
@@ -88,7 +83,6 @@ impl FileDescriptor for DiceDataDescriptor {
     fn write(&mut self, buf: &[u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
         match self {
             DiceDataDescriptor::Readable(read_state) => match &mut read_state.data {
-                #[cfg(feature = "initrd")]
                 DiceData::Layer0(stage0_dice_data) => {
                     <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data).zeroize();
                     let _ = core::mem::replace(
@@ -102,7 +96,6 @@ impl FileDescriptor for DiceDataDescriptor {
                 }
                 _ => Err(Errno::EINVAL),
             },
-            #[cfg(feature = "initrd")]
             DiceDataDescriptor::Writeable(write_state) => {
                 let data_as_slice = <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes_mut(
                     &mut write_state.data,
@@ -148,7 +141,6 @@ pub fn register(data: DiceData) {
         .expect("DiceDataDescriptor already registered");
 }
 
-#[cfg(feature = "initrd")]
 #[test]
 fn fd_permits_one_full_write() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
@@ -173,7 +165,6 @@ fn fd_permits_one_full_write() {
     assert!(fd.write(<RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(&layer1)).is_err());
 }
 
-#[cfg(feature = "initrd")]
 #[test]
 fn fd_supports_partial_writes() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();

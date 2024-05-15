@@ -66,7 +66,6 @@ rust_library(
     compile_data = ["src/boot/boot.s"],
     crate_features = [
         "virtio_console_channel",
-        "initrd",
     ],
     deps = _OAK_RESTRICTED_KERNEL_DEPS,
 )

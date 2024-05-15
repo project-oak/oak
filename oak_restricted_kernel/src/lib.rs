@@ -170,16 +170,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
-    #[cfg(feature = "initrd")]
     let ramdisk = info.ramdisk().expect("expected to find a ramdisk");
 
     // Physical frame allocator
-    mm::init(
-        info.e820_table(),
-        program_headers,
-        #[cfg(feature = "initrd")]
-        &ramdisk,
-    );
+    mm::init(info.e820_table(), program_headers, &ramdisk);
 
     // Note: `info` will not be valid after calling this!
     {
@@ -384,15 +378,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
-    #[cfg(not(feature = "initrd"))]
-    let mut channel =
-        get_channel(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
-
-    #[cfg(feature = "initrd")]
     let channel =
         get_channel(&kernel_args, GUEST_HOST_HEAP.get().unwrap(), acpi.as_mut(), sev_status);
 
-    #[cfg(feature = "initrd")]
     let application_bytes: Box<[u8]> = {
         let virt_addr = {
             let pt_guard = PAGE_TABLES.lock();
@@ -430,46 +418,14 @@ pub fn start_kernel(info: &BootParams) -> ! {
         owned_slice
     };
 
-    #[cfg(not(feature = "initrd"))]
-    let application_bytes: Box<[u8]> = {
-        // We need to load the application binary before we hand the channel over to the
-        // syscalls, which expose it to the user space.
-        info!("Loading application binary...");
-        oak_channel::basic_framed::receive_raw::<dyn Channel>(&mut *channel)
-            .expect("failed to load application binary from channel")
-            .into_boxed_slice()
-    };
-
     log::info!("Binary loaded, size: {}", application_bytes.len());
-
-    #[cfg(not(feature = "initrd"))]
-    let (derived_key, restricted_kernel_dice_data) = {
-        let app_digest =
-            oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
-        log::info!(
-            "Application digest (sha2-256): {}",
-            app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
-        );
-
-        let derived_key =
-            oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
-        let restricted_kernel_dice_data =
-            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
-
-        (derived_key, restricted_kernel_dice_data)
-    };
 
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
 
     syscall::enable_syscalls(
         channel,
-        #[cfg(feature = "initrd")]
         syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
-        #[cfg(not(feature = "initrd"))]
-        syscall::dice_data::DiceData::Layer1(Box::new(restricted_kernel_dice_data)),
-        #[cfg(not(feature = "initrd"))]
-        derived_key,
     );
 
     // Ensure new process is not dropped.
