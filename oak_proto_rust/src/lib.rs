@@ -62,4 +62,11 @@ pub mod oak {
             include_proto!("oak.functions.testing");
         }
     }
+
+    pub mod session {
+        pub mod v1 {
+            #![allow(dead_code)]
+            include_proto!("oak.session.v1");
+        }
+    }
 }
