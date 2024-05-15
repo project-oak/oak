@@ -23,6 +23,7 @@ extern crate std;
 
 pub mod attestation;
 pub mod config;
+pub mod handshake;
 mod session;
 
 pub use session::{ClientSession, ServerSession, Session};

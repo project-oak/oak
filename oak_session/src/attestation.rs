@@ -14,9 +14,14 @@
 // limitations under the License.
 //
 
+//! This module provides an implementation of the Attestation Provider, which
+//! handles remote attestation between two parties.
+
+use alloc::vec::Vec;
+
 use oak_proto_rust::oak::{
     attestation::v1::{AttestationResults, Endorsements, Evidence},
-    session::v1::EndorsedEvidence,
+    session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
 pub trait Attester {
@@ -29,4 +34,75 @@ pub trait AttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults>;
+}
+
+#[allow(dead_code)]
+struct AttestationProvider<'a> {
+    self_attesters: Vec<&'a dyn Attester>,
+    peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+}
+
+impl<'a> AttestationProvider<'a> {
+    pub fn new(
+        self_attesters: Vec<&'a dyn Attester>,
+        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+    ) -> Self {
+        Self { self_attesters, peer_verifiers }
+    }
+}
+
+/// Client-side Attestation Provider that initiates remote attestation with the
+/// server.
+#[allow(dead_code)]
+pub struct ClientAttestationProvider<'a> {
+    inner: AttestationProvider<'a>,
+}
+
+impl<'a> ClientAttestationProvider<'a> {
+    pub fn new(
+        self_attesters: Vec<&'a dyn Attester>,
+        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+    ) -> Self {
+        Self { inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    }
+
+    pub fn get_request(&self) -> anyhow::Result<AttestRequest> {
+        core::unimplemented!();
+    }
+
+    pub fn put_response(&self, _response: &AttestResponse) -> anyhow::Result<()> {
+        core::unimplemented!();
+    }
+
+    pub fn get_attestation_results(self) -> Option<AttestationResults> {
+        core::unimplemented!();
+    }
+}
+
+/// Server-side Attestation Provider that responds to the remote attestation
+/// request from the client.
+#[allow(dead_code)]
+pub struct ServerAttestationProvider<'a> {
+    inner: AttestationProvider<'a>,
+}
+
+impl<'a> ServerAttestationProvider<'a> {
+    pub fn new(
+        self_attesters: Vec<&'a dyn Attester>,
+        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+    ) -> Self {
+        Self { inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    }
+
+    pub fn put_request(&self, _request: &AttestRequest) -> anyhow::Result<()> {
+        core::unimplemented!();
+    }
+
+    pub fn get_response(&self) -> anyhow::Result<AttestResponse> {
+        core::unimplemented!();
+    }
+
+    pub fn get_attestation_results(self) -> Option<AttestationResults> {
+        core::unimplemented!();
+    }
 }
