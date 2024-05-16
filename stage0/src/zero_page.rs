@@ -70,45 +70,44 @@ impl ZeroPage {
     /// Returns the measurement (SHA2-384 digest) of the setup data if it was
     /// found, otherwise the measurement is all zeros.
     pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> Option<[u8; 32]> {
-        fw_cfg.get_setup_file().map(|file| {
-            let size = file.size();
-            // We temporarily copy the setup data to the end of available mapped virtual
-            // memory.
-            let start = find_suitable_dma_address(size, self.inner.e820_table())
-                .expect("no suitable DMA address available");
-            let address = crate::phys_to_virt(start);
+        let file = fw_cfg.get_setup_file()?;
+        let size = file.size();
+        // We temporarily copy the setup data to the end of available mapped virtual
+        // memory.
+        let start = find_suitable_dma_address(size, self.inner.e820_table())
+            .expect("no suitable DMA address available");
+        let address = crate::phys_to_virt(start);
 
-            // Safety: we have confirmed that the memory is backed by physical RAM and not
-            // currently used for anything else. We will overwrite all of it, so
-            // it does not have to be initialized.
-            let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
-            let actual_size = fw_cfg.read_file(&file, buf).expect("could not read setup data");
-            assert_eq!(actual_size, size, "setup data did not match expected size");
-            // The initial ram disk location and size are not constant. We will overwrite it
-            // later anyway, so we overwrite it with zeros before measuring so
-            // we can get consistent measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
-            // information on the  field offsets.
-            *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
-            *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
+        // Safety: we have confirmed that the memory is backed by physical RAM and not
+        // currently used for anything else. We will overwrite all of it, so
+        // it does not have to be initialized.
+        let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
+        let actual_size = fw_cfg.read_file(&file, buf).expect("could not read setup data");
+        assert_eq!(actual_size, size, "setup data did not match expected size");
+        // The initial ram disk location and size are not constant. We will overwrite it
+        // later anyway, so we overwrite it with zeros before measuring so
+        // we can get consistent measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
+        // information on the  field offsets.
+        *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
+        *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
 
-            let measurement = crate::measure_byte_slice(buf);
+        let measurement = crate::measure_byte_slice(buf);
 
-            // The header information starts at offset 0x01F1 from the start of the setup
-            // data.
-            let hdr_start = 0x1F1usize;
-            // We can determine the end of the setup header information by adding the value
-            // of the byte as offset 0x201 to the value 0x202.
-            let hdr_end = 0x202usize + (buf[0x201] as usize);
-            let src = &buf[hdr_start..hdr_end];
-            // If we are loading an older kernel, the setup header might be a bit shorter.
-            // New fields for more recent versions of the boot protocol are
-            // added to the end of the setup header and there is padding after
-            // header, so the resulting data stucture should still be understood
-            // correctly by the kernel.
-            let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
-            dest.copy_from_slice(src);
-            measurement
-        })
+        // The header information starts at offset 0x01F1 from the start of the setup
+        // data.
+        let hdr_start = 0x1F1usize;
+        // We can determine the end of the setup header information by adding the value
+        // of the byte as offset 0x201 to the value 0x202.
+        let hdr_end = 0x202usize + (buf[0x201] as usize);
+        let src = &buf[hdr_start..hdr_end];
+        // If we are loading an older kernel, the setup header might be a bit shorter.
+        // New fields for more recent versions of the boot protocol are
+        // added to the end of the setup header and there is padding after
+        // header, so the resulting data stucture should still be understood
+        // correctly by the kernel.
+        let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
+        dest.copy_from_slice(src);
+        Some(measurement)
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine)
