@@ -126,8 +126,8 @@ jobs:
 
           gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/binary"
           gcs_provenance_path="provenance/${GITHUB_SHA}/${package_name}/attestation.jsonl"
-          binary_url="https://storage.googleapis.com/${bucket}/${binary_path}"
-          provenance_url="https://storage.googleapis.com/${bucket}/${provenance_path}"
+          binary_url="https://storage.googleapis.com/${bucket}/${gcs_binary_path}"
+          provenance_url="https://storage.googleapis.com/${bucket}/${gcs_provenance_path}"
 
           gsutil cp "${binary_path}" "gs://${bucket}/${gcs_binary_path}"
           gsutil cp "${provenance_path}" "gs://${bucket}/${gcs_provenance_path}"
@@ -137,7 +137,6 @@ jobs:
             --header 'Content-Type: application/json' \
             --data "{ \"url\": \"${binary_url}\" }" \
             https://api.static.space/v1/snapshot
-
           curl --fail \
             --request POST \
             --header 'Content-Type: application/json' \
