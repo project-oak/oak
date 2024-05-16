@@ -69,6 +69,7 @@ jobs:
           set -o errexit
           set -o nounset
           set -o pipefail
+          gsutil --version
           echo "package_name: ${{ steps.parse.outputs.package-name }}"
           echo "binary_path: ${{ steps.parse.outputs.binary-path }}"
           echo "subject_path: ${{ steps.parse.outputs.subject-path }}"
@@ -106,20 +107,25 @@ jobs:
       # Upload binary and provenance to GCS and index via http://static.space
       # so that, regardless of the GCS bucket and path, it can easily be
       # located by its digest.
+      #
+      # TODO: b/339774247 - The filenames are hardwired for now so they don't
+      # collide with the upload from the other workflow (which doesn't use
+      # these names).
       - name: Upload
         id: upload
         run: |
           set -o errexit
           set -o nounset
           set -o pipefail
+          set -o xtrace
 
           bucket=oak-bins
           package_name=${{ steps.parse.outputs.package-name }}
           binary_path=${{ steps.parse.outputs.binary-path }}
           provenance_path=${{ steps.attest.outputs.bundle-path }}
 
-          gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/$(basename ${binary_path})"
-          gcs_provenance_path="provenance/${GITHUB_SHA}/${package_name}/$(basename ${provenance_path})"
+          gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/binary"
+          gcs_provenance_path="provenance/${GITHUB_SHA}/${package_name}/attestation.jsonl"
           binary_url="https://storage.googleapis.com/${bucket}/${binary_path}"
           provenance_url="https://storage.googleapis.com/${bucket}/${provenance_path}"
 
@@ -131,6 +137,7 @@ jobs:
             --header 'Content-Type: application/json' \
             --data "{ \"url\": \"${binary_url}\" }" \
             https://api.static.space/v1/snapshot
+
           curl --fail \
             --request POST \
             --header 'Content-Type: application/json' \
