@@ -170,6 +170,9 @@
                 export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2";
               '';
               packages = [
+                autoconf
+                autogen
+                automake
                 jdk11_headless
                 bazel
                 androidSdk

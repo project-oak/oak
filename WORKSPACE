@@ -172,9 +172,9 @@ android_sdk_repository(
 
 http_archive(
     name = "rules_foreign_cc",
-    sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
-    strip_prefix = "rules_foreign_cc-0.9.0",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.9.0.tar.gz",
+    sha256 = "5816f4198184a1e0e682d7e6b817331219929401e2f18358fac7f7b172737976",
+    strip_prefix = "rules_foreign_cc-0.10.0",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.10.0.tar.gz",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
@@ -350,6 +350,25 @@ load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencie
 crate_universe_dependencies(bootstrap = True)
 
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
+
+# Build jemalloc with bazel, so that we can provide it to the tikv-jemallocator build script.
+git_repository(
+    name = "jemalloc",
+    build_file = "//bazel:jemalloc.BUILD",
+    # jemalloc pointer for tikv-jemalloc-sys submodule pointer at 0.5.3
+    commit = "e13ca993e8ccb9ba9847cc330696e02839f328f7",
+
+    # Fix an issue when building jemalloc with gcc 10.3 (which is the version we
+    # currently use due to the aspect_gcc target)
+    # There's a target in the Makefile that uses the -MM flag, and
+    # when it does that, it doesn't include the $(CFLAGS).
+    # This results in __GNUC_PREREQ not being defined, which causes compiler
+    # failures.
+    # As a workaround, we patch that line in the Makefile.in to include the CFLAGS.
+    # TODO: b/341166977 Remove this when we can.
+    patch_cmds = ["sed -i '481s/-MM/$(CFLAGS) -MM/' Makefile.in"],
+    remote = "https://github.com/tikv/jemalloc",
+)
 
 # Default crate repository - some crates may require std.
 crates_repository(

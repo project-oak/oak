@@ -174,7 +174,7 @@ clang-tidy:
 bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio"
 
 bazel-ci:
-    bazel build --config=unsafe-fast-presubmit -- //...:all
+    bazel build --config=unsafe-fast-presubmit -- @jemalloc //...:all
     bazel test --config=unsafe-fast-presubmit -- //...:all
 
     # Some crates also need to be built for x86_64-unknown-none.
