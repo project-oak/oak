@@ -65,6 +65,13 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,6 +134,13 @@
         <span class="kw">pub mod </span>testing {
             <span class="kw">use </span>prost::Message;
             <span class="macro">include_proto!</span>(<span class="string">"oak.functions.testing"</span>);
+        }
+    }
+
+    <span class="kw">pub mod </span>session {
+        <span class="kw">pub mod </span>v1 {
+            <span class="attr">#![allow(dead_code)]
+            </span><span class="macro">include_proto!</span>(<span class="string">"oak.session.v1"</span>);
         }
     }
 }
