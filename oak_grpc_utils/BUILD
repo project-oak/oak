@@ -22,14 +22,9 @@ package(
 )
 
 rust_library(
-    name = "oak_virtio",
+    name = "oak_grpc_utils",
     srcs = glob(["src/**"]),
     deps = [
-        "//third_party/rust-hypervisor-firmware-virtio",
-        "@oak_crates_index//:strum",
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:x86_64",
+        "@oak_crates_index//:tonic-build",
     ],
 )

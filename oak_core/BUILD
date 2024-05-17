@@ -25,8 +25,8 @@ rust_library(
     name = "oak_core",
     srcs = glob(["src/**"]),
     deps = [
-        "@oak_crates_index//:getrandom",
         "@oak_crates_index//:lock_api",
         "@oak_crates_index//:spinning_top",
+        "@oak_no_std_crates_index//:getrandom",
     ],
 )

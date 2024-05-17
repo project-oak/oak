@@ -22,10 +22,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/containers/interfaces.proto",
             "../proto/key_provisioning/key_provisioning.proto",
             "../proto/containers/orchestrator_crypto.proto",
+            "../proto/attestation/endorsement.proto",
+            "../proto/attestation/evidence.proto",
+            "../proto/crypto/crypto.proto",
             "../proto/containers/hostlib_key_provisioning.proto",
             "../proto/session/messages.proto",
         ],
-        &[".."],
+        &[
+            "..",
+            // When building with Bazel, the build script doesn't automatically
+            // contain the information needed to find the well-known Google
+            // protos. So we need to include these paths here.
+            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
+        ],
         CodegenOptions { build_server: true, build_client: true, ..Default::default() },
     )?;
 
