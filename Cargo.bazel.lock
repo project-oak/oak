@@ -705,6 +705,7 @@ name = "direct-cargo-bazel-deps"
 version = "0.0.1"
 dependencies = [
  "acpi",
+ "aead",
  "aes-gcm",
  "aml",
  "anyhow",

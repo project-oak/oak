@@ -2614,6 +2614,7 @@ dependencies = [
 name = "oak_crypto"
 version = "0.1.0"
 dependencies = [
+ "aead",
  "aes-gcm",
  "anyhow",
  "async-trait",

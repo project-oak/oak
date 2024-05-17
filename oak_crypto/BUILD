@@ -33,6 +33,7 @@ rust_library(
     ],
     deps = [
         "//oak_proto_rust",
+        "@oak_crates_index//:aead",
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:ecdsa",

@@ -399,6 +399,7 @@ crates_repository(
     lockfile = "//:cargo-bazel-lock.json",  # Shares most contents with cargo_lockfile.
     packages = {
         "acpi": crate.spec(version = "*"),
+        "aead": crate.spec(version = "*"),
         "aes-gcm": crate.spec(
             default_features = False,
             features = [

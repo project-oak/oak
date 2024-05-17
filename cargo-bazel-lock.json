@@ -1,5 +1,5 @@
 {
-  "checksum": "c1ebf4c386191637042b041a412ef98947a11ed010d97b9808a43ef53467cddd",
+  "checksum": "452f3d48019e281e163f2eedbe30f2a65c93d237850779ef9383209df1373d78",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4310,6 +4310,10 @@
             {
               "id": "acpi 5.0.0",
               "target": "acpi"
+            },
+            {
+              "id": "aead 0.5.2",
+              "target": "aead"
             },
             {
               "id": "aes-gcm 0.10.3",
@@ -19296,6 +19300,7 @@
   },
   "direct_deps": [
     "acpi 5.0.0",
+    "aead 0.5.2",
     "aes-gcm 0.10.3",
     "aml 0.16.4",
     "anyhow 1.0.81",

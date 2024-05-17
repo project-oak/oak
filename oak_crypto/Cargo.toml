@@ -6,6 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+aead = { version = "*", default-features = false }
 aes-gcm = { version = "*", default-features = false, features = [
   "aes",
   "alloc",
