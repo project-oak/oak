@@ -527,6 +527,28 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -567,6 +589,10 @@
 <span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
 
 <span class="kw">use </span><span class="kw">crate</span>::alloc::{borrow::ToOwned, string::ToString};
+
+<span class="kw">const </span>AMD_SEV_SNP_TITLE: <span class="kw-2">&amp;</span>str = <span class="string">"AMD SEV-SNP"</span>;
+<span class="kw">const </span>INTEL_TDX_TITLE: <span class="kw-2">&amp;</span>str = <span class="string">"Intel TDX"</span>;
+<span class="kw">const </span>INSECURE_TEE_TITLE: <span class="kw-2">&amp;</span>str = <span class="string">"FAKE INSECURE"</span>;
 
 <span class="doccomment">/// Provides human readable explanations for attestation data.
 </span><span class="kw">pub trait </span>HumanReadableTitle {
@@ -640,11 +666,33 @@
     </span>for_each_node(value, <span class="kw-2">&amp;</span>modify_node);
 }
 
-<span class="kw">fn </span>get_tee_name(tee_report: <span class="kw-2">&amp;</span>Report) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-    <span class="kw">match </span>tee_report {
-        Report::SevSnp(<span class="kw">_</span>) =&gt; <span class="string">"AMD SEV-SNP"</span>,
-        Report::Tdx(<span class="kw">_</span>) =&gt; <span class="string">"Intel TDX"</span>,
-        Report::Fake(<span class="kw">_</span>) =&gt; <span class="string">"UNSAFE FAKE"</span>,
+<span class="kw">fn </span>get_tee_name_from_root_layer_evidence(
+    root_layer: <span class="kw-2">&amp;</span>RootLayerData,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, anyhow::Error&gt; {
+    <span class="kw">match </span>root_layer.report.as_ref().context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">? </span>{
+        Report::SevSnp(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(AMD_SEV_SNP_TITLE),
+        Report::Tdx(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(INTEL_TDX_TITLE),
+        Report::Fake(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(INSECURE_TEE_TITLE),
+    }
+}
+
+<span class="kw">fn </span>get_tee_name_from_root_layer_reference_values(
+    root_layer_reference_values: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
+) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
+    <span class="kw">match </span>root_layer_reference_values {
+        RootLayerReferenceValues { insecure: <span class="prelude-val">Some</span>(<span class="kw">_</span>), .. } =&gt; <span class="prelude-val">Ok</span>(INSECURE_TEE_TITLE.to_owned()),
+        RootLayerReferenceValues { amd_sev: <span class="prelude-val">Some</span>(<span class="kw">_</span>), intel_tdx: <span class="prelude-val">Some</span>(<span class="kw">_</span>), insecure: <span class="prelude-val">None </span>} =&gt; {
+            <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"{} or {}"</span>, AMD_SEV_SNP_TITLE, INTEL_TDX_TITLE))
+        }
+        RootLayerReferenceValues { amd_sev: <span class="prelude-val">None</span>, intel_tdx: <span class="prelude-val">Some</span>(<span class="kw">_</span>), insecure: <span class="prelude-val">None </span>} =&gt; {
+            <span class="prelude-val">Ok</span>(INTEL_TDX_TITLE.to_owned())
+        }
+        RootLayerReferenceValues { amd_sev: <span class="prelude-val">Some</span>(<span class="kw">_</span>), intel_tdx: <span class="prelude-val">None</span>, insecure: <span class="prelude-val">None </span>} =&gt; {
+            <span class="prelude-val">Ok</span>(AMD_SEV_SNP_TITLE.to_owned())
+        }
+        RootLayerReferenceValues { amd_sev: <span class="prelude-val">None</span>, intel_tdx: <span class="prelude-val">None</span>, insecure: <span class="prelude-val">None </span>} =&gt; {
+            <span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"no TEE value found in the reference values"</span>))
+        }
     }
 }
 
@@ -674,41 +722,37 @@
 
 <span class="kw">impl </span>HumanReadableTitle <span class="kw">for </span>OakRestrictedKernelData {
     <span class="kw">fn </span>title(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span>tee_report = <span class="self">self
-            </span>.root_layer
-            .as_ref()
-            .context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?
-            </span>.report
-            .as_ref()
-            .context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>tee_name = get_tee_name(tee_report);
+        <span class="kw">let </span>root_layer =
+            <span class="self">self</span>.root_layer.clone().context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tee_name = get_tee_name_from_root_layer_evidence(<span class="kw-2">&amp;</span>root_layer)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Restricted Kernel Stack in a {} TEE"</span>, tee_name))
     }
 }
 
 <span class="kw">impl </span>HumanReadableTitle <span class="kw">for </span>OakRestrictedKernelReferenceValues {
     <span class="kw">fn </span>title(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="prelude-val">Ok</span>(<span class="string">"Oak Restricted Kernel Stack"</span>.to_owned())
+        <span class="kw">let </span>root_layer =
+            <span class="self">self</span>.root_layer.as_ref().context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tee_name = get_tee_name_from_root_layer_reference_values(root_layer)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Restricted Kernel Stack in a {} TEE"</span>, tee_name))
     }
 }
 
 <span class="kw">impl </span>HumanReadableTitle <span class="kw">for </span>OakContainersData {
     <span class="kw">fn </span>title(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span>tee_report = <span class="self">self
-            </span>.root_layer
-            .clone()
-            .context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?
-            </span>.report
-            .clone()
-            .context(<span class="string">"unexpectedly unset report proto field"</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>tee_name = get_tee_name(<span class="kw-2">&amp;</span>tee_report);
-        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Evidence of the Oak Conatiners Stack in a {} TEE"</span>, tee_name))
+        <span class="kw">let </span>root_layer =
+            <span class="self">self</span>.root_layer.clone().context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tee_name = get_tee_name_from_root_layer_evidence(<span class="kw-2">&amp;</span>root_layer)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Containers Stack in a {} TEE"</span>, tee_name))
     }
 }
 
 <span class="kw">impl </span>HumanReadableTitle <span class="kw">for </span>OakContainersReferenceValues {
     <span class="kw">fn </span>title(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="prelude-val">Ok</span>(<span class="string">"Oak Conatiners Stack"</span>.to_owned())
+        <span class="kw">let </span>root_layer =
+            <span class="self">self</span>.root_layer.as_ref().context(<span class="string">"unexpectedly unset root_layer proto field"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tee_name = get_tee_name_from_root_layer_reference_values(root_layer)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">"Oak Containers Stack in a {} TEE"</span>, tee_name))
     }
 }
 
