@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, format};
+use alloc::{boxed::Box, format, string::String};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
@@ -29,6 +29,8 @@ use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use prost::{Message, Name};
+use prost_types::Any;
 use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3},
@@ -60,6 +62,10 @@ mod pic;
 mod sev;
 mod smp;
 mod zero_page;
+
+pub mod eventlog {
+    include!(concat!(env!("OUT_DIR"), "/eventlog.rs"));
+}
 
 type Measurement = [u8; 32];
 
@@ -339,10 +345,31 @@ pub fn rust64_start(encrypted: u64) -> ! {
         ),
         &crate::BOOT_ALLOC,
     ));
+
     // Reserve the memory containing the DICE data.
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,
         dice_data.as_bytes().len(),
+        E820EntryType::RESERVED,
+    ));
+
+    // Generate Stage0 Event Log data.
+    let mut stage0event = eventlog::Stage0Measurements::default();
+    stage0event.kernel_measurement = Some(kernel_info.measurement.as_bytes().to_vec());
+    stage0event.acpi_digest = Some(acpi_sha2_256_digest.as_bytes().to_vec());
+    stage0event.memory_map_digest = Some(memory_map_sha2_256_digest.as_bytes().to_vec());
+    stage0event.ram_disk_digest = Some(ram_disk_sha2_256_digest.as_bytes().to_vec());
+    stage0event.setup_data_digest = Some(setup_data_sha2_256_digest.as_bytes().to_vec());
+    stage0event.kernel_cmdline = Some(cmdline.clone());
+    let event_log = Box::leak(Box::new_in(
+        generate_event_log(stage0event),
+        &crate::BOOT_ALLOC,
+    ));
+    log::info!("event tag = {:?}", event_log);
+    // Reserve memory containing Eventlog Data.
+    zero_page.insert_e820_entry(BootE820Entry::new(
+        event_log.encode_to_vec().as_bytes().as_ptr() as usize,
+        event_log.encode_to_vec().as_bytes().len(),
         E820EntryType::RESERVED,
     ));
 
@@ -413,4 +440,34 @@ fn io_port_factory() -> PortFactoryWrapper {
     } else {
         PortFactoryWrapper::new_raw()
     }
+}
+
+const PACKAGE: &str = "google.protobuf";
+
+/// Compute the type URL for the given `google.protobuf` type, using
+/// `type.googleapis.com` as the authority for the URL.
+fn type_url_for<T: Name>() -> String {
+    format!("type.googleapis.com/{}.{}", T::PACKAGE, T::NAME)
+}
+
+impl Name for eventlog::Stage0Measurements {
+    const PACKAGE: &'static str = PACKAGE;
+    const NAME: &'static str = "Stage0";
+
+    fn type_url() -> String {
+        type_url_for::<Self>()
+    }
+}
+
+fn generate_event_log(measurements: eventlog::Stage0Measurements) -> eventlog::EventLog {
+    let mut event = eventlog::Event::default();
+    let mut str = String::new();
+    let any = Any::from_msg(&measurements);
+    str.push_str("Stage0");
+    let m = Some(str);
+    event.tag = m;
+    event.event = Some(any.unwrap());
+    let mut eventlog = eventlog::EventLog::default();
+    eventlog.events.push(event);
+    eventlog
 }
