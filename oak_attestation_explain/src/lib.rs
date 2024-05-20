@@ -24,6 +24,7 @@ extern crate std;
 use alloc::{format, string::String};
 
 use anyhow::{Context, Result};
+use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::{
     attestation::v1::{
         root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
@@ -85,8 +86,9 @@ fn make_reference_values_human_readable(value: &mut serde_yaml::Value) {
                     // The proto3 JSON mapping spec uses base64 encoding.
                     let base64_encoded_hash =
                         hash_value.as_str().expect("validated as string in prior conditional");
-                    let hash =
-                        base64::decode(base64_encoded_hash).expect("invalid base64 digest hash");
+                    let hash = BASE64_STANDARD
+                        .decode(base64_encoded_hash)
+                        .expect("invalid base64 digest hash");
                     *hash_value = serde_yaml::Value::String(hex::encode(hash));
                 })
             };
