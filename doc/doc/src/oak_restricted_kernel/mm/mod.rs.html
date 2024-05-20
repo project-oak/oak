@@ -391,18 +391,6 @@
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -421,15 +409,12 @@
 
 </span><span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
-<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-</span><span class="kw">use </span>oak_linux_boot_params::Ramdisk;
-<span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
+<span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 <span class="kw">use </span>oak_sev_guest::msr::{get_sev_status, SevStatus};
-<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-</span><span class="kw">use </span>x86_64::structures::paging::frame::PhysFrameRange;
 <span class="kw">use </span>x86_64::{
     addr::{align_down, align_up},
     structures::paging::{
+        frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame,
         Size2MiB, Size4KiB,
@@ -573,11 +558,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt;;
 }
 
-<span class="kw">pub fn </span>init(
-    memory_map: <span class="kw-2">&amp;</span>[BootE820Entry],
-    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
-    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)] </span>ramdisk: <span class="kw-2">&amp;</span>Ramdisk,
-) {
+<span class="kw">pub fn </span>init(memory_map: <span class="kw-2">&amp;</span>[BootE820Entry], program_headers: <span class="kw-2">&amp;</span>[ProgramHeader], ramdisk: <span class="kw-2">&amp;</span>Ramdisk) {
     <span class="kw">let </span><span class="kw-2">mut </span>alloc = FRAME_ALLOCATOR.lock();
 
     <span class="comment">/* Step 1: mark all RAM as available (event though it may contain data!) */
@@ -653,21 +634,16 @@
             alloc.mark_valid(range, <span class="bool-val">false</span>)
         });
 
-    <span class="comment">// Thirdly, mark the ramdisk as reserved.
-    </span><span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-    </span>{
-        <span class="kw">let </span>ramdisk_range = ramdisk_range(ramdisk);
-        <span class="macro">info!</span>(
-            <span class="string">"marking [{:#018x}..{:#018x}) as reserved (ramdisk)"</span>,
-            ramdisk_range.start.start_address().as_u64(),
-            ramdisk_range.end.start_address().as_u64()
-        );
-        alloc.mark_valid(ramdisk_range, <span class="bool-val">false</span>);
-    };
+    <span class="kw">let </span>ramdisk_range = ramdisk_range(ramdisk);
+    <span class="macro">info!</span>(
+        <span class="string">"marking [{:#018x}..{:#018x}) as reserved (ramdisk)"</span>,
+        ramdisk_range.start.start_address().as_u64(),
+        ramdisk_range.end.start_address().as_u64()
+    );
+    alloc.mark_valid(ramdisk_range, <span class="bool-val">false</span>);
 }
 
-<span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-</span><span class="kw">pub fn </span>ramdisk_range(ramdisk: <span class="kw-2">&amp;</span>Ramdisk) -&gt; PhysFrameRange&lt;Size2MiB&gt; {
+<span class="kw">pub fn </span>ramdisk_range(ramdisk: <span class="kw-2">&amp;</span>Ramdisk) -&gt; PhysFrameRange&lt;Size2MiB&gt; {
     PhysFrame::range(
         PhysFrame::&lt;x86_64::structures::paging::Size2MiB&gt;::from_start_address(PhysAddr::new(
             align_down(ramdisk.addr.into(), Size2MiB::SIZE),

@@ -95,21 +95,6 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -141,18 +126,11 @@
 
 <span class="kw">enum </span>DerivedKeyDescriptor {
     Readable(DerivedKeyState),
-    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-    </span>Writeable(DerivedKeyState),
+    Writeable(DerivedKeyState),
 }
 
 <span class="kw">impl </span>DerivedKeyDescriptor {
-    <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
-    </span><span class="kw">fn </span>new(key: DerivedKey) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::Readable(DerivedKeyState { index: <span class="number">0</span>, data: key })
-    }
-
-    <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-    </span><span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Writeable(DerivedKeyState::default())
     }
 }
@@ -160,8 +138,7 @@
 <span class="kw">impl </span>FileDescriptor <span class="kw">for </span>DerivedKeyDescriptor {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, oak_restricted_kernel_interface::Errno&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-            </span>DerivedKeyDescriptor::Writeable(_write_state) =&gt; <span class="prelude-val">Err</span>(Errno::EINVAL),
+            DerivedKeyDescriptor::Writeable(_write_state) =&gt; <span class="prelude-val">Err</span>(Errno::EINVAL),
             DerivedKeyDescriptor::Readable(read_state) =&gt; {
                 <span class="kw">let </span>data_as_slice = read_state.data.as_mut_slice();
                 <span class="kw">let </span>length = copy_max_slice(<span class="kw-2">&amp;</span>data_as_slice[read_state.index..], buf);
@@ -174,8 +151,7 @@
     <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, oak_restricted_kernel_interface::Errno&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             DerivedKeyDescriptor::Readable(_read_state) =&gt; <span class="prelude-val">Err</span>(Errno::EINVAL),
-            <span class="attr">#[cfg(feature = <span class="string">"initrd"</span>)]
-            </span>DerivedKeyDescriptor::Writeable(write_state) =&gt; {
+            DerivedKeyDescriptor::Writeable(write_state) =&gt; {
                 <span class="kw">let </span>data_as_slice =
                     &lt;DerivedKey <span class="kw">as </span>zerocopy::AsBytes&gt;::as_bytes_mut(<span class="kw-2">&amp;mut </span>write_state.data);
 
@@ -209,15 +185,9 @@
 }
 
 <span class="doccomment">/// Registers a file descriptor for reading a derived key (0x21)
-</span><span class="kw">pub fn </span>register(<span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))] </span>key: DerivedKey) {
-    <span class="kw">super</span>::fd::register(
-        DERIVED_KEY_FD,
-        Box::new(DerivedKeyDescriptor::new(
-            <span class="attr">#[cfg(not(feature = <span class="string">"initrd"</span>))]
-            </span>key,
-        )),
-    )
-    .map_err(|<span class="kw">_</span>| ()) <span class="comment">// throw away the box
-    </span>.expect(<span class="string">"DerivedKeyDescriptor already registered"</span>);
+</span><span class="kw">pub fn </span>register() {
+    <span class="kw">super</span>::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new()))
+        .map_err(|<span class="kw">_</span>| ()) <span class="comment">// throw away the box
+        </span>.expect(<span class="string">"DerivedKeyDescriptor already registered"</span>);
 }
 </code></pre></div></section></main></body></html>
