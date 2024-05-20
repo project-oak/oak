@@ -22,7 +22,7 @@ use crate::internal::*;
 static PATTERN: Lazy<Regex> =
     // Break up "TO" and "DO" to avoid false positives on this code.
     Lazy::new(|| {
-        Regex::new(&format!(r"({}DO\(#\d+\)|{}DO: .+ - .+\.)", "TO", "TO"))
+        Regex::new(&format!(r"({}DO\(#\d+\)|{}DO: .+ - \w+)", "TO", "TO"))
             .expect("couldn't parse regex")
     });
 
@@ -76,8 +76,6 @@ mod tests {
         assert!(!CheckTodo::is_invalid_todo(&format!("{}DO(#123)", "TO")));
 
         assert!(!CheckTodo::is_invalid_todo(&format!("{}DO: b/123 - do something.", "TO")));
-        // Missing full stop.
-        assert!(CheckTodo::is_invalid_todo(&format!("{}DO: b/123 - do something", "TO")));
         // Missing link separator.
         assert!(CheckTodo::is_invalid_todo(&format!("{}DO: do something.", "TO")));
         // Empty link.
