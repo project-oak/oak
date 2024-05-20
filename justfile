@@ -157,7 +157,7 @@ all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_v
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_init_rd_wrapper stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
-    RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
+    OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
 kokoro_run_tests: all_ensure_no_std
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'

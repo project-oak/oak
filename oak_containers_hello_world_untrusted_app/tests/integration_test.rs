@@ -15,7 +15,7 @@
 
 //! Integration test that launches the trusted app and invokes it.
 
-use std::sync::Once;
+use std::{env, sync::Once};
 
 use oak_client::verifier::{AttestationVerifier, InsecureAttestationVerifier};
 use oak_containers_launcher::{proto::oak::key_provisioning::v1::GetGroupKeysRequest, Args};
@@ -33,9 +33,14 @@ fn init_logging() {
 }
 
 static INIT_DEPENDENCIES: Lazy<anyhow::Result<()>> = Lazy::new(|| {
-    // This takes a long time, but we want to make sure everything it up to date.
-    // TODO(#4195): Stop dependencies from always being rebuilt.
-    duct::cmd!("just", "all_oak_containers_binaries",).dir(env!("WORKSPACE_ROOT")).run()?;
+    if env::var("OAK_CONTAINERS_BINARIES_ALREADY_BUILT").unwrap_or_default().is_empty() {
+        log::info!("Rebuilding all_oak_containers_binaries.");
+        log::info!(
+            "To prevent this, set the OAK_CONTAINERS_BINARIES_ALREADY_BUILT environment variable."
+        );
+        duct::cmd!("just", "all_oak_containers_binaries",).dir(env!("WORKSPACE_ROOT")).run()?;
+    }
+
     Ok(())
 });
 
