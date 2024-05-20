@@ -38,24 +38,24 @@ use crate::channel::{Connector, ConnectorHandle};
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the VMM binary to execute.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub kernel: PathBuf,
 
     /// Path to the Oak Functions application binary to be loaded into the
     /// enclave.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub app_binary: Option<PathBuf>,
 
     /// Path to the BIOS image to use.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub bios_binary: PathBuf,
 
     /// Port to use for debugging with gdb
-    #[arg(long = "gdb")]
+    #[arg(long, value_name = "PORT")]
     pub gdb: Option<u16>,
 
     /// How much memory to give to the enclave binary, e.g., 256M (M stands for
@@ -64,8 +64,13 @@ pub struct Params {
     pub memory_size: Option<String>,
 
     /// Path to the initrd image to use.
-    #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
+    #[arg(long, value_parser = path_exists, requires_all = &["kernel"], value_name = "FILE")]
     pub initrd: PathBuf,
+
+    /// Pass the specified host PCI device through to the virtual machine using
+    /// VFIO.
+    #[arg(long, value_name = "ADDRESS")]
+    pub pci_passthrough: Option<String>,
 }
 
 /// Checks if file with a given path exists.
@@ -144,6 +149,9 @@ impl Instance {
         cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
+        if let Some(pci_passthrough) = params.pci_passthrough {
+            cmd.args(["-device", format!("vfio-pci,host={pci_passthrough}").as_str()]);
+        }
         // Use stage0 as the BIOS.
         cmd.args(["-bios", params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
         // stage0 accoutrements: kernel that's compatible with the linux boot protocol

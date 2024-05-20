@@ -32,19 +32,19 @@ use crate::path_exists;
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the VMM binary to execute.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub vmm_binary: PathBuf,
 
     /// Path to the stage0 image to use.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub stage0_binary: PathBuf,
 
     /// Path to the Linux kernel file to use.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub kernel: PathBuf,
 
     /// Path to the initrd image to use.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, value_name = "FILE")]
     pub initrd: PathBuf,
 
     /// How much memory to give to the enclave binary, e.g., 256M (M stands for
@@ -62,13 +62,18 @@ pub struct Params {
 
     /// Optional port where QEMU will start a telnet server for the serial
     /// console; useful for interactive debugging.
-    #[arg(long)]
+    #[arg(long, value_name = "PORT")]
     pub telnet_console: Option<u16>,
 
     /// Optional virtio guest CID for virtio-vsock.
     /// Warning: This CID needs to be globally unique on the whole host!
     #[arg(long)]
     pub virtio_guest_cid: Option<u32>,
+
+    /// Pass the specified host PCI device through to the virtual machine using
+    /// VFIO.
+    #[arg(long, value_name = "ADDRESS")]
+    pub pci_passthrough: Option<String>,
 }
 
 impl Params {
@@ -88,6 +93,7 @@ impl Params {
             ramdrive_size: 3_000_000,
             telnet_console: None,
             virtio_guest_cid: None,
+            pci_passthrough: None,
         }
     }
 }
@@ -170,6 +176,9 @@ impl Qemu {
                 "-device",
                 &format!("vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0"),
             ]);
+        }
+        if let Some(pci_passthrough) = params.pci_passthrough {
+            cmd.args(["-device", format!("vfio-pci,host={pci_passthrough}").as_str()]);
         }
         // And yes, use stage0 as the BIOS.
         cmd.args(["-bios", params.stage0_binary.into_os_string().into_string().unwrap().as_str()]);
