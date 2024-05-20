@@ -5,6 +5,8 @@
 # - https://github.com/casey/just
 # - https://just.systems/man/en/
 
+export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { "--config=ci" }
+
 key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
@@ -87,6 +89,7 @@ oak_containers_kernel:
         oak_containers_kernel/target/bzImage
 
 oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
+    echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
     mkdir --parents oak_containers_system_image/target/image_binaries
     cp --preserve=timestamps \
@@ -96,7 +99,7 @@ oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
         oak_containers_syslogd/target/oak_containers_syslogd_patched \
         oak_containers_system_image/target/image_binaries/oak_containers_syslogd
     # Build and compress.
-    bazel build oak_containers_system_image
+    bazel build $BAZEL_CONFIG_FLAG oak_containers_system_image --build_tag_filters=+noci
     cp --preserve=timestamps \
         bazel-bin/oak_containers_system_image/oak_containers_system_image.tar \
         oak_containers_system_image/target/image.tar
@@ -130,7 +133,8 @@ oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
 
 cc_oak_containers_hello_world_container_bundle_tar:
-    env bazel build -c opt //cc/containers/hello_world_trusted_app:bundle.tar
+    echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
+    env bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt //cc/containers/hello_world_trusted_app:bundle.tar
 
 oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
@@ -163,7 +167,7 @@ kokoro_run_tests: all_ensure_no_std
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:
-    bazel build --config=clang-tidy //cc/...
+    bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
 bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio"
 

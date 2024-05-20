@@ -13,6 +13,8 @@ mkdir -p './cargo-cache'
 docker_run_flags=(
   '--rm'
   '--tty'
+  '--env=CI'
+  '--env=KOKORO_ARTIFACTS_DIR'
   '--env=TERM=xterm-256color'
   '--env=OAK_KVM_TESTS'
   '--env=RUST_BACKTRACE'
