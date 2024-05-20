@@ -672,6 +672,9 @@
 <a href="#670" id="670">670</a>
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1313,6 +1316,9 @@
     // request attestation reports or derived sealing keys for VMPL0. This stops
     // later boot stages from creating counterfeit DICE chains.
     </span>key.zeroize();
+    <span class="comment">// The sev-guest driver in the upstream kernel does not initialize with such
+    // an empty vmpck. So we fill it up with 0xFF.
+    </span>key.fill(<span class="number">0xFF</span>);
     <span class="prelude-val">Ok</span>(())
 }
 
