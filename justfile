@@ -88,6 +88,9 @@ oak_containers_kernel:
         oak_containers_kernel/bin/subjects \
         oak_containers_kernel/target/bzImage
 
+oak_containers_launcher:
+    env cargo build --release --package='oak_containers_launcher'
+
 oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
