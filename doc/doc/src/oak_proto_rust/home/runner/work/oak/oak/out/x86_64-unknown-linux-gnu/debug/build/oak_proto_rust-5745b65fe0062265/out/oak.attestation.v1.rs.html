@@ -1142,6 +1142,11 @@
 <a href="#1140" id="1140">1140</a>
 <a href="#1141" id="1141">1141</a>
 <a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -2146,13 +2151,18 @@
     <span class="doccomment">/// The custom bytes that were passed to the report when it was requested.
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>report_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Current TCB Version.
+    <span class="doccomment">/// This represents the actual, up-to-date TCB version of the currently running
+    /// SEV-SNP firmware. It reflects the latest security patches and updates
+    /// applied to the firmware.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>current_tcb: ::core::option::Option&lt;TcbVersion&gt;,
-    <span class="doccomment">/// Reported TCB version (the version can be lower than current_tcb in case of
-    /// a provisional update. See
+    <span class="doccomment">/// This is the TCB version reported in attestation reports. It can be set
+    /// independently from the current_tcb by the hypervisor. This allows for a
+    /// smoother transition when updating firmware, giving guest owners time to
+    /// retrieve new VCEK certificates before switching to a new VCEK derived from
+    /// the updated TCB.
+    /// See Section 3.4 of the AMD SEV-SNP specification:
     /// &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf&gt;
-    /// (Section 3.4) for more detail).
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>reported_tcb: ::core::option::Option&lt;TcbVersion&gt;,
     <span class="doccomment">/// Whether the VM was booted in debug mode.
