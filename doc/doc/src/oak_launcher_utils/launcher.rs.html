@@ -246,6 +246,14 @@
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -286,24 +294,24 @@
 </span><span class="attr">#[derive(Parser, Clone, Debug, PartialEq)]
 </span><span class="kw">pub struct </span>Params {
     <span class="doccomment">/// Path to the VMM binary to execute.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, value_name = <span class="string">"FILE"</span>)]
     </span><span class="kw">pub </span>vmm_binary: PathBuf,
 
     <span class="doccomment">/// Path to the enclave binary to load into the VM.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, value_name = <span class="string">"FILE"</span>)]
     </span><span class="kw">pub </span>kernel: PathBuf,
 
     <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the
     /// enclave.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, value_name = <span class="string">"FILE"</span>)]
     </span><span class="kw">pub </span>app_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 
     <span class="doccomment">/// Path to the BIOS image to use.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, value_name = <span class="string">"FILE"</span>)]
     </span><span class="kw">pub </span>bios_binary: PathBuf,
 
     <span class="doccomment">/// Port to use for debugging with gdb
-    </span><span class="attr">#[arg(long = <span class="string">"gdb"</span>)]
+    </span><span class="attr">#[arg(long, value_name = <span class="string">"PORT"</span>)]
     </span><span class="kw">pub </span>gdb: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
     <span class="doccomment">/// How much memory to give to the enclave binary, e.g., 256M (M stands for
@@ -312,8 +320,13 @@
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
     <span class="doccomment">/// Path to the initrd image to use.
-    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">"kernel"</span>]</span>)]
+    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">"kernel"</span>]</span>, value_name = <span class="string">"FILE"</span>)]
     <span class="kw">pub </span>initrd: PathBuf,
+
+    <span class="doccomment">/// Pass the specified host PCI device through to the virtual machine using
+    /// VFIO.
+    </span><span class="attr">#[arg(long, value_name = <span class="string">"ADDRESS"</span>)]
+    </span><span class="kw">pub </span>pci_passthrough: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="doccomment">/// Checks if file with a given path exists.
@@ -392,6 +405,9 @@
         </span>cmd.args([<span class="string">"-chardev"</span>, <span class="macro">format!</span>(<span class="string">"socket,id=commsock,fd={guest_socket_fd}"</span>).as_str()]);
         cmd.args([<span class="string">"-device"</span>, <span class="string">"virtio-serial-device,max_ports=1"</span>]);
         cmd.args([<span class="string">"-device"</span>, <span class="string">"virtconsole,chardev=commsock"</span>]);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(pci_passthrough) = params.pci_passthrough {
+            cmd.args([<span class="string">"-device"</span>, <span class="macro">format!</span>(<span class="string">"vfio-pci,host={pci_passthrough}"</span>).as_str()]);
+        }
         <span class="comment">// Use stage0 as the BIOS.
         </span>cmd.args([<span class="string">"-bios"</span>, params.bios_binary.into_os_string().into_string().unwrap().as_str()]);
         <span class="comment">// stage0 accoutrements: kernel that's compatible with the linux boot protocol
