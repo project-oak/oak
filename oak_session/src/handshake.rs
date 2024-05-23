@@ -17,12 +17,12 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-use alloc::vec::Vec;
-
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
     session::v1::{HandshakeRequest, HandshakeResponse},
 };
+
+use crate::{config::HandshakerConfig, ProtocolEngine};
 
 pub trait EncryptionKeyHandle {
     fn derive_session_keys(
@@ -34,74 +34,73 @@ pub trait EncryptionKeyHandle {
 
 pub enum HandshakeType {
     NoiseKK,
+    NoiseKN,
     NoiseNK,
+}
+
+pub trait Handshaker {
+    fn derive_session_keys(self) -> Option<SessionKeys>;
 }
 
 /// Client-side Handshaker that initiates the crypto handshake with the server.
 #[allow(dead_code)]
 pub struct ClientHandshaker<'a> {
-    handshake_type: HandshakeType,
-    self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
-    peer_static_public_key: Option<Vec<u8>>,
+    handshaker_config: HandshakerConfig<'a>,
 }
 
 impl<'a> ClientHandshaker<'a> {
-    pub fn new(
-        handshake_type: HandshakeType,
-        self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
-        peer_static_public_key: Option<&[u8]>,
-    ) -> Self {
-        Self {
-            handshake_type,
-            self_static_private_key,
-            peer_static_public_key: peer_static_public_key.map(|k| k.to_vec()),
-        }
+    pub fn new(handshaker_config: HandshakerConfig<'a>) -> Self {
+        Self { handshaker_config }
     }
+}
 
-    pub fn get_request(&mut self) -> anyhow::Result<HandshakeRequest> {
-        core::unimplemented!();
-    }
-
-    pub fn put_response(&mut self, _response: HandshakeResponse) -> anyhow::Result<()> {
-        core::unimplemented!();
-    }
-
-    pub fn derive_session_keys(self) -> Option<SessionKeys> {
+impl<'a> Handshaker for ClientHandshaker<'a> {
+    fn derive_session_keys(self) -> Option<SessionKeys> {
         core::unimplemented!();
     }
 }
 
-/// Server-side Attestation Provider that responds to the crypto handshake
-/// request from the client.
+impl<'a> ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker<'a> {
+    fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
+        core::unimplemented!();
+    }
+
+    fn put_incoming_message(
+        &mut self,
+        _incoming_message: &HandshakeResponse,
+    ) -> anyhow::Result<Option<()>> {
+        core::unimplemented!();
+    }
+}
+
+/// Server-side Handshaker that responds to the crypto handshake request from
+/// the client.
 #[allow(dead_code)]
 pub struct ServerHandshaker<'a> {
-    handshake_type: HandshakeType,
-    self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
-    peer_static_public_key: Option<Vec<u8>>,
+    handshaker_config: HandshakerConfig<'a>,
 }
 
 impl<'a> ServerHandshaker<'a> {
-    pub fn new(
-        handshake_type: HandshakeType,
-        self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
-        peer_static_public_key: Option<&[u8]>,
-    ) -> Self {
-        Self {
-            handshake_type,
-            self_static_private_key,
-            peer_static_public_key: peer_static_public_key.map(|k| k.to_vec()),
-        }
+    pub fn new(handshaker_config: HandshakerConfig<'a>) -> Self {
+        Self { handshaker_config }
     }
+}
 
-    pub fn put_request(&mut self, _request: HandshakeRequest) -> anyhow::Result<()> {
+impl<'a> Handshaker for ServerHandshaker<'a> {
+    fn derive_session_keys(self) -> Option<SessionKeys> {
+        core::unimplemented!();
+    }
+}
+
+impl<'a> ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker<'a> {
+    fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeResponse>> {
         core::unimplemented!();
     }
 
-    pub fn get_response(&mut self) -> anyhow::Result<HandshakeResponse> {
-        core::unimplemented!();
-    }
-
-    pub fn derive_session_keys(self) -> Option<SessionKeys> {
+    fn put_incoming_message(
+        &mut self,
+        _incoming_message: &HandshakeRequest,
+    ) -> anyhow::Result<Option<()>> {
         core::unimplemented!();
     }
 }

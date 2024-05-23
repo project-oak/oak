@@ -14,40 +14,77 @@
 // limitations under the License.
 //
 
-use crate::attestation::{AttestationVerifier, Attester};
+use alloc::{vec, vec::Vec};
 
-#[derive(Default)]
+use crate::{
+    attestation::{AttestationType, AttestationVerifier, Attester},
+    handshake::{EncryptionKeyHandle, HandshakeType},
+};
+
+#[allow(dead_code)]
 pub struct SessionConfig<'a> {
-    self_attester: Option<&'a dyn Attester>,
-    peer_verifier: Option<&'a dyn AttestationVerifier>,
+    attestation_provider_config: AttestationProviderConfig<'a>,
+    handshaker_config: HandshakerConfig<'a>,
 }
 
 impl<'a> SessionConfig<'a> {
-    pub fn builder() -> SessionConfigBuilder<'a> {
-        SessionConfigBuilder::default()
+    pub fn builder(attestation_type: AttestationType) -> SessionConfigBuilder<'a> {
+        SessionConfigBuilder::new(attestation_type)
     }
 }
 
-#[derive(Default)]
 pub struct SessionConfigBuilder<'a> {
     config: SessionConfig<'a>,
 }
 
 impl<'a> SessionConfigBuilder<'a> {
-    pub fn set_self_attester(mut self, self_attester: &'a dyn Attester) -> Self {
-        if self.config.self_attester.is_none() {
-            self.config.self_attester = Some(self_attester);
+    fn new(attestation_type: AttestationType) -> Self {
+        let handshake_type = match attestation_type {
+            AttestationType::Bidirectional => HandshakeType::NoiseKK,
+            AttestationType::SelfUnidirectional => HandshakeType::NoiseKN,
+            AttestationType::PeerUnidirectional => HandshakeType::NoiseNK,
+        };
+
+        let attestation_provider_config = AttestationProviderConfig {
+            attestation_type,
+            self_attesters: vec![],
+            peer_verifiers: vec![],
+        };
+
+        let handshaker_config = HandshakerConfig {
+            handshake_type,
+            self_static_private_key: None,
+            peer_static_public_key: None,
+        };
+
+        let config = SessionConfig { attestation_provider_config, handshaker_config };
+        Self { config }
+    }
+
+    pub fn add_self_attester(mut self, attester: &'a dyn Attester) -> Self {
+        self.config.attestation_provider_config.self_attesters.push(attester);
+        self
+    }
+
+    pub fn add_peer_verifier(mut self, verifier: &'a dyn AttestationVerifier) -> Self {
+        self.config.attestation_provider_config.peer_verifiers.push(verifier);
+        self
+    }
+
+    pub fn set_self_private_key(mut self, private_key: &'a dyn EncryptionKeyHandle) -> Self {
+        if self.config.handshaker_config.self_static_private_key.is_none() {
+            self.config.handshaker_config.self_static_private_key = Some(private_key);
         } else {
-            panic!("self attester has already been set");
+            panic!("self private key has already been set");
         }
         self
     }
 
-    pub fn set_peer_verifier(mut self, peer_verifier: &'a dyn AttestationVerifier) -> Self {
-        if self.config.peer_verifier.is_none() {
-            self.config.peer_verifier = Some(peer_verifier);
+    pub fn set_peer_static_public_key(mut self, public_key: &[u8]) -> Self {
+        if self.config.handshaker_config.peer_static_public_key.is_none() {
+            self.config.handshaker_config.peer_static_public_key = Some(public_key.to_vec());
         } else {
-            panic!("peer verifier has already been set");
+            panic!("peer public key has already been set");
         }
         self
     }
@@ -55,4 +92,18 @@ impl<'a> SessionConfigBuilder<'a> {
     pub fn build(self) -> SessionConfig<'a> {
         self.config
     }
+}
+
+#[allow(dead_code)]
+pub struct AttestationProviderConfig<'a> {
+    attestation_type: AttestationType,
+    self_attesters: Vec<&'a dyn Attester>,
+    peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+}
+
+#[allow(dead_code)]
+pub struct HandshakerConfig<'a> {
+    handshake_type: HandshakeType,
+    self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
+    peer_static_public_key: Option<Vec<u8>>,
 }

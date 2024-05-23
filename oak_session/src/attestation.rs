@@ -17,12 +17,12 @@
 //! This module provides an implementation of the Attestation Provider, which
 //! handles remote attestation between two parties.
 
-use alloc::vec::Vec;
-
 use oak_proto_rust::oak::{
     attestation::v1::{AttestationResults, Endorsements, Evidence},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
+
+use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
 pub trait Attester {
     fn get_endorsed_evidence(&self) -> anyhow::Result<EndorsedEvidence>;
@@ -36,45 +36,52 @@ pub trait AttestationVerifier {
     ) -> anyhow::Result<AttestationResults>;
 }
 
-#[allow(dead_code)]
-struct AttestationProvider<'a> {
-    self_attesters: Vec<&'a dyn Attester>,
-    peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+/// Configuration of the attestation behavior that the AttestationProtiver will
+/// perform between two parties: Client and Server.
+///
+/// When configuring the Client: "Self" is the Client and "Peer" is the Server.
+/// When configuring the Server: "Self" is the Server and "Peer" is the Client.
+pub enum AttestationType {
+    /// Both parties attest each other.
+    Bidirectional,
+    /// "Self" attests itself to the "Peer".
+    SelfUnidirectional,
+    /// "Peer" attests itself to the "Self".
+    PeerUnidirectional,
 }
 
-impl<'a> AttestationProvider<'a> {
-    pub fn new(
-        self_attesters: Vec<&'a dyn Attester>,
-        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
-    ) -> Self {
-        Self { self_attesters, peer_verifiers }
-    }
+pub trait AttestationProvider {
+    fn get_attestation_results(self) -> Option<AttestationResults>;
 }
 
 /// Client-side Attestation Provider that initiates remote attestation with the
 /// server.
 #[allow(dead_code)]
 pub struct ClientAttestationProvider<'a> {
-    inner: AttestationProvider<'a>,
+    config: AttestationProviderConfig<'a>,
 }
 
 impl<'a> ClientAttestationProvider<'a> {
-    pub fn new(
-        self_attesters: Vec<&'a dyn Attester>,
-        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
-    ) -> Self {
-        Self { inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    pub fn new(config: AttestationProviderConfig<'a>) -> Self {
+        Self { config }
     }
+}
 
-    pub fn get_request(&self) -> anyhow::Result<AttestRequest> {
+impl<'a> AttestationProvider for ClientAttestationProvider<'a> {
+    fn get_attestation_results(self) -> Option<AttestationResults> {
+        core::unimplemented!();
+    }
+}
+
+impl<'a> ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider<'a> {
+    fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
         core::unimplemented!();
     }
 
-    pub fn put_response(&self, _response: &AttestResponse) -> anyhow::Result<()> {
-        core::unimplemented!();
-    }
-
-    pub fn get_attestation_results(self) -> Option<AttestationResults> {
+    fn put_incoming_message(
+        &mut self,
+        _incoming_message: &AttestResponse,
+    ) -> anyhow::Result<Option<()>> {
         core::unimplemented!();
     }
 }
@@ -83,26 +90,30 @@ impl<'a> ClientAttestationProvider<'a> {
 /// request from the client.
 #[allow(dead_code)]
 pub struct ServerAttestationProvider<'a> {
-    inner: AttestationProvider<'a>,
+    config: AttestationProviderConfig<'a>,
 }
 
 impl<'a> ServerAttestationProvider<'a> {
-    pub fn new(
-        self_attesters: Vec<&'a dyn Attester>,
-        peer_verifiers: Vec<&'a dyn AttestationVerifier>,
-    ) -> Self {
-        Self { inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    pub fn new(config: AttestationProviderConfig<'a>) -> Self {
+        Self { config }
     }
+}
 
-    pub fn put_request(&self, _request: &AttestRequest) -> anyhow::Result<()> {
+impl<'a> AttestationProvider for ServerAttestationProvider<'a> {
+    fn get_attestation_results(self) -> Option<AttestationResults> {
+        core::unimplemented!();
+    }
+}
+
+impl<'a> ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider<'a> {
+    fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
         core::unimplemented!();
     }
 
-    pub fn get_response(&self) -> anyhow::Result<AttestResponse> {
-        core::unimplemented!();
-    }
-
-    pub fn get_attestation_results(self) -> Option<AttestationResults> {
+    fn put_incoming_message(
+        &mut self,
+        _incoming_message: &AttestRequest,
+    ) -> anyhow::Result<Option<()>> {
         core::unimplemented!();
     }
 }
