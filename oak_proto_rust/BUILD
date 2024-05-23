@@ -25,12 +25,23 @@ package(
 rust_library(
     name = "oak_proto_rust",
     srcs = glob(["src/**"]),
+    proc_macro_deps = [
+        "@oak_crates_index//:prost-derive",
+    ],
     deps = [
         ":build",
         "//micro_rpc",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-    ],
+    ] + select({
+        "@platforms//os:none": [
+            "//third_party/prost-types",
+            "@oak_no_std_crates_index//:prost",
+        ],
+        "//conditions:default": [
+            # See comment on micro_rpc/BUILD.
+            "@oak_crates_index//:prost",
+            "@oak_crates_index//:prost-types",
+        ],
+    }),
 )
 
 cargo_build_script(
@@ -41,6 +52,7 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
+    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         "//proto:digest_proto",
         "//proto/attestation:attachment_proto",
@@ -54,16 +66,18 @@ cargo_build_script(
         "//proto/attestation:verification_proto",
         "//proto/containers:interfaces_proto",
         "//proto/crypto:crypto_proto",
-        "//proto/crypto:crypto_rust_prost",
         "//proto/oak_functions:abi_proto",
         "//proto/oak_functions:lookup_data_proto",
         "//proto/oak_functions:testing_proto",
         "//proto/oak_functions/service:oak_functions_proto",
         "//proto/session:session_proto",
+    ],
+    tools = [
         "@com_google_protobuf//:protoc",
     ],
     deps = [
         "//micro_rpc_build",
+        "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
     ],
 )

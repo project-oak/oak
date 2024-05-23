@@ -26,7 +26,6 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_core",
-        # "@oak_crates_index//:anyhow",
         "@oak_crates_index//:static_assertions",
     ] + select({
         "@platforms//os:none": [

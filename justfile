@@ -172,7 +172,7 @@ kokoro_run_tests: all_ensure_no_std
 clang-tidy:
     bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
-bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc"
+bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc //oak_proto_rust"
 
 bazel-ci:
     bazel build --config=unsafe-fast-presubmit -- @jemalloc //...:all

@@ -1,5 +1,5 @@
 #
-# Copyright 2023 The Project Oak Authors
+# Copyright 2024 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,33 +14,27 @@
 # limitations under the License.
 #
 
-load("@bazel_skylib//rules:build_test.bzl", "build_test")
+# Upstream prost-types depends on prost-derive unconditionally, which means
+# we can't use it in our oak_no_std_crates_index.
+
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
 
-proto_library(
-    name = "crypto_proto",
-    srcs = ["crypto.proto"],
-)
-
-cc_proto_library(
-    name = "crypto_cc_proto",
-    deps = [":crypto_proto"],
-)
-
-java_proto_library(
-    name = "crypto_java_proto",
-    deps = [":crypto_proto"],
-)
-
-build_test(
-    name = "build_test",
-    targets = [
-        ":crypto_proto",
-        ":crypto_cc_proto",
-        ":crypto_java_proto",
+rust_library(
+    name = "prost-types",
+    srcs = glob(["src/**"]),
+    proc_macro_deps = [
+        "@oak_crates_index//:prost-derive",
     ],
+    deps = select({
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:prost",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:prost",
+        ],
+    }),
 )

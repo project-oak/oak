@@ -92,5 +92,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rerun-if-changed={}", proto_path);
     }
 
+    #[cfg(feature = "bazel")]
+    oak_proto_build_utils::fix_prost_derives()?;
+
     Ok(())
 }

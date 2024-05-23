@@ -64,5 +64,6 @@ cargo_build_script(
     ],
     deps = [
         "//micro_rpc_build",
+        "//oak_proto_build_utils",
     ],
 )
