@@ -22,6 +22,42 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
+<a href="#49" id="49">49</a>
+<a href="#50" id="50">50</a>
+<a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -44,4 +80,40 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">extern crate </span>std;
+
+<span class="kw">pub mod </span>attestation;
+<span class="kw">pub mod </span>config;
+<span class="kw">mod </span>session;
+
+<span class="kw">pub use </span>session::{ClientSession, ServerSession, Session};
+
+<span class="doccomment">/// Trait that represents a state-machine for protocol message generation.
+/// Incoming and outgoing messages are represented as generic arguments `I` and
+/// `O`.
+///
+/// This trait can be used to implement bidirectional streams, meaning that
+/// there doesn't have to be a one-to-one correspondence between incoming and
+/// outgoing messages.
+///
+/// If one of the methods returns an error, it means that there was a protocol
+/// error and the session needs to be restarted (because the state-machine is in
+/// an incorrect state).
+</span><span class="kw">pub trait </span>ProtocolEngine&lt;I, O&gt; {
+    <span class="doccomment">/// Puts a message received from the peer into the state-machine changing
+    /// its state.
+    ///
+    /// Method returns `Result&lt;Option&lt;()&gt;&gt;` with the corresponding outcomes:
+    /// - `Ok(None)`: No incoming messages were expected
+    /// - `Ok(Some(()))`: An incoming message was accepted by the state-machine
+    /// - `Err`: Protocol error
+    </span><span class="kw">fn </span>put_incoming_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>, incoming_message: <span class="kw-2">&amp;</span>I) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt;;
+
+    <span class="doccomment">/// Creates a next message that needs to be sent to the peer.
+    ///
+    /// Method returns `Result&lt;Option&lt;()&gt;&gt;` with the corresponding outcomes:
+    /// - `Ok(None)`: No outgoing messages
+    /// - `Ok(Some(O))`: An outgoing message that needs to be sent to the peer
+    /// - `Err`: Protocol error
+    </span><span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;O&gt;&gt;;
+}
 </code></pre></div></section></main></body></html>
