@@ -1,5 +1,5 @@
 {
-  "checksum": "7d35e77527edbd7a0a9f635fb185d7c95cd49f7877c7f4a65b183212d648d18b",
+  "checksum": "631d10644e387894ecdde4db0556fe725d97f7c5bd599465b375cdeb5dee84fd",
   "crates": {
     "anyhow 1.0.83": {
       "name": "anyhow",
@@ -268,6 +268,10 @@
               "target": "log"
             },
             {
+              "id": "prost 0.12.6",
+              "target": "prost"
+            },
+            {
               "id": "x86_64 0.15.1",
               "target": "x86_64"
             }
@@ -451,6 +455,53 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "prost 0.12.6": {
+      "name": "prost",
+      "version": "0.12.6",
+      "package_url": "https://github.com/tokio-rs/prost",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/prost/0.12.6/download",
+          "sha256": "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "prost",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "prost",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "bytes 1.6.0",
+              "target": "bytes"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.12.6"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": null
     },
     "rustversion 1.0.16": {
       "name": "rustversion",
@@ -695,6 +746,7 @@
     "bytes 1.6.0",
     "getrandom 0.2.15",
     "log 0.4.21",
+    "prost 0.12.6",
     "x86_64 0.15.1"
   ],
   "direct_dev_deps": []

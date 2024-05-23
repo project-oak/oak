@@ -1,5 +1,5 @@
 {
-  "checksum": "cf72206d8060287b076fedaeccc63131ecb47e453b310a56cb0a4c11f1900455",
+  "checksum": "1230c1a0283e3fd0d98539343f1a0dc7140874471b93228f8fc2bcebfe50f4d5",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4588,6 +4588,10 @@
             {
               "id": "async-trait 0.1.79",
               "target": "async_trait"
+            },
+            {
+              "id": "prost-derive 0.12.4",
+              "target": "prost_derive"
             }
           ],
           "selects": {}
@@ -19350,6 +19354,7 @@
     "procfs 0.16.0",
     "prost 0.12.4",
     "prost-build 0.12.3",
+    "prost-derive 0.12.4",
     "prost-types 0.12.3",
     "rand_core 0.6.4",
     "regex 1.10.4",

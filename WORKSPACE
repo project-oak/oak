@@ -564,6 +564,9 @@ crates_repository(
             features = ["prost-derive"],
             version = "*",
         ),
+        "prost-derive": crate.spec(
+            version = "*",
+        ),
         "prost-build": crate.spec(
             version = "*",
         ),
@@ -701,6 +704,12 @@ crates_repository(
         ),
         "log": crate.spec(
             features = [],
+            version = "*",
+        ),
+        "prost": crate.spec(
+            default_features = False,
+            # No derive feature - it requires std and will make other crates
+            # in this index, like bytes, require std.
             version = "*",
         ),
         "x86_64": crate.spec(version = "*"),

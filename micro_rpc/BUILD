@@ -27,11 +27,24 @@ rust_library(
     srcs = glob(["src/**"]),
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
+        "@oak_crates_index//:prost-derive",
     ],
     deps = [
         ":build",
-        "@oak_crates_index//:prost",
-    ],
+    ] + select({
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:prost",
+        ],
+        "//conditions:default": [
+            # When not building for bare metal, use the crate with std. Crates that require std
+            # and that also require prost won't work with @oak_no_std_crates_index//:prost. For
+            # example, oak_containers_orchestrator uses tonic which uses both prost and std.
+            # Both oak_containers_orchestrator and tonic need to see the same prost symbols.
+            # It doesn't work if one sees "@oak_no_std_crates_index//:prost" and the other
+            # sees "@oak_crates_index//:prost".
+            "@oak_crates_index//:prost",
+        ],
+    }),
 )
 
 cargo_build_script(
@@ -42,8 +55,11 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
+    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         "//proto/micro_rpc:messages_proto",
+    ],
+    tools = [
         "@com_google_protobuf//:protoc",
     ],
     deps = [

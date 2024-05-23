@@ -744,6 +744,7 @@ dependencies = [
  "procfs",
  "prost",
  "prost-build",
+ "prost-derive",
  "prost-types",
  "rand_core",
  "regex",
