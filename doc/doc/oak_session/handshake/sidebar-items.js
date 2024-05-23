@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["HandshakeType"],"struct":["ClientHandshaker","ServerHandshaker"],"trait":["EncryptionKeyHandle"]};

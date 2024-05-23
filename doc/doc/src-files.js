@@ -51,7 +51,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_restricted_kernel_launcher",["",[],["lib.rs"]]],\
 ["oak_restricted_kernel_orchestrator",["",[],["lib.rs"]]],\
 ["oak_restricted_kernel_sdk",["",[],["attestation.rs","channel.rs","crypto.rs","lib.rs","testing.rs","utils.rs"]]],\
-["oak_session",["",[],["attestation.rs","config.rs","lib.rs","session.rs"]]],\
+["oak_session",["",[],["attestation.rs","config.rs","handshake.rs","lib.rs","session.rs"]]],\
 ["oak_sev_guest",["",[],["ap_jump_table.rs","cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]]],\
 ["oak_sev_snp_attestation_report",["",[],["lib.rs"]]],\
 ["oak_simple_io",["",[],["lib.rs"]]],\
