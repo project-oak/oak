@@ -639,6 +639,7 @@ crates_repository(
         "tokio-util": crate.spec(version = "*"),
         "tonic": crate.spec(version = "*"),
         "tonic-build": crate.spec(version = "*"),
+        "tower": crate.spec(version = "*"),
         "uart_16550": crate.spec(version = "*"),
         "virtio-drivers": crate.spec(version = "*"),
         "walkdir": crate.spec(version = "*"),

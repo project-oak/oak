@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/session/messages.proto",
             "../proto/containers/orchestrator_crypto.proto",
         ],
-        &[".."],
+        &["..", "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto"],
         CodegenOptions { build_client: true, ..Default::default() },
     )?;
 

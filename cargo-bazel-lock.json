@@ -1,5 +1,5 @@
 {
-  "checksum": "452f3d48019e281e163f2eedbe30f2a65c93d237850779ef9383209df1373d78",
+  "checksum": "cf72206d8060287b076fedaeccc63131ecb47e453b310a56cb0a4c11f1900455",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4546,6 +4546,10 @@
             {
               "id": "tonic-build 0.11.0",
               "target": "tonic_build"
+            },
+            {
+              "id": "tower 0.4.13",
+              "target": "tower"
             },
             {
               "id": "uart_16550 0.3.0",
@@ -15768,12 +15772,14 @@
             "__common",
             "balance",
             "buffer",
+            "default",
             "discover",
             "futures-core",
             "futures-util",
             "indexmap",
             "limit",
             "load",
+            "log",
             "make",
             "pin-project",
             "pin-project-lite",
@@ -15959,6 +15965,7 @@
           "common": [
             "attributes",
             "default",
+            "log",
             "std",
             "tracing-attributes"
           ],
@@ -15966,6 +15973,10 @@
         },
         "deps": {
           "common": [
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            },
             {
               "id": "pin-project-lite 0.2.14",
               "target": "pin_project_lite"
@@ -19360,6 +19371,7 @@
     "tokio-util 0.7.11",
     "tonic 0.11.0",
     "tonic-build 0.11.0",
+    "tower 0.4.13",
     "uart_16550 0.3.0",
     "virtio-drivers 0.7.1",
     "walkdir 2.5.0",
