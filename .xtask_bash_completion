@@ -12,9 +12,6 @@ _xtask() {
             ",$1")
                 cmd="xtask"
                 ;;
-            xtask,build-enclave-binary)
-                cmd="xtask__build__enclave__binary"
-                ;;
             xtask,check-format)
                 cmd="xtask__check__format"
                 ;;
@@ -27,9 +24,6 @@ _xtask() {
             xtask,help)
                 cmd="xtask__help"
                 ;;
-            xtask,run-cargo-clean)
-                cmd="xtask__run__cargo__clean"
-                ;;
             xtask,run-cargo-clippy)
                 cmd="xtask__run__cargo__clippy"
                 ;;
@@ -39,23 +33,11 @@ _xtask() {
             xtask,run-cargo-fuzz)
                 cmd="xtask__run__cargo__fuzz"
                 ;;
-            xtask,run-cargo-tests)
-                cmd="xtask__run__cargo__tests"
-                ;;
             xtask,run-cargo-udeps)
                 cmd="xtask__run__cargo__udeps"
                 ;;
-            xtask,run-ci)
-                cmd="xtask__run__ci"
-                ;;
-            xtask,run-oak-functions-example)
-                cmd="xtask__run__oak__functions__example"
-                ;;
             xtask,run-tests)
                 cmd="xtask__run__tests"
-                ;;
-            xtask__help,build-enclave-binary)
-                cmd="xtask__help__build__enclave__binary"
                 ;;
             xtask__help,check-format)
                 cmd="xtask__help__check__format"
@@ -69,9 +51,6 @@ _xtask() {
             xtask__help,help)
                 cmd="xtask__help__help"
                 ;;
-            xtask__help,run-cargo-clean)
-                cmd="xtask__help__run__cargo__clean"
-                ;;
             xtask__help,run-cargo-clippy)
                 cmd="xtask__help__run__cargo__clippy"
                 ;;
@@ -81,17 +60,8 @@ _xtask() {
             xtask__help,run-cargo-fuzz)
                 cmd="xtask__help__run__cargo__fuzz"
                 ;;
-            xtask__help,run-cargo-tests)
-                cmd="xtask__help__run__cargo__tests"
-                ;;
             xtask__help,run-cargo-udeps)
                 cmd="xtask__help__run__cargo__udeps"
-                ;;
-            xtask__help,run-ci)
-                cmd="xtask__help__run__ci"
-                ;;
-            xtask__help,run-oak-functions-example)
-                cmd="xtask__help__run__oak__functions__example"
                 ;;
             xtask__help,run-tests)
                 cmd="xtask__help__run__tests"
@@ -103,22 +73,8 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --help build-enclave-binary run-oak-functions-example format check-format run-tests run-cargo-clippy run-cargo-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --dry-run --logs --keep-going --help format check-format run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__build__enclave__binary)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -177,22 +133,8 @@ _xtask() {
             return 0
             ;;
         xtask__help)
-            opts="build-enclave-binary run-oak-functions-example format check-format run-tests run-cargo-clippy run-cargo-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="format check-format run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__build__enclave__binary)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -260,20 +202,6 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__help__run__cargo__clean)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__help__run__cargo__clippy)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -316,49 +244,7 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__help__run__cargo__tests)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__help__run__cargo__udeps)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__run__ci)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__run__oak__functions__example)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -375,20 +261,6 @@ _xtask() {
         xtask__help__run__tests)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__cargo__clean)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -446,20 +318,6 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__run__cargo__tests)
-            opts="-h --cleanup --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__run__cargo__udeps)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -467,42 +325,6 @@ _xtask() {
                 return 0
             fi
             case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__ci)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__oak__functions__example)
-            opts="-h --example-name --lookup-data-path --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --example-name)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --lookup-data-path)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 *)
                     COMPREPLY=()
                     ;;

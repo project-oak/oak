@@ -16,13 +16,11 @@ clap = { version = "*", features = ["derive"] }
 clap_complete = "*"
 colored = "*"
 itertools = "*"
-nix = "*"
-oak_functions_test_utils = { workspace = true }
+nix = { version = "*", features = ["signal"] }
 once_cell = "*"
 portpicker = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
-serde_yaml = "*"
 strum = "0.24"
 strum_macros = "0.25"
 tokio = { version = "*", features = [
