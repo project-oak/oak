@@ -272,11 +272,83 @@ impl HumanReadableTitle for RootLayerReferenceValues {
     }
 }
 
+fn provenance_explaination_for_root_layer_reference_values(
+    values: &RootLayerReferenceValues,
+) -> Result<Option<String>> {
+    match values {
+        RootLayerReferenceValues {
+            amd_sev:
+                Some(oak_proto_rust::oak::attestation::v1::AmdSevReferenceValues {
+                    stage0: Some(oak_proto_rust::oak::attestation::v1::BinaryReferenceValue {r#type: Some(oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
+                        digests,
+                    ))}),
+                    ..
+                }),
+            ..
+        } => {
+    let firmware_provenances_as_bullet_points = digests.digests
+        .iter()
+        .map(|digest| {
+            SNPInitialMemoryMeasurement::try_from(digest.sha2_384.as_slice())
+                .map(|measurement| format!("- {}", measurement.provenance_link()))
+        })
+        .collect::<Result<Vec<String>>>()?;
+
+    Ok(if firmware_provenances_as_bullet_points.is_empty() {
+        None
+    } else {Some(format!(
+        "Attestations identifying firmware artifacts accepted by the reference values for this layer can be found at:
+{}",
+firmware_provenances_as_bullet_points.join("\n")
+    ))})
+        }
+        _ => Ok(None),
+    }
+}
+
 impl HumanReadableExplanation for RootLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut yaml_representation);
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        let attestation_root_explaination: String = match self {
+            RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: None, insecure: None } => {
+                format!("The attestation must be rooted in an {AMD_SEV_SNP_TITLE} TEE.")
+            }
+            RootLayerReferenceValues { amd_sev: None, intel_tdx: Some(_), insecure: None } => {
+                format!("The attestation must be rooted in an {INTEL_TDX_TITLE} TEE.")
+            }
+            RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: Some(_), insecure: None } => {
+                format!(
+                    "The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE."
+                )
+            }
+            RootLayerReferenceValues { insecure: Some(_), .. } => {
+                "The root of the attestation is not being verified.".to_owned()
+            }
+            RootLayerReferenceValues { amd_sev: None, intel_tdx: None, insecure: None } => {
+                anyhow::bail!("invalid root layer reference values")
+            }
+        };
+        let yaml_string = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_reference_values_human_readable(&mut yaml_representation);
+            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+        };
+        if let Some(provenance_explaination) =
+            provenance_explaination_for_root_layer_reference_values(self)?
+        {
+            Ok(format!(
+                "{attestation_root_explaination}
+
+{provenance_explaination}
+
+{yaml_string}"
+            ))
+        } else {
+            Ok(format!(
+                "{attestation_root_explaination}
+
+{yaml_string}"
+            ))
+        }
     }
 }
 
