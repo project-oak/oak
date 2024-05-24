@@ -108,6 +108,17 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -127,12 +138,12 @@
 </span><span class="doccomment">//! This module provides an implementation of the Attestation Provider, which
 //! handles remote attestation between two parties.
 
-</span><span class="kw">use </span>alloc::vec::Vec;
-
-<span class="kw">use </span>oak_proto_rust::oak::{
+</span><span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{AttestationResults, Endorsements, Evidence},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
+
+<span class="kw">use crate</span>::{config::AttestationProviderConfig, ProtocolEngine};
 
 <span class="kw">pub trait </span>Attester {
     <span class="kw">fn </span>get_endorsed_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt;;
@@ -146,45 +157,52 @@
     ) -&gt; anyhow::Result&lt;AttestationResults&gt;;
 }
 
-<span class="attr">#[allow(dead_code)]
-</span><span class="kw">struct </span>AttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-    peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
+<span class="doccomment">/// Configuration of the attestation behavior that the AttestationProtiver will
+/// perform between two parties: Client and Server.
+///
+/// When configuring the Client: "Self" is the Client and "Peer" is the Server.
+/// When configuring the Server: "Self" is the Server and "Peer" is the Client.
+</span><span class="kw">pub enum </span>AttestationType {
+    <span class="doccomment">/// Both parties attest each other.
+    </span>Bidirectional,
+    <span class="doccomment">/// "Self" attests itself to the "Peer".
+    </span>SelfUnidirectional,
+    <span class="doccomment">/// "Peer" attests itself to the "Self".
+    </span>PeerUnidirectional,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(
-        self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-        peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ self_attesters, peer_verifiers }
-    }
+<span class="kw">pub trait </span>AttestationProvider {
+    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;;
 }
 
 <span class="doccomment">/// Client-side Attestation Provider that initiates remote attestation with the
 /// server.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    inner: AttestationProvider&lt;<span class="lifetime">'a</span>&gt;,
+    config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(
-        self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-        peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    <span class="kw">pub fn </span>new(config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ config }
     }
+}
 
-    <span class="kw">pub fn </span>get_request(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestRequest&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AttestationProvider <span class="kw">for </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+        <span class="macro">core::unimplemented!</span>();
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;AttestResponse, AttestRequest&gt; <span class="kw">for </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestRequest&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 
-    <span class="kw">pub fn </span>put_response(<span class="kw-2">&amp;</span><span class="self">self</span>, _response: <span class="kw-2">&amp;</span>AttestResponse) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="macro">core::unimplemented!</span>();
-    }
-
-    <span class="kw">pub fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+    <span class="kw">fn </span>put_incoming_message(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        _incoming_message: <span class="kw-2">&amp;</span>AttestResponse,
+    ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 }
@@ -193,26 +211,30 @@
 /// request from the client.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    inner: AttestationProvider&lt;<span class="lifetime">'a</span>&gt;,
+    config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(
-        self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-        peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ inner: AttestationProvider::new(self_attesters, peer_verifiers) }
+    <span class="kw">pub fn </span>new(config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ config }
     }
+}
 
-    <span class="kw">pub fn </span>put_request(<span class="kw-2">&amp;</span><span class="self">self</span>, _request: <span class="kw-2">&amp;</span>AttestRequest) -&gt; anyhow::Result&lt;()&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AttestationProvider <span class="kw">for </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+        <span class="macro">core::unimplemented!</span>();
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;AttestRequest, AttestResponse&gt; <span class="kw">for </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestResponse&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 
-    <span class="kw">pub fn </span>get_response(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestResponse&gt; {
-        <span class="macro">core::unimplemented!</span>();
-    }
-
-    <span class="kw">pub fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+    <span class="kw">fn </span>put_incoming_message(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        _incoming_message: <span class="kw-2">&amp;</span>AttestRequest,
+    ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 }

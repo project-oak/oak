@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["SessionConfig","SessionConfigBuilder"]};
+window.SIDEBAR_ITEMS = {"struct":["AttestationProviderConfig","HandshakerConfig","SessionConfig","SessionConfigBuilder"]};

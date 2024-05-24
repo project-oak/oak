@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ClientAttestationProvider","ServerAttestationProvider"],"trait":["AttestationVerifier","Attester"]};
+window.SIDEBAR_ITEMS = {"enum":["AttestationType"],"struct":["ClientAttestationProvider","ServerAttestationProvider"],"trait":["AttestationProvider","AttestationVerifier","Attester"]};
