@@ -114,17 +114,6 @@ impl App {
     }
 }
 
-pub fn build_enclave_binary() -> Step {
-    Step::Single {
-        name: "Build enclave binary variants".to_string(),
-        command: Cmd::new_in_dir(
-            "cargo",
-            vec!["build", "--release"],
-            Path::new(&App::from_crate_name("").enclave_crate_path()),
-        ),
-    }
-}
-
 pub fn build_stage0() -> Step {
     Step::Single {
         name: "build stage0".to_string(),

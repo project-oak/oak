@@ -33,10 +33,9 @@ use xtask::{
     check_build_licenses::*,
     check_license::*,
     check_todo::*,
-    examples::*,
     files::*,
     internal::{self, *},
-    launcher, spread,
+    spread,
 };
 
 #[tokio::main]
@@ -93,19 +92,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::BuildEnclaveBinary => launcher::build_enclave_binary(),
-        Command::RunOakFunctionsExample(ref run_opt) => run_oak_functions_example(run_opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(),
-        Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
         Command::Format => format(),
         Command::CheckFormat => check_format(),
-        Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(),
-        Command::RunCargoClean => run_cargo_clean(),
     }
 }
 
@@ -220,33 +214,6 @@ fn run_completion(completion: &Completion) -> Step {
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
     Step::Multiple { name: "cargo completion".to_string(), steps: vec![] }
-}
-
-fn run_ci() -> Step {
-    // parse cmds for ./scripts/xtask from ci.yaml to keep them in sync
-    let path_to_ci_yaml = ".github/workflows/ci.yaml";
-    let file = std::fs::File::open(path_to_ci_yaml).expect("couldn't open file");
-    let contents: serde_yaml::Value =
-        serde_yaml::from_reader(file).expect("couldn't read file contents");
-    let mut ci_cmds = contents["jobs"]["xtask"]["strategy"]["matrix"]["cmd"]
-        .as_sequence()
-        .unwrap()
-        .iter()
-        .map(|c| c.as_str().unwrap().split_whitespace().collect())
-        .collect::<Vec<Vec<&str>>>();
-
-    Step::Multiple {
-        name: "ci".to_string(),
-        steps: ci_cmds
-            .iter_mut()
-            .map(|cmd| {
-                let mut call = vec!["xtask"];
-                call.append(cmd);
-                let opt = Opt::parse_from(call);
-                match_cmd(&opt)
-            })
-            .collect(),
-    }
 }
 
 enum FormatMode {
@@ -603,22 +570,6 @@ fn run_cargo_udeps() -> Step {
                         "--workspace",
                     ],
                     entry.parent().unwrap(),
-                ),
-            })
-            .collect(),
-    }
-}
-
-fn run_cargo_clean() -> Step {
-    Step::Multiple {
-        name: "cargo clean".to_string(),
-        steps: crate_manifest_files()
-            .map(to_string)
-            .map(|manifest_path| Step::Single {
-                name: manifest_path.clone(),
-                command: Cmd::new(
-                    "cargo",
-                    ["clean", &format!("--manifest-path={}", manifest_path)],
                 ),
             })
             .collect(),

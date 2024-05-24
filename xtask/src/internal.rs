@@ -44,18 +44,13 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    BuildEnclaveBinary,
-    RunOakFunctionsExample(RunOakExampleOpt),
     Format,
     CheckFormat,
     RunTests,
     RunCargoClippy,
-    RunCargoTests(RunTestsOpt),
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,
-    RunCi,
-    RunCargoClean,
     #[command(about = "generate bash completion script to stdout")]
     Completion(Completion),
 }
