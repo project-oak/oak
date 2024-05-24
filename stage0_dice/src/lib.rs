@@ -31,7 +31,7 @@ use hkdf::Hkdf;
 use oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
-        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, EVENT_ID, INITRD_MEASUREMENT_ID,
         KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
         KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
     },
@@ -62,6 +62,8 @@ pub struct Measurements {
     /// The concatenated measurement of the command used for building the ACPI
     /// tables.
     pub acpi_sha2_256_digest: [u8; 32],
+    /// Eventlog measurement containing the hashes of other components
+    pub eventlog_sha2_256_digest: [u8; 32],
 }
 
 /// Generates an ECA certificate for use by the next boot stage (Stage 1).
@@ -72,57 +74,66 @@ fn generate_stage1_certificate(
 ) -> (CoseSign1, SigningKey) {
     // Generate additional claims to cover the measurements.
 
-    let additional_claims = vec![(
-        ClaimName::PrivateUse(KERNEL_LAYER_ID),
-        Value::Map(vec![
-            (
-                Value::Integer(KERNEL_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.kernel_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                Value::Text(measurements.cmdline.clone()),
-            ),
-            (
-                Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(INITRD_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(ACPI_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.acpi_sha2_256_digest.into()),
-                )]),
-            ),
-        ]),
-    )];
+    let additional_claims = vec![
+        (
+            ClaimName::PrivateUse(KERNEL_LAYER_ID),
+            Value::Map(vec![
+                (
+                    Value::Integer(KERNEL_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.kernel_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(KERNEL_COMMANDLINE_ID.into()),
+                    Value::Text(measurements.cmdline.clone()),
+                ),
+                (
+                    Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(INITRD_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(ACPI_MEASUREMENT_ID.into()),
+                    Value::Map(alloc::vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.acpi_sha2_256_digest.into()),
+                    )]),
+                ),
+            ]),
+        ),
+        (
+            ClaimName::PrivateUse(EVENT_ID),
+            Value::Map(alloc::vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(measurements.eventlog_sha2_256_digest.into()),
+            )]),
+        ),
+    ];
 
     let (signing_key, verifying_key) = generate_ecdsa_key_pair();
     (

@@ -71,6 +71,8 @@ pub const LAYER_3_CODE_MEASUREMENT_ID: i64 = -4670569;
 pub const FINAL_LAYER_CONFIG_MEASUREMENT_ID: i64 = -4670570;
 /// The CWT private claim ID for SHA2_256 digests.
 pub const SHA2_256_ID: i64 = -4670572;
+/// The CWT private claim ID of the Event.
+pub const EVENT_ID: i64 = -4670573;
 
 /// String to be used as salt for generating Key IDs.
 const ID_SALT: &[u8] = b"DICE_ID_SALT";

@@ -319,6 +319,16 @@ pub fn rust64_start(encrypted: u64) -> ! {
     };
 
     let event_log_proto = generate_event_log(stage0event);
+    let event_type_url_str = event_log_proto.events[0].event.as_ref().unwrap().type_url.as_str();
+    let eventlog_sha2_256_digest = measure_byte_slice(
+        format!(
+            "{}{}{:?}",
+            event_type_url_str.len(),
+            event_type_url_str,
+            event_log_proto.events[0].event.as_ref().unwrap().value.as_bytes()
+        )
+        .as_bytes(),
+    );
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
@@ -326,6 +336,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
+    log::debug!("Event Log digest: sha2-256:{}", hex::encode(eventlog_sha2_256_digest));
 
     // TODO: b/331252282 - Remove temporary workaround for cmd line length.
     let cmdline_max_len = 256;
@@ -341,6 +352,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
+        eventlog_sha2_256_digest,
     };
 
     let tee_platform = if sev_status().contains(SevStatus::SNP_ACTIVE) {
