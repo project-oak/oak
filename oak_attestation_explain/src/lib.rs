@@ -22,10 +22,12 @@ extern crate alloc;
 extern crate std;
 
 use alloc::{format, string::String};
+use std::fmt::Write;
 
 use anyhow::{Context, Result};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::{
+    attestation,
     attestation::v1::{
         root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
         ContainerLayerData, ContainerLayerReferenceValues, KernelLayerData,
@@ -43,6 +45,10 @@ use crate::alloc::{borrow::ToOwned, string::ToString};
 const AMD_SEV_SNP_TITLE: &str = "AMD SEV-SNP";
 const INTEL_TDX_TITLE: &str = "Intel TDX";
 const INSECURE_TEE_TITLE: &str = "FAKE INSECURE";
+
+const ATTESTATIONS_INTRO: &str = "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
+const REFERENCE_VALUES_INTRO: &str =
+    "The reference values describing this layer are printed below.\n";
 
 /// Provides human readable explanations for attestation data.
 pub trait HumanReadableTitle {
@@ -167,24 +173,66 @@ fn get_tee_name_from_root_layer_reference_values(
 impl HumanReadableTitle for ReferenceValues {
     fn title(&self) -> Result<String, anyhow::Error> {
         match &self.r#type {
-            Some(
-                oak_proto_rust::oak::attestation::v1::reference_values::Type::OakRestrictedKernel(
-                    _value,
-                ),
-            ) => Ok("Reference values for the Oak Restricted Kernel stack".to_owned()),
-            Some(oak_proto_rust::oak::attestation::v1::reference_values::Type::OakContainers(
-                _value,
-            )) => Ok("Reference values for the Oak Containers stack".to_owned()),
+            Some(attestation::v1::reference_values::Type::OakRestrictedKernel(_value)) => {
+                Ok("Reference values for the Oak Restricted Kernel stack".to_owned())
+            }
+            Some(attestation::v1::reference_values::Type::OakContainers(_value)) => {
+                Ok("Reference values for the Oak Containers stack".to_owned())
+            }
             _ => Ok("Unrecognized reference values".to_owned()),
         }
     }
 }
 
 impl HumanReadableExplanation for ReferenceValues {
-    fn description(&self) -> Result<String, anyhow::Error> {
-        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut yaml_representation);
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+    fn description(&self) -> Result<String> {
+        match self {
+            ReferenceValues {
+                r#type:
+                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(
+                        OakRestrictedKernelReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            application_layer: Some(application_layer),
+                        },
+                    )),
+            } => Ok(format!(
+                "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
+                root_layer.title()?,
+                root_layer.description()?,
+                kernel_layer.title()?,
+                kernel_layer.description()?,
+                application_layer.title()?,
+                application_layer.description()?
+            )),
+            ReferenceValues {
+                r#type:
+                    Some(attestation::v1::reference_values::Type::OakContainers(
+                        OakContainersReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            system_layer: Some(system_layer),
+                            container_layer: Some(container_layer),
+                        },
+                    )),
+            } => Ok(format!(
+                "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
+                root_layer.title()?,
+                root_layer.description()?,
+                kernel_layer.title()?,
+                kernel_layer.description()?,
+                system_layer.title()?,
+                system_layer.description()?,
+                container_layer.title()?,
+                container_layer.description()?
+            )),
+            _ => {
+                let mut yaml_representation =
+                    serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+                make_reference_values_human_readable(&mut yaml_representation);
+                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+            }
+        }
     }
 }
 
@@ -278,29 +326,36 @@ fn provenance_explaination_for_root_layer_reference_values(
     match values {
         RootLayerReferenceValues {
             amd_sev:
-                Some(oak_proto_rust::oak::attestation::v1::AmdSevReferenceValues {
-                    stage0: Some(oak_proto_rust::oak::attestation::v1::BinaryReferenceValue {r#type: Some(oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
-                        digests,
-                    ))}),
+                Some(attestation::v1::AmdSevReferenceValues {
+                    stage0:
+                        Some(attestation::v1::BinaryReferenceValue {
+                            r#type:
+                                Some(attestation::v1::binary_reference_value::Type::Digests(digests)),
+                        }),
                     ..
                 }),
             ..
         } => {
-    let firmware_provenances_as_bullet_points = digests.digests
-        .iter()
-        .map(|digest| {
-            SNPInitialMemoryMeasurement::try_from(digest.sha2_384.as_slice())
-                .map(|measurement| format!("- {}", measurement.provenance_link()))
-        })
-        .collect::<Result<Vec<String>>>()?;
+            let firmware_provenances_as_bullet_points = digests
+                .digests
+                .iter()
+                .map(|digest| {
+                    SNPInitialMemoryMeasurement::try_from(digest.sha2_384.as_slice())
+                        .map(|measurement| format!("- {}", measurement.provenance_link()))
+                })
+                .collect::<Result<Vec<String>>>()?;
 
-    Ok(if firmware_provenances_as_bullet_points.is_empty() {
-        None
-    } else {Some(format!(
+            Ok(if firmware_provenances_as_bullet_points.is_empty() {
+                None
+            } else {
+                Some(format!(
         "Attestations identifying firmware artifacts accepted by the reference values for this layer can be found at:
-{}",
+{}
+
+ⓘ In reference values for {AMD_SEV_SNP_TITLE} TEEs, the firmware is captured as a SHA2-384 hash. This is the expected memory measurement that would be taken by the TEE. Attestations that describe this firmware, reference it using the SHA2-256 hash of the SHA2-384 hash.",
 firmware_provenances_as_bullet_points.join("\n")
-    ))})
+    ))
+            })
         }
         _ => Ok(None),
     }
@@ -327,10 +382,14 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
                 anyhow::bail!("invalid root layer reference values")
             }
         };
-        let yaml_string = {
+        let reference_values = {
             let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
             make_reference_values_human_readable(&mut yaml_representation);
-            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            format!(
+                "{REFERENCE_VALUES_INTRO}
+{}",
+                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            )
         };
         if let Some(provenance_explaination) =
             provenance_explaination_for_root_layer_reference_values(self)?
@@ -340,13 +399,13 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
 
 {provenance_explaination}
 
-{yaml_string}"
+{reference_values}"
             ))
         } else {
             Ok(format!(
                 "{attestation_root_explaination}
 
-{yaml_string}"
+{reference_values}"
             ))
         }
     }
@@ -404,11 +463,88 @@ impl HumanReadableTitle for KernelLayerReferenceValues {
     }
 }
 
+fn provenance_explanation_for_kernel_layer_reference_values(
+    values: &KernelLayerReferenceValues,
+) -> Result<Option<String>> {
+    let mut output = String::new();
+
+    if let Some(attestation::v1::KernelBinaryReferenceValue {
+        r#type:
+            Some(attestation::v1::kernel_binary_reference_value::Type::Digests(
+                attestation::v1::KernelDigests {
+                    image: Some(attestation::v1::Digests { digests, .. }),
+                    ..
+                },
+            )),
+        ..
+    }) = &values.kernel
+    {
+        writeln!(output, "Accepted Kernel Image Artifacts:").map_err(anyhow::Error::msg)?;
+        for digest in digests {
+            writeln!(
+                output,
+                "- {}",
+                ArtifactDigestSha2_256::try_from(digest)
+                    .map_err(anyhow::Error::from)?
+                    .provenance_link()
+            )
+            .map_err(anyhow::Error::msg)?;
+        }
+    };
+
+    if let Some(attestation::v1::BinaryReferenceValue {
+        r#type:
+            Some(attestation::v1::binary_reference_value::Type::Digests(attestation::v1::Digests {
+                digests,
+                ..
+            })),
+        ..
+    }) = &values.init_ram_fs
+    {
+        writeln!(output, "Accepted Initial Ramdisk Artifacts:").map_err(anyhow::Error::msg)?;
+        for digest in digests {
+            writeln!(
+                output,
+                "- {}",
+                ArtifactDigestSha2_256::try_from(digest)
+                    .map_err(anyhow::Error::from)?
+                    .provenance_link()
+            )
+            .map_err(anyhow::Error::msg)?;
+        }
+    };
+
+    if output.is_empty() {
+        Ok(None)
+    } else {
+        output.insert(0, '\n');
+        output.insert_str(0, ATTESTATIONS_INTRO);
+        Ok(Some(output))
+    }
+}
+
 impl HumanReadableExplanation for KernelLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut yaml_representation);
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        let reference_values = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_reference_values_human_readable(&mut yaml_representation);
+            format!(
+                "{REFERENCE_VALUES_INTRO}
+{}",
+                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            )
+        };
+        if let Some(provenance_explanation) =
+            provenance_explanation_for_kernel_layer_reference_values(self)?
+        {
+            Ok(format!(
+                "{provenance_explanation}
+
+{reference_values}"
+            ))
+        } else {
+            Ok(reference_values)
+        }
     }
 }
 
@@ -451,11 +587,63 @@ impl HumanReadableTitle for SystemLayerReferenceValues {
     }
 }
 
+fn provenance_explanation_for_system_layer_reference_values(
+    values: &SystemLayerReferenceValues,
+) -> Result<Option<String>> {
+    let mut output = String::new();
+
+    if let Some(attestation::v1::BinaryReferenceValue {
+        r#type:
+            Some(attestation::v1::binary_reference_value::Type::Digests(attestation::v1::Digests {
+                digests,
+                ..
+            })),
+        ..
+    }) = &values.system_image
+    {
+        writeln!(output, "Accepted System Image Artifacts:").map_err(anyhow::Error::msg)?;
+        for digest in digests {
+            writeln!(
+                output,
+                "- {}",
+                ArtifactDigestSha2_256::try_from(digest)
+                    .map_err(anyhow::Error::from)?
+                    .provenance_link()
+            )
+            .map_err(anyhow::Error::msg)?;
+        }
+    };
+
+    if output.is_empty() {
+        Ok(None)
+    } else {
+        output.insert_str(0, ATTESTATIONS_INTRO);
+        Ok(Some(output))
+    }
+}
+
 impl HumanReadableExplanation for SystemLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut yaml_representation);
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        let reference_values = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_reference_values_human_readable(&mut yaml_representation);
+            format!(
+                "{REFERENCE_VALUES_INTRO}
+{}",
+                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            )
+        };
+        if let Some(provenance_explanation) =
+            provenance_explanation_for_system_layer_reference_values(self)?
+        {
+            Ok(format!(
+                "{provenance_explanation}
+
+{reference_values}"
+            ))
+        } else {
+            Ok(reference_values)
+        }
     }
 }
 
@@ -521,11 +709,85 @@ impl HumanReadableTitle for ContainerLayerReferenceValues {
     }
 }
 
+fn provenance_explanation_for_container_layer_reference_values(
+    values: &ContainerLayerReferenceValues,
+) -> Result<Option<String>> {
+    let mut output = String::new();
+
+    if let Some(attestation::v1::BinaryReferenceValue {
+        r#type:
+            Some(attestation::v1::binary_reference_value::Type::Digests(attestation::v1::Digests {
+                digests,
+                ..
+            })),
+        ..
+    }) = &values.binary
+    {
+        writeln!(output, "Accepted Binary Artifacts:").map_err(anyhow::Error::msg)?;
+        for digest in digests {
+            writeln!(
+                output,
+                "- {}",
+                ArtifactDigestSha2_256::try_from(digest)
+                    .map_err(anyhow::Error::from)?
+                    .provenance_link()
+            )
+            .map_err(anyhow::Error::msg)?;
+        }
+    };
+
+    if let Some(attestation::v1::BinaryReferenceValue {
+        r#type:
+            Some(attestation::v1::binary_reference_value::Type::Digests(attestation::v1::Digests {
+                digests,
+                ..
+            })),
+        ..
+    }) = &values.configuration
+    {
+        writeln!(output, "Accepted Configuration Artifacts:").map_err(anyhow::Error::msg)?;
+        for digest in digests {
+            writeln!(
+                output,
+                "- {}",
+                ArtifactDigestSha2_256::try_from(digest)
+                    .map_err(anyhow::Error::from)?
+                    .provenance_link()
+            )
+            .map_err(anyhow::Error::msg)?;
+        }
+    };
+
+    if output.is_empty() {
+        Ok(None)
+    } else {
+        output.insert_str(0, ATTESTATIONS_INTRO);
+        Ok(Some(output))
+    }
+}
+
 impl HumanReadableExplanation for ContainerLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut yaml_representation);
-        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
+        let reference_values = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_reference_values_human_readable(&mut yaml_representation);
+            format!(
+                "{REFERENCE_VALUES_INTRO}
+{}",
+                serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+            )
+        };
+        if let Some(provenance_explanation) =
+            provenance_explanation_for_container_layer_reference_values(self)?
+        {
+            Ok(format!(
+                "{provenance_explanation}
+
+{reference_values}"
+            ))
+        } else {
+            Ok(reference_values)
+        }
     }
 }
 
