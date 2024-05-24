@@ -19,7 +19,10 @@ load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
-    default_visibility = ["//cc/containers/hello_world_trusted_app:__subpackages__"],
+    default_visibility = [
+        "//cc/containers/hello_world_trusted_app:__subpackages__",
+        "//oak_containers_hello_world_trusted_app:__subpackages__",
+    ],
     licenses = ["notice"],
 )
 
