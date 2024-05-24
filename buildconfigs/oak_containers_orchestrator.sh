@@ -13,5 +13,6 @@ export BUILD_COMMAND=(
   oak_containers_orchestrator
 )
 
-export BINARY_PATH=oak_containers_orchestrator/target/oak_containers_orchestrator
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  oak_containers_orchestrator/target/oak_containers_orchestrator
+)

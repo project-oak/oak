@@ -16,5 +16,6 @@ export BUILD_COMMAND=(
   --release
 )
 
-export BINARY_PATH=enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
+)

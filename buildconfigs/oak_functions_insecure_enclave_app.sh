@@ -18,5 +18,6 @@ export BUILD_COMMAND=(
   --features=allow_sensitive_logging
 )
 
-export BINARY_PATH=enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
+)

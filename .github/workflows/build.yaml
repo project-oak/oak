@@ -27,9 +27,9 @@ jobs:
           - buildconfigs/oak_echo_raw_enclave_app.sh
           - buildconfigs/oak_functions_enclave_app.sh
           - buildconfigs/oak_functions_insecure_enclave_app.sh
+          - buildconfigs/oak_orchestrator.sh
           - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.sh
           - buildconfigs/stage0_bin.sh
-          - buildconfigs/oak_orchestrator.sh
 
     permissions:
       actions: read
@@ -53,6 +53,8 @@ jobs:
       - name: Mount main branch
         uses: actions/checkout@v4
 
+      # Keeps two versions of SUBJECT_PATHS, with space resp. comma as
+      # path separator. Both are needed in later steps.
       - name: Parse buildconfig
         id: parse
         run: |
@@ -61,8 +63,9 @@ jobs:
           set -o pipefail
           source ${{ matrix.buildconfig }}
           echo "package-name=${PACKAGE_NAME}" >> "${GITHUB_OUTPUT}"
-          echo "binary-path=${BINARY_PATH}" >> "${GITHUB_OUTPUT}"
-          echo "subject-path=${SUBJECT_PATH}" >> "${GITHUB_OUTPUT}"
+          paths="${SUBJECT_PATHS[@]}"
+          echo "subject-paths=${paths}" >> "${GITHUB_OUTPUT}"
+          echo "subject-paths-commas=${paths// /,}" >> "${GITHUB_OUTPUT}"
 
       - name: Show values
         run: |
@@ -71,8 +74,8 @@ jobs:
           set -o pipefail
           gsutil --version
           echo "package_name: ${{ steps.parse.outputs.package-name }}"
-          echo "binary_path: ${{ steps.parse.outputs.binary-path }}"
-          echo "subject_path: ${{ steps.parse.outputs.subject-path }}"
+          echo "subject_paths: ${{ steps.parse.outputs.subject-paths }}"
+          echo "subject_paths_commas: ${{ steps.parse.outputs.subject-paths-commas }}"
           echo "GITHUB_SHA: ${GITHUB_SHA}"
 
       - name: Build
@@ -88,21 +91,22 @@ jobs:
           scripts/docker_pull
           scripts/docker_run "${BUILD_COMMAND[@]}"
 
-      - name: Show build artifact
+      - name: Show build artifacts
         run: |
-          echo "${{ steps.parse.outputs.binary-path }}"
-          ls -la "${{ steps.parse.outputs.binary-path }}"
+          echo "${{ steps.parse.outputs.subject-paths }}"
+          ls -la ${{ steps.parse.outputs.subject-paths }}
 
       - name: Attest
         id: attest
         uses: actions/attest-build-provenance@v1.1.1
         with:
-          subject-path: ${{ steps.parse.outputs.subject-path }}
+          subject-path: ${{ steps.parse.outputs.subject-paths-commas }}
 
       - name: Show bundle
         run: |
           echo "${{ steps.attest.outputs.bundle-path }}"
           ls -la "${{ steps.attest.outputs.bundle-path }}"
+          cat "${{ steps.attest.outputs.bundle-path }}"
 
       # Upload binary and provenance to GCS and index via http://static.space
       # so that, regardless of the GCS bucket and path, it can easily be
@@ -121,7 +125,8 @@ jobs:
 
           bucket=oak-bins
           package_name=${{ steps.parse.outputs.package-name }}
-          binary_path=${{ steps.parse.outputs.binary-path }}
+          subject_paths=( ${{ steps.parse.outputs.subject-paths }} )
+          binary_path="${subject_paths[0]}"
           provenance_path=${{ steps.attest.outputs.bundle-path }}
 
           gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/binary"

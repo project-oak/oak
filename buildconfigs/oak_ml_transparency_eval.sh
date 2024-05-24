@@ -14,5 +14,6 @@ export BUILD_COMMAND=(
   --output=claim.json
 )
 
-export BINARY_PATH=oak_ml_transparency/mnist/claim.json
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  oak_ml_transparency/mnist/claim.json
+)

@@ -13,5 +13,6 @@ export BUILD_COMMAND=(
   oak_containers_syslogd
 )
 
-export BINARY_PATH=oak_containers_syslogd/target/oak_containers_syslogd_patched
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  oak_containers_syslogd/target/oak_containers_syslogd_patched
+)

@@ -2,7 +2,6 @@
 #
 # Build configuration for oak_containers_kernel.
 #
-# TODO: b/333745447 - Replace this file with its counterparts in ./buildconfigs_full_provenance.
 export PACKAGE_NAME=oak_containers_kernel
 
 export BUILD_COMMAND=(
@@ -10,10 +9,13 @@ export BUILD_COMMAND=(
   develop
   .#bzImageProvenance
   --command
-  env
-  --chdir=oak_containers_kernel
-  make
+  just
+  oak_containers_kernel
 )
 
-export BINARY_PATH=oak_containers_kernel/target/bzImage
-export SUBJECT_PATH="${BINARY_PATH}"
+# The first element must be the Transparent Release binary (the main binary).
+export SUBJECT_PATHS=(
+  oak_containers_kernel/target/bzImage
+  oak_containers_kernel/bin/subjects/oak_containers_kernel_image
+  oak_containers_kernel/bin/subjects/oak_containers_kernel_setup_data
+)

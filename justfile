@@ -40,22 +40,18 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_bin_prefix:
         oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
     just bzimage_provenance_subjects \
         {{kernel_bin_prefix}} \
-        ./oak_restricted_kernel_wrapper/bin/{{kernel_bin_prefix}}/subjects \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
+        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin \
+        oak_restricted_kernel_wrapper/bin/{{kernel_bin_prefix}}/subjects
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
-# and image from it. Places them alongside the bzImage in the output directory.
-bzimage_provenance_subjects kernel_name output_dir_provenance_subjects bzimage_path:
-    rm --recursive --force {{output_dir_provenance_subjects}}
-    mkdir --parents {{output_dir_provenance_subjects}}
+# and image to the output directory.
+bzimage_provenance_subjects kernel_name bzimage_path output_dir:
+    rm --recursive --force {{output_dir}}
+    mkdir --parents {{output_dir}}
     cargo run --package=oak_kernel_measurement -- \
         --kernel={{bzimage_path}} \
-        --kernel-setup-data-output="{{output_dir_provenance_subjects}}/{{kernel_name}}_setup_data" \
-        --kernel-image-output="{{output_dir_provenance_subjects}}/{{kernel_name}}_image"
-    cp \
-        --preserve=timestamps \
-        {{bzimage_path}} \
-        {{output_dir_provenance_subjects}}/{{kernel_name}}_bzimage
+        --kernel-setup-data-output="{{output_dir}}/{{kernel_name}}_setup_data" \
+        --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
     just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel
@@ -85,8 +81,8 @@ oak_containers_kernel:
     env --chdir=oak_containers_kernel make
     just bzimage_provenance_subjects \
         oak_containers_kernel \
-        oak_containers_kernel/bin/subjects \
-        oak_containers_kernel/target/bzImage
+        oak_containers_kernel/target/bzImage \
+        oak_containers_kernel/bin/subjects
 
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'

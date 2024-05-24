@@ -14,5 +14,6 @@ export BUILD_COMMAND=(
   make
 )
 
-export BINARY_PATH=target/stage1.cpio
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  target/stage1.cpio
+)

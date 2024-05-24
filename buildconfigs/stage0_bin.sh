@@ -19,5 +19,6 @@ export BUILD_COMMAND=(
   target/x86_64-unknown-none/release/stage0_bin
 )
 
-export BINARY_PATH=stage0_bin/target/x86_64-unknown-none/release/stage0_bin
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  stage0_bin/target/x86_64-unknown-none/release/stage0_bin
+)

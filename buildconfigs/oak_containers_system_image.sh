@@ -13,5 +13,6 @@ export BUILD_COMMAND=(
   oak_containers_system_image
 )
 
-export BINARY_PATH=oak_containers_system_image/target/image.tar.xz
-export SUBJECT_PATH="${BINARY_PATH}"
+export SUBJECT_PATHS=(
+  oak_containers_system_image/target/image.tar.xz
+)
