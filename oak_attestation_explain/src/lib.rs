@@ -56,7 +56,53 @@ pub trait HumanReadableExplanation {
     fn description(&self) -> Result<String, anyhow::Error>;
 }
 
-// Adapt the JSON mapping of reference values to make it human readable.
+fn reencode_base64_value_as_hex(
+    value: &serde_yaml::Value,
+) -> Result<serde_yaml::Value, anyhow::Error> {
+    let base64_encoded = value.as_str().context("expected value to be a string string")?;
+    let bytes = BASE64_STANDARD
+        .decode(base64_encoded)
+        .map_err(anyhow::Error::msg)
+        .context("invalid base64")?;
+    let hex_encoded = hex::encode(bytes);
+    Ok(serde_yaml::Value::String(hex_encoded))
+}
+
+fn reencode_digests_as_hex(value: &mut serde_yaml::Value) {
+    if serde_yaml::from_value::<RawDigest>(value.clone()).is_ok() {
+        value.as_mapping_mut().expect("expected rawdigest to be a map").iter_mut().for_each(
+            |(_key, hash_value)| {
+                // The proto3 JSON mapping spec uses base64 encoding.
+                *hash_value = reencode_base64_value_as_hex(hash_value)
+                    .expect("failed to reencode base64 digest bytes as hex");
+            },
+        );
+    };
+}
+
+// Performs operation on every node in a potentially nested YAML tree.
+fn walk_nodes<F>(
+    value: &mut serde_yaml::Value,
+    operator: &F, // F is borrowed as otherwise the code encounters the recurision limit.
+) where
+    F: Fn(&mut serde_yaml::Value),
+{
+    operator(value);
+    match value {
+        serde_yaml::Value::Mapping(map) => {
+            map.iter_mut().for_each(|(_, v)| walk_nodes(v, operator))
+        }
+        serde_yaml::Value::Sequence(arr) => arr.iter_mut().for_each(|v| walk_nodes(v, operator)),
+        _ => {}
+    }
+}
+
+// Adapt the YAML mapping of evidence to make it human readable.
+fn make_evidence_human_readable(value: &mut serde_yaml::Value) {
+    walk_nodes(value, &reencode_digests_as_hex);
+}
+
+// Adapt the YAML mapping of reference values to make it human readable.
 fn make_reference_values_human_readable(value: &mut serde_yaml::Value) {
     fn modify_node(value: &mut serde_yaml::Value) {
         if let serde_yaml::Value::Mapping(map) = value {
@@ -78,43 +124,14 @@ fn make_reference_values_human_readable(value: &mut serde_yaml::Value) {
                 *value = digests.clone();
                 return;
             }
-
-            // Print digest hashes with hex encoding.
-            if serde_yaml::from_value::<RawDigest>(serde_yaml::Value::Mapping(map.clone())).is_ok()
-            {
-                map.iter_mut().for_each(|(_key, hash_value)| {
-                    // The proto3 JSON mapping spec uses base64 encoding.
-                    let base64_encoded_hash =
-                        hash_value.as_str().expect("validated as string in prior conditional");
-                    let hash = BASE64_STANDARD
-                        .decode(base64_encoded_hash)
-                        .expect("invalid base64 digest hash");
-                    *hash_value = serde_yaml::Value::String(hex::encode(hash));
-                })
-            };
         }
+
+        reencode_digests_as_hex(value)
     }
 
-    // Performs operation on every node in a potentially nested JSON tree.
-    fn for_each_node<F>(value: &mut serde_yaml::Value, operator: &F)
-    where
-        F: Fn(&mut serde_yaml::Value),
-    {
-        operator(value);
-        match value {
-            serde_yaml::Value::Mapping(map) => {
-                map.iter_mut().for_each(|(_, v)| for_each_node(v, operator))
-            }
-            serde_yaml::Value::Sequence(arr) => {
-                arr.iter_mut().for_each(|v| for_each_node(v, operator))
-            }
-            _ => {}
-        }
-    }
-
-    // Reference values are usually a nested set of Json nodes. Visit each one
+    // Reference values are usually a nested set of YAML nodes. Visit each one
     // and simplify it if needed.
-    for_each_node(value, &modify_node);
+    walk_nodes(value, &modify_node);
 }
 
 fn get_tee_name_from_root_layer_evidence(
@@ -165,9 +182,9 @@ impl HumanReadableTitle for ReferenceValues {
 
 impl HumanReadableExplanation for ReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -217,15 +234,29 @@ impl HumanReadableExplanation for RootLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
         match self.report.as_ref().context("unexpectedly unset report proto field")? {
             Report::SevSnp(report) => {
+                let tee_name = get_tee_name_from_root_layer_evidence(self)?;
                 let initial_memory_sha256_digest =
                     SNPInitialMemoryMeasurement::try_from(report.initial_measurement.as_slice())?;
+                let firmware_provenace_link = initial_memory_sha256_digest.provenance_link();
+                let firmware_hash_explaination =
+                    initial_memory_sha256_digest.display_hash_explaination();
+                let yaml_string = {
+                    let mut yaml_representation =
+                        serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+                    make_evidence_human_readable(&mut yaml_representation);
+                    serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+                };
                 Ok(format!(
-                    "Firmware [Digest]: {}
-{}
-Firmware [Provenances]: {}",
-                    initial_memory_sha256_digest.display_hash(),
-                    initial_memory_sha256_digest.display_hash_explaination(),
-                    initial_memory_sha256_digest.provenance_link()
+                    "The attestation is rooted in an {tee_name} TEE.
+
+Attestations identifying the firmware captured in the evidence can be found here:
+{firmware_provenace_link}
+
+{firmware_hash_explaination}
+
+The evidence describing this layer is outlined below.
+
+{yaml_string}"
                 ))
             }
             _ => Err(anyhow::Error::msg(
@@ -243,9 +274,9 @@ impl HumanReadableTitle for RootLayerReferenceValues {
 
 impl HumanReadableExplanation for RootLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -257,52 +288,40 @@ impl HumanReadableTitle for KernelLayerData {
 
 impl HumanReadableExplanation for KernelLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let kernel_image_digest: ArtifactDigestSha2_256 = self
-            .kernel_image
-            .as_ref()
-            .context("unexpectedly unset kernel_image proto field")
-            .and_then(|digest| {
-                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-            })?;
-
-        let bz_image_description = format!(
-            "Kernel Image [Digest]: {}
-Kernel Setup Data [Digest]: {}",
-            kernel_image_digest.display_hash(),
-            ArtifactDigestSha2_256::try_from(
-                self.kernel_setup_data
-                    .as_ref()
-                    .context("unexpectedly unset kernel_setup_data proto field")?
-            )?
-            .display_hash(),
-        );
-        let kernel_commandline = format!(
-            "Kernel Command Line [String]: {}",
-            self.kernel_raw_cmd_line
+        let kernel_provenance_link = {
+            let kernel_image_digest: ArtifactDigestSha2_256 = self
+                .kernel_image
                 .as_ref()
-                .context("unexpectedly unset kernel_raw_cmd_line proto field")?,
-        );
-        let init_ram_fs_digest: ArtifactDigestSha2_256 = self
-            .init_ram_fs
-            .as_ref()
-            .context("unexpectedly unset init_ram_fs proto field")
-            .and_then(|digest| {
-                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-            })?;
-        let initial_ramdisk_description =
-            format!("Initial RAM Disk [Digest]: {}", init_ram_fs_digest.display_hash());
+                .context("unexpectedly unset kernel_image proto field")
+                .and_then(|digest| {
+                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+                })?;
+            kernel_image_digest.provenance_link()
+        };
+        let initial_ramdisk_provenance_link = {
+            let init_ram_fs_digest: ArtifactDigestSha2_256 = self
+                .init_ram_fs
+                .as_ref()
+                .context("unexpectedly unset init_ram_fs proto field")
+                .and_then(|digest| {
+                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+                })?;
+            init_ram_fs_digest.provenance_link()
+        };
+        let yaml_string = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_evidence_human_readable(&mut yaml_representation);
+            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+        };
 
         Ok(format!(
-            "{}
-Kernel Image/Setup-Data [Provenances]: {}
-{}
-{}
-Inital RAM Disk [Provenances]: {}",
-            bz_image_description,
-            kernel_image_digest.provenance_link(),
-            kernel_commandline,
-            initial_ramdisk_description,
-            init_ram_fs_digest.provenance_link()
+"Attestations identifying the binaries captured in the evidence in this layer can be found as outlined below.
+Kernel: {kernel_provenance_link}
+Initial Ramdisk: {initial_ramdisk_provenance_link}
+
+The evidence describing the kernel layer is outlined below.
+
+{yaml_string}"
         ))
     }
 }
@@ -315,9 +334,9 @@ impl HumanReadableTitle for KernelLayerReferenceValues {
 
 impl HumanReadableExplanation for KernelLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -329,18 +348,27 @@ impl HumanReadableTitle for SystemLayerData {
 
 impl HumanReadableExplanation for SystemLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let system_image_digest = self
-            .system_image
-            .as_ref()
-            .context("unexpectedly unset system_image proto field")
-            .and_then(|digest| {
-                ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-            })?;
+        let system_image_provenance_link = {
+            let system_image_digest = self
+                .system_image
+                .as_ref()
+                .context("unexpectedly unset system_image proto field")
+                .and_then(|digest| {
+                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
+                })?;
+            system_image_digest.provenance_link()
+        };
+        let yaml_string = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_evidence_human_readable(&mut yaml_representation);
+            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
+        };
         Ok(format!(
-            "System Image [Digest]: {}
-System Image [Provenances]: {}",
-            system_image_digest.display_hash(),
-            system_image_digest.provenance_link(),
+            "Attestations identifying the system image captured in the evidence can be found here: {system_image_provenance_link}
+
+The evidence describing this layer is outlined below.
+
+{yaml_string}"
         ))
     }
 }
@@ -353,9 +381,9 @@ impl HumanReadableTitle for SystemLayerReferenceValues {
 
 impl HumanReadableExplanation for SystemLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -367,40 +395,16 @@ impl HumanReadableTitle for ApplicationLayerData {
 
 impl HumanReadableExplanation for ApplicationLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let digests = {
-            let binary_digest =
-                self.binary.as_ref().context("unexpectedly unset binary proto field").and_then(
-                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-                )?;
-
-            // Restricted Kernel Applications do not use a config, no digest is included in
-            // the.
-            if let Ok(config_digest) =
-                self.config.as_ref().context("unexpectedly unset config proto field").and_then(
-                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-                )
-            {
-                format!(
-                    "Binary [Digest]: {}
-Binary [Provenances]: {}
-Config [Digest]: {}
-Config [Provenances]: {}",
-                    binary_digest.display_hash(),
-                    binary_digest.provenance_link(),
-                    config_digest.display_hash(),
-                    config_digest.provenance_link()
-                )
-            } else {
-                format!(
-                    "Binary [Digest]: {}
-Binary [Provenances]: {}",
-                    binary_digest.display_hash(),
-                    binary_digest.provenance_link(),
-                )
-            }
+        let yaml_string = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_evidence_human_readable(&mut yaml_representation);
+            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
+        Ok(format!(
+            "The evidence describing the application is outlined below.
 
-        Ok(digests)
+{yaml_string}"
+        ))
     }
 }
 
@@ -412,9 +416,9 @@ impl HumanReadableTitle for ApplicationLayerReferenceValues {
 
 impl HumanReadableExplanation for ApplicationLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -426,29 +430,16 @@ impl HumanReadableTitle for ContainerLayerData {
 
 impl HumanReadableExplanation for ContainerLayerData {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let digests = {
-            let bundle_digest =
-                self.bundle.as_ref().context("unexpectedly unset binary proto field").and_then(
-                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-                )?;
-
-            if let Ok(config_digest) =
-                self.config.as_ref().context("unexpectedly unset config proto field").and_then(
-                    |digest| ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from),
-                )
-            {
-                format!(
-                    "Container Bundle [Digest]: {}
-Config [Digest]: {}",
-                    bundle_digest.display_hash(),
-                    config_digest.display_hash(),
-                )
-            } else {
-                format!("Container Bundle [Digest]: {}", bundle_digest.display_hash(),)
-            }
+        let yaml_string = {
+            let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+            make_evidence_human_readable(&mut yaml_representation);
+            serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)?
         };
+        Ok(format!(
+            "The evidence describing the application is outlined below.
 
-        Ok(digests)
+{yaml_string}"
+        ))
     }
 }
 
@@ -460,9 +451,9 @@ impl HumanReadableTitle for ContainerLayerReferenceValues {
 
 impl HumanReadableExplanation for ContainerLayerReferenceValues {
     fn description(&self) -> Result<String, anyhow::Error> {
-        let mut json_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
-        make_reference_values_human_readable(&mut json_representation);
-        serde_yaml::to_string(&json_representation).map_err(anyhow::Error::msg)
+        let mut yaml_representation = serde_yaml::to_value(self).map_err(anyhow::Error::msg)?;
+        make_reference_values_human_readable(&mut yaml_representation);
+        serde_yaml::to_string(&yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -526,7 +517,7 @@ impl SNPInitialMemoryMeasurement {
     /// struct.
     fn display_hash_explaination(&self) -> String {
         format!(
-            "ⓘ The firmware attestation digest is the SHA2-256 hash of the SHA2-384 hash of the initial memory state taken by the AMD SoC. The original SHA2-384 hash of the initial memory is: SHA2-384:{}.",
+            "ⓘ The firmware attestation digest is the SHA2-256 hash of the SHA2-384 hash of the initial memory state taken by the AMD SoC. The original SHA2-384 hash of the initial memory is: SHA2-384:{}; it is listed as the 'initial_measurement' in the evidence of this layer.",
             { hex::encode(self.0.as_slice()) }
         )
     }
