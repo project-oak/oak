@@ -27,7 +27,6 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 readonly generated_binaries=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/bzImage
-    ./oak_containers_kernel/cmd_line_regex.txt
     ./oak_containers_orchestrator/target/oak_containers_orchestrator
     ./oak_containers_syslogd/target/oak_containers_syslogd_patched
     ./oak_containers_system_image/target/image.tar.xz
@@ -38,7 +37,6 @@ readonly generated_binaries=(
 readonly binary_names=(
     oak_containers_stage1
     oak_containers_kernel
-    oak_containers_kernel_cmd_line_regex
     oak_containers_orchestrator
     oak_containers_syslogd
     oak_containers_system_image

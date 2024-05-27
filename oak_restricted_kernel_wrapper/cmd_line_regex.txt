@@ -1,1 +1,0 @@
-^quiet panic=-1 init=/init .*$
