@@ -331,11 +331,21 @@ rust_register_toolchains(
     versions = _RUST_VERSIONS,
 )
 
+_BARE_METAL_RUSTC_FLAGS = [
+    "-C",
+    "relocation-model=static",
+    "-C",
+    "target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+]
+
 # Creates remote repositories for Rust toolchains, required for cross-compiling.
 rust_repository_set(
     name = "rust_toolchain_repo",
     edition = "2021",
     exec_triple = "x86_64-unknown-linux-gnu",
+    extra_rustc_flags = {
+        "x86_64-unknown-none": _BARE_METAL_RUSTC_FLAGS,
+    },
     extra_target_triples = {
         "x86_64-unknown-none": [
             "@platforms//cpu:x86_64",
@@ -601,7 +611,10 @@ crates_repository(
             default_features = False,
             version = "*",
         ),
-        "snafu": crate.spec(version = "*"),
+        "snafu": crate.spec(
+            default_features = False,
+            version = "*",
+        ),
         "spinning_top": crate.spec(version = "*"),
         "static_assertions": crate.spec(version = "*"),
         "strum": crate.spec(
@@ -683,6 +696,14 @@ crates_repository(
     cargo_lockfile = "//:Cargo_no_std.bazel.lock",  # In Cargo-free mode this is used as output, not input.
     lockfile = "//:cargo-no-std-bazel-lock.json",  # Shares most contents with cargo_lockfile.
     packages = {
+        "aes-gcm": crate.spec(
+            default_features = False,
+            features = [
+                "aes",
+                "alloc",
+            ],
+            version = "*",
+        ),
         "anyhow": crate.spec(
             default_features = False,
             features = [],

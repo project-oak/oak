@@ -29,14 +29,21 @@ rust_library(
     ],
     deps = [
         "//oak_sev_snp_attestation_report",
-        "@oak_crates_index//:aes-gcm",
-        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:lock_api",
         "@oak_crates_index//:snafu",
         "@oak_crates_index//:spinning_top",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
-        "@oak_crates_index//:x86_64",
         "@oak_crates_index//:zerocopy",
-    ],
+        "@oak_no_std_crates_index//:aes-gcm",
+        "@oak_no_std_crates_index//:bitflags",
+    ] + select({
+        # TODO: b/334871992 - This select is probably not required after b/334871992.
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:x86_64",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:x86_64",
+        ],
+    }),
 )

@@ -1,5 +1,5 @@
 {
-  "checksum": "1230c1a0283e3fd0d98539343f1a0dc7140874471b93228f8fc2bcebfe50f4d5",
+  "checksum": "87666e043302a436f42f430e49d01477dc8bac0050d2afbab59f1c5e74216c93",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -13677,15 +13677,6 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "default",
-            "rust_1_61",
-            "rust_1_65",
-            "std"
-          ],
-          "selects": {}
-        },
         "edition": "2018",
         "proc_macro_deps": {
           "common": [
@@ -13734,12 +13725,6 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "rust_1_61"
-          ],
-          "selects": {}
-        },
         "deps": {
           "common": [
             {
