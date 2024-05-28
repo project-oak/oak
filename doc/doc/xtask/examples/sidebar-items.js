@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["build_rust_crate_wasm","run_oak_functions_example"]};
+window.SIDEBAR_ITEMS = {"fn":["build_rust_crate_wasm"]};

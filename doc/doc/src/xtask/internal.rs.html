@@ -748,11 +748,6 @@
 <a href="#746" id="746">746</a>
 <a href="#747" id="747">747</a>
 <a href="#748" id="748">748</a>
-<a href="#749" id="749">749</a>
-<a href="#750" id="750">750</a>
-<a href="#751" id="751">751</a>
-<a href="#752" id="752">752</a>
-<a href="#753" id="753">753</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -799,18 +794,13 @@
 
 <span class="attr">#[derive(Subcommand, Clone, Debug)]
 </span><span class="kw">pub enum </span>Command {
-    BuildEnclaveBinary,
-    RunOakFunctionsExample(RunOakExampleOpt),
     Format,
     CheckFormat,
     RunTests,
     RunCargoClippy,
-    RunCargoTests(RunTestsOpt),
     RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,
-    RunCi,
-    RunCargoClean,
     <span class="attr">#[command(about = <span class="string">"generate bash completion script to stdout"</span>)]
     </span>Completion(Completion),
 }
