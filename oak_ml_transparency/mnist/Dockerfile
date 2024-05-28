@@ -5,11 +5,8 @@ FROM nvidia/cuda:11.3.1-cudnn8-runtime-ubuntu20.04
 RUN apt-get update -y
 RUN apt-get install -y python3 python3-distutils python3-pip --no-install-recommends curl
 
-# Note installing keras directly resulted in some issues with saving the model.
-RUN pip3 install --no-cache-dir tensorflow==2.12.0
-
-# Install cleverhans for generating adversarial examples.
-RUN pip3 install --no-cache-dir cleverhans==4.0.0
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir --requirement /tmp/requirements.txt --require-hashes
 
 # Copy files in the current directory to project.
 RUN mkdir /project
