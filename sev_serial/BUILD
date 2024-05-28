@@ -26,6 +26,13 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_sev_guest",
-        "@oak_crates_index//:x86_64",
-    ],
+    ] + select({
+        # TODO: b/334871992 - This select is probably not required after b/334871992.
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:x86_64",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:x86_64",
+        ],
+    }),
 )
