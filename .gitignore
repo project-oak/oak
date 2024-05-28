@@ -31,6 +31,9 @@ cargo-timing*.html
 # Generated vscode files.
 **/.vscode/
 
+# Generated project info to support Bazel-only projects in rust-analyzer.
+rust-project.json
+
 # emacs stuff
 *~
 

@@ -753,3 +753,17 @@ prost_toolchain_crates()
 load("//bazel/tools/prost:defs.bzl", "setup_prost_toolchain")
 
 setup_prost_toolchain()
+
+# IDE support via rust-analyzer for bazel-only projects.
+# https://bazelbuild.github.io/rules_rust/rust_analyzer.html
+#
+# You can re-generate the rust-project.json file using:
+# bazel run @rules_rust//tools/rust_analyzer:gen_rust_project
+#
+# It should not be committed.
+#
+# VSCode users: There's a task included in .vscode/tasks.json that should
+# automatically do this for you when needed.
+load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
+
+rust_analyzer_dependencies()
