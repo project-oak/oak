@@ -475,6 +475,7 @@ crates_repository(
             ],
             version = "*",
         ),
+        "futures-util": crate.spec(version = "*"),
         "getrandom": crate.spec(
             version = "*",
         ),

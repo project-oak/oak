@@ -723,6 +723,7 @@ dependencies = [
  "coset",
  "curve25519-dalek",
  "ecdsa",
+ "futures-util",
  "getrandom",
  "goblin",
  "hex",

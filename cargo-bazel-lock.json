@@ -1,5 +1,5 @@
 {
-  "checksum": "87666e043302a436f42f430e49d01477dc8bac0050d2afbab59f1c5e74216c93",
+  "checksum": "9872a2c4b34b30e31ccb5db846832f1a2642beec9fa9266f82f20c3db29bbf54",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4380,6 +4380,10 @@
               "target": "ecdsa"
             },
             {
+              "id": "futures-util 0.3.30",
+              "target": "futures_util"
+            },
+            {
               "id": "getrandom 0.2.12",
               "target": "getrandom"
             },
@@ -5808,6 +5812,7 @@
             "alloc",
             "async-await",
             "async-await-macro",
+            "default",
             "futures-macro",
             "futures-sink",
             "sink",
@@ -19318,6 +19323,7 @@
     "coset 0.3.7",
     "curve25519-dalek 4.1.1",
     "ecdsa 0.16.9",
+    "futures-util 0.3.30",
     "getrandom 0.2.12",
     "goblin 0.8.0",
     "hex 0.4.3",
