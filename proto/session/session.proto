@@ -33,24 +33,53 @@ message AttestResponse {
   repeated oak.session.v1.EndorsedEvidence endorsed_evidence = 1;
 }
 
-// Request message for the crypto handshake request needed to establish a set of
-// session keys.
-message HandshakeRequest {
+// Noise handshake message containing fields for all handshake patterns.
+// <http://www.noiseprotocol.org/noise.html#handshake-patterns>
+message NoiseHandshakeMessage {
   // Noise Protocol ephemeral public key 'e'.
   // <http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>
   bytes ephemeral_public_key = 1;
+  // Noise Protocol static public key 's'.
+  // <http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>
+  //
+  // Note: For some Noise patterns (such as XX and IX) static public key may be
+  // encrypted with the chaining key to hide peer's identity.
+  // <http://www.noiseprotocol.org/noise.html#handshake-patterns>
+  bytes static_public_key = 2;
   // Payload encrypted with the current chaining key.
-  bytes ciphertext = 2;
+  bytes ciphertext = 3;
+}
+
+// Message to be signed as part of the attestation binding.
+message AttestationBindingMessage {
+  bytes handshake_hash = 1;
+  bytes endorsements_hash = 2;
+  bytes peer_reference_values_hash = 3;
+}
+
+// Message that binds the Noise session (and optionally Attestation Endorsement
+// and peer Reference Values) to the Attestation Evidence.
+message AttestationBinding {
+  // Signature of the serialized `AttestationBindingMessage` Protobuf message.
+  bytes signature = 1;
+}
+
+// Request message for the crypto handshake request needed to establish a set of
+// session keys.
+message HandshakeRequest {
+  oneof handshake_type {
+    NoiseHandshakeMessage noise_handshake_message = 1;
+  }
+  AttestationBinding attestation_binding = 2;
 }
 
 // Response message for the crypto handshake request needed to establish a set
 // of session keys.
 message HandshakeResponse {
-  // Noise Protocol ephemeral public key 'e'.
-  // <http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>
-  bytes ephemeral_public_key = 1;
-  // Payload encrypted with the current chaining key.
-  bytes ciphertext = 2;
+  oneof handshake_type {
+    NoiseHandshakeMessage noise_handshake_message = 1;
+  }
+  AttestationBinding attestation_binding = 2;
 }
 
 // Request message for the Oak protocol attested secure session.
