@@ -1,4 +1,3 @@
-# TODO: b/333745447 - Replace this file with its counterparts in ./buildconfigs_full_provenance.
 command = [
   "nix",
   "develop",

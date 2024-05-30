@@ -1,7 +1,3 @@
-# TODO: b/333745447 - Replace this file with its counterparts in ./buildconfigs_full_provenance.
-# This is the static build configuration that we use with the docker-based SLSA3 generator for
-# building the `oak_containers_kernel` binary, and its provenance.
-# See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
 command = [
   "nix",
   "develop",
