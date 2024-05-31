@@ -235,6 +235,17 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -268,7 +279,7 @@
 <span class="kw">use </span>oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
-        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, EVENT_ID, INITRD_MEASUREMENT_ID,
         KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
         KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
     },
@@ -299,6 +310,8 @@
     <span class="doccomment">/// The concatenated measurement of the command used for building the ACPI
     /// tables.
     </span><span class="kw">pub </span>acpi_sha2_256_digest: [u8; <span class="number">32</span>],
+    <span class="doccomment">/// Eventlog measurement containing the hashes of other components
+    </span><span class="kw">pub </span>eventlog_sha2_256_digest: [u8; <span class="number">32</span>],
 }
 
 <span class="doccomment">/// Generates an ECA certificate for use by the next boot stage (Stage 1).
@@ -309,57 +322,66 @@
 ) -&gt; (CoseSign1, SigningKey) {
     <span class="comment">// Generate additional claims to cover the measurements.
 
-    </span><span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[(
-        ClaimName::PrivateUse(KERNEL_LAYER_ID),
-        Value::Map(<span class="macro">vec!</span>[
-            (
-                Value::Integer(KERNEL_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.kernel_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                Value::Text(measurements.cmdline.clone()),
-            ),
-            (
-                Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(INITRD_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
-                )]),
-            ),
-            (
-                Value::Integer(ACPI_MEASUREMENT_ID.into()),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.acpi_sha2_256_digest.into()),
-                )]),
-            ),
-        ]),
-    )];
+    </span><span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[
+        (
+            ClaimName::PrivateUse(KERNEL_LAYER_ID),
+            Value::Map(<span class="macro">vec!</span>[
+                (
+                    Value::Integer(KERNEL_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.kernel_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(KERNEL_COMMANDLINE_ID.into()),
+                    Value::Text(measurements.cmdline.clone()),
+                ),
+                (
+                    Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(INITRD_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(ACPI_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">alloc::vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(measurements.acpi_sha2_256_digest.into()),
+                    )]),
+                ),
+            ]),
+        ),
+        (
+            ClaimName::PrivateUse(EVENT_ID),
+            Value::Map(<span class="macro">alloc::vec!</span>[(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(measurements.eventlog_sha2_256_digest.into()),
+            )]),
+        ),
+    ];
 
     <span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
     (

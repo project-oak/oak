@@ -462,6 +462,18 @@
 <a href="#460" id="460">460</a>
 <a href="#461" id="461">461</a>
 <a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -783,6 +795,16 @@
     };
 
     <span class="kw">let </span>event_log_proto = generate_event_log(stage0event);
+    <span class="kw">let </span>event_type_url_str = event_log_proto.events[<span class="number">0</span>].event.as_ref().unwrap().type_url.as_str();
+    <span class="kw">let </span>eventlog_sha2_256_digest = measure_byte_slice(
+        <span class="macro">format!</span>(
+            <span class="string">"{}{}{:?}"</span>,
+            event_type_url_str.len(),
+            event_type_url_str,
+            event_log_proto.events[<span class="number">0</span>].event.as_ref().unwrap().value.as_bytes()
+        )
+        .as_bytes(),
+    );
 
     <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
@@ -790,6 +812,7 @@
     <span class="macro">log::debug!</span>(<span class="string">"Initial RAM disk digest: sha2-256:{}"</span>, hex::encode(ram_disk_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"ACPI table generation digest: sha2-256:{}"</span>, hex::encode(acpi_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"E820 table digest: sha2-256:{}"</span>, hex::encode(memory_map_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"Event Log digest: sha2-256:{}"</span>, hex::encode(eventlog_sha2_256_digest));
 
     <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line length.
     </span><span class="kw">let </span>cmdline_max_len = <span class="number">256</span>;
@@ -805,6 +828,7 @@
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
+        eventlog_sha2_256_digest,
     };
 
     <span class="kw">let </span>tee_platform = <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
