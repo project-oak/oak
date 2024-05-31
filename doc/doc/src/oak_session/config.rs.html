@@ -207,15 +207,15 @@
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt; {
-    attestation_type: AttestationType,
-    self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-    peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
+    <span class="kw">pub </span>attestation_type: AttestationType,
+    <span class="kw">pub </span>self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
+    <span class="kw">pub </span>peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>HandshakerConfig&lt;<span class="lifetime">'a</span>&gt; {
-    handshake_type: HandshakeType,
-    self_static_private_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>EncryptionKeyHandle&gt;,
-    peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+    <span class="kw">pub </span>handshake_type: HandshakeType,
+    <span class="kw">pub </span>self_static_private_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>EncryptionKeyHandle&gt;,
+    <span class="kw">pub </span>peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 </code></pre></div></section></main></body></html>
