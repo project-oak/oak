@@ -16,20 +16,24 @@ cd "$SCRIPTS_DIR"
 mkdir --parent target
 
 docker buildx build . --tag=oak-containers-sysimage-base:latest --file base_image.Dockerfile
+docker buildx build . --tag=oak-containers-sysimage-nvidia-base:latest --file nvidia_base_image.Dockerfile
 
 # We need to actually create a container, otherwise we won't be able to use
 # `docker export` that gives us a filesystem image.
 # (`docker save` creates a tarball which has all the layers separate, which is
 # _not_ what we want.)
 readonly NEW_DOCKER_CONTAINER_ID="$(docker create oak-containers-sysimage-base:latest)"
+readonly NEW_NVIDIA_DOCKER_CONTAINER_ID="$(docker create oak-containers-sysimage-nvidia-base:latest)"
 
 # We export a plain tarball.
 # The oak_containers_sysimage_base oci_image rule will use this tarball to
 # create an OCI image that it can then push to Google artifact registry.
 # There *might* be a better approach here, but this is working for now.
 docker export "$NEW_DOCKER_CONTAINER_ID" > target/base-image.tar
+docker export "$NEW_NVIDIA_DOCKER_CONTAINER_ID" > target/nvidia-base-image.tar
 
 docker rm "$NEW_DOCKER_CONTAINER_ID"
+docker rm "$NEW_NVIDIA_DOCKER_CONTAINER_ID"
 
 # Repackage base-image.tar so that entries are in a consistent order and have a
 # consistent mtime. fakeroot ensures that file permissions are maintained, even
@@ -44,6 +48,14 @@ fakeroot -- sh -c "\
   tar --extract --file target/base-image.tar --directory \"${sandbox}\" \
   && cp files/etc/hosts \"${sandbox}/etc/hosts\" \
   && tar --create --sort=name --file target/base-image.tar --mtime='2000-01-01Z' \
+     --numeric-owner --directory \"${sandbox}\" ."
+rm -rf -- "$sandbox"
+
+sandbox="$(mktemp -d)"
+fakeroot -- sh -c "\
+  tar --extract --file target/nvidia-base-image.tar --directory \"${sandbox}\" \
+  && cp files/etc/hosts \"${sandbox}/etc/hosts\" \
+  && tar --create --sort=name --file target/nvidia-base-image.tar --mtime='2000-01-01Z' \
      --numeric-owner --directory \"${sandbox}\" ."
 rm -rf -- "$sandbox"
 

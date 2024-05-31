@@ -49,9 +49,25 @@ oci_image(
     tars = [":rust_bins_tar"],
 )
 
+oci_image(
+    name = "oak_containers_nvidia_system_image_oci_image",
+    base = "@oak_containers_nvidia_sysimage_base",
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
+    tars = [":rust_bins_tar"],
+)
+
 oci_runtime_bundle(
     name = "oak_containers_system_image",
     image = ":oak_containers_system_image_oci_image",
+    rootfs_only = True,
+    # This rule will fail unless build-bazel.sh has been run.
+    tags = ["noci"],
+)
+
+oci_runtime_bundle(
+    name = "oak_containers_nvidia_system_image",
+    image = ":oak_containers_nvidia_system_image_oci_image",
     rootfs_only = True,
     # This rule will fail unless build-bazel.sh has been run.
     tags = ["noci"],
@@ -65,6 +81,15 @@ filegroup(
     name = "base_image_tar",
     srcs = [
         "target/base-image.tar",
+    ],
+    # This rule will fail until build-base.sh has been run
+    tags = ["noci"],
+)
+
+filegroup(
+    name = "nvidia_base_image_tar",
+    srcs = [
+        "target/nvidia-base-image.tar",
     ],
     # This rule will fail until build-base.sh has been run
     tags = ["noci"],
@@ -97,6 +122,16 @@ oci_image(
     tars = [":base_image_tar"],
 )
 
+oci_image(
+    name = "oak_containers_nvidia_sysimage_base",
+    architecture = "amd64",
+    labels = ":oak_containers_sysimage_base_labels",
+    os = "linux",
+    # This rule will fail until build-base.sh has been run
+    tags = ["noci"],
+    tars = [":nvidia_base_image_tar"],
+)
+
 # After running this target, you will need to update the hash for
 # oak_containers_sysimage_base in the WORKSPACE file to use it.
 oci_push(
@@ -104,6 +139,15 @@ oci_push(
     image = ":oak_containers_sysimage_base",
     remote_tags = ["latest"],
     repository = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
+    # This rule will fail until build-base.sh has been run
+    tags = ["noci"],
+)
+
+oci_push(
+    name = "push_nvidia_base",
+    image = ":oak_containers_nvidia_sysimage_base",
+    remote_tags = ["latest"],
+    repository = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
     # This rule will fail until build-base.sh has been run
     tags = ["noci"],
 )

@@ -34,6 +34,8 @@ To update the base image and push it:
 1. ./oak_containers_system_image/build-base.sh
 2. bazel run --stamp oak_containers_system_image:push_base
 
+There is also a version of the base image that includes the nvidia drivers.
+
 ## Bazel-Based System Image Tools
 
 `just oak_containers_system_image` and some `BUILD` targets
@@ -66,3 +68,6 @@ How this works:
   base image built with the old way has all files in the top level. We'll
   probably need to mimic that structure. There are lots of ways to do this, but
   it's not clear what the most correct one is.
+
+- The version with nvidia drivers is still largely untested and under
+  development.
