@@ -96,14 +96,14 @@ impl<'a> SessionConfigBuilder<'a> {
 
 #[allow(dead_code)]
 pub struct AttestationProviderConfig<'a> {
-    attestation_type: AttestationType,
-    self_attesters: Vec<&'a dyn Attester>,
-    peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+    pub attestation_type: AttestationType,
+    pub self_attesters: Vec<&'a dyn Attester>,
+    pub peer_verifiers: Vec<&'a dyn AttestationVerifier>,
 }
 
 #[allow(dead_code)]
 pub struct HandshakerConfig<'a> {
-    handshake_type: HandshakeType,
-    self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
-    peer_static_public_key: Option<Vec<u8>>,
+    pub handshake_type: HandshakeType,
+    pub self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
+    pub peer_static_public_key: Option<Vec<u8>>,
 }
