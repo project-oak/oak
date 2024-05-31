@@ -10,3 +10,8 @@ Verification produces a go/no-go decision based on three (complex) arguments:
 1. **Reference Values** are passed by the client and provide the remaining
    parameters such as public signing keys. They are known good values that are
    relied upon without proof during the verification.
+
+The verification is divided into an extraction phase, and the actual
+verification:
+
+<img src="flow.png" width="850">
