@@ -170,7 +170,7 @@ clang-tidy:
     bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
 # TODO: b/343228114 - Use a Bazel tag instead of listing packages here.
-bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc //oak_proto_rust //oak_sev_snp_attestation_report //oak_sev_guest //sev_serial"
+bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc //oak_proto_rust //oak_sev_snp_attestation_report //oak_sev_guest //sev_serial //oak_crypto"
 
 bazel-ci:
     bazel build --config=unsafe-fast-presubmit -- @jemalloc //...:all
