@@ -1,9 +1,0 @@
-command = [
-  "nix",
-  "develop",
-  ".#systemImageProvenance",
-  "--command",
-  "just",
-  "oak_containers_orchestrator",
-]
-artifact_path = "./oak_containers_orchestrator/target/oak_containers_orchestrator"

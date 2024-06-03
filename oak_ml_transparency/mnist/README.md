@@ -128,9 +128,7 @@ tar --create --gzip --verbose --file mnist_model.tar.gz mnist-model
 ```
 
 Note that uploading to Ent requires and API key that you need to acquire out of
-band. You also need to install the Ent client and configure it. For more info,
-see
-[how it is done on Oak CI](https://github.com/project-oak/oak/blob/b25da5436345fb7e1539730d0a55e0d7b2a43768/.github/workflows/reusable_provenance.yaml#L76-L95).
+band. You also need to install the Ent client and configure it.
 
 Once you have the Ent client, installed and configured, you can use the
 following command to upload the tar file:
