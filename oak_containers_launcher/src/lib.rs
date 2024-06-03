@@ -63,6 +63,7 @@ use crate::proto::oak::{
     },
     session::v1::EndorsedEvidence,
 };
+pub use crate::qemu::VmType;
 
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));

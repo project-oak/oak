@@ -23,10 +23,21 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use command_fds::CommandFdExt;
 
 use crate::path_exists;
+
+/// Types of confidential VMs
+#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
+pub enum VmType {
+    #[default]
+    Default,
+    Sev,
+    SevEs,
+    SevSnp,
+    Tdx,
+}
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -74,6 +85,11 @@ pub struct Params {
     /// VFIO.
     #[arg(long, value_name = "ADDRESS")]
     pub pci_passthrough: Option<String>,
+
+    /// Type of the confidential VM. It could be Default, Sev, SevEs,
+    /// SevSnp, or Tdx (TDX is unimplemented yet)
+    #[arg(long, required = false, value_enum, default_value_t = VmType::Default)]
+    pub vm_type: VmType,
 }
 
 impl Params {
@@ -94,6 +110,7 @@ impl Params {
             telnet_console: None,
             virtio_guest_cid: None,
             pci_passthrough: None,
+            vm_type: VmType::Default,
         }
     }
 }
@@ -129,7 +146,7 @@ impl Qemu {
         // for remote attestation.
         cmd.args(["-cpu", "host"]);
         // Set memory size if given.
-        if let Some(memory_size) = params.memory_size {
+        if let Some(ref memory_size) = params.memory_size {
             cmd.args(["-m", &memory_size]);
         };
         // Number of CPUs to give to the VM.
@@ -141,7 +158,52 @@ impl Qemu {
         // restart should be treated as a failure)
         cmd.arg("-no-reboot");
         // Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
-        cmd.args(["-machine", "microvm,acpi=on,pcie=on"]);
+        let microvm_common = "microvm,acpi=on,pcie=on".to_string();
+        // SEV, SEV-ES, SEV-SNP VMs need confidential guest support and private memory.
+        let sev_machine_suffix = ",confidential-guest-support=sev0,memory-backend=ram1";
+        // Definition of the private memory.
+        let sev_common_object = format!(
+            "memory-backend-memfd,id=ram1,size={},share=true,reserve=false",
+            params.memory_size.unwrap_or("8G".to_string())
+        );
+        // SEV's feature configuration.
+        let sev_config_object = "id=sev0,cbitpos=51,reduced-phys-bits=1";
+        // Generate the parameters and add them to cmd.args.
+        let (machine_arg, object_args) = match params.vm_type {
+            VmType::Default => (microvm_common, vec![]),
+            VmType::Sev => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    "sev-guest,".to_string() + sev_config_object + ",policy=0x1",
+                ],
+            ),
+            VmType::SevEs => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    "sev-guest,".to_string() + sev_config_object + ",policy=0x5",
+                ],
+            ),
+            VmType::SevSnp => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    // Reference:
+                    // https://lore.kernel.org/kvm/20240502231140.GC13783@ls.amr.corp.intel.com/T/
+                    // A basic command-line invocation for SNP would be
+                    // ...
+                    // -object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1,id-auth=
+                    // ...
+                    "sev-snp-guest,".to_string() + sev_config_object + ",id-auth=",
+                ],
+            ),
+            VmType::Tdx => unimplemented!("TDX is not supported"),
+        };
+        cmd.args(["-machine", &machine_arg]);
+        for obj_arg in object_args {
+            cmd.args(["-object", &obj_arg]);
+        }
         // Route first serial port to console.
         if let Some(port) = params.telnet_console {
             cmd.args(["-serial", format!("telnet:localhost:{port},server").as_str()]);
@@ -170,7 +232,10 @@ impl Qemu {
             ));
         };
         cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
-        cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
+        cmd.args([
+            "-device",
+            "virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=",
+        ]);
         if let Some(virtio_guest_cid) = params.virtio_guest_cid {
             cmd.args([
                 "-device",
