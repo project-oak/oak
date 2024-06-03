@@ -21,8 +21,8 @@ use alloc::{string::String, vec, vec::Vec};
 use coset::{
     cbor::value::Value,
     cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
-    iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
-    RegisteredLabelWithPrivate,
+    iana, Algorithm, CborOrdering, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation,
+    KeyType, Label, RegisteredLabelWithPrivate,
 };
 use hkdf::Hkdf;
 use p256::{
@@ -228,7 +228,7 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
 /// Converts an ECDSA verifying key to a COSE_Key representation.
 pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
     let encoded_point = public_key.to_encoded_point(false);
-    CoseKey {
+    let mut ck = CoseKey {
         kty: KeyType::Assigned(iana::KeyType::EC2),
         key_id: Vec::from(derive_verifying_key_id(public_key)),
         alg: Some(Algorithm::Assigned(iana::Algorithm::ES256)),
@@ -248,7 +248,9 @@ pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
             ),
         ],
         ..Default::default()
-    }
+    };
+    ck.canonicalize(CborOrdering::LengthFirstLexicographic);
+    ck
 }
 
 /// Generates a CWT certificate representing an ECDSA signing key, such as an
