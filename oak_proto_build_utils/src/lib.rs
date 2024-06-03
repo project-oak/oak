@@ -33,7 +33,7 @@ pub fn fix_prost_derives() -> Result<(), Box<dyn std::error::Error>> {
     // let out_dir_path = std::path::PathBuf::from(std::env::var("OUT_DIR"))?;
 
     let out_dir = std::env::var("OUT_DIR")?;
-    for entry in fs::read_dir(&out_dir)? {
+    for entry in fs::read_dir(out_dir)? {
         let file_path = entry?.path();
         let contents = fs::read_to_string(&file_path)?;
 

@@ -1,13 +1,24 @@
 # Bazel build defaults.
 # incompatible_enable_cc_toolchain_resolution:
 #   Should not be needed after Bazel 7.0 is released.
-# cxxopt='-std=c++17': 
+# cxxopt='-std=c++17':
 #   Build C++ targets using C++17.
 #   <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>
 # --host_cxxopt='-std=c++17'
 #   Fix Abseil "C++ versions less than C++14 are not supported".
 #   <https://github.com/protocolbuffers/protobuf/issues/12393#issuecomment-1504349780>
 build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17' --host_cxxopt='-std=c++17'
+
+# Setup clippy aspect to run clippy automatically on all rust targets
+# See: https://bazelbuild.github.io/rules_rust/rust_clippy.html
+build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
+build:clippy --output_groups=+clippy_checks
+
+# Setup rustfmt aspect to run automatically on all rust targets
+# https://bazelbuild.github.io/rules_rust/rust_fmt.html
+build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
+build:rustfmt --output_groups=+rustfmt_checks
+build:rustfmt --@rules_rust//:rustfmt.toml=//:.rustfmt.toml
 
 # Required for bazel_clang_tidy to operate as expected
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect

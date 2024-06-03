@@ -24,7 +24,10 @@ package(
 )
 
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
-exports_files(["LICENSE"])
+exports_files([
+    "LICENSE",
+    ".rustfmt.toml",
+])
 
 constraint_value(
     name = "os_oak",

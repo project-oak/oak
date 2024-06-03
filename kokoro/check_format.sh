@@ -4,4 +4,4 @@
 source "$(dirname "$0")/common.sh"
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command ./scripts/xtask check-format
+./scripts/docker_run nix develop .#ci --command just check-format-ci

@@ -179,6 +179,18 @@ bazel-ci:
     # Some crates also need to be built for x86_64-unknown-none.
     bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- {{bare_metal_crates}}
 
+bazel-clippy:
+    bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/...
+
+bazel-rustfmt:
+    bazel build --config=rustfmt --config=unsafe-fast-presubmit //...:all -- -third_party/...
+
+xtask job:
+    ./scripts/xtask {{job}}
+
+clippy-ci: (xtask "run-cargo-clippy") bazel-clippy
+check-format-ci: (xtask "check-format") bazel-rustfmt
+
 # Temporary target to help debugging Bazel remote cache with more detailed logs.
 # It should be deleted when debugging is completed.
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.

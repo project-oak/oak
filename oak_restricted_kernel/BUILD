@@ -83,6 +83,9 @@ rust_library(
 rust_test(
     name = "oak_restricted_kernel_test",
     crate = ":oak_restricted_kernel",
+    crate_features = [
+        "simple_io_channel",
+    ],
     deps = [
         "@oak_crates_index//:assertables",
     ],
@@ -91,6 +94,9 @@ rust_test(
 rust_test(
     name = "oak_restricted_kernel_sinmple_io_channel_test",
     crate = ":oak_restricted_kernel_simple_io_channel",
+    crate_features = [
+        "simple_io_channel",
+    ],
     deps = [
         "@oak_crates_index//:assertables",
     ],
