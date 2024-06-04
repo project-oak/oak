@@ -1,0 +1,47 @@
+# Bazel build defaults.
+# incompatible_enable_cc_toolchain_resolution:
+#   Should not be needed after Bazel 7.0 is released.
+# cxxopt='-std=c++17':
+#   Build C++ targets using C++17.
+#   <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>
+# --host_cxxopt='-std=c++17'
+#   Fix Abseil "C++ versions less than C++14 are not supported".
+#   <https://github.com/protocolbuffers/protobuf/issues/12393#issuecomment-1504349780>
+build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17' --host_cxxopt='-std=c++17'
+
+# Required for bazel_clang_tidy to operate as expected
+build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
+build:clang-tidy --output_groups=report
+
+# Optionally override the .clang-tidy config file target
+build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
+
+# Use nightly rustc by default
+build --@rules_rust//rust/toolchain/channel=nightly
+
+# Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
+# and avoid attempting to parallelize steps that are actually serialized by Bazel.
+build:ci --block_for_lock=false
+# Useful to determine how long individual steps are taking in CI.
+build:ci --show_timestamps
+
+# --build_tag_filters=-noci allow us to skip broken/flaky/specialized test
+# targets during CI builds by adding tags = ["noci"]
+build:ci --build_tag_filters=-noci
+
+# --show_result leads to all of the built packages being logged at the
+# end, so we can visually verify that CI tasks are building everything we want.
+build:ci --show_result=1000000
+
+# --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
+build:ci --noshow_progress
+build:ci --curses=no
+
+# The unsafe-fast-presubmit config should only be used in presubmits steps that do not produce
+# binaries that need to be released or trusted (e.g. TEE applications). This is because it enables
+# using a remote cache, which in general may not be considered trustworthy.
+
+# Inherit from the ci config.
+build:unsafe-fast-presubmit --config=ci
+build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
+build:unsafe-fast-presubmit --remote_upload_local_results=false

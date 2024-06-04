@@ -1,0 +1,185 @@
+workspace(name = "test_workspace")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+local_repository(
+    # Give it a different name to ensure that this doesn't break any
+    # dependencies resolutions.
+    name = "oak2",
+    path = "../..",
+)
+
+http_archive(
+    name = "rules_rust",
+    integrity = "sha256-ww398ehv1QZQp26mRbOkXy8AZnsGGHpoXpVU4WfKl+4=",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.40.0/rules_rust-v0.40.0.tar.gz"],
+)
+
+RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
+
+RUST_VERSIONS = [
+    "1.76.0",
+    RUST_NIGHTLY_VERSION,
+]
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains", "rust_repository_set")
+
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition = "2021",
+    versions = RUST_VERSIONS,
+)
+
+_BARE_METAL_RUSTC_FLAGS = [
+    "-C",
+    "relocation-model=static",
+    "-C",
+    "target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+]
+
+# Creates remote repositories for Rust toolchains, required for cross-compiling.
+rust_repository_set(
+    name = "rust_toolchain_repo",
+    edition = "2021",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    extra_rustc_flags = {
+        "x86_64-unknown-none": _BARE_METAL_RUSTC_FLAGS,
+    },
+    extra_target_triples = {
+        "x86_64-unknown-none": [
+            "@platforms//cpu:x86_64",
+            "@platforms//os:none",
+        ],
+    },
+    versions = RUST_VERSIONS,
+)
+
+# C++ gRPC support.
+# https://github.com/grpc/grpc
+http_archive(
+    name = "com_github_grpc_grpc",
+    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
+    strip_prefix = "grpc-1.62.0",
+    urls = [
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
+    ],
+)
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+
+grpc_extra_deps()
+
+# Java gRPC support.
+# https://github.com/grpc/grpc-java
+http_archive(
+    name = "io_grpc_grpc_java",
+    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
+    strip_prefix = "grpc-java-1.56.0",
+    urls = [
+        # Java gRPC v1.56.0 (2023-06-21).
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
+    ],
+)
+
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
+
+# External Java rules.
+# https://github.com/bazelbuild/rules_jvm_external
+http_archive(
+    name = "rules_jvm_external",
+    sha256 = "f86fd42a809e1871ca0aabe89db0d440451219c3ce46c58da240c7dcdc00125f",
+    strip_prefix = "rules_jvm_external-5.2",
+    urls = [
+        # Rules Java v5.2 (2023-04-13).
+        "https://github.com/bazelbuild/rules_jvm_external/releases/download/5.2/rules_jvm_external-5.2.tar.gz",
+    ],
+)
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
+
+### --- Base Proto Support --- ###
+http_archive(
+    name = "rules_proto",
+    sha256 = "dc3fb206a2cb3441b485eb1e423165b231235a1ea9b031b4433cf7bc1fa460dd",
+    strip_prefix = "rules_proto-5.3.0-21.7",
+    urls = [
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/5.3.0-21.7.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "rules_foreign_cc",
+    sha256 = "5816f4198184a1e0e682d7e6b817331219929401e2f18358fac7f7b172737976",
+    strip_prefix = "rules_foreign_cc-0.10.0",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.10.0.tar.gz",
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+# This sets up some common toolchains for building targets. For more details, please see
+# https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
+rules_foreign_cc_dependencies()
+
+# Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by
+# distroless images. The glibc version provided by nix may be too new.
+# This (currently) needs to be loaded after rules_oci because it defaults to using an older version
+# of aspect-build/bazel-lib.
+http_archive(
+    name = "aspect_gcc_toolchain",
+    sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
+    strip_prefix = "gcc-toolchain-0.4.2",
+    urls = [
+        "https://github.com/aspect-build/gcc-toolchain/archive/refs/tags/0.4.2.tar.gz",
+    ],
+)
+
+load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
+
+gcc_toolchain_dependencies()
+
+load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64",
+    target_arch = ARCHS.x86_64,
+)
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+rules_proto_dependencies()
+
+rules_proto_toolchains()
+
+# --- Rust support ---
+
+load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies", "rules_cc_toolchains")
+
+rules_cc_dependencies()
+
+rules_cc_toolchains()
+
+load("@oak2//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
+
+create_oak_crate_repositories(
+    cargo_lockfile = "//:Cargo-test.bazel.lock",
+    lockfile = "//:cargo-bazel-test-lock.json",
+    no_std_cargo_lockfile = "//:Cargo_no_std-test.bazel.lock",
+    no_std_lockfile = "//:cargo-no-std-test-bazel-lock.json",
+)
+
+load("@oak2//bazel/crates:crates.bzl", "load_oak_crate_repositories")
+
+load_oak_crate_repositories()

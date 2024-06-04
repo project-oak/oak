@@ -173,11 +173,15 @@ clang-tidy:
 bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc //oak_proto_rust //oak_sev_snp_attestation_report //oak_sev_guest //sev_serial //oak_crypto"
 
 bazel-ci:
-    bazel build --config=unsafe-fast-presubmit -- @jemalloc //...:all
-    bazel test --config=unsafe-fast-presubmit -- //...:all
+    bazel build --config=unsafe-fast-presubmit -- //...:all
+    bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 
     # Some crates also need to be built for x86_64-unknown-none.
     bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- {{bare_metal_crates}}
+
+    # Test Oak as a dependency in the test workspace
+    # Protos don't work yet, so just testing a subset of targets
+    cd bazel/test_workspace && bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils
 
 bazel-clippy:
     bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/...

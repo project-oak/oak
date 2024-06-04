@@ -13,15 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Forwarder for bazel rules and macros."""
+#
+"""
+Load all the crate repositories created by create_oak_crate_repoitories.
 
-load("//bazel/private:oci_runtime_bundle.bzl", _oci_runtime_bundle = "oci_runtime_bundle")
+Usage:
 
-oci_runtime_bundle = _oci_runtime_bundle
+load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
-RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
+create_oak_crate_repositories()
 
-RUST_VERSIONS = [
-    "1.76.0",
-    RUST_NIGHTLY_VERSION,
-]
+load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
+
+load_oak_crate_repositories()
+
+"""
+
+load("@oak_crates_index//:defs.bzl", "crate_repositories")
+load("@oak_no_std_crates_index//:defs.bzl", no_std_crate_repositories = "crate_repositories")
+
+def load_oak_crate_repositories():
+    crate_repositories()
+    no_std_crate_repositories()
