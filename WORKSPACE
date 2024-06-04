@@ -263,6 +263,12 @@ oci_pull(
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
 )
 
+oci_pull(
+    name = "oak_containers_nvidia_sysimage_base",
+    digest = "sha256:9c5c0385c9c9902aa21ef4206729dfebb7b4d1b17ae1fc849de14d80d7c20482",
+    image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
+)
+
 load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
 
 register_expand_template_toolchains()

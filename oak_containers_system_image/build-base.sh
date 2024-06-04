@@ -61,6 +61,8 @@ rm -rf -- "$sandbox"
 
 set +o xtrace
 printf "\n\nIf you want to push this newly created base, run:\n"
-printf "\nbazel run oak_containers_system_image:push_base\n\n"
+printf "\nbazel run oak_containers_system_image:push_base\n"
+printf "(and/or) bazel run oak_containers_system_image:push_nvidia_base\n\n"
 printf "If you want to use the newly created base, update the hash for\n"
-printf "the oak_containers_sysimage_base oci_pull target in WORKSPACE\n\n"
+printf "the oak_containers_sysimage_base oci_pull target (or the nvidia flavour\n"
+printf "if needed) in WORKSPACE\n\n"

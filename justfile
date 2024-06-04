@@ -105,6 +105,13 @@ oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
         oak_containers_system_image/target/image.tar
     xz --force oak_containers_system_image/target/image.tar
 
+oak_containers_nvidia_system_image: oak_containers_system_image
+    bazel build $BAZEL_CONFIG_FLAG oak_containers_system_image:oak_containers_nvidia_system_image --build_tag_filters=+noci
+    cp --preserve=timestamps \
+        bazel-bin/oak_containers_system_image/oak_containers_nvidia_system_image.tar \
+        oak_containers_system_image/target/nvidia_image.tar
+    xz --force oak_containers_system_image/target/nvidia_image.tar
+
 oak_containers_orchestrator:
     env --chdir=oak_containers_orchestrator \
         cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
