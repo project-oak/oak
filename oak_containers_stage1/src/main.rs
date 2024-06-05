@@ -40,12 +40,13 @@ use nix::{
 use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
 use tokio::process::Command;
+use tonic::transport::Uri;
 use x86_64::PhysAddr;
 
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(long, default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
+    launcher_addr: Uri,
 
     #[arg(long, default_value = "/sbin/init")]
     init: String,
@@ -90,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
 
-    let mut client = LauncherClient::new(args.launcher_addr.parse()?)
+    let mut client = LauncherClient::new(args.launcher_addr)
         .await
         .context("error creating the launcher client")?;
 

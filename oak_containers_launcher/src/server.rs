@@ -37,9 +37,10 @@ use opentelemetry_proto::tonic::{
 use tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
-    sync::oneshot::{Receiver, Sender},
+    sync::{oneshot, watch},
 };
 use tokio_stream::wrappers::TcpListenerStream;
+use tokio_vsock::VsockListener;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::proto::oak::containers::{
@@ -63,10 +64,10 @@ struct LauncherServerImplementation {
     container_bundle: std::path::PathBuf,
     application_config: Vec<u8>,
     // Will be used to send the Attestation Evidence to the Launcher.
-    evidence_sender: Mutex<Option<Sender<Evidence>>>,
+    evidence_sender: Mutex<Option<oneshot::Sender<Evidence>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
-    app_ready_notifier: Mutex<Option<Sender<()>>>,
+    app_ready_notifier: Mutex<Option<oneshot::Sender<()>>>,
 }
 
 #[tonic::async_trait]
@@ -259,14 +260,18 @@ impl LogsService for LauncherServerImplementation {
     }
 }
 
+// Clippy is not wrong, but hopefully the situation with two listeners is only
+// temporary.
+#[allow(clippy::too_many_arguments)]
 pub async fn new(
     listener: TcpListener,
+    vsock_listener: VsockListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Vec<u8>,
-    evidence_sender: Sender<Evidence>,
-    app_ready_notifier: Sender<()>,
-    shutdown: Receiver<()>,
+    evidence_sender: oneshot::Sender<Evidence>,
+    app_ready_notifier: oneshot::Sender<()>,
+    shutdown: watch::Receiver<()>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = Arc::new(LauncherServerImplementation {
         system_image,
@@ -275,12 +280,27 @@ pub async fn new(
         evidence_sender: Mutex::new(Some(evidence_sender)),
         app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
     });
-    Server::builder()
+
+    let mut tcp_shutdown = shutdown.clone();
+    let tcp_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
         .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
-        .add_service(LogsServiceServer::from_arc(server_impl))
-        .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))
-        .await
+        .add_service(LogsServiceServer::from_arc(server_impl.clone()))
+        .serve_with_incoming_shutdown(
+            TcpListenerStream::new(listener),
+            tcp_shutdown.changed().map(|_| ()),
+        );
+
+    let mut virtio_shutdown = shutdown.clone();
+    let virtio_server = Server::builder()
+        .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .serve_with_incoming_shutdown(
+            vsock_listener.incoming(),
+            virtio_shutdown.changed().map(|_| ()),
+        );
+
+    tokio::try_join!(tcp_server, virtio_server)
+        .map(|((), ())| ())
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

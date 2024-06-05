@@ -2574,6 +2574,7 @@ dependencies = [
  "sha2",
  "tar",
  "tokio",
+ "tokio-vsock",
  "tonic",
  "tower",
  "x86_64",

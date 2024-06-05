@@ -262,6 +262,10 @@ impl Qemu {
                 "brd.max_part=1",
                 format!("ip={vm_address}:::255.255.255.0::eth0:off").as_str(),
                 "quiet",
+                "--",
+                // Makes stage1 communicate to the launcher via virtio-vsock. Disabled for now.
+                //format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}")
+                //    .as_str(),
             ]
             .join(" ")
             .as_str(),

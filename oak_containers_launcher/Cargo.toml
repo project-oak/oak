@@ -34,6 +34,6 @@ tokio = { version = "*", features = [
   "sync",
 ] }
 tokio-stream = { version = "*", features = ["net"] }
-tokio-vsock = "*"
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true, features = ["codegen"] }
 which = "*"

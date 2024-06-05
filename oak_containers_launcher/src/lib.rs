@@ -50,11 +50,11 @@ use oak_proto_rust::oak::attestation::v1::{
 pub use qemu::Params as QemuParams;
 use tokio::{
     net::TcpListener,
-    sync::oneshot::{channel, Receiver, Sender},
+    sync::{oneshot, watch},
     task::JoinHandle,
     time::{timeout, Duration},
 };
-use tokio_vsock::VsockAddr;
+use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
 use tonic::transport::Channel as TonicChannel;
 
 use crate::proto::oak::{
@@ -178,11 +178,11 @@ pub struct Launcher {
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_evidence: Option<EndorsedEvidence>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
-    evidence_receiver: Option<Receiver<Evidence>>,
-    app_ready_notifier: Option<Receiver<()>>,
+    evidence_receiver: Option<oneshot::Receiver<Evidence>>,
+    app_ready_notifier: Option<oneshot::Receiver<()>>,
     orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
     trusted_app_channel: Channel,
-    shutdown: Option<Sender<()>>,
+    shutdown: Option<watch::Sender<()>>,
 }
 
 impl Launcher {
@@ -192,12 +192,16 @@ impl Launcher {
         let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
+        // Resuse the same port we got for the TCP socket for vsock.
+        let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))?;
         log::info!("Launcher service listening on port {port}");
-        let (evidence_sender, evidence_receiver) = channel::<Evidence>();
-        let (shutdown_sender, shutdown_receiver) = channel::<()>();
-        let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
+        let (evidence_sender, evidence_receiver) = oneshot::channel::<Evidence>();
+        let (shutdown_sender, mut shutdown_receiver) = watch::channel::<()>(());
+        shutdown_receiver.mark_unchanged(); // Don't immediately notify on the initial value.
+        let (app_notifier_sender, app_notifier_receiver) = oneshot::channel::<()>();
         let server = tokio::spawn(server::new(
             listener,
+            vsock_listener,
             args.system_image,
             args.container_bundle,
             args.application_config,
