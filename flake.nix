@@ -34,7 +34,8 @@
           # reproducibility.
           # Note that building a package via nix is not by itself a guarantee of
           # reproducibility; see https://reproducible.nixos.org.
-          linux_kernel = pkgs.linuxManualConfig {
+          # Common kernel configuration
+          commonLinuxKernelConfig = {
             # To allow reproducibility, the following options need to be configured:
             # - CONFIG_MODULE_SIG is not set
             # - CONFIG_MODULE_SIG_ALL is not set
@@ -49,11 +50,16 @@
             version = linux_kernel_version;
             src = linux_kernel_src;
             allowImportFromDerivation = true;
+          };
+          # Patched kernel
+          linux_kernel = pkgs.linuxManualConfig (commonLinuxKernelConfig // {
             kernelPatches = [{
               name = "virtio-dma";
               patch = ./oak_containers_kernel/patches/virtio-dma.patch;
             }];
-          };
+          });
+          # Vanilla kernel
+          vanilla_linux_kernel = pkgs.linuxManualConfig commonLinuxKernelConfig;
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -101,7 +107,7 @@
           };
         in
         {
-          packages = { inherit linux_kernel; };
+          packages = { inherit linux_kernel; inherit vanilla_linux_kernel; };
           formatter = pkgs.nixpkgs-fmt;
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
@@ -184,6 +190,7 @@
             containers = with pkgs; mkShell {
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
+                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
               '';
               inputsFrom = [
                 base
@@ -214,6 +221,7 @@
             bzImageProvenance = with pkgs; mkShell {
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
+                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
               '';
               inputsFrom = [
                 rust
