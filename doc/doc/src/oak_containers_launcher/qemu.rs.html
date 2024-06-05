@@ -237,6 +237,71 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -262,10 +327,21 @@
 };
 
 <span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>clap::{Parser, ValueEnum};
 <span class="kw">use </span>command_fds::CommandFdExt;
 
 <span class="kw">use </span><span class="kw">crate</span>::path_exists;
+
+<span class="doccomment">/// Types of confidential VMs
+</span><span class="attr">#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
+</span><span class="kw">pub enum </span>VmType {
+    <span class="attr">#[default]
+    </span>Default,
+    Sev,
+    SevEs,
+    SevSnp,
+    Tdx,
+}
 
 <span class="doccomment">/// Represents parameters used for launching VM instances.
 </span><span class="attr">#[derive(Parser, Clone, Debug, PartialEq)]
@@ -313,6 +389,11 @@
     /// VFIO.
     </span><span class="attr">#[arg(long, value_name = <span class="string">"ADDRESS"</span>)]
     </span><span class="kw">pub </span>pci_passthrough: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+    <span class="doccomment">/// Type of the confidential VM. It could be Default, Sev, SevEs,
+    /// SevSnp, or Tdx (TDX is unimplemented yet)
+    </span><span class="attr">#[arg(long, required = <span class="bool-val">false</span>, value_enum, default_value_t = VmType::Default)]
+    </span><span class="kw">pub </span>vm_type: VmType,
 }
 
 <span class="kw">impl </span>Params {
@@ -333,6 +414,7 @@
             telnet_console: <span class="prelude-val">None</span>,
             virtio_guest_cid: <span class="prelude-val">None</span>,
             pci_passthrough: <span class="prelude-val">None</span>,
+            vm_type: VmType::Default,
         }
     }
 }
@@ -368,7 +450,7 @@
         // for remote attestation.
         </span>cmd.args([<span class="string">"-cpu"</span>, <span class="string">"host"</span>]);
         <span class="comment">// Set memory size if given.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(memory_size) = params.memory_size {
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>memory_size) = params.memory_size {
             cmd.args([<span class="string">"-m"</span>, <span class="kw-2">&amp;</span>memory_size]);
         };
         <span class="comment">// Number of CPUs to give to the VM.
@@ -380,7 +462,52 @@
         // restart should be treated as a failure)
         </span>cmd.arg(<span class="string">"-no-reboot"</span>);
         <span class="comment">// Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
-        </span>cmd.args([<span class="string">"-machine"</span>, <span class="string">"microvm,acpi=on,pcie=on"</span>]);
+        </span><span class="kw">let </span>microvm_common = <span class="string">"microvm,acpi=on,pcie=on"</span>.to_string();
+        <span class="comment">// SEV, SEV-ES, SEV-SNP VMs need confidential guest support and private memory.
+        </span><span class="kw">let </span>sev_machine_suffix = <span class="string">",confidential-guest-support=sev0,memory-backend=ram1"</span>;
+        <span class="comment">// Definition of the private memory.
+        </span><span class="kw">let </span>sev_common_object = <span class="macro">format!</span>(
+            <span class="string">"memory-backend-memfd,id=ram1,size={},share=true,reserve=false"</span>,
+            params.memory_size.unwrap_or(<span class="string">"8G"</span>.to_string())
+        );
+        <span class="comment">// SEV's feature configuration.
+        </span><span class="kw">let </span>sev_config_object = <span class="string">"id=sev0,cbitpos=51,reduced-phys-bits=1"</span>;
+        <span class="comment">// Generate the parameters and add them to cmd.args.
+        </span><span class="kw">let </span>(machine_arg, object_args) = <span class="kw">match </span>params.vm_type {
+            VmType::Default =&gt; (microvm_common, <span class="macro">vec!</span>[]),
+            VmType::Sev =&gt; (
+                microvm_common + sev_machine_suffix,
+                <span class="macro">vec!</span>[
+                    sev_common_object,
+                    <span class="string">"sev-guest,"</span>.to_string() + sev_config_object + <span class="string">",policy=0x1"</span>,
+                ],
+            ),
+            VmType::SevEs =&gt; (
+                microvm_common + sev_machine_suffix,
+                <span class="macro">vec!</span>[
+                    sev_common_object,
+                    <span class="string">"sev-guest,"</span>.to_string() + sev_config_object + <span class="string">",policy=0x5"</span>,
+                ],
+            ),
+            VmType::SevSnp =&gt; (
+                microvm_common + sev_machine_suffix,
+                <span class="macro">vec!</span>[
+                    sev_common_object,
+                    <span class="comment">// Reference:
+                    // https://lore.kernel.org/kvm/20240502231140.GC13783@ls.amr.corp.intel.com/T/
+                    // A basic command-line invocation for SNP would be
+                    // ...
+                    // -object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1,id-auth=
+                    // ...
+                    </span><span class="string">"sev-snp-guest,"</span>.to_string() + sev_config_object + <span class="string">",id-auth="</span>,
+                ],
+            ),
+            VmType::Tdx =&gt; <span class="macro">unimplemented!</span>(<span class="string">"TDX is not supported"</span>),
+        };
+        cmd.args([<span class="string">"-machine"</span>, <span class="kw-2">&amp;</span>machine_arg]);
+        <span class="kw">for </span>obj_arg <span class="kw">in </span>object_args {
+            cmd.args([<span class="string">"-object"</span>, <span class="kw-2">&amp;</span>obj_arg]);
+        }
         <span class="comment">// Route first serial port to console.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(port) = params.telnet_console {
             cmd.args([<span class="string">"-serial"</span>, <span class="macro">format!</span>(<span class="string">"telnet:localhost:{port},server"</span>).as_str()]);
@@ -409,7 +536,10 @@
             </span>));
         };
         cmd.args([<span class="string">"-netdev"</span>, netdev_rules.join(<span class="string">","</span>).as_str()]);
-        cmd.args([<span class="string">"-device"</span>, <span class="string">"virtio-net,netdev=netdev,rombar=0"</span>]);
+        cmd.args([
+            <span class="string">"-device"</span>,
+            <span class="string">"virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile="</span>,
+        ]);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(virtio_guest_cid) = params.virtio_guest_cid {
             cmd.args([
                 <span class="string">"-device"</span>,
