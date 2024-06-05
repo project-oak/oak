@@ -1,0 +1,31 @@
+[package]
+name = "oak_containers_agent"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+clap = { version = "*", features = ["derive"] }
+opentelemetry = { version = "*", default-features = false, features = [
+  "metrics",
+] }
+opentelemetry_sdk = { version = "*", default-features = false, features = [
+  "metrics",
+  "rt-tokio",
+] }
+opentelemetry-otlp = { version = "*", default-features = false, features = [
+  "grpc-tonic",
+  "metrics",
+] }
+procfs = "*"
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "sync",
+  "time",
+] }
+tokio-stream = { version = "*", features = ["net"] }
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }

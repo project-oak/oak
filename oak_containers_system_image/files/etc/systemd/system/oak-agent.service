@@ -1,0 +1,14 @@
+[Unit]
+Description=Oak Containers Metrics Agent
+After=network-online.target
+Wants=network-online.target
+
+
+[Service]
+Type=exec
+Restart=always
+ExecStart=/usr/bin/oak_containers_agent
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

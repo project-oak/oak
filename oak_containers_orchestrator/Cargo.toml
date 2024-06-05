@@ -36,7 +36,6 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
 p256 = { version = "*", features = ["ecdsa"] }
 prost = "*"
 prost-types = "*"
-procfs = "*"
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }

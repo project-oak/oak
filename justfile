@@ -88,7 +88,7 @@ oak_containers_kernel:
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'
 
-oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
+oak_containers_system_image: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
     mkdir --parents oak_containers_system_image/target/image_binaries
@@ -98,6 +98,9 @@ oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
     cp --preserve=timestamps \
         oak_containers_syslogd/target/oak_containers_syslogd_patched \
         oak_containers_system_image/target/image_binaries/oak_containers_syslogd
+    cp --preserve=timestamps \
+        oak_containers_agent/target/oak_containers_agent_patched \
+        oak_containers_system_image/target/image_binaries/oak_containers_agent
     # Build and compress.
     bazel build $BAZEL_CONFIG_FLAG oak_containers_system_image --build_tag_filters=+noci
     cp --preserve=timestamps \
@@ -127,6 +130,17 @@ oak_containers_syslogd:
         oak_containers_syslogd/target/oak_containers_syslogd_patched
     patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
         oak_containers_syslogd/target/oak_containers_syslogd_patched
+
+oak_containers_agent:
+    env --chdir=oak_containers_agent \
+        cargo build --release -Z unstable-options --out-dir=target
+    # We can't patch the binary in-place, as that would confuse cargo.
+    # Therefore we copy it to a new location and patch there.
+    cp \
+        oak_containers_agent/target/oak_containers_agent \
+        oak_containers_agent/target/oak_containers_agent_patched
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
+        oak_containers_agent/target/oak_containers_agent_patched
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:

@@ -20,15 +20,16 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # Copy the generated binaries to Placer. The timestamps are used to convey
 # the creation time.
 #
-# System image deps (oak_containers_orchestrator, oak_containers_syslogd)
-# are tracked to monitor their reproducibility. They are expected to be
-# imported transiently into google3 for the sake of provenance verification
-# (i.e., do Kokoro and GitHub produce identical results).
+# System image deps (oak_containers_orchestrator, oak_containers_syslogd,
+# oak_containers_agent) are tracked to monitor their reproducibility. They are
+# expected to be imported transiently into google3 for the sake of provenance
+# verification (i.e., do Kokoro and GitHub produce identical results).
 readonly generated_binaries=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/bzImage
     ./oak_containers_orchestrator/target/oak_containers_orchestrator
     ./oak_containers_syslogd/target/oak_containers_syslogd_patched
+    ./oak_containers_agent/target/oak_containers_agent_patched
     ./oak_containers_system_image/target/image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
@@ -39,6 +40,7 @@ readonly binary_names=(
     oak_containers_kernel
     oak_containers_orchestrator
     oak_containers_syslogd
+    oak_containers_agent
     oak_containers_system_image
     oak_containers_hello_world_container
     oak_functions_container

@@ -33,7 +33,6 @@ rust_library(
         "src/launcher_client.rs",
         "src/lib.rs",
         "src/logging.rs",
-        "src/metrics.rs",
     ],
     crate_features = ["bazel"],
     crate_name = "oak_containers_orchestrator",

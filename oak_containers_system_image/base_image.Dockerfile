@@ -45,6 +45,7 @@ RUN systemctl enable systemd-networkd
 # They don't exist yet in this image, but the symlinks will be properly created.
 RUN systemctl enable oak-orchestrator
 RUN systemctl enable oak-syslogd
+RUN systemctl enable oak-agent
 
 # Only enable interactive logins if the kernel was booted with "debug" flag.
 RUN systemctl disable getty@

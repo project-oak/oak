@@ -25,6 +25,7 @@ package(
 filegroup(
     name = "rust_bins",
     srcs = [
+        "target/image_binaries/oak_containers_agent",
         "target/image_binaries/oak_containers_orchestrator",
         "target/image_binaries/oak_containers_syslogd",
     ],

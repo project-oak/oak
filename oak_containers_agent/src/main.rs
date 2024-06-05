@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,22 @@
 // limitations under the License.
 //
 
-use std::{sync::Arc, time::Duration};
+#![feature(c_size_t)]
 
-use anyhow::Result;
+use clap::Parser;
 use opentelemetry::{
+    global::set_error_handler,
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };
 use procfs::{Current, CurrentSI};
+use tokio::time::{self, Duration};
 
-use crate::launcher_client::LauncherClient;
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(default_value = "http://10.0.2.100:8080")]
+    launcher_addr: String,
+}
 
 // It's not dead, it's just asynchronous.
 #[allow(dead_code)]
@@ -51,8 +57,9 @@ pub struct SystemMetrics {
     mem_slab: ObservableGauge<u64>,
 }
 
+#[allow(dead_code)]
 impl SystemMetrics {
-    fn new(meter: Meter) -> Result<Self> {
+    fn new(meter: Meter) -> Result<Self, anyhow::Error> {
         Ok(Self {
             cpu_seconds_total: meter
                 .u64_observable_counter("cpu_seconds_total")
@@ -259,11 +266,17 @@ impl SystemMetrics {
     }
 }
 
-pub fn run(launcher_client: Arc<LauncherClient>) -> Result<SystemMetrics> {
-    let metrics = opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(launcher_client.openmetrics_builder())
-        .with_period(Duration::from_secs(60))
-        .build()?;
-    SystemMetrics::new(metrics.meter("oak_containers_orchestrator"))
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+    set_error_handler(|err| eprintln!("oak-agent: OTLP error: {}", err))?;
+
+    let meter_provider = oak_containers_agent::metrics::init_metrics(args.launcher_addr).unwrap();
+    let meter = meter_provider.meter("oak_agent");
+    let _system_metrics = SystemMetrics::new(meter);
+
+    // keep alive loop
+    loop {
+        time::sleep(Duration::from_secs(30)).await;
+    }
 }

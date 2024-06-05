@@ -15,6 +15,7 @@ members = [
   "oak_attestation_verification_test_utils",
   "oak_channel",
   "oak_client",
+  "oak_containers_agent",
   "oak_containers_hello_world_trusted_app",
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_launcher",
@@ -109,6 +110,7 @@ oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_attestation_verification_test_utils = { path = "./oak_attestation_verification_test_utils" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
+oak_containers_agent = { path = "./oak_containers_agent" }
 oak_containers_orchestrator = { path = "./oak_containers_orchestrator" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
 oak_containers_sdk = { path = "./oak_containers_sdk" }

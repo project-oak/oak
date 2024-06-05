@@ -120,8 +120,6 @@ async fn main() -> anyhow::Result<()> {
         tokio::fs::create_dir_all(path).await?;
     }
 
-    let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
-
     // Start application and gRPC servers.
     let user = nix::unistd::User::from_name(&args.runtime_user)
         .context(format!("error resolving user {}", args.runtime_user))?

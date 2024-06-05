@@ -41,4 +41,3 @@ pub mod ipc_server;
 pub mod key_provisioning;
 pub mod launcher_client;
 pub mod logging;
-pub mod metrics;
