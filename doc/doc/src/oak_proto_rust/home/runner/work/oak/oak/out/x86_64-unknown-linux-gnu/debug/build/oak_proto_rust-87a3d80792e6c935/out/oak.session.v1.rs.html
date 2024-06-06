@@ -125,6 +125,59 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -180,31 +233,84 @@
     <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>endorsed_evidence: ::prost::alloc::vec::Vec&lt;EndorsedEvidence&gt;,
 }
+<span class="doccomment">/// Noise handshake message containing fields for all handshake patterns.
+/// &lt;&lt;http://www.noiseprotocol.org/noise.html#handshake-patterns&gt;&gt;
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>NoiseHandshakeMessage {
+    <span class="doccomment">/// Noise Protocol ephemeral public key 'e'.
+    /// &lt;&lt;http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine&gt;&gt;
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>ephemeral_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Noise Protocol static public key 's'.
+    /// &lt;&lt;http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine&gt;&gt;
+    ///
+    /// Note: For some Noise patterns (such as XX and IX) static public key may be
+    /// encrypted with the chaining key to hide peer's identity.
+    /// &lt;&lt;http://www.noiseprotocol.org/noise.html#handshake-patterns&gt;&gt;
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>static_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Payload encrypted with the current chaining key.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="doccomment">/// Message to be signed as part of the attestation binding.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AttestationBindingMessage {
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>handshake_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>endorsements_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>peer_reference_values_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="doccomment">/// Message that binds the Noise session (and optionally Attestation Endorsement
+/// and peer Reference Values) to the Attestation Evidence.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AttestationBinding {
+    <span class="doccomment">/// Signature of the serialized `AttestationBindingMessage` Protobuf message.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>signature: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
 <span class="doccomment">/// Request message for the crypto handshake request needed to establish a set of
 /// session keys.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HandshakeRequest {
-    <span class="doccomment">/// Noise Protocol ephemeral public key 'e'.
-    /// &lt;&lt;http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine&gt;&gt;
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>ephemeral_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Payload encrypted with the current chaining key.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>attestation_binding: ::core::option::Option&lt;AttestationBinding&gt;,
+    <span class="attr">#[prost(oneof = <span class="string">"handshake_request::HandshakeType"</span>, tags = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>handshake_type: ::core::option::Option&lt;handshake_request::HandshakeType&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `HandshakeRequest`.
+</span><span class="kw">pub mod </span>handshake_request {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>HandshakeType {
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>NoiseHandshakeMessage(<span class="kw">super</span>::NoiseHandshakeMessage),
+    }
 }
 <span class="doccomment">/// Response message for the crypto handshake request needed to establish a set
 /// of session keys.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HandshakeResponse {
-    <span class="doccomment">/// Noise Protocol ephemeral public key 'e'.
-    /// &lt;&lt;http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine&gt;&gt;
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>ephemeral_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Payload encrypted with the current chaining key.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>attestation_binding: ::core::option::Option&lt;AttestationBinding&gt;,
+    <span class="attr">#[prost(oneof = <span class="string">"handshake_response::HandshakeType"</span>, tags = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>handshake_type: ::core::option::Option&lt;handshake_response::HandshakeType&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `HandshakeResponse`.
+</span><span class="kw">pub mod </span>handshake_response {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>HandshakeType {
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>NoiseHandshakeMessage(<span class="kw">super</span>::NoiseHandshakeMessage),
+    }
 }
 <span class="doccomment">/// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
