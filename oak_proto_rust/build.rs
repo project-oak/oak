@@ -14,25 +14,47 @@
 // limitations under the License.
 //
 
-const INCLUDED_PROTOS: [&str; 13] = [
-    "..",
-    // We need to include the well-known protos ourselves
-    // From: https://github.com/grpc/grpc/blob/cac1f2727e6975d6bb7426898c97916faa91bdaa/bazel/protobuf.bzl#L21C1-L21C24
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/any_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/api_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/compiler_plugin_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/descriptor_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/duration_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/field_mask_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/source_context_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/struct_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/timestamp_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/type_proto",
-    "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/wrappers_proto",
-];
+use std::path::PathBuf;
+
+#[cfg(feature = "bazel")]
+fn get_included_protos() -> Vec<PathBuf> {
+    const WELL_KNOWN_PROTOS_PATH: &str = "com_google_protobuf/src";
+    extern crate runfiles;
+    let r = runfiles::Runfiles::create().unwrap();
+
+    // The root of all Oak protos
+    let oak_proto_root = PathBuf::from("..");
+
+    // When the build script runs in "bazel" mode, the google protobufs don't
+    // automatically end up in the include path for calls to protoc.
+
+    // The "well known" proto types provided by Google's protobuf library.
+    // These come from the "@com_google_protobuf//:well_known_type_protos" dep.
+    let well_known_google_protos_path = r.rlocation(WELL_KNOWN_PROTOS_PATH);
+
+    // descriptor.proto is not part of "well known protos", but we use it for
+    // micro_rpc, so it gets included as well.
+    // Comes from the "@com_google_protobuf//:descriptor_proto" dep.
+    let google_descriptor_proto_path = r.rlocation(format!(
+        "{WELL_KNOWN_PROTOS_PATH}/google/protobuf/_virtual_imports/descriptor_proto"
+    ));
+
+    vec![oak_proto_root, well_known_google_protos_path, google_descriptor_proto_path]
+}
+
+#[cfg(not(feature = "bazel"))]
+fn get_included_protos() -> Vec<PathBuf> {
+    // The root of all Oak protos, relative to this directory.
+    let oak_proto_root = PathBuf::from("..");
+
+    // In cargo mode, the protoc invocations already include the google
+    // protobufs, so we only need to provide the Oak proto root.
+    vec![oak_proto_root]
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let included_protos = get_included_protos();
+
     let proto_paths = [
         "../proto/crypto/crypto.proto",
         "../proto/attestation/attachment.proto",
@@ -70,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile_well_known_types()
         .extern_path(".google.protobuf", "::pbjson_types");
 
-    config.compile_protos(&proto_paths, &INCLUDED_PROTOS).expect("proto compilation failed");
+    config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
     #[cfg(feature = "json")]
     pbjson_build::Builder::new()
@@ -82,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     micro_rpc_build::compile(
         &["../proto/oak_functions/testing.proto", "../proto/crypto/crypto.proto"],
-        &INCLUDED_PROTOS,
+        &included_protos,
         Default::default(),
     );
 

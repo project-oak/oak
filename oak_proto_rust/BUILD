@@ -71,6 +71,8 @@ cargo_build_script(
         "//proto/oak_functions:testing_proto",
         "//proto/oak_functions/service:oak_functions_proto",
         "//proto/session:session_proto",
+        "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
     tools = [
         "@com_google_protobuf//:protoc",
@@ -79,6 +81,7 @@ cargo_build_script(
         "//micro_rpc_build",
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
+        "@rules_rust//tools/runfiles",
     ],
 )
 
