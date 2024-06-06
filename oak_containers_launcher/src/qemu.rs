@@ -25,6 +25,7 @@ use std::{
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
 use command_fds::CommandFdExt;
+use tokio_vsock::VMADDR_CID_HOST;
 
 use crate::path_exists;
 
@@ -251,25 +252,25 @@ impl Qemu {
         cmd.args(["-kernel", params.kernel.into_os_string().into_string().unwrap().as_str()]);
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
-        cmd.args([
-            "-append",
-            [
-                params.telnet_console.map_or_else(|| "", |_| "debug"),
-                "console=ttyS0",
-                "panic=-1",
-                "brd.rd_nr=1",
-                format!("brd.rd_size={ramdrive_size}").as_str(),
-                "brd.max_part=1",
-                format!("ip={vm_address}:::255.255.255.0::eth0:off").as_str(),
-                "quiet",
-                "--",
-                // Makes stage1 communicate to the launcher via virtio-vsock. Disabled for now.
-                //format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}")
-                //    .as_str(),
-            ]
-            .join(" ")
-            .as_str(),
-        ]);
+
+        let mut cmdline = vec![
+            params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
+            "console=ttyS0".to_string(),
+            "panic=-1".to_string(),
+            "brd.rd_nr=1".to_string(),
+            format!("brd.rd_size={ramdrive_size}"),
+            "brd.max_part=1".to_string(),
+            format!("ip={vm_address}:::255.255.255.0::eth0:off"),
+            "quiet".to_string(),
+        ];
+
+        if params.virtio_guest_cid.is_some() {
+            cmdline.push("--".to_string());
+            // Makes stage1 communicate to the launcher via virtio-vsock.
+            cmdline
+                .push(format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"));
+        }
+        cmd.args(["-append", cmdline.join(" ").as_str()]);
 
         log::debug!("QEMU command line: {:?}", cmd);
 
