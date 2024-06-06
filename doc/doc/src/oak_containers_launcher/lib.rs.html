@@ -362,6 +362,10 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -414,11 +418,11 @@
 <span class="kw">pub use </span>qemu::Params <span class="kw">as </span>QemuParams;
 <span class="kw">use </span>tokio::{
     net::TcpListener,
-    sync::oneshot::{channel, Receiver, Sender},
+    sync::{oneshot, watch},
     task::JoinHandle,
     time::{timeout, Duration},
 };
-<span class="kw">use </span>tokio_vsock::VsockAddr;
+<span class="kw">use </span>tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
 <span class="kw">use </span>tonic::transport::Channel <span class="kw">as </span>TonicChannel;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
@@ -542,11 +546,11 @@
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     </span>endorsed_evidence: <span class="prelude-ty">Option</span>&lt;EndorsedEvidence&gt;,
     <span class="comment">// Receiver that is used to get the Attestation Evidence from the server implementation.
-    </span>evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;Evidence&gt;&gt;,
-    app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
+    </span>evidence_receiver: <span class="prelude-ty">Option</span>&lt;oneshot::Receiver&lt;Evidence&gt;&gt;,
+    app_ready_notifier: <span class="prelude-ty">Option</span>&lt;oneshot::Receiver&lt;()&gt;&gt;,
     orchestrator_key_provisioning_client: <span class="prelude-ty">Option</span>&lt;KeyProvisioningClient&lt;TonicChannel&gt;&gt;,
     trusted_app_channel: Channel,
-    shutdown: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
+    shutdown: <span class="prelude-ty">Option</span>&lt;watch::Sender&lt;()&gt;&gt;,
 }
 
 <span class="kw">impl </span>Launcher {
@@ -556,12 +560,16 @@
         <span class="kw">let </span>orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
         <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
+        <span class="comment">// Resuse the same port we got for the TCP socket for vsock.
+        </span><span class="kw">let </span>vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))<span class="question-mark">?</span>;
         <span class="macro">log::info!</span>(<span class="string">"Launcher service listening on port {port}"</span>);
-        <span class="kw">let </span>(evidence_sender, evidence_receiver) = channel::&lt;Evidence&gt;();
-        <span class="kw">let </span>(shutdown_sender, shutdown_receiver) = channel::&lt;()&gt;();
-        <span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = channel::&lt;()&gt;();
+        <span class="kw">let </span>(evidence_sender, evidence_receiver) = oneshot::channel::&lt;Evidence&gt;();
+        <span class="kw">let </span>(shutdown_sender, <span class="kw-2">mut </span>shutdown_receiver) = watch::channel::&lt;()&gt;(());
+        shutdown_receiver.mark_unchanged(); <span class="comment">// Don't immediately notify on the initial value.
+        </span><span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = oneshot::channel::&lt;()&gt;();
         <span class="kw">let </span>server = tokio::spawn(server::new(
             listener,
+            vsock_listener,
             args.system_image,
             args.container_bundle,
             args.application_config,

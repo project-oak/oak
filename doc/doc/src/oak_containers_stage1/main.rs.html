@@ -161,6 +161,7 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -203,12 +204,13 @@
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::DiceData;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tokio::process::Command;
+<span class="kw">use </span>tonic::transport::Uri;
 <span class="kw">use </span>x86_64::PhysAddr;
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">struct </span>Args {
     <span class="attr">#[arg(long, default_value = <span class="string">"http://10.0.2.100:8080"</span>)]
-    </span>launcher_addr: String,
+    </span>launcher_addr: Uri,
 
     <span class="attr">#[arg(long, default_value = <span class="string">"/sbin/init"</span>)]
     </span>init: String,
@@ -253,7 +255,7 @@
     chroot(<span class="string">"."</span>).context(<span class="string">"failed to chroot to ."</span>)<span class="question-mark">?</span>;
     chdir(<span class="string">"/"</span>).context(<span class="string">"failed to chdir to /"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr.parse()<span class="question-mark">?</span>)
+    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr)
         .<span class="kw">await
         </span>.context(<span class="string">"error creating the launcher client"</span>)<span class="question-mark">?</span>;
 

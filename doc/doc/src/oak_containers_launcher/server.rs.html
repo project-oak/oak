@@ -286,6 +286,26 @@
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -325,9 +345,10 @@
 <span class="kw">use </span>tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
-    sync::oneshot::{Receiver, Sender},
+    sync::{oneshot, watch},
 };
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
+<span class="kw">use </span>tokio_vsock::VsockListener;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::{
@@ -351,10 +372,10 @@
     container_bundle: std::path::PathBuf,
     application_config: Vec&lt;u8&gt;,
     <span class="comment">// Will be used to send the Attestation Evidence to the Launcher.
-    </span>evidence_sender: Mutex&lt;<span class="prelude-ty">Option</span>&lt;Sender&lt;Evidence&gt;&gt;&gt;,
+    </span>evidence_sender: Mutex&lt;<span class="prelude-ty">Option</span>&lt;oneshot::Sender&lt;Evidence&gt;&gt;&gt;,
     <span class="comment">// Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
-    </span>app_ready_notifier: Mutex&lt;<span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;&gt;,
+    </span>app_ready_notifier: Mutex&lt;<span class="prelude-ty">Option</span>&lt;oneshot::Sender&lt;()&gt;&gt;&gt;,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -547,14 +568,18 @@
     }
 }
 
-<span class="kw">pub async fn </span>new(
+<span class="comment">// Clippy is not wrong, but hopefully the situation with two listeners is only
+// temporary.
+</span><span class="attr">#[allow(clippy::too_many_arguments)]
+</span><span class="kw">pub async fn </span>new(
     listener: TcpListener,
+    vsock_listener: VsockListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Vec&lt;u8&gt;,
-    evidence_sender: Sender&lt;Evidence&gt;,
-    app_ready_notifier: Sender&lt;()&gt;,
-    shutdown: Receiver&lt;()&gt;,
+    evidence_sender: oneshot::Sender&lt;Evidence&gt;,
+    app_ready_notifier: oneshot::Sender&lt;()&gt;,
+    shutdown: watch::Receiver&lt;()&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     <span class="kw">let </span>server_impl = Arc::new(LauncherServerImplementation {
         system_image,
@@ -563,13 +588,28 @@
         evidence_sender: Mutex::new(<span class="prelude-val">Some</span>(evidence_sender)),
         app_ready_notifier: Mutex::new(<span class="prelude-val">Some</span>(app_ready_notifier)),
     });
-    Server::builder()
+
+    <span class="kw">let </span><span class="kw-2">mut </span>tcp_shutdown = shutdown.clone();
+    <span class="kw">let </span>tcp_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
         .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
-        .add_service(LogsServiceServer::from_arc(server_impl))
-        .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|<span class="kw">_</span>| ()))
-        .<span class="kw">await
-        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"server error: {:?}"</span>, error))
+        .add_service(LogsServiceServer::from_arc(server_impl.clone()))
+        .serve_with_incoming_shutdown(
+            TcpListenerStream::new(listener),
+            tcp_shutdown.changed().map(|<span class="kw">_</span>| ()),
+        );
+
+    <span class="kw">let </span><span class="kw-2">mut </span>virtio_shutdown = shutdown.clone();
+    <span class="kw">let </span>virtio_server = Server::builder()
+        .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .serve_with_incoming_shutdown(
+            vsock_listener.incoming(),
+            virtio_shutdown.changed().map(|<span class="kw">_</span>| ()),
+        );
+
+    <span class="macro">tokio::try_join!</span>(tcp_server, virtio_server)
+        .map(|((), ())| ())
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"server error: {:?}"</span>, error))
 }
 </code></pre></div></section></main></body></html>

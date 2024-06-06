@@ -302,6 +302,10 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -566,7 +570,11 @@
                 <span class="string">"brd.max_part=1"</span>,
                 <span class="macro">format!</span>(<span class="string">"ip={vm_address}:::255.255.255.0::eth0:off"</span>).as_str(),
                 <span class="string">"quiet"</span>,
-            ]
+                <span class="string">"--"</span>,
+                <span class="comment">// Makes stage1 communicate to the launcher via virtio-vsock. Disabled for now.
+                //format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}")
+                //    .as_str(),
+            </span>]
             .join(<span class="string">" "</span>)
             .as_str(),
         ]);
