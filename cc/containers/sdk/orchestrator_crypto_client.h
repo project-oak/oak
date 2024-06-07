@@ -40,6 +40,10 @@ class OrchestratorCryptoClient {
       ::oak::containers::v1::KeyOrigin key_origin,
       absl::string_view serialized_encapsulated_public_key) const;
 
+  absl::StatusOr<::oak::crypto::v1::Signature> Sign(
+      ::oak::containers::v1::KeyOrigin key_origin,
+      absl::string_view message) const;
+
  private:
   explicit OrchestratorCryptoClient(
       const std::shared_ptr<grpc::Channel>& channel)

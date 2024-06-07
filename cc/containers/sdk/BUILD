@@ -67,3 +67,16 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "signing_key_handle",
+    srcs = ["signing_key_handle.cc"],
+    hdrs = ["signing_key_handle.h"],
+    deps = [
+        ":orchestrator_crypto_client",
+        "//cc/crypto:signing_key",
+        "//proto/crypto:crypto_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
