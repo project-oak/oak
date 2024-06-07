@@ -44,8 +44,12 @@ impl LauncherClient {
                     .context("invalid vsock CID")?,
                 addr.port_u16().context("invalid vsock port")?.into(),
             );
+            // The C++ gRPC implementations are more particular about the URI scheme; in
+            // particular, they may get confused by the "vsock" scheme. Therfore, create a
+            // fake URI with the "http" scheme to placate the libraries; the actual
+            // connection is made in `connect_with_connector` and that uses the correct URI.
             GrpcLauncherClient::new(
-                Channel::builder(addr)
+                Channel::builder(Uri::from_static("http://0:0"))
                     .connect_with_connector(service_fn(move |_| VsockStream::connect(vsock_addr)))
                     .await?,
             )

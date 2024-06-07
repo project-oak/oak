@@ -27,6 +27,7 @@ use std::{
     io::ErrorKind,
     path::Path,
     str::FromStr,
+    time::Instant,
 };
 
 use anyhow::Context;
@@ -95,7 +96,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .context("error creating the launcher client")?;
 
-    let buf = client.get_oak_system_image().await.context("error fetching system image")?;
+    let buf = {
+        let now = Instant::now();
+        let buf = client.get_oak_system_image().await.context("error fetching system image")?;
+        eprintln!("stage1: system image loaded in {} s", now.elapsed().as_secs_f64());
+        buf
+    };
 
     let system_image_claims = dice::measure_system_image(&buf);
 
