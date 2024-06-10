@@ -186,13 +186,6 @@ message SystemLayerReferenceValues {
   BinaryReferenceValue system_image = 1;
 }
 
-message CBSystemLayerReferenceValues {
-  // Verifies the system image binary.
-  BinaryReferenceValue system_image = 1;
-  // Verifies the command line by which the system image was built.
-  StringReferenceValue system_cmd_line = 2;
-}
-
 // Represents an application running under Oak Restricted Kernel.
 message ApplicationLayerReferenceValues {
   // Verifies the application binary based on endorsement.
@@ -202,18 +195,17 @@ message ApplicationLayerReferenceValues {
   BinaryReferenceValue configuration = 2;
 }
 
-// Represents digest of application task config.
-message CBApplicationLayerReferenceValues {
-  // Verifies the application task config.
-  BinaryReferenceValue binary = 1;
-}
-
 message ContainerLayerReferenceValues {
   // Verifies the container binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
   // Verifies configuration with respect to the container binary.
   BinaryReferenceValue configuration = 2;
+}
+
+// Represents digest of an event.
+message EventReferenceValues {
+  BinaryReferenceValue event = 1;
 }
 
 message OakRestrictedKernelReferenceValues {
@@ -231,9 +223,9 @@ message OakContainersReferenceValues {
 
 message CBReferenceValues {
   RootLayerReferenceValues root_layer = 1;
-  KernelLayerReferenceValues kernel_layer = 2;
-  CBSystemLayerReferenceValues system_layer = 3;
-  CBApplicationLayerReferenceValues application_layer = 4;
+  EventReferenceValues kernel_layer = 2;
+  EventReferenceValues system_layer = 3;
+  EventReferenceValues application_layer = 4;
 }
 
 message ReferenceValues {

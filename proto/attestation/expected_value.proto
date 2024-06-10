@@ -139,17 +139,9 @@ message ApplicationLayerExpectedValues {
   ExpectedDigests configuration = 2;
 }
 
-// Represents digest of application task config.
-message CBApplicationLayerExpectedValues {
-  // Verifies the application task config.
-  ExpectedDigests binary = 1;
-}
-
-// Represents digest of application task config.
-message CBSystemLayerExpectedValues {
-  // Verifies the application task config.
-  ExpectedDigests system_image = 1;
-  TextExpectedValue system_cmd_line = 2;
+// Represents digest of an event.
+message EventExpectedValues {
+  ExpectedDigests event = 1;
 }
 
 message OakRestrictedKernelExpectedValues {
@@ -167,6 +159,9 @@ message OakContainersExpectedValues {
 
 message CBExpectedValues {
   RootLayerExpectedValues root_layer = 1;
+  EventExpectedValues kernel_layer = 2;
+  EventExpectedValues system_layer = 3;
+  EventExpectedValues application_layer = 4;
 }
 
 message ExpectedValues {

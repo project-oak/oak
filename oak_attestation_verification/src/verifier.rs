@@ -39,19 +39,20 @@ use oak_proto_rust::oak::{
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, Evidence, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExpectedValues, ExtractedEvidence, FakeAttestationReport,
-        FirmwareAttachment, InsecureExpectedValues, IntelTdxAttestationReport,
-        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
-        KernelLayerData, KernelLayerEndorsements, KernelLayerExpectedValues,
-        KernelLayerReferenceValues, OakContainersData, OakContainersEndorsements,
-        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelData,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerData,
-        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
-        RootLayerReferenceValues, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion, TeePlatform,
-        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues, Evidence,
+        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, ExtractedEvidence,
+        FakeAttestationReport, FirmwareAttachment, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersData,
+        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
+        OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
+        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
+        VerificationSkipped,
     },
     RawDigest,
 };
@@ -402,6 +403,9 @@ fn get_cb_expected_values(
             endorsements.root_layer.as_ref(),
             reference_values.root_layer.as_ref().context("no root layer reference values")?,
         )?),
+        kernel_layer: Some(EventExpectedValues::default()),
+        system_layer: Some(EventExpectedValues::default()),
+        application_layer: Some(EventExpectedValues::default()),
     })
 }
 
@@ -1198,8 +1202,21 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
             _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
         }
     } else {
-        // Assume for now this is CB evidence until the CB fields are better defined.
-        Ok(EvidenceValues::Cb(CbData { root_layer }))
+        match &evidence.layers[..] {
+            [_kernel_layer, _system_layer, _application_layer] => {
+                let kernel_layer = Some(EventData::default());
+                let system_layer = Some(EventData::default());
+                let application_layer = Some(EventData::default());
+
+                Ok(EvidenceValues::Cb(CbData {
+                    root_layer,
+                    kernel_layer,
+                    system_layer,
+                    application_layer,
+                }))
+            }
+            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for CB")),
+        }
     }
 }
 

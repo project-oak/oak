@@ -194,6 +194,12 @@ message ContainerLayerData {
   RawDigest config = 2;
 }
 
+// Values extracted from the evidence that represents an event.
+message EventData {
+  // Measurement RawDigest of an event.
+  RawDigest event = 1;
+}
+
 // Values extracted from the evidence for a restricted kernel application.
 message OakRestrictedKernelData {
   RootLayerData root_layer = 1;
@@ -212,4 +218,7 @@ message OakContainersData {
 // Reserved for future use.
 message CbData {
   RootLayerData root_layer = 1;
+  EventData kernel_layer = 2;
+  EventData system_layer = 3;
+  EventData application_layer = 4;
 }
