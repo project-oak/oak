@@ -17,6 +17,7 @@ command-fds = { version = "*", features = ["tokio"] }
 env_logger = "*"
 futures = "*"
 log = "*"
+nix = { version = "*", features = ["process"] }
 oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }

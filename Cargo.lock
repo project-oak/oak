@@ -2480,6 +2480,7 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "nix 0.27.1",
  "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",

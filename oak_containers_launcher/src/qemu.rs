@@ -77,7 +77,8 @@ pub struct Params {
     #[arg(long, value_name = "PORT")]
     pub telnet_console: Option<u16>,
 
-    /// Optional virtio guest CID for virtio-vsock.
+    /// Optional virtio guest CID for virtio-vsock. If not assigned, defaults to
+    /// the current thread ID.
     /// Warning: This CID needs to be globally unique on the whole host!
     #[arg(long)]
     pub virtio_guest_cid: Option<u32>,
@@ -237,12 +238,17 @@ impl Qemu {
             "-device",
             "virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=",
         ]);
-        if let Some(virtio_guest_cid) = params.virtio_guest_cid {
-            cmd.args([
-                "-device",
-                &format!("vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0"),
-            ]);
-        }
+        // The CID needs to be globally unique, so we default to the current thread ID
+        // (which should be unique on the system). This may have interesting
+        // interactions with async code though: if you start two VMMs in the same
+        // thread, it won't work. But we don't really have any other good sources of
+        // globally unique identifiers available for us, and starting multiple VMMs in
+        // one thread should be uncommon.
+        let virtio_guest_cid = params
+            .virtio_guest_cid
+            .unwrap_or_else(|| nix::unistd::gettid().as_raw().unsigned_abs());
+        cmd.args(["-device", &format!("vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0")]);
+
         if let Some(pci_passthrough) = params.pci_passthrough {
             cmd.args(["-device", format!("vfio-pci,host={pci_passthrough}").as_str()]);
         }
@@ -253,7 +259,7 @@ impl Qemu {
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
 
-        let mut cmdline = vec![
+        let cmdline = vec![
             params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
             "console=ttyS0".to_string(),
             "panic=-1".to_string(),
@@ -262,14 +268,10 @@ impl Qemu {
             "brd.max_part=1".to_string(),
             format!("ip={vm_address}:::255.255.255.0::eth0:off"),
             "quiet".to_string(),
+            "--".to_string(),
+            format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
         ];
 
-        if params.virtio_guest_cid.is_some() {
-            cmdline.push("--".to_string());
-            // Makes stage1 communicate to the launcher via virtio-vsock.
-            cmdline
-                .push(format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"));
-        }
         cmd.args(["-append", cmdline.join(" ").as_str()]);
 
         log::debug!("QEMU command line: {:?}", cmd);
