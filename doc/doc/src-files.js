@@ -12,10 +12,11 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_attestation_verification_test_utils",["",[],["lib.rs"]]],\
 ["oak_channel",["",[],["basic_framed.rs","client.rs","frame.rs","lib.rs","message.rs","server.rs"]]],\
 ["oak_client",["",[],["client.rs","lib.rs","transport.rs","verifier.rs"]]],\
+["oak_containers_agent",["",[],["lib.rs","metrics.rs"]]],\
 ["oak_containers_hello_world_trusted_app",["",[],["app_service.rs","lib.rs"]]],\
 ["oak_containers_hello_world_untrusted_app",["",[],["app_client.rs","lib.rs"]]],\
 ["oak_containers_launcher",["",[],["lib.rs","qemu.rs","server.rs"]]],\
-["oak_containers_orchestrator",["",[],["container_runtime.rs","crypto.rs","dice.rs","ipc_server.rs","key_provisioning.rs","launcher_client.rs","lib.rs","logging.rs","metrics.rs"]]],\
+["oak_containers_orchestrator",["",[],["container_runtime.rs","crypto.rs","dice.rs","ipc_server.rs","key_provisioning.rs","launcher_client.rs","lib.rs","logging.rs"]]],\
 ["oak_containers_sdk",["",[],["crypto.rs","lib.rs","orchestrator_client.rs"]]],\
 ["oak_containers_stage1",["",[],["client.rs","dice.rs","image.rs","main.rs"]]],\
 ["oak_containers_syslogd",["",[],["log_relay.rs","main.rs","systemd_journal.rs"]]],\
