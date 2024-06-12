@@ -306,6 +306,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
             })
             .unwrap_or_default();
 
+    // QEMU assumes all SEV VMs use OVMF, and leaves type_of_loader 0x00. This
+    // would make the kernel unable to load stage1. We need to fix it to make
+    // stage1 loads smoothly.
+    zero_page.set_type_of_loader(zero_page::BOOT_LOADER_TYPE_UNDEFINED);
+
     let memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
     // Generate Stage0 Event Log data.

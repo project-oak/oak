@@ -44,14 +44,16 @@ impl Default for ZeroPage {
     }
 }
 
+pub const BOOT_LOADER_TYPE_UNDEFINED: u8 = 0xFF;
+
 impl ZeroPage {
     /// Constructs a empty zero page, filling in some magic values needed by the
     /// kernel.
     pub fn new() -> Self {
         let mut zero_page = BootParams::zeroed();
         // Magic constants.
-        // See https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header for more details.
-        zero_page.hdr.type_of_loader = 0xFF; // loader type undefined
+        // See https://www.kernel.org/doc/html/latest/arch/x86/boot.html#the-real-mode-kernel-header for more details.
+        zero_page.hdr.type_of_loader = BOOT_LOADER_TYPE_UNDEFINED; // loader type undefined
         zero_page.hdr.boot_flag = 0xAA55; // magic number
         zero_page.hdr.header = 0x53726448; // Magic "HdrS" string
         zero_page.hdr.kernel_alignment = 0x1000000; // Magic number from crosvm source.
@@ -344,6 +346,11 @@ impl ZeroPage {
         // The size of the RAM disk will always fit into 32 bits since we only map a
         // maximum of 1GiB of RAM.
         self.inner.hdr.ramdisk_size = ram_disk.len() as u32;
+    }
+
+    /// Sets the type of loader for direct kernel boot
+    pub fn set_type_of_loader(&mut self, loader_type: u8) {
+        self.inner.hdr.type_of_loader = loader_type;
     }
 }
 
