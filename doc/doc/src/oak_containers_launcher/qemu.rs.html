@@ -307,6 +307,8 @@
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -386,7 +388,8 @@
     </span><span class="attr">#[arg(long, value_name = <span class="string">"PORT"</span>)]
     </span><span class="kw">pub </span>telnet_console: <span class="prelude-ty">Option</span>&lt;u16&gt;,
 
-    <span class="doccomment">/// Optional virtio guest CID for virtio-vsock.
+    <span class="doccomment">/// Optional virtio guest CID for virtio-vsock. If not assigned, defaults to
+    /// the current thread ID.
     /// Warning: This CID needs to be globally unique on the whole host!
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>virtio_guest_cid: <span class="prelude-ty">Option</span>&lt;u32&gt;,
@@ -546,12 +549,17 @@
             <span class="string">"-device"</span>,
             <span class="string">"virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile="</span>,
         ]);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(virtio_guest_cid) = params.virtio_guest_cid {
-            cmd.args([
-                <span class="string">"-device"</span>,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0"</span>),
-            ]);
-        }
+        <span class="comment">// The CID needs to be globally unique, so we default to the current thread ID
+        // (which should be unique on the system). This may have interesting
+        // interactions with async code though: if you start two VMMs in the same
+        // thread, it won't work. But we don't really have any other good sources of
+        // globally unique identifiers available for us, and starting multiple VMMs in
+        // one thread should be uncommon.
+        </span><span class="kw">let </span>virtio_guest_cid = params
+            .virtio_guest_cid
+            .unwrap_or_else(|| nix::unistd::gettid().as_raw().unsigned_abs());
+        cmd.args([<span class="string">"-device"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"vhost-vsock-pci,guest-cid={virtio_guest_cid},rombar=0"</span>)]);
+
         <span class="kw">if let </span><span class="prelude-val">Some</span>(pci_passthrough) = params.pci_passthrough {
             cmd.args([<span class="string">"-device"</span>, <span class="macro">format!</span>(<span class="string">"vfio-pci,host={pci_passthrough}"</span>).as_str()]);
         }
@@ -562,7 +570,7 @@
         cmd.args([<span class="string">"-initrd"</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
         <span class="kw">let </span>ramdrive_size = params.ramdrive_size;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>cmdline = <span class="macro">vec!</span>[
+        <span class="kw">let </span>cmdline = <span class="macro">vec!</span>[
             params.telnet_console.map_or_else(|| <span class="string">""</span>, |<span class="kw">_</span>| <span class="string">"debug"</span>).to_string(),
             <span class="string">"console=ttyS0"</span>.to_string(),
             <span class="string">"panic=-1"</span>.to_string(),
@@ -571,14 +579,10 @@
             <span class="string">"brd.max_part=1"</span>.to_string(),
             <span class="macro">format!</span>(<span class="string">"ip={vm_address}:::255.255.255.0::eth0:off"</span>),
             <span class="string">"quiet"</span>.to_string(),
+            <span class="string">"--"</span>.to_string(),
+            <span class="macro">format!</span>(<span class="string">"--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"</span>),
         ];
 
-        <span class="kw">if </span>params.virtio_guest_cid.is_some() {
-            cmdline.push(<span class="string">"--"</span>.to_string());
-            <span class="comment">// Makes stage1 communicate to the launcher via virtio-vsock.
-            </span>cmdline
-                .push(<span class="macro">format!</span>(<span class="string">"--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"</span>));
-        }
         cmd.args([<span class="string">"-append"</span>, cmdline.join(<span class="string">" "</span>).as_str()]);
 
         <span class="macro">log::debug!</span>(<span class="string">"QEMU command line: {:?}"</span>, cmd);
