@@ -51,6 +51,9 @@ rust-project.json
 # Ignore downloaded temporary files, such as the trusted root CA certificates.
 /downloads/
 
+# Binary or other files generated during build, see `justfile`.
+/generated/
+
 # Ignore generated binary files.
 **/bin/
 # Except if it is source code in a vendored crate.

@@ -20,24 +20,26 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # Copy the generated binaries to Placer. The timestamps are used to convey
 # the creation time.
 readonly generated_binaries=(
-    ./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
-    ./stage0_bin/target/x86_64-unknown-none/release/stage0_bin
-    ./enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app
-    ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
-    ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
-    ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
-    ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
-    ./enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
+    enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app
+    generated/client_app.apk
+    enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
+    enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
+    enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
+    enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
+    enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
+    oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
+    stage0_bin/target/x86_64-unknown-none/release/stage0_bin
 )
 readonly binary_names=(
-    oak_restricted_kernel_simple_io_init_rd_wrapper_bin
-    stage0_bin
     key_xor_test_app
+    oak_client_android_app
     oak_echo_enclave_app
     oak_echo_raw_enclave_app
     oak_functions_enclave_app
     oak_functions_insecure_enclave_app
     oak_orchestrator
+    oak_restricted_kernel_simple_io_init_rd_wrapper_bin
+    stage0_bin
 )
 for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
