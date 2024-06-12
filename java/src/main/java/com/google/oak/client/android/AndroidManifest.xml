@@ -1,17 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.google.oak.functions.android.client"
+    package="com.google.oak.client.android"
     android:versionCode="1"
     android:versionName="1.0" >
 
   <uses-sdk
-      android:minSdkVersion="28"
-      android:targetSdkVersion="28" />
+      android:minSdkVersion="30"
+      android:targetSdkVersion="35" />
   <uses-permission android:name="android.permission.INTERNET"/>
 
   <application
       android:label="Oak Functions Client" android:taskAffinity="">
     <activity
-        android:name="com.google.oak.functions.android.client.MainActivity"
+        android:name="com.google.oak.client.android.MainActivity"
         android:label="Oak Functions Client"
         android:exported="true">
       <intent-filter>

@@ -81,11 +81,10 @@ grpc_extra_deps()
 # https://github.com/grpc/grpc-java
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
-    strip_prefix = "grpc-java-1.56.0",
+    sha256 = "4a37fbdf88c8344e14a12bb261aa3eb1401fa47cfc312fb82260592aa993171a",
+    strip_prefix = "grpc-java-1.62.0",
     urls = [
-        # Java gRPC v1.56.0 (2023-06-21).
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.62.0.tar.gz",
     ],
 )
 

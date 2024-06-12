@@ -63,6 +63,10 @@ build:unsafe-fast-presubmit --config=ci
 build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
 build:unsafe-fast-presubmit --remote_upload_local_results=false
 
+# https://github.com/bazelbuild/bazel/issues/9342
+# --experimental_check_desugar_deps (on by default) breaks Android builds with remote execution
+build:unsafe-fast-presubmit --noexperimental_check_desugar_deps
+
 # Use a custom local bazelrc if present.
 #
 # To set up remote cache write credentials:
