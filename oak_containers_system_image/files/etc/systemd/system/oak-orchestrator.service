@@ -12,6 +12,7 @@ ExecStopPost=/usr/bin/journalctl --sync --flush
 ProtectSystem=strict
 RuntimeDirectory=oak_containers_orchestrator
 ReadWritePaths=/oak
+PassEnvironment=LAUNCHER_ADDR
 
 [Install]
 WantedBy=multi-user.target

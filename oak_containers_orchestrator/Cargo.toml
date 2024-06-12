@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 ciborium = { version = "*", default-features = false }
-clap = { version = "*", features = ["derive"] }
+clap = { version = "*", features = ["derive", "env"] }
 coset = { version = "*", features = ["std"] }
 hpke = { version = "*", default-features = false, features = [
   "alloc",
@@ -53,7 +53,9 @@ tokio = { version = "*", features = [
 ] }
 tokio-stream = { version = "*", features = ["net"] }
 tokio-util = { version = "*", default-features = false }
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
+tower = "*"
 walkdir = "*"
 zeroize = "*"
 

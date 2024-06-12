@@ -1,5 +1,5 @@
 {
-  "checksum": "6f60f483c9b3770febf3b2110b3571bfd1a94c5e21aca9cb8b0f1f09ebf05b5d",
+  "checksum": "682754f838a52af6677cda26d9abff71b5539ae2534786da75c150bbb00d9826",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -2770,6 +2770,7 @@
             "color",
             "default",
             "derive",
+            "env",
             "error-context",
             "help",
             "std",
@@ -2838,6 +2839,7 @@
         "crate_features": {
           "common": [
             "color",
+            "env",
             "error-context",
             "help",
             "std",

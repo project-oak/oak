@@ -2544,7 +2544,9 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "tokio-vsock",
  "tonic",
+ "tower",
  "walkdir",
  "zeroize",
 ]

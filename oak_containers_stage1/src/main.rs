@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
 
-    let mut client = LauncherClient::new(args.launcher_addr)
+    let mut client = LauncherClient::new(args.launcher_addr.clone())
         .await
         .context("error creating the launcher client")?;
 
@@ -150,7 +150,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .or_else(|err| if err.kind() == ErrorKind::NotFound { Ok(()) } else { Err(err) })
         .context("error removing `/.dockerenv`")?;
 
-    image::switch(&args.init).context("error switching to the system image")?
+    image::switch(
+        &args.init,
+        &[std::ffi::CString::new(format!("LAUNCHER_ADDR={}", args.launcher_addr)).unwrap()],
+    )
+    .context("error switching to the system image")?
 }
 
 /// Tries to parse a string slice as an address.

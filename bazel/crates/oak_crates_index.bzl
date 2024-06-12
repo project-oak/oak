@@ -103,7 +103,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "clap": crate.spec(
-                features = ["derive"],
+                features = [
+                    "derive",
+                    "env",
+                ],
                 version = "*",
             ),
             "command-fds": crate.spec(

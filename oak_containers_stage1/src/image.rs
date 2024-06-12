@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
+use std::{
+    ffi::{CStr, CString},
+    os::unix::prelude::OsStrExt,
+    path::Path,
+};
 
 use anyhow::{anyhow, Result};
-use nix::unistd::execv;
+use nix::unistd::execve;
 use tar::Archive;
 use xz2::read::XzDecoder;
 
@@ -27,13 +31,16 @@ pub async fn extract(buf: &[u8], dst: &Path) -> Result<()> {
     archive.unpack(dst).map_err(|e| anyhow!(e))
 }
 
-pub fn switch(init: &str) -> Result<!> {
+pub fn switch<SE>(init: &str, env: &[SE]) -> Result<!>
+where
+    SE: AsRef<CStr>,
+{
     // On one hand, I feel like this function should be marked `unsafe` as this will
     // unconditionally switch over to the new executable (if it succeeds) without
     // any more Rust code executing. On the other hand, the return type is `!`,
     // so you shouldn't expect the control to return.
     let args: Vec<CString> =
         std::env::args_os().map(|arg| CString::new(arg.as_bytes()).unwrap()).collect();
-    execv(CString::new(init).unwrap().as_c_str(), &args[..])?;
+    execve(CString::new(init).unwrap().as_c_str(), &args[..], env)?;
     unreachable!()
 }
