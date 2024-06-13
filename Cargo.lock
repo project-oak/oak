@@ -2432,6 +2432,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "http",
  "oak_grpc_utils",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2439,6 +2440,8 @@ dependencies = [
  "procfs",
  "tokio",
  "tokio-stream",
+ "tonic",
+ "tower",
 ]
 
 [[package]]

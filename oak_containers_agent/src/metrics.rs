@@ -13,13 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
+use std::{
+    future::Future,
+    pin::Pin,
+    time::{Duration, Instant},
+};
 
 use opentelemetry::{
     global,
     metrics::{
         Counter, Histogram, Meter, MeterProvider, MetricsError, ObservableCounter, ObservableGauge,
-        ObservableUpDownCounter, UpDownCounter,
+        ObservableUpDownCounter, Unit, UpDownCounter,
     },
     KeyValue,
 };
@@ -102,6 +106,10 @@ impl OakObserver {
 
     pub fn register_metric<T: Into<MeterInstrument>>(&mut self, i: T) {
         self.metric_registry.push(i.into());
+    }
+
+    pub fn create_monitoring_layer(&self) -> MonitoringLayer {
+        MonitoringLayer::new(self.meter.clone())
     }
 }
 
@@ -275,5 +283,82 @@ impl From<ObservableGauge<f64>> for MeterInstrument {
 impl From<ObservableGauge<i64>> for MeterInstrument {
     fn from(val: ObservableGauge<i64>) -> Self {
         MeterInstrument::I64ObservableGauge(val)
+    }
+}
+
+#[derive(Clone)]
+pub struct MonitoringLayer {
+    meter: Meter,
+}
+
+impl MonitoringLayer {
+    fn new(meter: Meter) -> Self {
+        Self { meter }
+    }
+}
+
+impl<S> tower::Layer<S> for MonitoringLayer {
+    type Service = MonitoringService<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        MonitoringService {
+            inner,
+            latencies: self
+                .meter
+                .u64_histogram("rpc_server_latency")
+                .with_unit(Unit::new("milliseconds"))
+                .with_description("Distribution of server-side RPC latency")
+                .init(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct MonitoringService<S> {
+    inner: S,
+    latencies: Histogram<u64>,
+}
+
+impl<S, T> tower::Service<http::Request<T>> for MonitoringService<S>
+where
+    S: tower::Service<http::Request<T>> + Clone + Send + 'static,
+    <S as tower::Service<http::Request<T>>>::Future: Send,
+    T: Send + 'static,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: http::Request<T>) -> Self::Future {
+        // `[...]/Service/Method`, but we count from right, so method is last
+        let mut attributes = Vec::new();
+        let mut parts = req.uri().path().rsplitn(3, '/');
+        if let Some(method) = parts.next() {
+            attributes.push(KeyValue::new("rpc_method", method.to_string()));
+        }
+        if let Some(service) = parts.next() {
+            attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
+        }
+
+        // copied from the example in `tower::Service` to guarantee that `poll_ready`
+        // has been called on the proper instance (and not the clone!)
+        let clone = self.inner.clone();
+        let mut inner = std::mem::replace(&mut self.inner, clone);
+
+        let latencies = self.latencies.clone();
+
+        Box::pin(async move {
+            let now = Instant::now();
+            let resp = inner.call(req).await;
+            latencies.record(now.elapsed().as_micros().try_into().unwrap_or(u64::MAX), &attributes);
+            resp
+        })
     }
 }

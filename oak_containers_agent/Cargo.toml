@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
+http = "*"
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
 ] }
@@ -26,6 +27,8 @@ tokio = { version = "*", features = [
   "time",
 ] }
 tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true, features = ["gzip"] }
+tower = { version = "*", features = ["load-shed"] }
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }
