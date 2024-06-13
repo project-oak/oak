@@ -577,6 +577,13 @@
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
 <a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -623,14 +630,16 @@
     }
 }
 
+<span class="kw">pub const </span>BOOT_LOADER_TYPE_UNDEFINED: u8 = <span class="number">0xFF</span>;
+
 <span class="kw">impl </span>ZeroPage {
     <span class="doccomment">/// Constructs a empty zero page, filling in some magic values needed by the
     /// kernel.
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>zero_page = BootParams::zeroed();
         <span class="comment">// Magic constants.
-        // See https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header for more details.
-        </span>zero_page.hdr.type_of_loader = <span class="number">0xFF</span>; <span class="comment">// loader type undefined
+        // See https://www.kernel.org/doc/html/latest/arch/x86/boot.html#the-real-mode-kernel-header for more details.
+        </span>zero_page.hdr.type_of_loader = BOOT_LOADER_TYPE_UNDEFINED; <span class="comment">// loader type undefined
         </span>zero_page.hdr.boot_flag = <span class="number">0xAA55</span>; <span class="comment">// magic number
         </span>zero_page.hdr.header = <span class="number">0x53726448</span>; <span class="comment">// Magic "HdrS" string
         </span>zero_page.hdr.kernel_alignment = <span class="number">0x1000000</span>; <span class="comment">// Magic number from crosvm source.
@@ -923,6 +932,11 @@
         <span class="comment">// The size of the RAM disk will always fit into 32 bits since we only map a
         // maximum of 1GiB of RAM.
         </span><span class="self">self</span>.inner.hdr.ramdisk_size = ram_disk.len() <span class="kw">as </span>u32;
+    }
+
+    <span class="doccomment">/// Sets the type of loader for direct kernel boot
+    </span><span class="kw">pub fn </span>set_type_of_loader(<span class="kw-2">&amp;mut </span><span class="self">self</span>, loader_type: u8) {
+        <span class="self">self</span>.inner.hdr.type_of_loader = loader_type;
     }
 }
 

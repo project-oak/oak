@@ -474,6 +474,11 @@
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -781,6 +786,11 @@
                 measure_byte_slice(ram_disk)
             })
             .unwrap_or_default();
+
+    <span class="comment">// QEMU assumes all SEV VMs use OVMF, and leaves type_of_loader 0x00. This
+    // would make the kernel unable to load stage1. We need to fix it to make
+    // stage1 loads smoothly.
+    </span>zero_page.set_type_of_loader(zero_page::BOOT_LOADER_TYPE_UNDEFINED);
 
     <span class="kw">let </span>memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
