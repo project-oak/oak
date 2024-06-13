@@ -366,6 +366,7 @@
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -560,8 +561,9 @@
         <span class="kw">let </span>orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
         <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
-        <span class="comment">// Resuse the same port we got for the TCP socket for vsock.
-        </span><span class="kw">let </span>vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))<span class="question-mark">?</span>;
+        <span class="comment">// Reuse the same port we got for the TCP socket for vsock.
+        </span><span class="kw">let </span>vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
+            .expect(<span class="string">"Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it."</span>);
         <span class="macro">log::info!</span>(<span class="string">"Launcher service listening on port {port}"</span>);
         <span class="kw">let </span>(evidence_sender, evidence_receiver) = oneshot::channel::&lt;Evidence&gt;();
         <span class="kw">let </span>(shutdown_sender, <span class="kw-2">mut </span>shutdown_receiver) = watch::channel::&lt;()&gt;(());
