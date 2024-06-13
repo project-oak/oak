@@ -192,8 +192,9 @@ impl Launcher {
         let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
-        // Resuse the same port we got for the TCP socket for vsock.
-        let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))?;
+        // Reuse the same port we got for the TCP socket for vsock.
+        let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
+            .expect("Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it.");
         log::info!("Launcher service listening on port {port}");
         let (evidence_sender, evidence_receiver) = oneshot::channel::<Evidence>();
         let (shutdown_sender, mut shutdown_receiver) = watch::channel::<()>(());
