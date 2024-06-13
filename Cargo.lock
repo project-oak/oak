@@ -2428,6 +2428,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_agent"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "oak_grpc_utils",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "procfs",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "oak_containers_hello_world_trusted_app"
 version = "0.1.0"
 dependencies = [
@@ -2517,7 +2532,6 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "p256",
- "procfs",
  "prost",
  "prost-types",
  "rand_core",
