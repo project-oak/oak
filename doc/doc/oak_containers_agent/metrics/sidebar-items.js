@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["init_metrics"]};
+window.SIDEBAR_ITEMS = {"enum":["MeterInstrument"],"fn":["init_metrics"],"struct":["MetricsConfig","OakObserver"]};
