@@ -5,7 +5,7 @@
 /// The wire numbers are the codec IDs in
 /// <https://github.com/multiformats/multicodec/blob/master/table.csv>
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct RawDigest {
     #[prost(bytes = "vec", tag = "16")]
     pub psha2: ::prost::alloc::vec::Vec<u8>,
@@ -34,7 +34,7 @@ pub struct RawDigest {
 /// For example, the field sha2_256 could contain
 /// "82aac1adbfe3ada1244c1f54b7c949519e1f048067d0c3b236b7ae048fc7e227".
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct HexDigest {
     #[prost(string, tag = "16")]
     pub psha2: ::prost::alloc::string::String,

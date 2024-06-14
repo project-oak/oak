@@ -1,5 +1,5 @@
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct LookupRequest {
     #[prost(bytes = "vec", repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
@@ -17,7 +17,7 @@ pub mod lookup_request {
         Hash,
         PartialOrd,
         Ord,
-        ::prost::Enumeration
+        ::prost_derive::Enumeration
     )]
     #[repr(i32)]
     pub enum Mode {
@@ -46,20 +46,20 @@ pub mod lookup_request {
     }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct LookupResponse {
     #[prost(bytes = "vec", repeated, tag = "1")]
     pub values: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 /// Echo the bytes back, and then panic.
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EchoAndPanicRequest {
     #[prost(bytes = "vec", tag = "5")]
     pub data: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EchoAndPanicResponse {
     #[prost(bytes = "vec", tag = "2")]
     pub data: ::prost::alloc::vec::Vec<u8>,

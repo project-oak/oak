@@ -1,7 +1,7 @@
 /// Request message encrypted using Hybrid Public Key Encryption (HPKE).
 /// <<https://www.rfc-editor.org/rfc/rfc9180.html>>
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EncryptedRequest {
     /// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
@@ -18,7 +18,7 @@ pub struct EncryptedRequest {
 /// response key generated as part of bidirectional encryption.
 /// <<https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>>
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EncryptedResponse {
     /// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
@@ -28,7 +28,7 @@ pub struct EncryptedResponse {
 /// Message encrypted with Authenticated Encryption with Associated Data (AEAD).
 /// <<https://datatracker.ietf.org/doc/html/rfc5116>>
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct AeadEncryptedMessage {
     #[prost(bytes = "vec", tag = "1")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
@@ -41,7 +41,7 @@ pub struct AeadEncryptedMessage {
 /// a secure session. Needed to serialize contexts in order to send them over an
 /// RPC.
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionKeys {
     /// AEAD key for encrypting/decrypting client requests.
     #[prost(bytes = "vec", tag = "1")]
@@ -51,7 +51,7 @@ pub struct SessionKeys {
     pub response_key: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Signature {
     #[prost(bytes = "vec", tag = "1")]
     pub signature: ::prost::alloc::vec::Vec<u8>,

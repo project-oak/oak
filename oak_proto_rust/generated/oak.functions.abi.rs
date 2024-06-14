@@ -1,7 +1,7 @@
 /// The client can check the configuration report for the configuration of the
 /// Oak Functions runtime.
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ConfigurationReport {
     /// Hash of the loaded Wasm module.
     #[prost(bytes = "vec", tag = "1")]
@@ -13,7 +13,7 @@ pub struct ConfigurationReport {
 /// / Server-side policy describing limits on the size of the response and
 /// / response processing time to avoid side-channel leaks.
 #[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ServerPolicy {
     /// A fixed size for responses returned by the trusted runtime.
     ///
