@@ -8,5 +8,10 @@ target/bzImage:
 	# Log digest of kernel in order to detect non reproducibility.
 	sha256sum target/bzImage
 
+target/vanilla_bzImage:
+	mkdir --parents target
+	cp $${VANILLA_LINUX_KERNEL}/bzImage target/vanilla_bzImage
+	sha256sum target/vanilla_bzImage
+
 clean:
 	rm --recursive --force target
