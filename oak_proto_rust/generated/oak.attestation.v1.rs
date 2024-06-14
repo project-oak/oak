@@ -689,8 +689,11 @@ pub struct Event {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EventLog {
+    /// TODO: b/333748757 - Remove 'events' once 'encoded_events' is in google3.
     #[prost(message, repeated, tag = "1")]
     pub events: ::prost::alloc::vec::Vec<Event>,
+    #[prost(bytes = "vec", repeated, tag = "2")]
+    pub encoded_events: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

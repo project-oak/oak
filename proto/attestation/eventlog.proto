@@ -56,5 +56,7 @@ message Event {
 
 // A sequence of Events intended for inclusion in attestation evidence.
 message EventLog {
+  // TODO: b/333748757 - Remove 'events' once 'encoded_events' is in google3.
   repeated Event events = 1;
+  repeated bytes encoded_events = 2;
 }
