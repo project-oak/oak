@@ -1192,8 +1192,6 @@
 <a href="#1190" id="1190">1190</a>
 <a href="#1191" id="1191">1191</a>
 <a href="#1192" id="1192">1192</a>
-<a href="#1193" id="1193">1193</a>
-<a href="#1194" id="1194">1194</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1677,23 +1675,12 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;ExpectedDigests&gt;,
 }
-<span class="doccomment">/// Represents digest of application task config.
+<span class="doccomment">/// Represents digest of an event.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbApplicationLayerExpectedValues {
-    <span class="doccomment">/// Verifies the application task config.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="doccomment">/// Represents digest of application task config.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbSystemLayerExpectedValues {
-    <span class="doccomment">/// Verifies the application task config.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>system_cmd_line: ::core::option::Option&lt;TextExpectedValue&gt;,
+</span><span class="kw">pub struct </span>EventExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>event: ::core::option::Option&lt;ExpectedDigests&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1722,6 +1709,12 @@
 </span><span class="kw">pub struct </span>CbExpectedValues {
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2019,16 +2012,6 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;BinaryReferenceValue&gt;,
 }
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbSystemLayerReferenceValues {
-    <span class="doccomment">/// Verifies the system image binary.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;BinaryReferenceValue&gt;,
-    <span class="doccomment">/// Verifies the command line by which the system image was built.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>system_cmd_line: ::core::option::Option&lt;StringReferenceValue&gt;,
-}
 <span class="doccomment">/// Represents an application running under Oak Restricted Kernel.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2040,14 +2023,6 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;BinaryReferenceValue&gt;,
 }
-<span class="doccomment">/// Represents digest of application task config.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbApplicationLayerReferenceValues {
-    <span class="doccomment">/// Verifies the application task config.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;BinaryReferenceValue&gt;,
-}
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ContainerLayerReferenceValues {
@@ -2057,6 +2032,13 @@
     <span class="doccomment">/// Verifies configuration with respect to the container binary.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;BinaryReferenceValue&gt;,
+}
+<span class="doccomment">/// Represents digest of an event.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EventReferenceValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>event: ::core::option::Option&lt;BinaryReferenceValue&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2086,11 +2068,11 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerReferenceValues&gt;,
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;EventReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;CbSystemLayerReferenceValues&gt;,
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;EventReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;CbApplicationLayerReferenceValues&gt;,
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventReferenceValues&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2357,6 +2339,14 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>config: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
 }
+<span class="doccomment">/// Values extracted from the evidence that represents an event.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EventData {
+    <span class="doccomment">/// Measurement RawDigest of an event.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>event: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
+}
 <span class="doccomment">/// Values extracted from the evidence for a restricted kernel application.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2387,5 +2377,11 @@
 </span><span class="kw">pub struct </span>CbData {
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerData&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;EventData&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;EventData&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventData&gt;,
 }
 </code></pre></div></section></main></body></html>
