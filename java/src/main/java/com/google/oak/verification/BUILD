@@ -15,6 +15,7 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
@@ -40,6 +41,17 @@ java_binary(
 
 kt_jvm_library(
     name = "verification",
+    srcs = glob([
+        "*.java",
+        "*.kt",
+    ]),
+    deps = [
+        "@com_google_code_gson_gson",
+    ],
+)
+
+kt_android_library(
+    name = "verification_android",
     srcs = glob([
         "*.java",
         "*.kt",
