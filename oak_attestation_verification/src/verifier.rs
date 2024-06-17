@@ -23,11 +23,11 @@ use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLa
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
-    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID,
-    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
-    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
-    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
+    ENCLAVE_APPLICATION_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+    KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
+    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -1276,25 +1276,63 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
     }
 }
 
-/// Extracts the application public keys.
+/// Extracts application key values. There are two possible cases where
+/// in the first case application keys are defined as cose key and another case
+/// application keys are part of payload.
 fn extract_application_key_values(
     application_keys: &ApplicationKeys,
 ) -> anyhow::Result<ApplicationKeyValues> {
-    let encryption_claims =
-        claims_set_from_serialized_cert(&application_keys.encryption_public_key_certificate[..])?;
-    let encryption_cose_key =
-        get_public_key_from_claims_set(&encryption_claims).map_err(|msg| anyhow::anyhow!(msg))?;
-    let encryption_public_key =
-        cose_key_to_hpke_public_key(&encryption_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
+    let application_key_values = || -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+        let encryption_claims = claims_set_from_serialized_cert(
+            &application_keys.encryption_public_key_certificate[..],
+        )?;
+        let encryption_cose_key = get_public_key_from_claims_set(&encryption_claims)
+            .map_err(|msg| anyhow::anyhow!(msg))?;
+        let encryption_public_key = cose_key_to_hpke_public_key(&encryption_cose_key)
+            .map_err(|msg| anyhow::anyhow!(msg))?;
 
-    let signing_claims =
-        claims_set_from_serialized_cert(&application_keys.signing_public_key_certificate[..])?;
-    let signing_cose_key: CoseKey =
-        get_public_key_from_claims_set(&signing_claims).map_err(|msg| anyhow::anyhow!(msg))?;
-    let signing_verifying_key =
-        cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
-    let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
+        let signing_claims =
+            claims_set_from_serialized_cert(&application_keys.signing_public_key_certificate[..])?;
+        let signing_cose_key: CoseKey =
+            get_public_key_from_claims_set(&signing_claims).map_err(|msg| anyhow::anyhow!(msg))?;
+        let signing_verifying_key =
+            cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
+        let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
+        Ok((encryption_public_key, signing_public_key))
+    };
+    let (encryption_public_key, signing_public_key) = match application_key_values() {
+        Ok(values) => values,
+        Err(_) => {
+            let encryption_cert = coset::CoseSign1::from_slice(
+                &application_keys.encryption_public_key_certificate,
+            )
+            .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+            let encryption_payload = encryption_cert
+                .payload
+                .ok_or_else(|| anyhow::anyhow!("no encryption cert payload"))?;
+            let encryption_claims = ClaimsSet::from_slice(&encryption_payload)
+                .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption claims set"))?;
+            let encryption_public_key =
+                extract_value_from_claims_set(&encryption_claims, APPLICATION_KEY_ID)
+                    .context("key ID not found")?;
+
+            let signing_cert =
+                coset::CoseSign1::from_slice(&application_keys.signing_public_key_certificate)
+                    .map_err(|_cose_err| {
+                        anyhow::anyhow!("could not parse encryption certificate")
+                    })?;
+            let signing_payload =
+                signing_cert.payload.ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
+            let signing_claims = ClaimsSet::from_slice(&signing_payload)
+                .map_err(|_cose_err| anyhow::anyhow!("could not parse signing claims set"))?;
+            let signing_public_key =
+                extract_value_from_claims_set(&signing_claims, APPLICATION_KEY_ID)
+                    .context("key ID not found")?;
+
+            (encryption_public_key, signing_public_key)
+        }
+    };
     Ok(ApplicationKeyValues { encryption_public_key, signing_public_key })
 }
 
@@ -1379,6 +1417,24 @@ fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<
             }
         })
         .context("couldn't find layer values")
+}
+
+/// Extracts a value for the label from claim.
+fn extract_value_from_claims_set(claims: &ClaimsSet, label_id: i64) -> anyhow::Result<Vec<u8>> {
+    let target = RegisteredLabelWithPrivate::PrivateUse(label_id);
+    claims
+        .rest
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &target
+            {
+                Some(bytes.to_vec())
+            } else {
+                None
+            }
+        })
+        .context("couldn't find value from claims set")
 }
 
 /// Extracts a value for the label from the layer's mapping between labels and
