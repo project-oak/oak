@@ -29,6 +29,7 @@ rust_library(
         "@oak_crates_index//:async-trait",
         "@oak_crates_index//:prost-derive",
     ],
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         ":build",
     ] + select({

@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_linux_boot_params",
     srcs = glob(["src/**"]),
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",

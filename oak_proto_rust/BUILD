@@ -28,6 +28,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         ":build",
         "//micro_rpc",

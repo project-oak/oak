@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_restricted_kernel_dice",
     srcs = glob(["src/**"]),
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         "//oak_crypto",
         "//oak_dice",

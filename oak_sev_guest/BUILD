@@ -27,6 +27,7 @@ rust_library(
     crate_features = [
         "rust-crypto",
     ],
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:lock_api",

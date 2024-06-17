@@ -202,8 +202,9 @@ kokoro_run_tests: all_ensure_no_std
 clang-tidy:
     bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
-# TODO: b/343228114 - Use a Bazel tag instead of listing packages here.
-bare_metal_crates := "//oak_linux_boot_params //oak_channel //oak_core //oak_virtio //third_party/rust-hypervisor-firmware-virtio //micro_rpc //oak_proto_rust //oak_sev_snp_attestation_report //oak_sev_guest //sev_serial //oak_crypto //oak_dice //oak_restricted_kernel_dice"
+# Query crates that needs to be built for bare metal. Bazel query outputs one target in each line, so we
+# use `tr` to bring them into a single line.
+bare_metal_crates := `bazel query 'attr("tags", "ci-build-for-x86_64-unknown-none", //...)' | tr '\n' ' '`
 
 bazel-ci:
     # Test Oak as a dependency in the test workspace
@@ -224,6 +225,9 @@ bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index
     env CARGO_BAZEL_REPIN=true --chdir=bazel/test_workspace bazel sync --only=oak2
 
+bazel-fmt:
+    buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.
+
 bazel-rustfmt:
     bazel build --config=rustfmt --config=unsafe-fast-presubmit //...:all -- -third_party/...
 
@@ -231,7 +235,7 @@ xtask job:
     ./scripts/xtask {{job}}
 
 clippy-ci: (xtask "run-cargo-clippy") bazel-clippy
-check-format-ci: (xtask "check-format") bazel-rustfmt
+check-format-ci: (xtask "check-format") bazel-fmt
 
 # Temporary target to help debugging Bazel remote cache with more detailed logs.
 # It should be deleted when debugging is completed.

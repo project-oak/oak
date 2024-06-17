@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_virtio",
     srcs = glob(["src/**"]),
+    tags = ["ci-build-for-x86_64-unknown-none"],
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",
         "@oak_crates_index//:strum",
