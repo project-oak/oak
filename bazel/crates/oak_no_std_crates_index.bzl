@@ -54,6 +54,14 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 package = "bitflags",
                 version = "*",
             ),
+            "ciborium": crate.spec(
+                default_features = False,
+                version = "*",
+            ),
+            "coset": crate.spec(
+                default_features = False,
+                version = "*",
+            ),
             # Pin to 4.1.1 see issue #4952
             # TODO: #4952 - Remove this pinning.
             "curve25519-dalek": crate.spec(
@@ -75,6 +83,11 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 # rdrand is required to support x64_64-unknown-none.
                 features = ["rdrand"],
                 version = "0.2.12",
+            ),
+            "hex": crate.spec(
+                default_features = False,
+                features = ["alloc"],
+                version = "*",
             ),
             "hkdf": crate.spec(
                 default_features = False,

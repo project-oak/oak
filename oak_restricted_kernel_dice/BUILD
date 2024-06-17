@@ -27,9 +27,19 @@ rust_library(
     deps = [
         "//oak_crypto",
         "//oak_dice",
-        "@oak_crates_index//:coset",
-        "@oak_crates_index//:hkdf",
-        "@oak_crates_index//:p256",
-        "@oak_crates_index//:sha2",
-    ],
+    ] + select({
+        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:coset",
+            "@oak_no_std_crates_index//:hkdf",
+            "@oak_no_std_crates_index//:p256",
+            "@oak_no_std_crates_index//:sha2",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:coset",
+            "@oak_crates_index//:hkdf",
+            "@oak_crates_index//:p256",
+            "@oak_crates_index//:sha2",
+        ],
+    }),
 )

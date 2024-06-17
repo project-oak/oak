@@ -1,5 +1,5 @@
 {
-  "checksum": "a36c6f96b9d0224c167576b11b600f696c616c9d8b8bcee2834d87acd8b947b6",
+  "checksum": "4d16ad23b765690bb2679c3c12dc19ec3902723fe5e8be99db869bb12812014d",
   "crates": {
     "aead 0.5.2": {
       "name": "aead",
@@ -734,6 +734,156 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "ciborium 0.2.2": {
+      "name": "ciborium",
+      "version": "0.2.2",
+      "package_url": "https://github.com/enarx/ciborium",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ciborium/0.2.2/download",
+          "sha256": "42e69ffd6f0917f5c029256a24d0161db17cea3997d185db0d35926308770f0e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ciborium",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ciborium",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "ciborium-io 0.2.2",
+              "target": "ciborium_io"
+            },
+            {
+              "id": "ciborium-ll 0.2.2",
+              "target": "ciborium_ll"
+            },
+            {
+              "id": "serde 1.0.203",
+              "target": "serde"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.2"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
+    "ciborium-io 0.2.2": {
+      "name": "ciborium-io",
+      "version": "0.2.2",
+      "package_url": "https://github.com/enarx/ciborium",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ciborium-io/0.2.2/download",
+          "sha256": "05afea1e0a06c9be33d539b876f1ce3692f4afea2cb41f740e7743225ed1c757"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ciborium_io",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ciborium_io",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.2"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
+    "ciborium-ll 0.2.2": {
+      "name": "ciborium-ll",
+      "version": "0.2.2",
+      "package_url": "https://github.com/enarx/ciborium",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ciborium-ll/0.2.2/download",
+          "sha256": "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ciborium_ll",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ciborium_ll",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "ciborium-io 0.2.2",
+              "target": "ciborium_io"
+            },
+            {
+              "id": "half 2.4.1",
+              "target": "half"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.2"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "cipher 0.4.4": {
       "name": "cipher",
       "version": "0.4.4",
@@ -835,6 +985,57 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "coset 0.3.7": {
+      "name": "coset",
+      "version": "0.3.7",
+      "package_url": "https://github.com/google/coset",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/coset/0.3.7/download",
+          "sha256": "ff8aad850c1f86daa47e812913051eb5a26c4d9fb4242a89178bf99b946e4e3c"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "coset",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "coset",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "ciborium 0.2.2",
+              "target": "ciborium"
+            },
+            {
+              "id": "ciborium-io 0.2.2",
+              "target": "ciborium_io"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.7"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "cpufeatures 0.2.12": {
       "name": "cpufeatures",
       "version": "0.2.12",
@@ -902,6 +1103,70 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "crunchy 0.2.2": {
+      "name": "crunchy",
+      "version": "0.2.2",
+      "package_url": null,
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/crunchy/0.2.2/download",
+          "sha256": "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "crunchy",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "crunchy",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "crunchy 0.2.2",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.2.2"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": null
     },
     "crypto-bigint 0.5.5": {
       "name": "crypto-bigint",
@@ -1431,6 +1696,14 @@
               "target": "bytes"
             },
             {
+              "id": "ciborium 0.2.2",
+              "target": "ciborium"
+            },
+            {
+              "id": "coset 0.3.7",
+              "target": "coset"
+            },
+            {
               "id": "curve25519-dalek 4.1.1",
               "target": "curve25519_dalek"
             },
@@ -1441,6 +1714,10 @@
             {
               "id": "getrandom 0.2.15",
               "target": "getrandom"
+            },
+            {
+              "id": "hex 0.4.3",
+              "target": "hex"
             },
             {
               "id": "hkdf 0.12.4",
@@ -2047,6 +2324,106 @@
         "version": "0.13.0"
       },
       "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "half 2.4.1": {
+      "name": "half",
+      "version": "2.4.1",
+      "package_url": "https://github.com/starkat99/half-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/half/2.4.1/download",
+          "sha256": "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "half",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "half",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "cfg-if 1.0.0",
+              "target": "cfg_if"
+            }
+          ],
+          "selects": {
+            "cfg(target_arch = \"spirv\")": [
+              {
+                "id": "crunchy 0.2.2",
+                "target": "crunchy"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "2.4.1"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "hex 0.4.3": {
+      "name": "hex",
+      "version": "0.4.3",
+      "package_url": "https://github.com/KokaKiwi/rust-hex",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/hex/0.4.3/download",
+          "sha256": "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "hex",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "hex",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.4.3"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -3403,6 +3780,150 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "serde 1.0.203": {
+      "name": "serde",
+      "version": "1.0.203",
+      "package_url": "https://github.com/serde-rs/serde",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/serde/1.0.203/download",
+          "sha256": "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "serde",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "serde",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "derive",
+            "serde_derive"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "serde 1.0.203",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "serde_derive 1.0.203",
+              "target": "serde_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "1.0.203"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "serde_derive 1.0.203": {
+      "name": "serde_derive",
+      "version": "1.0.203",
+      "package_url": "https://github.com/serde-rs/serde",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/serde_derive/1.0.203/download",
+          "sha256": "500cbc0ebeb6f46627f50f3f5811ccf6bf00643be300b4c3eabc0ef55dc5b5ba"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "serde_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "serde_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.85",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.66",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "1.0.203"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "sha2 0.10.8": {
       "name": "sha2",
       "version": "0.10.8",
@@ -4235,6 +4756,7 @@
       "x86_64-unknown-none"
     ],
     "cfg(curve25519_dalek_backend = \"fiat\")": [],
+    "cfg(target_arch = \"spirv\")": [],
     "cfg(target_arch = \"x86_64\")": [
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
@@ -4256,9 +4778,12 @@
     "anyhow 1.0.83",
     "bitflags 2.5.0",
     "bytes 1.6.0",
+    "ciborium 0.2.2",
+    "coset 0.3.7",
     "curve25519-dalek 4.1.1",
     "ecdsa 0.16.9",
     "getrandom 0.2.15",
+    "hex 0.4.3",
     "hkdf 0.12.4",
     "hpke 0.11.0",
     "log 0.4.21",
