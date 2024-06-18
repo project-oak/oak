@@ -54,6 +54,9 @@ build:ci --show_result=1000000
 build:ci --noshow_progress
 build:ci --curses=no
 
+# Always show test errors in CI
+test:ci --test_output=errors
+
 # The unsafe-fast-presubmit config should only be used in presubmits steps that do not produce
 # binaries that need to be released or trusted (e.g. TEE applications). This is because it enables
 # using a remote cache, which in general may not be considered trustworthy.
