@@ -55,6 +55,7 @@ impl<'a> SessionConfigBuilder<'a> {
             handshake_type,
             self_static_private_key: None,
             peer_static_public_key: None,
+            peer_attestation_binding_public_key: None,
         };
 
         let config = SessionConfig { attestation_provider_config, handshaker_config };
@@ -104,6 +105,11 @@ pub struct AttestationProviderConfig<'a> {
 #[allow(dead_code)]
 pub struct HandshakerConfig<'a> {
     pub handshake_type: HandshakeType,
+    // Used for authentication schemes where a static public key is pre-shared with the responder.
     pub self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
+    // Used for authentication schemes where a responder's static public key is pre-shared with
+    // the initiator.
     pub peer_static_public_key: Option<Vec<u8>>,
+    // Public key that can be used to bind the attestation obtained from the peer to the handshake.
+    pub peer_attestation_binding_public_key: Option<Vec<u8>>,
 }

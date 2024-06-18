@@ -36,6 +36,7 @@ pub enum HandshakeType {
     NoiseKK,
     NoiseKN,
     NoiseNK,
+    NoiseNN,
 }
 
 pub trait Handshaker {
