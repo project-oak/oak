@@ -28,9 +28,19 @@ rust_library(
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",
         "@oak_crates_index//:strum",
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:x86_64",
-    ],
+    ] + select({
+        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:anyhow",
+            "@oak_no_std_crates_index//:bitflags",
+            "@oak_no_std_crates_index//:log",
+            "@oak_no_std_crates_index//:x86_64",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:anyhow",
+            "@oak_crates_index//:bitflags",
+            "@oak_crates_index//:log",
+            "@oak_crates_index//:x86_64",
+        ],
+    }),
 )

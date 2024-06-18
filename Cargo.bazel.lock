@@ -769,7 +769,6 @@ dependencies = [
  "tonic-build",
  "tower",
  "uart_16550",
- "virtio-drivers",
  "walkdir",
  "x509-cert",
  "x86_64",
@@ -2676,17 +2675,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "virtio-drivers"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4fd50c69dad27f9d266e42be17da981cd507d6cd47077558a81c25169431392"
-dependencies = [
- "bitflags 2.5.0",
- "log",
- "zerocopy",
-]
-
-[[package]]
 name = "volatile"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3025,7 +3013,6 @@ version = "0.7.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74d4d3961e53fa4c9a25a8637fc2bfaf2595b3d3ae34875568a5cf64787716be"
 dependencies = [
- "byteorder",
  "zerocopy-derive",
 ]
 

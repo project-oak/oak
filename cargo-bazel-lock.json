@@ -1,5 +1,5 @@
 {
-  "checksum": "9872a2c4b34b30e31ccb5db846832f1a2642beec9fa9266f82f20c3db29bbf54",
+  "checksum": "9b1e93fdac4e3f766dc08afc01205fb87292faa3711202f1ad41b1993790f938",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4558,10 +4558,6 @@
             {
               "id": "uart_16550 0.3.0",
               "target": "uart_16550"
-            },
-            {
-              "id": "virtio-drivers 0.7.1",
-              "target": "virtio_drivers"
             },
             {
               "id": "walkdir 2.5.0",
@@ -16457,68 +16453,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "virtio-drivers 0.7.1": {
-      "name": "virtio-drivers",
-      "version": "0.7.1",
-      "package_url": "https://github.com/rcore-os/virtio-drivers",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/virtio-drivers/0.7.1/download",
-          "sha256": "f4fd50c69dad27f9d266e42be17da981cd507d6cd47077558a81c25169431392"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "virtio_drivers",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": false,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "virtio_drivers",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "alloc",
-            "default"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "bitflags 2.5.0",
-              "target": "bitflags"
-            },
-            {
-              "id": "log 0.4.21",
-              "target": "log"
-            },
-            {
-              "id": "zerocopy 0.7.32",
-              "target": "zerocopy"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.7.1"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": "LICENSE"
-    },
     "volatile 0.4.6": {
       "name": "volatile",
       "version": "0.4.6",
@@ -18996,20 +18930,8 @@
         ],
         "crate_features": {
           "common": [
-            "alloc",
-            "byteorder",
-            "default",
             "derive",
             "zerocopy-derive"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "byteorder 1.5.0",
-              "target": "byteorder"
-            }
           ],
           "selects": {}
         },
@@ -19369,7 +19291,6 @@
     "tonic-build 0.11.0",
     "tower 0.4.13",
     "uart_16550 0.3.0",
-    "virtio-drivers 0.7.1",
     "walkdir 2.5.0",
     "x509-cert 0.2.5",
     "x86_64 0.14.11",

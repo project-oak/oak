@@ -308,7 +308,6 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "tonic-build": crate.spec(version = "*"),
             "tower": crate.spec(version = "*"),
             "uart_16550": crate.spec(version = "*"),
-            "virtio-drivers": crate.spec(version = "*"),
             "walkdir": crate.spec(version = "*"),
             "x509-cert": crate.spec(
                 default_features = False,

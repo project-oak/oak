@@ -32,6 +32,7 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
         cargo_lockfile = cargo_lockfile,  # In Cargo-free mode this is used as output, not input.
         lockfile = lockfile,  # Shares most contents with cargo_lockfile.
         packages = {
+            "acpi": crate.spec(version = "*"),
             "aead": crate.spec(version = "*"),
             "aes-gcm": crate.spec(
                 default_features = False,
@@ -41,6 +42,7 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "aml": crate.spec(version = "*"),
             "anyhow": crate.spec(
                 default_features = False,
                 features = [],
@@ -83,6 +85,15 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 # rdrand is required to support x64_64-unknown-none.
                 features = ["rdrand"],
                 version = "0.2.12",
+            ),
+            "goblin": crate.spec(
+                default_features = False,
+                features = [
+                    "elf32",
+                    "elf64",
+                    "endian_fd",
+                ],
+                version = "*",
             ),
             "hex": crate.spec(
                 default_features = False,
@@ -138,7 +149,8 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
-            "x86_64": crate.spec(version = "*"),
+            "virtio-drivers": crate.spec(version = "*"),
+            "x86_64": crate.spec(version = "=0.14"),  #  0.15 does not support LowerHex formatting.
             "zeroize": crate.spec(
                 features = ["derive"],
                 version = "*",

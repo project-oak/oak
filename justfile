@@ -223,7 +223,7 @@ bazel-clippy:
 
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index
-    env CARGO_BAZEL_REPIN=true --chdir=bazel/test_workspace bazel sync --only=oak2
+    cd bazel/test_workspace && env CARGO_BAZEL_REPIN=true bazel sync --only=oak2
 
 bazel-fmt:
     buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.

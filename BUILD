@@ -50,6 +50,14 @@ platform(
     ],
 )
 
+platform(
+    name = "x86_64-linux",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
 filegroup(
     name = "clang_tidy_config",
     srcs = [".clang-tidy"],
