@@ -109,6 +109,12 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -166,6 +172,7 @@
             handshake_type,
             self_static_private_key: <span class="prelude-val">None</span>,
             peer_static_public_key: <span class="prelude-val">None</span>,
+            peer_attestation_binding_public_key: <span class="prelude-val">None</span>,
         };
 
         <span class="kw">let </span>config = SessionConfig { attestation_provider_config, handshaker_config };
@@ -215,7 +222,12 @@
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>HandshakerConfig&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub </span>handshake_type: HandshakeType,
-    <span class="kw">pub </span>self_static_private_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>EncryptionKeyHandle&gt;,
-    <span class="kw">pub </span>peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+    <span class="comment">// Used for authentication schemes where a static public key is pre-shared with the responder.
+    </span><span class="kw">pub </span>self_static_private_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>EncryptionKeyHandle&gt;,
+    <span class="comment">// Used for authentication schemes where a responder's static public key is pre-shared with
+    // the initiator.
+    </span><span class="kw">pub </span>peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+    <span class="comment">// Public key that can be used to bind the attestation obtained from the peer to the handshake.
+    </span><span class="kw">pub </span>peer_attestation_binding_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 </code></pre></div></section></main></body></html>
