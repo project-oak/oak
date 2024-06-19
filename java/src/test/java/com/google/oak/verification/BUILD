@@ -14,15 +14,15 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_test")
 
 package(
     licenses = ["notice"],
 )
 
-java_test(
+kt_jvm_test(
     name = "log_entry_verifier_test",
-    srcs = ["LogEntryVerifierTest.java"],
+    srcs = ["LogEntryVerifierTest.kt"],
     data = [
         "//oak_attestation_verification/testdata:endorsement.json",
         "//oak_attestation_verification/testdata:logentry.json",
@@ -31,22 +31,26 @@ java_test(
     test_class = "com.google.oak.verification.LogEntryVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
+        "@maven//:junit_junit",
+        "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )
 
-java_test(
+kt_jvm_test(
     name = "rekor_log_entry_test",
-    srcs = ["RekorLogEntryTest.java"],
+    srcs = ["RekorLogEntryTest.kt"],
     data = ["//oak_attestation_verification/testdata:logentry.json"],
     test_class = "com.google.oak.verification.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
+        "@maven//:junit_junit",
+        "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )
 
-java_test(
+kt_jvm_test(
     name = "signature_verifier_test",
-    srcs = ["SignatureVerifierTest.java"],
+    srcs = ["SignatureVerifierTest.kt"],
     data = [
         "//oak_attestation_verification/testdata:endorsement.json",
         "//oak_attestation_verification/testdata:endorsement.json.sig",
@@ -55,5 +59,7 @@ java_test(
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
+        "@maven//:junit_junit",
+        "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )

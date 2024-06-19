@@ -1,4 +1,3 @@
-
 //
 // Copyright 2023 The Project Oak Authors
 //
@@ -15,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.verification;
+package com.google.oak.verification
 
 /** Signals verification failure and provides a human-readable cause. */
 data class Failure(val message: String)
