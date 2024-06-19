@@ -298,21 +298,19 @@ load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolcha
 gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
     target_arch = ARCHS.x86_64,
+    # target_compatible_with defaults to os:linux.
+)
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64_unknown_none",  # Repository @gcc_toolchain_x86_64_unknown_none
+    target_arch = ARCHS.x86_64,
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+    ],
 )
 
 # --- Rust support ---
-
-load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies", "rules_cc_toolchains")
-
-rules_cc_dependencies()
-
-rules_cc_toolchains()
-
-register_toolchains(
-    "//bazel/toolchains:x86_64_unknown_none_toolchain",
-)
-
-# rules_rust
 
 _RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
 
