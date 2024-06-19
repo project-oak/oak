@@ -18,28 +18,20 @@ use std::path::PathBuf;
 
 #[cfg(feature = "bazel")]
 fn get_included_protos() -> Vec<PathBuf> {
-    const WELL_KNOWN_PROTOS_PATH: &str = "com_google_protobuf/src";
-    extern crate runfiles;
-    let r = runfiles::Runfiles::create().unwrap();
-
     // The root of all Oak protos
     let oak_proto_root = PathBuf::from("..");
-
-    // When the build script runs in "bazel" mode, the google protobufs don't
-    // automatically end up in the include path for calls to protoc.
-
-    // The "well known" proto types provided by Google's protobuf library.
-    // These come from the "@com_google_protobuf//:well_known_type_protos" dep.
-    let well_known_google_protos_path = r.rlocation(WELL_KNOWN_PROTOS_PATH);
-
-    // descriptor.proto is not part of "well known protos", but we use it for
-    // micro_rpc, so it gets included as well.
-    // Comes from the "@com_google_protobuf//:descriptor_proto" dep.
-    let google_descriptor_proto_path = r.rlocation(format!(
-        "{WELL_KNOWN_PROTOS_PATH}/google/protobuf/_virtual_imports/descriptor_proto"
-    ));
-
-    vec![oak_proto_root, well_known_google_protos_path, google_descriptor_proto_path]
+    // Rely on bazel make variable `location` to find protobuf include paths.
+    // We do this as protobuf might be imported under different names in the
+    // external directory based on the setup (BzlMod, WORKSPACE or others).
+    // Possible names are: com_google_protobuf, protobuf~, and protobuf.
+    // The goal is to allow dependent repositories to use this
+    // library without renaming their explicit import of protobuf library.
+    let protobuf_include_path = PathBuf::from(
+        std::env::var("DESCRIPTOR_PROTO_PATH")
+            .unwrap()
+            .replace("google/protobuf/descriptor.proto", ""),
+    );
+    vec![oak_proto_root, protobuf_include_path]
 }
 
 #[cfg(not(feature = "bazel"))]

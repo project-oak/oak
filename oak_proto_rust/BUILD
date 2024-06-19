@@ -52,6 +52,7 @@ cargo_build_script(
     ],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
@@ -72,7 +73,7 @@ cargo_build_script(
         "//proto/oak_functions:testing_proto",
         "//proto/oak_functions/service:oak_functions_proto",
         "//proto/session:session_proto",
-        "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
     ],
     tools = [
@@ -82,7 +83,6 @@ cargo_build_script(
         "//micro_rpc_build",
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
-        "@rules_rust//tools/runfiles",
     ],
 )
 
