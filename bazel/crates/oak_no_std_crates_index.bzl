@@ -155,6 +155,10 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 features = ["derive"],
                 version = "*",
             ),
+            "rand_chacha": crate.spec(
+                default_features = False,
+                version = "*",
+            ),
         },
         supported_platform_triples = [
             "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).

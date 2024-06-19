@@ -41,12 +41,14 @@ use primeorder::{
     },
     Field, PrimeField,
 };
+use rand_core::{RngCore, SeedableRng};
 use sha2::Digest;
 
 use crate::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 
-pub fn rand_bytes(_output: &mut [u8]) {
-    panic!("unimplemented");
+pub fn rand_bytes(output: &mut [u8]) {
+    let mut rng = rand_chacha::ChaCha20Rng::from_entropy();
+    rng.fill_bytes(output);
 }
 
 /// Perform the HKDF operation from https://datatracker.ietf.org/doc/html/rfc5869
@@ -100,8 +102,7 @@ pub struct P256Scalar {
 impl P256Scalar {
     pub fn generate() -> P256Scalar {
         let mut ret = [0u8; P256_SCALAR_LEN];
-        // Warning: not very random.
-        ret[0] = 1;
+        rand_bytes(&mut ret);
         P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
     }
 

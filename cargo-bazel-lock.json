@@ -1,5 +1,5 @@
 {
-  "checksum": "9b1e93fdac4e3f766dc08afc01205fb87292faa3711202f1ad41b1993790f938",
+  "checksum": "290a8cd49ce52f180bb2dd588a86dcf551480f3dbaa2e76e948a7795a3347b1b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -4470,6 +4470,10 @@
             {
               "id": "prost-types 0.12.3",
               "target": "prost_types"
+            },
+            {
+              "id": "rand_chacha 0.3.1",
+              "target": "rand_chacha"
             },
             {
               "id": "rand_core 0.6.4",
@@ -11948,6 +11952,7 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "std"
           ],
           "selects": {}
@@ -19269,6 +19274,7 @@
     "prost-build 0.12.3",
     "prost-derive 0.12.4",
     "prost-types 0.12.3",
+    "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex 1.10.4",
     "rsa 0.9.6",

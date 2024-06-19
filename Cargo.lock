@@ -2644,6 +2644,7 @@ dependencies = [
  "pkcs8",
  "primeorder",
  "prost",
+ "rand_chacha",
  "rand_core",
  "sha2",
  "static_assertions",

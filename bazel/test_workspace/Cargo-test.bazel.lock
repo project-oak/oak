@@ -747,6 +747,7 @@ dependencies = [
  "prost-build",
  "prost-derive",
  "prost-types",
+ "rand_chacha",
  "rand_core",
  "regex",
  "rsa",

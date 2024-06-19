@@ -324,6 +324,9 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 features = ["derive"],
                 version = "*",
             ),
+            "rand_chacha": crate.spec(
+                version = "*",
+            ),
         },
         rust_version = RUST_NIGHTLY_VERSION,
         # We request bare metal support. Because of feature unification, some creates

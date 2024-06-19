@@ -46,6 +46,7 @@ rust_library(
             "@oak_no_std_crates_index//:p256",
             "@oak_no_std_crates_index//:pkcs8",
             "@oak_no_std_crates_index//:primeorder",
+            "@oak_no_std_crates_index//:rand_chacha",
             "@oak_no_std_crates_index//:rand_core",
             "@oak_no_std_crates_index//:sha2",
             "@oak_no_std_crates_index//:zeroize",
@@ -60,6 +61,7 @@ rust_library(
             "@oak_crates_index//:p256",  # //oak_containers_orchestrator requires stdful version.
             "@oak_crates_index//:pkcs8",
             "@oak_crates_index//:primeorder",
+            "@oak_crates_index//:rand_chacha",
             "@oak_crates_index//:rand_core",
             "@oak_crates_index//:sha2",
             "@oak_crates_index//:zeroize",

@@ -197,3 +197,13 @@ fn test_signer_and_verifier() {
 
     assert!(verifying_key_two.verify(TEST_SIGNATURE_MESSAGE_TWO, &signature).is_err());
 }
+
+use crate::noise_handshake::P256Scalar;
+
+#[test]
+fn test_p256scalar_key_generation() {
+    assert_ne!(
+        P256Scalar::generate().compute_public_key(),
+        P256Scalar::generate().compute_public_key()
+    );
+}
