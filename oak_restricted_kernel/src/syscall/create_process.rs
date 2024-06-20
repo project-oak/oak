@@ -21,7 +21,7 @@ use core::{
 
 use oak_restricted_kernel_interface::Errno;
 
-use crate::payload::Process;
+use crate::processes::Process;
 
 pub fn syscall_unstable_create_proccess(buf: *mut c_void, count: c_size_t) -> c_ssize_t {
     // Safety: we should validate that the pointer and count are valid, as these
@@ -38,12 +38,15 @@ fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
     // Copy the ELF file into kernel space.
     let copied_elf_binary: alloc::vec::Vec<u8> = buf.to_vec();
 
-    let application = crate::payload::Application::new(copied_elf_binary.into_boxed_slice())
-        .inspect_err(|err| log::error!("failed to create application: {:?}", err))
-        .map_err(|_| Errno::EINVAL)?;
+    let elf_executeable =
+        crate::processes::ElfExecuteable::new(copied_elf_binary.into_boxed_slice())
+            .inspect_err(|err| log::error!("failed to parse application elf file: {:?}", err))
+            .map_err(|_| Errno::EINVAL)?;
 
     Ok(
         // Safety: application is assumed to be a valid ELF file.
-        unsafe { Process::from_application(&application).expect("failed to create process") },
+        unsafe {
+            Process::from_elf_executeable(&elf_executeable).expect("failed to create process")
+        },
     )
 }

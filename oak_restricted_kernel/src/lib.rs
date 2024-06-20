@@ -50,7 +50,7 @@ mod libm;
 mod logging;
 mod memory;
 mod mm;
-mod payload;
+mod processes;
 #[cfg(feature = "serial_channel")]
 mod serial;
 pub mod shutdown;
@@ -94,7 +94,7 @@ use zeroize::Zeroize;
 use crate::{
     acpi::Acpi,
     mm::Translator,
-    payload::Process,
+    processes::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -449,9 +449,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     log::info!("Binary loaded, size: {}", application_bytes.len());
 
-    let application =
-        payload::Application::new(application_bytes).expect("failed to parse application");
-
     syscall::enable_syscalls(
         channel,
         syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
@@ -459,7 +456,13 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
-    let pid = unsafe { Process::from_application(&application).expect("failed to create process") };
+    let pid = {
+        let elf_executeable =
+            processes::ElfExecuteable::new(application_bytes).expect("failed to parse application");
+        unsafe {
+            Process::from_elf_executeable(&elf_executeable).expect("failed to create process")
+        }
+    };
 
     PROCCESSES.execute(pid).expect("failed to execute initial process")
 }

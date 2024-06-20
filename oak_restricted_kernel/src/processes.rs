@@ -48,17 +48,16 @@ self_cell!(
     }
 );
 
-/// Representation of an Restricted Application that the Restricted Kernel can
-/// run.
-pub struct Application {
+/// Parsed Elf executeable representing a Restricted Application.
+pub struct ElfExecuteable {
     binary: Binary,
 }
 
-impl Application {
+impl ElfExecuteable {
     /// Attempts to parse the provided binary blob as an ELF file representing
-    /// an Restricted Application.
+    /// a Restricted Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
-        Ok(Application {
+        Ok(ElfExecuteable {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
@@ -144,7 +143,7 @@ impl Application {
     }
 }
 
-pub fn identify_pml4_frame(
+fn identify_pml4_frame(
     pml4: &x86_64::structures::paging::PageTable,
 ) -> Result<x86_64::structures::paging::PhysFrame, anyhow::Error> {
     let phys_addr = {
@@ -170,9 +169,11 @@ impl Process {
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak
+    /// The process must be built from a valid ELF file representing an Oak
     /// Restricted Application.
-    pub unsafe fn from_application(application: &Application) -> Result<usize, anyhow::Error> {
+    pub unsafe fn from_elf_executeable(
+        elf_executeable: &ElfExecuteable,
+    ) -> Result<usize, anyhow::Error> {
         let pml4 = crate::BASE_L4_PAGE_TABLE.get().context("base l4 table should be set")?.clone();
         // Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
@@ -187,7 +188,7 @@ impl Process {
 
         // Safety: caller ensured the application is a valid ELF file representing an
         // Oak Restricted Application.
-        let entry = unsafe { application.map_into_memory() };
+        let entry = unsafe { elf_executeable.map_into_memory() };
 
         // We've mapped the memory into the process page tables. Let's revert to the
         // previous page table.
