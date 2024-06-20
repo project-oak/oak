@@ -266,6 +266,9 @@
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
 <a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -290,6 +293,7 @@
 <span class="kw">mod </span>process;
 <span class="kw">mod </span>stdio;
 
+<span class="kw">mod </span>create_process;
 <span class="kw">mod </span>switch_process;
 
 <span class="attr">#[cfg(test)]
@@ -309,6 +313,7 @@
 };
 
 <span class="kw">use </span><span class="self">self</span>::{
+    create_process::syscall_unstable_create_proccess,
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
     process::syscall_exit,
@@ -387,9 +392,10 @@
             syscall_mmap(arg1 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg2, arg3, arg4, arg5 <span class="kw">as </span>i32, arg6)
         }
         <span class="prelude-val">Some</span>(Syscall::Fsync) =&gt; syscall_fsync(arg1 <span class="kw">as </span>i32),
-        <span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; {
-            syscall_unstable_switch_proccess(arg1 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg2)
+        <span class="prelude-val">Some</span>(Syscall::UnstableCreateProcess) =&gt; {
+            syscall_unstable_create_proccess(arg1 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg2)
         }
+        <span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; syscall_unstable_switch_proccess(arg1),
         <span class="prelude-val">None </span>=&gt; Errno::ENOSYS <span class="kw">as </span>isize,
     }
 }

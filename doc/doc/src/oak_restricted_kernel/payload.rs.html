@@ -257,7 +257,7 @@
     VirtAddr,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
+<span class="kw">use crate</span>::{syscall::mmap::mmap, PROCCESSES};
 
 <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual
 // address space. Well... almost. It's one page lower than the very end, as
@@ -393,13 +393,14 @@
 }
 
 <span class="kw">impl </span>Process {
-    <span class="doccomment">/// Creates a process from the application, without executing it.
+    <span class="doccomment">/// Creates a process from the application, without executing it. Returns
+    /// the PID of the new process.
     ///
     /// # Safety
     ///
     /// The application must be built from a valid ELF file representing an Oak
     /// Restricted Application.
-    </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
+    </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;usize, anyhow::Error&gt; {
         <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">"base l4 table should be set"</span>)<span class="question-mark">?</span>.clone();
         <span class="comment">// Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
@@ -426,8 +427,8 @@
             <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
             </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
         }
-
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ pml4, entry })
+        <span class="kw">let </span>pid = PROCCESSES.add(<span class="self">Self </span>{ pml4, entry });
+        <span class="prelude-val">Ok</span>(pid)
     }
     <span class="doccomment">/// Executes the process.
     </span><span class="kw">pub fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
@@ -436,7 +437,6 @@
         </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
 
         <span class="kw">let </span>entry = <span class="self">self</span>.entry;
-        <span class="macro">log::info!</span>(<span class="string">"Running application"</span>);
         <span class="comment">// Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
         // user to guarantee that the file made sense.

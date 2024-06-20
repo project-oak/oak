@@ -137,6 +137,13 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -224,7 +231,7 @@
     ///   - arg0 (c_int): error code
     /// Oak Restricted Kernel considerations:
     ///   We don't expect the user process to terminate, so this triggers a
-    /// kernel panic, no matter   the error code.
+    /// kernel panic, no matter the error code.
     </span>Exit = <span class="number">60</span>,
 
     <span class="doccomment">/// Flush a file descriptor.
@@ -235,14 +242,21 @@
     ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
     </span>Fsync = <span class="number">74</span>,
 
-    <span class="doccomment">/// Terminates the calling process and executes the supplied ELF binary
-    /// instead.
+    <span class="doccomment">/// Create new process from ELF file, without starting it.
     ///
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
     ///   - arg1 (c_size_t): size of the buffer
     /// Returns:
-    ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
+    ///   a value of &lt;errno::Errno&gt; on failure; Otherwise the PID of the new
+    /// process.
+    </span>UnstableCreateProcess = UNSTABLE_SYSCALL_SPACE,
+
+    <span class="doccomment">/// Terminates the calling process and switches the active execution context
+    /// to the process with the provided PID.
+    ///
+    /// Arguments:
+    ///   - arg0 (c_size_t): PID of the process.
     </span>UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + <span class="number">1</span>,
 }
 

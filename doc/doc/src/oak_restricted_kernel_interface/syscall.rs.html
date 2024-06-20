@@ -189,6 +189,22 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -312,12 +328,28 @@
 }
 
 <span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">"C" </span><span class="kw">fn </span>sys_unstable_switch_proccess(buf: <span class="kw-2">*const </span>c_void, count: c_size_t) {
-    <span class="kw">unsafe </span>{ <span class="macro">syscall!</span>(Syscall::UnstableSwitchProcess, buf, count) };
+</span><span class="kw">pub extern </span><span class="string">"C" </span><span class="kw">fn </span>sys_unstable_create_proccess(buf: <span class="kw-2">*const </span>c_void, count: c_size_t) -&gt; c_ssize_t {
+    <span class="kw">unsafe </span>{ <span class="macro">syscall!</span>(Syscall::UnstableCreateProcess, buf, count) }
 }
 
-<span class="kw">pub fn </span>unstable_switch_proccess(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; ! {
-    sys_unstable_switch_proccess(buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>c_void, buf.len());
+<span class="kw">pub fn </span>unstable_create_proccess(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, Errno&gt; {
+    <span class="kw">let </span>ret = sys_unstable_create_proccess(buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>c_void, buf.len());
+    <span class="kw">if </span>ret &lt;= <span class="number">0 </span>{
+        <span class="prelude-val">Err</span>(Errno::from_repr(ret).unwrap_or_else(|| {
+            <span class="macro">panic!</span>(<span class="string">"unexpected error from unstable_create_proccess syscall: {}"</span>, ret)
+        }))
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Ok</span>(ret.try_into().expect(<span class="string">"pid could not be represented as isize"</span>))
+    }
+}
+
+<span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">"C" </span><span class="kw">fn </span>sys_unstable_switch_proccess(pid: c_size_t) {
+    <span class="kw">unsafe </span>{ <span class="macro">syscall!</span>(Syscall::UnstableSwitchProcess, pid) };
+}
+
+<span class="kw">pub fn </span>unstable_switch_proccess(pid: usize) -&gt; ! {
+    sys_unstable_switch_proccess(pid);
     <span class="macro">unreachable!</span>();
 }
 

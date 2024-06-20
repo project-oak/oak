@@ -190,9 +190,9 @@
 }
 
 <span class="kw">pub fn </span>syscall_read(fd: c_int, buf: <span class="kw-2">*mut </span>c_void, count: c_size_t) -&gt; c_ssize_t {
-    <span class="comment">// We should validate that the pointer and count are valid, as these come from
-    // userspace and therefore are not to be trusted, but right now everything
-    // is in kernel space so there is nothing to check.
+    <span class="comment">// Safety: we should validate that the pointer and count are valid, as these
+    // come from userspace and therefore are not to be trusted, but right now
+    // everything is in kernel space so there is nothing to check.
     </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut(buf <span class="kw">as </span><span class="kw-2">*mut </span>u8, count) };
 
     FILE_DESCRIPTORS
@@ -203,9 +203,9 @@
 }
 
 <span class="kw">pub fn </span>syscall_write(fd: c_int, buf: <span class="kw-2">*const </span>c_void, count: c_size_t) -&gt; c_ssize_t {
-    <span class="comment">// We should validate that the pointer and count are valid, as these come from
-    // userspace and therefore are not to be trusted, but right now everything
-    // is in kernel space so there is nothing to check.
+    <span class="comment">// Safety: we should validate that the pointer and count are valid, as these
+    // come from userspace and therefore are not to be trusted, but right now
+    // everything is in kernel space so there is nothing to check.
     </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice::from_raw_parts(buf <span class="kw">as </span><span class="kw-2">*mut </span>u8, count) };
 
     FILE_DESCRIPTORS
