@@ -1413,6 +1413,62 @@
 <a href="#1411" id="1411">1411</a>
 <a href="#1412" id="1412">1412</a>
 <a href="#1413" id="1413">1413</a>
+<a href="#1414" id="1414">1414</a>
+<a href="#1415" id="1415">1415</a>
+<a href="#1416" id="1416">1416</a>
+<a href="#1417" id="1417">1417</a>
+<a href="#1418" id="1418">1418</a>
+<a href="#1419" id="1419">1419</a>
+<a href="#1420" id="1420">1420</a>
+<a href="#1421" id="1421">1421</a>
+<a href="#1422" id="1422">1422</a>
+<a href="#1423" id="1423">1423</a>
+<a href="#1424" id="1424">1424</a>
+<a href="#1425" id="1425">1425</a>
+<a href="#1426" id="1426">1426</a>
+<a href="#1427" id="1427">1427</a>
+<a href="#1428" id="1428">1428</a>
+<a href="#1429" id="1429">1429</a>
+<a href="#1430" id="1430">1430</a>
+<a href="#1431" id="1431">1431</a>
+<a href="#1432" id="1432">1432</a>
+<a href="#1433" id="1433">1433</a>
+<a href="#1434" id="1434">1434</a>
+<a href="#1435" id="1435">1435</a>
+<a href="#1436" id="1436">1436</a>
+<a href="#1437" id="1437">1437</a>
+<a href="#1438" id="1438">1438</a>
+<a href="#1439" id="1439">1439</a>
+<a href="#1440" id="1440">1440</a>
+<a href="#1441" id="1441">1441</a>
+<a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
+<a href="#1446" id="1446">1446</a>
+<a href="#1447" id="1447">1447</a>
+<a href="#1448" id="1448">1448</a>
+<a href="#1449" id="1449">1449</a>
+<a href="#1450" id="1450">1450</a>
+<a href="#1451" id="1451">1451</a>
+<a href="#1452" id="1452">1452</a>
+<a href="#1453" id="1453">1453</a>
+<a href="#1454" id="1454">1454</a>
+<a href="#1455" id="1455">1455</a>
+<a href="#1456" id="1456">1456</a>
+<a href="#1457" id="1457">1457</a>
+<a href="#1458" id="1458">1458</a>
+<a href="#1459" id="1459">1459</a>
+<a href="#1460" id="1460">1460</a>
+<a href="#1461" id="1461">1461</a>
+<a href="#1462" id="1462">1462</a>
+<a href="#1463" id="1463">1463</a>
+<a href="#1464" id="1464">1464</a>
+<a href="#1465" id="1465">1465</a>
+<a href="#1466" id="1466">1466</a>
+<a href="#1467" id="1467">1467</a>
+<a href="#1468" id="1468">1468</a>
+<a href="#1469" id="1469">1469</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1438,11 +1494,11 @@
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
-    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_LAYER_ID, ENCLAVE_APPLICATION_LAYER_ID,
-    FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID,
-    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
-    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
-    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
+    ENCLAVE_APPLICATION_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+    KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
+    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
@@ -2691,25 +2747,63 @@
     }
 }
 
-<span class="doccomment">/// Extracts the application public keys.
+<span class="doccomment">/// Extracts application key values. There are two possible cases where
+/// in the first case application keys are defined as cose key and another case
+/// application keys are part of payload.
 </span><span class="kw">fn </span>extract_application_key_values(
     application_keys: <span class="kw-2">&amp;</span>ApplicationKeys,
 ) -&gt; anyhow::Result&lt;ApplicationKeyValues&gt; {
-    <span class="kw">let </span>encryption_claims =
-        claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>application_keys.encryption_public_key_certificate[..])<span class="question-mark">?</span>;
-    <span class="kw">let </span>encryption_cose_key =
-        get_public_key_from_claims_set(<span class="kw-2">&amp;</span>encryption_claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-    <span class="kw">let </span>encryption_public_key =
-        cose_key_to_hpke_public_key(<span class="kw-2">&amp;</span>encryption_cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+    <span class="kw">let </span>application_key_values = || -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
+        <span class="kw">let </span>encryption_claims = claims_set_from_serialized_cert(
+            <span class="kw-2">&amp;</span>application_keys.encryption_public_key_certificate[..],
+        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>encryption_cose_key = get_public_key_from_claims_set(<span class="kw-2">&amp;</span>encryption_claims)
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+        <span class="kw">let </span>encryption_public_key = cose_key_to_hpke_public_key(<span class="kw-2">&amp;</span>encryption_cose_key)
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>signing_claims =
-        claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>application_keys.signing_public_key_certificate[..])<span class="question-mark">?</span>;
-    <span class="kw">let </span>signing_cose_key: CoseKey =
-        get_public_key_from_claims_set(<span class="kw-2">&amp;</span>signing_claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-    <span class="kw">let </span>signing_verifying_key =
-        cose_key_to_verifying_key(<span class="kw-2">&amp;</span>signing_cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-    <span class="kw">let </span>signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
+        <span class="kw">let </span>signing_claims =
+            claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>application_keys.signing_public_key_certificate[..])<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_cose_key: CoseKey =
+            get_public_key_from_claims_set(<span class="kw-2">&amp;</span>signing_claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_verifying_key =
+            cose_key_to_verifying_key(<span class="kw-2">&amp;</span>signing_cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
+        <span class="prelude-val">Ok</span>((encryption_public_key, signing_public_key))
+    };
+    <span class="kw">let </span>(encryption_public_key, signing_public_key) = <span class="kw">match </span>application_key_values() {
+        <span class="prelude-val">Ok</span>(values) =&gt; values,
+        <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+            <span class="kw">let </span>encryption_cert = coset::CoseSign1::from_slice(
+                <span class="kw-2">&amp;</span>application_keys.encryption_public_key_certificate,
+            )
+            .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse encryption certificate"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>encryption_payload = encryption_cert
+                .payload
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no encryption cert payload"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>encryption_claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>encryption_payload)
+                .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse encryption claims set"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>encryption_public_key =
+                extract_value_from_claims_set(<span class="kw-2">&amp;</span>encryption_claims, APPLICATION_KEY_ID)
+                    .context(<span class="string">"key ID not found"</span>)<span class="question-mark">?</span>;
+
+            <span class="kw">let </span>signing_cert =
+                coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>application_keys.signing_public_key_certificate)
+                    .map_err(|_cose_err| {
+                        <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse encryption certificate"</span>)
+                    })<span class="question-mark">?</span>;
+            <span class="kw">let </span>signing_payload =
+                signing_cert.payload.ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no signing cert payload"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>signing_claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>signing_payload)
+                .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse signing claims set"</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>signing_public_key =
+                extract_value_from_claims_set(<span class="kw-2">&amp;</span>signing_claims, APPLICATION_KEY_ID)
+                    .context(<span class="string">"key ID not found"</span>)<span class="question-mark">?</span>;
+
+            (encryption_public_key, signing_public_key)
+        }
+    };
     <span class="prelude-val">Ok</span>(ApplicationKeyValues { encryption_public_key, signing_public_key })
 }
 
@@ -2794,6 +2888,24 @@
             </span>}
         })
         .context(<span class="string">"couldn't find layer values"</span>)
+}
+
+<span class="doccomment">/// Extracts a value for the label from claim.
+</span><span class="kw">fn </span>extract_value_from_claims_set(claims: <span class="kw-2">&amp;</span>ClaimsSet, label_id: i64) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="kw">let </span>target = RegisteredLabelWithPrivate::PrivateUse(label_id);
+    claims
+        .rest
+        .iter()
+        .find_map(|(label, value)| {
+            <span class="kw">if let </span>Value::Bytes(bytes) = value
+                &amp;&amp; label == <span class="kw-2">&amp;</span>target
+            {
+                <span class="prelude-val">Some</span>(bytes.to_vec())
+            } <span class="kw">else </span>{
+                <span class="prelude-val">None
+            </span>}
+        })
+        .context(<span class="string">"couldn't find value from claims set"</span>)
 }
 
 <span class="doccomment">/// Extracts a value for the label from the layer's mapping between labels and
