@@ -24,10 +24,11 @@ use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
-    ENCLAVE_APPLICATION_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
-    KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
-    KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
+    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID,
+    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
+    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
+    SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -39,14 +40,14 @@ use oak_proto_rust::oak::{
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues, Evidence,
-        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, ExtractedEvidence,
-        FakeAttestationReport, FirmwareAttachment, InsecureExpectedValues,
-        IntelTdxAttestationReport, IntelTdxExpectedValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData, KernelLayerEndorsements,
-        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersData,
-        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
-        OakRestrictedKernelData, OakRestrictedKernelEndorsements,
+        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues,
+        EventReferenceValues, Evidence, ExpectedDigests, ExpectedRegex, ExpectedStringLiterals,
+        ExpectedValues, ExtractedEvidence, FakeAttestationReport, FirmwareAttachment,
+        InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
+        KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
+        OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
+        OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
         ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
         RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
@@ -403,9 +404,21 @@ fn get_cb_expected_values(
             endorsements.root_layer.as_ref(),
             reference_values.root_layer.as_ref().context("no root layer reference values")?,
         )?),
-        kernel_layer: Some(EventExpectedValues::default()),
-        system_layer: Some(EventExpectedValues::default()),
-        application_layer: Some(EventExpectedValues::default()),
+        kernel_layer: Some(get_event_expected_values(
+            now_utc_millis,
+            reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
+        )?),
+        system_layer: Some(get_event_expected_values(
+            now_utc_millis,
+            reference_values.system_layer.as_ref().context("no system layer reference values")?,
+        )?),
+        application_layer: Some(get_event_expected_values(
+            now_utc_millis,
+            reference_values
+                .application_layer
+                .as_ref()
+                .context("no application layer reference values")?,
+        )?),
     })
 }
 
@@ -421,7 +434,23 @@ fn compare_cb_measurement_digests(
     )
     .context("root layer verification failed")?;
 
-    anyhow::bail!("needs more implementation")
+    compare_event_measurement_digests(
+        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
+        expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
+    )
+    .context("kernel layer verification failed")?;
+
+    compare_event_measurement_digests(
+        values.system_layer.as_ref().context("no system layer evidence values")?,
+        expected.system_layer.as_ref().context("no system layer expected_values")?,
+    )
+    .context("system layer verification failed")?;
+
+    compare_event_measurement_digests(
+        values.application_layer.as_ref().context("no application layer evidence values")?,
+        expected.application_layer.as_ref().context("no application layer expected_values")?,
+    )
+    .context("application layer verification failed")
 }
 
 /// Verifies the AMD SEV attestation report.
@@ -728,6 +757,29 @@ fn compare_kernel_layer_measurement_digests(
         expected.acpi.as_ref().context("no ACPI table expected value provided")?,
     )
     .context("ACPI table value failed verification")
+}
+
+fn get_event_expected_values(
+    now_utc_millis: i64,
+    reference_values: &EventReferenceValues,
+) -> anyhow::Result<EventExpectedValues> {
+    let event = Some(get_expected_measurement_digest(
+        now_utc_millis,
+        None,
+        reference_values.event.as_ref().context("event reference value")?,
+    )?);
+    Ok(EventExpectedValues { event })
+}
+
+fn compare_event_measurement_digests(
+    values: &EventData,
+    expected: &EventExpectedValues,
+) -> anyhow::Result<()> {
+    compare_measurement_digest(
+        values.event.as_ref().context("no event evidence value")?,
+        expected.event.as_ref().context("no event image value")?,
+    )
+    .context("event failed verification")
 }
 
 fn get_system_layer_expected_values(
@@ -1203,10 +1255,28 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
         }
     } else {
         match &evidence.layers[..] {
-            [_kernel_layer, _system_layer, _application_layer] => {
-                let kernel_layer = Some(EventData::default());
-                let system_layer = Some(EventData::default());
-                let application_layer = Some(EventData::default());
+            [kernel_layer, system_layer, application_layer] => {
+                let kernel_layer = Some(
+                    extract_event_data(
+                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                            .context("couldn't parse CB kernel DICE layer certificate")?,
+                    )
+                    .context("couldn't extract kernel values")?,
+                );
+                let system_layer = Some(
+                    extract_event_data(
+                        &claims_set_from_serialized_cert(&system_layer.eca_certificate)
+                            .context("couldn't parse CB system DICE layer certificate")?,
+                    )
+                    .context("couldn't extract system values")?,
+                );
+                let application_layer = Some(
+                    extract_event_data(
+                        &claims_set_from_serialized_cert(&application_layer.eca_certificate)
+                            .context("couldn't parse CB application DICE layer certificate")?,
+                    )
+                    .context("couldn't extract application values")?,
+                );
 
                 Ok(EvidenceValues::Cb(CbData {
                     root_layer,
@@ -1314,7 +1384,7 @@ fn extract_application_key_values(
             let encryption_claims = ClaimsSet::from_slice(&encryption_payload)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption claims set"))?;
             let encryption_public_key =
-                extract_value_from_claims_set(&encryption_claims, APPLICATION_KEY_ID)
+                extract_bytes_from_claims_set(&encryption_claims, APPLICATION_KEY_ID)
                     .context("key ID not found")?;
 
             let signing_cert =
@@ -1327,13 +1397,21 @@ fn extract_application_key_values(
             let signing_claims = ClaimsSet::from_slice(&signing_payload)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse signing claims set"))?;
             let signing_public_key =
-                extract_value_from_claims_set(&signing_claims, APPLICATION_KEY_ID)
+                extract_bytes_from_claims_set(&signing_claims, APPLICATION_KEY_ID)
                     .context("key ID not found")?;
 
             (encryption_public_key, signing_public_key)
         }
     };
     Ok(ApplicationKeyValues { encryption_public_key, signing_public_key })
+}
+
+/// Extracts the measurement values for the event data.
+fn extract_event_data(claims: &ClaimsSet) -> anyhow::Result<EventData> {
+    let values =
+        extract_value_from_claims_set(claims, EVENT_ID).context("event data layer ID not found")?;
+    let event = Some(value_to_raw_digest(values)?);
+    Ok(EventData { event })
 }
 
 /// Extracts the measurement values for the kernel layer.
@@ -1419,22 +1497,22 @@ fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<
         .context("couldn't find layer values")
 }
 
+/// Extracts bytes for the label from claim.
+fn extract_bytes_from_claims_set(claims: &ClaimsSet, label_id: i64) -> anyhow::Result<Vec<u8>> {
+    match extract_value_from_claims_set(claims, label_id)? {
+        Value::Bytes(bytes) => Ok(bytes.to_vec()),
+        _ => Err(anyhow::anyhow!("value was not of type Bytes")),
+    }
+}
+
 /// Extracts a value for the label from claim.
-fn extract_value_from_claims_set(claims: &ClaimsSet, label_id: i64) -> anyhow::Result<Vec<u8>> {
-    let target = RegisteredLabelWithPrivate::PrivateUse(label_id);
+fn extract_value_from_claims_set(claims: &ClaimsSet, label_id: i64) -> anyhow::Result<&Value> {
+    let target_label = RegisteredLabelWithPrivate::PrivateUse(label_id);
     claims
         .rest
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &target
-            {
-                Some(bytes.to_vec())
-            } else {
-                None
-            }
-        })
-        .context("couldn't find value from claims set")
+        .find_map(|(label, value)| if label == &target_label { Some(value) } else { None })
+        .context(format!("couldn't find value {label_id}"))
 }
 
 /// Extracts a value for the label from the layer's mapping between labels and
