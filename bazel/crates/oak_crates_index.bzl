@@ -105,6 +105,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 features = ["derive"],
                 version = "*",
             ),
+            "command-fds": crate.spec(
+                features = ["tokio"],
+                version = "*",
+            ),
             "coset": crate.spec(
                 default_features = False,
                 version = "*",
@@ -125,6 +129,8 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "env_logger": crate.spec(version = "*"),
+            "futures": crate.spec(version = "*"),
             "futures-util": crate.spec(version = "*"),
             "getrandom": crate.spec(
                 version = "*",
@@ -170,13 +176,21 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "nix": crate.spec(
-                features = ["user"],
+                features = ["user", "process"],
                 version = "*",
             ),
             "oci-spec": crate.spec(
                 version = "*",
             ),
             "opentelemetry": crate.spec(
+                version = "*",
+            ),
+            "opentelemetry-proto": crate.spec(
+                features = [
+                    "gen-tonic",
+                    "logs",
+                    "metrics",
+                ],
                 version = "*",
             ),
             "opentelemetry-otlp": crate.spec(
@@ -304,11 +318,28 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "tokio-util": crate.spec(version = "*"),
+            "tokio-vsock": crate.spec(
+                # Pull the crate from github as the latest version
+                # in the repository depends on tonic 10.0.2 that causes
+                # compilation errors as the compiler thinks that `Connected`
+                # is not implemented for `VsockStream`.
+                # Other options is to patch the generated bazel file in the
+                # create annotation or to write bazel for the local repository
+                # in the third-party folder. Writing patches is fragile as
+                # the generated build file might differ for repositories that
+                # depends on Oak. In fact, the patched version in the
+                # third-party folder changes the version of tonic to 11.0.0 in
+                # the dependencies.
+                git = "https://github.com/rust-vsock/tokio-vsock",
+                rev = "2a52faeb4ede7d9712adbc096e547ab7ea766f4b",
+                features = ["tonic-conn"],
+            ),
             "tonic": crate.spec(version = "*"),
             "tonic-build": crate.spec(version = "*"),
             "tower": crate.spec(version = "*"),
             "uart_16550": crate.spec(version = "*"),
             "walkdir": crate.spec(version = "*"),
+            "which": crate.spec(version = "*"),
             "x509-cert": crate.spec(
                 default_features = False,
                 features = ["pem"],

@@ -1,5 +1,5 @@
 {
-  "checksum": "290a8cd49ce52f180bb2dd588a86dcf551480f3dbaa2e76e948a7795a3347b1b",
+  "checksum": "b7867ac4766512c7b4b3505b1f1e434b3ef84d31cd7055a396a2330461c6dcfe",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -376,6 +376,22 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "perf-literal",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
+            }
+          ],
+          "selects": {}
+        },
         "edition": "2021",
         "version": "1.1.3"
       },
@@ -2953,6 +2969,70 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "command-fds 0.3.0": {
+      "name": "command-fds",
+      "version": "0.3.0",
+      "package_url": "https://github.com/google/command-fds/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/command-fds/0.3.0/download",
+          "sha256": "7bb11bd1378bf3731b182997b40cefe00aba6a6cc74042c8318c1b271d3badf7"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "command_fds",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "command_fds",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "tokio",
+            "tokio-crate"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "nix 0.27.1",
+              "target": "nix"
+            },
+            {
+              "id": "thiserror 1.0.60",
+              "target": "thiserror"
+            },
+            {
+              "id": "tokio 1.37.0",
+              "target": "tokio",
+              "alias": "tokio_crate"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "const-oid 0.9.6": {
       "name": "const-oid",
       "version": "0.9.6",
@@ -4368,6 +4448,10 @@
               "target": "clap"
             },
             {
+              "id": "command-fds 0.3.0",
+              "target": "command_fds"
+            },
+            {
               "id": "coset 0.3.7",
               "target": "coset"
             },
@@ -4378,6 +4462,14 @@
             {
               "id": "ecdsa 0.16.9",
               "target": "ecdsa"
+            },
+            {
+              "id": "env_logger 0.11.3",
+              "target": "env_logger"
+            },
+            {
+              "id": "futures 0.3.30",
+              "target": "futures"
             },
             {
               "id": "futures-util 0.3.30",
@@ -4434,6 +4526,10 @@
             {
               "id": "opentelemetry-otlp 0.16.0",
               "target": "opentelemetry_otlp"
+            },
+            {
+              "id": "opentelemetry-proto 0.6.0",
+              "target": "opentelemetry_proto"
             },
             {
               "id": "opentelemetry_sdk 0.23.0",
@@ -4548,6 +4644,10 @@
               "target": "tokio_util"
             },
             {
+              "id": "tokio-vsock 0.5.0",
+              "target": "tokio_vsock"
+            },
+            {
               "id": "tonic 0.11.0",
               "target": "tonic"
             },
@@ -4566,6 +4666,10 @@
             {
               "id": "walkdir 2.5.0",
               "target": "walkdir"
+            },
+            {
+              "id": "which 4.4.2",
+              "target": "which"
             },
             {
               "id": "x509-cert 0.2.5",
@@ -4836,6 +4940,138 @@
         "version": "0.13.8"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "env_filter 0.1.0": {
+      "name": "env_filter",
+      "version": "0.1.0",
+      "package_url": "https://github.com/rust-cli/env_logger",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/env_filter/0.1.0/download",
+          "sha256": "a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "env_filter",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "env_filter",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "regex"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            },
+            {
+              "id": "regex 1.10.4",
+              "target": "regex"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.1.0"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "env_logger 0.11.3": {
+      "name": "env_logger",
+      "version": "0.11.3",
+      "package_url": "https://github.com/rust-cli/env_logger",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/env_logger/0.11.3/download",
+          "sha256": "38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "env_logger",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "env_logger",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "auto-color",
+            "color",
+            "default",
+            "humantime",
+            "regex"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "anstream 0.6.14",
+              "target": "anstream"
+            },
+            {
+              "id": "anstyle 1.0.7",
+              "target": "anstyle"
+            },
+            {
+              "id": "env_filter 0.1.0",
+              "target": "env_filter"
+            },
+            {
+              "id": "humantime 2.1.0",
+              "target": "humantime"
+            },
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.11.3"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -5463,6 +5699,89 @@
       ],
       "license_file": "LICENSE.txt"
     },
+    "futures 0.3.30": {
+      "name": "futures",
+      "version": "0.3.30",
+      "package_url": "https://github.com/rust-lang/futures-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/futures/0.3.30/download",
+          "sha256": "645c6916888f6cb6350d2550b80fb63e734897a8498abe35cfb732b6487804b0"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "futures",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "futures",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "async-await",
+            "default",
+            "executor",
+            "futures-executor",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "futures-channel 0.3.30",
+              "target": "futures_channel"
+            },
+            {
+              "id": "futures-core 0.3.30",
+              "target": "futures_core"
+            },
+            {
+              "id": "futures-executor 0.3.30",
+              "target": "futures_executor"
+            },
+            {
+              "id": "futures-io 0.3.30",
+              "target": "futures_io"
+            },
+            {
+              "id": "futures-sink 0.3.30",
+              "target": "futures_sink"
+            },
+            {
+              "id": "futures-task 0.3.30",
+              "target": "futures_task"
+            },
+            {
+              "id": "futures-util 0.3.30",
+              "target": "futures_util"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.30"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "futures-channel 0.3.30": {
       "name": "futures-channel",
       "version": "0.3.30",
@@ -5496,6 +5815,8 @@
           "common": [
             "alloc",
             "default",
+            "futures-sink",
+            "sink",
             "std"
           ],
           "selects": {}
@@ -5505,6 +5826,10 @@
             {
               "id": "futures-core 0.3.30",
               "target": "futures_core"
+            },
+            {
+              "id": "futures-sink 0.3.30",
+              "target": "futures_sink"
             }
           ],
           "selects": {}
@@ -5616,6 +5941,51 @@
               "id": "futures-util 0.3.30",
               "target": "futures_util"
             }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.30"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "futures-io 0.3.30": {
+      "name": "futures-io",
+      "version": "0.3.30",
+      "package_url": "https://github.com/rust-lang/futures-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/futures-io/0.3.30/download",
+          "sha256": "a44623e20b9681a318efdd71c299b6b222ed6f231972bfe2f224ebad6311f0c1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "futures_io",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "futures_io",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "std"
           ],
           "selects": {}
         },
@@ -5812,9 +6182,14 @@
             "alloc",
             "async-await",
             "async-await-macro",
+            "channel",
             "default",
+            "futures-channel",
+            "futures-io",
             "futures-macro",
             "futures-sink",
+            "io",
+            "memchr",
             "sink",
             "slab",
             "std"
@@ -5824,8 +6199,16 @@
         "deps": {
           "common": [
             {
+              "id": "futures-channel 0.3.30",
+              "target": "futures_channel"
+            },
+            {
               "id": "futures-core 0.3.30",
               "target": "futures_core"
+            },
+            {
+              "id": "futures-io 0.3.30",
+              "target": "futures_io"
             },
             {
               "id": "futures-sink 0.3.30",
@@ -5834,6 +6217,10 @@
             {
               "id": "futures-task 0.3.30",
               "target": "futures_task"
+            },
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
             },
             {
               "id": "pin-project-lite 0.2.14",
@@ -7285,6 +7672,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "humantime 2.1.0": {
+      "name": "humantime",
+      "version": "2.1.0",
+      "package_url": "https://github.com/tailhook/humantime",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/humantime/2.1.0/download",
+          "sha256": "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "humantime",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "humantime",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2018",
+        "version": "2.1.0"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "hyper 0.14.28": {
       "name": "hyper",
       "version": "0.14.28",
@@ -8613,6 +9039,85 @@
       ],
       "license_file": "LICENSE-MIT"
     },
+    "memoffset 0.9.1": {
+      "name": "memoffset",
+      "version": "0.9.1",
+      "package_url": "https://github.com/Gilnaa/memoffset",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/memoffset/0.9.1/download",
+          "sha256": "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "memoffset",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "memoffset",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "memoffset 0.9.1",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.9.1"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "autocfg 1.2.0",
+              "target": "autocfg"
+            }
+          ],
+          "selects": {}
+        }
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "mime 0.3.17": {
       "name": "mime",
       "version": "0.3.17",
@@ -8819,6 +9324,68 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "nix 0.27.1": {
+      "name": "nix",
+      "version": "0.27.1",
+      "package_url": "https://github.com/nix-rust/nix",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/nix/0.27.1/download",
+          "sha256": "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "nix",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "nix",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "fs"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bitflags 2.5.0",
+              "target": "bitflags"
+            },
+            {
+              "id": "cfg-if 1.0.0",
+              "target": "cfg_if"
+            },
+            {
+              "id": "libc 0.2.153",
+              "target": "libc"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.27.1"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "nix 0.28.0": {
       "name": "nix",
       "version": "0.28.0",
@@ -8864,6 +9431,10 @@
           "common": [
             "default",
             "feature",
+            "ioctl",
+            "memoffset",
+            "process",
+            "socket",
             "user"
           ],
           "selects": {}
@@ -8881,6 +9452,10 @@
             {
               "id": "libc 0.2.153",
               "target": "libc"
+            },
+            {
+              "id": "memoffset 0.9.1",
+              "target": "memoffset"
             },
             {
               "id": "nix 0.28.0",
@@ -9603,6 +10178,7 @@
         "crate_features": {
           "common": [
             "default",
+            "logs",
             "metrics",
             "pin-project-lite",
             "trace"
@@ -9782,8 +10358,10 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "gen-tonic",
             "gen-tonic-messages",
+            "logs",
             "metrics",
             "prost",
             "tonic",
@@ -9855,10 +10433,12 @@
             "async-trait",
             "default",
             "glob",
+            "logs",
             "metrics",
             "percent-encoding",
             "rand",
             "rt-tokio",
+            "serde_json",
             "tokio",
             "tokio-stream",
             "trace"
@@ -9906,6 +10486,10 @@
             {
               "id": "rand 0.8.5",
               "target": "rand"
+            },
+            {
+              "id": "serde_json 1.0.115",
+              "target": "serde_json"
             },
             {
               "id": "thiserror 1.0.60",
@@ -12161,6 +12745,13 @@
         ],
         "crate_features": {
           "common": [
+            "perf",
+            "perf-backtrack",
+            "perf-cache",
+            "perf-dfa",
+            "perf-inline",
+            "perf-literal",
+            "perf-onepass",
             "std",
             "unicode-bool"
           ],
@@ -12168,6 +12759,14 @@
         },
         "deps": {
           "common": [
+            {
+              "id": "aho-corasick 1.1.3",
+              "target": "aho_corasick"
+            },
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
+            },
             {
               "id": "regex-automata 0.4.6",
               "target": "regex_automata"
@@ -12221,9 +12820,16 @@
         "crate_features": {
           "common": [
             "alloc",
+            "dfa-onepass",
+            "hybrid",
             "meta",
+            "nfa-backtrack",
             "nfa-pikevm",
             "nfa-thompson",
+            "perf-inline",
+            "perf-literal",
+            "perf-literal-multisubstring",
+            "perf-literal-substring",
             "std",
             "syntax",
             "unicode-bool"
@@ -12232,6 +12838,14 @@
         },
         "deps": {
           "common": [
+            {
+              "id": "aho-corasick 1.1.3",
+              "target": "aho_corasick"
+            },
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
+            },
             {
               "id": "regex-syntax 0.8.3",
               "target": "regex_syntax"
@@ -15527,6 +16141,82 @@
       ],
       "license_file": "LICENSE"
     },
+    "tokio-vsock 0.5.0": {
+      "name": "tokio-vsock",
+      "version": "0.5.0",
+      "package_url": "https://github.com/rust-vsock/tokio-vsock",
+      "repository": {
+        "Git": {
+          "remote": "https://github.com/rust-vsock/tokio-vsock",
+          "commitish": {
+            "Rev": "2a52faeb4ede7d9712adbc096e547ab7ea766f4b"
+          }
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "tokio_vsock",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "tokio_vsock",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "tonic",
+            "tonic-conn"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bytes 1.6.0",
+              "target": "bytes"
+            },
+            {
+              "id": "futures 0.3.30",
+              "target": "futures"
+            },
+            {
+              "id": "libc 0.2.153",
+              "target": "libc"
+            },
+            {
+              "id": "tokio 1.37.0",
+              "target": "tokio"
+            },
+            {
+              "id": "tonic 0.11.0",
+              "target": "tonic"
+            },
+            {
+              "id": "vsock 0.5.0",
+              "target": "vsock"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "tonic 0.11.0": {
       "name": "tonic",
       "version": "0.11.0",
@@ -16496,6 +17186,57 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "vsock 0.5.0": {
+      "name": "vsock",
+      "version": "0.5.0",
+      "package_url": "https://github.com/rust-vsock/vsock-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/vsock/0.5.0/download",
+          "sha256": "f82e291049535877d607cd861b6820eb622538c88853c1c01df72b1dbed4e32d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "vsock",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "vsock",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.153",
+              "target": "libc"
+            },
+            {
+              "id": "nix 0.28.0",
+              "target": "nix"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.5.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
     },
     "walkdir 2.5.0": {
       "name": "walkdir",
@@ -19247,9 +19988,12 @@
     "bytes 1.6.0",
     "ciborium 0.2.2",
     "clap 4.5.4",
+    "command-fds 0.3.0",
     "coset 0.3.7",
     "curve25519-dalek 4.1.1",
     "ecdsa 0.16.9",
+    "env_logger 0.11.3",
+    "futures 0.3.30",
     "futures-util 0.3.30",
     "getrandom 0.2.12",
     "goblin 0.8.0",
@@ -19264,6 +20008,7 @@
     "oci-spec 0.6.5",
     "opentelemetry 0.23.0",
     "opentelemetry-otlp 0.16.0",
+    "opentelemetry-proto 0.6.0",
     "opentelemetry_sdk 0.23.0",
     "p256 0.13.2",
     "p384 0.13.0",
@@ -19293,11 +20038,13 @@
     "tokio 1.37.0",
     "tokio-stream 0.1.15",
     "tokio-util 0.7.11",
+    "tokio-vsock 0.5.0",
     "tonic 0.11.0",
     "tonic-build 0.11.0",
     "tower 0.4.13",
     "uart_16550 0.3.0",
     "walkdir 2.5.0",
+    "which 4.4.2",
     "x509-cert 0.2.5",
     "x86_64 0.14.11",
     "zerocopy 0.7.32",
