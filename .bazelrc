@@ -56,6 +56,8 @@ build:ci --curses=no
 
 # Always show test errors in CI
 test:ci --test_output=errors
+# Show stdout/stderr in test output in CI
+test:ci --test_arg=--nocapture
 
 # The unsafe-fast-presubmit config should only be used in presubmits steps that do not produce
 # binaries that need to be released or trusted (e.g. TEE applications). This is because it enables
