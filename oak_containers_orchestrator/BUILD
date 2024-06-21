@@ -107,6 +107,7 @@ cargo_build_script(
     ],
     deps = [
         "//oak_grpc_utils",
+        "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
     ],
 )

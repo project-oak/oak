@@ -27,4 +27,7 @@ package(
 rust_library(
     name = "oak_proto_build_utils",
     srcs = glob(["src/**"]),
+    data = [
+        "@com_google_protobuf//:descriptor_proto_srcs",
+    ],
 )

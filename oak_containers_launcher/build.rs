@@ -13,43 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path::PathBuf;
-
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
-#[cfg(feature = "bazel")]
-fn get_included_protos() -> Vec<PathBuf> {
-    // The root of all Oak protos
-    let oak_proto_root = PathBuf::from("..");
-    // Rely on bazel make variable `location` to find protobuf include paths.
-    // We do this as protobuf might be imported under different names in the
-    // external directory based on the setup (BzlMod, WORKSPACE or others).
-    // Possible names are: com_google_protobuf, protobuf~, and protobuf.
-    // The goal is to allow dependent repositories to use this
-    // library without renaming their explicit import of protobuf library.
-    // We use descriptor_proto_srcs instead of well_known_type_protos as the latter
-    // returns a number of files and `locations` make variable returns a list of
-    // relative location and not absolute paths.
-    let protobuf_include_path = PathBuf::from(
-        std::env::var("DESCRIPTOR_PROTO_PATH")
-            .unwrap()
-            .replace("google/protobuf/descriptor.proto", ""),
-    );
-    vec![oak_proto_root, protobuf_include_path]
-}
-
-#[cfg(not(feature = "bazel"))]
-fn get_included_protos() -> Vec<PathBuf> {
-    // The root of all Oak protos, relative to this directory.
-    let oak_proto_root = PathBuf::from("..");
-
-    // In cargo mode, the protoc invocations already include the google
-    // protobufs, so we only need to provide the Oak proto root.
-    vec![oak_proto_root]
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let included_protos = get_included_protos();
+    #[cfg(not(feature = "bazel"))]
+    let included_protos = vec![std::path::PathBuf::from("..")];
+    #[cfg(feature = "bazel")]
+    let included_protos = oak_proto_build_utils::get_common_proto_path();
+
     // Generate gRPC code for connecting to the launcher.
     generate_grpc_code(
         &[

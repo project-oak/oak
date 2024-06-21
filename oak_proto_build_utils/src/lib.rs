@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::fs;
+use std::path::PathBuf;
 
 /// Replaces refs to prost with prost_derive. See b/340185847.
 /// Only to be called from build scripts of crates that generate prost code.
@@ -30,8 +31,6 @@ use std::fs;
 /// derive macro directly, but we need to change the crate name, as we no
 /// longer have prost re-exporting the derive macros.
 pub fn fix_prost_derives() -> Result<(), Box<dyn std::error::Error>> {
-    // let out_dir_path = std::path::PathBuf::from(std::env::var("OUT_DIR"))?;
-
     let out_dir = std::env::var("OUT_DIR")?;
     for entry in fs::read_dir(out_dir)? {
         let file_path = entry?.path();
@@ -45,4 +44,25 @@ pub fn fix_prost_derives() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+// Returns the include paths of common protos: Oak proto and com_google_protobuf.
+pub fn get_common_proto_path() -> Vec<PathBuf> {
+    // The root of all Oak protos
+    let oak_proto_root = PathBuf::from("..");
+    // Rely on bazel make variable `location` to find protobuf include paths.
+    // We do this as protobuf might be imported under different names in the
+    // external directory based on the setup (BzlMod, WORKSPACE or others).
+    // Possible names are: com_google_protobuf, protobuf~, and protobuf.
+    // The goal is to allow dependent repositories to use this
+    // library without renaming their explicit import of protobuf library.
+    // We use descriptor_proto_srcs instead of well_known_type_protos as the latter
+    // returns a number of files and `locations` make variable returns a list of
+    // relative location and not absolute paths.
+    let protobuf_include_path = PathBuf::from(
+        std::env::var("DESCRIPTOR_PROTO_PATH")
+            .unwrap()
+            .replace("google/protobuf/descriptor.proto", ""),
+    );
+    vec![oak_proto_root, protobuf_include_path]
 }
