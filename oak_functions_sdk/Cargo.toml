@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 micro_rpc = { workspace = true }
 oak_functions_abi = { workspace = true }
-prost = { workspace = true }
+oak_proto_rust = { workspace = true }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }

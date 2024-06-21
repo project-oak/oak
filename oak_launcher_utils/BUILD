@@ -21,36 +21,25 @@ package(
     licenses = ["notice"],
 )
 
-_OAK_CHANNEL_DEPS = [
-    "//oak_core",
-    "@oak_crates_index//:static_assertions",
-] + select({
-    "@platforms//os:none": [
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:bytes",
-    ],
-    "//conditions:default": [
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:bytes",
-    ],
-})
-
 rust_library(
-    name = "oak_channel",
-    srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
-    deps = _OAK_CHANNEL_DEPS,
-)
-
-rust_library(
-    name = "oak_channel_client",
+    name = "oak_launcher_utils",
     srcs = glob(["src/**"]),
     crate_features = [
-        "client",
-        "std",
+        "exchange_evidence",
     ],
-    crate_name = "oak_channel",
-    deps = _OAK_CHANNEL_DEPS,
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    deps = [
+        "//micro_rpc",
+        "//micro_rpc_build",
+        "//oak_channel:oak_channel_client",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bmrng",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:command-fds",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tokio",
+    ],
 )

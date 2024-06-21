@@ -96,6 +96,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "bmrng": crate.spec(version = "*"),
             "bytes": crate.spec(version = "*"),
             "ciborium": crate.spec(
                 default_features = False,
@@ -304,12 +305,13 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "tokio": crate.spec(
                 features = [
-                    "rt-multi-thread",
-                    "macros",
-                    "sync",
                     "fs",
-                    "process",
+                    "macros",
                     "net",
+                    "process",
+                    "rt-multi-thread",
+                    "signal",
+                    "sync",
                 ],
                 version = "*",
             ),

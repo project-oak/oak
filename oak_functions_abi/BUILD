@@ -21,36 +21,12 @@ package(
     licenses = ["notice"],
 )
 
-_OAK_CHANNEL_DEPS = [
-    "//oak_core",
-    "@oak_crates_index//:static_assertions",
-] + select({
-    "@platforms//os:none": [
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:bytes",
-    ],
-    "//conditions:default": [
+rust_library(
+    name = "oak_functions_abi",
+    srcs = glob(["src/**"]),
+    deps = [
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:strum",
     ],
-})
-
-rust_library(
-    name = "oak_channel",
-    srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
-    deps = _OAK_CHANNEL_DEPS,
-)
-
-rust_library(
-    name = "oak_channel_client",
-    srcs = glob(["src/**"]),
-    crate_features = [
-        "client",
-        "std",
-    ],
-    crate_name = "oak_channel",
-    deps = _OAK_CHANNEL_DEPS,
 )

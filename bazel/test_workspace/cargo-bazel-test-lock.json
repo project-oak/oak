@@ -1,5 +1,5 @@
 {
-  "checksum": "97e2627383b7ef1bd97085153cff0a1d87a40179eee4a4a9fe4684edda42c5d7",
+  "checksum": "b21bd38f017e09deb79be48415d35b2756078e174df6cc5ed486b0b033ff5c5b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1993,6 +1993,58 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "bmrng 0.5.2": {
+      "name": "bmrng",
+      "version": "0.5.2",
+      "package_url": "https://github.com/oguzbilgener/bmrng",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bmrng/0.5.2/download",
+          "sha256": "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bmrng",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bmrng",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "futures-core 0.3.30",
+              "target": "futures_core"
+            },
+            {
+              "id": "tokio 1.38.0",
+              "target": "tokio"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.2"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE"
     },
     "bumpalo 3.16.0": {
       "name": "bumpalo",
@@ -4430,6 +4482,10 @@
             {
               "id": "bitvec 1.0.1",
               "target": "bitvec"
+            },
+            {
+              "id": "bmrng 0.5.2",
+              "target": "bmrng"
             },
             {
               "id": "bytes 1.6.0",
@@ -15906,6 +15962,7 @@
             "process",
             "rt",
             "rt-multi-thread",
+            "signal",
             "signal-hook-registry",
             "socket2",
             "sync",
@@ -20184,6 +20241,7 @@
     "base64 0.21.7",
     "bitflags 2.5.0",
     "bitvec 1.0.1",
+    "bmrng 0.5.2",
     "bytes 1.6.0",
     "ciborium 0.2.2",
     "clap 4.5.4",

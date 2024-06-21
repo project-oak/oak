@@ -810,7 +810,7 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_functions_abi",
- "prost",
+ "oak_proto_rust",
 ]
 
 [[package]]

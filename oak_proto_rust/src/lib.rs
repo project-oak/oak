@@ -84,6 +84,13 @@ pub mod oak {
             use prost::Message;
             include_proto!("oak.functions.testing");
         }
+
+        pub mod wasm {
+            pub mod v1 {
+                use prost::Message;
+                include_proto!("oak.functions.wasm.v1");
+            }
+        }
     }
 
     pub mod session {
