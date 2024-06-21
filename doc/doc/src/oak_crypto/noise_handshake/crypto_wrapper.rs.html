@@ -205,6 +205,7 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -248,12 +249,14 @@
     },
     Field, PrimeField,
 };
+<span class="kw">use </span>rand_core::{RngCore, SeedableRng};
 <span class="kw">use </span>sha2::Digest;
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::crypto_wrapper::ecdsa::signature::Verifier;
 
-<span class="kw">pub fn </span>rand_bytes(_output: <span class="kw-2">&amp;mut </span>[u8]) {
-    <span class="macro">panic!</span>(<span class="string">"unimplemented"</span>);
+<span class="kw">pub fn </span>rand_bytes(output: <span class="kw-2">&amp;mut </span>[u8]) {
+    <span class="kw">let </span><span class="kw-2">mut </span>rng = rand_chacha::ChaCha20Rng::from_entropy();
+    rng.fill_bytes(output);
 }
 
 <span class="doccomment">/// Perform the HKDF operation from https://datatracker.ietf.org/doc/html/rfc5869
@@ -307,8 +310,7 @@
 <span class="kw">impl </span>P256Scalar {
     <span class="kw">pub fn </span>generate() -&gt; P256Scalar {
         <span class="kw">let </span><span class="kw-2">mut </span>ret = [<span class="number">0u8</span>; P256_SCALAR_LEN];
-        <span class="comment">// Warning: not very random.
-        </span>ret[<span class="number">0</span>] = <span class="number">1</span>;
+        rand_bytes(<span class="kw-2">&amp;mut </span>ret);
         P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
     }
 
