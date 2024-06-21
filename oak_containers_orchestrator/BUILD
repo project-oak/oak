@@ -92,6 +92,7 @@ cargo_build_script(
     ],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
     crate_features = ["bazel"],
     data = [
@@ -100,7 +101,9 @@ cargo_build_script(
         "//proto/containers:orchestrator_crypto_proto",
         "//proto/key_provisioning:key_provisioning_proto",
         "//proto/session:messages_proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:protoc",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
     deps = [
         "//oak_grpc_utils",

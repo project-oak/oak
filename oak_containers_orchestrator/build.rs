@@ -13,7 +13,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::PathBuf;
+
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+
+#[cfg(feature = "bazel")]
+fn get_included_protos() -> Vec<PathBuf> {
+    // The root of all Oak protos
+    let oak_proto_root = PathBuf::from("..");
+    // Rely on bazel make variable `location` to find protobuf include paths.
+    // We do this as protobuf might be imported under different names in the
+    // external directory based on the setup (BzlMod, WORKSPACE or others).
+    // Possible names are: com_google_protobuf, protobuf~, and protobuf.
+    // The goal is to allow dependent repositories to use this
+    // library without renaming their explicit import of protobuf library.
+    let protobuf_include_path = PathBuf::from(
+        std::env::var("DESCRIPTOR_PROTO_PATH")
+            .unwrap()
+            .replace("google/protobuf/descriptor.proto", ""),
+    );
+    vec![oak_proto_root, protobuf_include_path]
+}
+
+#[cfg(not(feature = "bazel"))]
+fn get_included_protos() -> Vec<PathBuf> {
+    // The root of all Oak protos, relative to this directory.
+    let oak_proto_root = PathBuf::from("..");
+
+    // In cargo mode, the protoc invocations already include the google
+    // protobufs, so we only need to provide the Oak proto root.
+    vec![oak_proto_root]
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for Orchestrator services.
@@ -28,13 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/containers/hostlib_key_provisioning.proto",
             "../proto/session/messages.proto",
         ],
-        &[
-            "..",
-            // When building with Bazel, the build script doesn't automatically
-            // contain the information needed to find the well-known Google
-            // protos. So we need to include these paths here.
-            "../external/com_google_protobuf/src/google/protobuf/_virtual_imports/empty_proto",
-        ],
+        &get_included_protos(),
         CodegenOptions { build_server: true, build_client: true, ..Default::default() },
     )?;
 
