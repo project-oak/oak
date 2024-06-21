@@ -204,7 +204,10 @@ clang-tidy:
 
 # Query crates that needs to be built for bare metal. Bazel query outputs one target in each line, so we
 # use `tr` to bring them into a single line.
-bare_metal_crates := `bazel query 'attr("tags", "ci-build-for-x86_64-unknown-none", //...)' | tr '\n' ' '`
+# We store the command for the query in this variable, but defer executing it
+# until usage to prevent bazel invocation on any just invocation.
+# Lazy assignment is not yet supported: https://github.com/casey/just/issues/953
+bare_metal_crates_query := "bazel query 'attr(\"tags\", \"ci-build-for-x86_64-unknown-none\", //...)' | tr '\\n' ' '"
 
 bazel-ci:
     # Test Oak as a dependency in the test workspace
@@ -215,7 +218,7 @@ bazel-ci:
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 
     # Some crates also need to be built for x86_64-unknown-none.
-    bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- {{bare_metal_crates}}
+    bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- $({{bare_metal_crates_query}})
 
 
 bazel-clippy:
