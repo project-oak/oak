@@ -1,0 +1,37 @@
+# Oak Standalone Libraries
+
+NOTE: The crates in this project currently only build with Bazel, as an
+experiment to see what the gaps are. So, the following tasks will be missing:
+
+* cargo fmt
+* cargo udeps
+* cargo
+
+Oak standalone is a collection of Oak utilities that can be used to provide
+confidential computing functionality to applications that are deployed into
+scenarios where using one of the full Oak stack deployment models is not
+feasible.
+
+Oak Standalone is designed to be easy to integrate with an existing service that
+provides a normal, unencrypted gRPC-style interface, defined using proto files
+and gRPC services.
+
+## Server
+
+The server component is a gRPC frontend that sits in front of the developer's
+client application to provide a facade that speaks the Oak protocol.
+
+It's built on the streaming_session.proto service API.
+
+In order to use it, you should compile it into your existing client server
+application, but rather than exposing (for example) a gRPC interface to your
+application, you will integrate with the Oak Standalone server facade (details
+on this this works TBD).
+
+## Client
+
+The client library provides some convenience methods for creating an Oak Client
+instance that can speak to an Oak Standalone server instance. Primarily, it
+provides an AttestationVerifier that does not actually verify any attestation,
+but does provide an attested evidence structure containing the public key that
+can be used to establish the crypto session.

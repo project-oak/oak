@@ -188,6 +188,7 @@ pub fn reference_values_from_evidence(evidence: ExtractedEvidence) -> ReferenceV
             }))
         }
         EvidenceValues::Cb(_) => panic!("not yet supported"),
+        EvidenceValues::Standalone(_) => panic!("not yet supported"),
     };
     ReferenceValues { r#type }
 }

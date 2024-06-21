@@ -67,6 +67,7 @@ message ExtractedEvidence {
     OakRestrictedKernelData oak_restricted_kernel = 1;
     OakContainersData oak_containers = 2;
     CbData cb = 3;
+    OakStandaloneData standalone = 7625;
   }
 
   // Contains the public key for encryption. The key is serialized as an X25519
@@ -222,3 +223,6 @@ message CbData {
   EventData system_layer = 3;
   EventData application_layer = 4;
 }
+
+// Oak Standalone currently skips all attestation
+message OakStandaloneData {}

@@ -98,6 +98,10 @@ message CBEndorsements {
   RootLayerEndorsements root_layer = 1;
 }
 
+// There are currently no endorsements in standalone mode.
+// This may change in the future.
+message OakStandaloneEndorsements {}
+
 // Endorsement contains statements that some entity (e.g. a hardware provider)
 // vouches for the integrity of claims about the TEE or the software running
 // on it.
@@ -109,5 +113,6 @@ message Endorsements {
     OakRestrictedKernelEndorsements oak_restricted_kernel = 1;
     OakContainersEndorsements oak_containers = 2;
     CBEndorsements cb = 3;
+    OakStandaloneEndorsements standalone = 5646;
   }
 };

@@ -114,26 +114,28 @@ pub fn verify(
     // Ensure the Attestation report is properly signed by the platform and that it
     // includes the root public key used in the DICE chain.
     {
-        let tee_certificate = match endorsements.r#type.as_ref().context("no endorsements")? {
-            endorsements::Type::OakRestrictedKernel(endorsements) => endorsements
-                .root_layer
-                .as_ref()
-                .context("no root layer endorsements")?
-                .tee_certificate
-                .as_ref(),
-            endorsements::Type::OakContainers(endorsements) => endorsements
-                .root_layer
-                .as_ref()
-                .context("no root layer endorsements")?
-                .tee_certificate
-                .as_ref(),
-            endorsements::Type::Cb(endorsements) => endorsements
-                .root_layer
-                .as_ref()
-                .context("no root layer endorsements")?
-                .tee_certificate
-                .as_ref(),
-        };
+        let tee_certificate: &[u8] =
+            match endorsements.r#type.as_ref().context("no endorsements")? {
+                endorsements::Type::OakRestrictedKernel(endorsements) => endorsements
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer endorsements")?
+                    .tee_certificate
+                    .as_ref(),
+                endorsements::Type::OakContainers(endorsements) => endorsements
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer endorsements")?
+                    .tee_certificate
+                    .as_ref(),
+                endorsements::Type::Cb(endorsements) => endorsements
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer endorsements")?
+                    .tee_certificate
+                    .as_ref(),
+                endorsements::Type::Standalone(_) => &[],
+            };
         let root_layer = evidence.root_layer.as_ref().context("no root layer evidence")?;
         verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)?;
     };
