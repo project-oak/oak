@@ -17,21 +17,25 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
+use alloc::vec::Vec;
+use core::convert::TryInto;
+
+use anyhow::{anyhow, Context};
+use oak_crypto::noise_handshake::client::HandshakeInitiator;
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
-    session::v1::{HandshakeRequest, HandshakeResponse},
+    session::v1::{HandshakeRequest, HandshakeResponse, NoiseHandshakeMessage},
 };
 
 use crate::{config::HandshakerConfig, ProtocolEngine};
 
+const EPHEMERAL_PUB_KEY_LEN: usize = 65;
+
 pub trait EncryptionKeyHandle {
-    fn derive_session_keys(
-        &self,
-        static_peer_public_key: &[u8],
-        ephemeral_peer_public_key: &[u8],
-    ) -> anyhow::Result<SessionKeys>;
+    fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;
 }
 
+#[derive(Copy, Clone)]
 pub enum HandshakeType {
     NoiseKK,
     NoiseKN,
@@ -47,11 +51,28 @@ pub trait Handshaker {
 #[allow(dead_code)]
 pub struct ClientHandshaker<'a> {
     handshaker_config: HandshakerConfig<'a>,
+    handshake_initiator: HandshakeInitiator,
 }
 
 impl<'a> ClientHandshaker<'a> {
-    pub fn new(handshaker_config: HandshakerConfig<'a>) -> Self {
-        Self { handshaker_config }
+    pub fn create(handshaker_config: HandshakerConfig<'a>) -> anyhow::Result<Self> {
+        let handshake_type = handshaker_config.handshake_type;
+        let peer_static_public_key = handshaker_config.peer_static_public_key.clone();
+        Ok(Self {
+            handshaker_config,
+            handshake_initiator: match handshake_type {
+                HandshakeType::NoiseKK => core::unimplemented!(),
+                HandshakeType::NoiseKN => core::unimplemented!(),
+                HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
+                    peer_static_public_key
+                        .context("handshaker_config missing the peer public key")?
+                        .as_slice()
+                        .try_into()
+                        .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
+                ),
+                HandshakeType::NoiseNN => HandshakeInitiator::new_nn(),
+            },
+        })
     }
 }
 
@@ -63,7 +84,26 @@ impl<'a> Handshaker for ClientHandshaker<'a> {
 
 impl<'a> ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker<'a> {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
-        core::unimplemented!();
+        let mut initial_message = self.handshake_initiator.build_initial_message();
+        let (ciphertext, ephemeral_public_key) =
+            (initial_message.split_off(EPHEMERAL_PUB_KEY_LEN), initial_message);
+        Ok(Some(HandshakeRequest {
+            r#handshake_type: Some(
+                oak_proto_rust::oak::session::v1::handshake_request::HandshakeType::NoiseHandshakeMessage(
+                    NoiseHandshakeMessage {
+                        ephemeral_public_key,
+                        static_public_key: match self.handshaker_config.handshake_type {
+                            HandshakeType::NoiseKK
+                            | HandshakeType::NoiseKN
+                            | HandshakeType::NoiseNK
+                            | HandshakeType::NoiseNN => vec![],
+                        },
+                        ciphertext,
+                    },
+                ),
+            ),
+            attestation_binding: None,
+        }))
     }
 
     fn put_incoming_message(

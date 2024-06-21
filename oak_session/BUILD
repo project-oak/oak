@@ -30,6 +30,7 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
+        "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
     ],
