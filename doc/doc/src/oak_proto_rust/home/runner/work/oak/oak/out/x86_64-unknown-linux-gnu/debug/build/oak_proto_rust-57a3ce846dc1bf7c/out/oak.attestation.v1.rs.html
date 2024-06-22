@@ -1192,6 +1192,19 @@
 <a href="#1190" id="1190">1190</a>
 <a href="#1191" id="1191">1191</a>
 <a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1473,6 +1486,11 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
 }
+<span class="doccomment">/// There are currently no endorsements in standalone mode.
+/// This may change in the future.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakStandaloneEndorsements {}
 <span class="doccomment">/// Endorsement contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running
 /// on it.
@@ -1482,7 +1500,7 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Endorsements {
-    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3, 5646"</span>)]
     </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;endorsements::Type&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `Endorsements`.
@@ -1496,6 +1514,8 @@
         </span>OakContainers(<span class="kw">super</span>::OakContainersEndorsements),
         <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Cb(<span class="kw">super</span>::CbEndorsements),
+        <span class="attr">#[prost(message, tag = <span class="string">"5646"</span>)]
+        </span>Standalone(<span class="kw">super</span>::OakStandaloneEndorsements),
     }
 }
 <span class="doccomment">/// The versions of the components in the AMD SEV-SNP platform Trusted Compute
@@ -2181,7 +2201,7 @@
     /// Elliptic-Curve-Point-to-Octet-String conversion.
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>signing_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">"extracted_evidence::EvidenceValues"</span>, tags = <span class="string">"1, 2, 3"</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"extracted_evidence::EvidenceValues"</span>, tags = <span class="string">"1, 2, 3, 7625"</span>)]
     </span><span class="kw">pub </span>evidence_values: ::core::option::Option&lt;extracted_evidence::EvidenceValues&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ExtractedEvidence`.
@@ -2195,6 +2215,8 @@
         </span>OakContainers(<span class="kw">super</span>::OakContainersData),
         <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Cb(<span class="kw">super</span>::CbData),
+        <span class="attr">#[prost(message, tag = <span class="string">"7625"</span>)]
+        </span>Standalone(<span class="kw">super</span>::OakStandaloneData),
     }
 }
 <span class="doccomment">/// Values extracted from the root layer evidence.
@@ -2384,4 +2406,8 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventData&gt;,
 }
+<span class="doccomment">/// Oak Standalone currently skips all attestation
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakStandaloneData {}
 </code></pre></div></section></main></body></html>
