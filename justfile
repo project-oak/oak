@@ -210,6 +210,9 @@ clang-tidy:
 bare_metal_crates_query := "bazel query 'attr(\"tags\", \"ci-build-for-x86_64-unknown-none\", //...)' | tr '\\n' ' '"
 
 bazel-ci:
+    # Make sure the generated prost files have been copied to the correct place.
+    bazel run oak_proto_rust:verify_generated
+
     # Test Oak as a dependency in the test workspace
     # Some dependencies aren't properly exposed yet, so just testing a subset of targets
     cd bazel/test_workspace && bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust

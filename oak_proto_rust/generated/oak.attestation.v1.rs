@@ -279,6 +279,11 @@ pub struct CbEndorsements {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerEndorsements>,
 }
+/// There are currently no endorsements in standalone mode.
+/// This may change in the future.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct OakStandaloneEndorsements {}
 /// Endorsement contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running
 /// on it.
@@ -288,7 +293,7 @@ pub struct CbEndorsements {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsements {
-    #[prost(oneof = "endorsements::Type", tags = "1, 2, 3")]
+    #[prost(oneof = "endorsements::Type", tags = "1, 2, 3, 5646")]
     pub r#type: ::core::option::Option<endorsements::Type>,
 }
 /// Nested message and enum types in `Endorsements`.
@@ -302,6 +307,8 @@ pub mod endorsements {
         OakContainers(super::OakContainersEndorsements),
         #[prost(message, tag = "3")]
         Cb(super::CbEndorsements),
+        #[prost(message, tag = "5646")]
+        Standalone(super::OakStandaloneEndorsements),
     }
 }
 /// The versions of the components in the AMD SEV-SNP platform Trusted Compute
@@ -987,7 +994,7 @@ pub struct ExtractedEvidence {
     /// Elliptic-Curve-Point-to-Octet-String conversion.
     #[prost(bytes = "vec", tag = "5")]
     pub signing_public_key: ::prost::alloc::vec::Vec<u8>,
-    #[prost(oneof = "extracted_evidence::EvidenceValues", tags = "1, 2, 3")]
+    #[prost(oneof = "extracted_evidence::EvidenceValues", tags = "1, 2, 3, 7625")]
     pub evidence_values: ::core::option::Option<extracted_evidence::EvidenceValues>,
 }
 /// Nested message and enum types in `ExtractedEvidence`.
@@ -1001,6 +1008,8 @@ pub mod extracted_evidence {
         OakContainers(super::OakContainersData),
         #[prost(message, tag = "3")]
         Cb(super::CbData),
+        #[prost(message, tag = "7625")]
+        Standalone(super::OakStandaloneData),
     }
 }
 /// Values extracted from the root layer evidence.
@@ -1190,3 +1199,7 @@ pub struct CbData {
     #[prost(message, optional, tag = "4")]
     pub application_layer: ::core::option::Option<EventData>,
 }
+/// Oak Standalone currently skips all attestation
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct OakStandaloneData {}
