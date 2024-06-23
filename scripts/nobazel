@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "Directories with Cargo.toml but no BUILD file:"
+
+while read -r cargo_dir
+do
+    if ! [ -f "$cargo_dir/BUILD" ]
+    then
+        echo "$cargo_dir needs bazelification"
+    fi
+done < <(find . -name "Cargo.toml" -exec dirname {} \;)
