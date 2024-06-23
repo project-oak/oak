@@ -30,7 +30,7 @@ object LogEntryVerifier {
    * Needs three paths as command line arguments, corresponding to the arguments of `#verify()`.
    * Verification failure is signalled via exit code.
    */
-  @kotlin.Throws(Exception::class)
+  @JvmStatic
   fun main(args: Array<String?>) {
     if (args.size != 3) {
       System.exit(2)
