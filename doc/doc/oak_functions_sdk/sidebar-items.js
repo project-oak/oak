@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["alloc","read_request","storage_get_item","storage_get_items","testing","write_log_message","write_response"],"macro":["log"],"mod":["proto"]};
+window.SIDEBAR_ITEMS = {"fn":["alloc","read_request","storage_get_item","storage_get_items","testing","write_log_message","write_response"],"macro":["log"]};
