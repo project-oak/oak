@@ -1,5 +1,5 @@
 {
-  "checksum": "adaa541bd76e7b9963a9b6319b98ca0f365d0434d761514dca126d01cf7a66e4",
+  "checksum": "35fe9d53b25745f64ea742d9641e29424bab2fd00c38ed9ebeb45ac2a408e15d",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1212,6 +1212,62 @@
         "MIT"
       ],
       "license_file": "LICENSE.md"
+    },
+    "async-recursion 1.1.1": {
+      "name": "async-recursion",
+      "version": "1.1.1",
+      "package_url": "https://github.com/dcchut/async-recursion",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/async-recursion/1.1.1/download",
+          "sha256": "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "async_recursion",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "async_recursion",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.79",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.35",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.58",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.1.1"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
     },
     "async-stream 0.3.5": {
       "name": "async-stream",
@@ -3165,14 +3221,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "clap 4.5.4": {
+    "clap 4.5.7": {
       "name": "clap",
-      "version": "4.5.4",
+      "version": "4.5.7",
       "package_url": "https://github.com/clap-rs/clap",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/clap/4.5.4/download",
-          "sha256": "90bc066a67923782aa8515dbaea16946c5bcc5addbd668bb80af688e53e548a0"
+          "url": "https://static.crates.io/crates/clap/4.5.7/download",
+          "sha256": "5db83dced34638ad474f39f250d7fea9598bdd239eaced1bdf45d597da0f433f"
         }
       },
       "targets": [
@@ -3211,7 +3267,7 @@
         "deps": {
           "common": [
             {
-              "id": "clap_builder 4.5.2",
+              "id": "clap_builder 4.5.7",
               "target": "clap_builder"
             }
           ],
@@ -3221,13 +3277,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "clap_derive 4.5.4",
+              "id": "clap_derive 4.5.5",
               "target": "clap_derive"
             }
           ],
           "selects": {}
         },
-        "version": "4.5.4"
+        "version": "4.5.7"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -3236,14 +3292,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "clap_builder 4.5.2": {
+    "clap_builder 4.5.7": {
       "name": "clap_builder",
-      "version": "4.5.2",
+      "version": "4.5.7",
       "package_url": "https://github.com/clap-rs/clap",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/clap_builder/4.5.2/download",
-          "sha256": "ae129e2e766ae0ec03484e609954119f123cc1fe650337e155d03b022f24f7b4"
+          "url": "https://static.crates.io/crates/clap_builder/4.5.7/download",
+          "sha256": "f7e204572485eb3fbf28f871612191521df159bc3e15a9f5064c66dba3a8c05f"
         }
       },
       "targets": [
@@ -3299,7 +3355,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.5.2"
+        "version": "4.5.7"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -3308,14 +3364,68 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "clap_derive 4.5.4": {
-      "name": "clap_derive",
-      "version": "4.5.4",
-      "package_url": "https://github.com/clap-rs/clap/tree/master/clap_derive",
+    "clap_complete 4.5.6": {
+      "name": "clap_complete",
+      "version": "4.5.6",
+      "package_url": "https://github.com/clap-rs/clap",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/clap_derive/4.5.4/download",
-          "sha256": "528131438037fd55894f62d6e9f068b8f45ac57ffa77517819645d10aed04f64"
+          "url": "https://static.crates.io/crates/clap_complete/4.5.6/download",
+          "sha256": "fbca90c87c2a04da41e95d1856e8bcd22f159bdbfa147314d2ce5218057b0e58"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "clap_complete",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "clap_complete",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "clap 4.5.7",
+              "target": "clap"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "4.5.6"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "clap_derive 4.5.5": {
+      "name": "clap_derive",
+      "version": "4.5.5",
+      "package_url": "https://github.com/clap-rs/clap",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/clap_derive/4.5.5/download",
+          "sha256": "c780290ccf4fb26629baa7a1081e68ced113f1d3ec302fa5948f1c381ebf06c6"
         }
       },
       "targets": [
@@ -3365,7 +3475,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.5.4"
+        "version": "4.5.5"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -4717,7 +4827,7 @@
               "target": "ciborium"
             },
             {
-              "id": "clap 4.5.4",
+              "id": "clap 4.5.7",
               "target": "clap"
             },
             {
@@ -6265,12 +6375,20 @@
               "target": "bytes"
             },
             {
+              "id": "chrono 0.4.38",
+              "target": "chrono"
+            },
+            {
               "id": "ciborium 0.2.2",
               "target": "ciborium"
             },
             {
-              "id": "clap 4.5.4",
+              "id": "clap 4.5.7",
               "target": "clap"
+            },
+            {
+              "id": "clap_complete 4.5.6",
+              "target": "clap_complete"
             },
             {
               "id": "colored 2.1.0",
@@ -6343,6 +6461,10 @@
             {
               "id": "ignore 0.4.22",
               "target": "ignore"
+            },
+            {
+              "id": "itertools 0.12.1",
+              "target": "itertools"
             },
             {
               "id": "lazy_static 1.4.0",
@@ -6423,6 +6545,10 @@
             {
               "id": "port_check 0.2.1",
               "target": "port_check"
+            },
+            {
+              "id": "portpicker 0.1.1",
+              "target": "portpicker"
             },
             {
               "id": "pprof 0.13.0",
@@ -6529,7 +6655,7 @@
               "target": "stderrlog"
             },
             {
-              "id": "strum 0.26.2",
+              "id": "strum 0.24.1",
               "target": "strum"
             },
             {
@@ -6575,6 +6701,10 @@
             {
               "id": "tokio-vsock 0.5.0",
               "target": "tokio_vsock"
+            },
+            {
+              "id": "toml 0.8.14",
+              "target": "toml"
             },
             {
               "id": "tonic 0.11.0",
@@ -6651,6 +6781,10 @@
         "proc_macro_deps": {
           "common": [
             {
+              "id": "async-recursion 1.1.1",
+              "target": "async_recursion"
+            },
+            {
               "id": "async-trait 0.1.79",
               "target": "async_trait"
             },
@@ -6661,6 +6795,10 @@
             {
               "id": "prost-derive 0.12.4",
               "target": "prost_derive"
+            },
+            {
+              "id": "strum_macros 0.25.3",
+              "target": "strum_macros"
             }
           ],
           "selects": {}
@@ -13711,6 +13849,7 @@
             "ioctl",
             "memoffset",
             "process",
+            "signal",
             "socket",
             "user"
           ],
@@ -16498,6 +16637,53 @@
       "license": "MIT",
       "license_ids": [
         "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "portpicker 0.1.1": {
+      "name": "portpicker",
+      "version": "0.1.1",
+      "package_url": "https://github.com/Dentosal/portpicker-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/portpicker/0.1.1/download",
+          "sha256": "be97d76faf1bfab666e1375477b23fde79eccf0276e9b63b92a39d676a889ba9"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "portpicker",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "portpicker",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "rand 0.8.5",
+              "target": "rand"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.1.1"
+      },
+      "license": "Unlicense",
+      "license_ids": [
+        "Unlicense"
       ],
       "license_file": "LICENSE"
     },
@@ -21439,14 +21625,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "strum 0.26.2": {
+    "strum 0.24.1": {
       "name": "strum",
-      "version": "0.26.2",
+      "version": "0.24.1",
       "package_url": "https://github.com/Peternator7/strum",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/strum/0.26.2/download",
-          "sha256": "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
+          "url": "https://static.crates.io/crates/strum/0.24.1/download",
+          "sha256": "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
         }
       },
       "targets": [
@@ -21479,13 +21665,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "strum_macros 0.26.2",
+              "id": "strum_macros 0.24.3",
               "target": "strum_macros"
             }
           ],
           "selects": {}
         },
-        "version": "0.26.2"
+        "version": "0.24.1"
       },
       "license": "MIT",
       "license_ids": [
@@ -21493,14 +21679,82 @@
       ],
       "license_file": "LICENSE"
     },
-    "strum_macros 0.26.2": {
+    "strum_macros 0.24.3": {
       "name": "strum_macros",
-      "version": "0.26.2",
+      "version": "0.24.3",
       "package_url": "https://github.com/Peternator7/strum",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/strum_macros/0.26.2/download",
-          "sha256": "c6cf59daf282c0a494ba14fd21610a0325f9f90ec9d1231dea26bcb1d696c946"
+          "url": "https://static.crates.io/crates/strum_macros/0.24.3/download",
+          "sha256": "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "strum_macros",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "strum_macros",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "heck 0.4.1",
+              "target": "heck"
+            },
+            {
+              "id": "proc-macro2 1.0.79",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.35",
+              "target": "quote"
+            },
+            {
+              "id": "syn 1.0.109",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "rustversion 1.0.14",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.24.3"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "strum_macros 0.25.3": {
+      "name": "strum_macros",
+      "version": "0.25.3",
+      "package_url": "https://github.com/Peternator7/strum",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/strum_macros/0.25.3/download",
+          "sha256": "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
         }
       },
       "targets": [
@@ -21553,7 +21807,7 @@
           ],
           "selects": {}
         },
-        "version": "0.26.2"
+        "version": "0.25.3"
       },
       "license": "MIT",
       "license_ids": [
@@ -21920,6 +22174,7 @@
             "clone-impls",
             "default",
             "derive",
+            "extra-traits",
             "parsing",
             "printing",
             "proc-macro",
@@ -23067,6 +23322,7 @@
             "mio",
             "net",
             "num_cpus",
+            "parking_lot",
             "process",
             "rt",
             "rt-multi-thread",
@@ -23092,6 +23348,10 @@
             {
               "id": "num_cpus 1.16.0",
               "target": "num_cpus"
+            },
+            {
+              "id": "parking_lot 0.12.3",
+              "target": "parking_lot"
             },
             {
               "id": "pin-project-lite 0.2.14",
@@ -30552,6 +30812,7 @@
     "anyhow 1.0.81",
     "arrayvec 0.7.4",
     "assertables 7.0.1",
+    "async-recursion 1.1.1",
     "async-stream 0.3.5",
     "async-trait 0.1.79",
     "atomic_refcell 0.1.13",
@@ -30560,8 +30821,10 @@
     "bitvec 1.0.1",
     "bmrng 0.5.2",
     "bytes 1.6.0",
+    "chrono 0.4.38",
     "ciborium 0.2.2",
-    "clap 4.5.4",
+    "clap 4.5.7",
+    "clap_complete 4.5.6",
     "colored 2.1.0",
     "command-fds 0.3.0",
     "coset 0.3.7",
@@ -30581,6 +30844,7 @@
     "http 1.1.0",
     "hyper 0.14.28",
     "ignore 0.4.22",
+    "itertools 0.12.1",
     "lazy_static 1.4.0",
     "libloading 0.8.4",
     "libm 0.2.8",
@@ -30601,6 +30865,7 @@
     "parking_lot 0.12.3",
     "pkcs8 0.10.2",
     "port_check 0.2.1",
+    "portpicker 0.1.1",
     "pprof 0.13.0",
     "primeorder 0.13.6",
     "procfs 0.16.0",
@@ -30628,7 +30893,8 @@
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",
     "stderrlog 0.6.0",
-    "strum 0.26.2",
+    "strum 0.24.1",
+    "strum_macros 0.25.3",
     "subprocess 0.2.9",
     "syn 2.0.58",
     "syslog 6.1.1",
@@ -30640,6 +30906,7 @@
     "tokio-stream 0.1.15",
     "tokio-util 0.7.11",
     "tokio-vsock 0.5.0",
+    "toml 0.8.14",
     "tonic 0.11.0",
     "tonic-build 0.11.0",
     "tonic-web 0.11.0",

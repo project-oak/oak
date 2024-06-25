@@ -73,6 +73,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "async-recursion": crate.spec(version = "*"),
             "async-stream": crate.spec(
                 version = "*",
             ),
@@ -98,6 +99,14 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "bmrng": crate.spec(version = "*"),
             "bytes": crate.spec(version = "*"),
+            "chrono": crate.spec(
+                default_features = False,
+                features = [
+                    "std",
+                    "clock",
+                ],
+                version = "*",
+            ),
             "ciborium": crate.spec(
                 default_features = False,
                 version = "*",
@@ -109,6 +118,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "clap_complete": crate.spec(version = "*"),
             "colored": crate.spec(version = "*"),
             "command-fds": crate.spec(
                 features = ["tokio"],
@@ -178,6 +188,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "http": crate.spec(version = "*"),
             "ignore": crate.spec(version = "*"),
+            "itertools": crate.spec(version = "*"),
             "lazy_static": crate.spec(version = "*"),
             "libloading": crate.spec(version = "*"),
             "libm": crate.spec(version = "*"),
@@ -196,7 +207,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "maplit": crate.spec(version = "*"),
             "nix": crate.spec(
-                features = ["user", "process"],
+                features = ["user", "process", "signal"],
                 version = "*",
             ),
             "oci-spec": crate.spec(version = "*"),
@@ -222,6 +233,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "ouroboros": crate.spec(version = "*"),
+            "portpicker": crate.spec(version = "*"),
             "p256": crate.spec(
                 default_features = False,
                 features = [
@@ -322,8 +334,9 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "strum": crate.spec(
                 default_features = False,
                 features = ["derive"],
-                version = "*",
+                version = "0.24",
             ),
+            "strum_macros": crate.spec(version = "0.25"),
             "subprocess": crate.spec(version = "*"),
             "syn": crate.spec(
                 features = ["full"],
@@ -344,8 +357,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "tokio": crate.spec(
                 features = [
                     "fs",
+                    "io-util",
                     "macros",
                     "net",
+                    "parking_lot",
                     "process",
                     "rt-multi-thread",
                     "signal",
@@ -374,6 +389,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 rev = "2a52faeb4ede7d9712adbc096e547ab7ea766f4b",
                 features = ["tonic-conn"],
             ),
+            "toml": crate.spec(version = "*"),
             "tonic": crate.spec(version = "*"),
             "tonic-build": crate.spec(version = "*"),
             "tonic-web": crate.spec(version = "*"),
