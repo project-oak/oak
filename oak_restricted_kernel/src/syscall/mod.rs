@@ -74,6 +74,11 @@ struct UserContext {
     r9: u64,
     r10: u64,
     r11: u64,
+    r12: u64,
+    r13: u64,
+    r14: u64,
+    r15: u64,
+    rbp: u64,
     ymm: [[u64; 4]; 16],
 }
 
@@ -186,6 +191,10 @@ extern "C" fn syscall_entrypoint() {
             "mov gs:[{OFFSET_R9}], r9",
             "mov gs:[{OFFSET_R10}], r10",
             "mov gs:[{OFFSET_R11}], r11",
+            "mov gs:[{OFFSET_R12}], r12",
+            "mov gs:[{OFFSET_R13}], r13",
+            "mov gs:[{OFFSET_R14}], r14",
+            "mov gs:[{OFFSET_R15}], r15",
 
             // Save AVX registers to GsData
             "vmovups gs:[{OFFSET_YMM} + 0*32], YMM0",
@@ -249,6 +258,10 @@ extern "C" fn syscall_entrypoint() {
             "mov r9, gs:[{OFFSET_R9}]",
             "mov r10, gs:[{OFFSET_R10}]",
             "mov r11, gs:[{OFFSET_R11}]", // restore user RFLAGS
+            "mov r12, gs:[{OFFSET_R12}]",
+            "mov r13, gs:[{OFFSET_R13}]",
+            "mov r14, gs:[{OFFSET_R14}]",
+            "mov r15, gs:[{OFFSET_R15}]",
 
             // Restore user RSP in preparation for SYSRET.
             "mov rsp, gs:[{OFFSET_RSP}]",
@@ -268,6 +281,10 @@ extern "C" fn syscall_entrypoint() {
             OFFSET_R9 = const(offset_of!(GsData, user_ctx.r9)),
             OFFSET_R10 = const(offset_of!(GsData, user_ctx.r10)),
             OFFSET_R11 = const(offset_of!(GsData, user_ctx.r11)),
+            OFFSET_R12 = const(offset_of!(GsData, user_ctx.r12)),
+            OFFSET_R13 = const(offset_of!(GsData, user_ctx.r13)),
+            OFFSET_R14 = const(offset_of!(GsData, user_ctx.r14)),
+            OFFSET_R15 = const(offset_of!(GsData, user_ctx.r15)),
             OFFSET_YMM = const(offset_of!(GsData, user_ctx.ymm)),
             options(noreturn)
         }
