@@ -37,6 +37,8 @@
 #![feature(naked_functions)]
 #![feature(c_size_t)]
 #![feature(never_type)]
+#![feature(offset_of_nested)]
+#![feature(asm_const)]
 
 mod acpi;
 mod args;
