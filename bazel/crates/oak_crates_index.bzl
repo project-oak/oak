@@ -109,6 +109,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "colored": crate.spec(version = "*"),
             "command-fds": crate.spec(
                 features = ["tokio"],
                 version = "*",
@@ -165,6 +166,8 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "ignore": crate.spec(version = "*"),
+            "lazy_static": crate.spec(version = "*"),
             "libm": crate.spec(version = "*"),
             "linked_list_allocator": crate.spec(
                 features = [

@@ -1,5 +1,5 @@
 {
-  "checksum": "2a035addb746c8ca234cb3909b9c267ae8c1865e72c084934f37c1903d734e78",
+  "checksum": "c76f99a89bf7249906fb292449157f50596f6df3d7e08c0b3bcce7c93db0510c",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -378,6 +378,7 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "perf-literal",
             "std"
           ],
@@ -2046,6 +2047,61 @@
       ],
       "license_file": "LICENSE"
     },
+    "bstr 1.9.1": {
+      "name": "bstr",
+      "version": "1.9.1",
+      "package_url": "https://github.com/BurntSushi/bstr",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bstr/1.9.1/download",
+          "sha256": "05efc5cfd9110c8416e471df0e96702d58690178e206e61b7173706673c93706"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bstr",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bstr",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "1.9.1"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "bumpalo 3.16.0": {
       "name": "bumpalo",
       "version": "3.16.0",
@@ -3040,6 +3096,60 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "colored 2.1.0": {
+      "name": "colored",
+      "version": "2.1.0",
+      "package_url": "https://github.com/mackwic/colored",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/colored/2.1.0/download",
+          "sha256": "cbf2150cce219b664a8a70df7a1f933836724b503f8a413af9365b4dcc4d90b8"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "colored",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "colored",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "lazy_static 1.4.0",
+              "target": "lazy_static"
+            }
+          ],
+          "selects": {
+            "cfg(windows)": [
+              {
+                "id": "windows-sys 0.48.0",
+                "target": "windows_sys"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "2.1.0"
+      },
+      "license": "MPL-2.0",
+      "license_ids": [
+        "MPL-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "command-fds 0.3.0": {
       "name": "command-fds",
       "version": "0.3.0",
@@ -3354,6 +3464,191 @@
         },
         "edition": "2015",
         "version": "1.4.2"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "crossbeam-deque 0.8.5": {
+      "name": "crossbeam-deque",
+      "version": "0.8.5",
+      "package_url": "https://github.com/crossbeam-rs/crossbeam",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/crossbeam-deque/0.8.5/download",
+          "sha256": "613f8cc01fe9cf1a3eb3d7f488fd2fa8388403e97039e2f73692932e291a770d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "crossbeam_deque",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "crossbeam_deque",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "crossbeam-epoch 0.9.18",
+              "target": "crossbeam_epoch"
+            },
+            {
+              "id": "crossbeam-utils 0.8.20",
+              "target": "crossbeam_utils"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.8.5"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "crossbeam-epoch 0.9.18": {
+      "name": "crossbeam-epoch",
+      "version": "0.9.18",
+      "package_url": "https://github.com/crossbeam-rs/crossbeam",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/crossbeam-epoch/0.9.18/download",
+          "sha256": "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "crossbeam_epoch",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "crossbeam_epoch",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "crossbeam-utils 0.8.20",
+              "target": "crossbeam_utils"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.9.18"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "crossbeam-utils 0.8.20": {
+      "name": "crossbeam-utils",
+      "version": "0.8.20",
+      "package_url": "https://github.com/crossbeam-rs/crossbeam",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/crossbeam-utils/0.8.20/download",
+          "sha256": "22ec99545bb0ed0ea7bb9b8e1e9122ea386ff8a48c0922e43f36d45ab09e0e80"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "crossbeam_utils",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "crossbeam_utils",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "crossbeam-utils 0.8.20",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.8.20"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -4502,6 +4797,10 @@
               "target": "clap"
             },
             {
+              "id": "colored 2.1.0",
+              "target": "colored"
+            },
+            {
               "id": "command-fds 0.3.0",
               "target": "command_fds"
             },
@@ -4548,6 +4847,14 @@
             {
               "id": "hpke 0.11.0",
               "target": "hpke"
+            },
+            {
+              "id": "ignore 0.4.22",
+              "target": "ignore"
+            },
+            {
+              "id": "lazy_static 1.4.0",
+              "target": "lazy_static"
             },
             {
               "id": "libm 0.2.8",
@@ -6654,6 +6961,77 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "globset 0.4.14": {
+      "name": "globset",
+      "version": "0.4.14",
+      "package_url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/globset/0.4.14/download",
+          "sha256": "57da3b9b5b85bd66f31093f8c408b90a74431672542466497dcbdfdc02034be1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "globset",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "globset",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "log"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "aho-corasick 1.1.3",
+              "target": "aho_corasick"
+            },
+            {
+              "id": "bstr 1.9.1",
+              "target": "bstr"
+            },
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            },
+            {
+              "id": "regex-automata 0.4.6",
+              "target": "regex_automata"
+            },
+            {
+              "id": "regex-syntax 0.8.3",
+              "target": "regex_syntax"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.4.14"
+      },
+      "license": "Unlicense OR MIT",
+      "license_ids": [
+        "MIT",
+        "Unlicense"
+      ],
+      "license_file": "LICENSE-MIT"
+    },
     "goblin 0.8.2": {
       "name": "goblin",
       "version": "0.8.2",
@@ -8144,6 +8522,85 @@
         "MIT"
       ],
       "license_file": "LICENSE"
+    },
+    "ignore 0.4.22": {
+      "name": "ignore",
+      "version": "0.4.22",
+      "package_url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ignore/0.4.22/download",
+          "sha256": "b46810df39e66e925525d6e38ce1e7f6e1d208f72dc39757880fcb66e2c58af1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ignore",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ignore",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "crossbeam-deque 0.8.5",
+              "target": "crossbeam_deque"
+            },
+            {
+              "id": "globset 0.4.14",
+              "target": "globset"
+            },
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            },
+            {
+              "id": "memchr 2.7.2",
+              "target": "memchr"
+            },
+            {
+              "id": "regex-automata 0.4.6",
+              "target": "regex_automata"
+            },
+            {
+              "id": "same-file 1.0.6",
+              "target": "same_file"
+            },
+            {
+              "id": "walkdir 2.5.0",
+              "target": "walkdir"
+            }
+          ],
+          "selects": {
+            "cfg(windows)": [
+              {
+                "id": "winapi-util 0.1.8",
+                "target": "winapi_util"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "0.4.22"
+      },
+      "license": "Unlicense OR MIT",
+      "license_ids": [
+        "MIT",
+        "Unlicense"
+      ],
+      "license_file": "LICENSE-MIT"
     },
     "indexmap 1.9.3": {
       "name": "indexmap",
@@ -12962,9 +13419,11 @@
             "dfa-onepass",
             "hybrid",
             "meta",
+            "nfa",
             "nfa-backtrack",
             "nfa-pikevm",
             "nfa-thompson",
+            "perf",
             "perf-inline",
             "perf-literal",
             "perf-literal-multisubstring",
@@ -20247,6 +20706,7 @@
     "bytes 1.6.0",
     "ciborium 0.2.2",
     "clap 4.5.4",
+    "colored 2.1.0",
     "command-fds 0.3.0",
     "coset 0.3.7",
     "curve25519-dalek 4.1.1",
@@ -20259,6 +20719,8 @@
     "hex 0.4.3",
     "hkdf 0.12.4",
     "hpke 0.11.0",
+    "ignore 0.4.22",
+    "lazy_static 1.4.0",
     "libm 0.2.8",
     "linked_list_allocator 0.10.5",
     "lock_api 0.4.12",

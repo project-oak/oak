@@ -42,24 +42,18 @@ impl Arbitrary<'_> for ResponseAndValidPolicy {
         // We limit the fuzzing to constant response size larger than the body.
         let constant_response_size_bytes = body_len + raw.int_in_range(0..=1000000)?;
 
-        Ok(ResponseAndValidPolicy {
-            response,
-            constant_response_size_bytes,
-        })
+        Ok(ResponseAndValidPolicy { response, constant_response_size_bytes })
     }
 }
 
-// This fuzz target checks that the constant size policy applies to an arbitrary request.
+// This fuzz target checks that the constant size policy applies to an arbitrary
+// request.
 fuzz_target!(|data: ResponseAndValidPolicy| {
     let constant_response_size_bytes = data.constant_response_size_bytes;
-    let response = data
-        .response
-        .pad(constant_response_size_bytes)
-        .unwrap()
-        .encode_to_vec();
+    let response = data.response.pad(constant_response_size_bytes).unwrap().encode_to_vec();
 
-    // Check the response size, which is the constant response size plus a fixed offset, where the
-    // status code and actual length are stored.
+    // Check the response size, which is the constant response size plus a fixed
+    // offset, where the status code and actual length are stored.
     assert_eq!(
         response.len(),
         oak_functions_abi::RESPONSE_BODY_OFFSET + constant_response_size_bytes

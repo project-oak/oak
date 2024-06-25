@@ -241,7 +241,8 @@ xtask job:
     ./scripts/xtask {{job}}
 
 clippy-ci: (xtask "run-cargo-clippy") bazel-clippy
-check-format-ci: (xtask "check-format") bazel-fmt
+check-format-ci:
+    bazel build --config=unsafe-fast-presubmit linter && bazel-bin/linter/linter --verbose
 
 # Temporary target to help debugging Bazel remote cache with more detailed logs.
 # It should be deleted when debugging is completed.
@@ -249,3 +250,7 @@ check-format-ci: (xtask "check-format") bazel-fmt
 bazel-cache-test:
     mkdir --parents target
     bazel test --config=unsafe-fast-presubmit --build_event_text_file=./target/bazel_bep_1.txt --execution_log_binary_file=./target/bazel_exec_1.log -- //cc/bazel_cache_test:test
+
+
+format:
+    bazel build linter && bazel-bin/linter/linter --fix

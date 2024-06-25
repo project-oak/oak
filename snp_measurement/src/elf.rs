@@ -34,8 +34,9 @@ pub struct MemorySegment {
 pub fn load_elf_segments(elf_path: PathBuf) -> anyhow::Result<Vec<MemorySegment>> {
     let elf_bytes = load_elf_file(elf_path)?;
     let elf = Elf::parse(&elf_bytes).context("invalid ELF file")?;
-    // For now we assume each segment's start address will be 4KiB aligned, so we do not pad the
-    // start. This assumption is validated when the segments are measured.
+    // For now we assume each segment's start address will be 4KiB aligned, so we do
+    // not pad the start. This assumption is validated when the segments are
+    // measured.
     Ok(elf
         .program_headers
         .iter()
