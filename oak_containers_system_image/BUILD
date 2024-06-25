@@ -133,6 +133,15 @@ oci_image(
     tars = [":nvidia_base_image_tar"],
 )
 
+# Helper targets for pushing base images.
+#
+# In order to set up the necessary credentials:
+#
+# - Install `gcloud`: https://cloud.google.com/sdk/docs/downloads-interactive
+# - `gcloud auth login`
+# - `gcloud config set project oak-ci`
+# - `gcloud auth configure-docker`
+# - `gcloud auth configure-docker europe-west2-docker.pkg.dev`
 # After running this target, you will need to update the hash for
 # oak_containers_sysimage_base in the WORKSPACE file to use it.
 oci_push(
