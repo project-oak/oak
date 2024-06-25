@@ -57,7 +57,8 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
           /* kem= */ EVP_hpke_x25519_hkdf_sha256(),
           /* priv_key= */ private_key_bytes.data(),
           /* priv_key_len= */ private_key_bytes.size())) {
-    return absl::AbortedError("Failed to generate HPKE keys for validation");
+    return absl::InvalidArgumentError(GetLastErrorWithPrefix(
+        "Failed to generate HPKE keys from input for validation"));
   }
 
   std::vector<uint8_t> verified_public_key_bytes(public_key_bytes.size());
@@ -67,11 +68,13 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
           /* out= */ verified_public_key_bytes.data(),
           /* out_len= */ &verfied_public_key_size,
           /* max_out= */ verified_public_key_bytes.size())) {
-    return absl::AbortedError("Failed to get public key");
+    return absl::InvalidArgumentError(
+        GetLastErrorWithPrefix("Failed to get public key"));
   }
 
   if (public_key_bytes != verified_public_key_bytes) {
-    return absl::InvalidArgumentError("Public key does not match private key");
+    return absl::InvalidArgumentError(
+        "Public key does not correspond to the private key");
   }
   return absl::OkStatus();
 }
@@ -85,7 +88,8 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
       /* key_len= */ session_keys.request_key().size(),
       /* tag_len= */ 0));
   if (request_aead_context == nullptr) {
-    return absl::AbortedError("Unable to deserialize request AEAD context");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Unable to deserialize request AEAD context"));
   }
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
@@ -94,7 +98,8 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
       /* key_len= */ session_keys.response_key().size(),
       /* tag_len= */ 0));
   if (response_aead_context == nullptr) {
-    return absl::AbortedError("Unable to deserialize response AEAD context");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Unable to deserialize response AEAD context"));
   }
 
   return std::make_unique<RecipientContext>(
@@ -154,7 +159,7 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
 
   std::unique_ptr<EVP_HPKE_CTX> hpke_recipient_context(EVP_HPKE_CTX_new());
   if (hpke_recipient_context == nullptr) {
-    return absl::AbortedError("Unable to generate HPKE recipient context");
+    return absl::InternalError("Unable to generate HPKE recipient context");
   }
 
   if (!EVP_HPKE_CTX_setup_recipient(
@@ -166,7 +171,8 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
           /* enc_len= */ encap_public_key_bytes.size(),
           /* info= */ info_bytes.data(),
           /* info_len= */ info_bytes.size())) {
-    return absl::AbortedError("Unable to setup recipient context");
+    return absl::InvalidArgumentError(
+        GetLastErrorWithPrefix("Unable to setup recipient context"));
   }
 
   // Configure recipient request context.
@@ -205,7 +211,8 @@ absl::StatusOr<KeyPair> KeyPair::Generate() {
   if (!EVP_HPKE_KEY_generate(
           /* key= */ recipient_keys.get(),
           /* kem= */ EVP_hpke_x25519_hkdf_sha256())) {
-    return absl::AbortedError("Failed to generate HPKE keys");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Failed to generate HPKE keys"));
   }
 
   std::vector<uint8_t> public_key_bytes(EVP_HPKE_MAX_PUBLIC_KEY_LENGTH);
@@ -215,7 +222,8 @@ absl::StatusOr<KeyPair> KeyPair::Generate() {
           /* out= */ public_key_bytes.data(),
           /* out_len= */ &public_key_bytes_len,
           /* max_out= */ public_key_bytes.size())) {
-    return absl::AbortedError("Failed to retrieve public key");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Failed to retrieve public key"));
   }
   public_key_bytes.resize(public_key_bytes_len);
 
@@ -226,7 +234,8 @@ absl::StatusOr<KeyPair> KeyPair::Generate() {
           /* out= */ private_key_bytes.data(),
           /* out_len= */ &private_key_bytes_len,
           /* max_out= */ private_key_bytes.size())) {
-    return absl::AbortedError("Failed to retrieve private key");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Failed to retrieve private key"));
   }
   private_key_bytes.resize(private_key_bytes_len);
 

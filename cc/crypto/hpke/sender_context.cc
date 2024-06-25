@@ -77,7 +77,7 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
 
   std::unique_ptr<EVP_HPKE_CTX> hpke_sender_context(EVP_HPKE_CTX_new());
   if (hpke_sender_context == nullptr) {
-    return absl::AbortedError("Unable to generate HPKE sender context");
+    return absl::InternalError("Unable to generate HPKE sender context");
   }
 
   if (!EVP_HPKE_CTX_setup_sender(
@@ -92,7 +92,8 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
           /* peer_public_key_len= */ recipient_public_key_bytes.size(),
           /* info= */ info_bytes.data(),
           /* info_len= */ info_bytes.size())) {
-    return absl::AbortedError("Unable to setup sender context");
+    return absl::InvalidArgumentError(
+        GetLastErrorWithPrefix("Unable to setup sender context"));
   }
   encap_public_key_info.key_bytes.resize(encap_public_key_info.key_size);
 

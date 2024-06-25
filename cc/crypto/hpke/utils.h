@@ -27,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
+#include "openssl/err.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
@@ -70,6 +71,8 @@ absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context,
                                      std::vector<uint8_t> nonce,
                                      absl::string_view ciphertext,
                                      absl::string_view associated_data);
+
+std::string GetLastErrorWithPrefix(absl::string_view prefix);
 
 }  // namespace oak::crypto
 #endif  // CC_CRYPTO_HPKE_CONSTANTS_H_

@@ -121,9 +121,9 @@ TEST(EncryptorTest,
   auto server_decryption_result = server_encryptor.Decrypt(*client_ciphertext);
   EXPECT_FALSE(server_decryption_result.ok());
   EXPECT_EQ(server_decryption_result.status().code(),
-            absl::StatusCode::kAborted);
+            absl::StatusCode::kInvalidArgument);
   EXPECT_THAT(server_decryption_result.status().message(),
-              StrEq("Unable to decrypt message"));
+              StrEq("Unable to decrypt message: code=101, reason=BAD_DECRYPT"));
 }
 
 }  // namespace

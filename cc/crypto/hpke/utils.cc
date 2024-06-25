@@ -27,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
+#include "openssl/err.h"
 #include "openssl/hpke.h"
 #include "openssl/rand.h"
 
@@ -49,7 +50,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
           /* secret_len= */ key.size(),
           /* context= */ key_context_bytes.data(),
           /* context_len= */ key_context_bytes.size())) {
-    return absl::AbortedError("Unable to export key");
+    return absl::InternalError(GetLastErrorWithPrefix("Unable to export key"));
   }
 
   std::unique_ptr<EVP_AEAD_CTX> aead_context(EVP_AEAD_CTX_new(
@@ -59,7 +60,8 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
       /* tag_len= */ 0));
 
   if (aead_context == nullptr) {
-    return absl::AbortedError("Unable to generate AEAD context");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Unable to generate AEAD context"));
   }
 
   return std::move(aead_context);
@@ -68,7 +70,8 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(
 absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
   if (!RAND_bytes(nonce.data(), nonce.size())) {
-    return absl::AbortedError("Unable to generate random nonce");
+    return absl::InternalError(
+        GetLastErrorWithPrefix("Unable to generate random nonce"));
   }
   return nonce;
 }
@@ -101,7 +104,8 @@ absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context,
           /* in_len= */ plaintext_bytes.size(),
           /* ad= */ associated_data_bytes.data(),
           /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Unable to encrypt message");
+    return absl::InvalidArgumentError(
+        GetLastErrorWithPrefix("Unable to encrypt message"));
   }
   ciphertext_bytes.resize(ciphertext_bytes_len);
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
@@ -134,11 +138,20 @@ absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context,
           /* in_len= */ ciphertext_bytes.size(),
           /* ad= */ associated_data_bytes.data(),
           /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Unable to decrypt message");
+    return absl::InvalidArgumentError(
+        GetLastErrorWithPrefix("Unable to decrypt message"));
   }
   plaintext_bytes.resize(plaintext_bytes_size);
   std::string plaintext(plaintext_bytes.begin(), plaintext_bytes.end());
   return plaintext;
+}
+
+// Gets latest from the OpenSSL error queue and return it's corresponding reason
+// string with a `prefix`.
+std::string GetLastErrorWithPrefix(absl::string_view prefix) {
+  int error = ERR_peek_last_error();
+  return absl::StrFormat("%s: code=%d, reason=%s", prefix,
+                         ERR_GET_REASON(error), ERR_reason_error_string(error));
 }
 
 }  // namespace oak::crypto

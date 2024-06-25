@@ -188,7 +188,8 @@ TEST_F(RecipientContextTest, RecipientRequestContextOpenFailure) {
       (*recipient_context)
           ->Open(*nonce, edited_ciphertext, associated_data_request_);
   EXPECT_FALSE(received_plaintext.ok());
-  EXPECT_EQ(received_plaintext.status().code(), absl::StatusCode::kAborted);
+  EXPECT_EQ(received_plaintext.status().code(),
+            absl::StatusCode::kInvalidArgument);
 }
 
 TEST_F(RecipientContextTest, RecipientResponseContextSealSuccess) {

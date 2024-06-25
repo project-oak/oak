@@ -210,7 +210,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   auto decyphered_message = sender_context.Open(
       default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
-  EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
+  EXPECT_EQ(decyphered_message.status().code(),
+            absl::StatusCode::kInvalidArgument);
 
   // Cleanup the lingering context.
   EVP_AEAD_CTX_free(response_aead_context_send.release());
@@ -267,7 +268,8 @@ TEST_F(SenderContextTest,
   auto decyphered_message = sender_context.Open(
       default_nonce_bytes_, ciphertext, different_associated_data);
   EXPECT_FALSE(decyphered_message.ok());
-  EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
+  EXPECT_EQ(decyphered_message.status().code(),
+            absl::StatusCode::kInvalidArgument);
 
   // Cleanup the lingering context.
   EVP_AEAD_CTX_free(response_aead_context_send.release());
