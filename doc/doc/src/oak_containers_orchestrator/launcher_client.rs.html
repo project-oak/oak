@@ -126,6 +126,26 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -143,7 +163,9 @@
 
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+<span class="kw">use </span>tokio_vsock::{VsockAddr, VsockStream};
 <span class="kw">use </span>tonic::transport::Channel;
+<span class="kw">use </span>tower::service_fn;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
     attestation::v1::Evidence,
@@ -164,7 +186,25 @@
 
 <span class="kw">impl </span>LauncherClient {
     <span class="kw">pub async fn </span>create(addr: tonic::transport::Uri) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-        <span class="kw">let </span>channel = Channel::builder(addr.clone()).connect().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>channel = <span class="kw">if </span>addr.scheme_str() == <span class="prelude-val">Some</span>(<span class="string">"vsock"</span>) {
+            <span class="kw">let </span>vsock_addr = VsockAddr::new(
+                addr.host()
+                    .unwrap_or(<span class="macro">format!</span>(<span class="string">"{}"</span>, tokio_vsock::VMADDR_CID_HOST).as_str())
+                    .parse()
+                    .context(<span class="string">"invalid vsock CID"</span>)<span class="question-mark">?</span>,
+                addr.port_u16().context(<span class="string">"invalid vsock port"</span>)<span class="question-mark">?</span>.into(),
+            );
+
+            <span class="comment">// The C++ gRPC implementations are more particular about the URI scheme; in
+            // particular, they may get confused by the "vsock" scheme. Therfore, create a
+            // fake URI with the "http" scheme to placate the libraries; the actual
+            // connection is made in `connect_with_connector` and that uses the correct URI.
+            </span>Channel::builder(tonic::transport::Uri::from_static(<span class="string">"http://0:0"</span>))
+                .connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| VsockStream::connect(vsock_addr)))
+                .<span class="kw">await</span><span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            Channel::builder(addr.clone()).connect().<span class="kw">await</span><span class="question-mark">?
+        </span>};
         <span class="kw">let </span>inner = GrpcLauncherClient::new(channel.clone());
         <span class="kw">let </span>hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ addr, inner, hostlib_key_provisioning_client })

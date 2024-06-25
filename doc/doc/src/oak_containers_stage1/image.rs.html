@@ -39,6 +39,13 @@
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -55,10 +62,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
+</span><span class="kw">use </span>std::{
+    ffi::{CStr, CString},
+    os::unix::prelude::OsStrExt,
+    path::Path,
+};
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>nix::unistd::execv;
+<span class="kw">use </span>nix::unistd::execve;
 <span class="kw">use </span>tar::Archive;
 <span class="kw">use </span>xz2::read::XzDecoder;
 
@@ -68,14 +79,17 @@
     archive.unpack(dst).map_err(|e| <span class="macro">anyhow!</span>(e))
 }
 
-<span class="kw">pub fn </span>switch(init: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;!&gt; {
+<span class="kw">pub fn </span>switch&lt;SE&gt;(init: <span class="kw-2">&amp;</span>str, env: <span class="kw-2">&amp;</span>[SE]) -&gt; <span class="prelude-ty">Result</span>&lt;!&gt;
+<span class="kw">where
+    </span>SE: AsRef&lt;CStr&gt;,
+{
     <span class="comment">// On one hand, I feel like this function should be marked `unsafe` as this will
     // unconditionally switch over to the new executable (if it succeeds) without
     // any more Rust code executing. On the other hand, the return type is `!`,
     // so you shouldn't expect the control to return.
     </span><span class="kw">let </span>args: Vec&lt;CString&gt; =
         std::env::args_os().map(|arg| CString::new(arg.as_bytes()).unwrap()).collect();
-    execv(CString::new(init).unwrap().as_c_str(), <span class="kw-2">&amp;</span>args[..])<span class="question-mark">?</span>;
+    execve(CString::new(init).unwrap().as_c_str(), <span class="kw-2">&amp;</span>args[..], env)<span class="question-mark">?</span>;
     <span class="macro">unreachable!</span>()
 }
 </code></pre></div></section></main></body></html>

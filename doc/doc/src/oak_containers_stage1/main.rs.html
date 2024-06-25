@@ -168,6 +168,10 @@
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -262,7 +266,7 @@
     chroot(<span class="string">"."</span>).context(<span class="string">"failed to chroot to ."</span>)<span class="question-mark">?</span>;
     chdir(<span class="string">"/"</span>).context(<span class="string">"failed to chdir to /"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr)
+    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr.clone())
         .<span class="kw">await
         </span>.context(<span class="string">"error creating the launcher client"</span>)<span class="question-mark">?</span>;
 
@@ -320,7 +324,11 @@
         .or_else(|err| <span class="kw">if </span>err.kind() == ErrorKind::NotFound { <span class="prelude-val">Ok</span>(()) } <span class="kw">else </span>{ <span class="prelude-val">Err</span>(err) })
         .context(<span class="string">"error removing `/.dockerenv`"</span>)<span class="question-mark">?</span>;
 
-    image::switch(<span class="kw-2">&amp;</span>args.init).context(<span class="string">"error switching to the system image"</span>)<span class="question-mark">?
+    image::switch(
+        <span class="kw-2">&amp;</span>args.init,
+        <span class="kw-2">&amp;</span>[std::ffi::CString::new(<span class="macro">format!</span>(<span class="string">"LAUNCHER_ADDR={}"</span>, args.launcher_addr)).unwrap()],
+    )
+    .context(<span class="string">"error switching to the system image"</span>)<span class="question-mark">?
 </span>}
 
 <span class="doccomment">/// Tries to parse a string slice as an address.
