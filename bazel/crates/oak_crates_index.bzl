@@ -255,6 +255,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "prost-types": crate.spec(
                 version = "*",
             ),
+            "rand": crate.spec(version = "*"),
             "rand_core": crate.spec(
                 default_features = False,
                 features = ["getrandom"],
