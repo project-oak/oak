@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/payload.rs`."><title>payload.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel/src/processes.rs`."><title>processes.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -226,6 +226,7 @@
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -276,17 +277,16 @@
     }
 );
 
-<span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can
-/// run.
-</span><span class="kw">pub struct </span>Application {
+<span class="doccomment">/// Parsed Elf executeable representing a Restricted Application.
+</span><span class="kw">pub struct </span>ElfExecuteable {
     binary: Binary,
 }
 
-<span class="kw">impl </span>Application {
+<span class="kw">impl </span>ElfExecuteable {
     <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing
-    /// an Restricted Application.
+    /// a Restricted Application.
     </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="prelude-val">Ok</span>(Application {
+        <span class="prelude-val">Ok</span>(ElfExecuteable {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"failed to parse ELF file: {}"</span>, err))
@@ -372,7 +372,7 @@
     }
 }
 
-<span class="kw">pub fn </span>identify_pml4_frame(
+<span class="kw">fn </span>identify_pml4_frame(
     pml4: <span class="kw-2">&amp;</span>x86_64::structures::paging::PageTable,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;x86_64::structures::paging::PhysFrame, anyhow::Error&gt; {
     <span class="kw">let </span>phys_addr = {
@@ -398,9 +398,11 @@
     ///
     /// # Safety
     ///
-    /// The application must be built from a valid ELF file representing an Oak
+    /// The process must be built from a valid ELF file representing an Oak
     /// Restricted Application.
-    </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;usize, anyhow::Error&gt; {
+    </span><span class="kw">pub unsafe fn </span>from_elf_executeable(
+        elf_executeable: <span class="kw-2">&amp;</span>ElfExecuteable,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, anyhow::Error&gt; {
         <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">"base l4 table should be set"</span>)<span class="question-mark">?</span>.clone();
         <span class="comment">// Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
@@ -415,7 +417,7 @@
 
         <span class="comment">// Safety: caller ensured the application is a valid ELF file representing an
         // Oak Restricted Application.
-        </span><span class="kw">let </span>entry = <span class="kw">unsafe </span>{ application.map_into_memory() };
+        </span><span class="kw">let </span>entry = <span class="kw">unsafe </span>{ elf_executeable.map_into_memory() };
 
         <span class="comment">// We've mapped the memory into the process page tables. Let's revert to the
         // previous page table.

@@ -515,6 +515,9 @@
 <a href="#513" id="513">513</a>
 <a href="#514" id="514">514</a>
 <a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -567,7 +570,7 @@
 <span class="kw">mod </span>logging;
 <span class="kw">mod </span>memory;
 <span class="kw">mod </span>mm;
-<span class="kw">mod </span>payload;
+<span class="kw">mod </span>processes;
 <span class="attr">#[cfg(feature = <span class="string">"serial_channel"</span>)]
 </span><span class="kw">mod </span>serial;
 <span class="kw">pub mod </span>shutdown;
@@ -611,7 +614,7 @@
 <span class="kw">use crate</span>::{
     acpi::Acpi,
     mm::Translator,
-    payload::Process,
+    processes::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -966,9 +969,6 @@
 
     <span class="macro">log::info!</span>(<span class="string">"Binary loaded, size: {}"</span>, application_bytes.len());
 
-    <span class="kw">let </span>application =
-        payload::Application::new(application_bytes).expect(<span class="string">"failed to parse application"</span>);
-
     syscall::enable_syscalls(
         channel,
         syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
@@ -976,7 +976,13 @@
 
     <span class="comment">// Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
-    </span><span class="kw">let </span>pid = <span class="kw">unsafe </span>{ Process::from_application(<span class="kw-2">&amp;</span>application).expect(<span class="string">"failed to create process"</span>) };
+    </span><span class="kw">let </span>pid = {
+        <span class="kw">let </span>elf_executeable =
+            processes::ElfExecuteable::new(application_bytes).expect(<span class="string">"failed to parse application"</span>);
+        <span class="kw">unsafe </span>{
+            Process::from_elf_executeable(<span class="kw-2">&amp;</span>elf_executeable).expect(<span class="string">"failed to create process"</span>)
+        }
+    };
 
     PROCCESSES.execute(pid).expect(<span class="string">"failed to execute initial process"</span>)
 }
