@@ -46,4 +46,9 @@ exports_files([
     "rk_evidence_20240312.textproto",
     "rk_vcek_milan.der",
     "rk_vcek_milan.pem",
+    "genoa_oc_evidence.binarypb",
+    "genoa_oc_evidence.prototext",
+    "genoa_oc_reference_values.binarypb",
+    "genoa_oc_reference_values.textproto",
+    "vcek_genoa.der",
 ])

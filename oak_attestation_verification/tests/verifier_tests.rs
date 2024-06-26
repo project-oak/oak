@@ -49,6 +49,9 @@ const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
 const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
 const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
+const GENOA_OC_EVIDENCE_PATH: &str = "testdata/genoa_oc_evidence.binarypb";
+const GENOA_VCEK_CERT_DER: &str = "testdata/vcek_genoa.der";
+const GENOA_OC_REFERENCE_PATH: &str = "testdata/genoa_oc_reference_values.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -146,6 +149,36 @@ fn create_rk_endorsements() -> Endorsements {
             oak_proto_rust::oak::attestation::v1::endorsements::Type::OakRestrictedKernel(ends),
         ),
     }
+}
+
+// Creates a valid AMD SEV-SNP evidence instance for Oak Containers running in
+// Genoa CPU.
+fn create_genoa_oc_evidence() -> Evidence {
+    let serialized = fs::read(GENOA_OC_EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Create a valid endorsement for Oak container.
+fn create_genoa_oc_endorsements() -> Endorsements {
+    let vcek_milan_cert = fs::read(GENOA_VCEK_CERT_DER).expect("could not read TEE cert");
+    let root_layer = oak_proto_rust::oak::attestation::v1::RootLayerEndorsements {
+        tee_certificate: vcek_milan_cert,
+        stage0: None,
+    };
+    let ends = oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
+        root_layer: Some(root_layer),
+        container_layer: None,
+        kernel_layer: None,
+        system_layer: None,
+    };
+    oak_proto_rust::oak::attestation::v1::Endorsements {
+        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+    }
+}
+
+fn create_genoa_oc_reference_values() -> ReferenceValues {
+    let serialized = fs::read(GENOA_OC_REFERENCE_PATH).expect("could not read reference");
+    ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference")
 }
 
 #[test]
@@ -1389,4 +1422,20 @@ fn restricted_kernel_application_config_fails() {
         },
     );
     assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+}
+
+#[test]
+fn verify_genoa() {
+    let evidence = create_genoa_oc_evidence();
+    let endorsements = create_genoa_oc_endorsements();
+    let reference_values = create_genoa_oc_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
 }

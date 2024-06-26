@@ -33,7 +33,7 @@ use zerocopy::{AsBytes, FromZeroes};
 // Table 8 of
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 const RSA_SSA_PSS_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113549.1.1.10");
-const _PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.2");
+const PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.2");
 const BL_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.1");
 const TEE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.2");
 const SNP_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.3");
@@ -81,8 +81,7 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
         .map_err(|_err| anyhow::anyhow!("signature verification failed"))
 }
 
-// Currently unused, use `pub` only to disable the warning.
-fn _product_name(cert: &Certificate) -> anyhow::Result<String> {
+pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
     let exts = cert
         .tbs_certificate
         .extensions
@@ -90,7 +89,7 @@ fn _product_name(cert: &Certificate) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?;
     let pn_ext = exts
         .iter()
-        .find(|&ext| ext.extn_id == _PRODUCT_NAME_OID)
+        .find(|&ext| ext.extn_id == PRODUCT_NAME_OID)
         .ok_or_else(|| anyhow::anyhow!("no product name found in cert"))?;
     String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
         .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))

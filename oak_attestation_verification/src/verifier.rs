@@ -68,7 +68,7 @@ use x509_cert::{
 use zerocopy::FromBytes;
 
 use crate::{
-    amd::{verify_attestation_report_signature, verify_cert_signature},
+    amd::{product_name, verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     util::{
@@ -76,8 +76,6 @@ use crate::{
         raw_digest_from_contents, raw_to_hex_digest,
     },
 };
-
-const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
@@ -526,6 +524,9 @@ fn verify_insecure(_expected_values: &InsecureExpectedValues) -> anyhow::Result<
     Ok(())
 }
 
+const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
+const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
+
 /// Verifies the signature chain for the attestation report included in the
 /// root.
 fn verify_root_attestation_signature(
@@ -539,13 +540,19 @@ fn verify_root_attestation_signature(
             // We demand that product-specific ASK signs the VCEK.
             let vcek = Certificate::from_der(serialized_certificate)
                 .map_err(|_err| anyhow::anyhow!("could not parse VCEK cert"))?;
-            // Right now there are only Milan CPUs, so it is not urgent to code the
-            // decision between Milan and Genoa which would appear here.
-            let ask_milan = Certificate::from_pem(ASK_MILAN_CERT_PEM)
-                .map_err(|_err| anyhow::anyhow!("could not parse ASK cert"))?;
+
+            let ask = if product_name(&vcek)?.contains("Milan") {
+                Certificate::from_pem(ASK_MILAN_CERT_PEM)
+                    .map_err(|_err| anyhow::anyhow!("could not parse Milan ASK cert"))?
+            } else if product_name(&vcek)?.contains("Genoa") {
+                Certificate::from_pem(ASK_GENOA_CERT_PEM)
+                    .map_err(|_err| anyhow::anyhow!("could not parse Genoa ASK cert"))?
+            } else {
+                anyhow::bail!("unsupported AMD product");
+            };
 
             // TODO(#4747): user current date as part of VCEK verification.
-            verify_cert_signature(&ask_milan, &vcek)?;
+            verify_cert_signature(&ask, &vcek)?;
 
             let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
                 .context("invalid AMD SEV-SNP attestation report")?;

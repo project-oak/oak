@@ -26,6 +26,7 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = [
         "//oak_attestation_verification/data:ask_milan.pem",
+        "//oak_attestation_verification/data:ask_genoa.pem",
     ],
     deps = [
         "//oak_dice",
@@ -55,6 +56,7 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = [
         "//oak_attestation_verification/data:ask_milan.pem",
+        "//oak_attestation_verification/data:ask_genoa.pem",
     ],
     crate_features = ["regex"],
     deps = [
