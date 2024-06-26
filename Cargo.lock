@@ -3145,6 +3145,7 @@ name = "oak_session"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "oak_crypto",
  "oak_proto_rust",
 ]
 

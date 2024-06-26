@@ -118,12 +118,15 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "criterion": crate.spec(version = "0.5"),
+            "criterion-macro": crate.spec(version = "0.4"),
             # Pin to 4.1.1 see issue #4952
             # TODO: #4952 - Remove this pinning.
             "curve25519-dalek": crate.spec(
                 default_features = False,
                 version = "=4.1.1",
             ),
+            "duct": crate.spec(version = "*"),
             "ecdsa": crate.spec(
                 default_features = False,
                 features = [
@@ -137,9 +140,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "env_logger": crate.spec(version = "*"),
             "futures": crate.spec(version = "*"),
             "futures-util": crate.spec(version = "*"),
-            "getrandom": crate.spec(
-                version = "*",
-            ),
+            "getrandom": crate.spec(version = "*"),
             "goblin": crate.spec(
                 default_features = False,
                 features = [
@@ -158,6 +159,15 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "hyper": crate.spec(
+                features = [
+                    "client",
+                    "http1",
+                    "runtime",
+                    "server",
+                ],
+                version = "*",
+            ),
             "hpke": crate.spec(
                 default_features = False,
                 features = [
@@ -166,8 +176,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "http": crate.spec(version = "*"),
             "ignore": crate.spec(version = "*"),
             "lazy_static": crate.spec(version = "*"),
+            "libloading": crate.spec(version = "*"),
             "libm": crate.spec(version = "*"),
             "linked_list_allocator": crate.spec(
                 features = [
@@ -182,16 +194,14 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "maplit": crate.spec(version = "*"),
             "nix": crate.spec(
                 features = ["user", "process"],
                 version = "*",
             ),
-            "oci-spec": crate.spec(
-                version = "*",
-            ),
-            "opentelemetry": crate.spec(
-                version = "*",
-            ),
+            "oci-spec": crate.spec(version = "*"),
+            "once_cell": crate.spec(version = "*"),
+            "opentelemetry": crate.spec(version = "*"),
             "opentelemetry-proto": crate.spec(
                 features = [
                     "gen-tonic",
@@ -211,6 +221,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "ouroboros": crate.spec(version = "*"),
             "p256": crate.spec(
                 default_features = False,
                 features = [
@@ -229,18 +240,25 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "0.13.0",
             ),
+            "parking_lot": crate.spec(version = "*"),
             "pkcs8": crate.spec(
                 default_features = False,
                 features = ["alloc"],
+                version = "*",
+            ),
+            "port_check": crate.spec(version = "*"),
+            "pprof": crate.spec(
+                features = [
+                    "frame-pointer",
+                    "prost-codec",
+                ],
                 version = "*",
             ),
             "primeorder": crate.spec(
                 default_features = False,
                 version = "*",
             ),
-            "procfs": crate.spec(
-                version = "*",
-            ),
+            "procfs": crate.spec(version = "*"),
             "prost": crate.spec(
                 default_features = False,
                 features = ["prost-derive"],
@@ -255,6 +273,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "prost-types": crate.spec(
                 version = "*",
             ),
+            "quote": crate.spec(version = "*"),
             "rand": crate.spec(version = "*"),
             "rand_core": crate.spec(
                 default_features = False,
@@ -265,10 +284,12 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "rlsf": crate.spec(version = "*"),
             "rsa": crate.spec(
                 default_features = False,
                 version = "0.9.6",
             ),
+            "rtnetlink": crate.spec(version = "*"),
             "self_cell": crate.spec(version = "*"),
             "serde": crate.spec(
                 default_features = False,
@@ -280,27 +301,37 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 features = ["alloc"],
                 version = "*",
             ),
+            "serde_yaml": crate.spec(version = "*"),
+            "signal-hook": crate.spec(version = "*"),
+            "signal-hook-tokio": crate.spec(
+                features = ["futures-v0_3"],
+                version = "*",
+            ),
             "sha2": crate.spec(
                 default_features = False,
                 version = "*",
             ),
+            "simple_logger": crate.spec(version = "*"),
             "snafu": crate.spec(
                 default_features = False,
                 version = "*",
             ),
             "spinning_top": crate.spec(version = "*"),
             "static_assertions": crate.spec(version = "*"),
+            "stderrlog": crate.spec(version = "*"),
             "strum": crate.spec(
                 default_features = False,
                 features = ["derive"],
                 version = "*",
             ),
-            "syslog": crate.spec(
+            "subprocess": crate.spec(version = "*"),
+            "syn": crate.spec(
+                features = ["full"],
                 version = "*",
             ),
-            "tar": crate.spec(
-                version = "*",
-            ),
+            "syslog": crate.spec(version = "*"),
+            "tar": crate.spec(version = "*"),
+            "tempfile": crate.spec(version = "*"),
             "tikv-jemallocator": crate.spec(version = "*"),
             "time": crate.spec(
                 default_features = False,
@@ -345,9 +376,21 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "tonic": crate.spec(version = "*"),
             "tonic-build": crate.spec(version = "*"),
+            "tonic-web": crate.spec(version = "*"),
             "tower": crate.spec(version = "*"),
+            "tower-http": crate.spec(
+                features = ["trace"],
+                version = "*",
+            ),
+            "tracing": crate.spec(version = "*"),
             "uart_16550": crate.spec(version = "*"),
+            "ubyte": crate.spec(version = "*"),
             "walkdir": crate.spec(version = "*"),
+            "wasmi": crate.spec(
+                default_features = False,
+                version = "*",
+            ),
+            "wasmtime": crate.spec(version = "*"),
             "which": crate.spec(version = "*"),
             "x509-cert": crate.spec(
                 default_features = False,
@@ -355,6 +398,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "0.2.5",
             ),
             "x86_64": crate.spec(version = "0.14"),
+            "xz2": crate.spec(version = "*"),
             "zerocopy": crate.spec(
                 default_features = False,
                 features = ["derive"],
