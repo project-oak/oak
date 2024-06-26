@@ -37,7 +37,7 @@ impl linter::LinterTool for SourceLicenseTool {
 
         for line in reader.lines().take(50) {
             if line?.contains("Apache License") {
-                return Ok(Outcome::Success);
+                return Ok(Outcome::Success("".to_string()));
             }
         }
         Ok(Outcome::Failure("No license file header found.".to_string()))

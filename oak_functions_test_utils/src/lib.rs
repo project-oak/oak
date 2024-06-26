@@ -16,13 +16,9 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
-use std::{
-    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
-    time::Duration,
-};
+use std::{collections::HashMap, future::Future, io::Write, pin::Pin, task::Poll, time::Duration};
 
 use anyhow::Context;
-use log::info;
 use nix::unistd::Pid;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
@@ -30,48 +26,6 @@ use oak_functions_client::OakFunctionsClient;
 use prost::Message;
 use tokio::{sync::oneshot, task::JoinHandle};
 use ubyte::ByteUnit;
-
-/// Returns the path to the Wasm file produced by compiling the provided
-/// `Cargo.toml` file.
-fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
-    let package_name = &metadata.root_package().unwrap().name;
-    // Keep this in sync with `/xtask/src/main.rs`.
-    format!("{}/bin/{package_name}.wasm", metadata.workspace_root)
-}
-
-/// Uses cargo to compile a Rust manifest to Wasm bytes.
-pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<Vec<u8>> {
-    let metadata =
-        cargo_metadata::MetadataCommand::new().manifest_path(manifest_path).exec().unwrap();
-    // Keep this in sync with `/xtask/src/main.rs`.
-    // Keep this in sync with `/sdk/rust/oak_tests/src/lib.rs`.
-    let mut args = vec![
-        // `--out-dir` is unstable and requires `-Zunstable-options`.
-        "-Zunstable-options".to_string(),
-        "build".to_string(),
-        "--target=wasm32-unknown-unknown".to_string(),
-        format!("--target-dir={}/wasm", metadata.target_directory),
-        format!("--out-dir={}/bin", metadata.workspace_root),
-        format!("--manifest-path={manifest_path}"),
-    ];
-
-    if release {
-        args.push("--release".to_string());
-    }
-
-    Command::new("cargo")
-        .args(args)
-        .env_remove("RUSTFLAGS")
-        .spawn()
-        .context("couldn't spawn cargo build")?
-        .wait()
-        .context("couldn't wait for cargo build to finish")?;
-
-    let module_path = build_wasm_module_path(&metadata);
-    info!("Compiled Wasm module path: {:?}", module_path);
-
-    std::fs::read(module_path).context("couldn't read compiled module")
-}
 
 /// Serializes the provided map as a contiguous buffer of length-delimited
 /// protobuf messages of type [`Entry`](https://github.com/project-oak/oak/blob/main/proto/oak_functions/lookup_data.proto).
@@ -192,16 +146,10 @@ pub fn build_rust_crate_enclave(crate_name: &str) -> anyhow::Result<String> {
 /// attribute in a Cargo.toml file included in the root cargo workspace) as a
 /// Wasm module, and returns the path of the resulting binary.
 pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
-    duct::cmd!(
-        "cargo",
-        "build",
-        "--target=wasm32-unknown-unknown",
-        "--release",
-        format!("--package={crate_name}"),
-    )
-    .dir(env!("WORKSPACE_ROOT"))
-    .run()
-    .context(format!("couldn't compile Wasm module {crate_name}"))?;
+    duct::cmd!("just", "wasm_release_crate", crate_name,)
+        .dir(env!("WORKSPACE_ROOT"))
+        .run()
+        .context(format!("couldn't compile Wasm module {crate_name}"))?;
     Ok(rust_crate_wasm_out_path(crate_name))
 }
 

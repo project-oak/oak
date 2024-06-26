@@ -35,7 +35,7 @@ pub enum Mode {
 #[derive(Clone, Debug)]
 pub enum Outcome {
     /// The linter action succeeded without issues
-    Success,
+    Success(String),
 
     /// The linter tool failed to launch or failed to terminate normally.
     Failure(String),
@@ -86,13 +86,13 @@ impl TryFrom<&mut process::Command> for Outcome {
 
     fn try_from(command: &mut process::Command) -> Result<Outcome, Self::Error> {
         let output = command.output()?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let newline = if stdout.is_empty() || stderr.is_empty() { "" } else { "\n" };
+        let messages = format!("{stdout}{newline}{stderr}");
         Ok(match output.status.success() {
-            true => Outcome::Success,
-            false => Outcome::Failure(format!(
-                "{}\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            )),
+            true => Outcome::Success(messages),
+            false => Outcome::Failure(messages),
         })
     }
 }

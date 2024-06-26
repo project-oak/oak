@@ -118,7 +118,10 @@ impl LinterContext {
                     let message = format!("TOOL FAILURE {err:?}").red();
                     println!("{}", message);
                 }
-                Ok(linter::Outcome::Success) => {
+                Ok(linter::Outcome::Success(message)) => {
+                    if !message.is_empty() {
+                        println!("{}", message);
+                    }
                     if self.verbose {
                         println!("No issues: {}", outcome.filename.cyan())
                     }

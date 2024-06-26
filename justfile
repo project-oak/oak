@@ -72,6 +72,12 @@ oak_client_android_app:
         bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
         generated
 
+wasm_crate name:
+    cargo build --target=wasm32-unknown-unknown -p {{name}}
+
+wasm_release_crate name:
+    cargo build --target=wasm32-unknown-unknown --release -p {{name}}
+
 stage0_bin:
     env --chdir=stage0_bin \
         cargo objcopy --release -- --output-target=binary \

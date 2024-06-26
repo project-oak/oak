@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use oak_functions_abi::{Request, Response};
@@ -26,25 +26,19 @@ use oak_functions_service::{
 };
 
 lazy_static! {
-    static ref PATH_TO_MODULES: PathBuf = {
-        // WORKSPACE_ROOT is set in .cargo/config.toml.
-         [env!("WORKSPACE_ROOT"),"oak_functions_sdk", "tests"].iter().collect()
-    };
     static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = PATH_TO_MODULES.clone();
-        manifest_path.push("lookup_module");
-        manifest_path.push("Cargo.toml");
-
-        oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("couldn't read Wasm module")
+        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(
+            "oak_functions_sdk_abi_test_get_storage_item",
+        )
+        .expect("couldn't read Wasm module");
+        std::fs::read(wasm_path).expect("couldn't read compiled module")
     };
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
-        let mut manifest_path = PATH_TO_MODULES.clone();
-        manifest_path.push("testing_module");
-        manifest_path.push("Cargo.toml");
-
-        oak_functions_test_utils::compile_rust_wasm(manifest_path.to_str().unwrap(), false)
-            .expect("couldn't read Wasm module")
+        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(
+            "oak_functions_sdk_abi_test_invoke_testing",
+        )
+        .expect("couldn't read Wasm module");
+        std::fs::read(wasm_path).expect("couldn't read compiled module")
     };
 }
 

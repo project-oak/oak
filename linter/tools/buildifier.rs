@@ -32,6 +32,6 @@ impl linter::LinterTool for BuildifierTool {
     }
 
     fn fix(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("buildifier", &["-mode=fix", "-lint=fix"], path)
+        super::linter_command("buildifier", &["-mode=fix", "-lint=fix", "-v"], path)
     }
 }

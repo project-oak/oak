@@ -53,6 +53,10 @@ impl linter::LinterTool for BadTodoTool {
             }
         }
 
-        Ok(if results.is_empty() { Outcome::Success } else { Outcome::Failure(results.join("\n")) })
+        Ok(if results.is_empty() {
+            Outcome::Success("".to_string())
+        } else {
+            Outcome::Failure(results.join("\n"))
+        })
     }
 }

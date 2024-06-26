@@ -34,7 +34,7 @@ impl linter::LinterTool for BuildFileLicenseTool {
 
         for line in BufReader::new(f).lines().take(50) {
             if line?.contains(r#"licenses = ["notice"]"#) {
-                return Ok(linter::Outcome::Success);
+                return Ok(linter::Outcome::Success("".to_string()));
             }
         }
         Ok(linter::Outcome::Failure("No license file header found.".to_string()))
