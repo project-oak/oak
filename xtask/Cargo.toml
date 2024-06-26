@@ -21,8 +21,6 @@ once_cell = "*"
 portpicker = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
-strum = "0.24"
-strum_macros = "0.25"
 tokio = { version = "*", features = [
   "fs",
   "io-util",

@@ -25,7 +25,6 @@ use async_trait::async_trait;
 use clap::{Parser, Subcommand};
 use colored::*;
 use nix::sys::signal::Signal;
-use strum_macros::EnumIter;
 use tokio::io::{empty, AsyncRead, AsyncReadExt};
 
 use crate::PROCESSES;
@@ -63,74 +62,6 @@ pub struct Completion {
         default_value = ".xtask_bash_completion"
     )]
     pub file_name: PathBuf,
-}
-
-/// Holds the options for running the example.
-#[derive(Parser, Clone, Debug)]
-pub struct RunOakExampleOpt {
-    #[arg(
-        long,
-        help = "name of a single example to run (i.e. the Rust crate name of the Wasm module)"
-    )]
-    pub example_name: String,
-    #[arg(long, help = "path to the lookup data file")]
-    pub lookup_data_path: Option<String>,
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct BuildClient {
-    #[arg(
-        long,
-        help = "client variant: [all, rust, cpp, go, nodejs, none] [default: all]",
-        default_value = "all"
-    )]
-    pub client_variant: String,
-    #[arg(
-        long,
-        help = "rust toolchain override to use for the client compilation [e.g. stable, nightly, stage2]"
-    )]
-    pub client_rust_toolchain: Option<String>,
-    #[arg(
-        long,
-        help = "rust target to use for the client compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
-    )]
-    pub client_rust_target: Option<String>,
-}
-
-#[derive(serde::Deserialize, Default, Debug, Clone, PartialEq, EnumIter)]
-pub enum ServerVariant {
-    /// Production-like server variant, without logging or any of the
-    /// experimental features enabled
-    #[default]
-    Base,
-}
-
-impl std::str::FromStr for ServerVariant {
-    type Err = String;
-    fn from_str(variant: &str) -> Result<Self, Self::Err> {
-        match variant {
-            "base" => Ok(ServerVariant::Base),
-            _ => Err(format!("couldn't parse functions server variant {}", variant)),
-        }
-    }
-}
-
-impl ServerVariant {
-    // Get path to manifest for the variant.
-    pub fn path_to_manifest(&self) -> &'static str {
-        match self {
-            ServerVariant::Base => "./oak_functions_launcher",
-        }
-    }
-
-    /// Get path to the executable server binary for the server variant.
-    pub fn path_to_executable(&self) -> &'static str {
-        match self {
-            ServerVariant::Base => {
-                "./target/x86_64-unknown-linux-musl/release/oak_functions_launcher"
-            }
-        }
-    }
 }
 
 #[derive(Parser, Clone, Debug)]

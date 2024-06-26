@@ -2649,7 +2649,7 @@ dependencies = [
  "rand_core",
  "sha2",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "zerocopy",
  "zeroize",
 ]
@@ -2707,7 +2707,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
 ]
 
 [[package]]
@@ -3001,7 +3001,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.4.1",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "zerocopy",
 ]
 
@@ -3055,7 +3055,7 @@ dependencies = [
  "sev_serial",
  "spinning_top 0.3.0",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "uart_16550",
  "virtio-drivers",
  "x86_64",
@@ -3081,7 +3081,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.4.1",
  "os_pipe",
- "strum 0.25.0",
+ "strum",
 ]
 
 [[package]]
@@ -3128,7 +3128,7 @@ dependencies = [
  "oak_restricted_kernel_sdk_proc_macro",
  "oak_stage0_dice",
  "p256",
- "strum 0.25.0",
+ "strum",
  "zerocopy",
 ]
 
@@ -3160,7 +3160,7 @@ dependencies = [
  "snafu",
  "spinning_top 0.3.0",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "x86_64",
  "zerocopy",
 ]
@@ -3171,7 +3171,7 @@ version = "0.0.0"
 dependencies = [
  "bitflags 2.4.1",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "zerocopy",
 ]
 
@@ -3208,7 +3208,7 @@ dependencies = [
  "sha2",
  "spinning_top 0.3.0",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "x86_64",
  "zerocopy",
  "zeroize",
@@ -3234,7 +3234,7 @@ name = "oak_tdx_guest"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.4.1",
- "strum 0.25.0",
+ "strum",
  "x86_64",
 ]
 
@@ -3247,7 +3247,7 @@ dependencies = [
  "log",
  "rand",
  "rust-hypervisor-firmware-virtio",
- "strum 0.25.0",
+ "strum",
  "x86_64",
 ]
 
@@ -4483,7 +4483,7 @@ dependencies = [
  "oak_sev_guest",
  "sha2",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "x86_64",
  "zerocopy",
 ]
@@ -4580,12 +4580,6 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
-
-[[package]]
-name = "strum"
-version = "0.24.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 
 [[package]]
 name = "strum"
@@ -6033,8 +6027,6 @@ dependencies = [
  "portpicker",
  "regex",
  "serde",
- "strum 0.24.1",
- "strum_macros",
  "tokio",
  "toml 0.8.8",
  "walkdir",
