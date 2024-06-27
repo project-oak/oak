@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "cc/crypto/hpke/sender_context.h"
 #include "cc/crypto/hpke/utils.h"
