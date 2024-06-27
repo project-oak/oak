@@ -9,6 +9,11 @@
 #   <https://github.com/protocolbuffers/protobuf/issues/12393#issuecomment-1504349780>
 build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17' --host_cxxopt='-std=c++17'
 
+# Required for cargo_build_script support before Bazel 7
+# See: "Build script env is overridden by use_default_shell_env in Bazel 6"
+# https://github.com/bazelbuild/rules_rust/issues/2665
+build --incompatible_merge_fixed_and_default_shell_env
+
 # Setup clippy aspect to run clippy automatically on all rust targets
 # See: https://bazelbuild.github.io/rules_rust/rust_clippy.html
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
