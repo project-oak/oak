@@ -211,7 +211,6 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -247,7 +246,7 @@
 // Table 8 of
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 </span><span class="kw">const </span>RSA_SSA_PSS_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.2.840.113549.1.1.10"</span>);
-<span class="kw">const </span>_PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.3.6.1.4.1.3704.1.2"</span>);
+<span class="kw">const </span>PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.3.6.1.4.1.3704.1.2"</span>);
 <span class="kw">const </span>BL_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.3.6.1.4.1.3704.1.3.1"</span>);
 <span class="kw">const </span>TEE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.3.6.1.4.1.3704.1.3.2"</span>);
 <span class="kw">const </span>SNP_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap(<span class="string">"1.3.6.1.4.1.3704.1.3.3"</span>);
@@ -295,8 +294,7 @@
         .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"signature verification failed"</span>))
 }
 
-<span class="comment">// Currently unused, use `pub` only to disable the warning.
-</span><span class="kw">fn </span>_product_name(cert: <span class="kw-2">&amp;</span>Certificate) -&gt; anyhow::Result&lt;String&gt; {
+<span class="kw">pub fn </span>product_name(cert: <span class="kw-2">&amp;</span>Certificate) -&gt; anyhow::Result&lt;String&gt; {
     <span class="kw">let </span>exts = cert
         .tbs_certificate
         .extensions
@@ -304,7 +302,7 @@
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not get extensions from cert"</span>))<span class="question-mark">?</span>;
     <span class="kw">let </span>pn_ext = exts
         .iter()
-        .find(|<span class="kw-2">&amp;</span>ext| ext.extn_id == _PRODUCT_NAME_OID)
+        .find(|<span class="kw-2">&amp;</span>ext| ext.extn_id == PRODUCT_NAME_OID)
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no product name found in cert"</span>))<span class="question-mark">?</span>;
     String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
         .map_err(|_utf8_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to read product name"</span>))
