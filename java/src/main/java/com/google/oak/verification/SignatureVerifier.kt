@@ -65,9 +65,9 @@ object SignatureVerifier {
    * @return empty if the verification succeeds, or a failure otherwise
    */
   fun verify(
-      signatureBytes: ByteArray,
-      publicKeyBytes: ByteArray,
-      contentBytes: ByteArray
+    signatureBytes: ByteArray,
+    publicKeyBytes: ByteArray,
+    contentBytes: ByteArray,
   ): Optional<Failure> {
     if (signatureBytes.isEmpty()) {
       return failure("empty signature")
@@ -100,12 +100,12 @@ object SignatureVerifier {
 
   /** Makes a plausible guess whether the public key is in PEM format. */
   fun looksLikePem(maybePem: String): Boolean =
-      maybePem.trim().run { startsWith(PEM_HEADER) && endsWith(PEM_FOOTER) }
+    maybePem.trim().run { startsWith(PEM_HEADER) && endsWith(PEM_FOOTER) }
 
   /** Converts a public key from PEM (on disk format) to raw binary format. */
   fun convertPemToRaw(pem: String): ByteArray {
     val trimmed: String =
-        pem.replace(PEM_HEADER, "").replace(PEM_FOOTER, "").replace("\n", "").trim()
+      pem.replace(PEM_HEADER, "").replace(PEM_FOOTER, "").replace("\n", "").trim()
     return Base64.getDecoder().decode(trimmed)
   }
 }

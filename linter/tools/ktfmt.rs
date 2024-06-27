@@ -16,22 +16,26 @@
 
 use std::path::Path;
 
-pub struct BuildifierTool {}
+use super::{has_extension, QuietSuccess};
 
-impl linter::LinterTool for BuildifierTool {
-    const NAME: &'static str = "Buildifier";
+pub struct KtfmtTool {}
+
+impl linter::LinterTool for KtfmtTool {
+    const NAME: &'static str = "Kotlin Format";
     const SUPPORTS_FIX: bool = true;
 
     fn accept(&self, path: &Path) -> anyhow::Result<bool> {
-        Ok(super::has_extension(path, &["bzl"])
-            || super::has_filename(path, &["BUILD", "WORKSPACE"]))
+        Ok(has_extension(path, &["kt"]))
     }
 
     fn check(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("buildifier", &["-mode=check", "-lint=warn"], path)
+        super::linter_command("ktfmt", &["--google-style", "--dry-run"], path)
     }
 
     fn fix(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("buildifier", &["-mode=fix", "-lint=fix"], path)
+        super::linter_command("ktfmt", &["--google-style"], path)
+            // Ktfmt is noisy when fixing, outputting filenames whether something was done or not,
+            // with no useful info.
+            .map(|outcome| outcome.quiet_success())
     }
 }

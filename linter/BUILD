@@ -52,6 +52,7 @@ rust_library(
         "tools/buildifier.rs",
         "tools/clang_format.rs",
         "tools/hadolint.rs",
+        "tools/ktfmt.rs",
         "tools/lib.rs",
         "tools/markdownlint.rs",
         "tools/prettier.rs",

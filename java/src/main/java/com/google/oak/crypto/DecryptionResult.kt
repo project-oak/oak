@@ -14,14 +14,12 @@
 // limitations under the License.
 //
 
-package com.google.oak.crypto;
+package com.google.oak.crypto
 
 class DecryptionResult(
-    // This is needed because the Java code reference backing fields directly.
-    // By default, Kotlin properties generate getter/setter methods, and does not
-    // expose the backing fields directly.
-    @JvmField
-    val plaintext: ByteArray,
-    @JvmField
-    val associatedData: ByteArray,
+  // This is needed because the Java code reference backing fields directly.
+  // By default, Kotlin properties generate getter/setter methods, and does not
+  // expose the backing fields directly.
+  @JvmField val plaintext: ByteArray,
+  @JvmField val associatedData: ByteArray,
 )

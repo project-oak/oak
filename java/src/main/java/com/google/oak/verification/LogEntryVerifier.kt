@@ -70,9 +70,9 @@ object LogEntryVerifier {
    * @return empty if the verification succeeds, or a failure otherwise
    */
   fun verify(
-      logEntry: RekorLogEntry,
-      publicKeyBytes: ByteArray,
-      endorsementBytes: ByteArray
+    logEntry: RekorLogEntry,
+    publicKeyBytes: ByteArray,
+    endorsementBytes: ByteArray,
   ): Optional<Failure> {
     val rekorSigVer = verifyRekorSignature(logEntry, publicKeyBytes)
     return if (rekorSigVer.isPresent()) {
@@ -108,13 +108,14 @@ object LogEntryVerifier {
   fun verifyRekorBody(body: RekorLogEntry.Body, contentBytes: ByteArray): Optional<Failure> {
     if (body.spec.signature.format != "x509") {
       return failure(
-          "unsupported signature format: ${body.spec.signature.format} only x509 is supported")
+        "unsupported signature format: ${body.spec.signature.format} only x509 is supported"
+      )
     }
 
     // For now, we only support `sha256` as the hashing algorithm.
     if (body.spec.data.hash.algorithm != "sha256") {
       return failure(
-          "unsupported hash algorithm: ${body.spec.data.hash.algorithm} only sha256 is supported",
+        "unsupported hash algorithm: ${body.spec.data.hash.algorithm} only sha256 is supported"
       )
     }
 
@@ -122,14 +123,16 @@ object LogEntryVerifier {
     val digest = sha256Hex(contentBytes)
     if (body.spec.data.hash.value != digest) {
       return failure(
-          "SHA2-256 digest of contents ($digest) differs from that in Rekor entry body (${body.spec.data.hash.value})")
+        "SHA2-256 digest of contents ($digest) differs from that in Rekor entry body (${body.spec.data.hash.value})"
+      )
     }
     val signatureBytes = Base64.getDecoder().decode(body.spec.signature.content)
     val publicKeyBytes =
-        SignatureVerifier.convertPemToRaw(
-            Base64.getDecoder()
-                .decode(body.spec.signature.publicKey.content)
-                .toString(StandardCharsets.UTF_8))
+      SignatureVerifier.convertPemToRaw(
+        Base64.getDecoder()
+          .decode(body.spec.signature.publicKey.content)
+          .toString(StandardCharsets.UTF_8)
+      )
     return SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes)
   }
 

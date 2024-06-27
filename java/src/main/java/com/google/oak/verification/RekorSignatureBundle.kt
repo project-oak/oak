@@ -24,14 +24,14 @@ import com.google.gson.GsonBuilder
  * the /api/v1/log/publicKey Rest API. For [sigstore.dev], it is a PEM-encoded x509/PKIX public key.
  */
 data class RekorSignatureBundle(
-    /**
-     * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
-     * fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
-     * LogEntry). These fields include body, integratedTime, logID and logIndex.
-     */
-    val canonicalized: String,
-    /** Base64-encoded signature over the canonicalized JSON document. */
-    val base64Signature: String,
+  /**
+   * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
+   * fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor LogEntry).
+   * These fields include body, integratedTime, logID and logIndex.
+   */
+  val canonicalized: String,
+  /** Base64-encoded signature over the canonicalized JSON document. */
+  val base64Signature: String,
 ) {
 
   companion object {

@@ -27,14 +27,14 @@ class SignatureVerifierTest {
 
   @Test
   fun testVerifySucceeds() {
-    val failure  = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes)
+    val failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes)
     assertFalse(failure.isPresent())
   }
 
   @Test
   fun testVerifyFailsWithManipulatedSignature() {
     signatureBytes[signatureBytes.size / 2]++
-    val failure  = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes)
+    val failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes)
     assertTrue(failure.isPresent())
   }
 

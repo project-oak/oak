@@ -27,8 +27,8 @@ import java.util.Base64
  * https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89
  */
 data class RekorLogEntry(
-    // package-private for testing
-    val logEntry: LogEntry
+  // package-private for testing
+  val logEntry: LogEntry
 ) {
   // The following nested classes represent a subset of Rekor types defined in
   // <https://github.com/sigstore/rekor/tree/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models>.
@@ -37,23 +37,23 @@ data class RekorLogEntry(
   // clients are not expected to instantiate them directly. The fields are not
   // explicitly made final to allow instantiation with Gson.
   data class LogEntry(
-      /** We cannot directly use the type `Body` here, since body is Base64-encoded. */
-      val body: String,
+    /** We cannot directly use the type `Body` here, since body is Base64-encoded. */
+    val body: String,
 
-      /**
-       * Unmarshaled body of this LogEntry. It is declared as a transient field, so that it is
-       * excluded when serializing and deserializing instances of LogEntry.
-       */
-      val integratedTime: Long,
+    /**
+     * Unmarshaled body of this LogEntry. It is declared as a transient field, so that it is
+     * excluded when serializing and deserializing instances of LogEntry.
+     */
+    val integratedTime: Long,
 
-      /**
-       * The SHA2-256 hash of the DER-encoded public key for the log at the time the entry was
-       * included in the log. Pattern: ^[0-9a-fA-F]{64}$
-       */
-      val logID: String,
+    /**
+     * The SHA2-256 hash of the DER-encoded public key for the log at the time the entry was
+     * included in the log. Pattern: ^[0-9a-fA-F]{64}$
+     */
+    val logID: String,
 
-      /** Minimum: 0 */
-      var logIndex: Long,
+    /** Minimum: 0 */
+    var logIndex: Long,
   ) {
     @kotlin.jvm.Transient var bodyObject: Body? = null
 
@@ -101,14 +101,14 @@ data class RekorLogEntry(
    * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
    */
   data class GenericSignature(
-      /** Base64 content that is signed. */
-      val content: String,
+    /** Base64 content that is signed. */
+    val content: String,
 
-      /** Signature format, e.g., x509. */
-      val format: String,
+    /** Signature format, e.g., x509. */
+    val format: String,
 
-      /** Public key associated with the signing key that generated this signature. */
-      val publicKey: PublicKey,
+    /** Public key associated with the signing key that generated this signature. */
+    val publicKey: PublicKey,
   )
 
   /**
@@ -118,8 +118,8 @@ data class RekorLogEntry(
    * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
    */
   data class PublicKey(
-      /** Base64 content of a public key. */
-      val content: String
+    /** Base64 content of a public key. */
+    val content: String
   )
 
   /**
@@ -131,8 +131,8 @@ data class RekorLogEntry(
    * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L341>.
    */
   internal data class LogEntryVerification(
-      /** Base64-encoded signature over the body, integratedTime, logID, and logIndex. */
-      val signedEntryTimestamp: String
+    /** Base64-encoded signature over the body, integratedTime, logID, and logIndex. */
+    val signedEntryTimestamp: String
   )
 
   val body: Body?
@@ -155,11 +155,11 @@ data class RekorLogEntry(
       // Use a default Gson instance to parse JSON strings into Java objects.
       val gson: Gson = GsonBuilder().create()
       val entryMap: Map<String, Any> =
-          try {
-            gson.fromJson(json, object : TypeToken<Map<String?, Any?>?>() {}.getType())
-          } catch (e: JsonSyntaxException) {
-            throw IllegalArgumentException(e)
-          }
+        try {
+          gson.fromJson(json, object : TypeToken<Map<String?, Any?>?>() {}.getType())
+        } catch (e: JsonSyntaxException) {
+          throw IllegalArgumentException(e)
+        }
 
       require(entryMap.size == 1) {
         "Expected exactly one entry in the json-formatted Rekor log entry, found ${

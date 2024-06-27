@@ -161,6 +161,8 @@
                 cargo-deadlinks
                 clang-tools
                 hadolint
+                ktfmt
+                ktlint
                 nixpkgs-fmt
                 nodePackages.markdownlint-cli
                 shellcheck

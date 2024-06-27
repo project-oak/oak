@@ -19,6 +19,7 @@ pub mod build_license;
 pub mod buildifier;
 pub mod clang_format;
 pub mod hadolint;
+pub mod ktfmt;
 pub mod markdownlint;
 pub mod prettier;
 pub mod rustfmt;
@@ -49,4 +50,17 @@ fn contents_starts_with(path: &Path, bytes: &[u8]) -> anyhow::Result<bool> {
 
 fn linter_command(command: &str, args: &[&str], path: &Path) -> anyhow::Result<linter::Outcome> {
     Command::new(command).args(args).arg(path.to_str().unwrap()).try_into()
+}
+
+trait QuietSuccess {
+    fn quiet_success(self) -> linter::Outcome;
+}
+
+impl QuietSuccess for linter::Outcome {
+    fn quiet_success(self) -> linter::Outcome {
+        match self {
+            linter::Outcome::Success(_) => linter::Outcome::Success("".to_string()),
+            x => x,
+        }
+    }
 }

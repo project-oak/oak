@@ -73,6 +73,7 @@ fn main() {
     counts += context.lint(tools::buildifier::BuildifierTool {});
     counts += context.lint(tools::clang_format::ClangFormatTool {});
     counts += context.lint(tools::hadolint::HadolintTool {});
+    counts += context.lint(tools::ktfmt::KtfmtTool {});
     counts += context.lint(tools::prettier::PrettierTool {});
     counts += context.lint(tools::shell_check::ShellCheckTool {});
     counts += context.lint(tools::rustfmt::RustfmtTool {});

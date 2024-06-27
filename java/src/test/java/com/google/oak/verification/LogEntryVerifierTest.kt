@@ -16,16 +16,15 @@
 package com.google.oak.verification
 
 import java.io.File
-import org.junit.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.junit.Test
 
 class LogEntryVerifierTest {
   private val logEntryBytes = File(LOG_ENTRY_PATH).readBytes()
   private val logEntry = RekorLogEntry.createFromJson(logEntryBytes)
-  private val publicKeyBytes = SignatureVerifier.convertPemToRaw(
-      File(REKOR_PUBLIC_KEY_PATH).readText()
-    )
+  private val publicKeyBytes =
+    SignatureVerifier.convertPemToRaw(File(REKOR_PUBLIC_KEY_PATH).readText())
   private val endorsementBytes = File(ENDORSEMENT_PATH).readBytes()
 
   @Test
