@@ -16,7 +16,14 @@ cd "$SCRIPTS_DIR"
 mkdir --parent target
 
 docker buildx build . --tag=oak-containers-sysimage-base:latest --file base_image.Dockerfile
-docker buildx build . --tag=oak-containers-sysimage-nvidia-base:latest --file nvidia_base_image.Dockerfile
+
+cp --force "$LINUX_KERNEL_SOURCE" target/linux-"$LINUX_KERNEL_VERSION".tar.xz
+cp --force "$LINUX_KERNEL_CONFIG" target/minimal.config
+
+docker buildx build . \
+    --build-arg LINUX_KERNEL_VERSION="$LINUX_KERNEL_VERSION" \
+    --tag=oak-containers-sysimage-nvidia-base:latest \
+    --file nvidia_base_image.Dockerfile
 
 # We need to actually create a container, otherwise we won't be able to use
 # `docker export` that gives us a filesystem image.

@@ -30,6 +30,7 @@
             url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
             sha256 = "01b414ba98fd189ecd544435caf3860ae2a790e3ec48f5aa70fdf42dc4c5c04a";
           };
+          linux_kernel_config = ./oak_containers_kernel/configs/${linux_kernel_version}/minimal.config;
           # Build the linux kernel for Oak Containers as a nix package, which simplifies
           # reproducibility.
           # Note that building a package via nix is not by itself a guarantee of
@@ -40,7 +41,7 @@
             # - CONFIG_MODULE_SIG is not set
             # - CONFIG_MODULE_SIG_ALL is not set
             # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
-            configfile = ./oak_containers_kernel/configs/6.9.1/minimal.config;
+            configfile = linux_kernel_config;
             # And also the following build variables.
             # See https://docs.kernel.org/kbuild/reproducible-builds.html.
             extraMakeFlags = [
@@ -190,9 +191,16 @@
             # Shell for building Oak Containers kernel and system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
+              # We need access to the kernel source and configuration, not just the binaries, to
+              # build the system image with nvidia drivers in it.
+              # See oak_containers_system_image/build-base.sh (and nvidia_base_image.Dockerfile) for
+              # more details. 
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
                 export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
+                export LINUX_KERNEL_VERSION="${linux_kernel_version}"
+                export LINUX_KERNEL_SOURCE="${linux_kernel_src}"
+                export LINUX_KERNEL_CONFIG="${linux_kernel_config}"
               '';
               inputsFrom = [
                 base
