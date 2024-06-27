@@ -14,9 +14,29 @@
 // limitations under the License.
 //
 
-use core::ffi::c_size_t;
+use core::ffi::{c_size_t, c_ssize_t};
 
-pub fn syscall_unstable_switch_proccess(pid: c_size_t) -> ! {
+use oak_restricted_kernel_interface::Errno;
+
+pub fn syscall_unstable_switch_proccess(pid: c_size_t) -> c_ssize_t {
+    match unstable_switch_proccess(pid) {
+        Ok(pid) => pid,
+        Err(err) => err as isize,
+    }
+}
+
+fn unstable_switch_proccess(pid: usize) -> Result<isize, Errno> {
     log::debug!("Switching to a different process (pid: {})", pid);
-    crate::PROCCESSES.execute(pid).expect("failed to switch to process")
+    // Safety: we're handling a syscall, so syscall handlers are registered.
+    let prev_pid = unsafe { crate::syscall::GsData::get_current_pid() };
+    // Safety: we're handling a syscall, the syscall entrypoint ensures that
+    // updates to this value handled correctly.
+    unsafe {
+        crate::syscall::GsData::set_current_pid(pid)
+            .inspect_err(|err| log::error!("failed to set pid: {:?}", err))
+            .map_err(|_| Errno::EINVAL)?
+    };
+    isize::try_from(prev_pid)
+        .inspect_err(|err| log::error!("failed to convert pid to isize. pid: {:?}", err))
+        .map_err(|_| Errno::EINVAL)
 }

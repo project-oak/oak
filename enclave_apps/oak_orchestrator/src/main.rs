@@ -61,7 +61,7 @@ static LOGGER: OrchestratorLogger = OrchestratorLogger {};
 // #[oak_restricted_kernel_sdk::entrypoint] is not used. The allocator,
 // handlers, etc are declared explicitly.
 #[no_mangle]
-fn _start() -> ! {
+fn _start() {
     oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
     oak_restricted_kernel_sdk::utils::log::set_max_level(
         oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug,
@@ -88,7 +88,7 @@ fn read_stage0_dice_data() -> Stage0DiceData {
     result
 }
 
-fn entrypoint() -> ! {
+fn entrypoint() {
     let mut attested_app = {
         let stage0_dice_data = read_stage0_dice_data();
         let channel = FileDescriptorChannel::default();
@@ -102,8 +102,6 @@ fn entrypoint() -> ! {
         .expect("failed to write dice data");
     attested_app.dice_data.as_bytes_mut().zeroize();
 
-    let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
+    let _pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
         .expect("failed to create app process");
-    log::info!("created application with pid: {}", pid);
-    syscall::unstable_switch_proccess(pid)
 }

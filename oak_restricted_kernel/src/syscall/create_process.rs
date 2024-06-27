@@ -29,12 +29,15 @@ pub fn syscall_unstable_create_proccess(buf: *mut c_void, count: c_size_t) -> c_
     // everything is in kernel space so there is nothing to check.
     let elf_binary_buffer = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
     match unstable_create_proccess(elf_binary_buffer) {
-        Ok(pid) => pid.try_into().expect("pid so large, it could not be represented as isize"),
+        // Safety: [`unstable_create_proccess`] does not return if succesful.
+        Ok(_) => unsafe {
+            core::hint::unreachable_unchecked();
+        },
         Err(err) => err as isize,
     }
 }
 
-fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
+fn unstable_create_proccess(buf: &[u8]) -> Result<!, Errno> {
     // Copy the ELF file into kernel space.
     let copied_elf_binary: alloc::vec::Vec<u8> = buf.to_vec();
 
@@ -42,11 +45,13 @@ fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
         crate::processes::ElfExecuteable::new(copied_elf_binary.into_boxed_slice())
             .inspect_err(|err| log::error!("failed to parse application elf file: {:?}", err))
             .map_err(|_| Errno::EINVAL)?;
-
-    Ok(
-        // Safety: application is assumed to be a valid ELF file.
-        unsafe {
-            Process::from_elf_executeable(&elf_executeable).expect("failed to create process")
-        },
-    )
+    // Safety: application is assumed to be a valid ELF file, syscalls are setup.
+    unsafe {
+        Process::from_elf_executeable(&elf_executeable)
+            .inspect_err(|err| log::error!("failed to load elf file into memory: {:?}", err))
+            .map_err(|_| Errno::EINVAL)?
+            .execute()
+            .inspect_err(|err| log::error!("failed start process: {:?}", err))
+            .map_err(|_| Errno::EINVAL)?
+    }
 }

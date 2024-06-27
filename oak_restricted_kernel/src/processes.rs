@@ -29,7 +29,7 @@ use x86_64::{
     VirtAddr,
 };
 
-use crate::{syscall::mmap::mmap, PROCCESSES};
+use crate::syscall::mmap::mmap;
 
 // Set up the userspace stack at the end of the lower half of the virtual
 // address space. Well... almost. It's one page lower than the very end, as
@@ -164,8 +164,7 @@ pub struct Process {
 }
 
 impl Process {
-    /// Creates a process from the application, without executing it. Returns
-    /// the PID of the new process.
+    /// Creates a process from the application, without executing it.
     ///
     /// # Safety
     ///
@@ -173,7 +172,7 @@ impl Process {
     /// Restricted Application.
     pub unsafe fn from_elf_executeable(
         elf_executeable: &ElfExecuteable,
-    ) -> Result<usize, anyhow::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let pml4 = crate::BASE_L4_PAGE_TABLE.get().context("base l4 table should be set")?.clone();
         // Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
@@ -200,28 +199,27 @@ impl Process {
             // Safety: the new page table maintains the same mappings for kernel space.
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
         }
-        let pid = PROCCESSES.add(Self { pml4, entry });
-        Ok(pid)
+        Ok(Self { pml4, entry })
     }
     /// Executes the process.
-    pub fn execute(&self) -> ! {
+    ///
+    /// Safety: syscalls must have been registered. Changes the root page table,
+    /// so addresses in userspace will be invalid. Caller must ensure those side
+    /// effects are okay. Process must have been created with a valid elf file.
+    pub unsafe fn execute(&self) -> anyhow::Result<!> {
         let pml4_frame = identify_pml4_frame(&self.pml4).expect("could not get pml4 frame");
-        // Safety: the new page table maintains the same mappings for kernel space.
-        unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
+
+        let pid = crate::syscall::GsData::register_process(pml4_frame)?;
+        crate::syscall::GsData::set_current_pid(pid)?;
 
         let entry = self.entry;
-        // Enter Ring 3 and jump to user code.
-        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
-        // user to guarantee that the file made sense.
-        unsafe {
-            asm! {
-                "mov rsp, {}", // user stack
-                "sysretq",
-                in(reg) APPLICATION_STACK_VIRT_ADDR - 8,
-                in("rcx") entry.as_u64(), // initial RIP
-                in("r11") 0x202, // initial RFLAGS (interrupts enabled)
-                options(noreturn)
-            }
+        asm! {
+            "mov rsp, {}", // user stack
+            "sysretq",
+            in(reg) APPLICATION_STACK_VIRT_ADDR - 8,
+            in("rcx") entry.as_u64(), // initial RIP
+            in("r11") 0x202, // initial RFLAGS (interrupts enabled)
+            options(noreturn)
         }
     }
 }

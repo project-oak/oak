@@ -137,13 +137,19 @@ pub fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
 }
 
 #[no_mangle]
-pub extern "C" fn sys_unstable_switch_proccess(pid: c_size_t) {
-    unsafe { syscall!(Syscall::UnstableSwitchProcess, pid) };
+pub extern "C" fn sys_unstable_switch_proccess(pid: c_size_t) -> c_ssize_t {
+    unsafe { syscall!(Syscall::UnstableSwitchProcess, pid) }
 }
 
-pub fn unstable_switch_proccess(pid: usize) -> ! {
-    sys_unstable_switch_proccess(pid);
-    unreachable!();
+pub fn unstable_switch_proccess(pid: usize) -> Result<usize, Errno> {
+    let ret = sys_unstable_switch_proccess(pid);
+    if ret < 0 {
+        Err(Errno::from_repr(ret).unwrap_or_else(|| {
+            panic!("unexpected error from unstable_switch_proccess syscall: {}", ret)
+        }))
+    } else {
+        Ok(ret.try_into().expect("pid could not be represented as isize"))
+    }
 }
 
 // Note that these tests are not being executed against Restricted Kernel, but

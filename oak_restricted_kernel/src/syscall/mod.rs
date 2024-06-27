@@ -38,7 +38,8 @@ use x86_64::{
         control::Efer,
         model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
     },
-    VirtAddr,
+    structures::paging::PhysFrame,
+    PhysAddr, VirtAddr,
 };
 
 use self::{
@@ -100,12 +101,15 @@ static mut GS_DATA: GsData = GsData {
     kernel_sp: VirtAddr::zero(),
     user_stack_pointers: [VirtAddr::zero(); MAX_PROCESSES],
     current_pid: 0,
+    // Safety: placeholders that will be overwritten before use.
+    user_pml4s: [unsafe { PhysFrame::from_start_address_unchecked(PhysAddr::zero()) };
+        MAX_PROCESSES],
 };
 
 /// State we need to track for system calls.
 #[repr(C, align(16))]
 #[derive(Debug)]
-struct GsData {
+pub(crate) struct GsData {
     /// Kernel stack pointer (what to set in RSP after saving user RSP).
     kernel_sp: VirtAddr,
 
@@ -114,6 +118,9 @@ struct GsData {
 
     /// Array of user stack pointers (RSP) for each process, by PID.
     user_stack_pointers: [VirtAddr; MAX_PROCESSES],
+
+    /// Array of root page tables for each process, by PID.
+    user_pml4s: [PhysFrame; MAX_PROCESSES],
 }
 
 impl GsData {
@@ -131,6 +138,52 @@ impl GsData {
             KernelGsBase::write(VirtAddr::from_ptr(addr_of_mut!(GS_DATA)));
             GsBase::write(VirtAddr::from_ptr(addr_of_mut!(GS_DATA)));
         };
+    }
+
+    /// Registers a process and returns its pid.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    pub unsafe fn register_process(process_pml4: PhysFrame) -> anyhow::Result<usize> {
+        let free_pid = GS_DATA.user_pml4s.iter().position(|&frame| frame.start_address().is_null());
+        match free_pid {
+            None => Err(anyhow::Error::msg(
+                "all slots for processes are occupied, no more processes can be registered",
+            )),
+            Some(pid) => {
+                GS_DATA.user_pml4s[pid] = process_pml4;
+                Ok(pid)
+            }
+        }
+    }
+
+    /// Get the current process ID from the GsData instance in the GS register.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    pub unsafe fn get_current_pid() -> usize {
+        GS_DATA.current_pid
+    }
+
+    /// Set the current process ID in the GsData instance in the GS register and
+    /// loads its pml4.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    /// Changes the root page table, so addresses in userspace will be invalid.
+    /// Caller must ensure those side effects are okay.
+    pub unsafe fn set_current_pid(pid: usize) -> Result<(), anyhow::Error> {
+        GS_DATA
+            .user_pml4s
+            .get(pid)
+            .ok_or(anyhow::Error::msg("Invalid PID: out of range"))?
+            .start_address()
+            .is_null()
+            .then(|| {
+                Err::<(), anyhow::Error>(anyhow::Error::msg("Invalid PID: not an active process"))
+            })
+            .transpose()?;
+        // Safety: the new page table maintains the same mappings for kernel space.
+        crate::PAGE_TABLES.lock().replace(GS_DATA.user_pml4s[pid]);
+        GS_DATA.current_pid = pid;
+        Ok(())
     }
 }
 
