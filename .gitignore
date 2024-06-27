@@ -8,6 +8,12 @@ bazel-*
 # Local additional settings and overrides.
 /.local.bazelrc
 
+# These exist as empty files, but we don't want to check in any changes to them.
+bazel/test_workspace/Cargo-test.bazel.lock
+bazel/test_workspace/Cargo_no_std-test.bazel.lock
+bazel/test_workspace/cargo-bazel-test-lock.json
+bazel/test_workspace/cargo-no-std-test-bazel-lock.json
+
 # Index file used to compare artifacts for reproducibility.
 /reproducibility_index
 

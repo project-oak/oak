@@ -221,7 +221,7 @@ bazel-ci:
 
     # Test Oak as a dependency in the test workspace
     # Some dependencies aren't properly exposed yet, so just testing a subset of targets
-    cd bazel/test_workspace && bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
+    cd bazel/test_workspace && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
     bazel build --config=unsafe-fast-presubmit -- //...:all
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
@@ -235,7 +235,6 @@ bazel-clippy:
 
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index
-    cd bazel/test_workspace && env CARGO_BAZEL_REPIN=true bazel sync --only=oak2
 
 bazel-fmt:
     buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.
