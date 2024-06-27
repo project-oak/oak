@@ -80,6 +80,10 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "elf": crate.spec(
+                default_features = False,
+                version = "*",
+            ),
             "getrandom": crate.spec(
                 default_features = False,
                 # rdrand is required to support x64_64-unknown-none.

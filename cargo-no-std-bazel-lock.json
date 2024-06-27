@@ -1,5 +1,5 @@
 {
-  "checksum": "92f7aa994b8ba971c9f42bf73affea3d59c04ec4ee974a03da51aa8029c44b74",
+  "checksum": "0ac4858fd1e6e50930208019bd226f0edb97282c40db6ef18659de8154625c20",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1949,6 +1949,10 @@
               "target": "ecdsa"
             },
             {
+              "id": "elf 0.7.4",
+              "target": "elf"
+            },
+            {
               "id": "getrandom 0.2.15",
               "target": "getrandom"
             },
@@ -2100,6 +2104,45 @@
         "version": "0.16.9"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "elf 0.7.4": {
+      "name": "elf",
+      "version": "0.7.4",
+      "package_url": "https://github.com/cole14/rust-elf/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/elf/0.7.4/download",
+          "sha256": "4445909572dbd556c457c849c4ca58623d84b27c8fff1e74b0b4227d8b90d17b"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "elf",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "elf",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2021",
+        "version": "0.7.4"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -5887,6 +5930,7 @@
     "coset 0.3.7",
     "curve25519-dalek 4.1.1",
     "ecdsa 0.16.9",
+    "elf 0.7.4",
     "getrandom 0.2.15",
     "goblin 0.8.2",
     "hex 0.4.3",
