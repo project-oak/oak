@@ -23,7 +23,9 @@ package(
 
 rust_library(
     name = "service",
-    srcs = ["src/service.rs"],
+    srcs = [
+        "src/service.rs",
+    ],
     crate_name = "oak_standalone_service",
     deps = [
         "//oak_client",

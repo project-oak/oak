@@ -31,6 +31,20 @@ use oak_standalone_rust_bs_proto::oak::session::v1::{
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
+/// A simple request/response adapter between a client application and the Oak
+/// Standalone facade.
+///
+/// Note: This is very similar to the [micro_rpc::Transport] trait. That type is
+/// a great candidate for implementing an Adapter. But since other approaches
+/// might be possible too, we keep the adapter type separate for now.
+pub trait Adapter: Send + Sync {
+    /// Invoke the client request for the provided serialized request string.
+    ///
+    /// The client should return a serialized response message that the Oak
+    /// Standalone facade will encrypt and return to the client.
+    fn invoke(&self, serialized_request: &[u8]) -> anyhow::Result<Vec<u8>>;
+}
+
 /// The structure that will implement the Oak Streaming Session crypto service
 /// on behalf of a client's application. Right now, it just sets up the crypto
 /// channel, but doesn't interact with any application yet.
@@ -56,11 +70,17 @@ struct OakStandaloneServiceImpl {
     /// * We might add some sort of attestation/transparent release support.
     /// * It's easier to transition later to a full Oak stack implementation.
     endorsed_evidence: Arc<EndorsedEvidence>,
+
+    adapter: Arc<dyn Adapter>,
 }
 
 impl OakStandaloneServiceImpl {
     /// Create a new instance of the server using the provided keypair.
-    fn new(private_encryption_key: EncryptionKey, public_key: Vec<u8>) -> Self {
+    fn new(
+        private_encryption_key: EncryptionKey,
+        public_key: Vec<u8>,
+        adapter: Arc<dyn Adapter>,
+    ) -> Self {
         Self {
             private_encryption_key: Arc::new(private_encryption_key),
 
@@ -87,6 +107,7 @@ impl OakStandaloneServiceImpl {
                     r#type: Some(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
                 }),
             }),
+            adapter,
         }
     }
 }
@@ -104,6 +125,7 @@ impl StreamingSession for OakStandaloneServiceImpl {
 
         let private_key = self.private_encryption_key.clone();
         let endorsed_evidence = self.endorsed_evidence.clone();
+        let adapter = self.adapter.clone();
 
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
@@ -124,7 +146,10 @@ impl StreamingSession for OakStandaloneServiceImpl {
                         let (server_encryptor, decrypted_request, _request_associated_data) =
                             ServerEncryptor::decrypt(&encrypted_request.encrypted_request.unwrap(), &*private_key)
                             .expect("server couldn't decrypt request");
-                        let response: Vec<u8> = decrypted_request.into_iter().rev().collect();
+
+                        let response = adapter.invoke(&decrypted_request)
+                            .map_err(|err| tonic::Status::internal(format!("invoke failed: {err:?}")))?;
+
                         let encrypted_response = server_encryptor.encrypt(&response, b"")
                             .map_err(|err| tonic::Status::internal(format!("encrypt failed: {err:?}")))?;
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
@@ -146,11 +171,13 @@ pub async fn create(
     listener: TcpListener,
     private_encryption_key: EncryptionKey,
     public_key: Vec<u8>,
+    adapter: Arc<dyn Adapter>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(StreamingSessionServer::new(OakStandaloneServiceImpl::new(
             private_encryption_key,
             public_key,
+            adapter,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

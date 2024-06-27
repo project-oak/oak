@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use anyhow::{Context, Result};
 use oak_client::{
@@ -23,18 +26,32 @@ use oak_client::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
+struct TestAdapter {}
+impl oak_standalone_service::Adapter for TestAdapter {
+    fn invoke(&self, serialized_request: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let reversed: Vec<u8> = serialized_request.iter().copied().rev().collect();
+        Ok(reversed)
+    }
+}
+
 async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()>>)> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
+    let adapter = Arc::new(TestAdapter {});
+
     let (private_encryption_key, public_key) =
         oak_crypto::encryption_key::generate_encryption_key_pair();
 
-    println!("PK: {public_key:x?}");
     Ok((
         addr,
-        tokio::spawn(oak_standalone_service::create(listener, private_encryption_key, public_key)),
+        tokio::spawn(oak_standalone_service::create(
+            listener,
+            private_encryption_key,
+            public_key,
+            adapter,
+        )),
     ))
 }
 
