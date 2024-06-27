@@ -13,6 +13,11 @@ build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17' --host
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
 build:clang-tidy --output_groups=report
 
+# Required for cargo_build_script support before Bazel 7
+# See: "Build script env is overridden by use_default_shell_env in Bazel 6"
+# https://github.com/bazelbuild/rules_rust/issues/2665
+build --incompatible_merge_fixed_and_default_shell_env
+
 # Optionally override the .clang-tidy config file target
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
 

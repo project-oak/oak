@@ -310,53 +310,13 @@ gcc_register_toolchain(
     ],
 )
 
-# --- Rust support ---
+load("//bazel/rust:deps.bzl", "load_rust_repositories")
 
-_RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
+load_rust_repositories()
 
-_RUST_VERSIONS = [
-    "1.76.0",
-    _RUST_NIGHTLY_VERSION,
-]
+load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
-http_archive(
-    name = "rules_rust",
-    sha256 = "17c53bf800b932f32d3ca19d2cb9e8ad533ce1c0d729f0d183077bfddab7ad46",
-    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.46.0/rules_rust-v0.46.0.tar.gz"],
-)
-
-load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains", "rust_repository_set")
-
-rules_rust_dependencies()
-
-rust_register_toolchains(
-    edition = "2021",
-    versions = _RUST_VERSIONS,
-)
-
-_BARE_METAL_RUSTC_FLAGS = [
-    "-C",
-    "relocation-model=static",
-    "-C",
-    "target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
-]
-
-# Creates remote repositories for Rust toolchains, required for cross-compiling.
-rust_repository_set(
-    name = "rust_toolchain_repo",
-    edition = "2021",
-    exec_triple = "x86_64-unknown-linux-gnu",
-    extra_rustc_flags = {
-        "x86_64-unknown-none": _BARE_METAL_RUSTC_FLAGS,
-    },
-    extra_target_triples = {
-        "x86_64-unknown-none": [
-            "@platforms//cpu:x86_64",
-            "@platforms//os:none",
-        ],
-    },
-    versions = _RUST_VERSIONS,
-)
+setup_rust_dependencies()
 
 load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
@@ -373,17 +333,3 @@ prost_toolchain_crates()
 load("//bazel/tools/prost:defs.bzl", "setup_prost_toolchain")
 
 setup_prost_toolchain()
-
-# IDE support via rust-analyzer for bazel-only projects.
-# https://bazelbuild.github.io/rules_rust/rust_analyzer.html
-#
-# You can re-generate the rust-project.json file using:
-# bazel run @rules_rust//tools/rust_analyzer:gen_rust_project
-#
-# It should not be committed.
-#
-# VSCode users: There's a task included in .vscode/tasks.json that should
-# automatically do this for you when needed.
-load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
-
-rust_analyzer_dependencies()

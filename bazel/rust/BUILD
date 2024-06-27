@@ -13,17 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Forwarder for bazel rules and macros."""
 
-load("//bazel/private:oci_runtime_bundle.bzl", _oci_runtime_bundle = "oci_runtime_bundle")
-
-oci_runtime_bundle = _oci_runtime_bundle
-
-RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
-
-RUST_VERSIONS = [
-    "1.76.0",
-    RUST_NIGHTLY_VERSION,
-]
-
-RUST_EDITION = "2021"
+package(licenses = ["notice"])
