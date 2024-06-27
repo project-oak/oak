@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["build_rust_crate_wasm"]};
