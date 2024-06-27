@@ -103,11 +103,32 @@ pub fn to_attestation_results(
 /// Verifies entire setup by forwarding to individual setup types.
 /// The `now_utc_millis` argument will be changed to a time type as work
 /// progresses.
+///
+/// This just fetches expected values using [get_expected_values], and then
+/// calls [verify_with_expected_values] with those.
+///
+/// If you'd like to cache and reuse the values, call those two methods
+/// indepedently, and cache the results of the first.
 pub fn verify(
     now_utc_millis: i64,
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
+) -> anyhow::Result<ExtractedEvidence> {
+    let expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)?;
+
+    verify_with_expected_values(now_utc_millis, evidence, endorsements, &expected_values)
+}
+
+/// Verifies entire setup by forwarding to individual setup types.
+/// The `now_utc_millis` argument will be changed to a time type as work
+/// progresses.
+/// This variant returns expected values along with the extracted evidence.
+pub fn verify_with_expected_values(
+    now_utc_millis: i64,
+    evidence: &Evidence,
+    endorsements: &Endorsements,
+    expected_values: &ExpectedValues,
 ) -> anyhow::Result<ExtractedEvidence> {
     // Ensure the Attestation report is properly signed by the platform and that it
     // includes the root public key used in the DICE chain.
@@ -142,14 +163,15 @@ pub fn verify(
     // public keys and other attestation-related data from the DICE chain.
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
 
-    // Ensure the extracted measurements match the endorsements.
-    let expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)?;
-    compare_expected_values(&extracted_evidence, &expected_values)?;
+    compare_expected_values(&extracted_evidence, expected_values)?;
 
     Ok(extracted_evidence)
 }
 
-fn get_expected_values(
+// Create the set of [ExpectedValues] for the provided [endorsements] and
+// [reference_values]. These can be cached by the client for as long as the
+// validity time provided.
+pub fn get_expected_values(
     now_utc_millis: i64,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,

@@ -1,0 +1,77 @@
+{	# (oak.attestation.v1.ExpectedValues) size=504B
+  oak_containers: {	# (oak.attestation.v1.OakContainersExpectedValues) size=501B
+    root_layer: {	# (oak.attestation.v1.RootLayerExpectedValues) size=2B
+      insecure: {	# (oak.attestation.v1.InsecureExpectedValues) size=0B
+      }	# oak_containers.root_layer.insecure
+    }	# oak_containers.root_layer
+    kernel_layer: {	# (oak.attestation.v1.KernelLayerExpectedValues) size=367B
+      kernel: {	# (oak.attestation.v1.KernelExpectedValues) size=82B
+        image: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+          digests: {	# (oak.attestation.v1.RawDigests) size=37B
+            digests: {	# (oak.RawDigest) size=35B
+              sha2_256: "\xD4*\xAB\x02ۅ\x85\xC8\xC6\x45ś\xBF\xCE>\x8F&*\xBE\xC1W\x03m\x1A\xEA\x93u\xA8\x39[\xA4\x06"	# size=32
+            }	# oak_containers.kernel_layer.kernel.image.digests.digests[0]
+          }	# oak_containers.kernel_layer.kernel.image.digests
+        }	# oak_containers.kernel_layer.kernel.image
+        setup_data: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+          digests: {	# (oak.attestation.v1.RawDigests) size=37B
+            digests: {	# (oak.RawDigest) size=35B
+              sha2_256: "\x01\xD2\xEB\x1A\xABL_\xEE\xA4\x12!\x04\x81\x9C\xC0`\x0E\xB6\xFFlo;g\x19\x00\xB0\xE5\x99\xD7\xF9\x82\x41"	# size=32
+            }	# oak_containers.kernel_layer.kernel.setup_data.digests.digests[0]
+          }	# oak_containers.kernel_layer.kernel.setup_data.digests
+        }	# oak_containers.kernel_layer.kernel.setup_data
+      }	# oak_containers.kernel_layer.kernel
+      kernel_cmd_line_text: {	# (oak.attestation.v1.TextExpectedValue) size=157B
+        string_literals: {	# (oak.attestation.v1.ExpectedStringLiterals) size=154B
+          value: [ "console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=3072000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet" ]	# size=151; fp64=1be7f98807c52084; fp2011=0f40e003b2aad6fc
+        }	# oak_containers.kernel_layer.kernel_cmd_line_text.string_literals
+      }	# oak_containers.kernel_layer.kernel_cmd_line_text
+      init_ram_fs: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "\x18\xC3M\x8C\xC7\x37\xFBW\t\xA9\x9A\xCB\x07<\xDC^ؤ\x04P?bl\xEAn\x0B\xAD\n@`\x02\xFC"	# size=32
+          }	# oak_containers.kernel_layer.init_ram_fs.digests.digests[0]
+        }	# oak_containers.kernel_layer.init_ram_fs.digests
+      }	# oak_containers.kernel_layer.init_ram_fs
+      memory_map: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "p\n\xA0\xD1:\xFFy\xFC\x37\xA0S\xA5r\xB1X\xC6\xD4\x62\x02i i\xF8\x83PI8\x8F\x10\x19\xA1\xF7"	# size=32
+          }	# oak_containers.kernel_layer.memory_map.digests.digests[0]
+        }	# oak_containers.kernel_layer.memory_map.digests
+      }	# oak_containers.kernel_layer.memory_map
+      acpi: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "Z\x80J\xF7\xE9\x07t\x92\xDA\xC2\xE2\xDBg\x10\xA6ͦ\x87\xD9]A\\rA\x95х1\x08\"\xB1\xB0"	# size=32
+          }	# oak_containers.kernel_layer.acpi.digests.digests[0]
+        }	# oak_containers.kernel_layer.acpi.digests
+      }	# oak_containers.kernel_layer.acpi
+    }	# oak_containers.kernel_layer
+    system_layer: {	# (oak.attestation.v1.SystemLayerExpectedValues) size=41B
+      system_image: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "\xD2r\x05\x66;L\x86\xB7\x17_\x8F;\xB6R\xF1\x07\xCF\xD8w!\x96u\x1B\xBA\x17\x93\x32\xF1\xE5(\xBB\x17"	# size=32
+          }	# oak_containers.system_layer.system_image.digests.digests[0]
+        }	# oak_containers.system_layer.system_image.digests
+      }	# oak_containers.system_layer.system_image
+    }	# oak_containers.system_layer
+    container_layer: {	# (oak.attestation.v1.ContainerLayerExpectedValues) size=82B
+      bundle: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "s+\x0E=/_\x88\xC1\xB7\x38\xEB\xA2*\xB9\x14wl\x08`\x16H=4\x03\nY\xD1xz}\xE2\xC2"	# size=32
+          }	# oak_containers.container_layer.bundle.digests.digests[0]
+        }	# oak_containers.container_layer.bundle.digests
+      }	# oak_containers.container_layer.bundle
+      config: {	# (oak.attestation.v1.ExpectedDigests) size=39B
+        digests: {	# (oak.attestation.v1.RawDigests) size=37B
+          digests: {	# (oak.RawDigest) size=35B
+            sha2_256: "\x1B޲\x8B\xC4\xF2\x10ۛB\xA2\x31`\xF8\x17\xC7\x05\xEF\xF9\x88\xDCg\xC2\xE2\xE8\xEEO\x8E\xE5\x93Rz"	# size=32
+          }	# oak_containers.container_layer.config.digests.digests[0]
+        }	# oak_containers.container_layer.config.digests
+      }	# oak_containers.container_layer.config
+    }	# oak_containers.container_layer
+  }	# oak_containers
+}

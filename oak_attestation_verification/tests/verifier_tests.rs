@@ -18,7 +18,10 @@ use std::fs;
 
 use oak_attestation_verification::{
     util::convert_pem_to_raw,
-    verifier::{to_attestation_results, verify, verify_dice_chain},
+    verifier::{
+        get_expected_values, to_attestation_results, verify, verify_dice_chain,
+        verify_with_expected_values,
+    },
 };
 use oak_attestation_verification_test_utils::{
     create_containers_reference_values, create_rk_reference_values, reference_values_from_evidence,
@@ -29,10 +32,10 @@ use oak_proto_rust::oak::{
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
         text_reference_value, ApplicationLayerEndorsements, BinaryReferenceValue,
         ContainerLayerEndorsements, Digests, EndorsementReferenceValue, Endorsements, Evidence,
-        InsecureReferenceValues, KernelLayerEndorsements, OakContainersEndorsements,
-        OakRestrictedKernelEndorsements, ReferenceValues, Regex, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements, TcbVersion,
-        TextReferenceValue, TransparentReleaseEndorsement,
+        ExpectedValues, InsecureReferenceValues, KernelLayerEndorsements,
+        OakContainersEndorsements, OakRestrictedKernelEndorsements, ReferenceValues, Regex,
+        RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
+        TcbVersion, TextReferenceValue, TransparentReleaseEndorsement,
     },
     RawDigest,
 };
@@ -52,6 +55,9 @@ const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
 const GENOA_OC_EVIDENCE_PATH: &str = "testdata/genoa_oc_evidence.binarypb";
 const GENOA_VCEK_CERT_DER: &str = "testdata/vcek_genoa.der";
 const GENOA_OC_REFERENCE_PATH: &str = "testdata/genoa_oc_reference_values.binarypb";
+// These expected values were generaeted by running verification on the fake
+// evidence.
+const FAKE_EXPECTED_VALUES_PATH: &str = "testdata/fake_expected_values.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -80,6 +86,12 @@ fn create_rk_obsolete_evidence() -> Evidence {
 fn create_fake_evidence() -> Evidence {
     let serialized = fs::read(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
+}
+
+fn create_fake_expected_values() -> ExpectedValues {
+    let serialized =
+        fs::read(FAKE_EXPECTED_VALUES_PATH).expect("could not read fake expected values");
+    ExpectedValues::decode(serialized.as_slice()).expect("could not decode fake expected values")
 }
 
 // Creates valid endorsements for an Oak Containers chain.
@@ -287,6 +299,52 @@ fn verify_fake_evidence_explicit_reference_values() {
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fake_evidence_split_verify_calls() {
+    let evidence = create_fake_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let computed_expected_values =
+        get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
+
+    let r = verify_with_expected_values(
+        NOW_UTC_MILLIS,
+        &evidence,
+        &endorsements,
+        &computed_expected_values,
+    );
+
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
+    let evidence = create_fake_evidence();
+    let endorsements = create_containers_endorsements();
+    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let computed_expected_values =
+        get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
+
+    let mut buf = vec![];
+    computed_expected_values
+        .encode(&mut buf)
+        .expect("Could not encode expected values from result");
+
+    let expected_expected_values = create_fake_expected_values();
+
+    assert!(computed_expected_values == expected_expected_values)
 }
 
 // See b/327069120: This test can go once we properly endorse stage0.
