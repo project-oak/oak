@@ -16,3 +16,10 @@ The tool can be run using:
 cargo run --package=oak_kernel_measurement -- \
     --kernel=oak_containers_kernel/target/bzImage
 ```
+
+or by:
+
+```bash
+bazel run //oak_kernel_measurement -- \
+    --kernel=$(pwd)/oak_containers_kernel/target/bzImage
+```
