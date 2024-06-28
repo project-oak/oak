@@ -164,6 +164,10 @@ profile_wasm:
     cargo bench --package=oak_functions_service --bench=wasm_benchmark --features=wasmtime flamegraph -- --profile-time=5
     google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
 
+bazel_wasm name:
+    bazel build {{name}} --platforms=":wasm32-unknown-unknown"
+
+
 # Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:

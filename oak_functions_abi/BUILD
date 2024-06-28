@@ -25,8 +25,16 @@ rust_library(
     name = "oak_functions_abi",
     srcs = glob(["src/**"]),
     deps = [
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
-    ],
+    ] + select({
+        "@platforms//os:none": [
+            "@oak_no_std_crates_index//:anyhow",
+            "@oak_no_std_crates_index//:static_assertions",
+            "@oak_no_std_crates_index//:strum",
+        ],
+        "//conditions:default": [
+            "@oak_crates_index//:anyhow",
+            "@oak_crates_index//:static_assertions",
+            "@oak_crates_index//:strum",
+        ],
+    }),
 )

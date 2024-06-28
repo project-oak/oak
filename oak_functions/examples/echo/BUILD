@@ -14,29 +14,15 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-exports_files(["README.md"])
-
-rust_library(
-    name = "oak_functions_sdk",
-    srcs = glob(["src/**"]),
-    compile_data = [":README.md"],
-    deps = [
-        "//micro_rpc",
-        "//oak_functions_abi",
-        "//oak_proto_rust",
-    ] + select({
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:prost",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:prost",
-        ],
-    }),
+rust_shared_library(
+    name = "echo",
+    srcs = ["module/src/lib.rs"],
+    deps = ["//oak_functions_sdk"],
 )

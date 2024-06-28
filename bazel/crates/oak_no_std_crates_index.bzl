@@ -153,6 +153,12 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "static_assertions": crate.spec(version = "*"),
+            "strum": crate.spec(
+                default_features = False,
+                features = ["derive"],
+                version = "*",
+            ),
             "virtio-drivers": crate.spec(version = "*"),
             "x86_64": crate.spec(version = "=0.14"),  #  0.15 does not support LowerHex formatting.
             "zeroize": crate.spec(
@@ -167,5 +173,6 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
         supported_platform_triples = [
             "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).
             "x86_64-unknown-none",
+            "wasm32-unknown-unknown",
         ],
     )
