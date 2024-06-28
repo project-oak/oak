@@ -1556,6 +1556,28 @@
 <a href="#1554" id="1554">1554</a>
 <a href="#1555" id="1555">1555</a>
 <a href="#1556" id="1556">1556</a>
+<a href="#1557" id="1557">1557</a>
+<a href="#1558" id="1558">1558</a>
+<a href="#1559" id="1559">1559</a>
+<a href="#1560" id="1560">1560</a>
+<a href="#1561" id="1561">1561</a>
+<a href="#1562" id="1562">1562</a>
+<a href="#1563" id="1563">1563</a>
+<a href="#1564" id="1564">1564</a>
+<a href="#1565" id="1565">1565</a>
+<a href="#1566" id="1566">1566</a>
+<a href="#1567" id="1567">1567</a>
+<a href="#1568" id="1568">1568</a>
+<a href="#1569" id="1569">1569</a>
+<a href="#1570" id="1570">1570</a>
+<a href="#1571" id="1571">1571</a>
+<a href="#1572" id="1572">1572</a>
+<a href="#1573" id="1573">1573</a>
+<a href="#1574" id="1574">1574</a>
+<a href="#1575" id="1575">1575</a>
+<a href="#1576" id="1576">1576</a>
+<a href="#1577" id="1577">1577</a>
+<a href="#1578" id="1578">1578</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1661,11 +1683,32 @@
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
 /// The `now_utc_millis` argument will be changed to a time type as work
 /// progresses.
+///
+/// This just fetches expected values using [get_expected_values], and then
+/// calls [verify_with_expected_values] with those.
+///
+/// If you'd like to cache and reuse the values, call those two methods
+/// indepedently, and cache the results of the first.
 </span><span class="kw">pub fn </span>verify(
     now_utc_millis: i64,
     evidence: <span class="kw-2">&amp;</span>Evidence,
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
+) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
+    <span class="kw">let </span>expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)<span class="question-mark">?</span>;
+
+    verify_with_expected_values(now_utc_millis, evidence, endorsements, <span class="kw-2">&amp;</span>expected_values)
+}
+
+<span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
+/// The `now_utc_millis` argument will be changed to a time type as work
+/// progresses.
+/// This variant returns expected values along with the extracted evidence.
+</span><span class="kw">pub fn </span>verify_with_expected_values(
+    now_utc_millis: i64,
+    evidence: <span class="kw-2">&amp;</span>Evidence,
+    endorsements: <span class="kw-2">&amp;</span>Endorsements,
+    expected_values: <span class="kw-2">&amp;</span>ExpectedValues,
 ) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
     <span class="comment">// Ensure the Attestation report is properly signed by the platform and that it
     // includes the root public key used in the DICE chain.
@@ -1700,14 +1743,15 @@
     // public keys and other attestation-related data from the DICE chain.
     </span><span class="kw">let </span>extracted_evidence = verify_dice_chain(evidence).context(<span class="string">"invalid DICE chain"</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Ensure the extracted measurements match the endorsements.
-    </span><span class="kw">let </span>expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)<span class="question-mark">?</span>;
-    compare_expected_values(<span class="kw-2">&amp;</span>extracted_evidence, <span class="kw-2">&amp;</span>expected_values)<span class="question-mark">?</span>;
+    compare_expected_values(<span class="kw-2">&amp;</span>extracted_evidence, expected_values)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(extracted_evidence)
 }
 
-<span class="kw">fn </span>get_expected_values(
+<span class="comment">// Create the set of [ExpectedValues] for the provided [endorsements] and
+// [reference_values]. These can be cached by the client for as long as the
+// validity time provided.
+</span><span class="kw">pub fn </span>get_expected_values(
     now_utc_millis: i64,
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
