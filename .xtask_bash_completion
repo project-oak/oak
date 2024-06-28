@@ -12,14 +12,8 @@ _xtask() {
             ",$1")
                 cmd="xtask"
                 ;;
-            xtask,check-format)
-                cmd="xtask__check__format"
-                ;;
             xtask,completion)
                 cmd="xtask__completion"
-                ;;
-            xtask,format)
-                cmd="xtask__format"
                 ;;
             xtask,help)
                 cmd="xtask__help"
@@ -39,14 +33,8 @@ _xtask() {
             xtask,run-tests)
                 cmd="xtask__run__tests"
                 ;;
-            xtask__help,check-format)
-                cmd="xtask__help__check__format"
-                ;;
             xtask__help,completion)
                 cmd="xtask__help__completion"
-                ;;
-            xtask__help,format)
-                cmd="xtask__help__format"
                 ;;
             xtask__help,help)
                 cmd="xtask__help__help"
@@ -73,22 +61,8 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --help format check-format run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
+            opts="-h --dry-run --logs --keep-going --help run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__check__format)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -118,37 +92,9 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__format)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__help)
-            opts="format check-format run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
+            opts="run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__check__format)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -161,20 +107,6 @@ _xtask() {
             return 0
             ;;
         xtask__help__completion)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__format)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

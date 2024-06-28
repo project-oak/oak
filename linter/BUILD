@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -66,4 +66,9 @@ rust_library(
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:regex",
     ],
+)
+
+rust_test(
+    name = "tools_test",
+    crate = ":tools",
 )

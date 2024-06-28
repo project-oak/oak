@@ -43,8 +43,6 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    Format,
-    CheckFormat,
     RunTests,
     RunCargoClippy,
     RunCargoFuzz(RunCargoFuzz),

@@ -30,9 +30,6 @@ use std::path::{Path, PathBuf};
 use clap::{CommandFactory, Parser};
 use colored::*;
 use xtask::{
-    check_build_licenses::*,
-    check_license::*,
-    check_todo::*,
     files::*,
     internal::{self, *},
     spread,
@@ -95,8 +92,6 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format => format(),
-        Command::CheckFormat => check_format(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(),
@@ -175,262 +170,12 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format() -> Step {
-    Step::Multiple {
-        name: "format".to_string(),
-        steps: vec![
-            run_clang_format(FormatMode::Fix),
-            run_buildifier(FormatMode::Fix),
-            run_prettier(FormatMode::Fix),
-            run_markdownlint(FormatMode::Fix),
-            run_cargo_fmt(FormatMode::Fix),
-        ],
-    }
-}
-
-fn check_format() -> Step {
-    Step::Multiple {
-        name: "format".to_string(),
-        steps: vec![
-            run_check_license(),
-            run_check_build_licenses(),
-            run_check_todo(),
-            run_clang_format(FormatMode::Check),
-            run_buildifier(FormatMode::Check),
-            run_prettier(FormatMode::Check),
-            run_markdownlint(FormatMode::Check),
-            // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
-            // run_liche(),
-            run_cargo_fmt(FormatMode::Check),
-            run_hadolint(),
-            run_shellcheck(),
-        ],
-    }
-}
-
 fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
     clap_complete::generate(clap_complete::Shell::Bash, &mut Opt::command(), "xtask", &mut file);
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
     Step::Multiple { name: "cargo completion".to_string(), steps: vec![] }
-}
-
-enum FormatMode {
-    Check,
-    Fix,
-}
-
-fn run_buildifier(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "buildifier".to_string(),
-        steps: source_files()
-            .filter(|p| is_bazel_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "buildifier",
-                    [
-                        "-lint=warn",
-                        match mode {
-                            FormatMode::Check => "-mode=check",
-                            FormatMode::Fix => "-mode=fix",
-                        },
-                        &entry,
-                    ],
-                ),
-            })
-            .collect(),
-    }
-}
-
-fn run_prettier(mode: FormatMode) -> Step {
-    // We run prettier as a single command on all the files at once instead of once
-    // per file, because it takes a considerable time to start up for each
-    // invocation. See #1680. We also filter out
-    // `supply-chain/{config,audits}.toml` as `cargo vet` insists on its own
-    // formatting of the files that is incompatible with Prettier's opinions.
-    let files = source_files()
-        .filter(|path| {
-            (is_markdown_file(path)
-                || is_yaml_file(path)
-                || is_toml_file(path)
-                || is_html_file(path)
-                || is_javascript_file(path)
-                || is_typescript_file(path))
-                && !path.ends_with("supply-chain/config.toml")
-                && !path.ends_with("supply-chain/audits.toml")
-        })
-        .map(to_string)
-        .collect::<Vec<_>>();
-    Step::Single {
-        name: "prettier (coalesced)".to_string(),
-        command: Cmd::new(
-            "prettier",
-            spread![
-                match mode {
-                    FormatMode::Check => "--check".to_string(),
-                    FormatMode::Fix => "--write".to_string(),
-                },
-                ...files
-            ],
-        ),
-    }
-}
-
-fn run_markdownlint(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "markdownlint".to_string(),
-        steps: source_files()
-            .filter(|p| is_markdown_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "markdownlint",
-                    spread![
-                        ...match mode {
-                            FormatMode::Check => vec![],
-                            FormatMode::Fix => vec!["--fix".to_string()],
-                        },
-                        entry,
-                    ],
-                ),
-            })
-            .collect(),
-    }
-}
-
-// TODO(#1304): Re-enable dead-code check, when re-run from GitHub is fixed.
-#[allow(dead_code)]
-fn run_liche() -> Step {
-    Step::Multiple {
-        name: "liche".to_string(),
-        steps: source_files()
-            .filter(|p| is_markdown_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new("liche", [
-                    "--document-root=.",
-                    // We exclude the following URLs from the checks:
-                    // - https://groups.google.com/g/project-oak-discuss : not publicly accessible
-                    // - https://crates.io/crates : returns 404 (see https://github.com/raviqqe/liche/issues/39)
-                    // - https://codecov.io/gh/project-oak/oak : unstable, and often unaccessible on CI-build
-                    "--exclude=(https://groups.google.com/g/project-oak-discuss|https://crates.io/crates|https://codecov.io/gh/project-oak/oak)",
-                    &entry,
-                ]),
-            })
-            .collect(),
-    }
-}
-
-fn run_hadolint() -> Step {
-    Step::Multiple {
-        name: "hadolint".to_string(),
-        steps: source_files()
-            .filter(|p| is_dockerfile(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new("hadolint", [entry]),
-            })
-            .collect(),
-    }
-}
-
-fn run_shellcheck() -> Step {
-    Step::Multiple {
-        name: "shellcheck".to_string(),
-        steps: source_files()
-            .filter(|p| is_shell_script(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new("shellcheck", ["--exclude=SC2155", "--external-sources", &entry]),
-            })
-            .collect(),
-    }
-}
-
-fn run_clang_format(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "clang format".to_string(),
-        steps: source_files()
-            .filter(|p| is_clang_format_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: match mode {
-                    // Uses Google style with minor adaptions from oak/.clang-format.
-                    FormatMode::Check => {
-                        Cmd::new("clang-format", ["--dry-run", "--Werror", "--style=file", &entry])
-                    }
-                    FormatMode::Fix => Cmd::new("clang-format", ["-i", "--style=file", &entry]),
-                },
-            })
-            .collect(),
-    }
-}
-
-fn run_check_license() -> Step {
-    Step::Multiple {
-        name: "check license".to_string(),
-        steps: source_files()
-            .filter(|p| is_source_code_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single { name: entry.clone(), command: CheckLicense::new(entry) })
-            .collect(),
-    }
-}
-
-fn run_check_build_licenses() -> Step {
-    Step::Multiple {
-        name: "check BUILD licenses".to_string(),
-        steps: source_files()
-            .filter(|p| is_build_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: CheckBuildLicenses::new(entry),
-            })
-            .collect(),
-    }
-}
-
-fn run_check_todo() -> Step {
-    Step::Multiple {
-        name: "check todo".to_string(),
-        steps: source_files()
-            .filter(|p| is_source_code_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single { name: entry.clone(), command: CheckTodo::new(entry) })
-            .collect(),
-    }
-}
-
-fn run_cargo_fmt(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "cargo fmt".to_string(),
-        steps: crate_manifest_files()
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "cargo",
-                    spread![
-                        "fmt",
-                        format!("--manifest-path={}", &entry).as_ref(),
-                        ...match mode {
-                            FormatMode::Check => vec!["--", "--check"],
-                            FormatMode::Fix => vec![],
-                        },
-                    ],
-                ),
-            })
-            .collect(),
-    }
 }
 
 fn run_cargo_test(opt: &RunTestsOpt) -> Step {
@@ -503,6 +248,9 @@ fn run_cargo_doc() -> Step {
 }
 
 fn run_cargo_clippy() -> Step {
+    for m in crate_manifest_files() {
+        println!("MANIFEST {m:?}")
+    }
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()

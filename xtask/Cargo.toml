@@ -19,7 +19,6 @@ itertools = "*"
 nix = { version = "*", features = ["signal"] }
 once_cell = "*"
 portpicker = "*"
-regex = "*"
 serde = { version = "*", features = ["derive"] }
 tokio = { version = "*", features = [
   "fs",

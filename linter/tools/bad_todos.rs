@@ -32,6 +32,11 @@ lazy_static! {
         .expect("couldn't parse regex");
 }
 
+fn is_invalid_todo(line: &str) -> bool {
+    // Using \x54 = T to prevent triggering the lint here.
+    line.contains("\x54ODO") && !PATTERN.is_match(line)
+}
+
 impl linter::LinterTool for BadTodoTool {
     // Using \x54 = T to prevent triggering the lint here.
     const NAME: &'static str = "Bad \x54ODOs";
@@ -47,8 +52,7 @@ impl linter::LinterTool for BadTodoTool {
         let mut results = Vec::<String>::new();
         for (n, line) in reader.lines().enumerate() {
             let line = line?;
-            // Using \x54 = T to prevent triggering the lint here.
-            if line.contains("\x54ODO") && !PATTERN.is_match(&line) {
+            if is_invalid_todo(&line) {
                 results.push(format!(" . Line {}: {}", n, line));
             }
         }
@@ -58,5 +62,27 @@ impl linter::LinterTool for BadTodoTool {
         } else {
             Outcome::Failure(results.join("\n"))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_invalid_todo;
+
+    #[test]
+    fn check_todos() {
+        // Using \x54 = T to prevent triggering the lint here.
+        assert!(is_invalid_todo("\x54ODO()"));
+        assert!(!is_invalid_todo("\x54ODO(#123)"));
+
+        assert!(!is_invalid_todo("\x54ODO: b/123 - do something."));
+        // Missing link separator.
+        assert!(is_invalid_todo("\x54ODO: do something."));
+        // Empty link.
+        assert!(is_invalid_todo("\x54ODO: - do something."));
+        assert!(is_invalid_todo("\x54ODO:-do something."));
+        // Empty description.
+        assert!(is_invalid_todo("\x54ODO: b/123 - ."));
+        assert!(is_invalid_todo("\x54ODO: b/123 -."));
     }
 }

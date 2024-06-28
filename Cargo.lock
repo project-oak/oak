@@ -6018,7 +6018,6 @@ dependencies = [
  "nix 0.27.1",
  "once_cell",
  "portpicker",
- "regex",
  "serde",
  "tokio",
  "toml 0.8.8",
