@@ -60,7 +60,7 @@ use oak_proto_rust::oak::{
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
 #[cfg(feature = "regex")]
-use regex::Regex;
+use regex_lite::Regex;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,

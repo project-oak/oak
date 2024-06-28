@@ -1,5 +1,5 @@
 {
-  "checksum": "e094a047ab46fafaa872ac871ffff9266f50a2d8a197ba3807ddb69ce516a571",
+  "checksum": "8087ece7f5de2c666aaa7fb7eedcee942334085da772cbd149eeceb08af52e03",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6561,6 +6561,10 @@
             {
               "id": "regex 1.10.4",
               "target": "regex"
+            },
+            {
+              "id": "regex-lite 0.1.6",
+              "target": "regex_lite"
             },
             {
               "id": "rlsf 0.2.1",
@@ -18817,6 +18821,52 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "regex-lite 0.1.6": {
+      "name": "regex-lite",
+      "version": "0.1.6",
+      "package_url": "https://github.com/rust-lang/regex/tree/master/regex-lite",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/regex-lite/0.1.6/download",
+          "sha256": "53a49587ad06b26609c52e423de037e7f57f20d53535d66e08c695f347df952a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "regex_lite",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "regex_lite",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "std",
+            "string"
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.1.6"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "regex-syntax 0.8.3": {
       "name": "regex-syntax",
       "version": "0.8.3",
@@ -30815,6 +30865,7 @@
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex 1.10.4",
+    "regex-lite 0.1.6",
     "rlsf 0.2.1",
     "rsa 0.9.6",
     "rtnetlink 0.14.1",

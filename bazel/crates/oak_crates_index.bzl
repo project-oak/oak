@@ -296,6 +296,14 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "regex-lite": crate.spec(
+                default_features = False,
+                features = [
+                    "std",
+                    "string",
+                ],
+                version = "0.1.6",
+            ),
             "rlsf": crate.spec(version = "*"),
             "rsa": crate.spec(
                 default_features = False,
