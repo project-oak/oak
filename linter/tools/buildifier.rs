@@ -32,6 +32,28 @@ impl linter::LinterTool for BuildifierTool {
     }
 
     fn fix(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("buildifier", &["-mode=fix", "-lint=fix"], path)
+        super::linter_command("buildifier", &["-mode=fix", "-lint=fix", "-v"], path)
+            .and_then(|outcome| process_fix_warnings(self, path, outcome))
+    }
+}
+
+// The buildifer verbose output is noisy, and provides a lot of useless
+// information. The interesting bits are that sometimes fix can't fix anything,
+// and reports remaining warnings. But it doesn't tell you what they are. So in
+// those cases, we should run check again, and report the warnings.
+fn process_fix_warnings<T: linter::LinterTool>(
+    tool: &T,
+    path: &Path,
+    outcome: linter::Outcome,
+) -> anyhow::Result<linter::Outcome> {
+    match outcome {
+        // It was fixed, no issues.
+        linter::Outcome::Success(msg) if msg.contains("0 warnings left") => {
+            Ok(linter::Outcome::Success("".to_string()))
+        }
+        // It was fixed, but issues remain. Run normal check to show them.
+        linter::Outcome::Success(_) => tool.check(path),
+        // It failed, so just show those results.
+        linter::Outcome::Failure(_) => Ok(outcome),
     }
 }
