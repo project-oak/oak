@@ -74,6 +74,7 @@ cc_test(
         "//cc/crypto/hpke:utils",
         "//proto/crypto:crypto_cc_proto",
         "@boringssl//:crypto",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],

@@ -91,6 +91,7 @@ cc_test(
         ":encryption_key",
         ":server_encryptor",
         "//cc/crypto/hpke:recipient_context",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
