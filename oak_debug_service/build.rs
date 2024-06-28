@@ -18,9 +18,15 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
+    #[cfg(not(feature = "bazel"))]
+    let included_protos = vec![std::path::PathBuf::from("..")];
+    #[cfg(feature = "bazel")]
+    let included_protos = oak_proto_build_utils::get_common_proto_path();
+
+    // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
         &["../proto/oak_debug/service/oak_debug.proto"],
-        &[".."],
+        &included_protos,
         CodegenOptions { build_server: true, ..Default::default() },
     )?;
 
