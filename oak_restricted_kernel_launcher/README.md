@@ -21,7 +21,7 @@ must be built.
 just \
   stage0_bin \
   oak_restricted_kernel_wrapper \
-  oak_orchestrator oak_echo_raw_enclave_app && \
+  oak_orchestrator oak_multi_process_test && \
 
 # After building dependencies, an enclave app may be run like so:
 RUST_LOG=DEBUG \
@@ -31,5 +31,5 @@ cargo run --package=oak_restricted_kernel_launcher -- \
 --memory-size=8G \
 --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
 --initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
---app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
+--app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_multi_process_test
 ```

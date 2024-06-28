@@ -10,6 +10,7 @@ export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { 
 key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
+oak_multi_process_test: (build_enclave_app "oak_multi_process_test")
 oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
 oak_orchestrator: (build_enclave_app "oak_orchestrator")
 

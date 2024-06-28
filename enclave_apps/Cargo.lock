@@ -823,6 +823,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_multi_process_test"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
 name = "oak_orchestrator"
 version = "0.1.0"
 dependencies = [
