@@ -108,7 +108,7 @@ absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(
     absl::Status status = Close();
     if (status.ok()) {
       return absl::InternalError(
-          "failed to read request for unspecified reason. This is likely an "
+          "failed to write request for unspecified reason. This is likely an "
           "implementation bug.");
     } else {
       return absl::Status(status.code(), absl::StrCat("while writing request: ",
@@ -122,7 +122,7 @@ absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(
     absl::Status status = Close();
     if (status.ok()) {
       return absl::InternalError(
-          "failed to write request for unspecified reason. This is likely an "
+          "failed to read response for unspecified reason. This is likely an "
           "implementation bug.");
     } else {
       return absl::Status(status.code(), absl::StrCat("while reading request: ",
