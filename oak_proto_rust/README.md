@@ -11,13 +11,12 @@ This library is imported into some environments where Prost and/or build scripts
 are not available. To support building our Rust targets in these environmnets,
 we also include pre-generated Prost Rust code in the `generated` directory.
 
-A presubmit job will run the `oak_proto_rust:verify_generated` target to verify
-that all generated code also exists in the `generated` directory.
+The bazel `write_source_files` helps us with this. It creates a rule for copying
+the generated files, as well as a rule that verifies that they exist in the
+right place.
 
 If proto changes are made, you should run:
+`bazel run oak_proto_rust:copy_generated_files`
 
-`bazel run oak_proto_rust:copy_generated`
-
-to copy any added/modified files. Not that the script will not cover any
-_removed_ files, so take care to clean up any uneeded files if protos are
-removed at some point.
+If you forget, your presubmit will fail, with a message telling you to run that
+command.

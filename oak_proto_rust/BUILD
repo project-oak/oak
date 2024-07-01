@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
@@ -87,20 +88,11 @@ cargo_build_script(
     ],
 )
 
-sh_binary(
-    name = "copy_generated",
-    srcs = [":copy_generated.sh"],
-    data = [
-        ":build",
-        ":oak_proto_rust",
-    ],
-)
-
-sh_binary(
-    name = "verify_generated",
-    srcs = [":verify_generated.sh"],
-    data = [
-        ":build",
-        ":oak_proto_rust",
-    ],
+# Prost build tools aren't available internally, so we copy the generated files
+# into the source tree for easy import. See README.md for more details.
+write_source_files(
+    name = "copy_generated_files",
+    files = {
+        "generated": "//oak_proto_rust:build",
+    },
 )
