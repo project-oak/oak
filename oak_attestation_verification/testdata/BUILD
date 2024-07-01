@@ -23,11 +23,14 @@ exports_files([
     "endorsement.json",
     "endorsement.json.sig",
     "fake_evidence.binarypb",
-    "fake_evidence.textproto",
+    "fake_expected_values.binarypb",
+    "genoa_oc_evidence.binarypb",
+    "genoa_oc_reference_values.binarypb",
     "logentry.json",
     "oak_containers_stage1.pem",
     "oak-development.pem",
     "oc_evidence.binarypb",
+    # TBD: Remove - we should only export binary protos, not the textproto version.
     "oc_evidence.textproto",
     # The VCEK cert needs to match the hardware ID of the attestation report in the
     # test evidence proto. The additional parameters in the URL encode the reported
@@ -41,14 +44,8 @@ exports_files([
     "oc_vcek_milan.pem",
     "rekor_public_key.pem",
     "rk_evidence.binarypb",
-    "rk_evidence.textproto",
     "rk_evidence_20240312.binarypb",
-    "rk_evidence_20240312.textproto",
     "rk_vcek_milan.der",
     "rk_vcek_milan.pem",
-    "genoa_oc_evidence.binarypb",
-    "genoa_oc_evidence.prototext",
-    "genoa_oc_reference_values.binarypb",
-    "genoa_oc_reference_values.textproto",
     "vcek_genoa.der",
 ])
