@@ -21,15 +21,19 @@ use alloc::vec::Vec;
 use core::convert::TryInto;
 
 use anyhow::{anyhow, Context};
-use oak_crypto::noise_handshake::client::HandshakeInitiator;
+use oak_crypto::noise_handshake::{client::HandshakeInitiator, Crypter};
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
-    session::v1::{HandshakeRequest, HandshakeResponse, NoiseHandshakeMessage},
+    session::v1::{
+        handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
+        NoiseHandshakeMessage,
+    },
 };
 
 use crate::{config::HandshakerConfig, ProtocolEngine};
 
 const EPHEMERAL_PUB_KEY_LEN: usize = 65;
+const HANDSHAKE_HASH_LEN: usize = 32;
 
 pub trait EncryptionKeyHandle {
     fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;
@@ -52,6 +56,7 @@ pub trait Handshaker {
 pub struct ClientHandshaker<'a> {
     handshaker_config: HandshakerConfig<'a>,
     handshake_initiator: HandshakeInitiator,
+    handshake_result: Option<([u8; HANDSHAKE_HASH_LEN], Crypter)>,
 }
 
 impl<'a> ClientHandshaker<'a> {
@@ -72,13 +77,14 @@ impl<'a> ClientHandshaker<'a> {
                 ),
                 HandshakeType::NoiseNN => HandshakeInitiator::new_nn(),
             },
+            handshake_result: None,
         })
     }
 }
 
 impl<'a> Handshaker for ClientHandshaker<'a> {
-    fn derive_session_keys(self) -> Option<SessionKeys> {
-        core::unimplemented!();
+    fn derive_session_keys(mut self) -> Option<SessionKeys> {
+        self.handshake_result.take().map(|(_handshake_hash, crypter)| crypter.into())
     }
 }
 
@@ -88,29 +94,40 @@ impl<'a> ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshake
         let (ciphertext, ephemeral_public_key) =
             (initial_message.split_off(EPHEMERAL_PUB_KEY_LEN), initial_message);
         Ok(Some(HandshakeRequest {
-            r#handshake_type: Some(
-                oak_proto_rust::oak::session::v1::handshake_request::HandshakeType::NoiseHandshakeMessage(
-                    NoiseHandshakeMessage {
-                        ephemeral_public_key,
-                        static_public_key: match self.handshaker_config.handshake_type {
-                            HandshakeType::NoiseKK
-                            | HandshakeType::NoiseKN
-                            | HandshakeType::NoiseNK
-                            | HandshakeType::NoiseNN => vec![],
-                        },
-                        ciphertext,
+            r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
+                NoiseHandshakeMessage {
+                    ephemeral_public_key,
+                    static_public_key: match self.handshaker_config.handshake_type {
+                        HandshakeType::NoiseKK
+                        | HandshakeType::NoiseKN
+                        | HandshakeType::NoiseNK
+                        | HandshakeType::NoiseNN => vec![],
                     },
-                ),
-            ),
+                    ciphertext,
+                },
+            )),
             attestation_binding: None,
         }))
     }
 
     fn put_incoming_message(
         &mut self,
-        _incoming_message: &HandshakeResponse,
+        incoming_message: &HandshakeResponse,
     ) -> anyhow::Result<Option<()>> {
-        core::unimplemented!();
+        match incoming_message.r#handshake_type.as_ref() {
+            Some(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
+                let handshake_response = [
+                    noise_message.ephemeral_public_key.as_slice(),
+                    noise_message.static_public_key.as_slice(),
+                    noise_message.ciphertext.as_slice(),
+                ]
+                .concat();
+                self.handshake_result =
+                    Some(self.handshake_initiator.process_response(handshake_response.as_slice()));
+                Ok(Some(()))
+            }
+            None => Err(anyhow!("Missing handshake_type")),
+        }
     }
 }
 

@@ -27,6 +27,8 @@ mod tests;
 
 use alloc::vec::Vec;
 
+use oak_proto_rust::oak::crypto::v1::SessionKeys;
+
 pub use crate::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
     p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
@@ -130,6 +132,12 @@ impl Crypter {
         }
         let unpadded_length = plaintext.len() - (plaintext[plaintext.len() - 1] as usize);
         Ok(Vec::from(&plaintext[0..unpadded_length - 1]))
+    }
+}
+
+impl From<Crypter> for SessionKeys {
+    fn from(value: Crypter) -> Self {
+        SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
     }
 }
 
