@@ -71,6 +71,7 @@ cargo_build_script(
         "//proto/attestation:reference_value_proto",
         "//proto/attestation:tcb_version_proto",
         "//proto/attestation:verification_proto",
+        "//proto/containers:hello_world_proto",
         "//proto/containers:interfaces_proto",
         "//proto/crypto:crypto_proto",
         "//proto/oak_functions:abi_proto",

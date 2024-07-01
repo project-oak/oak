@@ -27,7 +27,11 @@ package(
 # to verify the ARK -> ASK validity offline in a unit test.
 #
 # To verify ARK, redownload from https://www.amd.com/en/developer/sev.html and
-# convert and compare against the repository copies.
+# convert and compare against the repository copies. However, the mentioned
+# URL uses a custom AMD format - the files used here can be obtained directly
+# from https://kdsintf.amd.com/vcek/v1/${PRODUCT_NAME}/cert_chain, where
+# PRODUCT_NAME is `Genoa` or `Milan`.
+#
 exports_files([
     "ark_genoa.pem",
     "ask_genoa.pem",

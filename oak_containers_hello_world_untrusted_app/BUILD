@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -25,35 +25,41 @@ package(
 rust_library(
     name = "lib",
     srcs = [
-        "src/app_service.rs",
+        "src/app_client.rs",
         "src/lib.rs",
+        "tests/integration_test.rs",
     ],
-    crate_name = "oak_containers_hello_world_trusted_app",
+    crate_name = "oak_containers_hello_world_untrusted_app",
     deps = [
         ":build",
-        "//oak_containers_sdk",
+        "//oak_client",
+        "//oak_containers_launcher:lib",
         "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
     ],
 )
 
 rust_binary(
-    name = "oak_containers_hello_world_trusted_app",
+    name = "oak_containers_hello_world_untrusted_app",
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
-        "//oak_containers_sdk",
+        "//oak_client",
+        "//oak_containers_launcher:lib",
+        "//oak_crypto",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
     ],
 )
 
+# TODO: b/349587497 - Remove build script. Depend on //oak_proto_rust insetad.
 cargo_build_script(
     name = "build",
     srcs = [
@@ -72,5 +78,13 @@ cargo_build_script(
     deps = [
         "//oak_grpc_utils",
         "@oak_crates_index//:prost-build",
+    ],
+)
+
+rust_test(
+    name = "tests",
+    crate = ":lib",
+    deps = [
+        "@oak_crates_index//:assertables",
     ],
 )

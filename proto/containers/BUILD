@@ -17,6 +17,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,23 +25,23 @@ package(
 )
 
 proto_library(
-    name = "orchestrator_crypto_proto",
-    srcs = ["orchestrator_crypto.proto"],
+    name = "hello_world_proto",
+    srcs = ["hello_world.proto"],
     deps = [
         "//proto/crypto:crypto_proto",
     ],
 )
 
 cc_proto_library(
-    name = "orchestrator_crypto_cc_proto",
-    deps = [":orchestrator_crypto_proto"],
+    name = "hello_world_cc_proto",
+    deps = [":hello_world_proto"],
 )
 
 cc_grpc_library(
-    name = "orchestrator_crypto_cc_grpc",
-    srcs = [":orchestrator_crypto_proto"],
+    name = "hello_world_cc_grpc",
+    srcs = [":hello_world_proto"],
     grpc_only = True,
-    deps = [":orchestrator_crypto_cc_proto"],
+    deps = [":hello_world_cc_proto"],
 )
 
 proto_library(
@@ -73,10 +74,38 @@ cc_grpc_library(
     deps = [":interfaces_cc_proto"],
 )
 
+proto_library(
+    name = "orchestrator_crypto_proto",
+    srcs = ["orchestrator_crypto.proto"],
+    deps = [
+        "//proto/crypto:crypto_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "orchestrator_crypto_cc_proto",
+    deps = [":orchestrator_crypto_proto"],
+)
+
+cc_grpc_library(
+    name = "orchestrator_crypto_cc_grpc",
+    srcs = [":orchestrator_crypto_proto"],
+    grpc_only = True,
+    deps = [":orchestrator_crypto_cc_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
+        ":hello_world_proto",
+        ":hello_world_cc_proto",
+        ":hello_world_cc_grpc",
         ":hostlib_key_provisioning_proto",
+        ":interfaces_proto",
+        ":interfaces_cc_proto",
+        ":interfaces_cc_grpc",
         ":orchestrator_crypto_proto",
+        ":orchestrator_crypto_cc_proto",
+        ":orchestrator_crypto_cc_grpc",
     ],
 )

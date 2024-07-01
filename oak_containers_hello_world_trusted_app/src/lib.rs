@@ -23,5 +23,4 @@ mod proto {
         pub use oak_proto_rust::oak::crypto;
     }
 }
-
 pub mod app_service;
