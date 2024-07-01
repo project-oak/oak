@@ -42,16 +42,16 @@ struct LinterContext {
     verbose: bool,
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct ResultCounts {
     processed: usize,
-    failures: usize,
+    error_messages: Vec<String>,
 }
 
 impl std::ops::AddAssign<ResultCounts> for ResultCounts {
     fn add_assign(&mut self, rhs: ResultCounts) {
         self.processed += rhs.processed;
-        self.failures += rhs.failures;
+        self.error_messages.extend(rhs.error_messages);
     }
 }
 
@@ -84,8 +84,11 @@ fn main() {
     let elapsed = end.duration_since(start);
     println!("\n\nProcessed {} files in {:?}", counts.processed, elapsed);
 
-    if counts.failures > 0 {
-        println!("{}", format!("Files with issues: {}", counts.failures).red());
+    if !counts.error_messages.is_empty() {
+        println!("{}", format!("Files with issues: {}", counts.error_messages.len()).red());
+        for message in counts.error_messages {
+            println!("{}", message.red());
+        }
         std::process::exit(1);
     } else {
         println!("{}", "No files with issues found".cyan());
@@ -112,12 +115,13 @@ impl LinterContext {
         let linter = Linter::new(tool);
         let outcomes = linter.lint_files(&self.walk_builder, self.mode);
         let processed = outcomes.len();
-        let mut failures = 0;
+        let mut error_messages = Vec::new();
         for outcome in outcomes {
             match outcome.outcome {
                 Err(err) => {
                     let message = format!("TOOL FAILURE {err:?}").red();
                     println!("{}", message);
+                    error_messages.push(format!("{}: {}", outcome.filename, message));
                 }
                 Ok(linter::Outcome::Success(message)) => {
                     if !message.is_empty() {
@@ -128,8 +132,8 @@ impl LinterContext {
                     }
                 }
                 Ok(linter::Outcome::Failure(message)) => {
-                    failures += 1;
-                    println!("{}\n{message}", outcome.filename.red())
+                    println!("{}\n{message}", outcome.filename.red());
+                    error_messages.push(format!("{}: {}", outcome.filename, message));
                 }
             };
         }
@@ -141,6 +145,6 @@ impl LinterContext {
             processed,
             elapsed
         );
-        ResultCounts { processed, failures }
+        ResultCounts { processed, error_messages }
     }
 }
