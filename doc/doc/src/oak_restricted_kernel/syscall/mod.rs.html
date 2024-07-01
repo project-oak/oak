@@ -292,6 +292,13 @@
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -323,7 +330,7 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::offset_of};
+<span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::offset_of, ptr::addr_of_mut};
 
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
@@ -344,57 +351,13 @@
 };
 <span class="kw">use </span><span class="kw">crate</span>::mm;
 
-<span class="doccomment">/// State we need to track for system calls.
-</span><span class="attr">#[repr(C, align(<span class="number">16</span>))]
-#[derive(Debug)]
-</span><span class="kw">struct </span>GsData {
-    <span class="doccomment">/// Kernel stack pointer (what to set in RSP after saving user RSP).
-    </span>kernel_sp: VirtAddr,
-
-    <span class="doccomment">/// User context data
-    </span>user_ctx: UserContext,
-}
-
-<span class="attr">#[repr(C, align(<span class="number">16</span>))]
-#[derive(Debug, Default)]
-</span><span class="kw">struct </span>UserContext {
-    rsp: u64,
-    rcx: u64,
-    rdi: u64,
-    rsi: u64,
-    rdx: u64,
-    rbx: u64,
-    r8: u64,
-    r9: u64,
-    r10: u64,
-    r11: u64,
-    r12: u64,
-    r13: u64,
-    r14: u64,
-    r15: u64,
-    rbp: u64,
-    ymm: [[u64; <span class="number">4</span>]; <span class="number">16</span>],
-}
-
 <span class="kw">pub fn </span>enable_syscalls(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;, dice_data: dice_data::DiceData) {
     channel::register(channel);
     stdio::register();
     key::register();
     dice_data::register(dice_data);
 
-    <span class="comment">// Allocate a stack for the system call handler.
-    </span><span class="kw">let </span>kernel_sp = mm::allocate_stack();
-
-    <span class="comment">// Store the gsdata structure in the kernel heap.
-    // We need the GsData to stick around statically, so we'll leak it here.
-    </span><span class="kw">let </span>gsdata = Box::leak(Box::new(GsData {
-        <span class="comment">// Stack grows down, so SP points to the end of the page
-        </span>kernel_sp,
-        user_ctx: UserContext::default(),
-    }));
-
-    KernelGsBase::write(VirtAddr::from_ptr(gsdata));
-    GsBase::write(VirtAddr::from_ptr(gsdata));
+    GsData::setup();
 
     LStar::write(VirtAddr::new(syscall_entrypoint <span class="kw">as </span>usize <span class="kw">as </span>u64));
     <span class="kw">unsafe </span>{
@@ -429,6 +392,46 @@
         }
         <span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; syscall_unstable_switch_proccess(arg1),
         <span class="prelude-val">None </span>=&gt; Errno::ENOSYS <span class="kw">as </span>isize,
+    }
+}
+
+<span class="kw">const </span>MAX_PROCESSES: usize = <span class="number">16</span>;
+
+<span class="kw">static </span><span class="kw-2">mut </span>GS_DATA: GsData = GsData {
+    kernel_sp: VirtAddr::zero(),
+    user_stack_pointers: [VirtAddr::zero(); MAX_PROCESSES],
+    current_pid: <span class="number">0</span>,
+};
+
+<span class="doccomment">/// State we need to track for system calls.
+</span><span class="attr">#[repr(C, align(<span class="number">16</span>))]
+#[derive(Debug)]
+</span><span class="kw">struct </span>GsData {
+    <span class="doccomment">/// Kernel stack pointer (what to set in RSP after saving user RSP).
+    </span>kernel_sp: VirtAddr,
+
+    <span class="doccomment">/// Current process ID.
+    </span>current_pid: usize,
+
+    <span class="doccomment">/// Array of user stack pointers (RSP) for each process, by PID.
+    </span>user_stack_pointers: [VirtAddr; MAX_PROCESSES],
+}
+
+<span class="kw">impl </span>GsData {
+    <span class="kw">pub fn </span>setup() {
+        <span class="comment">// Allocate a stack for the system call handler.
+        </span><span class="kw">let </span>kernel_sp = mm::allocate_stack();
+
+        <span class="comment">// Store the gsdata structure in the kernel heap.
+        // We need the GsData to stick around statically, so we'll leak it here.
+        //
+        // Safety: This is called during initialization, so we know no other threads are
+        // accessing GS_DATA
+        </span><span class="kw">unsafe </span>{
+            GS_DATA.kernel_sp = kernel_sp;
+            KernelGsBase::write(VirtAddr::from_ptr(<span class="macro">addr_of_mut!</span>(GS_DATA)));
+            GsBase::write(VirtAddr::from_ptr(<span class="macro">addr_of_mut!</span>(GS_DATA)));
+        };
     }
 }
 
@@ -471,46 +474,59 @@
     // for more details.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm! </span>{
-            <span class="comment">// Switch to the syscall stack
-            </span><span class="string">"swapgs"</span>, <span class="comment">// switch to kernel GS
+            <span class="comment">// Switch to kernel GS.
+            </span><span class="string">"swapgs"</span>,
 
-            // Save user context to GsData
-            </span><span class="string">"mov gs:[{OFFSET_RSP}], rsp"</span>,
-            <span class="string">"mov gs:[{OFFSET_RCX}], rcx"</span>,
-            <span class="string">"mov gs:[{OFFSET_RDI}], rdi"</span>,
-            <span class="string">"mov gs:[{OFFSET_RSI}], rsi"</span>,
-            <span class="string">"mov gs:[{OFFSET_RDX}], rdx"</span>,
-            <span class="string">"mov gs:[{OFFSET_RBX}], rbx"</span>,
-            <span class="string">"mov gs:[{OFFSET_R8}], r8"</span>,
-            <span class="string">"mov gs:[{OFFSET_R9}], r9"</span>,
-            <span class="string">"mov gs:[{OFFSET_R10}], r10"</span>,
-            <span class="string">"mov gs:[{OFFSET_R11}], r11"</span>,
-            <span class="string">"mov gs:[{OFFSET_R12}], r12"</span>,
-            <span class="string">"mov gs:[{OFFSET_R13}], r13"</span>,
-            <span class="string">"mov gs:[{OFFSET_R14}], r14"</span>,
-            <span class="string">"mov gs:[{OFFSET_R15}], r15"</span>,
+            <span class="comment">// Save user general-purpose registers to user stack.
+            // rax is not saved as it holds the syscall identifier.
+            </span><span class="string">"push rbx"</span>,
+            <span class="string">"push rcx"</span>,
+            <span class="string">"push rdx"</span>,
+            <span class="string">"push rsi"</span>,
+            <span class="string">"push rdi"</span>,
+            <span class="string">"push rbp"</span>,
+            <span class="string">"push r8"</span>,
+            <span class="string">"push r9"</span>,
+            <span class="string">"push r10"</span>,
+            <span class="string">"push r11"</span>, <span class="comment">// the syscall instruction saved user RFLAGS into r11
+            </span><span class="string">"push r12"</span>,
+            <span class="string">"push r13"</span>,
+            <span class="string">"push r14"</span>,
+            <span class="string">"push r15"</span>,
 
-            <span class="comment">// Save AVX registers to GsData
-            </span><span class="string">"vmovups gs:[{OFFSET_YMM} + 0*32], YMM0"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 1*32], YMM1"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 2*32], YMM2"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 3*32], YMM3"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 4*32], YMM4"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 5*32], YMM5"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 6*32], YMM6"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 7*32], YMM7"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 8*32], YMM8"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 9*32], YMM9"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 10*32], YMM10"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 11*32], YMM11"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 12*32], YMM12"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 13*32], YMM13"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 14*32], YMM14"</span>,
-            <span class="string">"vmovups gs:[{OFFSET_YMM} + 15*32], YMM15"</span>,
+            <span class="comment">// Save user AVX registers to user stack.
+            // AVX registers (e.g., ymm0) are not saved using 'push' because they are 256 bits wide
+            // (or 512 bits in AVX-512) and 'push' is designed for pushing 16-bit, 32-bit, or 64-bit values.
+            // Additionally, AVX instructions often prefer 32-byte aligned memory access, which may not
+            // be guaranteed when using 'push' to place values on the stack.
+            </span><span class="string">"sub rsp, 512"</span>,
+            <span class="string">"vmovups [rsp + 0*32], ymm0"</span>,
+            <span class="string">"vmovups [rsp + 1*32], ymm1"</span>,
+            <span class="string">"vmovups [rsp + 2*32], ymm2"</span>,
+            <span class="string">"vmovups [rsp + 3*32], ymm3"</span>,
+            <span class="string">"vmovups [rsp + 4*32], ymm4"</span>,
+            <span class="string">"vmovups [rsp + 5*32], ymm5"</span>,
+            <span class="string">"vmovups [rsp + 6*32], ymm6"</span>,
+            <span class="string">"vmovups [rsp + 7*32], ymm7"</span>,
+            <span class="string">"vmovups [rsp + 8*32], ymm8"</span>,
+            <span class="string">"vmovups [rsp + 9*32], ymm9"</span>,
+            <span class="string">"vmovups [rsp + 10*32], ymm10"</span>,
+            <span class="string">"vmovups [rsp + 11*32], ymm11"</span>,
+            <span class="string">"vmovups [rsp + 12*32], ymm12"</span>,
+            <span class="string">"vmovups [rsp + 13*32], ymm13"</span>,
+            <span class="string">"vmovups [rsp + 14*32], ymm14"</span>,
+            <span class="string">"vmovups [rsp + 15*32], ymm15"</span>,
 
-            <span class="string">"mov rsp, gs:[{OFFSET_KERNEL_STACK_POINTER}]"</span>, <span class="comment">// switch to kernel stack
+            <span class="comment">// Save user stack pointer to GsData.
+            </span><span class="string">"mov r15, gs:[{OFFSET_CURRENT_PID}]"</span>,
+            <span class="string">"shl r15, {POINTER_SIZE_SHIFT}"</span>, <span class="comment">// Multiply by size of VirtAddr
+            </span><span class="string">"add r15, {OFFSET_USER_STACK_POINTERS}"</span>,
+            <span class="string">"mov gs:[r15], rsp"</span>,
 
-            // Shuffle around register values to match sysv calling convention, and escape into
+             <span class="comment">// Switch to kernel stack.
+            </span><span class="string">"mov rsp, gs:[{OFFSET_KERNEL_STACK_POINTER}]"</span>,
+
+            <span class="comment">// Shuffle around register values to match sysv calling convention, and escape into
             // proper Rust code from the assembly.
             </span><span class="string">"sub rsp, 8"</span>,
             <span class="string">"push r9"</span>,
@@ -524,62 +540,60 @@
             <span class="string">"pop r9"</span>,
             <span class="string">"add rsp, 8"</span>,
 
-            <span class="comment">// Restore AVX registers from GsData.
-            </span><span class="string">"vmovups YMM0, gs:[{OFFSET_YMM} + 0*32]"</span>,
-            <span class="string">"vmovups YMM1, gs:[{OFFSET_YMM} + 1*32]"</span>,
-            <span class="string">"vmovups YMM2, gs:[{OFFSET_YMM} + 2*32]"</span>,
-            <span class="string">"vmovups YMM3, gs:[{OFFSET_YMM} + 3*32]"</span>,
-            <span class="string">"vmovups YMM4, gs:[{OFFSET_YMM} + 4*32]"</span>,
-            <span class="string">"vmovups YMM5, gs:[{OFFSET_YMM} + 5*32]"</span>,
-            <span class="string">"vmovups YMM6, gs:[{OFFSET_YMM} + 6*32]"</span>,
-            <span class="string">"vmovups YMM7, gs:[{OFFSET_YMM} + 7*32]"</span>,
-            <span class="string">"vmovups YMM8, gs:[{OFFSET_YMM} + 8*32]"</span>,
-            <span class="string">"vmovups YMM9, gs:[{OFFSET_YMM} + 9*32]"</span>,
-            <span class="string">"vmovups YMM10, gs:[{OFFSET_YMM} + 10*32]"</span>,
-            <span class="string">"vmovups YMM11, gs:[{OFFSET_YMM} + 11*32]"</span>,
-            <span class="string">"vmovups YMM12, gs:[{OFFSET_YMM} + 12*32]"</span>,
-            <span class="string">"vmovups YMM13, gs:[{OFFSET_YMM} + 13*32]"</span>,
-            <span class="string">"vmovups YMM14, gs:[{OFFSET_YMM} + 14*32]"</span>,
-            <span class="string">"vmovups YMM15, gs:[{OFFSET_YMM} + 15*32]"</span>,
+            <span class="comment">// Re-calculate offset of the user stack pointer, the current pid may have changed.
+            </span><span class="string">"mov r15, gs:[{OFFSET_CURRENT_PID}]"</span>,
+            <span class="string">"shl r15, {POINTER_SIZE_SHIFT}"</span>, <span class="comment">// Multiply by size of VirtAddr
+            </span><span class="string">"add r15, {OFFSET_USER_STACK_POINTERS}"</span>,
 
-            <span class="comment">// Restore scratch registers from GsData
-            </span><span class="string">"mov rcx, gs:[{OFFSET_RCX}]"</span>,
-            <span class="string">"mov rdi, gs:[{OFFSET_RDI}]"</span>,
-            <span class="string">"mov rsi, gs:[{OFFSET_RSI}]"</span>,
-            <span class="string">"mov rdx, gs:[{OFFSET_RDX}]"</span>,
-            <span class="string">"mov rbx, gs:[{OFFSET_RBX}]"</span>,
-            <span class="string">"mov r8, gs:[{OFFSET_R8}]"</span>,
-            <span class="string">"mov r9, gs:[{OFFSET_R9}]"</span>,
-            <span class="string">"mov r10, gs:[{OFFSET_R10}]"</span>,
-            <span class="string">"mov r11, gs:[{OFFSET_R11}]"</span>, <span class="comment">// restore user RFLAGS
-            </span><span class="string">"mov r12, gs:[{OFFSET_R12}]"</span>,
-            <span class="string">"mov r13, gs:[{OFFSET_R13}]"</span>,
-            <span class="string">"mov r14, gs:[{OFFSET_R14}]"</span>,
-            <span class="string">"mov r15, gs:[{OFFSET_R15}]"</span>,
+            <span class="comment">// Restore user stack pointer from GsData.
+            </span><span class="string">"mov rsp, gs:[r15]"</span>,
 
-            <span class="comment">// Restore user RSP in preparation for SYSRET.
-            </span><span class="string">"mov rsp, gs:[{OFFSET_RSP}]"</span>,
-            <span class="string">"swapgs"</span>, <span class="comment">// restore user GS
+            <span class="comment">// Restore user AVX registers from user stack.
+            </span><span class="string">"vmovups ymm15, [rsp + 15*32]"</span>,
+            <span class="string">"vmovups ymm14, [rsp + 14*32]"</span>,
+            <span class="string">"vmovups ymm13, [rsp + 13*32]"</span>,
+            <span class="string">"vmovups ymm12, [rsp + 12*32]"</span>,
+            <span class="string">"vmovups ymm11, [rsp + 11*32]"</span>,
+            <span class="string">"vmovups ymm10, [rsp + 10*32]"</span>,
+            <span class="string">"vmovups ymm9, [rsp + 9*32]"</span>,
+            <span class="string">"vmovups ymm8, [rsp + 8*32]"</span>,
+            <span class="string">"vmovups ymm7, [rsp + 7*32]"</span>,
+            <span class="string">"vmovups ymm6, [rsp + 6*32]"</span>,
+            <span class="string">"vmovups ymm5, [rsp + 5*32]"</span>,
+            <span class="string">"vmovups ymm4, [rsp + 4*32]"</span>,
+            <span class="string">"vmovups ymm3, [rsp + 3*32]"</span>,
+            <span class="string">"vmovups ymm2, [rsp + 2*32]"</span>,
+            <span class="string">"vmovups ymm1, [rsp + 1*32]"</span>,
+            <span class="string">"vmovups ymm0, [rsp + 0*32]"</span>,
+            <span class="string">"add rsp, 512"</span>,
 
-            // Back to user code in Ring 3.
+            <span class="comment">// Restore user general-purpose registers from user stack.
+            </span><span class="string">"pop r15"</span>,
+            <span class="string">"pop r14"</span>,
+            <span class="string">"pop r13"</span>,
+            <span class="string">"pop r12"</span>,
+            <span class="string">"pop r11"</span>, <span class="comment">// the sysret instruction will copy r11 into RFLAGS
+            </span><span class="string">"pop r10"</span>,
+            <span class="string">"pop r9"</span>,
+            <span class="string">"pop r8"</span>,
+            <span class="string">"pop rbp"</span>,
+            <span class="string">"pop rdi"</span>,
+            <span class="string">"pop rsi"</span>,
+            <span class="string">"pop rdx"</span>,
+            <span class="string">"pop rcx"</span>,
+            <span class="string">"pop rbx"</span>,
+            <span class="comment">// rax is not restored as it holds the syscall return value.
+
+            // Restore user GS.
+            </span><span class="string">"swapgs"</span>,
+
+            <span class="comment">// Back to user code in Ring 3.
             </span><span class="string">"sysretq"</span>,
             HANDLER = sym syscall_handler,
             OFFSET_KERNEL_STACK_POINTER = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, kernel_sp)),
-            OFFSET_RSP = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rsp)),
-            OFFSET_RCX = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rcx)),
-            OFFSET_RDI = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rdi)),
-            OFFSET_RSI = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rsi)),
-            OFFSET_RDX = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rdx)),
-            OFFSET_RBX = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.rbx)),
-            OFFSET_R8 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r8)),
-            OFFSET_R9 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r9)),
-            OFFSET_R10 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r10)),
-            OFFSET_R11 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r11)),
-            OFFSET_R12 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r12)),
-            OFFSET_R13 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r13)),
-            OFFSET_R14 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r14)),
-            OFFSET_R15 = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.r15)),
-            OFFSET_YMM = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_ctx.ymm)),
+            OFFSET_USER_STACK_POINTERS = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, user_stack_pointers)),
+            OFFSET_CURRENT_PID = <span class="kw">const</span>(<span class="macro">offset_of!</span>(GsData, current_pid)),
+            POINTER_SIZE_SHIFT = <span class="kw">const</span>(core::mem::size_of::&lt;VirtAddr&gt;().trailing_zeros()),
             options(noreturn)
         }
     }
