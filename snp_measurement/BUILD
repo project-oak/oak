@@ -21,17 +21,14 @@ package(
     licenses = ["notice"],
 )
 
-# TODO: b/349587444 - Doesn't work with default location via WORKSPACE_ROOT.
-#
-# Currently, need to run like this:
-#
+# Example:
 # bazel run //snp_measurement -- \
-#  --stage0-rom=$(pwd)/stage0_bin/target/x86_64-unknown-none/release/stage0_bin
+#  --stage0-rom=$(pwd)/stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+#  --vcpu-count=4
 rust_binary(
     name = "snp_measurement",
     srcs = glob(["src/**"]),
     crate_root = "src/main.rs",
-    rustc_env = {"WORKSPACE_ROOT": ".."},
     deps = [
         "//oak_sev_guest",
         "@oak_crates_index//:anyhow",

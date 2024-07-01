@@ -21,9 +21,6 @@ use clap::Parser;
 use sha2::{Digest, Sha256};
 use zerocopy::FromBytes;
 
-/// The default workspace-relative path to the Linux Kernel bzImage file.
-const DEFAULT_LINUX_KERNEL: &str = "oak_containers_kernel/target/bzImage";
-
 #[derive(Parser, Clone)]
 #[command(about = "Oak Kernel Measurement Calculator")]
 struct Cli {
@@ -37,9 +34,7 @@ struct Cli {
 
 impl Cli {
     fn kernel_path(&self) -> PathBuf {
-        self.kernel.clone().unwrap_or_else(|| {
-            format!("{}/{}", env!("WORKSPACE_ROOT"), DEFAULT_LINUX_KERNEL).into()
-        })
+        self.kernel.clone().expect("need to specify --kernel")
     }
 }
 

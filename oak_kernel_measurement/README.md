@@ -15,6 +15,8 @@ The tool can be run using:
 ```bash
 cargo run --package=oak_kernel_measurement -- \
     --kernel=oak_containers_kernel/target/bzImage
+cargo run --package=oak_kernel_measurement -- \
+    --kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
 ```
 
 or by:
@@ -22,4 +24,6 @@ or by:
 ```bash
 bazel run //oak_kernel_measurement -- \
     --kernel=$(pwd)/oak_containers_kernel/target/bzImage
+bazel run //oak_kernel_measurement -- \
+    --kernel=$(pwd)/oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
 ```

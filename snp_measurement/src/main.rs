@@ -31,9 +31,6 @@ use crate::{
     vmsa::{get_ap_vmsa, get_boot_vmsa, VMSA_ADDRESS},
 };
 
-/// The default workspace-relative path to the Stage 0 firmware ROM image.
-const DEFAULT_STAGE0_ROM: &str = "stage0_bin/target/x86_64-unknown-none/release/stage0_bin";
-
 #[derive(Parser, Clone)]
 #[command(about = "Oak SEV-SNP Measurement Calculator")]
 struct Cli {
@@ -52,9 +49,7 @@ struct Cli {
 
 impl Cli {
     fn stage0_path(&self) -> PathBuf {
-        self.stage0_rom
-            .clone()
-            .unwrap_or_else(|| format!("{}/{}", env!("WORKSPACE_ROOT"), DEFAULT_STAGE0_ROM).into())
+        self.stage0_rom.clone().expect("need to specify --stage0_rom")
     }
 }
 

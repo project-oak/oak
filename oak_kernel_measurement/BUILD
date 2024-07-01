@@ -21,17 +21,10 @@ package(
     licenses = ["notice"],
 )
 
-# TODO: b/349587383 - Still does not work with default location via WORKSPACE_ROOT.
-#
-# Currently, need to run with explicit kernel path:
-#
-# bazel run //oak_kernel_measurement -- \
-#     --kernel=$(pwd)/oak_containers_kernel/target/bzImage
 rust_binary(
     name = "oak_kernel_measurement",
-    srcs = glob(["src/**"]),
+    srcs = ["src/main.rs"],
     crate_root = "src/main.rs",
-    rustc_env = {"WORKSPACE_ROOT": ".."},
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
