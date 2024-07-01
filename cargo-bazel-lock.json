@@ -1,5 +1,5 @@
 {
-  "checksum": "8087ece7f5de2c666aaa7fb7eedcee942334085da772cbd149eeceb08af52e03",
+  "checksum": "82efbe4d131316915fa54849664163a3b8278f8c5ce46c4e71f731e1de79964c",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6186,6 +6186,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "diff 0.1.13": {
+      "name": "diff",
+      "version": "0.1.13",
+      "package_url": "https://github.com/utkarshkukreti/diff.rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/diff/0.1.13/download",
+          "sha256": "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "diff",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "diff",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "0.1.13"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "digest 0.10.7": {
       "name": "digest",
       "version": "0.10.7",
@@ -6521,6 +6560,10 @@
             {
               "id": "pprof 0.13.0",
               "target": "pprof"
+            },
+            {
+              "id": "pretty_assertions 1.4.0",
+              "target": "pretty_assertions"
             },
             {
               "id": "primeorder 0.13.6",
@@ -16954,6 +16997,65 @@
         "version": "0.2.17"
       },
       "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "pretty_assertions 1.4.0": {
+      "name": "pretty_assertions",
+      "version": "1.4.0",
+      "package_url": "https://github.com/rust-pretty-assertions/rust-pretty-assertions",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/pretty_assertions/1.4.0/download",
+          "sha256": "af7cee1a6c8a5b9208b3cb1061f10c0cb689087b3d8ce85fb9d2dd7a29b6ba66"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "pretty_assertions",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "pretty_assertions",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "diff 0.1.13",
+              "target": "diff"
+            },
+            {
+              "id": "yansi 0.5.1",
+              "target": "yansi"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.4.0"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -30196,6 +30298,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "yansi 0.5.1": {
+      "name": "yansi",
+      "version": "0.5.1",
+      "package_url": "https://github.com/SergioBenitez/yansi",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/yansi/0.5.1/download",
+          "sha256": "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "yansi",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "yansi",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "0.5.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "yansi 1.0.1": {
       "name": "yansi",
       "version": "1.0.1",
@@ -30854,6 +30995,7 @@
     "port_check 0.2.1",
     "portpicker 0.1.1",
     "pprof 0.13.0",
+    "pretty_assertions 1.4.0",
     "primeorder 0.13.6",
     "procfs 0.16.0",
     "prost 0.12.4",

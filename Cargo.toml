@@ -6,7 +6,6 @@ members = [
   "oak_linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
-  "micro_rpc_tests",
   "oak_attestation",
   "oak_attestation_explain",
   "oak_attestation_explain_cli",

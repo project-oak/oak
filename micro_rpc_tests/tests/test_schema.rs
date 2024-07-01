@@ -28,6 +28,8 @@ mod test_schema {
     #![allow(dead_code, clippy::let_unit_value)]
     use prost::Message;
     include!(concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs"));
+
+    pub const CODE_FILE: &str = concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs");
 }
 
 /// Test implementation of a fallible transport that always returns the same

@@ -266,6 +266,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "pretty_assertions": crate.spec(version = "*"),
             "primeorder": crate.spec(
                 default_features = False,
                 version = "*",

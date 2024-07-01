@@ -37,9 +37,9 @@ message LogRequest {
 message LogResponse {}
 
 service TestService {
-  // method_id: 15
+  // method_id: 156
   rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {
-    option (.oak.micro_rpc.method_id) = 15;
+    option (.oak.micro_rpc.method_id) = 156;
   }
   // method_id: 16
   rpc Log(LogRequest) returns (LogResponse) {

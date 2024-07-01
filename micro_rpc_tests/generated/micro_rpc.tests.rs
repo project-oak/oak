@@ -53,7 +53,7 @@ impl<S: TestService> TestServiceServer<S> {
                 )
             })?;
         match request.method_id {
-            15 => {
+            156 => {
                 let request = <LookupDataRequest>::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
@@ -172,7 +172,7 @@ impl<T: ::micro_rpc::Transport> TestServiceClient<T> {
         &mut self,
         request: &LookupDataRequest,
     ) -> Result<Result<LookupDataResponse, ::micro_rpc::Status>, T::Error> {
-        ::micro_rpc::client_invoke(&mut self.transport, 15, request)
+        ::micro_rpc::client_invoke(&mut self.transport, 156, request)
     }
     pub fn log(
         &mut self,
@@ -216,7 +216,7 @@ impl<T: ::micro_rpc::AsyncTransport> TestServiceAsyncClient<T> {
         &mut self,
         request: &LookupDataRequest,
     ) -> Result<Result<LookupDataResponse, ::micro_rpc::Status>, T::Error> {
-        ::micro_rpc::async_client_invoke(&mut self.transport, 15, request).await
+        ::micro_rpc::async_client_invoke(&mut self.transport, 156, request).await
     }
     pub async fn log(
         &mut self,
