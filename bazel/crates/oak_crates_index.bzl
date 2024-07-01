@@ -208,11 +208,12 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "maplit": crate.spec(version = "*"),
             "nix": crate.spec(
                 features = ["user", "process", "signal"],
-                version = "*",
+                version = "0.27.1",
             ),
             "oci-spec": crate.spec(version = "*"),
             "once_cell": crate.spec(version = "*"),
-            "opentelemetry": crate.spec(version = "*"),
+            # TODO b/350061567 - Remove opentelemetry version pins
+            "opentelemetry": crate.spec(version = "0.22.0"),
             "opentelemetry-proto": crate.spec(
                 features = [
                     "gen-tonic",
@@ -222,15 +223,16 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "opentelemetry-otlp": crate.spec(
-                features = ["metrics"],
-                version = "*",
+                features = ["grpc-tonic", "logs", "metrics"],
+                version = "0.15.0",
             ),
             "opentelemetry_sdk": crate.spec(
                 features = [
+                    "logs",
                     "metrics",
                     "rt-tokio",
                 ],
-                version = "*",
+                version = "0.22.1",
             ),
             "ouroboros": crate.spec(version = "*"),
             "portpicker": crate.spec(version = "*"),

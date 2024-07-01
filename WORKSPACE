@@ -318,6 +318,12 @@ load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
 
+new_local_repository(
+    name = "systemd",
+    build_file = "systemd.BUILD",
+    path = "/",
+)
+
 load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
 create_oak_crate_repositories()

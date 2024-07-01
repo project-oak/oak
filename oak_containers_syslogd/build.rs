@@ -17,6 +17,11 @@
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(not(feature = "bazel"))]
+    let included_protos = vec![std::path::PathBuf::from("..")];
+    #[cfg(feature = "bazel")]
+    let included_protos = oak_proto_build_utils::get_common_proto_path();
+
     // Generate gRPC code for connecting to the launcher.
     generate_grpc_code(
         &[
@@ -24,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/crypto/crypto.proto",
             "../proto/session/messages.proto",
         ],
-        &[".."],
+        &included_protos,
         CodegenOptions::default(),
     )?;
 
