@@ -30,9 +30,8 @@ use std::{
 
 use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_containers_app::serve;
-use oak_functions_service::{
-    proto::oak::functions::InitializeRequest, wasm::wasmtime::WasmtimeHandler,
-};
+use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
+use oak_proto_rust::oak::oak_functions::InitializeRequest;
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;

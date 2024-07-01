@@ -32,19 +32,6 @@ extern crate rand_core;
 #[cfg(test)]
 extern crate std;
 
-pub mod proto {
-    pub mod oak {
-        pub mod functions {
-            pub mod config {
-                include!(concat!(env!("OUT_DIR"), "/oak.functions.config.rs"));
-            }
-            use prost::Message;
-            include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto};
-    }
-}
-
 pub mod instance;
 pub mod logger;
 pub mod lookup;

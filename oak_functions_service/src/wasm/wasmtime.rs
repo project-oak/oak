@@ -33,12 +33,12 @@ use std::time::Instant;
 use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
+use oak_proto_rust::oak::oak_functions::config::WasmtimeConfig;
 use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    proto::oak::functions::config::WasmtimeConfig,
     wasm::{api::StdWasmApiFactory, WasmApiFactory},
     Handler, Observer,
 };

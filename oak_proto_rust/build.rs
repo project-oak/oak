@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/containers/interfaces.proto",
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",
+        "../proto/oak_functions/application_config.proto",
         "../proto/oak_functions/lookup_data.proto",
         "../proto/session/session.proto",
         "../proto/oak_functions/sdk/oak_functions_wasm.proto",
@@ -76,6 +77,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         &included_protos,
         Default::default(),
+    );
+
+    micro_rpc_build::compile(
+        &["../proto/oak_functions/service/oak_functions.proto"],
+        &included_protos,
+        micro_rpc_build::CompileOptions {
+            receiver_type: micro_rpc_build::ReceiverType::RefSelf,
+            bytes: vec![
+                ".oak.functions.LookupDataEntry".to_string(),
+                ".oak.functions.ExtendNextLookupDataRequest".to_string(),
+            ],
+            extern_paths: vec![
+                micro_rpc_build::ExternPath::new(".oak.crypto.v1", "crate::oak::crypto::v1"),
+                micro_rpc_build::ExternPath::new(
+                    ".oak.attestation.v1",
+                    "crate::oak::attestation::v1",
+                ),
+            ],
+            ..Default::default()
+        },
     );
 
     // Tell cargo to rerun this build script if the proto file has changed.

@@ -70,6 +70,7 @@ cargo_build_script(
         "//proto/containers:interfaces_proto",
         "//proto/crypto:crypto_proto",
         "//proto/oak_functions:abi_proto",
+        "//proto/oak_functions:application_config_proto",
         "//proto/oak_functions:lookup_data_proto",
         "//proto/oak_functions:testing_proto",
         "//proto/oak_functions/sdk:oak_functions_wasm_proto",

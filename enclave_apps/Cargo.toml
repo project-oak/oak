@@ -14,4 +14,5 @@ oak_channel = { path = "../oak_channel" }
 oak_dice = { path = "../oak_dice" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+oak_proto_rust = { path = "../oak_proto_rust" }
 zerocopy = "*"

@@ -27,15 +27,12 @@ use std::{
 use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
-use oak_functions_service::{
-    instance::OakFunctionsInstance,
-    proto::oak::functions::{
-        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
-        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
-        ReserveRequest, ReserveResponse,
-    },
-    Handler, Observer,
+use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
+use oak_proto_rust::oak::oak_functions::{
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
+    ReserveResponse,
 };
 use opentelemetry::{
     metrics::{Histogram, Meter, Unit},

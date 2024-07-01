@@ -783,6 +783,7 @@ dependencies = [
  "micro_rpc",
  "oak_functions_enclave_service",
  "oak_functions_service",
+ "oak_proto_rust",
  "oak_restricted_kernel_sdk",
 ]
 

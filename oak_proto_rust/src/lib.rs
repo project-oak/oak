@@ -74,8 +74,13 @@ pub mod oak {
     }
 
     pub mod oak_functions {
+        use prost::Message;
+        include_proto!("oak.functions");
         pub mod abi {
             include_proto!("oak.functions.abi");
+        }
+        pub mod config {
+            include_proto!("oak.functions.config");
         }
         pub mod lookup_data {
             include_proto!("oak.functions.lookup_data");

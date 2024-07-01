@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             build_client: true,
             extern_paths: vec![ExternPath::new(
                 ".oak.functions",
-                "::oak_functions_service::proto::oak::functions",
+                "::oak_proto_rust::oak::oak_functions",
             )],
         },
     )?;
