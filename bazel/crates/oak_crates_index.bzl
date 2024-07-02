@@ -197,7 +197,8 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
-            "http": crate.spec(version = "*"),
+            # Use same version as cargo, newer versions has compatibility issues.
+            "http": crate.spec(version = "0.2.11"),
             "ignore": crate.spec(version = "*"),
             "itertools": crate.spec(version = "*"),
             "lazy_static": crate.spec(version = "*"),
@@ -232,7 +233,12 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "oci-spec": crate.spec(version = "*"),
             "once_cell": crate.spec(version = "*"),
             # TODO b/350061567 - Remove opentelemetry version pins
-            "opentelemetry": crate.spec(version = "0.22.0"),
+            "opentelemetry": crate.spec(
+                features = [
+                    "trace",
+                ],
+                version = "0.22.0",
+            ),
             "opentelemetry-proto": crate.spec(
                 features = [
                     "gen-tonic",
@@ -242,7 +248,12 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
             ),
             "opentelemetry-otlp": crate.spec(
-                features = ["grpc-tonic", "logs", "metrics"],
+                features = [
+                    "grpc-tonic",
+                    "logs",
+                    "metrics",
+                    "trace",
+                ],
                 version = "0.15.0",
             ),
             "opentelemetry_sdk": crate.spec(
@@ -250,6 +261,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                     "logs",
                     "metrics",
                     "rt-tokio",
+                    "trace",
                 ],
                 version = "0.22.1",
             ),
@@ -423,10 +435,16 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 features = ["tonic-conn"],
             ),
             "toml": crate.spec(version = "*"),
-            "tonic": crate.spec(version = "*"),
+            "tonic": crate.spec(
+                features = ["gzip"],
+                version = "*",
+            ),
             "tonic-build": crate.spec(version = "*"),
             "tonic-web": crate.spec(version = "*"),
-            "tower": crate.spec(version = "*"),
+            "tower": crate.spec(
+                features = ["load-shed"],
+                version = "*",
+            ),
             "tower-http": crate.spec(
                 features = ["trace"],
                 version = "*",
@@ -437,6 +455,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "walkdir": crate.spec(version = "*"),
             "wasmi": crate.spec(
                 default_features = False,
+                features = ["std"],
                 # same version as cargo, newer versions had compatibility issues
                 version = "0.31.2",
             ),

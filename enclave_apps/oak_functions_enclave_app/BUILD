@@ -27,8 +27,8 @@ rust_binary(
     platform = "//:x86_64-unknown-none",
     deps = [
         "//micro_rpc",
-        "//oak_functions_enclave_service",
-        "//oak_functions_service",
+        "//oak_functions_enclave_service:lib",
+        "//oak_functions_service:lib",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
     ],

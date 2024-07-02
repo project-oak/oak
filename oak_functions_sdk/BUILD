@@ -46,7 +46,7 @@ rust_test_suite(
     deps = [
         ":oak_functions_sdk",
         "//oak_functions_abi",
-        "//oak_functions_service",
+        "//oak_functions_service:lib",
         "//oak_functions_test_utils",
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:tokio",

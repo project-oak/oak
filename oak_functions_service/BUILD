@@ -27,17 +27,26 @@ DEPS = [
     "//oak_functions_abi",
     "//oak_proto_rust",
     "@oak_crates_index//:spinning_top",
-    "@oak_no_std_crates_index//:anyhow",
-    "@oak_no_std_crates_index//:log",
-    "@oak_no_std_crates_index//:rand_core",
-    "@oak_no_std_crates_index//:wasmi",
-] + select_std_crates(["prost"])
+] + select_std_crates([
+    "anyhow",
+    "log",
+    "prost",
+    "rand_core",
+    "wasmi",
+])
+
+UNRESTRICTED_DEPS = DEPS + [
+    "@oak_crates_index//:parking_lot",
+    #"@oak_crates_index//:wasmtime",
+]
 
 rust_library(
-    name = "oak_functions_service",
+    name = "lib",
     srcs = glob(["src/**/*.rs"]),
-    # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
+    # The features are inverted on purpose; this means the "default" package
+    # will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
+    crate_name = "oak_functions_service",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
@@ -45,9 +54,45 @@ rust_library(
     deps = DEPS,
 )
 
+rust_library(
+    name = "lib_insecure",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["allow_sensitive_logging"],
+    crate_name = "oak_functions_service",
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+    ]),
+    deps = DEPS,
+)
+
+rust_library(
+    name = "lib_unrestricted",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = [
+        "deny_sensitive_logging",
+        "std",
+        #"wasmtime",
+    ],
+    crate_name = "oak_functions_service",
+    deps = UNRESTRICTED_DEPS,
+)
+
+rust_library(
+    name = "lib_insecure_unrestricted",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = [
+        "allow_sensitive_logging",
+        "std",
+        #"wasmtime",
+    ],
+    crate_name = "oak_functions_service",
+    deps = UNRESTRICTED_DEPS,
+)
+
 rust_test(
-    name = "oak_functions_service_test",
-    crate = ":oak_functions_service",
+    name = "lib_test",
+    crate = ":lib",
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [
@@ -57,20 +102,9 @@ rust_test(
     ],
 )
 
-rust_library(
-    name = "oak_functions_service_allow_sensitive_logging",
-    srcs = glob(["src/**/*.rs"]),
-    crate_name = "oak_functions_service",
-    target_compatible_with = either_platform([
-        "//:x86_64-none-setting",
-        "//:x86_64-linux-setting",  # Needed to run unit tests.
-    ]),
-    deps = DEPS,
-)
-
 rust_test(
-    name = "oak_functions_service_allow_sensitive_logging_test",
-    crate = ":oak_functions_service_allow_sensitive_logging",
+    name = "lib_insecure_test",
+    crate = ":lib_insecure",
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [

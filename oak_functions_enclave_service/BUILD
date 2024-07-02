@@ -36,21 +36,23 @@ DEPS = [
 ])
 
 rust_library(
-    name = "oak_functions_enclave_service",
+    name = "lib",
     srcs = glob(["src/*.rs"]),
-    # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
+    # The features are inverted on purpose; this means the "default"
+    # package will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
+    crate_name = "oak_functions_enclave_service",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
     ]),
     deps = DEPS + [
-        "//oak_functions_service",
+        "//oak_functions_service:lib",
     ],
 )
 
 rust_library(
-    name = "oak_functions_enclave_service_allow_sensitive_logging",
+    name = "lib_insecure",
     srcs = glob(["src/*.rs"]),
     crate_name = "oak_functions_enclave_service",
     target_compatible_with = either_platform([
@@ -58,12 +60,12 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed to run unit tests.
     ]),
     deps = DEPS + [
-        "//oak_functions_service:oak_functions_service_allow_sensitive_logging",
+        "//oak_functions_service:lib_insecure",
     ],
 )
 
 rust_test_suite(
-    name = "oak_functions_enclave_service_integration_tests",
+    name = "integration_tests",
     srcs = glob(["tests/**"]),
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
@@ -73,11 +75,11 @@ rust_test_suite(
         "//oak_functions_test_module",
     ],
     deps = [
-        ":oak_functions_enclave_service",
+        ":lib",
         "//micro_rpc",
         "//oak_client",
         "//oak_crypto",
-        "//oak_functions_service",
+        "//oak_functions_service:lib",
         "//oak_functions_test_utils",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
