@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_LINUX_KERNEL"],"fn":["main"],"struct":["Cli","Kernel"]};
+window.SIDEBAR_ITEMS = {"fn":["main"],"struct":["Cli","Kernel"]};

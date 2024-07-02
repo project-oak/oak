@@ -123,11 +123,6 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -151,9 +146,6 @@
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::FromBytes;
 
-<span class="doccomment">/// The default workspace-relative path to the Linux Kernel bzImage file.
-</span><span class="kw">const </span>DEFAULT_LINUX_KERNEL: <span class="kw-2">&amp;</span>str = <span class="string">"oak_containers_kernel/target/bzImage"</span>;
-
 <span class="attr">#[derive(Parser, Clone)]
 #[command(about = <span class="string">"Oak Kernel Measurement Calculator"</span>)]
 </span><span class="kw">struct </span>Cli {
@@ -167,9 +159,7 @@
 
 <span class="kw">impl </span>Cli {
     <span class="kw">fn </span>kernel_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PathBuf {
-        <span class="self">self</span>.kernel.clone().unwrap_or_else(|| {
-            <span class="macro">format!</span>(<span class="string">"{}/{}"</span>, <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>), DEFAULT_LINUX_KERNEL).into()
-        })
+        <span class="self">self</span>.kernel.clone().expect(<span class="string">"need to specify --kernel"</span>)
     }
 }
 
