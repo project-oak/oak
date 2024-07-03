@@ -24,7 +24,9 @@ package(
 rust_library(
     name = "oak_core",
     srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = [
         "@oak_crates_index//:lock_api",
         "@oak_crates_index//:spinning_top",

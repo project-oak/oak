@@ -27,7 +27,9 @@ rust_library(
     crate_features = [
         "no_std",
     ],
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = [
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",

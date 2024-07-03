@@ -23,7 +23,9 @@ package(
 rust_library(
     name = "rust-hypervisor-firmware-virtio",
     srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = [
         "@oak_crates_index//:atomic_refcell",
     ] + select({

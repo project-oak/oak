@@ -17,6 +17,7 @@
 load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -29,7 +30,10 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = either_platform([
+        "@platforms//os:linux",
+        "@platforms//os:none",
+    ]),
     deps = [
         ":build",
         "//micro_rpc",

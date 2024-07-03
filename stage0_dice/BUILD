@@ -21,12 +21,13 @@ package(
     licenses = ["notice"],
 )
 
-# TODO: b/349778041 - CI not to build this for Linux.
 rust_library(
     name = "stage0_dice",
     srcs = glob(["src/**"]),
     crate_name = "oak_stage0_dice",
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = [
         "//oak_dice",
         "//oak_sev_snp_attestation_report",

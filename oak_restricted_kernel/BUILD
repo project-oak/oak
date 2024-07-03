@@ -81,7 +81,9 @@ rust_library(
         "virtio_console_channel",
     ],
     crate_name = "oak_restricted_kernel",
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         "@oak_no_std_crates_index//:virtio-drivers",
     ],
@@ -95,7 +97,9 @@ rust_library(
         "vsock_channel",
     ],
     crate_name = "oak_restricted_kernel",
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         "//oak_virtio",
     ],
@@ -109,7 +113,9 @@ rust_library(
         "serial_channel",
     ],
     crate_name = "oak_restricted_kernel",
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         "@oak_crates_index//:uart_16550",
     ],
@@ -123,7 +129,9 @@ rust_library(
         "simple_io_channel",
     ],
     crate_name = "oak_restricted_kernel",
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         "//oak_simple_io",
     ],

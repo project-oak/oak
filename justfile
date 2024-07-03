@@ -212,18 +212,20 @@ kokoro_run_tests: all_ensure_no_std
 clang-tidy:
     bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
-# Query crates that needs to be built for bare metal. Bazel query outputs one target in each line, so we
-# use `tr` to bring them into a single line.
+# Query crates that needs to be built for bare metal. Bazel cquery outputs one target in each line, 
+# with format like "//stage0_dice:stage0_dice (f47c594)" so we take the part before " " (using cut)
+# and then use `tr` to bring them into a single line.
 # We store the command for the query in this variable, but defer executing it
 # until usage to prevent bazel invocation on any just invocation.
 # Lazy assignment is not yet supported: https://github.com/casey/just/issues/953
-bare_metal_crates_query := "bazel query 'attr(\"tags\", \"ci-build-for-x86_64-unknown-none\", //...)' | tr '\\n' ' '"
+bare_metal_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"@platforms//os:none\", //...)' --platforms=//:x86_64-unknown-none  | cut -d' ' -f1 | tr '\\n' ' '"
 
 bazel-ci:
     # Test Oak as a dependency in the test workspace
     # Some dependencies aren't properly exposed yet, so just testing a subset of targets
     cd bazel/test_workspace && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
+    # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     bazel build --config=unsafe-fast-presubmit -- //...:all
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 

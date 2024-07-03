@@ -27,3 +27,36 @@ RUST_VERSIONS = [
 ]
 
 RUST_EDITION = "2021"
+
+def either_platform(platform_list):
+    """Helper to mark either platform from platform_list as compatible.
+
+    Generates a `select` expression to use with `target_compatible_with`
+    meaning that any of the platforms given is compatible.
+
+    Example:
+    ```
+    target_compatible_with = either_platform([
+        "@platforms//os:linux",
+        "@platforms//os:none"
+    ]),
+    ```
+    is equivalent to:
+    ```
+    target_compatible_with = select({
+        "@platforms//os:linux": ["@platforms//os:linux"],
+        "@platforms//os:none": ["@platforms//os:none"],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    ```
+    This is the idiomatic way to select one of several possible compatible
+    platforms as pointed out in
+    https://bazel.build/extending/platforms#expressive-constraints,
+    except we return the same OS string in the values (instead of `[]`), as
+    that is required for our cquery in just bazel-ci to work properly. If we
+    return `[]`, that query will include false positives, as all targets that
+    don't specify any value for `target_compatible_with` will default to `[]`.
+    """
+    select_dict = {platform: [platform] for platform in platform_list}
+    select_dict["//conditions:default"] = ["@platforms//:incompatible"]
+    return select(select_dict)

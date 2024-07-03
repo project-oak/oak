@@ -40,7 +40,9 @@ _OAK_CHANNEL_DEPS = [
 rust_library(
     name = "oak_channel",
     srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = _OAK_CHANNEL_DEPS,
 )
 

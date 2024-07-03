@@ -24,7 +24,9 @@ package(
 rust_library(
     name = "sev_serial",
     srcs = glob(["src/**"]),
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = [
+        "@platforms//os:none",
+    ],
     deps = [
         "//oak_sev_guest",
     ] + select({
