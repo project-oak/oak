@@ -16,6 +16,7 @@
 
 //! Verifies binary endorsements as coming from Transparent Release.
 
+use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 
 use crate::{
@@ -36,17 +37,23 @@ pub fn verify_binary_endorsement(
     endorser_public_key: &[u8],
     rekor_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let statement = parse_endorsement_statement(endorsement)?;
+    let statement = parse_endorsement_statement(endorsement)
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("parsing endorsement statement")?;
 
     if !log_entry.is_empty() {
-        verify_endorsement_statement(now_utc_millis, &statement)?;
-        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
-        verify_endorser_public_key(log_entry, endorser_public_key)?;
+        verify_endorsement_statement(now_utc_millis, &statement)
+            .context("verifying endorsement statement")?;
+        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)
+            .context("verifying rekor log entry")?;
+        verify_endorser_public_key(log_entry, endorser_public_key)
+            .context("verifying endorser public key")?;
     } else {
         if !rekor_public_key.is_empty() {
             anyhow::bail!("log entry unavailable but verification was requested");
         }
-        verify_signature_raw(signature, endorsement, endorser_public_key)?;
+        verify_signature_raw(signature, endorsement, endorser_public_key)
+            .context("verifying raw signature")?;
     }
 
     Ok(())
@@ -60,7 +67,8 @@ pub fn verify_endorsement_statement(
     if let Err(err) = validate_endorsement(statement) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
-    verify_validity_duration(now_utc_millis, statement)?;
+    verify_validity_duration(now_utc_millis, statement)
+        .context("verifying endorsement validity")?;
 
     Ok(())
 }
@@ -74,7 +82,7 @@ pub fn verify_endorser_public_key(
     // TODO(#4231): Currently, we only check that the public keys are the same.
     // Should be updated to support verifying rolling keys.
 
-    let body = get_rekor_log_entry_body(log_entry)?;
+    let body = get_rekor_log_entry_body(log_entry).context("getting rekor log entry body")?;
 
     let actual_pem_vec =
         BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
@@ -82,7 +90,9 @@ pub fn verify_endorser_public_key(
         })?;
     let actual_pem =
         core::str::from_utf8(&actual_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
-    let actual = convert_pem_to_raw(actual_pem)?;
+    let actual = convert_pem_to_raw(actual_pem)
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("converting public key from log entry body")?;
 
     if !equal_keys(endorser_public_key, &actual)? {
         anyhow::bail!(

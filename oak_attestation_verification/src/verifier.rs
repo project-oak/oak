@@ -115,7 +115,8 @@ pub fn verify(
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> anyhow::Result<ExtractedEvidence> {
-    let expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)?;
+    let expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)
+        .context("getting expected values")?;
 
     verify_with_expected_values(now_utc_millis, evidence, endorsements, &expected_values)
 }
@@ -156,14 +157,16 @@ pub fn verify_with_expected_values(
                 endorsements::Type::Standalone(_) => &[],
             };
         let root_layer = evidence.root_layer.as_ref().context("no root layer evidence")?;
-        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)?;
+        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)
+            .context("verifying root signature")?;
     };
 
     // Ensure the DICE chain signatures are valid and extract the measurements,
     // public keys and other attestation-related data from the DICE chain.
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
 
-    compare_expected_values(&extracted_evidence, expected_values)?;
+    compare_expected_values(&extracted_evidence, expected_values)
+        .context("comparing expected values to evidence")?;
 
     Ok(extracted_evidence)
 }
@@ -181,7 +184,8 @@ pub fn get_expected_values(
             Some(endorsements::Type::OakRestrictedKernel(ends)),
             Some(reference_values::Type::OakRestrictedKernel(rvs)),
         ) => {
-            let expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)?;
+            let expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)
+                .context("getting RK expected values")?;
             Ok(ExpectedValues {
                 r#type: Some(expected_values::Type::OakRestrictedKernel(expected)),
             })
@@ -190,11 +194,13 @@ pub fn get_expected_values(
             Some(endorsements::Type::OakContainers(ends)),
             Some(reference_values::Type::OakContainers(rvs)),
         ) => {
-            let expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)?;
+            let expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)
+                .context("getting containers expected values")?;
             Ok(ExpectedValues { r#type: Some(expected_values::Type::OakContainers(expected)) })
         }
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
-            let expected = get_cb_expected_values(now_utc_millis, ends, rvs)?;
+            let expected = get_cb_expected_values(now_utc_millis, ends, rvs)
+                .context("getting CB expected values")?;
             Ok(ExpectedValues { r#type: Some(expected_values::Type::Cb(expected)) })
         }
         // Evidence, endorsements and reference values must exist and reflect the same chain type.
@@ -249,9 +255,10 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
 
     // Sequentially verify the layers, eventually retrieving the verifying key of
     // the last layer.
-    let last_layer_verifying_key = evidence.layers.iter().try_fold(
-        root_layer_verifying_key,
-        |previous_layer_verifying_key, current_layer| {
+    let last_layer_verifying_key = evidence
+        .layers
+        .iter()
+        .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
             let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
             cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
@@ -262,11 +269,14 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
             let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
             let claims = ClaimsSet::from_slice(&payload)
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
-            let cose_key =
-                get_public_key_from_claims_set(&claims).map_err(|msg| anyhow::anyhow!(msg))?;
-            cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))
-        },
-    )?;
+            let cose_key = get_public_key_from_claims_set(&claims)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("getting pk from claims")?;
+            cose_key_to_verifying_key(&cose_key)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("converting cose key")
+        })
+        .context("getting last layer key")?;
 
     // Finally, use the last layer's verification key to verify the application
     // keys.
@@ -337,18 +347,20 @@ fn compare_oak_restricted_kernel_measurement_digests(
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
         expected.root_layer.as_ref().context("no root layer expected values")?,
-    )?;
+    )
+    .context("comparing root layer values")?;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         expected.kernel_layer.as_ref().context("no kernel layer expected values")?,
-    )?;
+    )
+    .context("comparing kernel layer values")?;
 
     compare_application_layer_measurement_digests(
         values.application_layer.as_ref().context("no applications layer evidence values")?,
         expected.application_layer.as_ref().context("no application layer expected values")?,
     )
-    .context("application layer verification failed")
+    .context("comparing application layer values")
 }
 
 fn get_oak_containers_expected_values(
@@ -357,32 +369,47 @@ fn get_oak_containers_expected_values(
     reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<OakContainersExpectedValues> {
     Ok(OakContainersExpectedValues {
-        root_layer: Some(get_root_layer_expected_values(
-            now_utc_millis,
-            endorsements.root_layer.as_ref(),
-            reference_values.root_layer.as_ref().context("no root layer reference values")?,
-        )?),
-        kernel_layer: Some(get_kernel_layer_expected_values(
-            now_utc_millis,
-            endorsements.kernel_layer.as_ref(),
-            reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
-        )?),
-        system_layer: Some(get_system_layer_expected_values(
-            now_utc_millis,
-            endorsements.system_layer.as_ref(),
-            reference_values
-                .system_layer
-                .as_ref()
-                .context("no application layer reference values")?,
-        )?),
-        container_layer: Some(get_container_layer_expected_values(
-            now_utc_millis,
-            endorsements.container_layer.as_ref(),
-            reference_values
-                .container_layer
-                .as_ref()
-                .context("no kernel layer reference values")?,
-        )?),
+        root_layer: Some(
+            get_root_layer_expected_values(
+                now_utc_millis,
+                endorsements.root_layer.as_ref(),
+                reference_values.root_layer.as_ref().context("no root layer reference values")?,
+            )
+            .context("getting root layer values")?,
+        ),
+        kernel_layer: Some(
+            get_kernel_layer_expected_values(
+                now_utc_millis,
+                endorsements.kernel_layer.as_ref(),
+                reference_values
+                    .kernel_layer
+                    .as_ref()
+                    .context("no kernel layer reference values")?,
+            )
+            .context("getting kernel layer values")?,
+        ),
+        system_layer: Some(
+            get_system_layer_expected_values(
+                now_utc_millis,
+                endorsements.system_layer.as_ref(),
+                reference_values
+                    .system_layer
+                    .as_ref()
+                    .context("no application layer reference values")?,
+            )
+            .context("getting system layer values")?,
+        ),
+        container_layer: Some(
+            get_container_layer_expected_values(
+                now_utc_millis,
+                endorsements.container_layer.as_ref(),
+                reference_values
+                    .container_layer
+                    .as_ref()
+                    .context("no kernel layer reference values")?,
+            )
+            .context("getting container layer values")?,
+        ),
     })
 }
 
@@ -395,24 +422,26 @@ fn compare_oak_containers_measurement_digests(
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context("no root layer evidence values")?,
         expected.root_layer.as_ref().context("no root layer expected values")?,
-    )?;
+    )
+    .context("comparing root layer digests")?;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
         expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
-    )?;
+    )
+    .context("comparing kernel layer digests")?;
 
     compare_system_layer_measurement_digests(
         values.system_layer.as_ref().context("no system layer evidence values")?,
         expected.system_layer.as_ref().context("no system layer expected_values")?,
     )
-    .context("system layer verification failed")?;
+    .context("comparing system layer digests")?;
 
     compare_container_layer_measurement_digests(
         values.container_layer.as_ref().context("no container layer evidence values")?,
         expected.container_layer.as_ref().context("no system layer expected_values")?,
     )
-    .context("container layer verification failed")
+    .context("comparing container layer digests")
 }
 
 fn get_cb_expected_values(
@@ -421,26 +450,44 @@ fn get_cb_expected_values(
     reference_values: &CbReferenceValues,
 ) -> anyhow::Result<CbExpectedValues> {
     Ok(CbExpectedValues {
-        root_layer: Some(get_root_layer_expected_values(
-            now_utc_millis,
-            endorsements.root_layer.as_ref(),
-            reference_values.root_layer.as_ref().context("no root layer reference values")?,
-        )?),
-        kernel_layer: Some(get_event_expected_values(
-            now_utc_millis,
-            reference_values.kernel_layer.as_ref().context("no kernel layer reference values")?,
-        )?),
-        system_layer: Some(get_event_expected_values(
-            now_utc_millis,
-            reference_values.system_layer.as_ref().context("no system layer reference values")?,
-        )?),
-        application_layer: Some(get_event_expected_values(
-            now_utc_millis,
-            reference_values
-                .application_layer
-                .as_ref()
-                .context("no application layer reference values")?,
-        )?),
+        root_layer: Some(
+            get_root_layer_expected_values(
+                now_utc_millis,
+                endorsements.root_layer.as_ref(),
+                reference_values.root_layer.as_ref().context("no root layer reference values")?,
+            )
+            .context("getting root layer values")?,
+        ),
+        kernel_layer: Some(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .kernel_layer
+                    .as_ref()
+                    .context("no kernel layer reference values")?,
+            )
+            .context("getting kernel layer values")?,
+        ),
+        system_layer: Some(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .system_layer
+                    .as_ref()
+                    .context("no system layer reference values")?,
+            )
+            .context("getting system layer values")?,
+        ),
+        application_layer: Some(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .application_layer
+                    .as_ref()
+                    .context("no application layer reference values")?,
+            )
+            .context("getting application layer values")?,
+        ),
     })
 }
 
@@ -574,14 +621,15 @@ fn verify_root_attestation_signature(
             };
 
             // TODO(#4747): user current date as part of VCEK verification.
-            verify_cert_signature(&ask, &vcek)?;
+            verify_cert_signature(&ask, &vcek).context("verifying vcek cert")?;
 
             let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
                 .context("invalid AMD SEV-SNP attestation report")?;
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             // Ensure that the attestation report is signed by the VCEK public key.
-            verify_attestation_report_signature(&vcek, report)?;
+            verify_attestation_report_signature(&vcek, report)
+                .context("verifying attestation report signature")?;
 
             // Check that the root ECA public key for the DICE chain is bound to the
             // attestation report to ensure that the entire chain is valid.
@@ -615,7 +663,8 @@ fn get_root_layer_expected_values(
             now_utc_millis,
             endorsements.and_then(|value| value.stage0.as_ref()),
             amd_sev_values.stage0.as_ref().context("stage0 binary reference values not found")?,
-        )?;
+        )
+        .context("getting stage0 expected values")?;
         Some(AmdSevExpectedValues {
             stage0_expected: Some(stage0_expected),
             min_tcb_version: amd_sev_values.min_tcb_version.clone(),
@@ -927,7 +976,8 @@ fn get_expected_measurement_digest(
                 &endorsement.rekor_log_entry,
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
-            )?;
+            )
+            .context("verifying binary endorsement")?;
             Ok(into_expected_digests(&[hex_to_raw_digest(&get_digest(
                 &parse_endorsement_statement(&endorsement.endorsement)?,
             )?)?]))
@@ -979,15 +1029,17 @@ fn get_verified_stage0_attachment(
         &endorsement.rekor_log_entry,
         &public_keys.endorser_public_key,
         &public_keys.rekor_public_key,
-    )?;
+    )
+    .context("verifying binary endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
+    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)
+        .context("parsing endorsement statement")?;
     if parsed_statement.predicate.usage != "firmware" {
         anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
     }
-    let expected_digest = get_digest(&parsed_statement)?;
+    let expected_digest = get_digest(&parsed_statement).context("getting expected digest")?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest)?;
+    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing digests")?;
     FirmwareAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse stage0 attachment"))
 }
@@ -1012,7 +1064,8 @@ fn get_stage0_expected_values(
                 now_utc_millis,
                 endorsement.context("matching endorsement not found for reference value")?,
                 public_keys,
-            )?;
+            )
+            .context("getting verified stage0 attachment")?;
 
             Ok(into_expected_digests(
                 firmware_attachment
@@ -1045,15 +1098,17 @@ fn get_verified_kernel_attachment(
         &endorsement.rekor_log_entry,
         &public_keys.endorser_public_key,
         &public_keys.rekor_public_key,
-    )?;
+    )
+    .context("verifying binary endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)?;
+    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)
+        .context("parsing endorsement statement")?;
     if parsed_statement.predicate.usage != "kernel" {
         anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
     }
-    let expected_digest = get_digest(&parsed_statement)?;
+    let expected_digest = get_digest(&parsed_statement).context("getting expected digest")?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
-    is_hex_digest_match(&actual_digest, &expected_digest)?;
+    is_hex_digest_match(&actual_digest, &expected_digest).context("comparing expected digest")?;
     KernelAttachment::decode(&*endorsement.subject)
         .map_err(|_| anyhow::anyhow!("couldn't parse kernel attachment"))
 }
@@ -1083,7 +1138,8 @@ fn get_kernel_expected_values(
                 now_utc_millis,
                 endorsement.context("matching endorsement not found for reference value")?,
                 public_keys,
-            )?;
+            )
+            .context("getting verified kernel attachment")?;
             let expected_image = kernel_attachment
                 .image
                 .ok_or_else(|| anyhow::anyhow!("no image digest in kernel attachment"))?;
@@ -1158,7 +1214,8 @@ fn get_text_expected_values(
                 &endorsement.rekor_log_entry,
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
-            )?;
+            )
+            .context("verifying binary endorsement")?;
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .expect("endorsement subject is not utf8");
@@ -1386,18 +1443,24 @@ fn extract_application_key_values(
     let application_key_values = || -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let encryption_claims = claims_set_from_serialized_cert(
             &application_keys.encryption_public_key_certificate[..],
-        )?;
+        )
+        .context("getting encryption claims")?;
         let encryption_cose_key = get_public_key_from_claims_set(&encryption_claims)
-            .map_err(|msg| anyhow::anyhow!(msg))?;
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("getting encryption cose key")?;
         let encryption_public_key = cose_key_to_hpke_public_key(&encryption_cose_key)
-            .map_err(|msg| anyhow::anyhow!(msg))?;
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("converting encryption cose key")?;
 
         let signing_claims =
-            claims_set_from_serialized_cert(&application_keys.signing_public_key_certificate[..])?;
-        let signing_cose_key: CoseKey =
-            get_public_key_from_claims_set(&signing_claims).map_err(|msg| anyhow::anyhow!(msg))?;
-        let signing_verifying_key =
-            cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
+            claims_set_from_serialized_cert(&application_keys.signing_public_key_certificate[..])
+                .context("getting signing claims")?;
+        let signing_cose_key: CoseKey = get_public_key_from_claims_set(&signing_claims)
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("getting signing cose key")?;
+        let signing_verifying_key = cose_key_to_verifying_key(&signing_cose_key)
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("getting signing verifying key")?;
         let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
         Ok((encryption_public_key, signing_public_key))
