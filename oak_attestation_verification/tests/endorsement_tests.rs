@@ -39,6 +39,12 @@ const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC
 const NOW_UTC_MILLIS: i64 = 1709294400000;
 
+// Endorsement statement was invalid on: 28 March 2023, 10:40 UTC
+const TOO_EARLY_UTC_MILLIS: i64 = 1680000000000;
+
+// Endorsement statement was invalid on: 26 March 2025, 14:40 UTC
+const TOO_LATE_UTC_MILLIS: i64 = 1743000000000;
+
 struct TestData {
     endorsement: Vec<u8>,
     signature: Vec<u8>,
@@ -65,14 +71,14 @@ fn load_testdata() -> TestData {
 }
 
 #[test]
-fn test_verify_rekor_signature() {
+fn test_verify_rekor_signature_success() {
     let testdata = load_testdata();
     let result = verify_rekor_signature(&testdata.log_entry, &testdata.rekor_public_key);
     assert!(result.is_ok());
 }
 
 #[test]
-fn test_verify_rekor_log_entry() {
+fn test_verify_rekor_log_entry_success() {
     let testdata = load_testdata();
 
     let result = verify_rekor_log_entry(
@@ -84,7 +90,7 @@ fn test_verify_rekor_log_entry() {
 }
 
 #[test]
-fn test_verify_endorsement_statement() {
+fn test_verify_endorsement_statement_success() {
     let testdata = load_testdata();
     let statement = parse_endorsement_statement(&testdata.endorsement)
         .expect("could not parse endorsement statement");
@@ -93,7 +99,25 @@ fn test_verify_endorsement_statement() {
 }
 
 #[test]
-fn test_verify_endorser_public_key() {
+fn test_verify_endorsement_statement_fails_too_early() {
+    let testdata = load_testdata();
+    let statement = parse_endorsement_statement(&testdata.endorsement)
+        .expect("could not parse endorsement statement");
+    let result = verify_endorsement_statement(TOO_EARLY_UTC_MILLIS, &statement);
+    assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_endorsement_statement_fails_too_late() {
+    let testdata = load_testdata();
+    let statement = parse_endorsement_statement(&testdata.endorsement)
+        .expect("could not parse endorsement statement");
+    let result = verify_endorsement_statement(TOO_LATE_UTC_MILLIS, &statement);
+    assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_endorser_public_key_success() {
     let testdata = load_testdata();
 
     let result = verify_endorser_public_key(&testdata.log_entry, &testdata.endorser_public_key);
@@ -101,7 +125,7 @@ fn test_verify_endorser_public_key() {
 }
 
 #[test]
-fn test_verify_binary_endorsement() {
+fn test_verify_binary_endorsement_success() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
@@ -113,6 +137,83 @@ fn test_verify_binary_endorsement() {
         &testdata.rekor_public_key,
     );
     assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_binary_endorsement_fails_with_empty_signature() {
+    let testdata = load_testdata();
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &Vec::new(),
+        &testdata.log_entry,
+        &testdata.endorser_public_key,
+        &testdata.rekor_public_key,
+    );
+    assert!(result.is_err(), "{:?}", result);
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &Vec::new(),
+        &Vec::new(),
+        &testdata.endorser_public_key,
+        &Vec::new(),
+    );
+    assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_binary_endorsement_fails_with_invalid_signature() {
+    let mut testdata = load_testdata();
+
+    testdata.signature[0] ^= 1;
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &testdata.log_entry,
+        &testdata.endorser_public_key,
+        &testdata.rekor_public_key,
+    );
+    assert!(result.is_err(), "{:?}", result);
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &Vec::new(),
+        &testdata.endorser_public_key,
+        &Vec::new(),
+    );
+    assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_binary_endorsement_fails_with_empty_endorser_public_key() {
+    let testdata = load_testdata();
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &testdata.log_entry,
+        &Vec::new(),
+        &testdata.rekor_public_key,
+    );
+    assert!(result.is_err(), "{:?}", result);
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &Vec::new(),
+        &Vec::new(),
+        &Vec::new(),
+    );
+    assert!(result.is_err(), "{:?}", result);
 }
 
 #[test]
@@ -160,4 +261,29 @@ fn test_verify_binary_endorsement_fails_with_rekor_key_but_no_log_entry() {
         &testdata.rekor_public_key,
     );
     assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_binary_endorsement_succeeds_with_no_rekor_key() {
+    let testdata = load_testdata();
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &testdata.log_entry,
+        &testdata.endorser_public_key,
+        &Vec::new(),
+    );
+    assert!(result.is_ok(), "{:?}", result);
+
+    let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        &testdata.signature,
+        &Vec::new(),
+        &testdata.endorser_public_key,
+        &Vec::new(),
+    );
+    assert!(result.is_ok(), "{:?}", result);
 }

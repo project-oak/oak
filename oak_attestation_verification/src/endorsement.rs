@@ -29,6 +29,13 @@ use crate::{
 };
 
 /// Verifies the binary endorsement against log entry and public keys.
+///
+/// `endorser_public_key` and `signature` must be present.
+///
+/// If `rekor_public_key` is present, then presence of the log entry is
+/// required and the log entry will be verified. If `rekor_public_key`
+/// is empty (not set), then verification is skipped no matter if the log
+/// entry is present or not.
 pub fn verify_binary_endorsement(
     now_utc_millis: i64,
     endorsement: &[u8],
@@ -37,23 +44,32 @@ pub fn verify_binary_endorsement(
     endorser_public_key: &[u8],
     rekor_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let statement = parse_endorsement_statement(endorsement)
-        .map_err(|e| anyhow::anyhow!(e))
-        .context("parsing endorsement statement")?;
+    if signature.is_empty() {
+        anyhow::bail!("signature of endorsement is required");
+    }
+    if endorser_public_key.is_empty() {
+        anyhow::bail!("endorser's public key is required");
+    }
 
-    if !log_entry.is_empty() {
-        verify_endorsement_statement(now_utc_millis, &statement)
-            .context("verifying endorsement statement")?;
+    // The signature verification is also part of log entry verification,
+    // so in some cases this check will be dispensable. We verify the
+    // signature nonetheless before parsing the endorsement.
+    verify_signature_raw(signature, endorsement, endorser_public_key)
+        .context("verifying signature")?;
+
+    let statement =
+        parse_endorsement_statement(endorsement).context("parsing endorsement statement")?;
+    verify_endorsement_statement(now_utc_millis, &statement)
+        .context("verifying endorsement statement")?;
+
+    if !rekor_public_key.is_empty() {
+        if log_entry.is_empty() {
+            anyhow::bail!("log entry unavailable but verification was requested");
+        }
         verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)
             .context("verifying rekor log entry")?;
         verify_endorser_public_key(log_entry, endorser_public_key)
             .context("verifying endorser public key")?;
-    } else {
-        if !rekor_public_key.is_empty() {
-            anyhow::bail!("log entry unavailable but verification was requested");
-        }
-        verify_signature_raw(signature, endorsement, endorser_public_key)
-            .context("verifying raw signature")?;
     }
 
     Ok(())

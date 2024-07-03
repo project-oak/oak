@@ -30,10 +30,14 @@ message SkipVerification {}
 
 // Verifies the transparency log entry, including signatures and the digest.
 message EndorsementReferenceValue {
-  // The endorser's public signing key for signature verification.
+  // The endorser's public verifying key for signature verification. The
+  // attestation verification requires that all endorsements need to be
+  // signed, therefore this cannot be empty.
   bytes endorser_public_key = 1;
 
-  // Rekor's public signing key for signature verification.
+  // Rekor's public verifying key for log entry verification. Needs to be
+  // set when a log entry is present that should be verified. If it is not set,
+  // then log entry verification is skipped.
   bytes rekor_public_key = 2;
 }
 
