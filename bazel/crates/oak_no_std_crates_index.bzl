@@ -120,6 +120,10 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 features = [],
                 version = "*",
             ),
+            "maplit": crate.spec(
+                features = [],
+                version = "*",
+            ),
             "p256": crate.spec(
                 default_features = False,
                 features = [

@@ -16,10 +16,12 @@
 
 //! Oak Functions ABI test.
 
+#![feature(assert_matches)]
+
+use core::assert_matches::assert_matches;
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Context};
-use assert_matches::assert_matches;
+use anyhow::anyhow;
 use maplit::hashmap;
 
 type TestFn = fn(&str) -> ();
@@ -46,7 +48,8 @@ impl TestManager<'static> {
     fn run_test(&self) -> anyhow::Result<()> {
         let request = oak_functions_sdk::read_request()
             .map_err(|error| anyhow!("couldn't read request: {:?}", error))?;
-        let test_name = String::from_utf8(request).context("couldn't parse request")?;
+        let test_name = String::from_utf8(request)
+            .map_err(|err| anyhow::anyhow!("couldn't parse request: {err}"))?;
         let test = self
             .tests
             .get(&test_name as &str)

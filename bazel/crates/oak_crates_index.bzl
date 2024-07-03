@@ -15,7 +15,7 @@
 #
 #
 """
- Defines the no_std crates repository.
+ Defines the std crates repository.
  After being defined, it should be loaded using:
 
  load("@oak_crates_index//:defs.bzl", oak_crate_repositories = "crate_repositories")

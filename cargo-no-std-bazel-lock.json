@@ -1,5 +1,5 @@
 {
-  "checksum": "042c964203d897aec6bb490e61ab62d9385669207bd03993bc7c36a169556cc7",
+  "checksum": "8067eab2b6523b268748a8ef5c70a84c1e174a05ce66217c98cf679826c59bc0",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1977,6 +1977,10 @@
               "target": "log"
             },
             {
+              "id": "maplit 1.0.2",
+              "target": "maplit"
+            },
+            {
               "id": "p256 0.13.2",
               "target": "p256"
             },
@@ -3308,6 +3312,45 @@
         "version": "0.4.21"
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "maplit 1.0.2": {
+      "name": "maplit",
+      "version": "1.0.2",
+      "package_url": "https://github.com/bluss/maplit",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/maplit/1.0.2/download",
+          "sha256": "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "maplit",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "maplit",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.0.2"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -6148,6 +6191,7 @@
     "hkdf 0.12.4",
     "hpke 0.11.0",
     "log 0.4.21",
+    "maplit 1.0.2",
     "p256 0.13.2",
     "pkcs8 0.10.2",
     "primeorder 0.13.6",
