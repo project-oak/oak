@@ -1,5 +1,5 @@
 {
-  "checksum": "29000e1cc506207f10f6725fdfd827400c9e64d2df09af5681b12f77c9a8413b",
+  "checksum": "61cfe6e7048f2d815e448bc3184a6e6466cfe798edf2d389deb7338fa01f9b4c",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -13842,6 +13842,8 @@
             "process",
             "sched",
             "signal",
+            "term",
+            "ucontext",
             "uio",
             "user"
           ],

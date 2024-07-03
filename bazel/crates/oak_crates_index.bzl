@@ -211,7 +211,14 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "maplit": crate.spec(version = "*"),
             "nix": crate.spec(
-                features = ["user", "process", "signal"],
+                features = [
+                    "mount",
+                    "process",
+                    "signal",
+                    "term",
+                    "ucontext",
+                    "user",
+                ],
                 version = "0.27.1",
             ),
             "oci-spec": crate.spec(version = "*"),
