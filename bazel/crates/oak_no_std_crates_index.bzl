@@ -175,7 +175,8 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
             ),
         },
         supported_platform_triples = [
-            "x86_64-unknown-linux-gnu",  # Needed for bazel buid //...:all (builds for Linux).
+            # Linux for dependencies of build scripts (they run on host):
+            "x86_64-unknown-linux-gnu",
             "x86_64-unknown-none",
             "wasm32-unknown-unknown",
         ],
