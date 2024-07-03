@@ -147,6 +147,23 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -170,15 +187,19 @@
 <span class="kw">use </span>core::convert::TryInto;
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>oak_crypto::noise_handshake::client::HandshakeInitiator;
+<span class="kw">use </span>oak_crypto::noise_handshake::{client::HandshakeInitiator, Crypter};
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
-    session::v1::{HandshakeRequest, HandshakeResponse, NoiseHandshakeMessage},
+    session::v1::{
+        handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
+        NoiseHandshakeMessage,
+    },
 };
 
 <span class="kw">use crate</span>::{config::HandshakerConfig, ProtocolEngine};
 
 <span class="kw">const </span>EPHEMERAL_PUB_KEY_LEN: usize = <span class="number">65</span>;
+<span class="kw">const </span>HANDSHAKE_HASH_LEN: usize = <span class="number">32</span>;
 
 <span class="kw">pub trait </span>EncryptionKeyHandle {
     <span class="kw">fn </span>get_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt;;
@@ -201,6 +222,7 @@
 </span><span class="kw">pub struct </span>ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
     handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
     handshake_initiator: HandshakeInitiator,
+    handshake_result: <span class="prelude-ty">Option</span>&lt;([u8; HANDSHAKE_HASH_LEN], Crypter)&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
@@ -221,13 +243,14 @@
                 ),
                 HandshakeType::NoiseNN =&gt; HandshakeInitiator::new_nn(),
             },
+            handshake_result: <span class="prelude-val">None</span>,
         })
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Handshaker <span class="kw">for </span>ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>derive_session_keys(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
-        <span class="macro">core::unimplemented!</span>();
+    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
+        <span class="self">self</span>.handshake_result.take().map(|(_handshake_hash, crypter)| crypter.into())
     }
 }
 
@@ -237,29 +260,40 @@
         <span class="kw">let </span>(ciphertext, ephemeral_public_key) =
             (initial_message.split_off(EPHEMERAL_PUB_KEY_LEN), initial_message);
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(HandshakeRequest {
-            r#handshake_type: <span class="prelude-val">Some</span>(
-                oak_proto_rust::oak::session::v1::handshake_request::HandshakeType::NoiseHandshakeMessage(
-                    NoiseHandshakeMessage {
-                        ephemeral_public_key,
-                        static_public_key: <span class="kw">match </span><span class="self">self</span>.handshaker_config.handshake_type {
-                            HandshakeType::NoiseKK
-                            | HandshakeType::NoiseKN
-                            | HandshakeType::NoiseNK
-                            | HandshakeType::NoiseNN =&gt; <span class="macro">vec!</span>[],
-                        },
-                        ciphertext,
+            r#handshake_type: <span class="prelude-val">Some</span>(handshake_request::HandshakeType::NoiseHandshakeMessage(
+                NoiseHandshakeMessage {
+                    ephemeral_public_key,
+                    static_public_key: <span class="kw">match </span><span class="self">self</span>.handshaker_config.handshake_type {
+                        HandshakeType::NoiseKK
+                        | HandshakeType::NoiseKN
+                        | HandshakeType::NoiseNK
+                        | HandshakeType::NoiseNN =&gt; <span class="macro">vec!</span>[],
                     },
-                ),
-            ),
+                    ciphertext,
+                },
+            )),
             attestation_binding: <span class="prelude-val">None</span>,
         }))
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _incoming_message: <span class="kw-2">&amp;</span>HandshakeResponse,
+        incoming_message: <span class="kw-2">&amp;</span>HandshakeResponse,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">match </span>incoming_message.r#handshake_type.as_ref() {
+            <span class="prelude-val">Some</span>(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) =&gt; {
+                <span class="kw">let </span>handshake_response = [
+                    noise_message.ephemeral_public_key.as_slice(),
+                    noise_message.static_public_key.as_slice(),
+                    noise_message.ciphertext.as_slice(),
+                ]
+                .concat();
+                <span class="self">self</span>.handshake_result =
+                    <span class="prelude-val">Some</span>(<span class="self">self</span>.handshake_initiator.process_response(handshake_response.as_slice()));
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
+            }
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Missing handshake_type"</span>)),
+        }
     }
 }
 

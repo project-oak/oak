@@ -218,6 +218,14 @@
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -246,6 +254,8 @@
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">use </span>alloc::vec::Vec;
+
+<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 <span class="kw">pub use </span><span class="kw">crate</span>::noise_handshake::crypto_wrapper::{
     aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
@@ -350,6 +360,12 @@
         }
         <span class="kw">let </span>unpadded_length = plaintext.len() - (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize);
         <span class="prelude-val">Ok</span>(Vec::from(<span class="kw-2">&amp;</span>plaintext[<span class="number">0</span>..unpadded_length - <span class="number">1</span>]))
+    }
+}
+
+<span class="kw">impl </span>From&lt;Crypter&gt; <span class="kw">for </span>SessionKeys {
+    <span class="kw">fn </span>from(value: Crypter) -&gt; <span class="self">Self </span>{
+        SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
     }
 }
 
