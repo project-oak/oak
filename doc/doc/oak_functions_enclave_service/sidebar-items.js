@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["OakFunctionsService"]};
+window.SIDEBAR_ITEMS = {"struct":["OakFunctionsService"]};

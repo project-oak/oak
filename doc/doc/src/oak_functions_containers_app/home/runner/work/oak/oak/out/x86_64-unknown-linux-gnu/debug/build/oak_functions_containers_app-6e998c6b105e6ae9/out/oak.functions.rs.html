@@ -907,28 +907,6 @@
 <a href="#905" id="905">905</a>
 <a href="#906" id="906">906</a>
 <a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Generated client implementations.
 </span><span class="kw">pub mod </span>oak_functions_client {
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
@@ -1020,12 +998,10 @@
         </span><span class="kw">pub async fn </span>initialize(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::InitializeRequest,
+                ::oak_proto_rust::oak::oak_functions::InitializeRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::InitializeResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::InitializeResponse&gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1052,12 +1028,10 @@
         </span><span class="kw">pub async fn </span>handle_user_request(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::InvokeRequest,
+                ::oak_proto_rust::oak::oak_functions::InvokeRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::InvokeResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::InvokeResponse&gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1089,11 +1063,11 @@
         </span><span class="kw">pub async fn </span>extend_next_lookup_data(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataRequest,
+                ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt; {
@@ -1125,11 +1099,11 @@
         </span><span class="kw">pub async fn </span>finish_next_lookup_data(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataRequest,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt; {
@@ -1158,12 +1132,10 @@
         /// method_id: 4
         </span><span class="kw">pub async fn </span>abort_next_lookup_data(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::Empty,
-            &gt;,
+            request: <span class="kw">impl </span>tonic::IntoRequest&lt;::oak_proto_rust::oak::oak_functions::Empty&gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::AbortNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::AbortNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt; {
@@ -1196,11 +1168,11 @@
         </span><span class="kw">pub async fn </span>stream_lookup_data(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoStreamingRequest&lt;
-                Message = ::oak_functions_service::proto::oak::functions::LookupDataChunk,
+                Message = ::oak_proto_rust::oak::oak_functions::LookupDataChunk,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt; {
@@ -1234,12 +1206,10 @@
         </span><span class="kw">pub async fn </span>reserve(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;
-                ::oak_functions_service::proto::oak::functions::ReserveRequest,
+                ::oak_proto_rust::oak::oak_functions::ReserveRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::ReserveResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::ReserveResponse&gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1275,12 +1245,10 @@
         </span><span class="kw">async fn </span>initialize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::InitializeRequest,
+                ::oak_proto_rust::oak::oak_functions::InitializeRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::InitializeResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::InitializeResponse&gt;,
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Handles an invocation coming from a client.
@@ -1288,13 +1256,9 @@
         /// method_id: 1
         </span><span class="kw">async fn </span>handle_user_request(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::InvokeRequest,
-            &gt;,
+            request: tonic::Request&lt;::oak_proto_rust::oak::oak_functions::InvokeRequest&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::InvokeResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::InvokeResponse&gt;,
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Extends the next lookup data by the given chunk of lookup data. Only
@@ -1306,11 +1270,11 @@
         </span><span class="kw">async fn </span>extend_next_lookup_data(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataRequest,
+                ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt;;
@@ -1322,11 +1286,11 @@
         </span><span class="kw">async fn </span>finish_next_lookup_data(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataRequest,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataRequest,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt;;
@@ -1335,12 +1299,10 @@
         /// method_id: 4
         </span><span class="kw">async fn </span>abort_next_lookup_data(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::Empty,
-            &gt;,
+            request: tonic::Request&lt;::oak_proto_rust::oak::oak_functions::Empty&gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::AbortNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::AbortNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt;;
@@ -1353,13 +1315,11 @@
         </span><span class="kw">async fn </span>stream_lookup_data(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;
-                tonic::Streaming&lt;
-                    ::oak_functions_service::proto::oak::functions::LookupDataChunk,
-                &gt;,
+                tonic::Streaming&lt;::oak_proto_rust::oak::oak_functions::LookupDataChunk&gt;,
             &gt;,
         ) -&gt; std::result::Result&lt;
             tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse,
+                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse,
             &gt;,
             tonic::Status,
         &gt;;
@@ -1372,13 +1332,9 @@
         /// method_id: 6
         </span><span class="kw">async fn </span>reserve(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;
-                ::oak_functions_service::proto::oak::functions::ReserveRequest,
-            &gt;,
+            request: tonic::Request&lt;::oak_proto_rust::oak::oak_functions::ReserveRequest&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;
-                ::oak_functions_service::proto::oak::functions::ReserveResponse,
-            &gt;,
+            tonic::Response&lt;::oak_proto_rust::oak::oak_functions::ReserveResponse&gt;,
             tonic::Status,
         &gt;;
     }
@@ -1467,9 +1423,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::InitializeRequest,
+                        ::oak_proto_rust::oak::oak_functions::InitializeRequest,
                     &gt; <span class="kw">for </span>InitializeSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::InitializeResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::InitializeResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1477,7 +1433,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::InitializeRequest,
+                                ::oak_proto_rust::oak::oak_functions::InitializeRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1516,9 +1472,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::InvokeRequest,
+                        ::oak_proto_rust::oak::oak_functions::InvokeRequest,
                     &gt; <span class="kw">for </span>HandleUserRequestSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::InvokeResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::InvokeResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1526,7 +1482,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::InvokeRequest,
+                                ::oak_proto_rust::oak::oak_functions::InvokeRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1566,9 +1522,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataRequest,
+                        ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataRequest,
                     &gt; <span class="kw">for </span>ExtendNextLookupDataSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1576,7 +1532,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::ExtendNextLookupDataRequest,
+                                ::oak_proto_rust::oak::oak_functions::ExtendNextLookupDataRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1619,9 +1575,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::FinishNextLookupDataRequest,
+                        ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataRequest,
                     &gt; <span class="kw">for </span>FinishNextLookupDataSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1629,7 +1585,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::FinishNextLookupDataRequest,
+                                ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1672,9 +1628,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::Empty,
+                        ::oak_proto_rust::oak::oak_functions::Empty,
                     &gt; <span class="kw">for </span>AbortNextLookupDataSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::AbortNextLookupDataResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::AbortNextLookupDataResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1682,7 +1638,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::Empty,
+                                ::oak_proto_rust::oak::oak_functions::Empty,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1722,9 +1678,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::ClientStreamingService&lt;
-                        ::oak_functions_service::proto::oak::functions::LookupDataChunk,
+                        ::oak_proto_rust::oak::oak_functions::LookupDataChunk,
                     &gt; <span class="kw">for </span>StreamLookupDataSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::FinishNextLookupDataResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::FinishNextLookupDataResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1733,7 +1689,7 @@
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
                                 tonic::Streaming&lt;
-                                    ::oak_functions_service::proto::oak::functions::LookupDataChunk,
+                                    ::oak_proto_rust::oak::oak_functions::LookupDataChunk,
                                 &gt;,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
@@ -1774,9 +1730,9 @@
                     <span class="kw">impl</span>&lt;
                         T: OakFunctions,
                     &gt; tonic::server::UnaryService&lt;
-                        ::oak_functions_service::proto::oak::functions::ReserveRequest,
+                        ::oak_proto_rust::oak::oak_functions::ReserveRequest,
                     &gt; <span class="kw">for </span>ReserveSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = ::oak_functions_service::proto::oak::functions::ReserveResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::oak_functions::ReserveResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1784,7 +1740,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                ::oak_functions_service::proto::oak::functions::ReserveRequest,
+                                ::oak_proto_rust::oak::oak_functions::ReserveRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);

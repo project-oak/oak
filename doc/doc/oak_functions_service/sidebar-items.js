@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["instance","logger","lookup","lookup_htbl","proto","wasm"],"trait":["Handler","Observer"]};
+window.SIDEBAR_ITEMS = {"mod":["instance","logger","lookup","lookup_htbl","wasm"],"trait":["Handler","Observer"]};

@@ -193,10 +193,6 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -217,19 +213,15 @@
 
 <span class="kw">use </span>micro_rpc::{Status, Vec};
 <span class="kw">use </span>oak_functions_abi::Request;
+<span class="kw">use </span>oak_proto_rust::oak::oak_functions::{
+    extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
+    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+    FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,
+    ReserveRequest, ReserveResponse,
+};
 <span class="kw">use </span>prost::Message;
 
-<span class="kw">use crate</span>::{
-    logger::StandaloneLogger,
-    lookup::LookupDataManager,
-    proto::oak::functions::{
-        extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
-        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-        FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,
-        ReserveRequest, ReserveResponse,
-    },
-    Handler, Observer,
-};
+<span class="kw">use crate</span>::{logger::StandaloneLogger, lookup::LookupDataManager, Handler, Observer};
 
 <span class="kw">pub struct </span>OakFunctionsInstance&lt;H: Handler&gt; {
     lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,

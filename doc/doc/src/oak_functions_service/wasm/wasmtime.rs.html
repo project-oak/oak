@@ -596,12 +596,12 @@
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
+<span class="kw">use </span>oak_proto_rust::oak::oak_functions::config::WasmtimeConfig;
 <span class="kw">use </span>wasmtime::{PoolingAllocationConfig, Store};
 
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    proto::oak::functions::config::WasmtimeConfig,
     wasm::{api::StdWasmApiFactory, WasmApiFactory},
     Handler, Observer,
 };
