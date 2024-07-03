@@ -1,5 +1,5 @@
 {
-  "checksum": "c4be2749e541c67a98fce81c31388468fc37a4113e0abc002e9ba5f8d661f680",
+  "checksum": "29000e1cc506207f10f6725fdfd827400c9e64d2df09af5681b12f77c9a8413b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -23874,6 +23874,12 @@
               "id": "tokio-macros 2.2.0",
               "target": "tokio_macros"
             }
+          ],
+          "selects": {}
+        },
+        "rustc_flags": {
+          "common": [
+            "--cfg=tokio_unstable"
           ],
           "selects": {}
         },

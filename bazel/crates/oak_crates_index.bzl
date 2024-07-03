@@ -54,6 +54,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 version = "*",
                 deps = ["@jemalloc"],
             )],
+            # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
+            "tokio": [crate.annotation(
+                rustc_flags = ["--cfg=tokio_unstable"],
+            )],
         },
         cargo_lockfile = cargo_lockfile,  # In Cargo-free mode this is used as output, not input.
         lockfile = lockfile,  # Shares most contents with cargo_lockfile.
@@ -373,9 +377,11 @@ def oak_crates_index(cargo_lockfile, lockfile):
                     "net",
                     "parking_lot",
                     "process",
+                    "rt",
                     "rt-multi-thread",
                     "signal",
                     "sync",
+                    "time",
                 ],
                 version = "*",
             ),
