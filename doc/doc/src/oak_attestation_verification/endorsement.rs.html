@@ -96,6 +96,16 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -114,7 +124,8 @@
 
 </span><span class="doccomment">//! Verifies binary endorsements as coming from Transparent Release.
 
-</span><span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 
 <span class="kw">use crate</span>::{
     claims::{
@@ -134,17 +145,23 @@
     endorser_public_key: <span class="kw-2">&amp;</span>[u8],
     rekor_public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>statement = parse_endorsement_statement(endorsement)<span class="question-mark">?</span>;
+    <span class="kw">let </span>statement = parse_endorsement_statement(endorsement)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(e))
+        .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>!log_entry.is_empty() {
-        verify_endorsement_statement(now_utc_millis, <span class="kw-2">&amp;</span>statement)<span class="question-mark">?</span>;
-        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)<span class="question-mark">?</span>;
-        verify_endorser_public_key(log_entry, endorser_public_key)<span class="question-mark">?</span>;
+        verify_endorsement_statement(now_utc_millis, <span class="kw-2">&amp;</span>statement)
+            .context(<span class="string">"verifying endorsement statement"</span>)<span class="question-mark">?</span>;
+        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)
+            .context(<span class="string">"verifying rekor log entry"</span>)<span class="question-mark">?</span>;
+        verify_endorser_public_key(log_entry, endorser_public_key)
+            .context(<span class="string">"verifying endorser public key"</span>)<span class="question-mark">?</span>;
     } <span class="kw">else </span>{
         <span class="kw">if </span>!rekor_public_key.is_empty() {
             <span class="macro">anyhow::bail!</span>(<span class="string">"log entry unavailable but verification was requested"</span>);
         }
-        verify_signature_raw(signature, endorsement, endorser_public_key)<span class="question-mark">?</span>;
+        verify_signature_raw(signature, endorsement, endorser_public_key)
+            .context(<span class="string">"verifying raw signature"</span>)<span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(())
@@ -158,7 +175,8 @@
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = validate_endorsement(statement) {
         <span class="macro">anyhow::bail!</span>(<span class="string">"validating endorsement: {err:?}"</span>);
     }
-    verify_validity_duration(now_utc_millis, statement)<span class="question-mark">?</span>;
+    verify_validity_duration(now_utc_millis, statement)
+        .context(<span class="string">"verifying endorsement validity"</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
@@ -172,7 +190,7 @@
     <span class="comment">// TODO(#4231): Currently, we only check that the public keys are the same.
     // Should be updated to support verifying rolling keys.
 
-    </span><span class="kw">let </span>body = get_rekor_log_entry_body(log_entry)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>body = get_rekor_log_entry_body(log_entry).context(<span class="string">"getting rekor log entry body"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>actual_pem_vec =
         BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
@@ -180,7 +198,9 @@
         })<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_pem =
         core::str::from_utf8(<span class="kw-2">&amp;</span>actual_pem_vec).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
-    <span class="kw">let </span>actual = convert_pem_to_raw(actual_pem)<span class="question-mark">?</span>;
+    <span class="kw">let </span>actual = convert_pem_to_raw(actual_pem)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(e))
+        .context(<span class="string">"converting public key from log entry body"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>!equal_keys(endorser_public_key, <span class="kw-2">&amp;</span>actual)<span class="question-mark">? </span>{
         <span class="macro">anyhow::bail!</span>(

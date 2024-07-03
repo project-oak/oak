@@ -1578,6 +1578,69 @@
 <a href="#1576" id="1576">1576</a>
 <a href="#1577" id="1577">1577</a>
 <a href="#1578" id="1578">1578</a>
+<a href="#1579" id="1579">1579</a>
+<a href="#1580" id="1580">1580</a>
+<a href="#1581" id="1581">1581</a>
+<a href="#1582" id="1582">1582</a>
+<a href="#1583" id="1583">1583</a>
+<a href="#1584" id="1584">1584</a>
+<a href="#1585" id="1585">1585</a>
+<a href="#1586" id="1586">1586</a>
+<a href="#1587" id="1587">1587</a>
+<a href="#1588" id="1588">1588</a>
+<a href="#1589" id="1589">1589</a>
+<a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
+<a href="#1599" id="1599">1599</a>
+<a href="#1600" id="1600">1600</a>
+<a href="#1601" id="1601">1601</a>
+<a href="#1602" id="1602">1602</a>
+<a href="#1603" id="1603">1603</a>
+<a href="#1604" id="1604">1604</a>
+<a href="#1605" id="1605">1605</a>
+<a href="#1606" id="1606">1606</a>
+<a href="#1607" id="1607">1607</a>
+<a href="#1608" id="1608">1608</a>
+<a href="#1609" id="1609">1609</a>
+<a href="#1610" id="1610">1610</a>
+<a href="#1611" id="1611">1611</a>
+<a href="#1612" id="1612">1612</a>
+<a href="#1613" id="1613">1613</a>
+<a href="#1614" id="1614">1614</a>
+<a href="#1615" id="1615">1615</a>
+<a href="#1616" id="1616">1616</a>
+<a href="#1617" id="1617">1617</a>
+<a href="#1618" id="1618">1618</a>
+<a href="#1619" id="1619">1619</a>
+<a href="#1620" id="1620">1620</a>
+<a href="#1621" id="1621">1621</a>
+<a href="#1622" id="1622">1622</a>
+<a href="#1623" id="1623">1623</a>
+<a href="#1624" id="1624">1624</a>
+<a href="#1625" id="1625">1625</a>
+<a href="#1626" id="1626">1626</a>
+<a href="#1627" id="1627">1627</a>
+<a href="#1628" id="1628">1628</a>
+<a href="#1629" id="1629">1629</a>
+<a href="#1630" id="1630">1630</a>
+<a href="#1631" id="1631">1631</a>
+<a href="#1632" id="1632">1632</a>
+<a href="#1633" id="1633">1633</a>
+<a href="#1634" id="1634">1634</a>
+<a href="#1635" id="1635">1635</a>
+<a href="#1636" id="1636">1636</a>
+<a href="#1637" id="1637">1637</a>
+<a href="#1638" id="1638">1638</a>
+<a href="#1639" id="1639">1639</a>
+<a href="#1640" id="1640">1640</a>
+<a href="#1641" id="1641">1641</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1695,7 +1758,8 @@
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
 ) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
-    <span class="kw">let </span>expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)<span class="question-mark">?</span>;
+    <span class="kw">let </span>expected_values = get_expected_values(now_utc_millis, endorsements, reference_values)
+        .context(<span class="string">"getting expected values"</span>)<span class="question-mark">?</span>;
 
     verify_with_expected_values(now_utc_millis, evidence, endorsements, <span class="kw-2">&amp;</span>expected_values)
 }
@@ -1736,14 +1800,16 @@
                 endorsements::Type::Standalone(<span class="kw">_</span>) =&gt; <span class="kw-2">&amp;</span>[],
             };
         <span class="kw">let </span>root_layer = evidence.root_layer.as_ref().context(<span class="string">"no root layer evidence"</span>)<span class="question-mark">?</span>;
-        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)<span class="question-mark">?</span>;
+        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)
+            .context(<span class="string">"verifying root signature"</span>)<span class="question-mark">?</span>;
     };
 
     <span class="comment">// Ensure the DICE chain signatures are valid and extract the measurements,
     // public keys and other attestation-related data from the DICE chain.
     </span><span class="kw">let </span>extracted_evidence = verify_dice_chain(evidence).context(<span class="string">"invalid DICE chain"</span>)<span class="question-mark">?</span>;
 
-    compare_expected_values(<span class="kw-2">&amp;</span>extracted_evidence, expected_values)<span class="question-mark">?</span>;
+    compare_expected_values(<span class="kw-2">&amp;</span>extracted_evidence, expected_values)
+        .context(<span class="string">"comparing expected values to evidence"</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(extracted_evidence)
 }
@@ -1761,7 +1827,8 @@
             <span class="prelude-val">Some</span>(endorsements::Type::OakRestrictedKernel(ends)),
             <span class="prelude-val">Some</span>(reference_values::Type::OakRestrictedKernel(rvs)),
         ) =&gt; {
-            <span class="kw">let </span>expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)<span class="question-mark">?</span>;
+            <span class="kw">let </span>expected = get_oak_restricted_kernel_expected_values(now_utc_millis, ends, rvs)
+                .context(<span class="string">"getting RK expected values"</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(ExpectedValues {
                 r#type: <span class="prelude-val">Some</span>(expected_values::Type::OakRestrictedKernel(expected)),
             })
@@ -1770,11 +1837,13 @@
             <span class="prelude-val">Some</span>(endorsements::Type::OakContainers(ends)),
             <span class="prelude-val">Some</span>(reference_values::Type::OakContainers(rvs)),
         ) =&gt; {
-            <span class="kw">let </span>expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)<span class="question-mark">?</span>;
+            <span class="kw">let </span>expected = get_oak_containers_expected_values(now_utc_millis, ends, rvs)
+                .context(<span class="string">"getting containers expected values"</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(ExpectedValues { r#type: <span class="prelude-val">Some</span>(expected_values::Type::OakContainers(expected)) })
         }
         (<span class="prelude-val">Some</span>(endorsements::Type::Cb(ends)), <span class="prelude-val">Some</span>(reference_values::Type::Cb(rvs))) =&gt; {
-            <span class="kw">let </span>expected = get_cb_expected_values(now_utc_millis, ends, rvs)<span class="question-mark">?</span>;
+            <span class="kw">let </span>expected = get_cb_expected_values(now_utc_millis, ends, rvs)
+                .context(<span class="string">"getting CB expected values"</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(ExpectedValues { r#type: <span class="prelude-val">Some</span>(expected_values::Type::Cb(expected)) })
         }
         <span class="comment">// Evidence, endorsements and reference values must exist and reflect the same chain type.
@@ -1829,9 +1898,10 @@
 
     <span class="comment">// Sequentially verify the layers, eventually retrieving the verifying key of
     // the last layer.
-    </span><span class="kw">let </span>last_layer_verifying_key = evidence.layers.iter().try_fold(
-        root_layer_verifying_key,
-        |previous_layer_verifying_key, current_layer| {
+    </span><span class="kw">let </span>last_layer_verifying_key = evidence
+        .layers
+        .iter()
+        .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
             <span class="kw">let </span>cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>current_layer.eca_certificate)
                 .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse certificate"</span>))<span class="question-mark">?</span>;
             cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
@@ -1842,11 +1912,14 @@
             <span class="kw">let </span>payload = cert.payload.ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no cert payload"</span>))<span class="question-mark">?</span>;
             <span class="kw">let </span>claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
                 .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse claims set"</span>))<span class="question-mark">?</span>;
-            <span class="kw">let </span>cose_key =
-                get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-            cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
-        },
-    )<span class="question-mark">?</span>;
+            <span class="kw">let </span>cose_key = get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims)
+                .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+                .context(<span class="string">"getting pk from claims"</span>)<span class="question-mark">?</span>;
+            cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key)
+                .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+                .context(<span class="string">"converting cose key"</span>)
+        })
+        .context(<span class="string">"getting last layer key"</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Finally, use the last layer's verification key to verify the application
     // keys.
@@ -1917,18 +1990,20 @@
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.root_layer.as_ref().context(<span class="string">"no root layer expected values"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"comparing root layer values"</span>)<span class="question-mark">?</span>;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context(<span class="string">"no kernel layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.kernel_layer.as_ref().context(<span class="string">"no kernel layer expected values"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"comparing kernel layer values"</span>)<span class="question-mark">?</span>;
 
     compare_application_layer_measurement_digests(
         values.application_layer.as_ref().context(<span class="string">"no applications layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.application_layer.as_ref().context(<span class="string">"no application layer expected values"</span>)<span class="question-mark">?</span>,
     )
-    .context(<span class="string">"application layer verification failed"</span>)
+    .context(<span class="string">"comparing application layer values"</span>)
 }
 
 <span class="kw">fn </span>get_oak_containers_expected_values(
@@ -1937,32 +2012,47 @@
     reference_values: <span class="kw-2">&amp;</span>OakContainersReferenceValues,
 ) -&gt; anyhow::Result&lt;OakContainersExpectedValues&gt; {
     <span class="prelude-val">Ok</span>(OakContainersExpectedValues {
-        root_layer: <span class="prelude-val">Some</span>(get_root_layer_expected_values(
-            now_utc_millis,
-            endorsements.root_layer.as_ref(),
-            reference_values.root_layer.as_ref().context(<span class="string">"no root layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        kernel_layer: <span class="prelude-val">Some</span>(get_kernel_layer_expected_values(
-            now_utc_millis,
-            endorsements.kernel_layer.as_ref(),
-            reference_values.kernel_layer.as_ref().context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        system_layer: <span class="prelude-val">Some</span>(get_system_layer_expected_values(
-            now_utc_millis,
-            endorsements.system_layer.as_ref(),
-            reference_values
-                .system_layer
-                .as_ref()
-                .context(<span class="string">"no application layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        container_layer: <span class="prelude-val">Some</span>(get_container_layer_expected_values(
-            now_utc_millis,
-            endorsements.container_layer.as_ref(),
-            reference_values
-                .container_layer
-                .as_ref()
-                .context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
+        root_layer: <span class="prelude-val">Some</span>(
+            get_root_layer_expected_values(
+                now_utc_millis,
+                endorsements.root_layer.as_ref(),
+                reference_values.root_layer.as_ref().context(<span class="string">"no root layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting root layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        kernel_layer: <span class="prelude-val">Some</span>(
+            get_kernel_layer_expected_values(
+                now_utc_millis,
+                endorsements.kernel_layer.as_ref(),
+                reference_values
+                    .kernel_layer
+                    .as_ref()
+                    .context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting kernel layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        system_layer: <span class="prelude-val">Some</span>(
+            get_system_layer_expected_values(
+                now_utc_millis,
+                endorsements.system_layer.as_ref(),
+                reference_values
+                    .system_layer
+                    .as_ref()
+                    .context(<span class="string">"no application layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting system layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        container_layer: <span class="prelude-val">Some</span>(
+            get_container_layer_expected_values(
+                now_utc_millis,
+                endorsements.container_layer.as_ref(),
+                reference_values
+                    .container_layer
+                    .as_ref()
+                    .context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting container layer values"</span>)<span class="question-mark">?</span>,
+        ),
     })
 }
 
@@ -1975,24 +2065,26 @@
     compare_root_layer_measurement_digests(
         values.root_layer.as_ref().context(<span class="string">"no root layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.root_layer.as_ref().context(<span class="string">"no root layer expected values"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"comparing root layer digests"</span>)<span class="question-mark">?</span>;
 
     compare_kernel_layer_measurement_digests(
         values.kernel_layer.as_ref().context(<span class="string">"no kernel layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.kernel_layer.as_ref().context(<span class="string">"no kernel layer expected_values"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"comparing kernel layer digests"</span>)<span class="question-mark">?</span>;
 
     compare_system_layer_measurement_digests(
         values.system_layer.as_ref().context(<span class="string">"no system layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.system_layer.as_ref().context(<span class="string">"no system layer expected_values"</span>)<span class="question-mark">?</span>,
     )
-    .context(<span class="string">"system layer verification failed"</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">"comparing system layer digests"</span>)<span class="question-mark">?</span>;
 
     compare_container_layer_measurement_digests(
         values.container_layer.as_ref().context(<span class="string">"no container layer evidence values"</span>)<span class="question-mark">?</span>,
         expected.container_layer.as_ref().context(<span class="string">"no system layer expected_values"</span>)<span class="question-mark">?</span>,
     )
-    .context(<span class="string">"container layer verification failed"</span>)
+    .context(<span class="string">"comparing container layer digests"</span>)
 }
 
 <span class="kw">fn </span>get_cb_expected_values(
@@ -2001,26 +2093,44 @@
     reference_values: <span class="kw-2">&amp;</span>CbReferenceValues,
 ) -&gt; anyhow::Result&lt;CbExpectedValues&gt; {
     <span class="prelude-val">Ok</span>(CbExpectedValues {
-        root_layer: <span class="prelude-val">Some</span>(get_root_layer_expected_values(
-            now_utc_millis,
-            endorsements.root_layer.as_ref(),
-            reference_values.root_layer.as_ref().context(<span class="string">"no root layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        kernel_layer: <span class="prelude-val">Some</span>(get_event_expected_values(
-            now_utc_millis,
-            reference_values.kernel_layer.as_ref().context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        system_layer: <span class="prelude-val">Some</span>(get_event_expected_values(
-            now_utc_millis,
-            reference_values.system_layer.as_ref().context(<span class="string">"no system layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
-        application_layer: <span class="prelude-val">Some</span>(get_event_expected_values(
-            now_utc_millis,
-            reference_values
-                .application_layer
-                .as_ref()
-                .context(<span class="string">"no application layer reference values"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>),
+        root_layer: <span class="prelude-val">Some</span>(
+            get_root_layer_expected_values(
+                now_utc_millis,
+                endorsements.root_layer.as_ref(),
+                reference_values.root_layer.as_ref().context(<span class="string">"no root layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting root layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        kernel_layer: <span class="prelude-val">Some</span>(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .kernel_layer
+                    .as_ref()
+                    .context(<span class="string">"no kernel layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting kernel layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        system_layer: <span class="prelude-val">Some</span>(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .system_layer
+                    .as_ref()
+                    .context(<span class="string">"no system layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting system layer values"</span>)<span class="question-mark">?</span>,
+        ),
+        application_layer: <span class="prelude-val">Some</span>(
+            get_event_expected_values(
+                now_utc_millis,
+                reference_values
+                    .application_layer
+                    .as_ref()
+                    .context(<span class="string">"no application layer reference values"</span>)<span class="question-mark">?</span>,
+            )
+            .context(<span class="string">"getting application layer values"</span>)<span class="question-mark">?</span>,
+        ),
     })
 }
 
@@ -2154,14 +2264,15 @@
             };
 
             <span class="comment">// TODO(#4747): user current date as part of VCEK verification.
-            </span>verify_cert_signature(<span class="kw-2">&amp;</span>ask, <span class="kw-2">&amp;</span>vcek)<span class="question-mark">?</span>;
+            </span>verify_cert_signature(<span class="kw-2">&amp;</span>ask, <span class="kw-2">&amp;</span>vcek).context(<span class="string">"verifying vcek cert"</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let </span>report = AttestationReport::ref_from(<span class="kw-2">&amp;</span>root_layer.remote_attestation_report)
                 .context(<span class="string">"invalid AMD SEV-SNP attestation report"</span>)<span class="question-mark">?</span>;
             report.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
 
             <span class="comment">// Ensure that the attestation report is signed by the VCEK public key.
-            </span>verify_attestation_report_signature(<span class="kw-2">&amp;</span>vcek, report)<span class="question-mark">?</span>;
+            </span>verify_attestation_report_signature(<span class="kw-2">&amp;</span>vcek, report)
+                .context(<span class="string">"verifying attestation report signature"</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// Check that the root ECA public key for the DICE chain is bound to the
             // attestation report to ensure that the entire chain is valid.
@@ -2195,7 +2306,8 @@
             now_utc_millis,
             endorsements.and_then(|value| value.stage0.as_ref()),
             amd_sev_values.stage0.as_ref().context(<span class="string">"stage0 binary reference values not found"</span>)<span class="question-mark">?</span>,
-        )<span class="question-mark">?</span>;
+        )
+        .context(<span class="string">"getting stage0 expected values"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Some</span>(AmdSevExpectedValues {
             stage0_expected: <span class="prelude-val">Some</span>(stage0_expected),
             min_tcb_version: amd_sev_values.min_tcb_version.clone(),
@@ -2507,7 +2619,8 @@
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
-            )<span class="question-mark">?</span>;
+            )
+            .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(into_expected_digests(<span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>get_digest(
                 <span class="kw-2">&amp;</span>parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>,
             )<span class="question-mark">?</span>)<span class="question-mark">?</span>]))
@@ -2559,15 +2672,17 @@
         <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
         <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
         <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
-    </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
+        .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">"firmware" </span>{
         <span class="macro">anyhow::bail!</span>(<span class="string">"unexpected endorsement usage: {}"</span>, parsed_statement.predicate.usage);
     }
-    <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement)<span class="question-mark">?</span>;
+    <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement).context(<span class="string">"getting expected digest"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
-    is_hex_digest_match(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest)<span class="question-mark">?</span>;
+    is_hex_digest_match(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest).context(<span class="string">"comparing digests"</span>)<span class="question-mark">?</span>;
     FirmwareAttachment::decode(<span class="kw-2">&amp;*</span>endorsement.subject)
         .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't parse stage0 attachment"</span>))
 }
@@ -2592,7 +2707,8 @@
                 now_utc_millis,
                 endorsement.context(<span class="string">"matching endorsement not found for reference value"</span>)<span class="question-mark">?</span>,
                 public_keys,
-            )<span class="question-mark">?</span>;
+            )
+            .context(<span class="string">"getting verified stage0 attachment"</span>)<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>(into_expected_digests(
                 firmware_attachment
@@ -2625,15 +2741,17 @@
         <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
         <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
         <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
-    )<span class="question-mark">?</span>;
+    )
+    .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
-    </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>parsed_statement = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
+        .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
     <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">"kernel" </span>{
         <span class="macro">anyhow::bail!</span>(<span class="string">"unexpected endorsement usage: {}"</span>, parsed_statement.predicate.usage);
     }
-    <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement)<span class="question-mark">?</span>;
+    <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement).context(<span class="string">"getting expected digest"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
-    is_hex_digest_match(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest)<span class="question-mark">?</span>;
+    is_hex_digest_match(<span class="kw-2">&amp;</span>actual_digest, <span class="kw-2">&amp;</span>expected_digest).context(<span class="string">"comparing expected digest"</span>)<span class="question-mark">?</span>;
     KernelAttachment::decode(<span class="kw-2">&amp;*</span>endorsement.subject)
         .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't parse kernel attachment"</span>))
 }
@@ -2663,7 +2781,8 @@
                 now_utc_millis,
                 endorsement.context(<span class="string">"matching endorsement not found for reference value"</span>)<span class="question-mark">?</span>,
                 public_keys,
-            )<span class="question-mark">?</span>;
+            )
+            .context(<span class="string">"getting verified kernel attachment"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>expected_image = kernel_attachment
                 .image
                 .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no image digest in kernel attachment"</span>))<span class="question-mark">?</span>;
@@ -2738,7 +2857,8 @@
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
-            )<span class="question-mark">?</span>;
+            )
+            .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
             <span class="comment">// Compare the actual command line against the one inlined in the endorsement.
             </span><span class="kw">let </span>regex = String::from_utf8(endorsement.subject.clone())
                 .expect(<span class="string">"endorsement subject is not utf8"</span>);
@@ -2966,18 +3086,24 @@
     <span class="kw">let </span>application_key_values = || -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span>encryption_claims = claims_set_from_serialized_cert(
             <span class="kw-2">&amp;</span>application_keys.encryption_public_key_certificate[..],
-        )<span class="question-mark">?</span>;
+        )
+        .context(<span class="string">"getting encryption claims"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>encryption_cose_key = get_public_key_from_claims_set(<span class="kw-2">&amp;</span>encryption_claims)
-            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+            .context(<span class="string">"getting encryption cose key"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>encryption_public_key = cose_key_to_hpke_public_key(<span class="kw-2">&amp;</span>encryption_cose_key)
-            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+            .context(<span class="string">"converting encryption cose key"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>signing_claims =
-            claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>application_keys.signing_public_key_certificate[..])<span class="question-mark">?</span>;
-        <span class="kw">let </span>signing_cose_key: CoseKey =
-            get_public_key_from_claims_set(<span class="kw-2">&amp;</span>signing_claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-        <span class="kw">let </span>signing_verifying_key =
-            cose_key_to_verifying_key(<span class="kw-2">&amp;</span>signing_cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+            claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>application_keys.signing_public_key_certificate[..])
+                .context(<span class="string">"getting signing claims"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_cose_key: CoseKey = get_public_key_from_claims_set(<span class="kw-2">&amp;</span>signing_claims)
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+            .context(<span class="string">"getting signing cose key"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_verifying_key = cose_key_to_verifying_key(<span class="kw-2">&amp;</span>signing_cose_key)
+            .map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+            .context(<span class="string">"getting signing verifying key"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
         <span class="prelude-val">Ok</span>((encryption_public_key, signing_public_key))
