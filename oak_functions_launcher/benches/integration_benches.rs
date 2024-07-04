@@ -48,10 +48,6 @@ struct OakFunctionsTestConfig {
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
 
-    runtime.block_on(xtask::testing::run_step(xtask::launcher::build_stage0()));
-    runtime.block_on(xtask::testing::run_step(xtask::launcher::just_build(
-        "oak_restricted_kernel_wrapper",
-    )));
     let oak_restricted_kernel_orchestrator_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
             .expect("Failed to build oak_orchestrator");
@@ -68,7 +64,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             "target",
             "x86_64-unknown-none",
             "release",
-            "oak_stage0.bin",
+            "stage0_bin",
         ]),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),

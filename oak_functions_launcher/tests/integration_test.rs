@@ -128,9 +128,6 @@ async fn test_load_large_lookup_data() {
         return;
     }
 
-    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
-    xtask::testing::run_step(xtask::launcher::just_build("oak_restricted_kernel_wrapper")).await;
-
     let oak_restricted_kernel_orchestrator_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
             .expect("Failed to build oak_orchestrator");
@@ -148,7 +145,7 @@ async fn test_load_large_lookup_data() {
             "target",
             "x86_64-unknown-none",
             "release",
-            "oak_stage0.bin",
+            "stage0_bin",
         ]),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
@@ -212,9 +209,6 @@ async fn test_load_two_gib_lookup_data() {
         return;
     }
 
-    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
-    xtask::testing::run_step(xtask::launcher::just_build("oak_restricted_kernel_wrapper")).await;
-
     let oak_restricted_kernel_orchestrator_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
             .expect("Failed to build oak_orchestrator");
@@ -232,7 +226,7 @@ async fn test_load_two_gib_lookup_data() {
             "target",
             "x86_64-unknown-none",
             "release",
-            "oak_stage0.bin",
+            "stage0_bin",
         ]),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),

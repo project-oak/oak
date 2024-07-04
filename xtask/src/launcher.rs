@@ -19,9 +19,6 @@
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
-static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
-static OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["oak_functions_launcher"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     workspace_path(&["target", "x86_64-unknown-linux-gnu", "debug", "oak_functions_launcher"])
 });
@@ -105,7 +102,7 @@ impl App {
                     "target",
                     "x86_64-unknown-none",
                     "release",
-                    "oak_stage0.bin",
+                    "stage0_bin",
                 ])
                 .to_str()
                 .unwrap()
@@ -114,35 +111,10 @@ impl App {
     }
 }
 
-pub fn build_stage0() -> Step {
-    Step::Single {
-        name: "build stage0".to_string(),
-        command: Cmd::new_in_dir(
-            "cargo",
-            vec![
-                "objcopy",
-                "--release",
-                "--",
-                "-O",
-                "binary",
-                "target/x86_64-unknown-none/release/oak_stage0.bin",
-            ],
-            STAGE_0_DIR.as_path(),
-        ),
-    }
-}
-
 pub fn build_binary(name: &str, directory: &str) -> Step {
     Step::Single {
         name: name.to_string(),
         command: Cmd::new_in_dir("cargo", vec!["build"], Path::new(directory)),
-    }
-}
-
-pub fn just_build(just_command: &str) -> Step {
-    Step::Single {
-        name: format!("build {}", just_command),
-        command: Cmd::new_in_dir("just", vec![just_command], workspace_path(&[]).as_path()),
     }
 }
 
@@ -188,14 +160,6 @@ pub async fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
 ) -> (crate::testing::BackgroundStep, u16) {
-    crate::testing::run_step(crate::launcher::build_stage0()).await;
-    crate::testing::run_step(crate::launcher::just_build("oak_restricted_kernel_wrapper")).await;
-    crate::testing::run_step(crate::launcher::just_build("oak_orchestrator")).await;
-    crate::testing::run_step(crate::launcher::build_binary(
-        "build Oak Functions Launcher binary",
-        crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR.to_str().unwrap(),
-    ))
-    .await;
     let variant = crate::launcher::App::from_crate_name("oak_functions_enclave_app");
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions enclave app",

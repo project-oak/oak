@@ -25,6 +25,22 @@ oak_functions_insecure_enclave_app:
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
+run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
+    target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
+        --vmm-binary=$(which qemu-system-x86_64) \
+        --stage0-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+        --kernel=oak_containers_kernel/target/bzImage \
+        --initrd=target/stage1.cpio \
+        --system-image=oak_containers_system_image/target/image.tar.xz \
+        --container-bundle=oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar \
+        --ramdrive-size=1000000 \
+        --memory-size=2G \
+        --wasm={{wasm_path}} \
+        --port={{port}} \
+        --lookup-data={{lookup_data_path}} \
+        --virtio-guest-cid={{virtio_guest_cid}} \
+        --communication-channel={{communication_channel}}
+
 # Builds a variant of the restricted kernel and creates a bzImage of it.
 # Then creates provenance subjects for it.
 restricted_kernel_bzimage_and_provenance_subjects kernel_bin_prefix:
@@ -206,13 +222,13 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests: all_ensure_no_std
+kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:
     bazel build $BAZEL_CONFIG_FLAG --config=clang-tidy //cc/...
 
-# Query crates that needs to be built for bare metal. Bazel cquery outputs one target in each line, 
+# Query crates that needs to be built for bare metal. Bazel cquery outputs one target in each line,
 # with format like "//stage0_dice:stage0_dice (f47c594)" so we take the part before " " (using cut)
 # and then use `tr` to bring them into a single line.
 # We store the command for the query in this variable, but defer executing it
