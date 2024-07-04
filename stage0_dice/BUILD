@@ -26,7 +26,7 @@ rust_library(
     srcs = glob(["src/**"]),
     crate_name = "oak_stage0_dice",
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//oak_dice",

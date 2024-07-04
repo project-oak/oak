@@ -25,7 +25,7 @@ rust_library(
     name = "oak_virtio",
     srcs = glob(["src/**"]),
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",

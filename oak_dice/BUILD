@@ -28,7 +28,7 @@ rust_library(
         "no_std",
     ],
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "@oak_crates_index//:static_assertions",

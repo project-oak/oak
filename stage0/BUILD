@@ -25,7 +25,7 @@ rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//oak_core",

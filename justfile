@@ -248,7 +248,8 @@ clang-tidy:
 # We store the command for the query in this variable, but defer executing it
 # until usage to prevent bazel invocation on any just invocation.
 # Lazy assignment is not yet supported: https://github.com/casey/just/issues/953
-bare_metal_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"@platforms//os:none\", //...)' --platforms=//:x86_64-unknown-none  | cut -d' ' -f1 | tr '\\n' ' '"
+bare_metal_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)' --platforms=//:x86_64-unknown-none | cut -d' ' -f1 | tr '\\n' ' '"
+wasm_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)' | cut -d' ' -f1 | tr '\\n' ' '"
 
 bazel-ci:
     # Test Oak as a dependency in the test workspace
@@ -259,8 +260,9 @@ bazel-ci:
     bazel build --config=unsafe-fast-presubmit -- //...:all
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 
-    # Some crates also need to be built for x86_64-unknown-none.
+    # Some crates also need to be built for x86_64-unknown-none and for wasm32-unknown-unknown.
     bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- $({{bare_metal_crates_query}})
+    bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown -- $({{wasm_crates_query}})
 
 
 bazel-clippy:

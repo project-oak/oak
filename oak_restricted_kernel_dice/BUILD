@@ -25,7 +25,7 @@ rust_library(
     name = "oak_restricted_kernel_dice",
     srcs = glob(["src/**"]),
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//oak_crypto",

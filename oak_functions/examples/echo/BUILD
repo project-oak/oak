@@ -24,5 +24,6 @@ package(
 rust_shared_library(
     name = "echo",
     srcs = ["module/src/lib.rs"],
+    target_compatible_with = ["//:wasm32-none-setting"],
     deps = ["//oak_functions_sdk"],
 )

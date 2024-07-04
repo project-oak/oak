@@ -31,8 +31,9 @@ rust_library(
         "@oak_crates_index//:prost-derive",
     ],
     target_compatible_with = either_platform([
-        "@platforms//os:linux",
-        "@platforms//os:none",
+        "//:x86_64-linux-setting",
+        "//:x86_64-none-setting",
+        "//:wasm32-none-setting",
     ]),
     deps = [
         ":build",

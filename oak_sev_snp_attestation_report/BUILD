@@ -25,7 +25,7 @@ rust_library(
     name = "oak_sev_snp_attestation_report",
     srcs = glob(["src/**"]),
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "@oak_crates_index//:static_assertions",

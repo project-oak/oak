@@ -41,7 +41,7 @@ rust_library(
     name = "oak_channel",
     srcs = glob(["src/**"]),
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = _OAK_CHANNEL_DEPS,
 )

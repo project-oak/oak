@@ -28,7 +28,7 @@ rust_library(
         "rust-crypto",
     ],
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//oak_sev_snp_attestation_report",

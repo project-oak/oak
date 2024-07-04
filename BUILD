@@ -18,6 +18,8 @@
 # loaded by `rules_docker`:
 # https://github.com/bazelbuild/bazel-gazelle/issues/609
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
@@ -61,6 +63,35 @@ platform(
 platform(
     name = "x86_64-linux",
     constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
+# To mark targets to build for x86_64 on bare metal, use this setting.
+# This way you can exclude your target from being built for
+# wasm on bare metal or for x86_64 on Linux.
+selects.config_setting_group(
+    name = "x86_64-none-setting",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+    ],
+)
+
+# Same as previous setting, but for wasm on bare metal.
+selects.config_setting_group(
+    name = "wasm32-none-setting",
+    match_all = [
+        "@platforms//cpu:wasm32",
+        "@platforms//os:none",
+    ],
+)
+
+# Same as previous setting, but for x86_64 on Linux.
+selects.config_setting_group(
+    name = "x86_64-linux-setting",
+    match_all = [
         "@platforms//cpu:x86_64",
         "@platforms//os:linux",
     ],

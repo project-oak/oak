@@ -32,7 +32,7 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     target_compatible_with = [
-        "@platforms//os:none",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//oak_proto_rust",

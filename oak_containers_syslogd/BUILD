@@ -28,6 +28,7 @@ rust_binary(
     crate_features = ["bazel"],
     # TODO: b/335717840 - Fix systemd linker issue and remove this tag.
     tags = ["noci"],
+    target_compatible_with = ["@platforms//:incompatible"],
     deps = [
         ":build",
         "//oak_containers_orchestrator:lib",

@@ -37,15 +37,15 @@ def either_platform(platform_list):
     Example:
     ```
     target_compatible_with = either_platform([
-        "@platforms//os:linux",
-        "@platforms//os:none"
+        "//:x86_64-linux-setting",
+        "//:x86_64-none-setting"
     ]),
     ```
     is equivalent to:
     ```
     target_compatible_with = select({
-        "@platforms//os:linux": ["@platforms//os:linux"],
-        "@platforms//os:none": ["@platforms//os:none"],
+        "//:x86_64-linux-setting": ["//:x86_64-linux-setting"],
+        "//:x86_64-none-setting": ["//:x86_64-none-setting"],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     ```
