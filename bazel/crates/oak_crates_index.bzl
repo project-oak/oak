@@ -428,7 +428,8 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "walkdir": crate.spec(version = "*"),
             "wasmi": crate.spec(
                 default_features = False,
-                version = "*",
+                # same version as cargo, newer versions had compatibility issues
+                version = "0.31.2",
             ),
             "wasmtime": crate.spec(version = "*"),
             "which": crate.spec(version = "*"),

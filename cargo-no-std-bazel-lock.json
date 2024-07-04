@@ -1,5 +1,5 @@
 {
-  "checksum": "8067eab2b6523b268748a8ef5c70a84c1e174a05ce66217c98cf679826c59bc0",
+  "checksum": "02b629afde9758a0c3dad347faaf5fd42829c095a68a8891886d3a271c2794b5",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -2021,6 +2021,10 @@
               "target": "virtio_drivers"
             },
             {
+              "id": "wasmi 0.31.2",
+              "target": "wasmi"
+            },
+            {
               "id": "x86_64 0.14.11",
               "target": "x86_64"
             },
@@ -2037,6 +2041,45 @@
       "license": null,
       "license_ids": [],
       "license_file": null
+    },
+    "downcast-rs 1.2.1": {
+      "name": "downcast-rs",
+      "version": "1.2.1",
+      "package_url": "https://github.com/marcianx/downcast-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/downcast-rs/1.2.1/download",
+          "sha256": "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "downcast_rs",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "downcast_rs",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.2.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
     },
     "ecdsa 0.16.9": {
       "name": "ecdsa",
@@ -3081,6 +3124,44 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "indexmap-nostd 0.4.0": {
+      "name": "indexmap-nostd",
+      "version": "0.4.0",
+      "package_url": "https://github.com/robbepop/indexmap-nostd",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/indexmap-nostd/0.4.0/download",
+          "sha256": "8e04e2fd2b8188ea827b32ef11de88377086d690286ab35747ef7f9bf3ccb590"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "indexmap_nostd",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "indexmap_nostd",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2021",
+        "version": "0.4.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "inout 0.1.3": {
       "name": "inout",
       "version": "0.1.3",
@@ -3181,6 +3262,77 @@
         },
         "edition": "2015",
         "version": "0.2.154"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "libm 0.2.8": {
+      "name": "libm",
+      "version": "0.2.8",
+      "package_url": "https://github.com/rust-lang/libm",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/libm/0.2.8/download",
+          "sha256": "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "libm",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "libm",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libm 0.2.8",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.2.8"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -3357,6 +3509,80 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "num-traits 0.2.19": {
+      "name": "num-traits",
+      "version": "0.2.19",
+      "package_url": "https://github.com/rust-num/num-traits",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/num-traits/0.2.19/download",
+          "sha256": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "num_traits",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "num_traits",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "num-traits 0.2.19",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.19"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "autocfg 1.3.0",
+              "target": "autocfg"
+            }
+          ],
+          "selects": {}
+        }
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "opaque-debug 0.3.1": {
       "name": "opaque-debug",
       "version": "0.3.1",
@@ -3465,6 +3691,71 @@
         "version": "0.13.2"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "paste 1.0.15": {
+      "name": "paste",
+      "version": "1.0.15",
+      "package_url": "https://github.com/dtolnay/paste",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/paste/1.0.15/download",
+          "sha256": "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "paste",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "paste",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "paste 1.0.15",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.0.15"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -4960,6 +5251,97 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "smallvec 1.13.2": {
+      "name": "smallvec",
+      "version": "1.13.2",
+      "package_url": "https://github.com/servo/rust-smallvec",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/smallvec/1.13.2/download",
+          "sha256": "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "smallvec",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "smallvec",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "union"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.13.2"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "spin 0.9.8": {
+      "name": "spin",
+      "version": "0.9.8",
+      "package_url": "https://github.com/mvdnes/spin-rs.git",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/spin/0.9.8/download",
+          "sha256": "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "spin",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "spin",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "mutex",
+            "rwlock",
+            "spin_mutex"
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.9.8"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "spinning_top 0.2.5": {
       "name": "spinning_top",
       "version": "0.2.5",
@@ -5712,6 +6094,223 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "wasmi 0.31.2": {
+      "name": "wasmi",
+      "version": "0.31.2",
+      "package_url": "https://github.com/paritytech/wasmi",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasmi/0.31.2/download",
+          "sha256": "77a8281d1d660cdf54c76a3efa9ddd0c270cada1383a995db3ccb43d166456c7"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasmi",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasmi",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "smallvec 1.13.2",
+              "target": "smallvec"
+            },
+            {
+              "id": "spin 0.9.8",
+              "target": "spin"
+            },
+            {
+              "id": "wasmi_arena 0.4.1",
+              "target": "wasmi_arena"
+            },
+            {
+              "id": "wasmi_core 0.13.0",
+              "target": "wasmi_core"
+            },
+            {
+              "id": "wasmparser-nostd 0.100.2",
+              "target": "wasmparser_nostd",
+              "alias": "wasmparser"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.31.2"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
+    "wasmi_arena 0.4.1": {
+      "name": "wasmi_arena",
+      "version": "0.4.1",
+      "package_url": "https://github.com/paritytech/wasmi",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasmi_arena/0.4.1/download",
+          "sha256": "104a7f73be44570cac297b3035d76b169d6599637631cf37a1703326a0727073"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasmi_arena",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasmi_arena",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2021",
+        "version": "0.4.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
+    "wasmi_core 0.13.0": {
+      "name": "wasmi_core",
+      "version": "0.13.0",
+      "package_url": "https://github.com/paritytech/wasmi",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasmi_core/0.13.0/download",
+          "sha256": "dcf1a7db34bff95b85c261002720c00c3a6168256dcb93041d3fa2054d19856a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasmi_core",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasmi_core",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "downcast-rs 1.2.1",
+              "target": "downcast_rs"
+            },
+            {
+              "id": "libm 0.2.8",
+              "target": "libm"
+            },
+            {
+              "id": "num-traits 0.2.19",
+              "target": "num_traits"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "paste 1.0.15",
+              "target": "paste"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.13.0"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
+    "wasmparser-nostd 0.100.2": {
+      "name": "wasmparser-nostd",
+      "version": "0.100.2",
+      "package_url": "https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasmparser",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasmparser-nostd/0.100.2/download",
+          "sha256": "d5a015fe95f3504a94bb1462c717aae75253e39b9dd6c3fb1062c934535c64aa"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasmparser_nostd",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasmparser_nostd",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "indexmap-nostd 0.4.0",
+              "target": "indexmap_nostd",
+              "alias": "indexmap"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.100.2"
+      },
+      "license": "Apache-2.0 WITH LLVM-exception",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
     "wyz 0.5.1": {
       "name": "wyz",
       "version": "0.5.1",
@@ -6202,6 +6801,7 @@
     "static_assertions 1.1.0",
     "strum 0.26.3",
     "virtio-drivers 0.7.3",
+    "wasmi 0.31.2",
     "x86_64 0.14.11",
     "zeroize 1.8.1"
   ],

@@ -173,6 +173,11 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "wasmi": crate.spec(
+                default_features = False,
+                # same version as cargo, newer versions had compatibility issues
+                version = "0.31.2",
+            ),
         },
         supported_platform_triples = [
             # Linux for dependencies of build scripts (they run on host):
