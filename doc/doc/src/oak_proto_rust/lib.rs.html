@@ -135,6 +135,13 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -201,6 +208,13 @@
                     type_url_for::&lt;<span class="self">Self</span>&gt;()
                 }
             }
+        }
+    }
+
+    <span class="kw">pub mod </span>containers {
+        <span class="macro">include_proto!</span>(<span class="string">"oak.containers"</span>);
+        <span class="kw">pub mod </span>example {
+            <span class="macro">include_proto!</span>(<span class="string">"oak.containers.example"</span>);
         }
     }
 
