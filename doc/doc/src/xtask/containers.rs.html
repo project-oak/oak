@@ -60,109 +60,6 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -179,63 +76,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
-    internal::{Cmd, Runnable, Step},
-    workspace_path,
-};
-
-<span class="kw">fn </span>build_kernel() -&gt; Step {
-    Step::Single {
-        name: <span class="string">"build kernel"</span>.to_string(),
-        command: Cmd::new(<span class="string">"just"</span>, <span class="macro">vec!</span>[<span class="string">"oak_containers_kernel"</span>]),
-    }
-}
-
-<span class="kw">fn </span>build_stage1() -&gt; Step {
-    Step::Single {
-        name: <span class="string">"build stage1"</span>.to_string(),
-        command: Cmd::new(<span class="string">"just"</span>, <span class="macro">vec!</span>[<span class="string">"stage1_cpio"</span>]),
-    }
-}
-
-<span class="kw">fn </span>build_system_image() -&gt; Step {
-    Step::Single {
-        name: <span class="string">"build system image"</span>.to_string(),
-        command: Cmd::new(<span class="string">"just"</span>, <span class="macro">vec!</span>[<span class="string">"oak_containers_system_image"</span>]),
-    }
-}
-
-<span class="kw">fn </span>build_oak_functions_bundle() -&gt; Step {
-    Step::Single {
-        name: <span class="string">"build Oak Functions bundle"</span>.to_string(),
-        command: Cmd::new(<span class="string">"just"</span>, <span class="macro">vec!</span>[<span class="string">"oak_functions_containers_container_bundle_tar"</span>]),
-    }
-}
-
-<span class="kw">fn </span>build_oak_functions_launcher() -&gt; Step {
-    Step::Single {
-        name: <span class="string">"build Oak Functions bundle"</span>.to_string(),
-        command: Cmd::new(<span class="string">"just"</span>, <span class="macro">vec!</span>[<span class="string">"oak_functions_containers_launcher"</span>]),
-    }
-}
-
-<span class="kw">async fn </span>build_prerequisites() {
-    <span class="comment">// `just` steps can clash with each other, so ensure that we're not trying to
-    // build things like the system image concurrently.
-    </span><span class="kw">static </span>BUILD: tokio::sync::OnceCell&lt;()&gt; = tokio::sync::OnceCell::const_new();
-    BUILD
-        .get_or_init(<span class="kw">async </span>|| {
-            <span class="macro">tokio::join!</span>(
-                <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_stage0()),
-                <span class="kw">crate</span>::testing::run_step(build_kernel()),
-                <span class="kw">crate</span>::testing::run_step(build_stage1()),
-                <span class="kw">crate</span>::testing::run_step(build_system_image()),
-                <span class="kw">crate</span>::testing::run_step(build_oak_functions_bundle()),
-                <span class="kw">crate</span>::testing::run_step(build_oak_functions_launcher())
-            );
-        })
-        .<span class="kw">await</span>;
-}
+</span><span class="kw">use </span><span class="kw">crate</span>::internal::{Cmd, Runnable};
 
 <span class="kw">pub fn </span>run_oak_functions_launcher_example_with_lookup_data(
     wasm_path: <span class="kw-2">&amp;</span>str,
@@ -243,61 +84,16 @@
     lookup_data_path: <span class="kw-2">&amp;</span>str,
     communication_channel: <span class="kw-2">&amp;</span>str,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
-    <span class="kw">let </span>args = <span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">"--vmm-binary={}"</span>, which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap().to_str().unwrap()),
-        <span class="macro">format!</span>(
-            <span class="string">"--stage0-binary={}"</span>,
-            workspace_path(<span class="kw-2">&amp;</span>[
-                <span class="string">"stage0_bin"</span>,
-                <span class="string">"target"</span>,
-                <span class="string">"x86_64-unknown-none"</span>,
-                <span class="string">"release"</span>,
-                <span class="string">"oak_stage0.bin"</span>,
-            ])
-            .to_str()
-            .unwrap()
-        ),
-        <span class="macro">format!</span>(
-            <span class="string">"--kernel={}"</span>,
-            workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"oak_containers_kernel"</span>, <span class="string">"target"</span>, <span class="string">"bzImage"</span>]).to_str().unwrap()
-        ),
-        <span class="macro">format!</span>(<span class="string">"--initrd={}"</span>, workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"target"</span>, <span class="string">"stage1.cpio"</span>]).to_str().unwrap()),
-        <span class="macro">format!</span>(
-            <span class="string">"--system-image={}"</span>,
-            workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"oak_containers_system_image"</span>, <span class="string">"target"</span>, <span class="string">"image.tar.xz"</span>])
-                .to_str()
-                .unwrap()
-        ),
-        <span class="macro">format!</span>(
-            <span class="string">"--container-bundle={}"</span>,
-            workspace_path(<span class="kw-2">&amp;</span>[
-                <span class="string">"oak_functions_containers_container"</span>,
-                <span class="string">"target"</span>,
-                <span class="string">"oak_functions_container_oci_filesystem_bundle.tar"</span>,
-            ])
-            .to_str()
-            .unwrap()
-        ),
-        <span class="macro">format!</span>(<span class="string">"--ramdrive-size={}"</span>, <span class="string">"1000000"</span>), <span class="comment">// 1 GiB in KiB
-        </span><span class="macro">format!</span>(<span class="string">"--memory-size={}"</span>, <span class="string">"2G"</span>),
-        <span class="macro">format!</span>(<span class="string">"--wasm={}"</span>, wasm_path),
-        <span class="macro">format!</span>(<span class="string">"--port={}"</span>, port),
-        <span class="macro">format!</span>(<span class="string">"--lookup-data={}"</span>, lookup_data_path),
-        <span class="comment">// Use the current thread ID as the CID, as we may have tests that start multiple QEMUs in
-        // parallel. Starting multiple QEMUs in one thread will fail.
-        </span><span class="macro">format!</span>(<span class="string">"--virtio-guest-cid={}"</span>, nix::unistd::gettid()),
-        <span class="macro">format!</span>(<span class="string">"--communication-channel={}"</span>, communication_channel),
-    ];
     Cmd::new(
-        workspace_path(<span class="kw-2">&amp;</span>[
-            <span class="string">"target"</span>,
-            <span class="string">"x86_64-unknown-linux-gnu"</span>,
-            <span class="string">"release"</span>,
-            <span class="string">"oak_functions_containers_launcher"</span>,
-        ])
-        .to_str()
-        .unwrap(),
-        args,
+        <span class="string">"just"</span>,
+        <span class="macro">vec!</span>[
+            <span class="string">"run_oak_functions_containers_launcher"</span>,
+            wasm_path,
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, port),
+            lookup_data_path,
+            communication_channel,
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, nix::unistd::gettid()),
+        ],
     )
 }
 
@@ -308,8 +104,6 @@
     lookup_data_path: <span class="kw-2">&amp;</span>str,
     communication_channel: <span class="kw-2">&amp;</span>str,
 ) -&gt; (<span class="kw">crate</span>::testing::BackgroundStep, u16) {
-    build_prerequisites().<span class="kw">await</span>;
-
     <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {}"</span>, wasm_path);
 
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
