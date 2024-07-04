@@ -41,6 +41,20 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
+run_oak_functions_launcher wasm_path port lookup_data_path:
+    target/x86_64-unknown-linux-gnu/debug/oak_functions_launcher \
+        --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+        --kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
+        --vmm-binary=$(which qemu-system-x86_64) \
+        --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app \
+        --initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
+        --memory-size=256M \
+        --wasm={{wasm_path}} \
+        --port={{port}} \
+        --lookup-data={{lookup_data_path}} \
+
+
+
 # Builds a variant of the restricted kernel and creates a bzImage of it.
 # Then creates provenance subjects for it.
 restricted_kernel_bzimage_and_provenance_subjects kernel_bin_prefix:
@@ -222,7 +236,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin
+kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:

@@ -52,7 +52,6 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
         "@oak_crates_index//:walkdir",
-        "@oak_crates_index//:which",
     ],
 )
 
