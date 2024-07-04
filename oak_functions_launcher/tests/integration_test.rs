@@ -19,10 +19,9 @@ use std::{io::Write, time::Duration};
 
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
-use oak_functions_launcher::{
-    proto::oak::functions::OakFunctionsAsyncClient, update_lookup_data, LookupDataConfig,
-};
+use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
 use oak_launcher_utils::launcher;
+use oak_proto_rust::oak::oak_functions::OakFunctionsAsyncClient;
 use ubyte::ByteUnit;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 

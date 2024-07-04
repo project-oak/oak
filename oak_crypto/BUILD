@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,9 +32,10 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
-    target_compatible_with = [
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
-    ],
+    ]),
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:static_assertions",

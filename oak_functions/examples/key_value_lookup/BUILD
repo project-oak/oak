@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_shared_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -22,9 +22,33 @@ package(
 )
 
 rust_shared_library(
-    name = "echo",
+    name = "key_value_lookup",
     srcs = ["module/src/lib.rs"],
     platform = "//:wasm32-unknown-unknown",
-    target_compatible_with = ["//:wasm32-none-setting"],
     deps = ["//oak_functions_sdk"],
+)
+
+rust_test(
+    name = "test",
+    srcs = ["module/src/tests.rs"],
+    crate_features = ["bazel"],
+    data = [
+        ":key_value_lookup",
+        "//oak_functions_launcher",
+    ],
+    deps = [
+        "//micro_rpc",
+        "//micro_rpc_build",
+        "//oak_client",
+        "//oak_functions_abi",
+        "//oak_functions_client:lib",
+        "//oak_functions_test_utils",
+        "//xtask:lib",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:maplit",
+        "@oak_crates_index//:pretty_assertions",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:tokio",
+    ],
 )

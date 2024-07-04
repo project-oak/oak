@@ -17,19 +17,19 @@
 use std::{net::SocketAddr, pin::Pin};
 
 use futures::{Future, Stream, StreamExt};
-use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+use oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    oak_functions,
+};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use crate::{
     channel::ConnectorHandle,
-    proto::oak::{
-        functions,
-        session::v1::{
-            request_wrapper, response_wrapper,
-            streaming_session_server::{StreamingSession, StreamingSessionServer},
-            EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
-            ResponseWrapper,
-        },
+    proto::oak::session::v1::{
+        request_wrapper, response_wrapper,
+        streaming_session_server::{StreamingSession, StreamingSessionServer},
+        EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
+        ResponseWrapper,
     },
 };
 
@@ -74,12 +74,12 @@ impl StreamingSession for SessionProxy {
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
                         #[allow(clippy::needless_update)]
-                        let enclave_invoke_request = functions::InvokeRequest {
+                        let enclave_invoke_request = oak_functions::InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
                         };
                         let mut enclave_client =
-                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            oak_functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         let enclave_invoke_response = enclave_client
                             .handle_user_request(&enclave_invoke_request)
                             .await

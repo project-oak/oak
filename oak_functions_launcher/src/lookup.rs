@@ -18,16 +18,14 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
+use oak_proto_rust::oak::oak_functions::{
+    extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
+};
 use prost::Message;
 use ubyte::ByteUnit;
 
-use crate::{
-    channel::ConnectorHandle,
-    proto::oak::functions::{
-        extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
-        FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
-    },
-};
+use crate::channel::ConnectorHandle;
 
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
@@ -116,7 +114,7 @@ fn chunk_up_lookup_data(
             entries = Vec::new();
         };
 
-        entries.push(LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key: key.into(), value: value.into() })
     }
     chunks.push(LookupDataChunk { items: entries });
     chunks
@@ -133,7 +131,7 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
     lookup_data_buffer: B,
 ) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let mut lookup_data_buffer = lookup_data_buffer;
-    let mut entries = HashMap::new();
+    let mut entries = hashbrown::HashMap::new();
     while lookup_data_buffer.has_remaining() {
         let entry =
             oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(

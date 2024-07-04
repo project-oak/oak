@@ -1,5 +1,5 @@
 {
-  "checksum": "47f0b135e3fb47fa7aa7737628750134610264099cf1d10774c406a0993eb3a1",
+  "checksum": "7ab5cd9ce27d8d8fb2eeb0d636d2ad59d34eaaa6cd571e31f5a1a5aef9cf70a0",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6507,6 +6507,10 @@
               "target": "goblin"
             },
             {
+              "id": "hashbrown 0.14.5",
+              "target": "hashbrown"
+            },
+            {
               "id": "hex 0.4.3",
               "target": "hex"
             },
@@ -6819,7 +6823,7 @@
               "target": "walkdir"
             },
             {
-              "id": "wasmi 0.33.0",
+              "id": "wasmi 0.31.2",
               "target": "wasmi"
             },
             {
@@ -9870,7 +9874,6 @@
         "crate_features": {
           "common": [
             "ahash",
-            "inline-more",
             "raw",
             "serde"
           ],
@@ -13326,45 +13329,6 @@
       ],
       "license_file": "LICENSE"
     },
-    "multi-stash 0.2.0": {
-      "name": "multi-stash",
-      "version": "0.2.0",
-      "package_url": "https://github.com/robbepop/multi-stash",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/multi-stash/0.2.0/download",
-          "sha256": "685a9ac4b61f4e728e1d2c6a7844609c16527aeb5e6c865915c08e619c16410f"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "multi_stash",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": false,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "multi_stash",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "edition": "2021",
-        "version": "0.2.0"
-      },
-      "license": "MIT/Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "multimap 0.10.0": {
       "name": "multimap",
       "version": "0.10.0",
@@ -13840,6 +13804,8 @@
             "process",
             "sched",
             "signal",
+            "term",
+            "ucontext",
             "uio",
             "user"
           ],
@@ -14117,62 +14083,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-Apache"
-    },
-    "num-derive 0.4.2": {
-      "name": "num-derive",
-      "version": "0.4.2",
-      "package_url": "https://github.com/rust-num/num-derive",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/num-derive/0.4.2/download",
-          "sha256": "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
-        }
-      },
-      "targets": [
-        {
-          "ProcMacro": {
-            "crate_name": "num_derive",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": false,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "num_derive",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "proc-macro2 1.0.84",
-              "target": "proc_macro2"
-            },
-            {
-              "id": "quote 1.0.36",
-              "target": "quote"
-            },
-            {
-              "id": "syn 2.0.66",
-              "target": "syn"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.4.2"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
     },
     "num-integer 0.1.46": {
       "name": "num-integer",
@@ -22005,65 +21915,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "string-interner 0.17.0": {
-      "name": "string-interner",
-      "version": "0.17.0",
-      "package_url": "https://github.com/robbepop/string-interner",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/string-interner/0.17.0/download",
-          "sha256": "1c6a0d765f5807e98a091107bae0a56ea3799f66a5de47b2c84c94a39c09974e"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "string_interner",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": false,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "string_interner",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "backends",
-            "inline-more"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "cfg-if 1.0.0",
-              "target": "cfg_if"
-            },
-            {
-              "id": "hashbrown 0.14.5",
-              "target": "hashbrown"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.17.0"
-      },
-      "license": "MIT/Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "strsim 0.11.1": {
       "name": "strsim",
       "version": "0.11.1",
@@ -26508,14 +26359,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "wasmi 0.33.0": {
+    "wasmi 0.31.2": {
       "name": "wasmi",
-      "version": "0.33.0",
-      "package_url": "https://github.com/wasmi-labs/wasmi",
+      "version": "0.31.2",
+      "package_url": "https://github.com/paritytech/wasmi",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasmi/0.33.0/download",
-          "sha256": "6d81cc42a9b7e7f4145fecc7360849438a5f4bc3e48ac3ac5edc3b5493c152d8"
+          "url": "https://static.crates.io/crates/wasmi/0.31.2/download",
+          "sha256": "77a8281d1d660cdf54c76a3efa9ddd0c270cada1383a995db3ccb43d166456c7"
         }
       },
       "targets": [
@@ -26540,18 +26391,6 @@
         "deps": {
           "common": [
             {
-              "id": "arrayvec 0.7.4",
-              "target": "arrayvec"
-            },
-            {
-              "id": "multi-stash 0.2.0",
-              "target": "multi_stash"
-            },
-            {
-              "id": "num-traits 0.2.19",
-              "target": "num_traits"
-            },
-            {
               "id": "smallvec 1.13.2",
               "target": "smallvec"
             },
@@ -26560,11 +26399,11 @@
               "target": "spin"
             },
             {
-              "id": "wasmi_collections 0.33.0",
-              "target": "wasmi_collections"
+              "id": "wasmi_arena 0.4.1",
+              "target": "wasmi_arena"
             },
             {
-              "id": "wasmi_core 0.33.0",
+              "id": "wasmi_core 0.13.0",
               "target": "wasmi_core"
             },
             {
@@ -26576,16 +26415,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "num-derive 0.4.2",
-              "target": "num_derive"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.33.0"
+        "version": "0.31.2"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -26594,20 +26424,20 @@
       ],
       "license_file": null
     },
-    "wasmi_collections 0.33.0": {
-      "name": "wasmi_collections",
-      "version": "0.33.0",
-      "package_url": "https://github.com/wasmi-labs/wasmi",
+    "wasmi_arena 0.4.1": {
+      "name": "wasmi_arena",
+      "version": "0.4.1",
+      "package_url": "https://github.com/paritytech/wasmi",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasmi_collections/0.33.0/download",
-          "sha256": "9f6968a028db1def31d086e6b9cede39325996602750091bdb471fefe4c15a04"
+          "url": "https://static.crates.io/crates/wasmi_arena/0.4.1/download",
+          "sha256": "104a7f73be44570cac297b3035d76b169d6599637631cf37a1703326a0727073"
         }
       },
       "targets": [
         {
           "Library": {
-            "crate_name": "wasmi_collections",
+            "crate_name": "wasmi_arena",
             "crate_root": "src/lib.rs",
             "srcs": {
               "allow_empty": false,
@@ -26618,30 +26448,13 @@
           }
         }
       ],
-      "library_target_name": "wasmi_collections",
+      "library_target_name": "wasmi_arena",
       "common_attrs": {
         "compile_data_glob": [
           "**"
         ],
-        "deps": {
-          "common": [
-            {
-              "id": "ahash 0.8.11",
-              "target": "ahash"
-            },
-            {
-              "id": "hashbrown 0.14.5",
-              "target": "hashbrown"
-            },
-            {
-              "id": "string-interner 0.17.0",
-              "target": "string_interner"
-            }
-          ],
-          "selects": {}
-        },
         "edition": "2021",
-        "version": "0.33.0"
+        "version": "0.4.1"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -26650,14 +26463,14 @@
       ],
       "license_file": null
     },
-    "wasmi_core 0.33.0": {
+    "wasmi_core 0.13.0": {
       "name": "wasmi_core",
-      "version": "0.33.0",
-      "package_url": "https://github.com/wasmi-labs/wasmi",
+      "version": "0.13.0",
+      "package_url": "https://github.com/paritytech/wasmi",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasmi_core/0.33.0/download",
-          "sha256": "6fa3327fa8ff84ccc3b6670195c47bf246a831c253d10b152c41985784ab346d"
+          "url": "https://static.crates.io/crates/wasmi_core/0.13.0/download",
+          "sha256": "dcf1a7db34bff95b85c261002720c00c3a6168256dcb93041d3fa2054d19856a"
         }
       },
       "targets": [
@@ -26706,7 +26519,7 @@
           ],
           "selects": {}
         },
-        "version": "0.33.0"
+        "version": "0.13.0"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -31473,6 +31286,7 @@
     "futures-util 0.3.30",
     "getrandom 0.2.15",
     "goblin 0.8.2",
+    "hashbrown 0.14.5",
     "hex 0.4.3",
     "hkdf 0.12.4",
     "hpke 0.11.0",
@@ -31553,7 +31367,7 @@
     "uart_16550 0.3.0",
     "ubyte 0.10.4",
     "walkdir 2.5.0",
-    "wasmi 0.33.0",
+    "wasmi 0.31.2",
     "wasmtime 22.0.0",
     "which 6.0.1",
     "x509-cert 0.2.5",

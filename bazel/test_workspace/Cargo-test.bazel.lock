@@ -1082,6 +1082,7 @@ dependencies = [
  "futures-util",
  "getrandom",
  "goblin",
+ "hashbrown 0.14.5",
  "hex",
  "hkdf",
  "hpke",
@@ -2208,12 +2209,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "multi-stash"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "685a9ac4b61f4e728e1d2c6a7844609c16527aeb5e6c865915c08e619c16410f"
-
-[[package]]
 name = "multimap"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2341,17 +2336,6 @@ name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
-
-[[package]]
-name = "num-derive"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.66",
-]
 
 [[package]]
 name = "num-integer"
@@ -3615,16 +3599,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "string-interner"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c6a0d765f5807e98a091107bae0a56ea3799f66a5de47b2c84c94a39c09974e"
-dependencies = [
- "cfg-if",
- "hashbrown 0.14.5",
-]
-
-[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4367,37 +4341,28 @@ dependencies = [
 
 [[package]]
 name = "wasmi"
-version = "0.33.0"
+version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d81cc42a9b7e7f4145fecc7360849438a5f4bc3e48ac3ac5edc3b5493c152d8"
+checksum = "77a8281d1d660cdf54c76a3efa9ddd0c270cada1383a995db3ccb43d166456c7"
 dependencies = [
- "arrayvec",
- "multi-stash",
- "num-derive",
- "num-traits",
  "smallvec",
  "spin 0.9.8",
- "wasmi_collections",
+ "wasmi_arena",
  "wasmi_core",
  "wasmparser-nostd",
 ]
 
 [[package]]
-name = "wasmi_collections"
-version = "0.33.0"
+name = "wasmi_arena"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f6968a028db1def31d086e6b9cede39325996602750091bdb471fefe4c15a04"
-dependencies = [
- "ahash",
- "hashbrown 0.14.5",
- "string-interner",
-]
+checksum = "104a7f73be44570cac297b3035d76b169d6599637631cf37a1703326a0727073"
 
 [[package]]
 name = "wasmi_core"
-version = "0.33.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fa3327fa8ff84ccc3b6670195c47bf246a831c253d10b152c41985784ab346d"
+checksum = "dcf1a7db34bff95b85c261002720c00c3a6168256dcb93041d3fa2054d19856a"
 dependencies = [
  "downcast-rs",
  "libm",

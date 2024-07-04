@@ -2812,7 +2812,6 @@ dependencies = [
  "hashbrown 0.14.3",
  "log",
  "micro_rpc",
- "micro_rpc_build",
  "oak_channel",
  "oak_client",
  "oak_crypto",

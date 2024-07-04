@@ -164,6 +164,10 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "hashbrown": crate.spec(
+                default_features = False,
+                version = "0.14",
+            ),
             "hex": crate.spec(
                 default_features = False,
                 features = ["alloc"],

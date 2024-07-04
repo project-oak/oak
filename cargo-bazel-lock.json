@@ -1,5 +1,5 @@
 {
-  "checksum": "4a3e634f934f9d0227e6268e9937ada7cf6579f095037ca887cbea771998290e",
+  "checksum": "05c31b6d92950619ab1dd8749795682123ffabc0f86a25ecc02a0936b87d1a6b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6499,6 +6499,10 @@
             {
               "id": "goblin 0.8.0",
               "target": "goblin"
+            },
+            {
+              "id": "hashbrown 0.14.3",
+              "target": "hashbrown"
             },
             {
               "id": "hex 0.4.3",
@@ -31172,6 +31176,7 @@
     "futures-util 0.3.30",
     "getrandom 0.2.12",
     "goblin 0.8.0",
+    "hashbrown 0.14.3",
     "hex 0.4.3",
     "hkdf 0.12.4",
     "hpke 0.11.0",

@@ -23,11 +23,6 @@ pub mod server;
 
 pub mod proto {
     pub mod oak {
-        pub mod functions {
-            #![allow(dead_code)]
-            use prost::Message;
-            include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
-        }
         pub use oak_proto_rust::oak::{attestation, crypto};
         pub mod session {
             pub mod v1 {
@@ -47,11 +42,10 @@ use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use ubyte::ByteUnit;
-
-use crate::proto::oak::functions::{
+use oak_proto_rust::oak::oak_functions::{
     InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
 };
+use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]
 #[group(skip)]

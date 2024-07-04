@@ -29,12 +29,16 @@ rust_library(
     ),
     crate_features = ["bazel"],
     crate_name = "xtask",
+    data = [
+        "//oak_functions_launcher",
+    ],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
         "@oak_crates_index//:async-recursion",
         "@oak_crates_index//:strum_macros",
     ],
     rustc_env = {
+        # TODO: b/351201245 - Remove when we stop using cargo to build protos.
         "WORKSPACE_ROOT": ".",
     },
     deps = [

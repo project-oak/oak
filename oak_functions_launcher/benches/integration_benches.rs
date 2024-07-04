@@ -23,11 +23,9 @@ use std::path::PathBuf;
 
 use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::encryptor::ClientEncryptor;
-use oak_functions_launcher::{
-    proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
-    LookupDataConfig,
-};
+use oak_functions_launcher::LookupDataConfig;
 use oak_launcher_utils::launcher;
+use oak_proto_rust::oak::oak_functions::{InvokeRequest, OakFunctionsAsyncClient};
 use prost::Message;
 use test::Bencher;
 use ubyte::ByteUnit;

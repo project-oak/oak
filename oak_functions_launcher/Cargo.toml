@@ -37,7 +37,6 @@ hashbrown = "*"
 ubyte = "*"
 
 [build-dependencies]
-micro_rpc_build = { workspace = true }
 oak_grpc_utils = { workspace = true }
 
 [dev-dependencies]

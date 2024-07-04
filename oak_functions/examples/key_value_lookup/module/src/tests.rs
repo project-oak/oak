@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This is only needed in bazel because it considers the `tests.rs` file as a
+// separate crate.
+#![cfg_attr(feature = "bazel", feature(test))]
+
 extern crate test;
 
 use std::time::Duration;
@@ -25,7 +29,8 @@ use test::Bencher;
 
 #[tokio::test]
 async fn test_server() {
-    if xtask::testing::skip_test() {
+    // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
+    if xtask::testing::skip_test() || cfg!(feature = "bazel") {
         log::info!("skipping test");
         return;
     }
@@ -41,6 +46,7 @@ async fn test_server() {
         }),
     );
 
+    // TODO: b/349587445 - Use bazel variant once dependencies are bazelified.
     let (_server_background, server_port) =
         xtask::launcher::run_oak_functions_example_in_background(
             &wasm_path,
@@ -71,7 +77,8 @@ async fn test_server() {
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    if xtask::testing::skip_test() {
+    // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
+    if xtask::testing::skip_test() || cfg!(feature = "bazel") {
         log::info!("skipping test");
         return;
     }

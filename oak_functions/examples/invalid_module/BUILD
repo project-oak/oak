@@ -14,25 +14,16 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-rust_library(
-    name = "oak_sev_snp_attestation_report",
-    srcs = glob(["src/**"]),
-    target_compatible_with = either_platform([
-        "//:x86_64-linux-setting",
-        "//:x86_64-none-setting",
-    ]),
-    deps = [
-        "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
-        "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:bitflags",
-    ],
+rust_shared_library(
+    name = "invalid_module",
+    srcs = ["module/src/lib.rs"],
+    platform = "//:wasm32-unknown-unknown",
+    deps = ["//oak_functions_sdk"],
 )

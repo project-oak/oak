@@ -15,7 +15,6 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,16 +22,24 @@ package(
 )
 
 rust_library(
-    name = "oak_sev_snp_attestation_report",
-    srcs = glob(["src/**"]),
-    target_compatible_with = either_platform([
-        "//:x86_64-linux-setting",
-        "//:x86_64-none-setting",
-    ]),
+    name = "oak_functions_test_utils",
+    srcs = glob(["src/*.rs"]),
+    rustc_env = {
+        # TODO: b/351201245 - Remove when we stop using cargo to build protos.
+        "WORKSPACE_ROOT": ".",
+    },
     deps = [
-        "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
-        "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:bitflags",
+        "//oak_client",
+        "//oak_functions_abi",
+        "//oak_functions_client:lib",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:duct",
+        "@oak_crates_index//:nix",
+        "@oak_crates_index//:port_check",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tempfile",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:ubyte",
     ],
 )

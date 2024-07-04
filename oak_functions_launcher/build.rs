@@ -24,12 +24,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         CodegenOptions { build_server: true, ..Default::default() },
     )?;
 
-    // Generate micro RPC code for exchanging messages with the enclave.
-    micro_rpc_build::compile(
-        &["../proto/oak_functions/service/oak_functions.proto"],
-        &[".."],
-        Default::default(),
-    );
-
     Ok(())
 }
