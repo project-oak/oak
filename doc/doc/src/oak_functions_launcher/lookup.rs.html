@@ -186,8 +186,6 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -208,16 +206,14 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hashbrown::HashMap;
+<span class="kw">use </span>oak_proto_rust::oak::oak_functions::{
+    extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
+};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>ubyte::ByteUnit;
 
-<span class="kw">use crate</span>::{
-    channel::ConnectorHandle,
-    proto::oak::functions::{
-        extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
-        FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
-    },
-};
+<span class="kw">use </span><span class="kw">crate</span>::channel::ConnectorHandle;
 
 <span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">'a</span>, I: Iterator&lt;Item = LookupDataChunk&gt;&gt; {
     inner: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
@@ -306,7 +302,7 @@
             entries = Vec::new();
         };
 
-        entries.push(LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key: key.into(), value: value.into() })
     }
     chunks.push(LookupDataChunk { items: entries });
     chunks
@@ -323,7 +319,7 @@
     lookup_data_buffer: B,
 ) -&gt; anyhow::Result&lt;HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>lookup_data_buffer = lookup_data_buffer;
-    <span class="kw">let </span><span class="kw-2">mut </span>entries = HashMap::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>entries = hashbrown::HashMap::new();
     <span class="kw">while </span>lookup_data_buffer.has_remaining() {
         <span class="kw">let </span>entry =
             oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["run_oak_functions_example_in_background","run_oak_functions_launcher_example_with_lookup_data"],"static":["MOCK_LOOKUP_DATA_PATH","OAK_RESTRICTED_KERNEL_WRAPPER_BIN"]};
+window.SIDEBAR_ITEMS = {"fn":["run_oak_functions_example_in_background","run_oak_functions_example_in_background_bazel","run_oak_functions_launcher_example_with_lookup_data","run_oak_functions_launcher_example_with_lookup_data_bazel"],"static":["MOCK_LOOKUP_DATA_PATH","OAK_RESTRICTED_KERNEL_WRAPPER_BIN"]};

@@ -135,19 +135,19 @@
 </span><span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
 
 <span class="kw">use </span>futures::{Future, Stream, StreamExt};
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    oak_functions,
+};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
 
 <span class="kw">use crate</span>::{
     channel::ConnectorHandle,
-    proto::oak::{
-        functions,
-        session::v1::{
-            request_wrapper, response_wrapper,
-            streaming_session_server::{StreamingSession, StreamingSessionServer},
-            EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
-            ResponseWrapper,
-        },
+    proto::oak::session::v1::{
+        request_wrapper, response_wrapper,
+        streaming_session_server::{StreamingSession, StreamingSessionServer},
+        EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
+        ResponseWrapper,
     },
 };
 
@@ -192,12 +192,12 @@
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
                         <span class="attr">#[allow(clippy::needless_update)]
-                        </span><span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
+                        </span><span class="kw">let </span>enclave_invoke_request = oak_functions::InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
                         };
                         <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
-                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            oak_functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         <span class="kw">let </span>enclave_invoke_response = enclave_client
                             .handle_user_request(<span class="kw-2">&amp;</span>enclave_invoke_request)
                             .<span class="kw">await
