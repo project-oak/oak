@@ -144,6 +144,8 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -242,14 +244,13 @@
     ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
     </span>Fsync = <span class="number">74</span>,
 
-    <span class="doccomment">/// Create new process from ELF file, without starting it.
+    <span class="doccomment">/// Create new process from ELF file and starts it.
     ///
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
     ///   - arg1 (c_size_t): size of the buffer
     /// Returns:
-    ///   a value of &lt;errno::Errno&gt; on failure; Otherwise the PID of the new
-    /// process.
+    ///   a value of &lt;errno::Errno&gt; on failure.
     </span>UnstableCreateProcess = UNSTABLE_SYSCALL_SPACE,
 
     <span class="doccomment">/// Terminates the calling process and switches the active execution context
@@ -257,6 +258,9 @@
     ///
     /// Arguments:
     ///   - arg0 (c_size_t): PID of the process.
+    /// Returns:
+    ///   a value of &lt;errno::Errno&gt; on failure; Otherwise the pid of previously
+    /// active process, once execution returns to the calling process.
     </span>UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + <span class="number">1</span>,
 }
 

@@ -225,8 +225,6 @@
 <a href="#223" id="223">223</a>
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -258,7 +256,7 @@
     VirtAddr,
 };
 
-<span class="kw">use crate</span>::{syscall::mmap::mmap, PROCCESSES};
+<span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
 
 <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual
 // address space. Well... almost. It's one page lower than the very end, as
@@ -393,8 +391,7 @@
 }
 
 <span class="kw">impl </span>Process {
-    <span class="doccomment">/// Creates a process from the application, without executing it. Returns
-    /// the PID of the new process.
+    <span class="doccomment">/// Creates a process from the application, without executing it.
     ///
     /// # Safety
     ///
@@ -402,7 +399,7 @@
     /// Restricted Application.
     </span><span class="kw">pub unsafe fn </span>from_elf_executeable(
         elf_executeable: <span class="kw-2">&amp;</span>ElfExecuteable,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, anyhow::Error&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
         <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE.get().context(<span class="string">"base l4 table should be set"</span>)<span class="question-mark">?</span>.clone();
         <span class="comment">// Load the process's page table, so the application can be loaded into its
         // memory. Hold onto the previous PT, so we can revert to it once the
@@ -429,28 +426,27 @@
             <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
             </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
         }
-        <span class="kw">let </span>pid = PROCCESSES.add(<span class="self">Self </span>{ pml4, entry });
-        <span class="prelude-val">Ok</span>(pid)
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ pml4, entry })
     }
     <span class="doccomment">/// Executes the process.
-    </span><span class="kw">pub fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
+    ///
+    /// Safety: syscalls must have been registered. Changes the root page table,
+    /// so addresses in userspace will be invalid. Caller must ensure those side
+    /// effects are okay. Process must have been created with a valid elf file.
+    </span><span class="kw">pub unsafe fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;!&gt; {
         <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span><span class="self">self</span>.pml4).expect(<span class="string">"could not get pml4 frame"</span>);
-        <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
-        </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
+
+        <span class="kw">let </span>pid = <span class="kw">crate</span>::syscall::GsData::register_process(pml4_frame)<span class="question-mark">?</span>;
+        <span class="kw">crate</span>::syscall::GsData::set_current_pid(pid)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>entry = <span class="self">self</span>.entry;
-        <span class="comment">// Enter Ring 3 and jump to user code.
-        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the
-        // user to guarantee that the file made sense.
-        </span><span class="kw">unsafe </span>{
-            <span class="macro">asm! </span>{
-                <span class="string">"mov rsp, {}"</span>, <span class="comment">// user stack
-                </span><span class="string">"sysretq"</span>,
-                <span class="kw">in</span>(reg) APPLICATION_STACK_VIRT_ADDR - <span class="number">8</span>,
-                <span class="kw">in</span>(<span class="string">"rcx"</span>) entry.as_u64(), <span class="comment">// initial RIP
-                </span><span class="kw">in</span>(<span class="string">"r11"</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
-                </span>options(noreturn)
-            }
+        <span class="macro">asm! </span>{
+            <span class="string">"mov rsp, {}"</span>, <span class="comment">// user stack
+            </span><span class="string">"sysretq"</span>,
+            <span class="kw">in</span>(reg) APPLICATION_STACK_VIRT_ADDR - <span class="number">8</span>,
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) entry.as_u64(), <span class="comment">// initial RIP
+            </span><span class="kw">in</span>(<span class="string">"r11"</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
+            </span>options(noreturn)
         }
     }
 }

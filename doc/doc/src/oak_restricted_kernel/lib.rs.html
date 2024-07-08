@@ -498,28 +498,6 @@
 <a href="#496" id="496">496</a>
 <a href="#497" id="497">497</a>
 <a href="#498" id="498">498</a>
-<a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
-<a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
-<a href="#505" id="505">505</a>
-<a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
-<a href="#508" id="508">508</a>
-<a href="#509" id="509">509</a>
-<a href="#510" id="510">510</a>
-<a href="#511" id="511">511</a>
-<a href="#512" id="512">512</a>
-<a href="#513" id="513">513</a>
-<a href="#514" id="514">514</a>
-<a href="#515" id="515">515</a>
-<a href="#516" id="516">516</a>
-<a href="#517" id="517">517</a>
-<a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -595,7 +573,6 @@
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
 <span class="kw">use </span>core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
-<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
@@ -652,33 +629,6 @@
             Page::from_start_address_unchecked(VirtAddr::new_truncate(<span class="number">0xFFFF_E900_0000_0000</span>))
         },
     )));
-
-<span class="kw">static </span>PROCCESSES: Processes = Processes { list: Spinlock::new(alloc::vec::Vec::new()) };
-
-<span class="kw">struct </span>Processes {
-    list: Spinlock&lt;alloc::vec::Vec&lt;Process&gt;&gt;,
-}
-
-<span class="kw">impl </span>Processes {
-    <span class="kw">fn </span>add(<span class="kw-2">&amp;</span><span class="self">self</span>, process: Process) -&gt; usize {
-        <span class="comment">// Safety: the list is only locked in the execute method. In this
-        // case a lock is aquired but never dropped (since execution switches
-        // to the application). However while it's still held, this mutable handle
-        // cannot be used again, as the kernel is can only resume execution via
-        // an unrelated syscall handler that does not have the mutable in scope. Hence
-        // we can safely force unlock.
-        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.list.force_unlock() }
-        <span class="kw">let </span><span class="kw-2">mut </span>processes = <span class="self">self</span>.list.lock();
-        <span class="kw">let </span>pid: usize = processes.len();
-        processes.push(process);
-        <span class="macro">log::debug!</span>(<span class="string">"Created process (pid: {})"</span>, pid);
-        pid
-    }
-    <span class="kw">fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>, pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;!, anyhow::Error&gt; {
-        <span class="macro">log::debug!</span>(<span class="string">"Executing process (pid: {})"</span>, pid);
-        <span class="self">self</span>.list.lock().get(pid).context(<span class="string">"PID not mapped to a process"</span>)<span class="question-mark">?</span>.execute()
-    }
-}
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
 </span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) -&gt; ! {
@@ -980,7 +930,7 @@
 
     <span class="comment">// Ensure new process is not dropped.
     // Safety: The application is assumed to be a valid ELF file.
-    </span><span class="kw">let </span>pid = {
+    </span><span class="kw">let </span>process = {
         <span class="kw">let </span>elf_executeable =
             processes::ElfExecuteable::new(application_bytes).expect(<span class="string">"failed to parse application"</span>);
         <span class="kw">unsafe </span>{
@@ -988,7 +938,13 @@
         }
     };
 
-    PROCCESSES.execute(pid).expect(<span class="string">"failed to execute initial process"</span>)
+    <span class="comment">// Safety: syscalls have been setup, we're ready to load the app.
+    </span><span class="kw">unsafe </span>{
+        process
+            .execute()
+            .inspect_err(|err| <span class="macro">log::error!</span>(<span class="string">"failed to create initial process: {:?}"</span>, err))
+            .expect(<span class="string">"failed to create initial process"</span>)
+    }
 }
 
 <span class="attr">#[derive(EnumIter, EnumString)]

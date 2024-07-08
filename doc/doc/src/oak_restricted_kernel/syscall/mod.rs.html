@@ -299,6 +299,59 @@
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
 <a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -339,7 +392,8 @@
         control::Efer,
         model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
     },
-    VirtAddr,
+    structures::paging::PhysFrame,
+    PhysAddr, VirtAddr,
 };
 
 <span class="kw">use </span><span class="self">self</span>::{
@@ -401,12 +455,15 @@
     kernel_sp: VirtAddr::zero(),
     user_stack_pointers: [VirtAddr::zero(); MAX_PROCESSES],
     current_pid: <span class="number">0</span>,
+    <span class="comment">// Safety: placeholders that will be overwritten before use.
+    </span>user_pml4s: [<span class="kw">unsafe </span>{ PhysFrame::from_start_address_unchecked(PhysAddr::zero()) };
+        MAX_PROCESSES],
 };
 
 <span class="doccomment">/// State we need to track for system calls.
 </span><span class="attr">#[repr(C, align(<span class="number">16</span>))]
 #[derive(Debug)]
-</span><span class="kw">struct </span>GsData {
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>GsData {
     <span class="doccomment">/// Kernel stack pointer (what to set in RSP after saving user RSP).
     </span>kernel_sp: VirtAddr,
 
@@ -415,6 +472,9 @@
 
     <span class="doccomment">/// Array of user stack pointers (RSP) for each process, by PID.
     </span>user_stack_pointers: [VirtAddr; MAX_PROCESSES],
+
+    <span class="doccomment">/// Array of root page tables for each process, by PID.
+    </span>user_pml4s: [PhysFrame; MAX_PROCESSES],
 }
 
 <span class="kw">impl </span>GsData {
@@ -432,6 +492,52 @@
             KernelGsBase::write(VirtAddr::from_ptr(<span class="macro">addr_of_mut!</span>(GS_DATA)));
             GsBase::write(VirtAddr::from_ptr(<span class="macro">addr_of_mut!</span>(GS_DATA)));
         };
+    }
+
+    <span class="doccomment">/// Registers a process and returns its pid.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    </span><span class="kw">pub unsafe fn </span>register_process(process_pml4: PhysFrame) -&gt; anyhow::Result&lt;usize&gt; {
+        <span class="kw">let </span>free_pid = GS_DATA.user_pml4s.iter().position(|<span class="kw-2">&amp;</span>frame| frame.start_address().is_null());
+        <span class="kw">match </span>free_pid {
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(anyhow::Error::msg(
+                <span class="string">"all slots for processes are occupied, no more processes can be registered"</span>,
+            )),
+            <span class="prelude-val">Some</span>(pid) =&gt; {
+                GS_DATA.user_pml4s[pid] = process_pml4;
+                <span class="prelude-val">Ok</span>(pid)
+            }
+        }
+    }
+
+    <span class="doccomment">/// Get the current process ID from the GsData instance in the GS register.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    </span><span class="kw">pub unsafe fn </span>get_current_pid() -&gt; usize {
+        GS_DATA.current_pid
+    }
+
+    <span class="doccomment">/// Set the current process ID in the GsData instance in the GS register and
+    /// loads its pml4.
+    ///
+    /// Safety: this function must only be called once syscalls have been setup.
+    /// Changes the root page table, so addresses in userspace will be invalid.
+    /// Caller must ensure those side effects are okay.
+    </span><span class="kw">pub unsafe fn </span>set_current_pid(pid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
+        GS_DATA
+            .user_pml4s
+            .get(pid)
+            .ok_or(anyhow::Error::msg(<span class="string">"Invalid PID: out of range"</span>))<span class="question-mark">?
+            </span>.start_address()
+            .is_null()
+            .then(|| {
+                <span class="prelude-val">Err</span>::&lt;(), anyhow::Error&gt;(anyhow::Error::msg(<span class="string">"Invalid PID: not an active process"</span>))
+            })
+            .transpose()<span class="question-mark">?</span>;
+        <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
+        </span><span class="kw">crate</span>::PAGE_TABLES.lock().replace(GS_DATA.user_pml4s[pid]);
+        GS_DATA.current_pid = pid;
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
