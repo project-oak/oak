@@ -15,7 +15,7 @@ hpke = { version = "*", default-features = false, features = [
   "x25519",
 ] }
 log = "*"
-nix = { version = "*", features = ["user"] }
+nix = { version = "*", features = ["user", "fs"] }
 oak_attestation = { workspace = true }
 oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
@@ -39,6 +39,8 @@ prost-types = "*"
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
 sha2 = { version = "*", default-features = false }
 syslog = "*"
 tar = "*"

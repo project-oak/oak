@@ -216,6 +216,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "maplit": crate.spec(version = "*"),
             "nix": crate.spec(
                 features = [
+                    "fs",
                     "mount",
                     "process",
                     "signal",

@@ -34,6 +34,7 @@ pub mod proto {
     }
 }
 
+mod cdi;
 pub mod container_runtime;
 pub mod crypto;
 pub mod dice;

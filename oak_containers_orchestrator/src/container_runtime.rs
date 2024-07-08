@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use std::{
+    ffi::OsStr,
     os::unix::fs::lchown,
     path::{Path, PathBuf},
 };
@@ -46,6 +47,25 @@ pub async fn run(
 
     let spec_path = container_dir.join("config.json");
     let mut spec = Spec::load(&spec_path).context("error reading OCI spec")?;
+
+    // Inject any nvidia cards, if we have a CDI spec available.
+    match std::fs::read_dir("/etc/cdi") {
+        Ok(dir) => {
+            for entry in dir {
+                let entry = entry?;
+                if entry.file_type()?.is_file()
+                    && entry.path().extension().unwrap_or_default() == OsStr::new("json")
+                {
+                    let cdi_spec = crate::cdi::CdiSpec::new(entry.path())?;
+                    if cdi_spec.kind() != "nvidia.com/gpu" {
+                        cdi_spec.inject("all", &mut spec)?;
+                    }
+                }
+            }
+        }
+        Err(err) => log::warn!("could not read `/etc/cdi`: {}", err),
+    }
+
     let mut mounts = spec.mounts().as_ref().cloned().unwrap_or_default();
     mounts.push({
         let mut mount = Mount::default();
