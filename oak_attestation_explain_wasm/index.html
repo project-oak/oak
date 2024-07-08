@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>WASM Test</title>
+  </head>
+
+  <body>
+    <script>
+      const importObj = {};
+      (async () => {
+        const response = await fetch('./oak_attestation_explain_wasm.wasm');
+        const { instance } = await WebAssembly.instantiateStreaming(
+          response,
+          importObj,
+        );
+        console.log(instance.exports.nth_prime(10));
+      })();
+    </script>
+  </body>
+</html>
