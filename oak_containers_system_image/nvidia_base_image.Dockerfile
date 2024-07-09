@@ -4,26 +4,38 @@ FROM oak-containers-sysimage-base:latest
 
 ARG LINUX_KERNEL_VERSION
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # We need to enable `contrib` for `nvidia-support`.
 RUN sed -i -e '/^Components: main/cComponents: main contrib' \
     /etc/apt/sources.list.d/debian.sources
 
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
-    curl ca-certificates
+    curl gpg ca-certificates
 
 RUN curl -O -L https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb \
     && dpkg -i cuda-keyring_1.1-1_all.deb \
     && rm -f cuda-keyring_1.1-1_all.deb
 
+# See https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-apt
+RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
     nvidia-driver nvidia-smi \
+    libcuda1 nvidia-container-toolkit \
     # Stuff to build kernel (will be purged later, see below)
     libc6-dev flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
     # Cleanup
     && apt-get clean \
     && rm --recursive --force /var/lib/apt/lists/*
+
+# Generate /etc/cdi/nvidia.json for the orchestrator.
+RUN systemctl enable nvidia-ctk.service
 
 COPY target/linux-${LINUX_KERNEL_VERSION}.tar.xz /tmp
 COPY target/minimal.config /tmp

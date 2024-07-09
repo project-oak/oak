@@ -1,0 +1,19 @@
+# Generates `/etc/cdi/nvidia.json`, for consumption by the orchestrator when starting a container.
+#
+# Normally `nvidia-ctk` is not installed in the system and this unit is not enabled, so the
+# orchestrator will not have a dependency on this. However, in the system image with nvidia
+# drivers installed, both nvidia-ctk will be installed and this unit will be enabled.
+#
+[Unit]
+Description=Generate NVIDIA CDI file for exposing GPUs to the container
+ConditionPathExists=/usr/bin/nvidia-ctk
+ConditionPathExists=!/etc/cdi/nvidia.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nvidia-ctk cdi generate --format json --output /etc/cdi/nvidia.json
+RemainAfterExit=true
+StandardOutput=journal
+
+[Install]
+WantedBy=oak-orchestrator.service
