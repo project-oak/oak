@@ -58,7 +58,7 @@ pub mod oak {
 
             impl Name for Stage0Measurements {
                 const PACKAGE: &'static str = PACKAGE;
-                const NAME: &'static str = "Stage0";
+                const NAME: &'static str = "Stage0Measurements";
 
                 fn type_url() -> String {
                     type_url_for::<Self>()
