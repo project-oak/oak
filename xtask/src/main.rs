@@ -32,7 +32,6 @@ use colored::*;
 use xtask::{
     files::*,
     internal::{self, *},
-    spread,
 };
 
 #[tokio::main]
@@ -91,7 +90,6 @@ fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(),
-        Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(),
@@ -125,51 +123,6 @@ fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
     }
 }
 
-pub fn run_cargo_fuzz(opt: &RunCargoFuzz) -> Step {
-    let cargo_manifests: Vec<PathBuf> =
-        crate_manifest_files().filter(|path| is_fuzzing_toml_file(path)).collect();
-
-    Step::Multiple {
-        name: "fuzzing".to_string(),
-        steps: cargo_manifests.iter().map(|path| run_fuzz_targets_in_crate(path, opt)).collect(),
-    }
-}
-
-pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
-    // Pop one component to get to the `fuzz` crate.
-    let mut fuzz_path = path.to_path_buf();
-    fuzz_path.pop();
-
-    let cargo_manifest: CargoManifest = toml::from_str(&read_file(path))
-        .unwrap_or_else(|err| panic!("couldn't parse cargo manifest file {:?}: {}", path, err));
-
-    Step::Multiple {
-        name: "run cargo-fuzz".to_owned(),
-        steps: cargo_manifest
-            .bin
-            .iter()
-            .filter(|binary| match &opt.target_name {
-                Some(target_name) => &binary.name == target_name,
-                None => true,
-            })
-            .map(|binary| Step::Single {
-                name: binary.name.clone(),
-                command: Cmd::new_in_dir(
-                    "cargo-fuzz",
-                    spread!["run".to_string(),
-                        binary.name.clone(),
-                        "--target=x86_64-unknown-linux-gnu".to_string(),
-                        "--release".to_string(),
-                        "--".to_string(),
-                        ...opt.args
-                    ],
-                    &fuzz_path,
-                ),
-            })
-            .collect(),
-    }
-}
-
 fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
     clap_complete::generate(clap_complete::Shell::Bash, &mut Opt::command(), "xtask", &mut file);
@@ -182,8 +135,6 @@ fn run_cargo_test(opt: &RunTestsOpt) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
-            // Exclude `fuzz` crates, as there are no tests and binaries should not be executed.
-            .filter(|path| !is_fuzzing_toml_file(path))
             .map(|entry| {
                 // Run `cargo test` in the directory of the crate, not the top-level directory.
                 // This is needed as otherwise any crate-specific `.cargo/config.toml` files

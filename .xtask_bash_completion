@@ -24,9 +24,6 @@ _xtask() {
             xtask,run-cargo-deny)
                 cmd="xtask__run__cargo__deny"
                 ;;
-            xtask,run-cargo-fuzz)
-                cmd="xtask__run__cargo__fuzz"
-                ;;
             xtask,run-cargo-udeps)
                 cmd="xtask__run__cargo__udeps"
                 ;;
@@ -45,9 +42,6 @@ _xtask() {
             xtask__help,run-cargo-deny)
                 cmd="xtask__help__run__cargo__deny"
                 ;;
-            xtask__help,run-cargo-fuzz)
-                cmd="xtask__help__run__cargo__fuzz"
-                ;;
             xtask__help,run-cargo-udeps)
                 cmd="xtask__help__run__cargo__udeps"
                 ;;
@@ -61,7 +55,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --help run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
+            opts="-h --dry-run --logs --keep-going --help run-tests run-cargo-clippy run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -93,7 +87,7 @@ _xtask() {
             return 0
             ;;
         xtask__help)
-            opts="run-tests run-cargo-clippy run-cargo-fuzz run-cargo-deny run-cargo-udeps completion help"
+            opts="run-tests run-cargo-clippy run-cargo-deny run-cargo-udeps completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -162,20 +156,6 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__help__run__cargo__fuzz)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__help__run__cargo__udeps)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -225,24 +205,6 @@ _xtask() {
                 return 0
             fi
             case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__cargo__fuzz)
-            opts="-h --target-name --help [ARGS]..."
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --target-name)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 *)
                     COMPREPLY=()
                     ;;

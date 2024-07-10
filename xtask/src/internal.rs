@@ -45,7 +45,6 @@ pub struct Opt {
 pub enum Command {
     RunTests,
     RunCargoClippy,
-    RunCargoFuzz(RunCargoFuzz),
     RunCargoDeny,
     RunCargoUdeps,
     #[command(about = "generate bash completion script to stdout")]
@@ -66,15 +65,6 @@ pub struct Completion {
 pub struct RunTestsOpt {
     #[arg(long, help = "Remove generated files after running tests for each crate")]
     pub cleanup: bool,
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct RunCargoFuzz {
-    #[arg(long, help = "name of a specific fuzz-target. If not specified, runs all fuzz targets.")]
-    pub target_name: Option<String>,
-    /// Additional `libFuzzer` arguments passed through to the binary
-    #[arg(last(true))]
-    pub args: Vec<String>,
 }
 
 /// Partial representation of Cargo manifest files.
@@ -144,25 +134,6 @@ impl CargoManifest {
             })
             .collect()
     }
-}
-
-/// Struct representing config files for fuzzing.
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct FuzzConfig {
-    pub examples: Vec<FuzzableExample>,
-}
-
-/// Config for building an example for fuzzing.
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct FuzzableExample {
-    /// Name of the example
-    pub name: String,
-    /// Path to the Cargo.toml file for the example.
-    pub manifest_path: String,
-    /// Path to desired location of the .wasm file.
-    pub out_dir: String,
 }
 
 /// A construct to keep track of the status of the execution. It only cares

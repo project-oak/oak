@@ -46,10 +46,7 @@ pub fn file_contains(path: &Path, pattern: &str) -> bool {
 
 /// Return an iterator of all known Cargo Manifest files that define crates.
 pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
-    source_files()
-        .filter(|p| is_cargo_toml_file(p))
-        .filter(|p| is_cargo_package_file(p))
-        .filter(|p| !p.ends_with("fuzz/Cargo.toml"))
+    source_files().filter(|p| is_cargo_toml_file(p)).filter(|p| is_cargo_package_file(p))
 }
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
@@ -68,12 +65,6 @@ pub fn is_source_code_file(path: &Path) -> bool {
         || filename.ends_with(".js")
         || filename.ends_with(".go")
         || filename.ends_with(".java")
-}
-
-/// Return whether the provided path refers to a `fuzz` crate for fuzz testing
-/// with `cargo-fuzz`.
-pub fn is_fuzzing_toml_file(path: &Path) -> bool {
-    format!("{:?}", path).contains("/fuzz/")
 }
 
 /// Return whether the provided path refers to a `Cargo.toml` file. Note that it

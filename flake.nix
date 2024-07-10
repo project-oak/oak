@@ -137,7 +137,6 @@
                 cargo-deadlinks
                 cargo-binutils
                 cargo-deny
-                cargo-fuzz
                 cargo-nextest
                 cargo-udeps
                 cargo-vet
@@ -194,7 +193,7 @@
               # We need access to the kernel source and configuration, not just the binaries, to
               # build the system image with nvidia drivers in it.
               # See oak_containers_system_image/build-base.sh (and nvidia_base_image.Dockerfile) for
-              # more details. 
+              # more details.
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
                 export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"

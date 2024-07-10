@@ -70,10 +70,8 @@ members = [
   "oak_restricted_kernel_sdk_proc_macro",
 ]
 exclude = [
-  "fuzz",
   "enclave_applications",
   "micro_rpc_workspace_test",
-  "oak_functions/loader/fuzz",
   "oak_restricted_kernel_bin",
   "oak_restricted_kernel_wrapper",
   "stage0_bin",
