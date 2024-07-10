@@ -22,8 +22,7 @@ use oak_functions_client::OakFunctionsClient;
 use xtask::workspace_path;
 
 async fn run_key_value_lookup_test(communication_channel: &str) {
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
 
     let (mut _output, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
@@ -75,8 +74,7 @@ async fn test_launcher_echo() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
 
     let (_background, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(

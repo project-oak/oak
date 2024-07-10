@@ -89,7 +89,7 @@ fn it_should_handle_user_requests_after_initialization() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
         wasm_module: wasm_bytes,
@@ -123,7 +123,7 @@ fn it_should_only_initialize_once() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
         wasm_module: wasm_bytes,
@@ -145,7 +145,7 @@ fn it_should_error_on_invalid_wasm_module() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("invalid_module").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("invalid_module");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
         wasm_module: wasm_bytes,
@@ -210,7 +210,7 @@ fn it_should_support_lookup_data() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
         wasm_module: wasm_bytes,
@@ -282,8 +282,7 @@ fn it_should_handle_wasm_panic() {
 
     // Use the Oak Functions test Wasm module, which contains a function that
     // panics.
-    let wasm_path =
-        oak_functions_test_utils::build_rust_crate_wasm("oak_functions_test_module").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("oak_functions_test_module");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
         wasm_module: wasm_bytes,

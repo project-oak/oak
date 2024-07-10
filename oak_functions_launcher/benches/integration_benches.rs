@@ -47,11 +47,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
 
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
-            .expect("Failed to build oak_orchestrator");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
-            .expect("Failed to build oak_functions_enclave_app");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
 
     let params = launcher::Params {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
@@ -146,8 +144,7 @@ fn bench_key_value_lookup(b: &mut Bencher) {
     // See https://github.com/rust-cli/env_logger/#in-tests.
     let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Trace).try_init();
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
     run_bench(
         b,
         &OakFunctionsTestConfig {

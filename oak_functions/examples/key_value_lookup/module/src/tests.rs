@@ -35,7 +35,7 @@ async fn test_server() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
         &oak_functions_test_utils::serialize_entries(hashmap! {
@@ -84,7 +84,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let runtime =
         tokio::runtime::Builder::new_current_thread().enable_io().enable_time().build().unwrap();
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
         &oak_functions_test_utils::serialize_entries(hashmap! {

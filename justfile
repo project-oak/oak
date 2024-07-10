@@ -108,6 +108,8 @@ wasm_crate name:
 wasm_release_crate name:
     cargo build --target=wasm32-unknown-unknown --release -p {{name}}
 
+all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
+
 stage0_bin:
     env --chdir=stage0_bin \
         cargo objcopy --release -- --output-target=binary \
@@ -236,7 +238,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app
+kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:

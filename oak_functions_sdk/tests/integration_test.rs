@@ -27,17 +27,15 @@ use oak_functions_service::{
 
 lazy_static! {
     static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
-        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(
+        let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(
             "oak_functions_sdk_abi_test_get_storage_item",
-        )
-        .expect("couldn't read Wasm module");
+        );
         std::fs::read(wasm_path).expect("couldn't read compiled module")
     };
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
-        let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(
+        let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(
             "oak_functions_sdk_abi_test_invoke_testing",
-        )
-        .expect("couldn't read Wasm module");
+        );
         std::fs::read(wasm_path).expect("couldn't read compiled module")
     };
 }

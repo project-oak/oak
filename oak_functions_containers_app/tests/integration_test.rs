@@ -41,8 +41,7 @@ use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
 
 #[tokio::test]
 async fn test_lookup() {
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
 
     let (addr, stream) = {
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);

@@ -33,8 +33,7 @@ async fn test_launcher_key_value_lookup() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
 
     let (mut _child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         &wasm_path,
@@ -63,8 +62,7 @@ async fn test_launcher_echo() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
 
     let (_child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         &wasm_path,
@@ -126,12 +124,10 @@ async fn test_load_large_lookup_data() {
     }
 
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
-            .expect("Failed to build oak_orchestrator");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
 
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
-            .expect("Failed to build oak_functions_enclave_app");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
 
     let params = launcher::Params {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
@@ -163,8 +159,7 @@ async fn test_load_large_lookup_data() {
         update_interval: None,
         max_chunk_size,
     };
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
     let status_one_chunk =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
     assert!(status_one_chunk.is_ok());
@@ -207,12 +202,10 @@ async fn test_load_two_gib_lookup_data() {
     }
 
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
-            .expect("Failed to build oak_orchestrator");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
 
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
-            .expect("Failed to build oak_functions_enclave_app");
+        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
 
     let params = launcher::Params {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
@@ -244,8 +237,7 @@ async fn test_load_two_gib_lookup_data() {
         update_interval: None,
         max_chunk_size,
     };
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
+    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
     let status =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
     assert!(status.is_ok());

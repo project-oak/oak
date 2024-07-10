@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_extend_chunk() {
-        let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
         let wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         let instance = OakFunctionsInstance::<WasmHandler>::new(
@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_extend_entries() {
-        let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
+        let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
         let wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         let instance = OakFunctionsInstance::<WasmHandler>::new(
