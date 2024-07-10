@@ -333,7 +333,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_extend_chunk() {
-        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm(<span class="string">"echo"</span>).unwrap();
+        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
         <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
@@ -358,7 +358,7 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_extend_entries() {
-        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm(<span class="string">"echo"</span>).unwrap();
+        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
         <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
