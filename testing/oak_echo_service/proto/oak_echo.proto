@@ -31,7 +31,7 @@ message EchoResponse {
 }
 
 message GetEvidenceResponse {
-  oak.attestation.v1.Evidence evidence = 1;
+  .oak.attestation.v1.Evidence evidence = 1;
 }
 
 service Echo {
@@ -41,7 +41,7 @@ service Echo {
   }
 
   // method_id: 1771
-  rpc GetEvidence(google.protobuf.Empty) returns (GetEvidenceResponse) {
+  rpc GetEvidence(.google.protobuf.Empty) returns (GetEvidenceResponse) {
     option (.oak.micro_rpc.method_id) = 1771;
   }
 }

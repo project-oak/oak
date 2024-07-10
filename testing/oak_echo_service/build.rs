@@ -14,10 +14,24 @@
 // limitations under the License.
 //
 
+#[cfg(not(feature = "bazel"))]
 fn main() {
     micro_rpc_build::compile(
         &["testing/oak_echo_service/proto/oak_echo.proto", "proto/attestation/evidence.proto"],
         &["../.."],
         Default::default(),
     );
+}
+
+#[cfg(feature = "bazel")]
+fn main() {
+    micro_rpc_build::compile(
+        &[
+            "../../testing/oak_echo_service/proto/oak_echo.proto",
+            "../../proto/attestation/evidence.proto",
+        ],
+        &oak_proto_build_utils::get_common_proto_path("../.."),
+        Default::default(),
+    );
+    oak_proto_build_utils::fix_prost_derives().unwrap();
 }

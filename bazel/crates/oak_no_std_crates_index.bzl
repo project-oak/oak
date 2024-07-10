@@ -99,6 +99,10 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "*",
             ),
+            "hashbrown": crate.spec(
+                default_features = False,
+                version = "0.14",
+            ),
             "hex": crate.spec(
                 default_features = False,
                 features = ["alloc"],
@@ -114,6 +118,10 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                     "alloc",
                     "x25519",
                 ],
+                version = "*",
+            ),
+            "lazy_static": crate.spec(
+                features = ["spin_no_std"],
                 version = "*",
             ),
             "log": crate.spec(

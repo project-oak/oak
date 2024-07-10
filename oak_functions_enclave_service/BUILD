@@ -35,7 +35,7 @@ DEPS = [
 
 rust_library(
     name = "oak_functions_enclave_service",
-    srcs = glob(["src/**"]),
+    srcs = glob(["src/*.rs"]),
     # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
     target_compatible_with = [
@@ -48,7 +48,7 @@ rust_library(
 
 rust_library(
     name = "oak_functions_enclave_service_allow_sensitive_logging",
-    srcs = glob(["src/**"]),
+    srcs = glob(["src/*.rs"]),
     target_compatible_with = [
         "//:x86_64-none-setting",
     ],

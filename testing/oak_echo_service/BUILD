@@ -15,8 +15,7 @@
 #
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,46 +23,54 @@ package(
 )
 
 rust_library(
-    name = "micro_rpc",
+    name = "oak_echo_service",
     srcs = glob(["src/*.rs"]),
     proc_macro_deps = [
-        "@oak_crates_index//:async-trait",
         "@oak_crates_index//:prost-derive",
     ],
-    target_compatible_with = either_platform([
-        "//:x86_64-linux-setting",
+    target_compatible_with = [
         "//:x86_64-none-setting",
-        "//:wasm32-none-setting",
-    ]),
+    ],
     deps = [
         ":build",
+        "//micro_rpc",
+        "//oak_attestation",
+        "//oak_proto_rust",
+        "//oak_restricted_kernel_sdk",
+        "@oak_no_std_crates_index//:hashbrown",
+        "@oak_no_std_crates_index//:log",
     ] + select({
         "@platforms//os:none": [
+            "//third_party/prost-types",
             "@oak_no_std_crates_index//:prost",
         ],
         "//conditions:default": [
-            # When not building for bare metal, use the crate with std. Crates that require std
-            # and that also require prost won't work with @oak_no_std_crates_index//:prost. For
-            # example, oak_containers_orchestrator uses tonic which uses both prost and std.
-            # Both oak_containers_orchestrator and tonic need to see the same prost symbols.
-            # It doesn't work if one sees "@oak_no_std_crates_index//:prost" and the other
-            # sees "@oak_crates_index//:prost".
             "@oak_crates_index//:prost",
+            "@oak_crates_index//:prost-types",
         ],
     }),
 )
 
+rust_test(
+    name = "oak_echo_service_test",
+    size = "small",
+    crate = ":oak_echo_service",
+)
+
 cargo_build_script(
     name = "build",
-    srcs = [
-        "build.rs",
-    ],
+    srcs = ["build.rs"],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
-    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
+    crate_features = ["bazel"],
     data = [
-        "//proto/micro_rpc:messages_proto",
+        "//proto/session:messages_proto",
+        "//proto/session:service_streaming_proto",
+        "//testing/oak_echo_service/proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
     tools = [
         "@com_google_protobuf//:protoc",
@@ -71,5 +78,6 @@ cargo_build_script(
     deps = [
         "//micro_rpc_build",
         "//oak_proto_build_utils",
+        "@oak_crates_index//:prost-build",
     ],
 )

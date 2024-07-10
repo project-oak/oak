@@ -29,7 +29,6 @@ DEPS = [
     "@oak_crates_index//:spinning_top",
     "@oak_no_std_crates_index//:anyhow",
     "@oak_no_std_crates_index//:log",
-    "@oak_no_std_crates_index//:prost",
     "@oak_no_std_crates_index//:rand_core",
     "@oak_no_std_crates_index//:wasmi",
 ] + select({
@@ -43,7 +42,7 @@ DEPS = [
 
 rust_library(
     name = "oak_functions_service",
-    srcs = glob(["src/**"]),
+    srcs = glob(["src/**/*.rs"]),
     # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
     target_compatible_with = either_platform([
@@ -67,7 +66,8 @@ rust_test(
 
 rust_library(
     name = "oak_functions_service_allow_sensitive_logging",
-    srcs = glob(["src/**"]),
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "oak_functions_service",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
