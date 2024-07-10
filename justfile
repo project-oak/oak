@@ -27,9 +27,6 @@ build_enclave_app name:
 oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
-oak_restricted_kernel_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
-
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
     target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
@@ -49,36 +46,40 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
 run_oak_functions_launcher wasm_path port lookup_data_path:
     target/x86_64-unknown-linux-gnu/release/oak_functions_launcher \
         --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
-        --kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
+        --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
         --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app \
         --initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
         --memory-size=256M \
         --wasm={{wasm_path}} \
         --port={{port}} \
-        --lookup-data={{lookup_data_path}} \
+        --lookup-data={{lookup_data_path}}
 
 # Run an integration test for Oak Functions making sure all the dependencies are built.
-run_oak_functions_test: oak_orchestrator oak_functions_launcher oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper
+run_oak_functions_test: oak_orchestrator oak_functions_launcher oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper_virtio_console_channel
     cargo test --package=key_value_lookup test_server
 
 # Builds a variant of the restricted kernel and creates a bzImage of it.
 # Then creates provenance subjects for it.
-restricted_kernel_bzimage_and_provenance_subjects kernel_bin_prefix:
-    env \
-        --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_bin_prefix}}_bin cargo build \
-        --release
-    mkdir \
-        --parents \
-        ./oak_restricted_kernel_wrapper/target/released_bin_with_components_{{kernel_bin_prefix}}
+# kernel_suffix examples: _virtio_console_channel, _simple_io_channel
+restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
+    mkdir --parents oak_restricted_kernel_wrapper/bin
+
+    # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
+    # This check must be OFF otherwise checks will be too conservative and fail at runtime.
+    bazel build //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}} \
+        --platforms=//:x86_64-unknown-none \
+        --compilation_mode opt
+
     rust-objcopy \
         --output-target=binary \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
+        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}} \
+        oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
+
     just bzimage_provenance_subjects \
-        {{kernel_bin_prefix}} \
-        oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin \
-        oak_restricted_kernel_wrapper/bin/{{kernel_bin_prefix}}/subjects
+        oak_restricted_kernel{{kernel_suffix}} \
+        oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}} \
+        oak_restricted_kernel_wrapper/bin/wrapper{{kernel_suffix}}_subjects
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
 # and image to the output directory.
@@ -90,14 +91,21 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
         --kernel-setup-data-output="{{output_dir}}/{{kernel_name}}_setup_data" \
         --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
 
-oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
-    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel
+oak_restricted_kernel_bin_virtio_console_channel:
+    # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
+    # This check must be OFF otherwise checks will be too conservative and fail at runtime.
+    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
+        --platforms=//:x86_64-unknown-none \
+        --compilation_mode opt
 
-oak_restricted_kernel_simple_io_init_rd_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_init_rd_bin
+oak_restricted_kernel_wrapper_virtio_console_channel:
+    just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
 
-oak_restricted_kernel_simple_io_init_rd_wrapper: oak_restricted_kernel_simple_io_init_rd_bin
-    just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io_init_rd
+oak_restricted_kernel_bin_simple_io_channel:
+    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel --platforms=//:x86_64-unknown-none
+
+oak_restricted_kernel_wrapper_simple_io_channel:
+    just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
 
 oak_client_android_app:
     bazel build --noexperimental_check_desugar_deps --compilation_mode opt \
@@ -256,8 +264,8 @@ oak_attestation_explain_wasm:
 
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \
-    oak_restricted_kernel_simple_io_init_rd_wrapper stage0_bin \
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
+    oak_restricted_kernel_wrapper_simple_io_channel stage0_bin \
     oak_client_android_app
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
@@ -270,7 +278,7 @@ kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_cont
 # TODO: b/349572480 - Enable benchmarks in Bazel and remove oak_functions_service and oak_functions_launcher (after integration tests bazelified) from this list.
 cargo_test_packages_arg := "-p key_value_lookup -p oak_functions_containers_app -p oak_functions_containers_launcher -p oak_functions_launcher -p oak_functions_service"
 
-kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates build-clients
+kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates build-clients
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
 
 clang-tidy:

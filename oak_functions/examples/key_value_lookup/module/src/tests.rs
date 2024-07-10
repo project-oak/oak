@@ -101,7 +101,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     );
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(20));
+    std::thread::sleep(Duration::from_secs(180));
 
     let uri = format!("http://localhost:{server_port}/");
     let mut client = runtime

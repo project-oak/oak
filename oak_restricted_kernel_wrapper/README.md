@@ -13,5 +13,5 @@ NOTE: This wrapper is not intended to be built using `cargo build` directly.
 To build it, run the following in the workspace root:
 
 ```bash
-just oak_restricted_kernel_wrapper
+just oak_restricted_kernel_wrapper_virtio_console_channel
 ```

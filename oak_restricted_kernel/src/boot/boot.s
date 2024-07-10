@@ -55,7 +55,9 @@ _oak_start:
     # Finally, trigger a full TLB flush by overwriting CR3, even if it is the same value.
     movq %rbx, %cr3
 
-    # Clear BSS: base address goes to RDI, value goes to AX, count goes into CX.
+    # Clear BSS: base address goes to RDI, value (0) goes to AX, count goes into CX.
+    # Set Direction Dlag (DF) to 0 for the address to increment (not decrement) after each rep of stosb.
+    cld
     mov $bss_start, %rdi
     mov $bss_size, %rcx
     xor %rax, %rax

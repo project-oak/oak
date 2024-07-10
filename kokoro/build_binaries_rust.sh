@@ -28,7 +28,7 @@ readonly generated_binaries=(
     enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
     enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
     enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
-    oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
+    oak_restricted_kernel_wrapper/bin/wrapper_bzimage_simple_io_channel
     stage0_bin/target/x86_64-unknown-none/release/stage0_bin
 )
 readonly binary_names=(

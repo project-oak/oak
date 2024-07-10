@@ -22,10 +22,8 @@ pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
 pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     workspace_path(&[
         "oak_restricted_kernel_wrapper",
-        "target",
-        "x86_64-unknown-none",
-        "release",
-        "oak_restricted_kernel_wrapper_bin",
+        "bin",
+        "wrapper_bzimage_virtio_console_channel",
     ])
 });
 

@@ -23,11 +23,11 @@ package(
 rust_binary(
     name = "oak_restricted_kernel_wrapper_virtio_console_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/asm/boot.s"],
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
-    data = [
+    compile_data = [
+        "src/asm/boot.s",
         "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel",
     ],
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
     linker_script = ":layout.ld",
     platform = "//:x86_64-unknown-none-noavx-softfloat",
@@ -36,7 +36,7 @@ rust_binary(
     },
     rustc_flags = [
         "-C",
-        "relocation-model=pie",
+        "relocation-model=static",
     ],
     deps = [
         "@//oak_linux_boot_params",
@@ -48,11 +48,11 @@ rust_binary(
 rust_binary(
     name = "oak_restricted_kernel_wrapper_simple_io_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/asm/boot.s"],
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
-    data = [
+    compile_data = [
+        "src/asm/boot.s",
         "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel",
     ],
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
     linker_script = ":layout.ld",
     platform = "//:x86_64-unknown-none-noavx-softfloat",
@@ -61,7 +61,7 @@ rust_binary(
     },
     rustc_flags = [
         "-C",
-        "relocation-model=pie",
+        "relocation-model=static",
     ],
     deps = [
         "@//oak_linux_boot_params",

@@ -23,13 +23,12 @@ PHDRS
      * has a sanity check that expects the section with the lowest address to come
      * first.
      */
-    hdrs    PT_LOAD FILEHDR PHDRS FLAGS(4);
+    hdrs    PT_LOAD FILEHDR PHDRS FLAGS(4) AT(2M);
     /* Executable text. */
     boot    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     text    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     /* Read-only data. */
     rodata  PT_LOAD FLAGS(4); /* PF_R */
-    payload PT_LOAD FLAGS(4); /* PF_R */
     /* Initialized read-write data. */
     data    PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
     /* Uninitialized read-write data. */
@@ -44,10 +43,7 @@ SECTIONS {
     . = 2M;
 
     /* The kernel code expects FILEHDR and PHDRS to be located at 0x20_0000. */
-    hdrs = .;
     . += SIZEOF_HEADERS;
-    .hdrs : {
-    } : hdrs
 
      /*
      * Boot code is executed with identity mapping; the main duty of the boot
@@ -79,8 +75,9 @@ SECTIONS {
     .bss : ALIGN(2M) {
         bss_start = .;
         *(.bss .bss.*)
-        bss_size = . - bss_start;
     } : bss
+
+    bss_size = SIZEOF(.bss) ;
 
     /* Stack grows down, so stack_start is the upper address in memory. */
     .stack (NOLOAD) : ALIGN(2M) {
