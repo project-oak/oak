@@ -37,12 +37,15 @@ http_archive(
 # BoringSSL.
 # https://github.com/google/boringssl
 http_archive(
-    name = "boringssl",
-    sha256 = "b6dd308895eea9e1f0d3f503b7210141f75ba6817c78b4057406ee8f0a042504",
-    strip_prefix = "boringssl-44cc20b4a0227b8913dc5f9e063443cb05e4134d",
+    name = "bssl",
+    patch_args = ["-p1"],
+    patch_tool = "patch",
+    patches = ["//third_party/boringssl:0001-add-bazel-rules-to-build-bssl-crypto.patch"],
+    sha256 = "6479eea14710345d131a3459b5622d23921d5c94d938038506a5cfb47a232789",
+    strip_prefix = "boringssl-00364d10b265d501f3800e6456e94bde88df58ef",
     urls = [
-        # Head commit on 2023-06-14.
-        "https://github.com/google/boringssl/archive/44cc20b4a0227b8913dc5f9e063443cb05e4134d.zip",
+        # Head commit on 2024-07-25.
+        "https://github.com/google/boringssl/archive/00364d10b265d501f3800e6456e94bde88df58ef.zip",
     ],
 )
 
@@ -336,10 +339,33 @@ load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
 
-load("//bazel/tools/prost:deps.bzl", "prost_toolchain_crates")
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
 
-prost_toolchain_crates()
+rules_rust_dependencies()
 
-load("//bazel/tools/prost:defs.bzl", "setup_prost_toolchain")
+rust_register_toolchains(
+    edition = "2021",
+    sha256s = {
+        "2024-02-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "7247ca497c7d9194c9e7bb9b6a51f8ccddc452bbce2977d608cabdbc1a0f332f",
+        "2024-02-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "1271eaa89d50bd7f63b338616c36f41fe1e733b5d6c4cc2c95eaa6b3c8faba62",
+        "2024-02-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "1d859549b5f3d2dd146b84aa13dfec24a05913653af2116b39a919cab69de850",
+        "2024-02-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "b227753189981d9a115527ba0e95b365388fb0fe7f1a1ff93116c4448c854197",
+        "2024-02-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "b1a444f8e8f33d813c4d532c12717743edd9b34f685ff5293b6375fc75c2421e",
+    },
+    versions = [
+        "1.76.0",
+        "nightly/2024-02-01",
+    ],
+)
 
-setup_prost_toolchain()
+# Additional setup for bindgen
+
+load("@rules_rust//bindgen:repositories.bzl", "rust_bindgen_dependencies", "rust_bindgen_register_toolchains")
+
+rust_bindgen_dependencies()
+
+rust_bindgen_register_toolchains()
+
+load("@rules_rust//bindgen:transitive_repositories.bzl", "rust_bindgen_transitive_dependencies")
+
+rust_bindgen_transitive_dependencies()
