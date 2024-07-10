@@ -1106,6 +1106,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry-proto 0.6.0",
  "opentelemetry_sdk 0.22.1",
+ "os_pipe",
  "ouroboros",
  "p256",
  "p384",

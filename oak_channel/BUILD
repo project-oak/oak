@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -44,6 +44,11 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_CHANNEL_DEPS,
+)
+
+rust_test(
+    name = "oak_channel_test",
+    crate = ":oak_channel",
 )
 
 rust_library(

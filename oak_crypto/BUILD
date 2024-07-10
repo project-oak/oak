@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
@@ -71,4 +71,14 @@ rust_library(
             "@oak_crates_index//:zeroize",
         ],
     }),
+)
+
+rust_test(
+    name = "oak_crypto_test",
+    size = "small",
+    crate = ":oak_crypto",
+    deps = [
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:tokio",
+    ],
 )

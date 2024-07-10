@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,9 +25,10 @@ package(
 rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
     deps = [
         "//oak_core",
         "//oak_dice",
@@ -64,4 +66,10 @@ rust_library(
             "@oak_crates_index//:x86_64",
         ],
     }),
+)
+
+rust_test(
+    name = "stage0_test",
+    size = "small",
+    crate = ":stage0",
 )

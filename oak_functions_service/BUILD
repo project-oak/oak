@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,24 +32,57 @@ DEPS = [
     "@oak_no_std_crates_index//:prost",
     "@oak_no_std_crates_index//:rand_core",
     "@oak_no_std_crates_index//:wasmi",
-]
+] + select({
+    "@platforms//os:none": [
+        "@oak_no_std_crates_index//:prost",
+    ],
+    "//conditions:default": [
+        "@oak_crates_index//:prost",
+    ],
+})
 
 rust_library(
     name = "oak_functions_service",
     srcs = glob(["src/**"]),
     # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
-    target_compatible_with = [
-        "@platforms//os:none",
-    ],
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+    ]),
     deps = DEPS,
+)
+
+rust_test(
+    name = "oak_functions_service_test",
+    crate = ":oak_functions_service",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = ["//oak_functions/examples/echo"],
+    deps = [
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:prost",
+    ],
 )
 
 rust_library(
     name = "oak_functions_service_allow_sensitive_logging",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
-        "@platforms//os:none",
-    ],
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+    ]),
     deps = DEPS,
+)
+
+rust_test(
+    name = "oak_functions_service_allow_sensitive_logging_test",
+    crate = ":oak_functions_service_allow_sensitive_logging",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = ["//oak_functions/examples/echo"],
+    deps = [
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:prost",
+    ],
 )

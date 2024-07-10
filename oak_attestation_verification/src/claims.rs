@@ -283,6 +283,9 @@ mod tests {
     use super::get_digest;
     use crate::claims::{parse_endorsement_statement, validate_endorsement};
 
+    #[cfg(feature = "bazel")]
+    const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
+    #[cfg(not(feature = "bazel"))]
     const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 
     #[test]

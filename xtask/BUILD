@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -57,6 +57,12 @@ rust_library(
         "@oak_crates_index//:toml",
         "@oak_crates_index//:walkdir",
     ],
+)
+
+rust_test(
+    name = "xtask_test",
+    size = "small",
+    crate = ":lib",
 )
 
 # TODO(b/330178457) Swap ./script to use Bazel.

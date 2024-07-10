@@ -253,6 +253,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 ],
                 version = "0.22.1",
             ),
+            "os_pipe": crate.spec(version = "*"),
             "ouroboros": crate.spec(version = "*"),
             "portpicker": crate.spec(version = "*"),
             "p256": crate.spec(

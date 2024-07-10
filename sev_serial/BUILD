@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,9 +25,10 @@ package(
 rust_library(
     name = "sev_serial",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
+    ]),
     deps = [
         "//oak_sev_guest",
     ] + select({

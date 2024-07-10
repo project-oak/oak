@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -51,6 +51,15 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "oak_attestation_verification_test",
+    crate = ":oak_attestation_verification",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = [
+        "//oak_attestation_verification/testdata:endorsement.json",
+    ],
+)
+
 rust_library(
     name = "oak_attestation_verification_with_regex",
     srcs = glob(["src/**"]),
@@ -80,5 +89,14 @@ rust_library(
         "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
+    ],
+)
+
+rust_test(
+    name = "oak_attestation_verification_with_reged_test",
+    crate = ":oak_attestation_verification_with_regex",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = [
+        "//oak_attestation_verification/testdata:endorsement.json",
     ],
 )

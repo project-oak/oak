@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,9 +25,10 @@ package(
 rust_library(
     name = "oak_virtio",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",
         "@oak_crates_index//:strum",
@@ -45,4 +47,13 @@ rust_library(
             "@oak_crates_index//:x86_64",
         ],
     }),
+)
+
+rust_test(
+    name = "oak_virtio_test",
+    size = "small",
+    crate = ":oak_virtio",
+    deps = [
+        "@oak_crates_index//:rand",
+    ],
 )

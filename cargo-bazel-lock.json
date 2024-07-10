@@ -1,5 +1,5 @@
 {
-  "checksum": "c8419db8f6a1f07175d84d2971eae3dd0969acce2ac9bfe24efb3b3417ae6d8b",
+  "checksum": "d4d2e1d93bb189e8cbeb8e9d140fbb6358c27f1b7ebccc310bea41cdd4003452",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6653,6 +6653,10 @@
             {
               "id": "opentelemetry_sdk 0.22.1",
               "target": "opentelemetry_sdk"
+            },
+            {
+              "id": "os_pipe 1.2.0",
+              "target": "os_pipe"
             },
             {
               "id": "ouroboros 0.18.4",
@@ -31390,6 +31394,7 @@
     "opentelemetry-otlp 0.15.0",
     "opentelemetry-proto 0.6.0",
     "opentelemetry_sdk 0.22.1",
+    "os_pipe 1.2.0",
     "ouroboros 0.18.4",
     "p256 0.13.2",
     "p384 0.13.0",

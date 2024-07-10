@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -27,5 +27,14 @@ rust_library(
     deps = [
         "@oak_crates_index//:strum",
         "@oak_no_std_crates_index//:bitflags",
+    ],
+)
+
+rust_test(
+    name = "oak_restricted_kernel_interface_test",
+    size = "small",
+    crate = ":oak_restricted_kernel_interface",
+    deps = [
+        "@oak_crates_index//:os_pipe",
     ],
 )

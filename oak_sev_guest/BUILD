@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -27,9 +28,10 @@ rust_library(
     crate_features = [
         "rust-crypto",
     ],
-    target_compatible_with = [
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
     deps = [
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:lock_api",
@@ -49,4 +51,10 @@ rust_library(
             "@oak_crates_index//:x86_64",
         ],
     }),
+)
+
+rust_test(
+    name = "oak_sev_guest_test",
+    size = "small",
+    crate = ":oak_sev_guest",
 )
