@@ -297,6 +297,9 @@ load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolcha
 
 gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
+    # Prevents aspect_gcc from rendering -nostdinc flag. Needed to compile wasmtime.
+    # See b/352306808#comment25.
+    extra_cflags = [],
     target_arch = ARCHS.x86_64,
     # target_compatible_with defaults to os:linux.
 )

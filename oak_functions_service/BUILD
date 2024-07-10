@@ -38,7 +38,7 @@ DEPS = [
 
 UNRESTRICTED_DEPS = DEPS + [
     "@oak_crates_index//:parking_lot",
-    #"@oak_crates_index//:wasmtime",
+    "@oak_crates_index//:wasmtime",
 ]
 
 rust_library(
@@ -73,7 +73,7 @@ rust_library(
     crate_features = [
         "deny_sensitive_logging",
         "std",
-        #"wasmtime",
+        "wasmtime",
     ],
     crate_name = "oak_functions_service",
     deps = UNRESTRICTED_DEPS,
@@ -85,7 +85,7 @@ rust_library(
     crate_features = [
         "allow_sensitive_logging",
         "std",
-        #"wasmtime",
+        "wasmtime",
     ],
     crate_name = "oak_functions_service",
     deps = UNRESTRICTED_DEPS,
@@ -104,8 +104,32 @@ rust_test(
 )
 
 rust_test(
+    name = "lib_unrestricted_test",
+    crate = ":lib_unrestricted",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = ["//oak_functions/examples/echo"],
+    deps = [
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test(
     name = "lib_insecure_test",
     crate = ":lib_insecure",
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = ["//oak_functions/examples/echo"],
+    deps = [
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:bytes",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test(
+    name = "lib_insecure_unrestricted_test",
+    crate = ":lib_insecure_unrestricted",
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [

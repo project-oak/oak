@@ -459,7 +459,19 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 # same version as cargo, newer versions had compatibility issues
                 version = "0.31.2",
             ),
-            "wasmtime": crate.spec(version = "*"),
+            "wasmtime": crate.spec(
+                default_features = False,
+                # Try to figure out a minimal set of features we need (e.g. disable wasm profiling)
+                features = [
+                    "cranelift",
+                    "cache",
+                    "parallel-compilation",
+                    "pooling-allocator",
+                    "runtime",
+                ],
+                # same version as cargo
+                version = "18.0.4",
+            ),
             "which": crate.spec(version = "*"),
             "x509-cert": crate.spec(
                 default_features = False,
