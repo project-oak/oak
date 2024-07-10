@@ -137,15 +137,6 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -194,10 +185,7 @@
 
 <span class="doccomment">/// Return an iterator of all known Cargo Manifest files that define crates.
 </span><span class="kw">pub fn </span>crate_manifest_files() -&gt; <span class="kw">impl </span>Iterator&lt;Item = PathBuf&gt; {
-    source_files()
-        .filter(|p| is_cargo_toml_file(p))
-        .filter(|p| is_cargo_package_file(p))
-        .filter(|p| !p.ends_with(<span class="string">"fuzz/Cargo.toml"</span>))
+    source_files().filter(|p| is_cargo_toml_file(p)).filter(|p| is_cargo_package_file(p))
 }
 
 <span class="doccomment">/// Return an iterator of all known Cargo Manifest files that define workspaces.
@@ -216,12 +204,6 @@
         || filename.ends_with(<span class="string">".js"</span>)
         || filename.ends_with(<span class="string">".go"</span>)
         || filename.ends_with(<span class="string">".java"</span>)
-}
-
-<span class="doccomment">/// Return whether the provided path refers to a `fuzz` crate for fuzz testing
-/// with `cargo-fuzz`.
-</span><span class="kw">pub fn </span>is_fuzzing_toml_file(path: <span class="kw-2">&amp;</span>Path) -&gt; bool {
-    <span class="macro">format!</span>(<span class="string">"{:?}"</span>, path).contains(<span class="string">"/fuzz/"</span>)
 }
 
 <span class="doccomment">/// Return whether the provided path refers to a `Cargo.toml` file. Note that it
