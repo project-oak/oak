@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::internal::{read_to_end, Command, Context, Opt, Runnable, Running, Status, Step};
+use crate::internal::{Command, Context, Opt, Status, Step};
 
 fn opt_for_test() -> Opt {
     Opt { dry_run: false, logs: true, keep_going: false, cmd: Command::RunTests }
@@ -26,29 +26,6 @@ pub async fn run_step(step: Step) {
     let run_status = Status::new(usize::MAX);
     let result = crate::internal::run_step(&context, step, run_status).await;
     assert!(result.success());
-}
-
-/// Thin wrapper around an inner `Running` that kills the inner `Running` when
-/// dropped.
-pub struct BackgroundStep {
-    pub inner: Box<dyn Running>,
-}
-
-impl std::ops::Drop for BackgroundStep {
-    fn drop(&mut self) {
-        self.inner.kill();
-    }
-}
-
-/// Runs a step in the background, and returns a reference to the running
-/// process.
-///
-/// The running process is killed when the returned `BackgroundStep` is dropped.
-pub async fn run_background(step: Box<dyn Runnable>) -> BackgroundStep {
-    let mut running = step.run(&opt_for_test());
-    tokio::spawn(read_to_end(running.stdout()));
-    tokio::spawn(read_to_end(running.stderr()));
-    BackgroundStep { inner: running }
 }
 
 /// Whether to skip the test. For instance, GitHub Actions does not support KVM,

@@ -19,18 +19,18 @@ use std::time::Duration;
 
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
-use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
+use xtask::workspace_path;
 
 async fn run_key_value_lookup_test(communication_channel: &str) {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let (mut _background, port) = xtask::containers::run_oak_functions_example_in_background(
-        &wasm_path,
-        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
-        communication_channel,
-    )
-    .await;
+    let (mut _output, port) =
+        oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+            &wasm_path,
+            oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+            communication_channel,
+        );
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(60)).await;
@@ -78,12 +78,12 @@ async fn test_launcher_echo() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo")
         .expect("Failed to build Wasm module");
 
-    let (_background, port) = xtask::containers::run_oak_functions_example_in_background(
-        &wasm_path,
-        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
-        "network",
-    )
-    .await;
+    let (_background, port) =
+        oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+            &wasm_path,
+            oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+            "network",
+        );
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(60)).await;

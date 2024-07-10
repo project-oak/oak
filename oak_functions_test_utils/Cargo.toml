@@ -16,8 +16,10 @@ oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_client = { workspace = true }
 oak_proto_rust = { workspace = true }
+once_cell = "*"
 port_check = "*"
 prost = { workspace = true }
+portpicker = "*"
 tempfile = "*"
 tokio = { workspace = true, features = ["sync"] }
 ubyte = "*"

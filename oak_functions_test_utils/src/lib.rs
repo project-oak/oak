@@ -16,16 +16,38 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
-use std::{collections::HashMap, future::Future, io::Write, pin::Pin, task::Poll, time::Duration};
+pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
+
+pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "oak_restricted_kernel_wrapper",
+        "target",
+        "x86_64-unknown-none",
+        "release",
+        "oak_restricted_kernel_wrapper_bin",
+    ])
+});
+
+use std::{
+    collections::HashMap, future::Future, io::Write, path::PathBuf, pin::Pin, task::Poll,
+    time::Duration,
+};
 
 use anyhow::Context;
 use nix::unistd::Pid;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
 use oak_functions_client::OakFunctionsClient;
+use once_cell::sync::Lazy;
 use prost::Message;
 use tokio::{sync::oneshot, task::JoinHandle};
 use ubyte::ByteUnit;
+
+// Creates a path relative to the workspace root.
+pub fn workspace_path(relative_path: &[&str]) -> PathBuf {
+    [&[env!("WORKSPACE_ROOT")], relative_path].concat().iter().collect()
+}
 
 /// Serializes the provided map as a contiguous buffer of length-delimited
 /// protobuf messages of type [`Entry`](https://github.com/project-oak/oak/blob/main/proto/oak_functions/lookup_data.proto).
@@ -214,4 +236,50 @@ pub fn assert_response_body(response: Response, expected: &str) {
         std::str::from_utf8(body).expect("couldn't convert response body from utf8"),
         expected
     )
+}
+
+/// Runs the specified example as a background task. Returns a reference to the
+/// running server and the port on which the server is listening.
+pub fn run_oak_functions_containers_example_in_background(
+    wasm_path: &str,
+    lookup_data_path: &str,
+    communication_channel: &str,
+) -> (std::process::Child, u16) {
+    eprintln!("using Wasm module {}", wasm_path);
+
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+    eprintln!("using port {}", port);
+
+    let child = std::process::Command::new("just")
+        .args(vec![
+            "run_oak_functions_containers_launcher",
+            wasm_path,
+            &format!("{}", port),
+            lookup_data_path,
+            communication_channel,
+            &format!("{}", nix::unistd::gettid()),
+        ])
+        .spawn()
+        .expect("didn't start oak functions containers launcher");
+
+    (child, port)
+}
+
+/// Runs the specified example as a background task. Returns a reference to the
+/// running server and the port on which the server is listening.
+pub fn run_oak_functions_example_in_background(
+    wasm_path: &str,
+    lookup_data_path: &str,
+) -> (std::process::Child, u16) {
+    eprintln!("using Wasm module {}", wasm_path);
+
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+    eprintln!("using port {}", port);
+
+    let child = std::process::Command::new("just")
+        .args(vec!["run_oak_functions_launcher", wasm_path, &format!("{}", port), lookup_data_path])
+        .spawn()
+        .expect("didn't start oak functions containers launcher");
+
+    (child, port)
 }

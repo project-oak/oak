@@ -30,4 +30,5 @@ ubyte = "*"
 oak_client = { workspace = true }
 oak_functions_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }
+portpicker = "*"
 xtask = { workspace = true }

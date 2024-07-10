@@ -47,12 +47,10 @@ async fn test_server() {
     );
 
     // TODO: b/349587445 - Use bazel variant once dependencies are bazelified.
-    let (_server_background, server_port) =
-        xtask::launcher::run_oak_functions_example_in_background(
-            &wasm_path,
-            lookup_data_file.path().to_str().unwrap(),
-        )
-        .await;
+    let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+        &wasm_path,
+        lookup_data_file.path().to_str().unwrap(),
+    );
 
     // Wait for the server to start up.
     // TODO(#4677): Reduce the wait time.
@@ -97,11 +95,10 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         }),
     );
 
-    let (_server_background, server_port) =
-        runtime.block_on(xtask::launcher::run_oak_functions_example_in_background(
-            &wasm_path,
-            lookup_data_file.path().to_str().unwrap(),
-        ));
+    let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+        &wasm_path,
+        lookup_data_file.path().to_str().unwrap(),
+    );
 
     // Wait for the server to start up.
     std::thread::sleep(Duration::from_secs(20));

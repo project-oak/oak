@@ -54,7 +54,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
@@ -152,7 +152,7 @@ fn bench_key_value_lookup(b: &mut Bencher) {
         b,
         &OakFunctionsTestConfig {
             wasm_path: wasm_path.into(),
-            lookup_data_path: xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
+            lookup_data_path: oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
             request: b"test_key".to_vec(),
             expected_response: b"test_value".to_vec(),
         },

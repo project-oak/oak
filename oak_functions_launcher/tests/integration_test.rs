@@ -23,7 +23,7 @@ use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
 use oak_launcher_utils::launcher;
 use oak_proto_rust::oak::oak_functions::OakFunctionsAsyncClient;
 use ubyte::ByteUnit;
-use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
+use xtask::workspace_path;
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
@@ -36,11 +36,10 @@ async fn test_launcher_key_value_lookup() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let (mut _background, port) = xtask::launcher::run_oak_functions_example_in_background(
+    let (mut _child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         &wasm_path,
-        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
-    )
-    .await;
+        oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    );
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
@@ -67,11 +66,10 @@ async fn test_launcher_echo() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo")
         .expect("Failed to build Wasm module");
 
-    let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
+    let (_child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         &wasm_path,
-        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
-    )
-    .await;
+        oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    );
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
@@ -136,7 +134,7 @@ async fn test_load_large_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
@@ -217,7 +215,7 @@ async fn test_load_two_gib_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[

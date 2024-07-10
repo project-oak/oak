@@ -18,7 +18,6 @@ colored = "*"
 itertools = "*"
 nix = { version = "*", features = ["signal"] }
 once_cell = "*"
-portpicker = "*"
 serde = { version = "*", features = ["derive"] }
 tokio = { version = "*", features = [
   "fs",
