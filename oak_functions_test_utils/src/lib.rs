@@ -244,3 +244,20 @@ pub fn run_oak_functions_example_in_background(
 
     (child, port)
 }
+
+pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("just")
+        .arg("run-java-functions-client")
+        .arg(addr)
+        .current_dir(workspace_path(&[]))
+        .output()
+}
+
+pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("just")
+        .arg("run-cc-functions-client")
+        .arg(addr)
+        .arg(request)
+        .current_dir(workspace_path(&[]))
+        .output()
+}

@@ -238,7 +238,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates
+kokoro_run_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates build-clients
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:
@@ -298,3 +298,12 @@ bazel-cache-test:
 
 format:
     bazel build linter && bazel-bin/linter/linter --fix
+
+build-clients:
+    bazel build --config=unsafe-fast-presubmit //java/src/main/java/com/google/oak/client/oak_functions_client //cc/client:cli
+
+run-java-functions-client addr:
+    bazel-out/k8-fastbuild/bin/java/src/main/java/com/google/oak/client/oak_functions_client/oak_functions_client {{addr}}
+
+run-cc-functions-client addr request:
+    bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}

@@ -82,38 +82,16 @@ async fn test_launcher_echo() {
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
 
+    let addr = format!("http://localhost:{port}");
+
     // TODO(#4177): Check response in the integration test.
     // Run Java client via Bazel.
-    let status = tokio::process::Command::new("bazel")
-        .arg("run")
-        .arg("//java/src/main/java/com/google/oak/client/oak_functions_client")
-        .arg("--")
-        .arg(format!("http://localhost:{port}"))
-        .current_dir(workspace_path(&[]))
-        .spawn()
-        .expect("failed to spawn bazel")
-        .wait()
-        .await
-        .expect("failed to wait for bazel");
-    eprintln!("bazel status: {:?}", status);
-    assert!(status.success());
+    oak_functions_test_utils::run_java_client(&addr).expect("java client failed");
 
     // TODO(#4177): Check response in the integration test.
     // Run C++ client via Bazel.
-    let status = tokio::process::Command::new("bazel")
-        .arg("run")
-        .arg("//cc/client:cli")
-        .arg("--")
-        .arg(format!("--address=localhost:{port}"))
-        .arg("--request={\"lat\":0,\"lng\":0}")
-        .current_dir(workspace_path(&[]))
-        .spawn()
-        .expect("failed to spawn bazel")
-        .wait()
-        .await
-        .expect("failed to wait for bazel");
-    eprintln!("bazel status: {:?}", status);
-    assert!(status.success());
+    let request = "--request={\"lat\":0,\"lng\":0}";
+    oak_functions_test_utils::run_cc_client(&addr, request).expect("cc client failed");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
