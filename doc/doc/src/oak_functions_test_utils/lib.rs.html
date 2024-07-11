@@ -246,6 +246,23 @@
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -491,5 +508,22 @@
         .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
 
     (child, port)
+}
+
+<span class="kw">pub fn </span>run_java_client(addr: <span class="kw-2">&amp;</span>str) -&gt; std::io::Result&lt;std::process::Output&gt; {
+    std::process::Command::new(<span class="string">"just"</span>)
+        .arg(<span class="string">"run-java-functions-client"</span>)
+        .arg(addr)
+        .current_dir(workspace_path(<span class="kw-2">&amp;</span>[]))
+        .output()
+}
+
+<span class="kw">pub fn </span>run_cc_client(addr: <span class="kw-2">&amp;</span>str, request: <span class="kw-2">&amp;</span>str) -&gt; std::io::Result&lt;std::process::Output&gt; {
+    std::process::Command::new(<span class="string">"just"</span>)
+        .arg(<span class="string">"run-cc-functions-client"</span>)
+        .arg(addr)
+        .arg(request)
+        .current_dir(workspace_path(<span class="kw-2">&amp;</span>[]))
+        .output()
 }
 </code></pre></div></section></main></body></html>
