@@ -263,6 +263,16 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -299,6 +309,7 @@
     time::Duration,
 };
 
+<span class="kw">use </span>command_group::stdlib::CommandGroup;
 <span class="kw">use </span>nix::unistd::Pid;
 <span class="kw">use </span>oak_client::verifier::InsecureAttestationVerifier;
 <span class="kw">use </span>oak_functions_abi::Response;
@@ -470,7 +481,7 @@
     wasm_path: <span class="kw-2">&amp;</span>str,
     lookup_data_path: <span class="kw-2">&amp;</span>str,
     communication_channel: <span class="kw-2">&amp;</span>str,
-) -&gt; (std::process::Child, u16) {
+) -&gt; (BackgroundHandle, u16) {
     <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {}"</span>, wasm_path);
 
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
@@ -485,10 +496,19 @@
             communication_channel,
             <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, nix::unistd::gettid()),
         ])
-        .spawn()
+        .group_spawn()
         .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
 
-    (child, port)
+    (BackgroundHandle(child), port)
+}
+
+<span class="doccomment">/// A wrapper around a child process that kills it when its dropped.
+</span><span class="kw">pub struct </span>BackgroundHandle(<span class="kw">pub </span>command_group::GroupChild);
+
+<span class="kw">impl </span>std::ops::Drop <span class="kw">for </span>BackgroundHandle {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.kill().expect(<span class="string">"Couldn't kill command group"</span>)
+    }
 }
 
 <span class="doccomment">/// Runs the specified example as a background task. Returns a reference to the
@@ -496,7 +516,7 @@
 </span><span class="kw">pub fn </span>run_oak_functions_example_in_background(
     wasm_path: <span class="kw-2">&amp;</span>str,
     lookup_data_path: <span class="kw-2">&amp;</span>str,
-) -&gt; (std::process::Child, u16) {
+) -&gt; (BackgroundHandle, u16) {
     <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {}"</span>, wasm_path);
 
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
@@ -504,10 +524,10 @@
 
     <span class="kw">let </span>child = std::process::Command::new(<span class="string">"just"</span>)
         .args(<span class="macro">vec!</span>[<span class="string">"run_oak_functions_launcher"</span>, wasm_path, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, port), lookup_data_path])
-        .spawn()
+        .group_spawn()
         .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
 
-    (child, port)
+    (BackgroundHandle(child), port)
 }
 
 <span class="kw">pub fn </span>run_java_client(addr: <span class="kw-2">&amp;</span>str) -&gt; std::io::Result&lt;std::process::Output&gt; {
