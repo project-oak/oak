@@ -34,6 +34,7 @@ use std::{
     time::Duration,
 };
 
+use command_group::stdlib::CommandGroup;
 use nix::unistd::Pid;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
@@ -205,7 +206,7 @@ pub fn run_oak_functions_containers_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
     communication_channel: &str,
-) -> (std::process::Child, u16) {
+) -> (BackgroundHandle, u16) {
     eprintln!("using Wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -220,10 +221,19 @@ pub fn run_oak_functions_containers_example_in_background(
             communication_channel,
             &format!("{}", nix::unistd::gettid()),
         ])
-        .spawn()
+        .group_spawn()
         .expect("didn't start oak functions containers launcher");
 
-    (child, port)
+    (BackgroundHandle(child), port)
+}
+
+/// A wrapper around a child process that kills it when its dropped.
+pub struct BackgroundHandle(pub command_group::GroupChild);
+
+impl std::ops::Drop for BackgroundHandle {
+    fn drop(&mut self) {
+        self.0.kill().expect("Couldn't kill command group")
+    }
 }
 
 /// Runs the specified example as a background task. Returns a reference to the
@@ -231,7 +241,7 @@ pub fn run_oak_functions_containers_example_in_background(
 pub fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
-) -> (std::process::Child, u16) {
+) -> (BackgroundHandle, u16) {
     eprintln!("using Wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -239,10 +249,10 @@ pub fn run_oak_functions_example_in_background(
 
     let child = std::process::Command::new("just")
         .args(vec!["run_oak_functions_launcher", wasm_path, &format!("{}", port), lookup_data_path])
-        .spawn()
+        .group_spawn()
         .expect("didn't start oak functions containers launcher");
 
-    (child, port)
+    (BackgroundHandle(child), port)
 }
 
 pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {

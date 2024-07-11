@@ -34,6 +34,7 @@ rust_library(
         "//oak_functions_client:lib",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:command-group",
         "@oak_crates_index//:duct",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:once_cell",

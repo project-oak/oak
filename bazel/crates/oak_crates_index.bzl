@@ -128,6 +128,9 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 features = ["tokio"],
                 version = "*",
             ),
+            "command-group": crate.spec(
+                version = "*",
+            ),
             "coset": crate.spec(
                 default_features = False,
                 version = "*",

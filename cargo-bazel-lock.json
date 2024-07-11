@@ -1,5 +1,5 @@
 {
-  "checksum": "330d0705019b45fde2065661b2bf2aa1c175a37b13753addfe3d210b8f99c2e6",
+  "checksum": "c8419db8f6a1f07175d84d2971eae3dd0969acce2ac9bfe24efb3b3417ae6d8b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -3687,6 +3687,68 @@
       ],
       "license_file": "LICENSE"
     },
+    "command-group 5.0.1": {
+      "name": "command-group",
+      "version": "5.0.1",
+      "package_url": "https://github.com/watchexec/command-group",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/command-group/5.0.1/download",
+          "sha256": "a68fa787550392a9d58f44c21a3022cfb3ea3e2458b7f85d3b399d0ceeccf409"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "command_group",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "command_group",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [],
+          "selects": {
+            "cfg(unix)": [
+              {
+                "id": "nix 0.27.1",
+                "target": "nix"
+              }
+            ],
+            "cfg(windows)": [
+              {
+                "id": "winapi 0.3.9",
+                "target": "winapi"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "5.0.1"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "const-default 1.0.0": {
       "name": "const-default",
       "version": "1.0.0",
@@ -6459,6 +6521,10 @@
             {
               "id": "command-fds 0.3.0",
               "target": "command_fds"
+            },
+            {
+              "id": "command-group 5.0.1",
+              "target": "command_group"
             },
             {
               "id": "coset 0.3.7",
@@ -13811,7 +13877,11 @@
             "uio",
             "user"
           ],
-          "selects": {}
+          "selects": {
+            "x86_64-unknown-linux-gnu": [
+              "poll"
+            ]
+          }
         },
         "deps": {
           "common": [
@@ -31286,6 +31356,7 @@
     "clap_complete 4.5.6",
     "colored 2.1.0",
     "command-fds 0.3.0",
+    "command-group 5.0.1",
     "coset 0.3.7",
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
