@@ -37,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/oak_functions/application_config.proto",
         "../proto/oak_functions/lookup_data.proto",
         "../proto/session/session.proto",
+        "../proto/session/messages.proto",
         "../proto/oak_functions/sdk/oak_functions_wasm.proto",
         "../proto/oak_functions/service/oak_functions.proto",
         "../proto/oak_functions/testing.proto",

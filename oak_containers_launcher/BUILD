@@ -32,8 +32,6 @@ rust_library(
     crate_name = "oak_containers_launcher",
     deps = [
         ":build",
-        "//oak_attestation",
-        "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",

@@ -222,7 +222,10 @@ oak_functions_containers_container_bundle_tar:
 oak_functions_containers_launcher:
     env cargo build --release --package='oak_functions_containers_launcher'
 
-all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
+oak_functions_launcher:
+    env cargo build --release --package='oak_functions_launcher'
+
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher oak_functions_launcher
 
 ensure_no_std package:
     RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'

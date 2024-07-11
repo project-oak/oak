@@ -27,12 +27,10 @@ mod proto {
 mod app_client;
 
 use oak_containers_launcher::{
-    proto::oak::{
-        key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
-        session::v1::EndorsedEvidence,
-    },
+    proto::oak::key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     Launcher,
 };
+use oak_proto_rust::oak::session::v1::EndorsedEvidence;
 
 use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 

@@ -14,7 +14,6 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
 log = "*"
-oak_attestation = { workspace = true }
 oak_containers_launcher = { workspace = true }
 oak_crypto = { workspace = true }
 oak_functions_launcher = { workspace = true }

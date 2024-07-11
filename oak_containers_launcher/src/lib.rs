@@ -23,8 +23,6 @@ pub mod proto {
                 tonic::include_proto!("oak.containers.v1");
             }
         }
-        pub use oak_attestation::proto::oak::{attestation, session};
-        pub use oak_proto_rust::oak::crypto;
         pub mod key_provisioning {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
@@ -44,8 +42,9 @@ use std::{
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use oak_proto_rust::oak::attestation::v1::{
-    endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
+use oak_proto_rust::oak::{
+    attestation::v1::{endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements},
+    session::v1::EndorsedEvidence,
 };
 pub use qemu::Params as QemuParams;
 use tokio::{
@@ -57,11 +56,8 @@ use tokio::{
 use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
 use tonic::transport::Channel as TonicChannel;
 
-use crate::proto::oak::{
-    key_provisioning::v1::{
-        key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
-    },
-    session::v1::EndorsedEvidence,
+use crate::proto::oak::key_provisioning::v1::{
+    key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
 };
 pub use crate::qemu::VmType;
 

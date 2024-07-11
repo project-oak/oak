@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "bazel"))]
@@ -25,13 +25,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         &[
             "../proto/containers/interfaces.proto",
-            "../proto/crypto/crypto.proto",
             "../proto/key_provisioning/key_provisioning.proto",
             "../proto/containers/hostlib_key_provisioning.proto",
-            "../proto/session/messages.proto",
         ],
         &included_protos,
-        CodegenOptions { build_client: true, build_server: true, ..Default::default() },
+        CodegenOptions {
+            build_client: true,
+            build_server: true,
+            extern_paths: vec![
+                ExternPath::new(".oak.crypto.v1", "::oak_proto_rust::oak::crypto::v1"),
+                ExternPath::new(".oak.session.v1", "::oak_proto_rust::oak::session::v1"),
+                ExternPath::new(".oak.attestation.v1", "::oak_proto_rust::oak::attestation::v1"),
+            ],
+        },
     )?;
 
     Ok(())
