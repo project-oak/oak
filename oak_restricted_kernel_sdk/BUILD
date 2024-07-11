@@ -28,7 +28,7 @@ rust_library(
         "//oak_restricted_kernel_sdk_proc_macro",
     ],
     target_compatible_with = [
-        ":x86_64-none-setting",
+        "//:x86_64-none-setting",
     ],
     deps = [
         "//micro_rpc",

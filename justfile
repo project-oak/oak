@@ -266,6 +266,8 @@ bazel-ci:
     bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- $({{bare_metal_crates_query}})
     bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown -- $({{wasm_crates_query}})
 
+list-bare-metal-crates:
+    {{bare_metal_crates_query}}
 
 bazel-clippy:
     bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/...
