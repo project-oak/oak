@@ -57,7 +57,7 @@ pub async fn run(
                     && entry.path().extension().unwrap_or_default() == OsStr::new("json")
                 {
                     let cdi_spec = crate::cdi::CdiSpec::new(entry.path())?;
-                    if cdi_spec.kind() != "nvidia.com/gpu" {
+                    if cdi_spec.kind() == "nvidia.com/gpu" {
                         cdi_spec.inject("all", &mut spec)?;
                     }
                 }
