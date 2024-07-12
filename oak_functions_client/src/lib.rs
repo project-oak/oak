@@ -32,7 +32,9 @@ impl OakFunctionsClient {
             .connect()
             .await
             .context("couldn't connect via gRPC channel")?;
-        let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
+        let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel))
+            .await
+            .context("couldn't create GRPC streaming transport")?;
         let oak_client =
             OakClient::create(transport, verifier).await.context("couldn't create Oak client")?;
         Ok(Self { oak_client })

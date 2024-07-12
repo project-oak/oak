@@ -15,21 +15,44 @@
 //
 
 use anyhow::Context;
+use futures::channel::mpsc;
 use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 use tonic::transport::Channel;
 
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    EndorsedEvidence, GetEndorsedEvidenceRequest, InvokeRequest, RequestWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest,
+    InvokeResponse, RequestWrapper, ResponseWrapper,
 };
 
 pub struct GrpcStreamingTransport {
-    rpc_client: StreamingSessionClient<Channel>,
+    response_stream: tonic::Streaming<ResponseWrapper>,
+    request_tx_channel: mpsc::Sender<RequestWrapper>,
 }
 
 impl GrpcStreamingTransport {
-    pub fn new(rpc_client: StreamingSessionClient<Channel>) -> Self {
-        Self { rpc_client }
+    pub async fn new(rpc_client: StreamingSessionClient<Channel>) -> anyhow::Result<Self> {
+        let mut rpc_client = rpc_client;
+        let (tx, rx) = mpsc::channel(10);
+
+        let response_stream =
+            rpc_client.stream(rx).await.context("couldn't send stream request")?.into_inner();
+
+        Ok(Self { response_stream, request_tx_channel: tx })
+    }
+
+    async fn send_and_receive(
+        &mut self,
+        request: request_wrapper::Request,
+    ) -> anyhow::Result<ResponseWrapper> {
+        self.request_tx_channel
+            .try_send(RequestWrapper { request: Some(request) })
+            .context("Couldn't send request")?;
+        self.response_stream
+            .message()
+            .await
+            .context("received empty response stream")?
+            .context("empty response")
     }
 }
 
@@ -47,37 +70,21 @@ impl Transport for GrpcStreamingTransport {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        let mut response_stream = self
-            .rpc_client
-            .stream(futures_util::stream::iter(vec![RequestWrapper {
-                #[allow(clippy::needless_update)]
-                request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    encrypted_request: Some(encrypted_request.clone()),
-                    ..Default::default()
-                })),
-            }]))
+        let response_wrapper: ResponseWrapper = self
+            .send_and_receive(request_wrapper::Request::InvokeRequest(InvokeRequest {
+                encrypted_request: Some(encrypted_request.clone()),
+            }))
             .await
-            .context("couldn't send invoke request")?
-            .into_inner();
+            .context("Sending invoke request")?;
 
-        // Read the next (and only) message from the response stream.
-        let response_wrapper = response_stream
-            .message()
-            .await
-            .context("gRPC server error when invoking method")?
-            .context("received empty response stream")?;
-
-        let Some(response_wrapper::Response::InvokeResponse(invoke_response)) =
-            response_wrapper.response
-        else {
-            return Err(anyhow::anyhow!(
+        match response_wrapper.response {
+            Some(response_wrapper::Response::InvokeResponse(InvokeResponse {
+                encrypted_response: Some(encrypted_response),
+            })) => Ok(encrypted_response),
+            _ => Err(anyhow::anyhow!(
                 "response_wrapper does not have a valid invoke_response message"
-            ));
-        };
-
-        invoke_response
-            .encrypted_response
-            .context("InvokeResponse does not include an encrypted message")
+            )),
+        }
     }
 }
 
@@ -89,35 +96,20 @@ pub trait EvidenceProvider {
 #[async_trait::async_trait]
 impl EvidenceProvider for GrpcStreamingTransport {
     async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
-        let mut response_stream = self
-            .rpc_client
-            .stream(futures_util::stream::iter(vec![RequestWrapper {
-                request: Some(request_wrapper::Request::GetEndorsedEvidenceRequest(
-                    GetEndorsedEvidenceRequest {},
-                )),
-            }]))
+        let response_wrapper = self
+            .send_and_receive(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                GetEndorsedEvidenceRequest {},
+            ))
             .await
-            .context("couldn't get endorsed evidence")?
-            .into_inner();
+            .context("Sending get_endorsed_evidence request")?;
 
-        // Read the next (and only) message from the response stream.
-        let response_wrapper = response_stream
-            .message()
-            .await
-            .context("gRPC server error when requesting endorsed evidence")?
-            .context("received empty response stream")?;
-
-        let Some(response_wrapper::Response::GetEndorsedEvidenceResponse(
-            get_endorsed_evidence_response,
-        )) = response_wrapper.response
-        else {
-            return Err(anyhow::anyhow!(
-                "response_wrapper doesn't contain a valid get_endorsed_evidence_response message"
-            ));
-        };
-
-        get_endorsed_evidence_response
-            .endorsed_evidence
-            .context("get_endorsed_evidence_response message doesn't contain endorsed evidence")
+        match response_wrapper.response {
+            Some(response_wrapper::Response::GetEndorsedEvidenceResponse(
+                GetEndorsedEvidenceResponse { endorsed_evidence: Some(endorsed_evidence) },
+            )) => Ok(endorsed_evidence),
+            _ => Err(anyhow::anyhow!(
+                "response_wrapper does not have a valid invoke_response message"
+            )),
+        }
     }
 }

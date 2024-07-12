@@ -39,6 +39,7 @@ rust_library(
         "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tonic",

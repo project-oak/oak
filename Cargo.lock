@@ -2399,6 +2399,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "futures",
  "futures-util",
  "log",
  "oak_attestation_verification",

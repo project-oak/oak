@@ -71,7 +71,9 @@ async fn test1() {
         .await
         .context("couldn't connect via gRPC channel")
         .unwrap();
-    let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
+    let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel))
+        .await
+        .expect("couldn't create GRPC streaming transport");
 
     // Create client
     let mut oak_client = oak_standalone_client::new(transport).await.unwrap();
