@@ -264,7 +264,7 @@ oci_pull(
 
 oci_pull(
     name = "oak_containers_nvidia_sysimage_base",
-    digest = "sha256:fdec1e1dff19a21899c40f5004fc2d9b8e1f047a4605657eea6119e387168611",
+    digest = "sha256:96c88f713b07fcfe1f049f42042bd7b39298dd8533e646f554c8a56064619851",
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
 )
 

@@ -1,0 +1,12 @@
+# This is the static build configuration that we use with the docker-based SLSA3 generator for
+# building the system image that includes nvidia drivers, and its provenance.
+# See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
+command = [
+  "nix",
+  "develop",
+  ".#systemImageProvenance",
+  "--command",
+  "just",
+  "oak_containers_nvidia_system_image",
+]
+artifact_path = "./oak_containers_system_image/target/nvidia_image.tar.xz"

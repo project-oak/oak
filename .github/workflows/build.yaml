@@ -25,6 +25,7 @@ jobs:
           - buildconfigs/oak_containers_syslogd.sh
           - buildconfigs/oak_containers_agent.sh
           - buildconfigs/oak_containers_system_image.sh
+          - buildconfigs/oak_containers_nvidia_system_image.sh
           - buildconfigs/oak_echo_enclave_app.sh
           - buildconfigs/oak_echo_raw_enclave_app.sh
           - buildconfigs/oak_functions_enclave_app.sh

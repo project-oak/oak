@@ -31,6 +31,7 @@ readonly generated_binaries=(
     ./oak_containers_syslogd/target/oak_containers_syslogd_patched
     ./oak_containers_agent/target/oak_containers_agent_patched
     ./oak_containers_system_image/target/image.tar.xz
+    ./oak_containers_system_image/target/nvidia_image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_insecure_container_oci_filesystem_bundle.tar
@@ -42,6 +43,7 @@ readonly binary_names=(
     oak_containers_syslogd
     oak_containers_agent
     oak_containers_system_image
+    oak_containers_nvidia_system_image
     oak_containers_hello_world_container
     oak_functions_container
     oak_functions_insecure_container
