@@ -12,7 +12,10 @@ unsound = "deny"
 yanked = "deny"
 notice = "deny"
 # For crate rsa 0.9.6. Remove when there is a safe upgrade.
-ignore = ["RUSTSEC-2023-0071"]
+ignore = [
+  { id = "RUSTSEC-2023-0071", reason = "b/352738504" },
+  { id = "RUSTSEC-2024-0344", reason = "b/352738247" },
+]
 
 [bans]
 multiple-versions = "allow"
