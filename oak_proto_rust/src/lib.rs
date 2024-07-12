@@ -28,8 +28,6 @@
 macro_rules! include_proto {
     ($package: tt) => {
         include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
-        #[cfg(feature = "json")]
-        include!(concat!(env!("OUT_DIR"), "/", $package, ".serde.rs"));
     };
 }
 
@@ -110,33 +108,5 @@ pub mod oak {
             #![allow(dead_code)]
             include_proto!("oak.session.v1");
         }
-    }
-}
-
-/// Well known proto messages use a different type depending on whether JSON
-/// mappings are enabled. This can cause type checking issues when this crate
-/// is used. To address this we export relevant utilites whose implementation
-/// depends on which feature is set for this crate.
-/// This is similiar to the approach taken by serde for an analogous issue: https://docs.rs/serde/1.0.186/src/serde/integer128.rs.html#71-75
-pub mod well_known {
-    // Copied implementation from prost types: https://github.com/tokio-rs/prost/blob/d42c85e790263f78f6c626ceb0dac5fda0edcb41/prost-types/src/any.rs#L4
-    // as pbjson-types's Any does not implenment a similiar function.
-    #[cfg(feature = "json")]
-    pub fn any_from_msg<M>(msg: &M) -> Result<pbjson_types::Any, prost::EncodeError>
-    where
-        M: prost::Name,
-    {
-        let type_url = M::type_url();
-        let mut value = Vec::new();
-        prost::Message::encode(msg, &mut value)?;
-        Ok(pbjson_types::Any { type_url, value: value.into() })
-    }
-
-    #[cfg(not(feature = "json"))]
-    pub fn any_from_msg<M>(msg: &M) -> Result<prost_types::Any, prost::EncodeError>
-    where
-        M: prost::Name,
-    {
-        prost_types::Any::from_msg(msg)
     }
 }

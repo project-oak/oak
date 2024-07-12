@@ -54,6 +54,7 @@ rust_library(
     ] + select({
         # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
         "@platforms//os:none": [
+            "//third_party/prost-types",
             "@oak_no_std_crates_index//:coset",
             "@oak_no_std_crates_index//:p256",
             "@oak_no_std_crates_index//:prost",
@@ -63,6 +64,7 @@ rust_library(
             "@oak_crates_index//:coset",
             "@oak_crates_index//:p256",
             "@oak_crates_index//:prost",
+            "@oak_crates_index//:prost-types",
             "@oak_crates_index//:x86_64",
         ],
     }),

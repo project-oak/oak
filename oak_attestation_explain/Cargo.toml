@@ -9,12 +9,12 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
-oak_proto_rust = { workspace = true, features = ["json"] }
+oak_proto_rust = { workspace = true }
 sha2 = { version = "*", default-features = false }
 zerocopy = { version = "*", features = ["derive"] }
-base64 = { version = "*" }
 serde = { version = "*" }
 serde_yaml = { version = "*" }
+serde_json = { version = "*" }
 
 [dev-dependencies]
 prost = { workspace = true, default-features = false, features = [

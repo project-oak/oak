@@ -48,28 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("cargo:rerun-if-env-changed=CARGO_FEATURE_JSON");
 
-    #[cfg(feature = "json")]
-    let descriptor_path =
-        std::path::PathBuf::from(std::env::var("OUT_DIR").expect("could not get OUT_DIR"))
-            .join("proto_descriptor.bin");
-
-    #[cfg(feature = "json")]
-    config
-        // Save descriptors to file
-        .file_descriptor_set_path(&descriptor_path)
-        // Map in pbjson-types
-        .compile_well_known_types()
-        .extern_path(".google.protobuf", "::pbjson_types");
-
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
-
-    #[cfg(feature = "json")]
-    pbjson_build::Builder::new()
-        .register_descriptors(
-            &std::fs::read(descriptor_path).expect("failed to read descriptor_set"),
-        )?
-        .preserve_proto_field_names()
-        .build(&["."])?;
 
     micro_rpc_build::compile(
         &[

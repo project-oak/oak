@@ -28,10 +28,7 @@ use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_proto_rust::{
-    oak::attestation::v1::{Event, EventLog, Stage0Measurements},
-    well_known::any_from_msg,
-};
+use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use prost::Message;
 use sha2::{Digest, Sha256};
@@ -470,7 +467,7 @@ fn io_port_factory() -> PortFactoryWrapper {
 
 fn generate_event_log(measurements: Stage0Measurements) -> EventLog {
     let tag = String::from("Stage0");
-    let any = any_from_msg(&measurements);
+    let any = prost_types::Any::from_msg(&measurements);
     let event = Event { tag, event: Some(any.unwrap()) };
     log::info!("Any:{:?}", event.event.clone().unwrap());
     let mut eventlog = EventLog::default();

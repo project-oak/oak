@@ -626,6 +626,7 @@ dependencies = [
  "oak_stage0_dice",
  "p256",
  "prost",
+ "prost-types",
  "rand_core",
  "sev_serial",
  "sha2",

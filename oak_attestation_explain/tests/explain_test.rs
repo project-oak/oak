@@ -59,40 +59,44 @@ https://search.sigstore.dev/?hash=33d5453b09e16ed0d6deb7c9f076b66b92a1b472d89534
 The evidence describing this layer is outlined below.
 
 sev_snp:
-  report_data: j8Z0FbgSAfGJ8tGcvleqZvcoKRa1uebMqDq4aI9EmdMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
   current_tcb:
     boot_loader: 3
-    snp: 20
     microcode: 209
+    snp: 20
+    tee: 0
+  debug: false
+  hardware_id: 42e1f92660cc2bf7d996a4db5ebeafe83361eac6f96db350a70c7e07115fad60a85f5ae98b8fb87ec76ce2a3f81ad70df8aebbde1c3c21797897a04b616235ef
+  initial_measurement: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
+  report_data: 8fc67415b81201f189f2d19cbe57aa66f7282916b5b9e6cca83ab8688f4499d30000000000000000000000000000000000000000000000000000000000000000
   reported_tcb:
     boot_loader: 3
-    snp: 20
     microcode: 209
-  initial_measurement: bAkORZT9QO4YbJDUP3rY2QSDi6qWQ6S+HZ1P8P3WcKYlZeJBdmAAjgWMwvICnqyK
-  hardware_id: QuH5JmDMK/fZlqTbXr6v6DNh6sb5bbNQpwx+BxFfrWCoX1rpi4+4fsds4qP4GtcN+K673hw8IXl4l6BLYWI17w==
+    snp: 20
+    tee: 0
+  vmpl: 0
 "
                     );
                     assert_eq!(
                         kernel_layer.description().unwrap(),
-                        "Attestations identifying the binaries captured in the evidence in this layer can be found as outlined below.
+"Attestations identifying the binaries captured in the evidence in this layer can be found as outlined below.
 Kernel: https://search.sigstore.dev/?hash=ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
 Initial Ramdisk: https://search.sigstore.dev/?hash=daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
 
 The evidence describing the kernel layer is outlined below.
 
-kernel_image:
-  sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
-kernel_setup_data:
-  sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
-kernel_cmd_line:
-  sha2_256: 2b98586d9905a605c295d77c61e8cfd2027ae5b8a04eefa9018436f6ad114297
-kernel_raw_cmd_line: console=ttyS0
-init_ram_fs:
-  sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
-memory_map:
-  sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
 acpi:
   sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
+init_ram_fs:
+  sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+kernel_cmd_line:
+  sha2_256: 2b98586d9905a605c295d77c61e8cfd2027ae5b8a04eefa9018436f6ad114297
+kernel_image:
+  sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+kernel_raw_cmd_line: console=ttyS0
+kernel_setup_data:
+  sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
+memory_map:
+  sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
 "
                     );
                     assert_eq!(
@@ -127,7 +131,7 @@ fn produces_expected_reference_values_explaination() {
 
     assert_eq!(
         reference_values.description().expect("could not get reference values description"),
-        "_____ Root Layer _____
+"_____ Root Layer _____
 
 The attestation must be rooted in an AMD SEV-SNP TEE.
 
@@ -139,10 +143,12 @@ Attestations identifying firmware artifacts accepted by the reference values for
 The reference values describing this layer are printed below.
 
 amd_sev:
+  allow_debug: false
   min_tcb_version:
     boot_loader: 3
-    snp: 20
     microcode: 209
+    snp: 20
+    tee: 0
   stage0:
     digests:
     - sha2_384: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
@@ -160,25 +166,24 @@ Accepted Initial Ramdisk Artifacts:
 
 The reference values describing this layer are printed below.
 
+acpi:
+  digests:
+  - sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
+init_ram_fs:
+  digests:
+  - sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
 kernel:
-  image:
-    digests:
+  digests:
+    image:
     - sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
-  setup_data:
-    digests:
+    setup_data:
     - sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
 kernel_cmd_line_text:
   string_literals:
   - console=ttyS0
-init_ram_fs:
-  digests:
-  - sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
 memory_map:
   digests:
   - sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
-acpi:
-  digests:
-  - sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
 
 
 _____ Application Layer _____

@@ -337,12 +337,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
-name = "base64"
-version = "0.22.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
-
-[[package]]
 name = "base64ct"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2310,13 +2304,13 @@ name = "oak_attestation_explain"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "hex",
  "oak_attestation_verification",
  "oak_attestation_verification_test_utils",
  "oak_proto_rust",
  "prost",
  "serde",
+ "serde_json",
  "serde_yaml",
  "sha2",
  "zerocopy",
@@ -3028,13 +3022,10 @@ version = "0.0.1"
 dependencies = [
  "micro_rpc",
  "micro_rpc_build",
- "pbjson",
  "pbjson-build",
- "pbjson-types",
  "prost",
  "prost-build",
  "prost-types",
- "serde",
 ]
 
 [[package]]
@@ -3220,6 +3211,7 @@ dependencies = [
  "oak_stage0_dice",
  "p256",
  "prost",
+ "prost-types",
  "rand_core",
  "sev_serial",
  "sha2",
@@ -3492,16 +3484,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
 
 [[package]]
-name = "pbjson"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1030c719b0ec2a2d25a5df729d6cff1acf3cc230bf766f4f97833591f7577b90"
-dependencies = [
- "base64 0.21.7",
- "serde",
-]
-
-[[package]]
 name = "pbjson-build"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3511,21 +3493,6 @@ dependencies = [
  "itertools 0.11.0",
  "prost",
  "prost-types",
-]
-
-[[package]]
-name = "pbjson-types"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18f596653ba4ac51bdecbb4ef6773bc7f56042dc13927910de1684ad3d32aa12"
-dependencies = [
- "bytes",
- "chrono",
- "pbjson",
- "pbjson-build",
- "prost",
- "prost-build",
- "serde",
 ]
 
 [[package]]
