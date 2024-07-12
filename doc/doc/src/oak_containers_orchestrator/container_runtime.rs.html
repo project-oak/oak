@@ -198,7 +198,7 @@
                     &amp;&amp; entry.path().extension().unwrap_or_default() == OsStr::new(<span class="string">"json"</span>)
                 {
                     <span class="kw">let </span>cdi_spec = <span class="kw">crate</span>::cdi::CdiSpec::new(entry.path())<span class="question-mark">?</span>;
-                    <span class="kw">if </span>cdi_spec.kind() != <span class="string">"nvidia.com/gpu" </span>{
+                    <span class="kw">if </span>cdi_spec.kind() == <span class="string">"nvidia.com/gpu" </span>{
                         cdi_spec.inject(<span class="string">"all"</span>, <span class="kw-2">&amp;mut </span>spec)<span class="question-mark">?</span>;
                     }
                 }
