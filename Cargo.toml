@@ -154,4 +154,4 @@ tonic = "*"
 tonic-build = { version = "*", default-features = false }
 
 [patch.crates-io]
-tokio-vsock = { path = "third_party/tokio-vsock" }
+tokio-vsock = { git = "https://github.com/rust-vsock/tokio-vsock", rev = "2a52faeb4ede7d9712adbc096e547ab7ea766f4b" }
