@@ -64,9 +64,11 @@ jobs:
       # https://github.com/actions/runner-images/issues/2875
       - name: Free disk space
         run: |
+          set -o errexit
+          set -o xtrace
           df --human-readable
           sudo apt-get remove --yes \
-              '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-cli \
+              '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
               hhvm google-chrome-stable firefox powershell
           df --human-readable
           sudo apt-get autoremove --yes
@@ -76,12 +78,6 @@ jobs:
           docker rmi $(docker image ls --all --quiet)
           df --human-readable
           rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
-          df --human-readable
-          rm --recursive --force /usr/local/share/boost
-          df --human-readable
-          sudo swapoff --all
-          df --human-readable
-          sudo rm --force /swapfile
           df --human-readable
 
       # Keeps two versions of SUBJECT_PATHS, with space resp. comma as

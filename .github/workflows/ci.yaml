@@ -36,18 +36,15 @@ jobs:
         with:
           fetch-depth: 2
 
-      # The runner comes with all this software pre-installed: https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
-      # so we delete some large packages to make sure we have more space available.
-      #
-      # We print the remaining disk space between commands in order to have an idea of which of them
-      # have the most significant impact.
-      #
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
-      # and https://github.com/actions/virtual-environments/issues/709#issuecomment-612569242
+      # See build.yaml.
       - name: Free disk space
         run: |
+          set -o errexit
+          set -o xtrace
           df --human-readable
-          sudo apt-get remove --yes '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-cli hhvm google-chrome-stable firefox powershell
+          sudo apt-get remove --yes \
+              '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
+              hhvm google-chrome-stable firefox powershell
           df --human-readable
           sudo apt-get autoremove --yes
           df --human-readable
@@ -55,13 +52,7 @@ jobs:
           df --human-readable
           docker rmi $(docker image ls --all --quiet)
           df --human-readable
-          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
-          df --human-readable
-          rm --recursive --force /usr/local/share/boost
-          df --human-readable
-          sudo swapoff --all
-          df --human-readable
-          sudo rm --force /swapfile
+          rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
           df --human-readable
 
       - name: Docker pull

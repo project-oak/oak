@@ -34,14 +34,23 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      # Copied from https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
+      # See build.yaml.
       - name: Free disk space
         run: |
+          set -o errexit
+          set -o xtrace
           df --human-readable
-          sudo swapoff --all
-          sudo rm --force /swapfile
+          sudo apt-get remove --yes \
+              '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
+              hhvm google-chrome-stable firefox powershell
+          df --human-readable
+          sudo apt-get autoremove --yes
+          df --human-readable
           sudo apt clean
+          df --human-readable
           docker rmi $(docker image ls --all --quiet)
+          df --human-readable
+          rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
           df --human-readable
 
       - uses: DeterminateSystems/nix-installer-action@677cbc8aa1fe7e80b1fd15243ec41d5e0c7e3669
