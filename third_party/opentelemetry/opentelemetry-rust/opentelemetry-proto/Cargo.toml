@@ -1,0 +1,65 @@
+[package]
+name = "opentelemetry-proto"
+version = "0.6.0"
+description = "Protobuf generated files and transformations."
+homepage = "https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-proto"
+repository = "https://github.com/open-telemetry/opentelemetry-rust/tree/main/opentelemetry-proto"
+readme = "README.md"
+categories = [
+    "development-tools::debugging",
+    "development-tools::profiling",
+    "asynchronous",
+]
+keywords = ["opentelemetry", "otlp", "logging", "tracing", "metrics"]
+license = "Apache-2.0"
+edition = "2021"
+rust-version = "1.70"
+autotests = false
+
+[lib]
+doctest = false
+
+[[test]]
+name = "grpc_build"
+path = "tests/grpc_build.rs"
+
+[[test]]
+name = "json_deserialize"
+path = "tests/json_deserialize.rs"
+
+
+[features]
+default = ["full"]
+
+full = ["gen-tonic", "trace", "logs", "metrics", "zpages", "with-serde"]
+
+# crates used to generate rs files
+gen-tonic = ["gen-tonic-messages", "tonic/transport"]
+gen-tonic-messages = ["tonic", "prost"]
+
+# telemetry pillars and functions
+trace = ["opentelemetry/trace", "opentelemetry_sdk/trace"]
+metrics = ["opentelemetry/metrics", "opentelemetry_sdk/metrics"]
+logs = ["opentelemetry/logs", "opentelemetry_sdk/logs"]
+zpages = ["trace"]
+testing = ["opentelemetry/testing"]
+
+# add ons
+with-schemars = ["schemars"]
+with-serde = ["serde", "hex"]
+
+[dependencies]
+tonic = { workspace = true, optional = true, features = ["codegen", "prost"] }
+prost = { workspace = true, optional = true }
+opentelemetry = { version = "0.23", default-features = false, path = "../opentelemetry" }
+opentelemetry_sdk = { version = "0.23", default-features = false, path = "../opentelemetry-sdk" }
+schemars = { version = "0.8", optional = true }
+serde = { workspace = true, optional = true, features = ["serde_derive"] }
+hex = { version = "0.4.3", optional = true }
+
+[dev-dependencies]
+opentelemetry = { version = "0.23", features = ["testing"], path = "../opentelemetry" }
+tonic-build = { workspace = true }
+prost-build = { workspace = true }
+tempfile = "3.3.0"
+serde_json = { workspace = true }

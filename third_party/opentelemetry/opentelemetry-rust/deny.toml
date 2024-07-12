@@ -1,0 +1,38 @@
+exclude=[
+    "actix-http",
+    "actix-http-tracing",
+    "actix-udp",
+    "actix-udp-example",
+    "tracing-grpc",
+    "http"
+]
+
+[licenses]
+unlicensed = "deny"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "ISC",
+    "BSD-3-Clause",
+    "OpenSSL"
+]
+
+[licenses.private]
+ignore = true
+
+[[licenses.clarify]]
+name = "ring"
+version = "*"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
+
+[advisories]
+ignore = [
+    # unsoundness in indirect dependencies without a safe upgrade below
+    "RUSTSEC-2021-0145",
+    "RUSTSEC-2019-0036"
+]
+unmaintained = "allow"
+yanked = "allow"
