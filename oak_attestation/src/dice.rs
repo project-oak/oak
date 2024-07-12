@@ -25,13 +25,12 @@ use oak_dice::{
     },
     evidence::Stage0DiceData,
 };
-use p256::ecdsa::{SigningKey, VerifyingKey};
-use zeroize::Zeroize;
-
-use crate::proto::oak::attestation::v1::{
+use oak_proto_rust::oak::attestation::v1::{
     ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
     TeePlatform,
 };
+use p256::ecdsa::{SigningKey, VerifyingKey};
+use zeroize::Zeroize;
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
 pub struct DiceBuilder {

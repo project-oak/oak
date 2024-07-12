@@ -55,8 +55,7 @@ pub mod proto {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.functions");
         }
-        pub use oak_attestation::proto::oak::{attestation, session};
-        pub use oak_proto_rust::oak::crypto;
+        pub use oak_proto_rust::oak::{attestation, crypto, session};
     }
 }
 

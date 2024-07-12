@@ -21,11 +21,12 @@ use std::{
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
-use oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
+use oak_attestation::dice::DiceBuilder;
 use oak_dice::cert::{
     CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
     SHA2_256_ID,
 };
+use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use zeroize::Zeroize;

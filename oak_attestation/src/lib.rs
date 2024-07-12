@@ -18,17 +18,5 @@
 
 extern crate alloc;
 
-pub mod proto {
-    pub mod oak {
-        pub mod session {
-            pub mod v1 {
-                #![allow(dead_code)]
-                include!(concat!(env!("OUT_DIR"), "/oak.session.v1.rs"));
-            }
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto};
-    }
-}
-
 pub mod dice;
 pub mod handler;
