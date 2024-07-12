@@ -50,3 +50,20 @@ RUN tar --directory=/tmp --extract --file /tmp/linux-${LINUX_KERNEL_VERSION}.tar
     && apt-get --yes purge libc6-dev flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
     && apt-get --yes autoremove
 
+# Remove a bunch of stuff we know we won't need.
+RUN apt-get --yes purge openssl autoconf cpp gcc groff-base libgssapi-krb5-2 man-db \
+    && apt-get --yes autoremove
+# Technically this leaves the packages in a broken state as they're dependencies of nvidia-driver;
+# however, as we can reasonably predict we will never rebuild kernel modules without rebuilding the
+# whole system image we don't really need the compiler in there.
+# It's entirely possible that:
+# (a) we could force-purge more packages without any ill effects and
+# (b) the current list includes something we actually need but don't know yet.
+RUN  dpkg --purge --force-all \
+    binutils-common libbinutils libctf0 libgprofng0 binutils-x86-64-linux-gnu binutils \
+    libxml2 libicu72 libperl5.36 perl libdpkg-perl perl-modules-5.36 dpkg-dev dkms libz3-4 \
+    libasan8 libtsan2 liblsan0 libubsan1 xz-utils make \
+    libllvm15 gcc-12 cpp-12 libgcc-12-dev \
+    nvidia-kernel-dkms linux-headers-${LINUX_KERNEL_VERSION} \
+    xserver-xorg-video-nvidia xkb-data keyboard-configuration xserver-common xserver-xorg-core \
+    libfreetype6 libxfont2
