@@ -272,7 +272,15 @@ SECTIONS {
      * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - (16 + 3*12 + 2*22 + 18) : {
+    .guid_tables TOP - 0x20 - (16             /* AMD SEV header       <--------|     */
+                                  + 3*12      /* AMD SEV metadata sections     |     */
+                                  + 16        /* Intel TDX metadata GUID       |     */
+                                  + 16        /* TDVF decriptor       <--------|--|  */
+                                  + 0*32      /* TDVF sections                 |  |  */
+                                  + 22        /* AMD SEV metadata offset block |  |  */
+                                  + 22        /* AMD SEV-ES reset block           |  */
+                                  + 22        /* Intel TDX metadata offset block  |  */
+                                  + 18        /* footer */) : {
         /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
          * them together at the end of the file, thus we put them in the .guid_tables section along with
          * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
@@ -308,6 +316,39 @@ SECTIONS {
         LONG(SEV_SECTION_CPUID)
         HIDDEN(sev_guided_structure_end = .);
 
+        /* TDX metadata.
+         *
+         * See TDX Virtual Firmware Design Guide, chapter 11
+         * Size: 16 bytes UUID + 16 bytes descriptor + a number of 32-byte sections.
+         * TDX Metadata GUID "e9eaf9f3-168e-44d5-a8eb-7f4d8738f6ae"
+         * Hypervisor checks this UUID
+         */
+        HIDDEN(tdx_metadata_guid = .);
+        LONG(0xe9eaf9f3)
+        SHORT(0x168e)
+        SHORT(0x44d5)
+        SHORT(0xeba8)
+        BYTE(0x7f) BYTE(0x4d) BYTE(0x87) BYTE(0x38) BYTE(0xf6) BYTE(0xae)
+        /* Descriptor: See Table 11-1: TDVF_DESCRIPTOR definition
+         * uint32 signature ("TDVF"), uint32 length, uint32 version, uint32 number of sections */
+        HIDDEN(tdx_metadata_structure_start = .);
+        BYTE(0x54) BYTE(0x44) BYTE(0x56) BYTE(0x46)
+        LONG(tdx_metadata_structure_end - tdx_metadata_structure_start)
+        LONG(1) /* version, must be 1 */
+        LONG((tdx_metadata_structure_end - tdx_metadata_structure_start - 16) / 32)
+        /* 32-byte sections to be added: "BFV", "CFV", ...
+         * See Table 11-2: TDVF_SECTION definition
+         * uint32 offset, uint32 raw data size, uint64 memory base, uint64 memory size, uint32 type, uint32 attributes
+         * For example
+         * LONG(tdx_bfv_raw_data_offset)
+         * LONG(tdx_bfv_raw_data_size)
+         * QUAD(tdx_bfv_memory_base)
+         * QUAD(tdx_bfv_memory_size)
+         * LONG(tdx_metadata_section_type_bfv)
+         * LONG(tdx_metadata_attributes_extendmr)
+         */
+        HIDDEN(tdx_metadata_structure_end = .);
+
         /*
          * This is where the GUIDed tables actually start.
          * Size: each entry is 22 bytes + a 18-byte footer.
@@ -334,6 +375,18 @@ SECTIONS {
         SHORT(0x0e89)
         BYTE(0x68) BYTE(0xc7) BYTE(0x7e) BYTE(0x2f) BYTE(0xb4) BYTE(0x4e)
         HIDDEN(sev_es_reset_block_end = .);
+
+        /* TDX metadata offset block: uint32 addr, uint16 size, 16-byte GUID */
+        /* https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm#L58 */
+        HIDDEN(tdx_metadata_offset_start = .);
+        LONG(TOP - tdx_metadata_structure_start) /* points to Descriptor */
+        SHORT(tdx_metadata_offset_end - tdx_metadata_offset_start)
+        LONG(0xe47a6535)
+        SHORT(0x984a)
+        SHORT(0x4798)
+        SHORT(0x5e86)
+        BYTE(0x46) BYTE(0x85) BYTE(0xa7) BYTE(0xbf) BYTE(0x8e) BYTE(0xc2)
+        HIDDEN(tdx_metadata_offset_end = .);
 
         /* Footer: uint16 size, 16-byte GUID */
         SHORT(tables_end - tables_start)
