@@ -425,7 +425,6 @@
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -483,8 +482,7 @@
             <span class="attr">#![allow(clippy::return_self_not_must_use)]
             </span><span class="macro">tonic::include_proto!</span>(<span class="string">"oak.functions"</span>);
         }
-        <span class="kw">pub use </span>oak_attestation::proto::oak::{attestation, session};
-        <span class="kw">pub use </span>oak_proto_rust::oak::crypto;
+        <span class="kw">pub use </span>oak_proto_rust::oak::{attestation, crypto, session};
     }
 }
 

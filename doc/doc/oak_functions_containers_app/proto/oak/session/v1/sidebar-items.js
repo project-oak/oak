@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["EndorsedEvidence","GetEndorsedEvidenceRequest","GetEndorsedEvidenceResponse","InvokeRequest","InvokeResponse"]};
+window.SIDEBAR_ITEMS = {"mod":["handshake_request","handshake_response","session_request","session_response"],"struct":["AttestRequest","AttestResponse","AttestationBinding","AttestationBindingMessage","EndorsedEvidence","GetEndorsedEvidenceRequest","GetEndorsedEvidenceResponse","HandshakeRequest","HandshakeResponse","InvokeRequest","InvokeResponse","NoiseHandshakeMessage","SessionRequest","SessionResponse"]};
