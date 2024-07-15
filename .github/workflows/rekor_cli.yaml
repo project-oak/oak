@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      # Needed for GCS upload.
+      #  Needed for GCS upload.
       # - name: Authenticate to Google Cloud
       #   uses: google-github-actions/auth@v2
       #   with:
