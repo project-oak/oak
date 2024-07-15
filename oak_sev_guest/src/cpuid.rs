@@ -18,6 +18,8 @@
 //! the CPUID page that is provisioned into the VM guest memory during SEV-SNP
 //! startup.
 
+use core::arch::x86_64::CpuidResult;
+
 use zerocopy::{FromBytes, FromZeroes};
 
 use crate::interrupts::MutableInterruptStackFrame;
@@ -91,6 +93,12 @@ pub struct CpuidOutput {
     pub ecx: u32,
     /// The EDX register output from calling CPUID.
     pub edx: u32,
+}
+
+impl From<CpuidOutput> for CpuidResult {
+    fn from(value: CpuidOutput) -> Self {
+        CpuidResult { eax: value.eax, ebx: value.ebx, ecx: value.ecx, edx: value.edx }
+    }
 }
 
 /// Representation of the CPUID page.

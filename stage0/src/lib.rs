@@ -53,6 +53,7 @@ mod apic;
 mod cmos;
 mod dice_attestation;
 mod fw_cfg;
+mod hal;
 mod initramfs;
 mod kernel;
 mod logging;

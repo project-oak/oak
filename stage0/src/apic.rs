@@ -14,19 +14,16 @@
 // limitations under the License.
 //
 
-use core::arch::x86_64::__cpuid;
-
-use oak_sev_guest::cpuid::CpuidInput;
 use x86_64::PhysAddr;
 
 use crate::{
+    hal,
     msr::{
         ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
         MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
         X2ApicIdRegister, X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister,
         X2ApicVersionRegister,
     },
-    sev::GHCB_WRAPPER,
 };
 
 /// Interrupt Command.
@@ -86,29 +83,10 @@ trait SpuriousInterrupts {
 }
 
 mod xapic {
-    use core::mem::MaybeUninit;
-
-    use x86_64::{
-        instructions::tlb::flush_all,
-        structures::paging::{PageSize, PageTableFlags, Size2MiB, Size4KiB},
-        PhysAddr, VirtAddr,
-    };
+    use x86_64::PhysAddr;
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
-    use crate::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
-
-    /// Representation of the APIC MMIO registers.
-    ///
-    /// We do not represent _all_ the xAPIC registers here, but only the ones we
-    /// are interested in.
-    ///
-    /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC
-    /// Registers) of the AMD64 Architecture Programmer's Manual, Volume 2.
-    #[repr(C, align(4096))]
-    struct ApicRegisters {
-        registers: [u32; 1024],
-    }
-    static_assertions::assert_eq_size!(ApicRegisters, [u8; Size4KiB::SIZE as usize]);
+    use crate::hal;
 
     // We divide the offset by 4 as we're indexing by u32's, not bytes.
     const APIC_ID_REGISTER_OFFSET: usize = 0x020 / core::mem::size_of::<u32>();
@@ -119,36 +97,15 @@ mod xapic {
     const INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = 0x310 / core::mem::size_of::<u32>();
 
     pub(crate) struct Xapic {
-        mmio_area: &'static mut ApicRegisters,
-
-        // APIC base address, we keep track of it as we may need to use the GHCB protocol instead
-        // of accessing `mmio_area` directly
-        aba: PhysAddr,
+        mmio: crate::hal::Mmio,
     }
 
     impl Xapic {
         fn read(&self, register: usize) -> u32 {
-            // Safety: these registers can only be accessed through ApicRegisters, by which
-            // we should have established where the MMIO area is.
-            if let Some(ghcb) = GHCB_WRAPPER.get() {
-                ghcb.lock()
-                    .mmio_read_u32(self.aba + (register * core::mem::size_of::<u32>()))
-                    .expect("couldn't read the MSR using the GHCB protocol")
-            } else {
-                // Safety: the APIC base register is supported in all modern CPUs.
-                unsafe { (&self.mmio_area.registers[register] as *const u32).read_volatile() }
-            }
+            self.mmio.read_u32(register)
         }
-        fn write(&mut self, register: usize, val: u32) {
-            if let Some(ghcb) = GHCB_WRAPPER.get() {
-                ghcb.lock()
-                    .mmio_write_u32(self.aba + (register * core::mem::size_of::<u32>()), val)
-                    .expect("couldn't read the MSR using the GHCB protocol")
-            } else {
-                // Safety: these registers can only be accessed through ApicRegisters, by which
-                // we should have established where the MMIO area is.
-                unsafe { (&mut self.mmio_area.registers[register] as *mut u32).write_volatile(val) }
-            }
+        unsafe fn write(&mut self, register: usize, val: u32) {
+            unsafe { self.mmio.write_u32(register, val) }
         }
     }
 
@@ -175,16 +132,19 @@ mod xapic {
         ) -> Result<(), &'static str> {
             let destination: u8 =
                 destination.try_into().map_err(|_| "destination APIC ID too big for xAPIC")?;
-            self.write(INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET, (destination as u32) << 24);
-            self.write(
-                INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
-                destination_shorthand as u32
-                    | trigger_mode as u32
-                    | level as u32
-                    | destination_mode as u32
-                    | message_type as u32
-                    | vector as u32,
-            );
+            // Safety: the values we write are valid according to the spec.
+            unsafe {
+                self.write(INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET, (destination as u32) << 24);
+                self.write(
+                    INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
+                    destination_shorthand as u32
+                        | trigger_mode as u32
+                        | level as u32
+                        | destination_mode as u32
+                        | message_type as u32
+                        | vector as u32,
+                );
+            }
             Ok(())
         }
     }
@@ -195,7 +155,8 @@ mod xapic {
         }
 
         fn clear(&mut self) {
-            self.write(ERROR_STATUS_REGISTER_OFFSET, 0)
+            // Safety: zeroing the register is valid for ErrorStatus.
+            unsafe { self.write(ERROR_STATUS_REGISTER_OFFSET, 0) }
         }
     }
 
@@ -219,32 +180,15 @@ mod xapic {
         }
 
         fn write(&mut self, flags: super::SpuriousInterruptFlags, vec: u8) {
-            self.write(SPURIOUS_INTERRUPT_REGISTER_OFFSET, flags.bits() | vec as u32)
+            // Safety: the values we write are valid according to the spec.
+            unsafe { self.write(SPURIOUS_INTERRUPT_REGISTER_OFFSET, flags.bits() | vec as u32) }
         }
     }
 
-    // Reserve a 4K chunk of memory -- we don't really care where, we only care that
-    // we don't overlap and can change the physical address it points to.
-    static mut APIC_MMIO_AREA: MaybeUninit<ApicRegisters> = MaybeUninit::uninit();
-
-    pub(crate) fn init(apic_base: PhysAddr) -> Xapic {
-        // Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA
-        // virtual address to be somewhere in the first two megabytes.
-
-        // Safety: we're not dereferencing the pointer, we just want to know where it
-        // landed in virtual memory.
-        let vaddr = VirtAddr::from_ptr(unsafe { APIC_MMIO_AREA.as_ptr() });
-        if vaddr.as_u64() > Size2MiB::SIZE {
-            panic!("APIC_MMIO_AREA virtual address does not land in the first page table");
-        }
-        let mut tables = PAGE_TABLE_REFS.get().unwrap().lock();
-        tables.pt_0[vaddr.p1_index()].set_addr(
-            apic_base,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE,
-        );
-        flush_all();
-        // Safety: we've mapped APIC_MMIO_AREA to where the caller claimed it to be.
-        Xapic { mmio_area: unsafe { APIC_MMIO_AREA.assume_init_mut() }, aba: apic_base }
+    /// Safety: caller needs to guarantee that `apic_base` points to the APIC
+    /// MMIO memory.
+    pub(crate) unsafe fn init(apic_base: PhysAddr) -> Xapic {
+        Xapic { mmio: hal::Mmio::new(apic_base) }
     }
 }
 
@@ -340,13 +284,7 @@ pub struct Lapic {
 
 impl Lapic {
     pub fn enable() -> Result<Self, &'static str> {
-        let x2apic = if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().get_cpuid(CpuidInput { eax: 0x0000_0001, ecx: 0, xcr0: 0, xss: 0 })?.ecx
-        } else {
-            // Safety: the CPUs we support are new enough to support CPUID.
-            unsafe { __cpuid(0x0000_0001) }.ecx
-        } & (1 << 21)
-            > 0;
+        let x2apic = hal::cpuid(0x0000_0001).ecx & (1 << 21) > 0;
         // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
         // explanation of the initialization procedure.
         let (aba, mut flags) = ApicBase::read();
@@ -373,7 +311,8 @@ impl Lapic {
             }
         } else {
             log::info!("Using xAPIC for AP initialization.");
-            let apic = xapic::init(aba);
+            // Safety: we trust the address provided by the ApicBase MSR.
+            let apic = unsafe { xapic::init(aba) };
             Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         // Version should be between [0x10...0x20).
