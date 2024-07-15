@@ -7,7 +7,7 @@ on:
     branches: [stage0verify]
 
 jobs:
-  build_attest_all:
+  build_attest_rekor_cli:
     permissions:
       actions: read
       id-token: write
@@ -40,22 +40,23 @@ jobs:
         id: build
         run: |
           set -o errexit
+          set -o xtrace
           git clone https://github.com/sigstore/rekor.git rekor-cli
           cd rekor-cli
           make rekor-cli
-          cp --preserve=timestamps rekor-cli /tmp
-          chmod 755 /tmp/rekor-cli
+          cp --preserve=timestamps rekor-cli /tmp/rekor-cli-linux-amd64
+          chmod 755 /tmp/rekor-cli-linux-amd64
 
       - name: Show build artifact
         run: |
-          ls -la /tmp/rekor_cli
-          /tmp/rekor_cli --version
+          ls -la /tmp/rekor-cli-linux-amd64
+          /tmp/rekor-cli-linux-amd64 --version
 
       - name: Attest
         id: attest
         uses: actions/attest-build-provenance@v1.1.1
         with:
-          subject-path: /tmp/rekor_cli
+          subject-path: /tmp/rekor-cli-linux-amd64
 
       - name: Show bundle
         run: |
@@ -76,7 +77,7 @@ jobs:
 
           bucket=oak-bins
           package_name=rekor_cli_linux_amd64
-          binary_path=/tmp/rekor_cli
+          binary_path=/tmp/rekor-cli-linux-amd64
           provenance_path=${{ steps.attest.outputs.bundle-path }}
 
           gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/binary"
