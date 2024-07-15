@@ -1,6 +1,8 @@
 name: Build and attest Rekor CLI
 
 on:
+  push:
+    branches: [stage0verify]
   workflow_dispatch:
     branches: [stage0verify]
 
