@@ -309,6 +309,9 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -594,7 +597,10 @@
     <span class="kw">use </span><span class="kw">super</span>::get_digest;
     <span class="kw">use </span><span class="kw">crate</span>::claims::{parse_endorsement_statement, validate_endorsement};
 
-    <span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"testdata/endorsement.json"</span>;
+    <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
+    </span><span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"oak_attestation_verification/testdata/endorsement.json"</span>;
+    <span class="attr">#[cfg(not(feature = <span class="string">"bazel"</span>))]
+    </span><span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"testdata/endorsement.json"</span>;
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_parse_endorsement_statement() {

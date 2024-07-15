@@ -193,6 +193,14 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -333,7 +341,11 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_extend_chunk() {
-        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
+        <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
+        </span><span class="kw">let </span>wasm_module_path = <span class="string">"oak_functions/examples/echo/echo.wasm"</span>;
+        <span class="attr">#[cfg(not(feature = <span class="string">"bazel"</span>))]
+        </span><span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
+
         <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
@@ -358,7 +370,11 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_extend_entries() {
-        <span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
+        <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
+        </span><span class="kw">let </span>wasm_module_path = <span class="string">"oak_functions/examples/echo/echo.wasm"</span>;
+        <span class="attr">#[cfg(not(feature = <span class="string">"bazel"</span>))]
+        </span><span class="kw">let </span>wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="string">"echo"</span>);
+
         <span class="kw">let </span>wasm_module = std::fs::read(wasm_module_path).unwrap();
 
         <span class="kw">let </span>instance = OakFunctionsInstance::&lt;WasmHandler&gt;::new(
