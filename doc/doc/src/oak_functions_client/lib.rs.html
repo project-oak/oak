@@ -60,6 +60,8 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -94,7 +96,9 @@
             </span>.connect()
             .<span class="kw">await
             </span>.context(<span class="string">"couldn't connect via gRPC channel"</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
+        <span class="kw">let </span>transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel))
+            .<span class="kw">await
+            </span>.context(<span class="string">"couldn't create GRPC streaming transport"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>oak_client =
             OakClient::create(transport, verifier).<span class="kw">await</span>.context(<span class="string">"couldn't create Oak client"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ oak_client })

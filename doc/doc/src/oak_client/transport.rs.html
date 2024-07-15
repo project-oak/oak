@@ -115,14 +115,6 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -140,21 +132,44 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>futures::channel::mpsc;
 <span class="kw">use </span>oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 <span class="kw">use </span>tonic::transport::Channel;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    EndorsedEvidence, GetEndorsedEvidenceRequest, InvokeRequest, RequestWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest,
+    InvokeResponse, RequestWrapper, ResponseWrapper,
 };
 
 <span class="kw">pub struct </span>GrpcStreamingTransport {
-    rpc_client: StreamingSessionClient&lt;Channel&gt;,
+    response_stream: tonic::Streaming&lt;ResponseWrapper&gt;,
+    request_tx_channel: mpsc::Sender&lt;RequestWrapper&gt;,
 }
 
 <span class="kw">impl </span>GrpcStreamingTransport {
-    <span class="kw">pub fn </span>new(rpc_client: StreamingSessionClient&lt;Channel&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ rpc_client }
+    <span class="kw">pub async fn </span>new(rpc_client: StreamingSessionClient&lt;Channel&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>rpc_client = rpc_client;
+        <span class="kw">let </span>(tx, rx) = mpsc::channel(<span class="number">10</span>);
+
+        <span class="kw">let </span>response_stream =
+            rpc_client.stream(rx).<span class="kw">await</span>.context(<span class="string">"couldn't send stream request"</span>)<span class="question-mark">?</span>.into_inner();
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ response_stream, request_tx_channel: tx })
+    }
+
+    <span class="kw">async fn </span>send_and_receive(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: request_wrapper::Request,
+    ) -&gt; anyhow::Result&lt;ResponseWrapper&gt; {
+        <span class="self">self</span>.request_tx_channel
+            .try_send(RequestWrapper { request: <span class="prelude-val">Some</span>(request) })
+            .context(<span class="string">"Couldn't send request"</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.response_stream
+            .message()
+            .<span class="kw">await
+            </span>.context(<span class="string">"received empty response stream"</span>)<span class="question-mark">?
+            </span>.context(<span class="string">"empty response"</span>)
     }
 }
 
@@ -172,37 +187,21 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="self">self
-            </span>.rpc_client
-            .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
-                <span class="attr">#[allow(clippy::needless_update)]
-                </span>request: <span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    encrypted_request: <span class="prelude-val">Some</span>(encrypted_request.clone()),
-                    ..Default::default()
-                })),
-            }]))
+        <span class="kw">let </span>response_wrapper: ResponseWrapper = <span class="self">self
+            </span>.send_and_receive(request_wrapper::Request::InvokeRequest(InvokeRequest {
+                encrypted_request: <span class="prelude-val">Some</span>(encrypted_request.clone()),
+            }))
             .<span class="kw">await
-            </span>.context(<span class="string">"couldn't send invoke request"</span>)<span class="question-mark">?
-            </span>.into_inner();
+            </span>.context(<span class="string">"Sending invoke request"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Read the next (and only) message from the response stream.
-        </span><span class="kw">let </span>response_wrapper = response_stream
-            .message()
-            .<span class="kw">await
-            </span>.context(<span class="string">"gRPC server error when invoking method"</span>)<span class="question-mark">?
-            </span>.context(<span class="string">"received empty response stream"</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span><span class="prelude-val">Some</span>(response_wrapper::Response::InvokeResponse(invoke_response)) =
-            response_wrapper.response
-        <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+        <span class="kw">match </span>response_wrapper.response {
+            <span class="prelude-val">Some</span>(response_wrapper::Response::InvokeResponse(InvokeResponse {
+                encrypted_response: <span class="prelude-val">Some</span>(encrypted_response),
+            })) =&gt; <span class="prelude-val">Ok</span>(encrypted_response),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
                 <span class="string">"response_wrapper does not have a valid invoke_response message"
-            </span>));
-        };
-
-        invoke_response
-            .encrypted_response
-            .context(<span class="string">"InvokeResponse does not include an encrypted message"</span>)
+            </span>)),
+        }
     }
 }
 
@@ -214,36 +213,21 @@
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>GrpcStreamingTransport {
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="self">self
-            </span>.rpc_client
-            .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
-                request: <span class="prelude-val">Some</span>(request_wrapper::Request::GetEndorsedEvidenceRequest(
-                    GetEndorsedEvidenceRequest {},
-                )),
-            }]))
+        <span class="kw">let </span>response_wrapper = <span class="self">self
+            </span>.send_and_receive(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                GetEndorsedEvidenceRequest {},
+            ))
             .<span class="kw">await
-            </span>.context(<span class="string">"couldn't get endorsed evidence"</span>)<span class="question-mark">?
-            </span>.into_inner();
+            </span>.context(<span class="string">"Sending get_endorsed_evidence request"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Read the next (and only) message from the response stream.
-        </span><span class="kw">let </span>response_wrapper = response_stream
-            .message()
-            .<span class="kw">await
-            </span>.context(<span class="string">"gRPC server error when requesting endorsed evidence"</span>)<span class="question-mark">?
-            </span>.context(<span class="string">"received empty response stream"</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span><span class="prelude-val">Some</span>(response_wrapper::Response::GetEndorsedEvidenceResponse(
-            get_endorsed_evidence_response,
-        )) = response_wrapper.response
-        <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
-                <span class="string">"response_wrapper doesn't contain a valid get_endorsed_evidence_response message"
-            </span>));
-        };
-
-        get_endorsed_evidence_response
-            .endorsed_evidence
-            .context(<span class="string">"get_endorsed_evidence_response message doesn't contain endorsed evidence"</span>)
+        <span class="kw">match </span>response_wrapper.response {
+            <span class="prelude-val">Some</span>(response_wrapper::Response::GetEndorsedEvidenceResponse(
+                GetEndorsedEvidenceResponse { endorsed_evidence: <span class="prelude-val">Some</span>(endorsed_evidence) },
+            )) =&gt; <span class="prelude-val">Ok</span>(endorsed_evidence),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
+                <span class="string">"response_wrapper does not have a valid invoke_response message"
+            </span>)),
+        }
     }
 }
 </code></pre></div></section></main></body></html>
