@@ -50,7 +50,7 @@ jobs:
       - name: Show build artifact
         run: |
           ls -la /tmp/rekor-cli-linux-amd64
-          /tmp/rekor-cli-linux-amd64 --version
+          /tmp/rekor-cli-linux-amd64 version
 
       - name: Attest
         id: attest
