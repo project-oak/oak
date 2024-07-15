@@ -16,9 +16,11 @@
 
 use alloc::{vec, vec::Vec};
 
+use oak_crypto::identity_key::IdentityKeyHandle;
+
 use crate::{
     attestation::{AttestationType, AttestationVerifier, Attester},
-    handshake::{EncryptionKeyHandle, HandshakeType},
+    handshake::HandshakeType,
 };
 
 #[allow(dead_code)]
@@ -72,7 +74,7 @@ impl<'a> SessionConfigBuilder<'a> {
         self
     }
 
-    pub fn set_self_private_key(mut self, private_key: &'a dyn EncryptionKeyHandle) -> Self {
+    pub fn set_self_private_key(mut self, private_key: &'a dyn IdentityKeyHandle) -> Self {
         if self.config.handshaker_config.self_static_private_key.is_none() {
             self.config.handshaker_config.self_static_private_key = Some(private_key);
         } else {
@@ -106,7 +108,7 @@ pub struct AttestationProviderConfig<'a> {
 pub struct HandshakerConfig<'a> {
     pub handshake_type: HandshakeType,
     // Used for authentication schemes where a static public key is pre-shared with the responder.
-    pub self_static_private_key: Option<&'a dyn EncryptionKeyHandle>,
+    pub self_static_private_key: Option<&'a dyn IdentityKeyHandle>,
     // Used for authentication schemes where a responder's static public key is pre-shared with
     // the initiator.
     pub peer_static_public_key: Option<Vec<u8>>,

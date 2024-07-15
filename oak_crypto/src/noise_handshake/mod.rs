@@ -29,14 +29,17 @@ use alloc::vec::Vec;
 
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
-pub use crate::noise_handshake::crypto_wrapper::{
-    aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
-    p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
-    P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
-};
 use crate::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
+};
+pub use crate::{
+    identity_key::IdentityKeyHandle,
+    noise_handshake::crypto_wrapper::{
+        aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
+        p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
+        P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
+    },
 };
 
 // This is assumed to be vastly larger than any connection will ever reach.
@@ -147,36 +150,24 @@ pub struct Response {
     pub response: Vec<u8>,
 }
 
-/// Performs the Responder side of the Noise protocol with the NK or NN pattern.
-/// |identity_private_key_bytes| contains the private key scalar for the
-/// service's provisioned identity. |in_data| is provided by the Initiator and
-/// contains its ephemeral public key and encrypted payload.
-///
-/// The identity public key is computed from the private key, but could
-/// alternatively be stored separately to reduce computation if needed to
-/// reduce per-transaction computation.
-/// See https://noiseexplorer.com/patterns/NK/
-pub fn respond_nk(identity_private_key_bytes: &[u8], in_data: &[u8]) -> Result<Response, Error> {
+pub fn respond_nk(identity_key: &dyn IdentityKeyHandle, in_data: &[u8]) -> Result<Response, Error> {
     if in_data.len() < P256_X962_LEN {
         return Err(Error::InvalidHandshake);
     }
 
     let mut noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(&[0; 1]); // Prologue
-
-    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    let identity_scalar: P256Scalar =
-        identity_private_key_bytes.try_into().map_err(|_| Error::InvalidPrivateKey)?;
-    let identity_pub = identity_scalar.compute_public_key();
-    noise.mix_hash_point(identity_pub.as_slice());
+    noise.mix_hash_point(
+        identity_key.get_public_key().map_err(|_| Error::InvalidPrivateKey)?.as_slice(),
+    );
 
     // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
     let peer_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
     noise.mix_hash(peer_pub.as_slice());
     noise.mix_key(peer_pub.as_slice());
 
-    let es_ecdh_bytes = crypto_wrapper::p256_scalar_mult(&identity_scalar, &peer_pub)
-        .map_err(|_| Error::InvalidHandshake)?;
+    let es_ecdh_bytes =
+        identity_key.derive_dh_secret(peer_pub.to_vec()).map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(es_ecdh_bytes.as_slice());
     finish_response(&mut noise, in_data, &peer_pub)
 }

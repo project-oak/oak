@@ -15,16 +15,23 @@
 #[cfg(test)]
 use alloc::vec;
 
-use crate::noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn, P256Scalar};
+use crate::{
+    identity_key::{IdentityKey, IdentityKeyHandle},
+    noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn},
+};
 
 #[test]
 fn process_nk_handshake() {
     let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
-    let identity_priv = P256Scalar::generate();
-    let identity_pub_bytes = identity_priv.compute_public_key();
-    let mut initiator = HandshakeInitiator::new_nk(&identity_pub_bytes);
+    let identity_priv = IdentityKey::generate();
+    let identity_pub_bytes = identity_priv
+        .get_public_key()
+        .expect("couldn't get the public key from the generated identity key");
+    let mut initiator = HandshakeInitiator::new_nk(
+        identity_pub_bytes.as_slice().try_into().expect("wrong public key format"),
+    );
     let message = initiator.build_initial_message();
-    let handshake_response = respond_nk(identity_priv.bytes().as_slice(), &message).unwrap();
+    let handshake_response = respond_nk(&identity_priv, &message).unwrap();
     let mut enclave_crypter = handshake_response.crypter;
 
     let (client_hash, mut client_crypter) =

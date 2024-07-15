@@ -25,6 +25,7 @@ extern crate std;
 pub mod encryption_key;
 pub mod encryptor;
 pub mod hpke;
+pub mod identity_key;
 pub mod noise_handshake;
 pub mod signer;
 #[cfg(test)]
