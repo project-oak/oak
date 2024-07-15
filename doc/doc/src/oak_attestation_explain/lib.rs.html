@@ -836,46 +836,6 @@
 <a href="#834" id="834">834</a>
 <a href="#835" id="835">835</a>
 <a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a>
-<a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
-<a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
-<a href="#856" id="856">856</a>
-<a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -903,12 +863,11 @@
 <span class="kw">use </span>std::fmt::Write;
 
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation,
     attestation::v1::{
         root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
-        ContainerLayerData, ContainerLayerReferenceValues, KernelLayerData,
+        ContainerLayerData, ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
         KernelLayerReferenceValues, OakContainersData, OakContainersReferenceValues,
         OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
@@ -919,6 +878,8 @@
 <span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
 
 <span class="kw">use </span><span class="kw">crate</span>::alloc::{borrow::ToOwned, string::ToString};
+
+<span class="kw">mod </span>json_serialization;
 
 <span class="kw">const </span>AMD_SEV_SNP_TITLE: <span class="kw-2">&amp;</span>str = <span class="string">"AMD SEV-SNP"</span>;
 <span class="kw">const </span>INTEL_TDX_TITLE: <span class="kw-2">&amp;</span>str = <span class="string">"Intel TDX"</span>;
@@ -938,84 +899,6 @@
     <span class="doccomment">/// Provides human readable explanations for a layer of an attestation data
     /// stack, including directions to map the attestation data to source code.
     </span><span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt;;
-}
-
-<span class="kw">fn </span>reencode_base64_value_as_hex(
-    value: <span class="kw-2">&amp;</span>serde_yaml::Value,
-) -&gt; <span class="prelude-ty">Result</span>&lt;serde_yaml::Value, anyhow::Error&gt; {
-    <span class="kw">let </span>base64_encoded = value.as_str().context(<span class="string">"expected value to be a string string"</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>bytes = BASE64_STANDARD
-        .decode(base64_encoded)
-        .map_err(anyhow::Error::msg)
-        .context(<span class="string">"invalid base64"</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>hex_encoded = hex::encode(bytes);
-    <span class="prelude-val">Ok</span>(serde_yaml::Value::String(hex_encoded))
-}
-
-<span class="kw">fn </span>reencode_digests_as_hex(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
-    <span class="kw">if </span>serde_yaml::from_value::&lt;RawDigest&gt;(value.clone()).is_ok() {
-        value.as_mapping_mut().expect(<span class="string">"expected rawdigest to be a map"</span>).iter_mut().for_each(
-            |(_key, hash_value)| {
-                <span class="comment">// The proto3 JSON mapping spec uses base64 encoding.
-                </span><span class="kw-2">*</span>hash_value = reencode_base64_value_as_hex(hash_value)
-                    .expect(<span class="string">"failed to reencode base64 digest bytes as hex"</span>);
-            },
-        );
-    };
-}
-
-<span class="comment">// Performs operation on every node in a potentially nested YAML tree.
-</span><span class="kw">fn </span>walk_nodes&lt;F&gt;(
-    value: <span class="kw-2">&amp;mut </span>serde_yaml::Value,
-    operator: <span class="kw-2">&amp;</span>F, <span class="comment">// F is borrowed as otherwise the code encounters the recurision limit.
-</span>) <span class="kw">where
-    </span>F: Fn(<span class="kw-2">&amp;mut </span>serde_yaml::Value),
-{
-    operator(value);
-    <span class="kw">match </span>value {
-        serde_yaml::Value::Mapping(map) =&gt; {
-            map.iter_mut().for_each(|(<span class="kw">_</span>, v)| walk_nodes(v, operator))
-        }
-        serde_yaml::Value::Sequence(arr) =&gt; arr.iter_mut().for_each(|v| walk_nodes(v, operator)),
-        <span class="kw">_ </span>=&gt; {}
-    }
-}
-
-<span class="comment">// Adapt the YAML mapping of evidence to make it human readable.
-</span><span class="kw">fn </span>make_evidence_human_readable(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
-    walk_nodes(value, <span class="kw-2">&amp;</span>reencode_digests_as_hex);
-}
-
-<span class="comment">// Adapt the YAML mapping of reference values to make it human readable.
-</span><span class="kw">fn </span>make_reference_values_human_readable(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
-    <span class="kw">fn </span>modify_node(value: <span class="kw-2">&amp;mut </span>serde_yaml::Value) {
-        <span class="kw">if let </span>serde_yaml::Value::Mapping(map) = value {
-            <span class="comment">// Some referene values are nested under a value key. Remove
-            // for human readability.
-            </span><span class="kw">if </span>map.len() == <span class="number">1
-                </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(inner_value) = map.get_mut(<span class="string">"value"</span>)
-            {
-                <span class="kw-2">*</span>value = inner_value.clone();
-                <span class="kw">return</span>;
-            }
-            <span class="comment">// Some messages nest digests twice. Once under a digest key that
-            // holds an object, and then again under a digest key that holds an array.
-            // Simplify by rmeoving the first nesting.
-            </span><span class="kw">if </span>map.len() == <span class="number">1
-                </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(digests) = map.get_mut(<span class="string">"digests"</span>)
-                &amp;&amp; <span class="macro">matches!</span>(digests, serde_yaml::Value::Mapping(<span class="kw">_</span>))
-            {
-                <span class="kw-2">*</span>value = digests.clone();
-                <span class="kw">return</span>;
-            }
-        }
-
-        reencode_digests_as_hex(value)
-    }
-
-    <span class="comment">// Reference values are usually a nested set of YAML nodes. Visit each one
-    // and simplify it if needed.
-    </span>walk_nodes(value, <span class="kw-2">&amp;</span>modify_node);
 }
 
 <span class="kw">fn </span>get_tee_name_from_root_layer_evidence(
@@ -1045,6 +928,16 @@
         RootLayerReferenceValues { amd_sev: <span class="prelude-val">None</span>, intel_tdx: <span class="prelude-val">None</span>, insecure: <span class="prelude-val">None </span>} =&gt; {
             <span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"no TEE value found in the reference values"</span>))
         }
+    }
+}
+
+<span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ExtractedEvidence {
+    <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
+        <span class="kw">let </span>yaml_representation = {
+            <span class="kw">let </span>json_representation = json_serialization::serialize_extracted_evidence(<span class="self">self</span>);
+            serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+        </span>};
+        serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)
     }
 }
 
@@ -1105,9 +998,10 @@
                 container_layer.description()<span class="question-mark">?
             </span>)),
             <span class="kw">_ </span>=&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation =
-                    serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-                make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+                <span class="kw">let </span>yaml_representation = {
+                    <span class="kw">let </span>json_representation = json_serialization::serialize_reference_values(<span class="self">self</span>);
+                    serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+                </span>};
                 serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)
             }
         }
@@ -1167,9 +1061,11 @@
                 <span class="kw">let </span>firmware_hash_explaination =
                     initial_memory_sha256_digest.display_hash_explaination();
                 <span class="kw">let </span>yaml_string = {
-                    <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation =
-                        serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-                    make_evidence_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+                    <span class="kw">let </span>yaml_representation = {
+                        <span class="kw">let </span>json_representation =
+                            json_serialization::serialize_root_layer_data(<span class="self">self</span>);
+                        serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+                    </span>};
                     serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
                 </span>};
                 <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
@@ -1261,8 +1157,11 @@ firmware_provenances_as_bullet_points.join(<span class="string">"\n"</span>)
             }
         };
         <span class="kw">let </span>reference_values = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation =
+                    json_serialization::serialize_root_layer_reference_values(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             <span class="macro">format!</span>(
                 <span class="string">"{REFERENCE_VALUES_INTRO}
 {}"</span>,
@@ -1318,8 +1217,10 @@ firmware_provenances_as_bullet_points.join(<span class="string">"\n"</span>)
             init_ram_fs_digest.provenance_link()
         };
         <span class="kw">let </span>yaml_string = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_evidence_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation = json_serialization::serialize_kernel_layer_data(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
         </span>};
 
@@ -1404,8 +1305,11 @@ The evidence describing the kernel layer is outlined below.
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>KernelLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
         <span class="kw">let </span>reference_values = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation =
+                    json_serialization::serialize_kernel_layer_reference_values(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             <span class="macro">format!</span>(
                 <span class="string">"{REFERENCE_VALUES_INTRO}
 {}"</span>,
@@ -1445,8 +1349,10 @@ The evidence describing the kernel layer is outlined below.
             system_image_digest.provenance_link()
         };
         <span class="kw">let </span>yaml_string = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_evidence_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation = json_serialization::serialize_system_layer_data(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
         </span>};
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
@@ -1503,8 +1409,11 @@ The evidence describing this layer is outlined below.
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>SystemLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
         <span class="kw">let </span>reference_values = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation =
+                    json_serialization::serialize_system_layer_reference_values(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             <span class="macro">format!</span>(
                 <span class="string">"{REFERENCE_VALUES_INTRO}
 {}"</span>,
@@ -1534,8 +1443,11 @@ The evidence describing this layer is outlined below.
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ApplicationLayerData {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
         <span class="kw">let </span>yaml_string = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_evidence_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation =
+                    json_serialization::serialize_application_layer_data(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
         </span>};
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
@@ -1554,8 +1466,11 @@ The evidence describing this layer is outlined below.
 
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ApplicationLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+        <span class="kw">let </span>yaml_representation = {
+            <span class="kw">let </span>json_representation =
+                json_serialization::serialize_application_layer_reference_values(<span class="self">self</span>);
+            serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+        </span>};
         serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)
     }
 }
@@ -1569,8 +1484,10 @@ The evidence describing this layer is outlined below.
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ContainerLayerData {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
         <span class="kw">let </span>yaml_string = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_evidence_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation = json_serialization::serialize_container_layer_data(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             serde_yaml::to_string(<span class="kw-2">&amp;</span>yaml_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
         </span>};
         <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(
@@ -1647,8 +1564,11 @@ The evidence describing this layer is outlined below.
 <span class="kw">impl </span>HumanReadableExplanation <span class="kw">for </span>ContainerLayerReferenceValues {
     <span class="kw">fn </span>description(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String, anyhow::Error&gt; {
         <span class="kw">let </span>reference_values = {
-            <span class="kw">let </span><span class="kw-2">mut </span>yaml_representation = serde_yaml::to_value(<span class="self">self</span>).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-            make_reference_values_human_readable(<span class="kw-2">&amp;mut </span>yaml_representation);
+            <span class="kw">let </span>yaml_representation = {
+                <span class="kw">let </span>json_representation =
+                    json_serialization::serialize_container_layer_reference_values(<span class="self">self</span>);
+                serde_yaml::to_value(json_representation).map_err(anyhow::Error::msg)<span class="question-mark">?
+            </span>};
             <span class="macro">format!</span>(
                 <span class="string">"{REFERENCE_VALUES_INTRO}
 {}"</span>,

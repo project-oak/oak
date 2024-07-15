@@ -112,36 +112,6 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -172,8 +142,6 @@
 </span><span class="macro">macro_rules! </span>include_proto {
     (<span class="macro-nonterminal">$package</span>: tt) =&gt; {
         <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">"OUT_DIR"</span>), <span class="macro">concat!</span>(<span class="string">"/"</span>, <span class="macro-nonterminal">$package</span>, <span class="string">".rs"</span>)));
-        <span class="attr">#[cfg(feature = <span class="string">"json"</span>)]
-        </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">"OUT_DIR"</span>), <span class="string">"/"</span>, <span class="macro-nonterminal">$package</span>, <span class="string">".serde.rs"</span>));
     };
 }
 
@@ -254,34 +222,6 @@
             <span class="attr">#![allow(dead_code)]
             </span><span class="macro">include_proto!</span>(<span class="string">"oak.session.v1"</span>);
         }
-    }
-}
-
-<span class="doccomment">/// Well known proto messages use a different type depending on whether JSON
-/// mappings are enabled. This can cause type checking issues when this crate
-/// is used. To address this we export relevant utilites whose implementation
-/// depends on which feature is set for this crate.
-/// This is similiar to the approach taken by serde for an analogous issue: https://docs.rs/serde/1.0.186/src/serde/integer128.rs.html#71-75
-</span><span class="kw">pub mod </span>well_known {
-    <span class="comment">// Copied implementation from prost types: https://github.com/tokio-rs/prost/blob/d42c85e790263f78f6c626ceb0dac5fda0edcb41/prost-types/src/any.rs#L4
-    // as pbjson-types's Any does not implenment a similiar function.
-    </span><span class="attr">#[cfg(feature = <span class="string">"json"</span>)]
-    </span><span class="kw">pub fn </span>any_from_msg&lt;M&gt;(msg: <span class="kw-2">&amp;</span>M) -&gt; <span class="prelude-ty">Result</span>&lt;pbjson_types::Any, prost::EncodeError&gt;
-    <span class="kw">where
-        </span>M: prost::Name,
-    {
-        <span class="kw">let </span>type_url = M::type_url();
-        <span class="kw">let </span><span class="kw-2">mut </span>value = Vec::new();
-        prost::Message::encode(msg, <span class="kw-2">&amp;mut </span>value)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(pbjson_types::Any { type_url, value: value.into() })
-    }
-
-    <span class="attr">#[cfg(not(feature = <span class="string">"json"</span>))]
-    </span><span class="kw">pub fn </span>any_from_msg&lt;M&gt;(msg: <span class="kw-2">&amp;</span>M) -&gt; <span class="prelude-ty">Result</span>&lt;prost_types::Any, prost::EncodeError&gt;
-    <span class="kw">where
-        </span>M: prost::Name,
-    {
-        prost_types::Any::from_msg(msg)
     }
 }
 </code></pre></div></section></main></body></html>

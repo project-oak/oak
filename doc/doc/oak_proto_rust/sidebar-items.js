@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["oak","well_known"]};
+window.SIDEBAR_ITEMS = {"mod":["oak"]};

@@ -6,7 +6,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["micro_rpc",["",[],["lib.rs","status.rs"]]],\
 ["micro_rpc_build",["",[],["lib.rs"]]],\
 ["oak_attestation",["",[],["dice.rs","handler.rs","lib.rs"]]],\
-["oak_attestation_explain",["",[],["lib.rs"]]],\
+["oak_attestation_explain",["",[],["json_serialization.rs","lib.rs"]]],\
 ["oak_attestation_explain_cli",["",[],["main.rs"]]],\
 ["oak_attestation_verification",["",[],["amd.rs","claims.rs","endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]]],\
 ["oak_attestation_verification_test_utils",["",[],["lib.rs"]]],\
