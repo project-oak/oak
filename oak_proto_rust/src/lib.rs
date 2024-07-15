@@ -67,9 +67,6 @@ pub mod oak {
 
     pub mod containers {
         include_proto!("oak.containers");
-        pub mod example {
-            include_proto!("oak.containers.example");
-        }
     }
 
     pub mod crypto {

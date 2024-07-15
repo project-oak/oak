@@ -39,6 +39,40 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct RequestWrapper {
+    #[prost(oneof = "request_wrapper::Request", tags = "2, 3")]
+    pub request: ::core::option::Option<request_wrapper::Request>,
+}
+/// Nested message and enum types in `RequestWrapper`.
+pub mod request_wrapper {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Request {
+        #[prost(message, tag = "2")]
+        InvokeRequest(super::InvokeRequest),
+        #[prost(message, tag = "3")]
+        GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ResponseWrapper {
+    #[prost(oneof = "response_wrapper::Response", tags = "2, 3")]
+    pub response: ::core::option::Option<response_wrapper::Response>,
+}
+/// Nested message and enum types in `ResponseWrapper`.
+pub mod response_wrapper {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Response {
+        #[prost(message, tag = "2")]
+        InvokeResponse(super::InvokeResponse),
+        #[prost(message, tag = "3")]
+        GetEndorsedEvidenceResponse(super::GetEndorsedEvidenceResponse),
+    }
+}
 /// Request message for the remote attestation.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

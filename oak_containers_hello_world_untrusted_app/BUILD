@@ -27,6 +27,7 @@ rust_library(
     srcs = [
         "src/app_client.rs",
         "src/lib.rs",
+        "src/service.rs",
         "tests/integration_test.rs",
     ],
     crate_name = "oak_containers_hello_world_untrusted_app",
@@ -37,8 +38,11 @@ rust_library(
         "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
     ],
 )
@@ -70,7 +74,7 @@ cargo_build_script(
     },
     data = [
         "//proto/containers:hello_world_proto",
-        "//proto/crypto:crypto_proto",
+        "//proto/session:service_streaming_proto",
     ],
     tools = [
         "@com_google_protobuf//:protoc",

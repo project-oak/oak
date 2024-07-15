@@ -2445,9 +2445,10 @@ name = "oak_containers_hello_world_untrusted_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "clap",
- "duct",
  "env_logger",
+ "futures",
  "log",
  "oak_client",
  "oak_containers_launcher",
@@ -2457,6 +2458,7 @@ dependencies = [
  "once_cell",
  "prost",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tower",
  "xtask",

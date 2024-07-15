@@ -21,26 +21,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let included_protos = oak_proto_build_utils::get_common_proto_path();
 
     let proto_paths = [
-        "../proto/crypto/crypto.proto",
         "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
+        "../proto/attestation/reference_value.proto",
         "../proto/attestation/endorsement.proto",
-        "../proto/attestation/expected_value.proto",
         "../proto/attestation/eventlog.proto",
         "../proto/attestation/evidence.proto",
-        "../proto/attestation/reference_value.proto",
+        "../proto/attestation/expected_value.proto",
         "../proto/attestation/verification.proto",
-        "../proto/containers/interfaces.proto",
         "../proto/containers/hello_world.proto",
+        "../proto/containers/interfaces.proto",
+        "../proto/crypto/crypto.proto",
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/application_config.proto",
         "../proto/oak_functions/lookup_data.proto",
-        "../proto/session/session.proto",
-        "../proto/session/messages.proto",
         "../proto/oak_functions/sdk/oak_functions_wasm.proto",
         "../proto/oak_functions/service/oak_functions.proto",
         "../proto/oak_functions/testing.proto",
+        "../proto/session/messages.proto",
+        "../proto/session/service_streaming.proto",
+        "../proto/session/session.proto",
     ];
     let mut config = prost_build::Config::new();
 

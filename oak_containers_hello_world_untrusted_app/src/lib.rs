@@ -20,56 +20,13 @@ mod proto {
                 tonic::include_proto!("oak.containers.example");
             }
         }
-        pub use oak_proto_rust::oak::crypto;
+        pub mod session {
+            pub mod v1 {
+                tonic::include_proto!("oak.session.v1");
+            }
+        }
     }
 }
 
 mod app_client;
-
-use oak_containers_launcher::{
-    proto::oak::key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
-    Launcher,
-};
-use oak_proto_rust::oak::session::v1::EndorsedEvidence;
-
-use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-
-pub struct UntrustedApp {
-    launcher: Launcher,
-    app_client: app_client::TrustedApplicationClient,
-}
-
-impl UntrustedApp {
-    pub async fn create(
-        launcher_args: oak_containers_launcher::Args,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
-        let trusted_app_address = launcher.get_trusted_app_address().await?;
-        let app_client =
-            app_client::TrustedApplicationClient::create(format!("http://{trusted_app_address}"))
-                .await?;
-        Ok(Self { launcher, app_client })
-    }
-
-    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
-        self.launcher.get_endorsed_evidence().await
-    }
-
-    pub async fn get_group_keys(
-        &mut self,
-        request: GetGroupKeysRequest,
-    ) -> anyhow::Result<GetGroupKeysResponse> {
-        self.launcher.get_group_keys(request).await
-    }
-
-    pub async fn hello(
-        &mut self,
-        encrypted_request: EncryptedRequest,
-    ) -> anyhow::Result<EncryptedResponse> {
-        self.app_client.hello(encrypted_request).await
-    }
-
-    pub async fn kill(&mut self) {
-        self.launcher.kill().await;
-    }
-}
+pub mod service;
