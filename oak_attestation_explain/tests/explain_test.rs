@@ -15,8 +15,6 @@
 //
 #![feature(assert_matches)]
 
-use std::fs;
-
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
 use oak_attestation_verification_test_utils::reference_values_from_evidence;
 use oak_proto_rust::oak::attestation::v1::{
@@ -24,14 +22,13 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 use prost::Message;
 
-// TODO: b/334900893 - Generate extracted evidence programatically.
-const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
+const RK_EVIDENCE: &[u8] = include_bytes!("../testdata/rk_evidence.binarypb").as_slice();
 
 #[test]
 fn produces_expected_explaination() {
     let mut extracted_evidence = {
-        let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read extracted evidence");
-        let evidence = Evidence::decode(serialized.as_slice()).expect("could not decode evidence");
+        // TODO: b/334900893 - Generate extracted evidence programatically.
+        let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
         oak_attestation_verification::verifier::extract_evidence(&evidence)
             .expect("could not extract evidence")
     };
@@ -120,9 +117,7 @@ config: {}
 fn produces_expected_reference_values_explaination() {
     let reference_values: ReferenceValues = {
         let extracted_evidence = {
-            let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read extracted evidence");
-            let evidence =
-                Evidence::decode(serialized.as_slice()).expect("could not decode evidence");
+            let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
             oak_attestation_verification::verifier::extract_evidence(&evidence)
                 .expect("could not extract evidence")
         };
