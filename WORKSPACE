@@ -303,6 +303,7 @@ gcc_register_toolchain(
 
 gcc_register_toolchain(
     name = "gcc_toolchain_x86_64_unknown_none",  # Repository @gcc_toolchain_x86_64_unknown_none
+    extra_ldflags = ["-nostdlib"],
     target_arch = ARCHS.x86_64,
     target_compatible_with = [
         "@platforms//cpu:x86_64",
