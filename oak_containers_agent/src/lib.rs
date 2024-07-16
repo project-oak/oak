@@ -14,3 +14,5 @@
 // limitations under the License.
 
 pub mod metrics;
+
+pub use opentelemetry::global::set_error_handler;

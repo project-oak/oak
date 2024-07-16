@@ -51,9 +51,7 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:oci-spec",
-        "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:opentelemetry-otlp",
-        "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:procfs",
         "@oak_crates_index//:prost",
@@ -80,6 +78,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
+        "//oak_containers_agent:lib",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

@@ -17,6 +17,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 use oak_containers_orchestrator::{
     crypto::generate_instance_keys, launcher_client::LauncherClient,
 };
@@ -55,6 +56,16 @@ async fn main() -> anyhow::Result<()> {
             .await
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
+
+    set_error_handler(|err| eprintln!("oak_containers_orchestrator: OTLP error: {}", err))?;
+
+    let metrics_config = MetricsConfig {
+        launcher_addr: args.launcher_addr,
+        scope: String::from("orchestrator"),
+        excluded_metrics: None,
+    };
+
+    let _oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
 
     // Get key provisioning role.
     let key_provisioning_role = launcher_client

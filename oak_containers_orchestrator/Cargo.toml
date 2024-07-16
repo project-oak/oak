@@ -19,17 +19,11 @@ nix = { version = "*", features = ["user", "fs"] }
 oak_attestation = { workspace = true }
 oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
+oak_containers_agent = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
 oci-spec = "*"
-opentelemetry = { version = "*", default-features = false, features = [
-  "metrics",
-] }
-opentelemetry_sdk = { version = "*", default-features = false, features = [
-  "metrics",
-  "rt-tokio",
-] }
 opentelemetry-otlp = { version = "*", default-features = false, features = [
   "grpc-tonic",
   "metrics",
