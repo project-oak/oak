@@ -18,13 +18,14 @@ use std::{
     fmt::Display,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     num::{NonZeroU16, NonZeroU32},
-    sync::Arc,
-    time::Duration,
 };
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use oak_containers_orchestrator::launcher_client::LauncherClient;
+use oak_containers_agent::{
+    metrics::{MetricsConfig, OakObserver},
+    set_error_handler,
+};
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 #[cfg(feature = "native")]
@@ -35,16 +36,10 @@ use oak_proto_rust::oak::functions::config::{
     application_config::CommunicationChannel, ApplicationConfig, HandlerType,
     TcpCommunicationChannel, WasmtimeConfig,
 };
-use opentelemetry::{
-    global::set_error_handler,
-    metrics::{Meter, MeterProvider},
-    KeyValue,
-};
 use prost::Message;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpListener,
-    runtime::Handle,
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_vsock::{VsockAddr, VsockListener};
@@ -75,7 +70,7 @@ async fn serve<S>(
             + Unpin,
     >,
     encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
-    meter: Meter,
+    observer: OakObserver,
 ) -> anyhow::Result<()>
 where
     S: Display,
@@ -87,14 +82,14 @@ where
             app_serve::<WasmtimeHandler>(
                 stream,
                 encryption_key_handle,
-                meter,
+                observer,
                 handler_config.unwrap_or_default(),
             )
             .await
         }
         HandlerType::HandlerNative => {
             if cfg!(feature = "native") {
-                app_serve::<NativeHandler>(stream, encryption_key_handle, meter, ()).await
+                app_serve::<NativeHandler>(stream, encryption_key_handle, observer, ()).await
             } else {
                 panic!(
                     "Application config specified `native` handler type, but this binary does not support that feature"
@@ -107,12 +102,6 @@ where
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-
-    let launcher_client = Arc::new(
-        LauncherClient::create(args.launcher_addr.parse()?)
-            .await
-            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
-    );
 
     // Use eprintln here, as normal logging would go through the OTLP connection,
     // which may no longer be valid.
@@ -128,71 +117,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // RPC, and the cycle continues.
     stderrlog::new().module("oak_functions_service").verbosity(log::Level::Debug).init().unwrap();
 
-    let metrics = opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(launcher_client.openmetrics_builder())
-        .with_period(Duration::from_secs(60))
-        .build()?;
+    let metrics_config = MetricsConfig {
+        launcher_addr: args.launcher_addr,
+        scope: String::from("oak_functions_containers_app"),
+        excluded_metrics: None,
+    };
 
-    let meter = metrics.meter("oak_functions_containers_app");
-    let _tokio_metrics = [
-        meter
-            .u64_observable_counter("tokio_workers_count")
-            .with_description("Number of worker threads used by the runtime")
-            .with_callback(|counter| {
-                if let Ok(num_workers) = Handle::current().metrics().num_workers().try_into() {
-                    counter.observe(num_workers, &[]);
-                }
-            })
-            .try_init()?,
-        meter
-            .u64_observable_counter("tokio_blocking_threads_count")
-            .with_description("Number of additional threads used by the runtime")
-            .with_callback(|counter| {
-                if let Ok(num_blocking_threads) =
-                    Handle::current().metrics().num_blocking_threads().try_into()
-                {
-                    counter.observe(num_blocking_threads, &[]);
-                }
-            })
-            .try_init()?,
-        meter
-            .u64_observable_counter("tokio_active_tasks")
-            .with_description("Number of active tasks in the runtime")
-            .with_callback(|counter| {
-                if let Ok(active_tasks_count) =
-                    Handle::current().metrics().active_tasks_count().try_into()
-                {
-                    counter.observe(active_tasks_count, &[]);
-                }
-            })
-            .try_init()?,
-        meter
-            .u64_observable_counter("tokio_injection_queue_depth")
-            .with_description("Number of tasks currently in the runtime's injection queue")
-            .with_callback(|counter| {
-                if let Ok(injection_queue_depth) =
-                    Handle::current().metrics().injection_queue_depth().try_into()
-                {
-                    counter.observe(injection_queue_depth, &[]);
-                }
-            })
-            .try_init()?,
-        meter
-            .u64_observable_counter("tokio_worker_local_queue_depth")
-            .with_description("Number of tasks currently scheduled in the workers' local queue")
-            .with_callback(|counter| {
-                let metrics = Handle::current().metrics();
-                for worker in 0..metrics.num_workers() {
-                    if let (Ok(depth), Ok(worker)) =
-                        (metrics.worker_local_queue_depth(worker).try_into(), worker.try_into())
-                    {
-                        counter.observe(depth, &[KeyValue::new::<&str, i64>("worker", worker)])
-                    }
-                }
-            })
-            .try_init()?,
-    ];
+    let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
 
     let mut client =
         OrchestratorClient::create().await.context("couldn't create Orchestrator client")?;
@@ -234,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 wasmtime_config,
                 Box::new(TcpListenerStream::new(listener)),
                 encryption_key_handle,
-                meter,
+                oak_observer,
             ))
         }
         CommunicationChannel::VsockChannel(config) => {
@@ -248,7 +179,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 wasmtime_config,
                 Box::new(listener.incoming()),
                 encryption_key_handle,
-                meter,
+                oak_observer,
             ))
         }
     };

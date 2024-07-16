@@ -20,6 +20,7 @@ use std::{
     time::Duration,
 };
 
+use oak_containers_agent::metrics::OakObserver;
 use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_containers_app::serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
@@ -46,7 +47,7 @@ async fn test_lookup() {
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
         Box::new(encryption_key),
-        NoopMeterProvider::new().meter(""),
+        OakObserver { meter: NoopMeterProvider::new().meter(""), metric_registry: Vec::new() },
         Default::default(),
     ));
 

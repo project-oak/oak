@@ -309,6 +309,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
                 .with_unit(Unit::new("milliseconds"))
                 .with_description("Distribution of server-side RPC latency")
                 .init(),
+            rpc_count: self.meter.u64_counter("rpc_count").init(),
         }
     }
 }
@@ -317,6 +318,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
 pub struct MonitoringService<S> {
     inner: S,
     latencies: Histogram<u64>,
+    rpc_count: Counter<u64>,
 }
 
 impl<S, T> tower::Service<http::Request<T>> for MonitoringService<S>
@@ -353,6 +355,7 @@ where
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
         let latencies = self.latencies.clone();
+        self.rpc_count.add(1, &attributes);
 
         Box::pin(async move {
             let now = Instant::now();

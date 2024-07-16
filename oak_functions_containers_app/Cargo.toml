@@ -21,7 +21,7 @@ clap = { version = "*", features = ["derive"] }
 libloading = { version = "*", optional = true }
 http = "*"
 oak_attestation = { workspace = true }
-oak_containers_orchestrator = { workspace = true }
+oak_containers_agent = { workspace = true }
 oak_containers_sdk = { workspace = true }
 oak_debug_service = { workspace = true }
 oak_functions_abi = { workspace = true }
@@ -34,15 +34,6 @@ oak_proto_rust = { workspace = true }
 log = "*"
 micro_rpc = { workspace = true }
 opentelemetry = { version = "*", default-features = false, features = [
-  "metrics",
-  "trace",
-] }
-opentelemetry_sdk = { version = "*", default-features = false, features = [
-  "metrics",
-  "trace",
-  "rt-tokio",
-] }
-opentelemetry-otlp = { version = "*", default-features = false, features = [
   "metrics",
   "trace",
 ] }

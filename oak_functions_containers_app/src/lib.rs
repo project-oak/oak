@@ -18,14 +18,12 @@
 
 use std::{
     error::Error,
-    future::Future,
-    pin::Pin,
     sync::{Arc, OnceLock},
-    time::Instant,
 };
 
 use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
+use oak_containers_agent::metrics::OakObserver;
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
 use oak_proto_rust::oak::functions::{
@@ -34,10 +32,7 @@ use oak_proto_rust::oak::functions::{
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
     ReserveResponse,
 };
-use opentelemetry::{
-    metrics::{Histogram, Meter, Unit},
-    KeyValue,
-};
+use opentelemetry::metrics::{Histogram, Meter, Unit};
 use prost::Message;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::StreamExt;
@@ -213,83 +208,6 @@ where
     }
 }
 
-#[derive(Clone)]
-struct MonitoringLayer {
-    meter: Meter,
-}
-
-impl MonitoringLayer {
-    fn new(meter: Meter) -> Self {
-        Self { meter }
-    }
-}
-
-impl<S> tower::Layer<S> for MonitoringLayer {
-    type Service = MonitoringService<S>;
-
-    fn layer(&self, inner: S) -> Self::Service {
-        MonitoringService {
-            inner,
-            latencies: self
-                .meter
-                .u64_histogram("rpc_server_latency")
-                .with_unit(Unit::new("milliseconds"))
-                .with_description("Distribution of server-side RPC latency")
-                .init(),
-        }
-    }
-}
-
-#[derive(Clone)]
-struct MonitoringService<S> {
-    inner: S,
-    latencies: Histogram<u64>,
-}
-
-impl<S, T> tower::Service<http::Request<T>> for MonitoringService<S>
-where
-    S: tower::Service<http::Request<T>> + Clone + Send + 'static,
-    <S as tower::Service<http::Request<T>>>::Future: Send,
-    T: Send + 'static,
-{
-    type Response = S::Response;
-    type Error = S::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
-
-    fn poll_ready(
-        &mut self,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: http::Request<T>) -> Self::Future {
-        // `[...]/Service/Method`, but we count from right, so method is last
-        let mut attributes = Vec::new();
-        let mut parts = req.uri().path().rsplitn(3, '/');
-        if let Some(method) = parts.next() {
-            attributes.push(KeyValue::new("rpc_method", method.to_string()));
-        }
-        if let Some(service) = parts.next() {
-            attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
-        }
-
-        // copied from the example in `tower::Service` to guarantee that `poll_ready`
-        // has been called on the proper instance (and not the clone!)
-        let clone = self.inner.clone();
-        let mut inner = std::mem::replace(&mut self.inner, clone);
-
-        let latencies = self.latencies.clone();
-
-        Box::pin(async move {
-            let now = Instant::now();
-            let resp = inner.call(req).await;
-            latencies.record(now.elapsed().as_micros().try_into().unwrap_or(u64::MAX), &attributes);
-            resp
-        })
-    }
-}
-
 /// Creates a `trace::Span` for the currently active gRPC request.
 ///
 /// The fields of the Span are filled out according to the OpenTelemetry
@@ -374,7 +292,7 @@ pub async fn serve<H>(
             + Unpin,
     >,
     encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
-    meter: Meter,
+    observer: OakObserver,
     handler_config: H::HandlerConfig,
 ) -> anyhow::Result<()>
 where
@@ -398,12 +316,12 @@ where
             ),
         )
         .layer(tower::load_shed::LoadShedLayer::new())
-        .layer(MonitoringLayer::new(meter.clone()))
+        .layer(observer.create_monitoring_layer())
         .add_service(
             OakFunctionsServer::new(OakFunctionsContainersService::<H>::new(
                 handler_config,
                 Arc::from(encryption_key_handle),
-                Some(Arc::new(OtelObserver::new(meter))),
+                Some(Arc::new(OtelObserver::new(observer.meter))),
             ))
             .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
             .accept_compressed(CompressionEncoding::Gzip),
