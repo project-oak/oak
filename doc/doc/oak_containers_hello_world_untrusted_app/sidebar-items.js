@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["UntrustedApp"]};
+window.SIDEBAR_ITEMS = {"mod":["service"]};

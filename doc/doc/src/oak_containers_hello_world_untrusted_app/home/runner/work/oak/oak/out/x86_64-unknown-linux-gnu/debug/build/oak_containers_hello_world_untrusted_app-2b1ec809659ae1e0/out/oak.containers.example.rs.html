@@ -132,7 +132,7 @@
 </span><span class="kw">pub struct </span>HelloRequest {
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>encrypted_request: ::core::option::Option&lt;
-        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedRequest,
+        ::oak_proto_rust::oak::crypto::v1::EncryptedRequest,
     &gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -140,7 +140,7 @@
 </span><span class="kw">pub struct </span>HelloResponse {
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>encrypted_response: ::core::option::Option&lt;
-        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedResponse,
+        ::oak_proto_rust::oak::crypto::v1::EncryptedResponse,
     &gt;,
 }
 <span class="doccomment">/// Generated client implementations.

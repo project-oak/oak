@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["example"],"struct":["GetApplicationConfigResponse","GetImageResponse","SendAttestationEvidenceRequest"]};
+window.SIDEBAR_ITEMS = {"struct":["GetApplicationConfigResponse","GetImageResponse","SendAttestationEvidenceRequest"]};

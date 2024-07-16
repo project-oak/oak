@@ -1384,144 +1384,6 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>certificate_authority: ::core::option::Option&lt;CertificateAuthority&gt;,
 }
-<span class="doccomment">/// Endorsement for binaries from the Transparent Release process.
-/// &lt;&lt;https://github.com/project-oak/oak/blob/main/docs/release.md&gt;&gt;
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>TransparentReleaseEndorsement {
-    <span class="doccomment">/// JSON string comtaining the endorsement statement for the underlying binary.
-    /// The format is described here:
-    /// &lt;https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format&gt;
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>endorsement: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The data hashed as endorsement subject can be inlined here when needed.
-    /// Can be the binary or the attachment, depending on the usage specified
-    /// in the endorsement.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>subject: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The signature for the endorsement.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>endorsement_signature: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The log entry as proof of inclusion of the endorsement statement in Rekor.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>RootLayerEndorsements {
-    <span class="doccomment">/// The serialized TEE certificate(s). The details of the format and how the
-    /// certificate(s) are encoded into this byte array are implementation
-    /// specific. In case of AMD-SEV-SNP, as described in
-    /// &lt;https://www.amd.com/system/files/TechDocs/57230.pdf,&gt; there are three
-    /// different certificates packaged in two different files. We only include
-    /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
-    /// AMD SEV Key (ASK) are long-lived.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>tee_certificate: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Endorsement of the Stage0 binary.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>stage0: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>KernelLayerEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
-    </span><span class="kw">pub </span>memory_map: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
-    </span><span class="kw">pub </span>acpi: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="doccomment">/// Field is deprecated and kept only for backwards compatibility. Remove ASAP.
-    </span><span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">"7"</span>)]
-    </span><span class="kw">pub </span>kernel_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>SystemLayerEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ApplicationLayerEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ContainerLayerEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakRestrictedKernelEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerEndorsements&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;ApplicationLayerEndorsements&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakContainersEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerEndorsements&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerEndorsements&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerEndorsements&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbEndorsements {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
-}
-<span class="doccomment">/// There are currently no endorsements in standalone mode.
-/// This may change in the future.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakStandaloneEndorsements {}
-<span class="doccomment">/// Endorsement contains statements that some entity (e.g. a hardware provider)
-/// vouches for the integrity of claims about the TEE or the software running
-/// on it.
-///
-/// The name is chosen to match the RATS terminology:
-/// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements&gt;&gt;
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Endorsements {
-    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3, 5646"</span>)]
-    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;endorsements::Type&gt;,
-}
-<span class="doccomment">/// Nested message and enum types in `Endorsements`.
-</span><span class="kw">pub mod </span>endorsements {
-    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    </span><span class="kw">pub enum </span>Type {
-        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
-        </span>OakRestrictedKernel(<span class="kw">super</span>::OakRestrictedKernelEndorsements),
-        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
-        </span>OakContainers(<span class="kw">super</span>::OakContainersEndorsements),
-        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
-        </span>Cb(<span class="kw">super</span>::CbEndorsements),
-        <span class="attr">#[prost(message, tag = <span class="string">"5646"</span>)]
-        </span>Standalone(<span class="kw">super</span>::OakStandaloneEndorsements),
-    }
-}
 <span class="doccomment">/// The versions of the components in the AMD SEV-SNP platform Trusted Compute
 /// Base (TCB).
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1540,271 +1402,6 @@
     <span class="doccomment">/// The lowest current patch level of all the CPU cores.
     </span><span class="attr">#[prost(uint32, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>microcode: u32,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>VerificationSkipped {}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>RawDigests {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>digests: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ExpectedDigests {
-    <span class="attr">#[prost(oneof = <span class="string">"expected_digests::Type"</span>, tags = <span class="string">"1, 2"</span>)]
-    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;expected_digests::Type&gt;,
-}
-<span class="doccomment">/// Nested message and enum types in `ExpectedDigests`.
-</span><span class="kw">pub mod </span>expected_digests {
-    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    </span><span class="kw">pub enum </span>Type {
-        <span class="doccomment">/// If the reference value was set to SkipVerification, we represent that
-        /// here.
-        </span><span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
-        </span>Skipped(<span class="kw">super</span>::VerificationSkipped),
-        <span class="doccomment">/// One or more digests that should be considered a valid match against an
-        /// actual value.
-        </span><span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
-        </span>Digests(<span class="kw">super</span>::RawDigests),
-    }
-}
-<span class="doccomment">/// The expected values for kernel image and setup data, computed from previously
-/// provided endorsements and reference values.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>KernelExpectedValues {
-    <span class="doccomment">/// Allowable digests for the image.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>image: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="doccomment">/// Allowable digests for the setup data.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>setup_data: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AmdSevExpectedValues {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>stage0_expected: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="doccomment">/// Minimum accepted versions of all TCB components.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>min_tcb_version: ::core::option::Option&lt;TcbVersion&gt;,
-    <span class="doccomment">/// If true, will skip the check that the TEE is not in debug mode.
-    </span><span class="attr">#[prost(bool, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>allow_debug: bool,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>IntelTdxExpectedValues {}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>InsecureExpectedValues {}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ExpectedRegex {
-    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>value: ::prost::alloc::string::String,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ExpectedStringLiterals {
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>TextExpectedValue {
-    <span class="attr">#[prost(oneof = <span class="string">"text_expected_value::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
-    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;text_expected_value::Type&gt;,
-}
-<span class="doccomment">/// Nested message and enum types in `TextExpectedValue`.
-</span><span class="kw">pub mod </span>text_expected_value {
-    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    </span><span class="kw">pub enum </span>Type {
-        <span class="doccomment">/// If the reference value was set to SkipVerification, we represent that
-        /// here.
-        </span><span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
-        </span>Skipped(<span class="kw">super</span>::VerificationSkipped),
-        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
-        </span>Regex(<span class="kw">super</span>::ExpectedRegex),
-        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
-        </span>StringLiterals(<span class="kw">super</span>::ExpectedStringLiterals),
-    }
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>RootLayerExpectedValues {
-    <span class="doccomment">/// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
-    /// Verification is skipped when not running in a TEE.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>amd_sev: ::core::option::Option&lt;AmdSevExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>intel_tdx: ::core::option::Option&lt;IntelTdxExpectedValues&gt;,
-    <span class="doccomment">/// When insecure is set no verification of the TEE platform is performed. This
-    /// can be used when not running in a TEE or when the client is agnostic about
-    /// the platform and doesn't care about the hardware verification.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>insecure: ::core::option::Option&lt;InsecureExpectedValues&gt;,
-}
-<span class="doccomment">/// Reference values of the kernel layer, as measured by stage0.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>KernelLayerExpectedValues {
-    <span class="doccomment">/// Verifies the kernel based on endorsement.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;KernelExpectedValues&gt;,
-    <span class="doccomment">/// Verifies the kernel command line, i.e. the parameters passed to the
-    /// kernel on boot.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_cmd_line_text: ::core::option::Option&lt;TextExpectedValue&gt;,
-    <span class="doccomment">/// Verifies the stage1 binary if running as Oak Containers.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>memory_map: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
-    </span><span class="kw">pub </span>acpi: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="doccomment">/// The expected binary digests for a system layer image.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>SystemLayerExpectedValues {
-    <span class="doccomment">/// The allowable digest values for a system layer image.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="doccomment">/// The expected bundle and configuration digests for a container layer.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ContainerLayerExpectedValues {
-    <span class="doccomment">/// The allowable digest values for a container bundle.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>bundle: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="doccomment">/// The allowable digest values for a configuration passed into a container.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>config: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="doccomment">/// The expected binary and configuration digests for an application layer.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ApplicationLayerExpectedValues {
-    <span class="doccomment">/// The allowable digest values for an application binary.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;ExpectedDigests&gt;,
-    <span class="doccomment">/// The allowable digest values for a configuration passed to the application
-    /// binary.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="doccomment">/// Represents digest of an event.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>EventExpectedValues {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>event: ::core::option::Option&lt;ExpectedDigests&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakRestrictedKernelExpectedValues {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;ApplicationLayerExpectedValues&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakContainersExpectedValues {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerExpectedValues&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CbExpectedValues {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ExpectedValues {
-    <span class="attr">#[prost(oneof = <span class="string">"expected_values::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
-    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;expected_values::Type&gt;,
-}
-<span class="doccomment">/// Nested message and enum types in `ExpectedValues`.
-</span><span class="kw">pub mod </span>expected_values {
-    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    </span><span class="kw">pub enum </span>Type {
-        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
-        </span>OakRestrictedKernel(<span class="kw">super</span>::OakRestrictedKernelExpectedValues),
-        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
-        </span>OakContainers(<span class="kw">super</span>::OakContainersExpectedValues),
-        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
-        </span>Cb(<span class="kw">super</span>::CbExpectedValues),
-    }
-}
-<span class="doccomment">/// All the related measurements for Stage 0.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Stage0Measurements {
-    <span class="doccomment">/// Kernel setup data digest.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>setup_data_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Kernel digest.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>kernel_measurement: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Initial RAM disk digest.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>ram_disk_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// E820 table digest.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"4"</span>)]
-    </span><span class="kw">pub </span>memory_map_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// ACPI table generation digest
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"5"</span>)]
-    </span><span class="kw">pub </span>acpi_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// Kernel Command line.
-    </span><span class="attr">#[prost(string, tag = <span class="string">"6"</span>)]
-    </span><span class="kw">pub </span>kernel_cmdline: ::prost::alloc::string::String,
-}
-<span class="doccomment">/// Represents an event intended for inclusion in attestation.
-/// For example, in an attested measured boot, each event is a reference to the
-/// code identity of the boot layer being launched next.
-/// An Event message contain what's necessary for an attestation verifier to
-/// verify the Event against a Reference Value.
-/// TODO: b/333748757 - Make other CB layers use this definition.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Event {
-    <span class="doccomment">/// Represents what is contained in the event. For example, the tag for
-    /// TaskConfig for the Layer 2 is "layer2".
-    /// TODO: b/333748757 - Consider making the tag a UUID instead of string.
-    </span><span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>tag: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>event: ::core::option::Option&lt;::prost_types::Any&gt;,
-}
-<span class="doccomment">/// A sequence of Events intended for inclusion in attestation evidence.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>EventLog {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;Event&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2119,6 +1716,409 @@
         </span>OakContainers(<span class="kw">super</span>::OakContainersReferenceValues),
         <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Cb(<span class="kw">super</span>::CbReferenceValues),
+    }
+}
+<span class="doccomment">/// Endorsement for binaries from the Transparent Release process.
+/// &lt;&lt;https://github.com/project-oak/oak/blob/main/docs/release.md&gt;&gt;
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>TransparentReleaseEndorsement {
+    <span class="doccomment">/// JSON string comtaining the endorsement statement for the underlying binary.
+    /// The format is described here:
+    /// &lt;https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format&gt;
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>endorsement: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The data hashed as endorsement subject can be inlined here when needed.
+    /// Can be the binary or the attachment, depending on the usage specified
+    /// in the endorsement.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>subject: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The signature for the endorsement.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>endorsement_signature: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The log entry as proof of inclusion of the endorsement statement in Rekor.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>RootLayerEndorsements {
+    <span class="doccomment">/// The serialized TEE certificate(s). The details of the format and how the
+    /// certificate(s) are encoded into this byte array are implementation
+    /// specific. In case of AMD-SEV-SNP, as described in
+    /// &lt;https://www.amd.com/system/files/TechDocs/57230.pdf,&gt; there are three
+    /// different certificates packaged in two different files. We only include
+    /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
+    /// AMD SEV Key (ASK) are long-lived.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>tee_certificate: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Endorsement of the Stage0 binary.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>stage0: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>KernelLayerEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
+    </span><span class="kw">pub </span>memory_map: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
+    </span><span class="kw">pub </span>acpi: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="doccomment">/// Field is deprecated and kept only for backwards compatibility. Remove ASAP.
+    </span><span class="attr">#[deprecated]
+    #[prost(message, optional, tag = <span class="string">"7"</span>)]
+    </span><span class="kw">pub </span>kernel_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>SystemLayerEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ApplicationLayerEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ContainerLayerEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakRestrictedKernelEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerEndorsements&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;ApplicationLayerEndorsements&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakContainersEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerEndorsements&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerEndorsements&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerEndorsements&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>CbEndorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
+}
+<span class="doccomment">/// There are currently no endorsements in standalone mode.
+/// This may change in the future.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakStandaloneEndorsements {}
+<span class="doccomment">/// Endorsement contains statements that some entity (e.g. a hardware provider)
+/// vouches for the integrity of claims about the TEE or the software running
+/// on it.
+///
+/// The name is chosen to match the RATS terminology:
+/// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements&gt;&gt;
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>Endorsements {
+    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3, 5646"</span>)]
+    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;endorsements::Type&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `Endorsements`.
+</span><span class="kw">pub mod </span>endorsements {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Type {
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>OakRestrictedKernel(<span class="kw">super</span>::OakRestrictedKernelEndorsements),
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>OakContainers(<span class="kw">super</span>::OakContainersEndorsements),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>Cb(<span class="kw">super</span>::CbEndorsements),
+        <span class="attr">#[prost(message, tag = <span class="string">"5646"</span>)]
+        </span>Standalone(<span class="kw">super</span>::OakStandaloneEndorsements),
+    }
+}
+<span class="doccomment">/// All the related measurements for Stage 0.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>Stage0Measurements {
+    <span class="doccomment">/// Kernel setup data digest.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>setup_data_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Kernel digest.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_measurement: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Initial RAM disk digest.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>ram_disk_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// E820 table digest.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>memory_map_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// ACPI table generation digest
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"5"</span>)]
+    </span><span class="kw">pub </span>acpi_digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Kernel Command line.
+    </span><span class="attr">#[prost(string, tag = <span class="string">"6"</span>)]
+    </span><span class="kw">pub </span>kernel_cmdline: ::prost::alloc::string::String,
+}
+<span class="doccomment">/// Represents an event intended for inclusion in attestation.
+/// For example, in an attested measured boot, each event is a reference to the
+/// code identity of the boot layer being launched next.
+/// An Event message contain what's necessary for an attestation verifier to
+/// verify the Event against a Reference Value.
+/// TODO: b/333748757 - Make other CB layers use this definition.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>Event {
+    <span class="doccomment">/// Represents what is contained in the event. For example, the tag for
+    /// TaskConfig for the Layer 2 is "layer2".
+    /// TODO: b/333748757 - Consider making the tag a UUID instead of string.
+    </span><span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>tag: ::prost::alloc::string::String,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>event: ::core::option::Option&lt;::prost_types::Any&gt;,
+}
+<span class="doccomment">/// A sequence of Events intended for inclusion in attestation evidence.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EventLog {
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;Event&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>VerificationSkipped {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>RawDigests {
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>digests: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ExpectedDigests {
+    <span class="attr">#[prost(oneof = <span class="string">"expected_digests::Type"</span>, tags = <span class="string">"1, 2"</span>)]
+    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;expected_digests::Type&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `ExpectedDigests`.
+</span><span class="kw">pub mod </span>expected_digests {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Type {
+        <span class="doccomment">/// If the reference value was set to SkipVerification, we represent that
+        /// here.
+        </span><span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>Skipped(<span class="kw">super</span>::VerificationSkipped),
+        <span class="doccomment">/// One or more digests that should be considered a valid match against an
+        /// actual value.
+        </span><span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>Digests(<span class="kw">super</span>::RawDigests),
+    }
+}
+<span class="doccomment">/// The expected values for kernel image and setup data, computed from previously
+/// provided endorsements and reference values.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>KernelExpectedValues {
+    <span class="doccomment">/// Allowable digests for the image.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>image: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="doccomment">/// Allowable digests for the setup data.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>setup_data: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AmdSevExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>stage0_expected: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="doccomment">/// Minimum accepted versions of all TCB components.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>min_tcb_version: ::core::option::Option&lt;TcbVersion&gt;,
+    <span class="doccomment">/// If true, will skip the check that the TEE is not in debug mode.
+    </span><span class="attr">#[prost(bool, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>allow_debug: bool,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>IntelTdxExpectedValues {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>InsecureExpectedValues {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ExpectedRegex {
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>value: ::prost::alloc::string::String,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ExpectedStringLiterals {
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>TextExpectedValue {
+    <span class="attr">#[prost(oneof = <span class="string">"text_expected_value::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
+    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;text_expected_value::Type&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `TextExpectedValue`.
+</span><span class="kw">pub mod </span>text_expected_value {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Type {
+        <span class="doccomment">/// If the reference value was set to SkipVerification, we represent that
+        /// here.
+        </span><span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>Skipped(<span class="kw">super</span>::VerificationSkipped),
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>Regex(<span class="kw">super</span>::ExpectedRegex),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>StringLiterals(<span class="kw">super</span>::ExpectedStringLiterals),
+    }
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>RootLayerExpectedValues {
+    <span class="doccomment">/// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+    /// Verification is skipped when not running in a TEE.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>amd_sev: ::core::option::Option&lt;AmdSevExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>intel_tdx: ::core::option::Option&lt;IntelTdxExpectedValues&gt;,
+    <span class="doccomment">/// When insecure is set no verification of the TEE platform is performed. This
+    /// can be used when not running in a TEE or when the client is agnostic about
+    /// the platform and doesn't care about the hardware verification.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>insecure: ::core::option::Option&lt;InsecureExpectedValues&gt;,
+}
+<span class="doccomment">/// Reference values of the kernel layer, as measured by stage0.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>KernelLayerExpectedValues {
+    <span class="doccomment">/// Verifies the kernel based on endorsement.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>kernel: ::core::option::Option&lt;KernelExpectedValues&gt;,
+    <span class="doccomment">/// Verifies the kernel command line, i.e. the parameters passed to the
+    /// kernel on boot.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_cmd_line_text: ::core::option::Option&lt;TextExpectedValue&gt;,
+    <span class="doccomment">/// Verifies the stage1 binary if running as Oak Containers.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>memory_map: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
+    </span><span class="kw">pub </span>acpi: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="doccomment">/// The expected binary digests for a system layer image.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>SystemLayerExpectedValues {
+    <span class="doccomment">/// The allowable digest values for a system layer image.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="doccomment">/// The expected bundle and configuration digests for a container layer.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ContainerLayerExpectedValues {
+    <span class="doccomment">/// The allowable digest values for a container bundle.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>bundle: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="doccomment">/// The allowable digest values for a configuration passed into a container.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>config: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="doccomment">/// The expected binary and configuration digests for an application layer.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ApplicationLayerExpectedValues {
+    <span class="doccomment">/// The allowable digest values for an application binary.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;ExpectedDigests&gt;,
+    <span class="doccomment">/// The allowable digest values for a configuration passed to the application
+    /// binary.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="doccomment">/// Represents digest of an event.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EventExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>event: ::core::option::Option&lt;ExpectedDigests&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakRestrictedKernelExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;ApplicationLayerExpectedValues&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakContainersExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerExpectedValues&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>CbExpectedValues {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>application_layer: ::core::option::Option&lt;EventExpectedValues&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ExpectedValues {
+    <span class="attr">#[prost(oneof = <span class="string">"expected_values::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
+    </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;expected_values::Type&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `ExpectedValues`.
+</span><span class="kw">pub mod </span>expected_values {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Type {
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
+        </span>OakRestrictedKernel(<span class="kw">super</span>::OakRestrictedKernelExpectedValues),
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>OakContainers(<span class="kw">super</span>::OakContainersExpectedValues),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>Cb(<span class="kw">super</span>::CbExpectedValues),
     }
 }
 <span class="doccomment">/// Represents a verification result. Can be extended to return certain

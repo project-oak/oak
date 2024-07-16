@@ -178,6 +178,40 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -218,6 +252,40 @@
     </span><span class="kw">pub </span>encrypted_response: ::core::option::Option&lt;
         <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedResponse,
     &gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>RequestWrapper {
+    <span class="attr">#[prost(oneof = <span class="string">"request_wrapper::Request"</span>, tags = <span class="string">"2, 3"</span>)]
+    </span><span class="kw">pub </span>request: ::core::option::Option&lt;request_wrapper::Request&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `RequestWrapper`.
+</span><span class="kw">pub mod </span>request_wrapper {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Request {
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>InvokeRequest(<span class="kw">super</span>::InvokeRequest),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>GetEndorsedEvidenceRequest(<span class="kw">super</span>::GetEndorsedEvidenceRequest),
+    }
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ResponseWrapper {
+    <span class="attr">#[prost(oneof = <span class="string">"response_wrapper::Response"</span>, tags = <span class="string">"2, 3"</span>)]
+    </span><span class="kw">pub </span>response: ::core::option::Option&lt;response_wrapper::Response&gt;,
+}
+<span class="doccomment">/// Nested message and enum types in `ResponseWrapper`.
+</span><span class="kw">pub mod </span>response_wrapper {
+    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    </span><span class="kw">pub enum </span>Response {
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
+        </span>InvokeResponse(<span class="kw">super</span>::InvokeResponse),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>GetEndorsedEvidenceResponse(<span class="kw">super</span>::GetEndorsedEvidenceResponse),
+    }
 }
 <span class="doccomment">/// Request message for the remote attestation.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
