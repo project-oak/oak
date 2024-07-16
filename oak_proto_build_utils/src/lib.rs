@@ -47,9 +47,9 @@ pub fn fix_prost_derives() -> Result<(), Box<dyn std::error::Error>> {
 
 // Returns the include paths of common protos: Oak proto and
 // com_google_protobuf.
-pub fn get_common_proto_path() -> Vec<PathBuf> {
+pub fn get_common_proto_path(root: &str) -> Vec<PathBuf> {
     // The root of all Oak protos
-    let oak_proto_root = PathBuf::from("..");
+    let oak_proto_root = PathBuf::from(root);
     // Rely on bazel make variable `location` to find protobuf include paths.
     // We do this as protobuf might be imported under different names in the
     // external directory based on the setup (BzlMod, WORKSPACE or others).

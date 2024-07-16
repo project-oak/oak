@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "bazel"))]
     let included_protos = vec![std::path::PathBuf::from("..")];
     #[cfg(feature = "bazel")]
-    let included_protos = oak_proto_build_utils::get_common_proto_path();
+    let included_protos = oak_proto_build_utils::get_common_proto_path("..");
 
     let proto_paths = [
         "../proto/attestation/attachment.proto",
