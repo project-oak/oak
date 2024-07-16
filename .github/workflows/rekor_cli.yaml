@@ -3,7 +3,7 @@ name: Build and attest Rekor CLI
 # Workflow to build the Rekor command line tool from source, and to generate
 # a GitHub provenance/attestation for the build artifact.
 # Only to be run manually via:
-#    gh workflow run .github/workflows/rekor_cli.yaml
+#    gh workflow run --repo project-oak/oak .github/workflows/rekor_cli.yaml
 # See build.yaml for details.
 
 on:
