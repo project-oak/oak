@@ -17,8 +17,8 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        &["../proto/containers/hello_world.proto"],
-        &[".."],
+        &["../../../proto/containers/hello_world.proto"],
+        &["../../.."],
         CodegenOptions {
             build_client: true,
             extern_paths: vec![
@@ -30,8 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     generate_grpc_code(
-        &["../proto/session/service_streaming.proto"],
-        &[".."],
+        &["../../../proto/session/service_streaming.proto"],
+        &["../../.."],
         CodegenOptions {
             build_server: true,
             build_client: true,

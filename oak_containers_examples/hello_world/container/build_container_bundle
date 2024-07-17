@@ -27,6 +27,6 @@ docker buildx \
     --output="type=oci,dest=${OCI_IMAGE_FILE}" \
     .
 
-../scripts/export_container_bundle \
+../../../scripts/export_container_bundle \
     -c "${OCI_IMAGE_FILE}" \
     -o "./target/oak_container_example_oci_filesystem_bundle.tar"

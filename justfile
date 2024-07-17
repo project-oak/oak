@@ -203,7 +203,7 @@ bazel_wasm name:
 # Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:
-    env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
+    env --chdir=oak_containers_examples/hello_world/container DOCKER_BUILDKIT=0 bash build_container_bundle
 
 cc_oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
