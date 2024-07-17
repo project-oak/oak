@@ -60,9 +60,12 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
         .connect()
         .await
         .expect("couldn't connect via gRPC channel");
-    let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel))
+
+    let mut client = StreamingSessionClient::new(channel);
+
+    let transport = GrpcStreamingTransport::new(|rx| client.stream(rx))
         .await
-        .expect("Couldn't create streaming transport");
+        .expect("couldn't create GRPC streaming transport");
 
     let verifier = InsecureAttestationVerifier {};
     let mut client = OakClient::create(transport, &verifier).await.expect("Couldn't create client");

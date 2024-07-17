@@ -2397,7 +2397,6 @@ dependencies = [
  "log",
  "oak_attestation_verification",
  "oak_crypto",
- "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "prost",

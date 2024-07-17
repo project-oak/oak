@@ -69,7 +69,10 @@ async fn test1() {
         .await
         .context("couldn't connect via gRPC channel")
         .unwrap();
-    let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel))
+
+    let mut client = StreamingSessionClient::new(channel);
+
+    let transport = GrpcStreamingTransport::new(|rx| client.stream(rx))
         .await
         .expect("couldn't create GRPC streaming transport");
 

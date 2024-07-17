@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
+use std::future::Future;
+
 use anyhow::Context;
 use futures::channel::mpsc;
-use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 use oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
     session::v1::{
@@ -25,20 +26,48 @@ use oak_proto_rust::oak::{
         ResponseWrapper,
     },
 };
-use tonic::transport::Channel;
 
+/// A [Transport] implementation that uses a single gRPC streaming session to
+/// get the evidence and then invokve the desired request.
 pub struct GrpcStreamingTransport {
     response_stream: tonic::Streaming<ResponseWrapper>,
     request_tx_channel: mpsc::Sender<RequestWrapper>,
 }
 
 impl GrpcStreamingTransport {
-    pub async fn new(rpc_client: StreamingSessionClient<Channel>) -> anyhow::Result<Self> {
-        let mut rpc_client = rpc_client;
+    /// Create a new [GrpcStreamingTransport].
+    ///
+    /// The provided stream_creator will be immediately invokved to create a new
+    /// stream session, and all actions on the newly created instance will use
+    /// that stream. If the stream dies, a new client/transport pair will need
+    /// to be created.
+    ///
+    /// The `stream_creator` is a closure to create a new stream. Typically this
+    /// will be used with a gRPC client instance that exposes a
+    /// bi-directional streaming method.
+    ///
+    /// For example, if you have a gRPC service like:
+    /// ```
+    /// service {
+    ///     rpc MyMethod(stream RequestWrapper) returns (stream ResponseWrapper);
+    /// }
+    /// ```
+    ///
+    /// You will call:
+    /// ```
+    /// let transport =
+    ///   GrpcStreamingTransport::new(|rx| client.my_method(rx))
+    /// ```
+    pub async fn new<Fut>(
+        stream_creator: impl FnOnce(mpsc::Receiver<RequestWrapper>) -> Fut,
+    ) -> anyhow::Result<Self>
+    where
+        Fut: Future<Output = tonic::Result<tonic::Response<tonic::Streaming<ResponseWrapper>>>>,
+    {
         let (tx, rx) = mpsc::channel(10);
 
         let response_stream =
-            rpc_client.stream(rx).await.context("couldn't send stream request")?.into_inner();
+            stream_creator(rx).await.context("couldn't send stream request")?.into_inner();
 
         Ok(Self { response_stream, request_tx_channel: tx })
     }
