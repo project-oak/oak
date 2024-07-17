@@ -473,7 +473,7 @@
     <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">"{root}oak_containers_system_image/target/image.tar.xz"</span>,).into();
         <span class="kw">let </span>container_bundle = <span class="macro">format!</span>(
-            <span class="string">"{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar"</span>,
+            <span class="string">"{root}oak_containers_examples/hello_world/container/target/oak_container_example_oci_filesystem_bundle.tar"</span>,
         ).into();
         <span class="self">Self </span>{
             system_image,
