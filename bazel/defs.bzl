@@ -60,3 +60,11 @@ def either_platform(platform_list):
     select_dict = {platform: [platform] for platform in platform_list}
     select_dict["//conditions:default"] = ["@platforms//:incompatible"]
     return select(select_dict)
+
+def auto_std_crates(names):
+    """Selects the std or no_std version of a list of crates according to the currently selected platform.
+    """
+    return select({
+        "@platforms//os:none": ["@oak_no_std_crates_index//:" + name for name in names],
+        "//conditions:default": ["@oak_crates_index//:" + name for name in names],
+    })

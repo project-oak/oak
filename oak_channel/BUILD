@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -40,9 +41,10 @@ _OAK_CHANNEL_DEPS = [
 rust_library(
     name = "oak_channel",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
-    ],
+    ]),
     deps = _OAK_CHANNEL_DEPS,
 )
 

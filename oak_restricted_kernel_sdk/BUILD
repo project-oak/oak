@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "auto_std_crates", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,13 +24,19 @@ package(
 
 rust_library(
     name = "oak_restricted_kernel_sdk",
-    srcs = glob(["src/**"]),
+    srcs = glob(["src/*.rs"]),
+    # Only enable the testing feature on Linux for unit and integration tests.
+    crate_features = select({
+        "@platforms//os:linux": ["testing"],
+        "//conditions:default": [],
+    }),
     proc_macro_deps = [
         "//oak_restricted_kernel_sdk_proc_macro",
     ],
-    target_compatible_with = [
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
-    ],
+    ]),
     deps = [
         "//micro_rpc",
         "//oak_channel",
@@ -41,11 +48,12 @@ rust_library(
         "//oak_restricted_kernel_dice",
         "//oak_restricted_kernel_interface",
         "//stage0_dice",
-        "@oak_crates_index//:lazy_static",
-        "@oak_crates_index//:strum",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:p256",
-    ],
+    ] + auto_std_crates([
+        "lazy_static",
+        "anyhow",
+        "p256",
+        "log",
+        "strum",
+    ]),
 )

@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,9 +25,10 @@ package(
 rust_library(
     name = "oak_restricted_kernel_dice",
     srcs = glob(["src/**"]),
-    target_compatible_with = [
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
-    ],
+    ]),
     deps = [
         "//oak_crypto",
         "//oak_dice",

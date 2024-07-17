@@ -15,7 +15,8 @@
 #
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -28,9 +29,10 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
-    target_compatible_with = [
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
-    ],
+    ]),
     deps = [
         ":build",
         "//micro_rpc",
@@ -55,6 +57,15 @@ rust_test(
     name = "oak_echo_service_test",
     size = "small",
     crate = ":oak_echo_service",
+)
+
+rust_test_suite(
+    name = "oak_echo_service_integration_test",
+    srcs = ["tests/integration_test.rs"],
+    deps = [
+        ":oak_echo_service",
+        "//oak_restricted_kernel_sdk",
+    ],
 )
 
 cargo_build_script(
