@@ -180,8 +180,6 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -201,14 +199,13 @@
 </span><span class="kw">use </span>std::{collections::HashMap, path::PathBuf};
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient;
+<span class="kw">use </span>oak_proto_rust::oak::functions::{
+    extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
+};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>ubyte::ByteUnit;
-
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    extend_next_lookup_data_request::Data,
-    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, Empty,
-    ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
-};
 
 <span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">'a</span>, I: Iterator&lt;Item = LookupDataChunk&gt;&gt; {
     inner: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,
@@ -294,7 +291,7 @@
             entries = Vec::new();
         };
 
-        entries.push(LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key: key.into(), value: value.into() })
     }
     chunks.push(LookupDataChunk { items: entries });
     chunks
@@ -313,11 +310,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>lookup_data_buffer = lookup_data_buffer;
     <span class="kw">let </span><span class="kw-2">mut </span>entries = HashMap::new();
     <span class="kw">while </span>lookup_data_buffer.has_remaining() {
-        <span class="kw">let </span>entry =
-            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
-                <span class="kw-2">&amp;mut </span>lookup_data_buffer,
-            )
-            .context(<span class="string">"couldn't decode entry"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>entry = oak_proto_rust::oak::functions::lookup_data::Entry::decode_length_delimited(
+            <span class="kw-2">&amp;mut </span>lookup_data_buffer,
+        )
+        .context(<span class="string">"couldn't decode entry"</span>)<span class="question-mark">?</span>;
         entries.insert(entry.key, entry.value);
     }
     <span class="prelude-val">Ok</span>(entries)

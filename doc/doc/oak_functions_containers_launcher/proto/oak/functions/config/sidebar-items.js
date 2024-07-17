@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["HandlerType"],"mod":["application_config","wasmtime_config"],"struct":["ApplicationConfig","TcpCommunicationChannel","VsockCommunicationChannel","WasmtimeConfig"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["request_wrapper","response_wrapper","streaming_session_client"],"struct":["EndorsedEvidence","GetEndorsedEvidenceRequest","GetEndorsedEvidenceResponse","InvokeRequest","InvokeResponse","RequestWrapper","ResponseWrapper"]};

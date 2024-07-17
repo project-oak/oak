@@ -40,6 +40,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_functions_service",["",[["wasm",[],["api.rs","mod.rs","wasmtime.rs"]]],["instance.rs","lib.rs","logger.rs","lookup.rs","lookup_htbl.rs"]]],\
 ["oak_functions_test_module",["",[],["lib.rs"]]],\
 ["oak_functions_test_utils",["",[],["lib.rs"]]],\
+["oak_grpc",["",[],["lib.rs"]]],\
 ["oak_grpc_utils",["",[],["lib.rs"]]],\
 ["oak_hello_world_linux_init",["",[],["init.rs","main.rs"]]],\
 ["oak_kernel_measurement",["",[],["main.rs"]]],\

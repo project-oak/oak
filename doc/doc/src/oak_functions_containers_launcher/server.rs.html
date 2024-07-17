@@ -112,6 +112,8 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -134,17 +136,19 @@
 </span><span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
 
 <span class="kw">use </span>futures::{Future, Stream, StreamExt};
-<span class="kw">use </span>oak_functions_launcher::proto::oak::session::v1::{
-    request_wrapper, response_wrapper,
-    streaming_session_server::{StreamingSession, StreamingSessionServer},
-    EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
+<span class="kw">use </span>oak_grpc::oak::{
+    functions::oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient,
+    session::v1::streaming_session_server::{StreamingSession, StreamingSessionServer},
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    functions::InvokeRequest,
+    session::v1::{
+        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
+        InvokeResponse, RequestWrapper, ResponseWrapper,
+    },
+};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
-
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InvokeRequest,
-};
 
 <span class="kw">pub struct </span>SessionProxy {
     connector_handle: GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,

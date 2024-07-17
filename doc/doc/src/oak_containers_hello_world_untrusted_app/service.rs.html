@@ -138,6 +138,9 @@
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{Stream, StreamExt};
 <span class="kw">use </span>oak_containers_launcher::Launcher;
+<span class="kw">use </span>oak_grpc::oak::session::v1::streaming_session_server::{
+    StreamingSession, StreamingSessionServer,
+};
 <span class="kw">use </span>oak_proto_rust::oak::session::v1::{
     request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
     RequestWrapper, ResponseWrapper,
@@ -145,10 +148,7 @@
 <span class="kw">use </span>tokio::{net::TcpListener, sync::Mutex};
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
-<span class="kw">use crate</span>::{
-    app_client::TrustedApplicationClient,
-    proto::oak::session::v1::streaming_session_server::{StreamingSession, StreamingSessionServer},
-};
+<span class="kw">use </span><span class="kw">crate</span>::app_client::TrustedApplicationClient;
 
 <span class="doccomment">/// The sample application's implementation of Oak's streaming service protocol.
 </span><span class="kw">struct </span>StreamingSessionImpl {

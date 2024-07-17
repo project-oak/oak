@@ -63,7 +63,6 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -80,10 +79,9 @@
 // limitations under the License.
 
 </span><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>oak_grpc::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
-
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
 
 <span class="comment">// Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to

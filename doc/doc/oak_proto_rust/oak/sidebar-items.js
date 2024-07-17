@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","containers","crypto","oak_functions","session"],"struct":["HexDigest","RawDigest"]};
+window.SIDEBAR_ITEMS = {"mod":["attestation","crypto","functions","session"],"struct":["HexDigest","RawDigest"]};

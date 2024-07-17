@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["Service"]};
+window.SIDEBAR_ITEMS = {"struct":["Service"]};
