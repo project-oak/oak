@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
+load("//bazel:defs.bzl", "auto_std_crates", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -28,19 +29,21 @@ DEPS = [
     "//oak_crypto",
     "//oak_proto_rust",
     "//oak_restricted_kernel_sdk",
-    "@oak_no_std_crates_index//:anyhow",
     "@oak_no_std_crates_index//:log",
-    "@oak_no_std_crates_index//:prost",
-]
+] + auto_std_crates([
+    "prost",
+    "anyhow",
+])
 
 rust_library(
     name = "oak_functions_enclave_service",
     srcs = glob(["src/*.rs"]),
     # The features are inverted on purpose; this means the "default" package will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
-    target_compatible_with = [
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+    ]),
     deps = DEPS + [
         "//oak_functions_service",
     ],
@@ -49,10 +52,37 @@ rust_library(
 rust_library(
     name = "oak_functions_enclave_service_allow_sensitive_logging",
     srcs = glob(["src/*.rs"]),
-    target_compatible_with = [
+    crate_name = "oak_functions_enclave_service",
+    target_compatible_with = either_platform([
         "//:x86_64-none-setting",
-    ],
+        "//:x86_64-linux-setting",  # Needed to run unit tests.
+    ]),
     deps = DEPS + [
         "//oak_functions_service:oak_functions_service_allow_sensitive_logging",
+    ],
+)
+
+rust_test_suite(
+    name = "oak_functions_enclave_service_integration_tests",
+    srcs = glob(["tests/**"]),
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = [
+        "//oak_functions/examples/echo",
+        "//oak_functions/examples/invalid_module",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions_test_module",
+    ],
+    deps = [
+        ":oak_functions_enclave_service",
+        "//micro_rpc",
+        "//oak_client",
+        "//oak_crypto",
+        "//oak_functions_service",
+        "//oak_functions_test_utils",
+        "//oak_proto_rust",
+        "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
     ],
 )

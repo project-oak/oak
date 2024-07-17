@@ -89,6 +89,9 @@ fn it_should_handle_user_requests_after_initialization() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
+    #[cfg(feature = "bazel")]
+    let wasm_path = "oak_functions/examples/echo/echo.wasm";
+    #[cfg(not(feature = "bazel"))]
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
@@ -123,6 +126,9 @@ fn it_should_only_initialize_once() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
+    #[cfg(feature = "bazel")]
+    let wasm_path = "oak_functions/examples/echo/echo.wasm";
+    #[cfg(not(feature = "bazel"))]
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
@@ -145,6 +151,9 @@ fn it_should_error_on_invalid_wasm_module() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
+    #[cfg(feature = "bazel")]
+    let wasm_path = "oak_functions/examples/invalid_module/invalid_module.wasm";
+    #[cfg(not(feature = "bazel"))]
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("invalid_module");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
@@ -210,6 +219,9 @@ fn it_should_support_lookup_data() {
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
+    #[cfg(feature = "bazel")]
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
+    #[cfg(not(feature = "bazel"))]
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
@@ -282,6 +294,9 @@ fn it_should_handle_wasm_panic() {
 
     // Use the Oak Functions test Wasm module, which contains a function that
     // panics.
+    #[cfg(feature = "bazel")]
+    let wasm_path = "oak_functions_test_module/oak_functions_test_module.wasm";
+    #[cfg(not(feature = "bazel"))]
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("oak_functions_test_module");
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
     let request = InitializeRequest {
