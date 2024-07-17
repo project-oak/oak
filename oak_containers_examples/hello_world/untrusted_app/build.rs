@@ -29,18 +29,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
-    generate_grpc_code(
-        &["../../../proto/session/service_streaming.proto"],
-        &["../../.."],
-        CodegenOptions {
-            build_server: true,
-            build_client: true,
-            extern_paths: vec![
-                ExternPath::new(".oak.session.v1", "::oak_proto_rust::oak::session::v1"),
-                ExternPath::new(".oak.crypto.v1", "::oak_proto_rust::oak::crypto::v1"),
-            ],
-        },
-    )?;
-
     Ok(())
 }

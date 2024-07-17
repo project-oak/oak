@@ -17,14 +17,13 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{anyhow, Context};
+use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient;
+use oak_proto_rust::oak::functions::{
+    extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
+    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
+};
 use prost::Message;
 use ubyte::ByteUnit;
-
-use crate::proto::oak::functions::{
-    extend_next_lookup_data_request::Data,
-    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, Empty,
-    ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
-};
 
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
@@ -110,7 +109,7 @@ fn chunk_up_lookup_data(
             entries = Vec::new();
         };
 
-        entries.push(LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key: key.into(), value: value.into() })
     }
     chunks.push(LookupDataChunk { items: entries });
     chunks
@@ -129,11 +128,10 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
     let mut lookup_data_buffer = lookup_data_buffer;
     let mut entries = HashMap::new();
     while lookup_data_buffer.has_remaining() {
-        let entry =
-            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
-                &mut lookup_data_buffer,
-            )
-            .context("couldn't decode entry")?;
+        let entry = oak_proto_rust::oak::functions::lookup_data::Entry::decode_length_delimited(
+            &mut lookup_data_buffer,
+        )
+        .context("couldn't decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

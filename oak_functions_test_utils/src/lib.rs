@@ -54,7 +54,7 @@ pub fn workspace_path(relative_path: &[&str]) -> PathBuf {
 pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     let mut buf = Vec::new();
     for (key, value) in entries.into_iter() {
-        let entry_proto = oak_proto_rust::oak::oak_functions::lookup_data::Entry { key, value };
+        let entry_proto = oak_proto_rust::oak::functions::lookup_data::Entry { key, value };
         entry_proto
             .encode_length_delimited(&mut buf)
             .expect("couldn't encode entry as length delimited");

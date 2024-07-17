@@ -18,6 +18,9 @@ use std::{pin::Pin, sync::Arc};
 use anyhow::anyhow;
 use futures::{Stream, StreamExt};
 use oak_containers_launcher::Launcher;
+use oak_grpc::oak::session::v1::streaming_session_server::{
+    StreamingSession, StreamingSessionServer,
+};
 use oak_proto_rust::oak::session::v1::{
     request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
     RequestWrapper, ResponseWrapper,
@@ -25,10 +28,7 @@ use oak_proto_rust::oak::session::v1::{
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
 
-use crate::{
-    app_client::TrustedApplicationClient,
-    proto::oak::session::v1::streaming_session_server::{StreamingSession, StreamingSessionServer},
-};
+use crate::app_client::TrustedApplicationClient;
 
 /// The sample application's implementation of Oak's streaming service protocol.
 struct StreamingSessionImpl {

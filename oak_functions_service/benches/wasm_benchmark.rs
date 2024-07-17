@@ -33,7 +33,7 @@ use oak_functions_service::{
     wasm::{wasmtime::WasmtimeHandler, WasmHandler},
     Handler,
 };
-use oak_proto_rust::oak::oak_functions::testing::{
+use oak_proto_rust::oak::functions::testing::{
     lookup_request::Mode, LookupRequest, LookupResponse, TestModuleClient,
 };
 

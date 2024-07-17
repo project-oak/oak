@@ -20,6 +20,14 @@ use std::{
 
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
+use oak_grpc::oak::containers::{
+    launcher_server::{Launcher, LauncherServer},
+    v1::{
+        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
+        GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
+    },
+    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+};
 use oak_proto_rust::oak::attestation::v1::Evidence;
 use opentelemetry_proto::tonic::{
     collector::{
@@ -42,15 +50,6 @@ use tokio::{
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_vsock::VsockListener;
 use tonic::{transport::Server, Request, Response, Status};
-
-use crate::proto::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
-    v1::{
-        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
-        GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-    },
-    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
 // comfortably below that by limiting responses to 3MiB.

@@ -13,26 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.containers.v1");
-            }
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto};
-        pub mod key_provisioning {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.key_provisioning.v1");
-            }
-        }
-    }
-}
-
 mod cdi;
 pub mod container_runtime;
 pub mod crypto;

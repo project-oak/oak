@@ -18,13 +18,13 @@ use std::net::{Ipv6Addr, SocketAddr};
 use anyhow::Context;
 use clap::Parser;
 use oak_containers_launcher::ChannelType;
-use oak_functions_containers_launcher::proto::oak::functions::{
+use oak_functions_launcher::LookupDataConfig;
+use oak_proto_rust::oak::functions::{
     config::{
         application_config::CommunicationChannel, ApplicationConfig, VsockCommunicationChannel,
     },
     InitializeRequest,
 };
-use oak_functions_launcher::LookupDataConfig;
 use prost::Message;
 use ubyte::ByteUnit;
 

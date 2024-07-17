@@ -18,7 +18,7 @@ use alloc::{boxed::Box, rc::Rc, sync::Arc, vec::Vec};
 use core::cell::Cell;
 
 use log::Level;
-use oak_proto_rust::oak::oak_functions::wasm::v1::{
+use oak_proto_rust::oak::functions::wasm::v1::{
     BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
     LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, StdWasmApi,
     StdWasmApiServer, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,

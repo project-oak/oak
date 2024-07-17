@@ -29,6 +29,7 @@ oak_functions_service = { workspace = true, default-features = false, features =
   "std",
 ] }
 oak_crypto = { workspace = true }
+oak_grpc = { workspace = true }
 oak_proto_rust = { workspace = true }
 log = "*"
 micro_rpc = { workspace = true }

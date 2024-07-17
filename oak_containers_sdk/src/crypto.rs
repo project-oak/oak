@@ -16,17 +16,15 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
+use oak_grpc::oak::containers::v1::{
+    orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient,
+    DeriveSessionKeysRequest, KeyOrigin, SignRequest,
+};
 use oak_proto_rust::oak::crypto::v1::{SessionKeys, Signature};
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
-use crate::{
-    proto::oak::containers::v1::{
-        orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient,
-        DeriveSessionKeysRequest, KeyOrigin, SignRequest,
-    },
-    IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET,
-};
+use crate::{IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET};
 
 struct OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel>,

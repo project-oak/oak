@@ -23,8 +23,12 @@ package(
 )
 
 rust_library(
-    name = "oak_standalone_rust_bs_proto",
-    srcs = ["lib.rs"],
+    name = "grpc",
+    srcs = [
+        "lib.rs",
+    ],
+    crate_features = ["bazel"],
+    crate_name = "oak_grpc",
     deps = [
         ":build",
         "//oak_proto_rust",
@@ -41,16 +45,25 @@ cargo_build_script(
     ],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
     crate_features = ["bazel"],
     data = [
+        "//proto/containers:hostlib_key_provisioning_proto",
+        "//proto/containers:interfaces_proto",
+        "//proto/containers:orchestrator_crypto_proto",
+        "//proto/key_provisioning:key_provisioning_proto",
+        "//proto/oak_debug/service:oak_debug_proto",
+        "//proto/oak_functions/service:oak_functions_proto",
+        "//proto/session:messages_proto",
         "//proto/session:service_streaming_proto",
-    ],
-    tools = [
+        "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:protoc",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
     deps = [
         "//oak_grpc_utils",
+        "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
     ],
 )

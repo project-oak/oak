@@ -21,6 +21,7 @@ oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
+oak_grpc = { workspace = true }
 oci-spec = "*"
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",

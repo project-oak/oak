@@ -23,7 +23,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use micro_rpc::Transport;
-use oak_proto_rust::oak::oak_functions::testing::{
+use oak_proto_rust::oak::functions::testing::{
     lookup_request::Mode, EchoAndPanicRequest, EchoAndPanicResponse, LookupRequest, LookupResponse,
     TestModule, TestModuleServer,
 };

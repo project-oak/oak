@@ -19,6 +19,7 @@ futures = "*"
 log = "*"
 nix = { version = "*", features = ["process"] }
 oak_proto_rust = { workspace = true }
+oak_grpc = { workspace = true }
 opentelemetry-proto = { version = "*", default-features = false, features = [
   "gen-tonic",
   "logs",

@@ -28,6 +28,7 @@ rust_library(
     deps = [
         "//micro_rpc",
         "//oak_client",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tonic",

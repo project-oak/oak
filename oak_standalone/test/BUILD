@@ -27,8 +27,8 @@ rust_test(
     deps = [
         "//oak_client",
         "//oak_crypto",
+        "//oak_proto_rust/grpc",
         "//oak_standalone/client",
-        "//oak_standalone/proto:oak_standalone_rust_bs_proto",
         "//oak_standalone/service",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",

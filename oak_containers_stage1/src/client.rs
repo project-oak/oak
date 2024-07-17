@@ -14,17 +14,8 @@
 // limitations under the License.
 //
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            tonic::include_proto!("oak.containers");
-        }
-        pub use oak_proto_rust::oak::attestation;
-    }
-}
-
 use anyhow::{Context, Result};
-use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
+use oak_grpc::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tokio_vsock::{VsockAddr, VsockStream};
 use tonic::transport::{Channel, Uri};
 use tower::service_fn;

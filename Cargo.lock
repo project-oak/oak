@@ -2397,6 +2397,7 @@ dependencies = [
  "log",
  "oak_attestation_verification",
  "oak_crypto",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "prost",
@@ -2453,6 +2454,7 @@ dependencies = [
  "oak_client",
  "oak_containers_launcher",
  "oak_crypto",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "once_cell",
@@ -2477,6 +2479,7 @@ dependencies = [
  "futures",
  "log",
  "nix 0.27.1",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "opentelemetry-proto",
@@ -2504,6 +2507,7 @@ dependencies = [
  "oak_attestation_verification",
  "oak_crypto",
  "oak_dice",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "oci-spec",
@@ -2538,6 +2542,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "oak_crypto",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "prost",
@@ -2561,6 +2566,7 @@ dependencies = [
  "oak_attestation",
  "oak_crypto",
  "oak_dice",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "p256",
@@ -2638,6 +2644,7 @@ dependencies = [
 name = "oak_debug_service"
 version = "0.1.0"
 dependencies = [
+ "oak_grpc",
  "oak_grpc_utils",
  "pprof",
  "prost",
@@ -2734,6 +2741,7 @@ dependencies = [
  "micro_rpc",
  "oak_client",
  "oak_functions_abi",
+ "oak_grpc",
  "prost",
  "regex",
  "tokio",
@@ -2758,6 +2766,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_service",
  "oak_functions_test_utils",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "opentelemetry",
@@ -2794,6 +2803,7 @@ dependencies = [
  "oak_functions_client",
  "oak_functions_launcher",
  "oak_functions_test_utils",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
  "portpicker",
@@ -2847,6 +2857,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "oak_functions_test_utils",
+ "oak_grpc",
  "oak_grpc_utils",
  "oak_launcher_utils",
  "oak_proto_rust",
@@ -2954,6 +2965,17 @@ dependencies = [
  "tempfile",
  "tokio",
  "ubyte",
+]
+
+[[package]]
+name = "oak_grpc"
+version = "0.1.0"
+dependencies = [
+ "oak_grpc_utils",
+ "oak_proto_rust",
+ "prost",
+ "prost-types",
+ "tonic",
 ]
 
 [[package]]

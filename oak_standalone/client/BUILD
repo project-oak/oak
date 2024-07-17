@@ -28,6 +28,7 @@ rust_library(
     deps = [
         "//oak_attestation_verification",
         "//oak_client",
+        "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
     ],
 )

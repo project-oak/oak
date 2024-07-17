@@ -21,19 +21,6 @@
 mod lookup;
 pub mod server;
 
-pub mod proto {
-    pub mod oak {
-        pub use oak_proto_rust::oak::{attestation, crypto};
-        pub mod session {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                #![allow(clippy::large_enum_variant)]
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
-    }
-}
-
 use std::{fs, path::PathBuf, time::Duration};
 
 use anyhow::Context;
@@ -42,7 +29,7 @@ use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use oak_proto_rust::oak::oak_functions::{
+use oak_proto_rust::oak::functions::{
     InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
 };
 use ubyte::ByteUnit;

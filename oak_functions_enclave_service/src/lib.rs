@@ -24,7 +24,7 @@ use oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
-use oak_proto_rust::oak::oak_functions::{
+use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
     ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,

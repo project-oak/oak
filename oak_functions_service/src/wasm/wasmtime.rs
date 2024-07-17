@@ -33,7 +33,7 @@ use std::time::Instant;
 use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
-use oak_proto_rust::oak::oak_functions::config::WasmtimeConfig;
+use oak_proto_rust::oak::functions::config::WasmtimeConfig;
 use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{

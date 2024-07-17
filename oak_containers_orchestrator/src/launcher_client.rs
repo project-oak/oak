@@ -14,13 +14,7 @@
 // limitations under the License.
 
 use anyhow::Context;
-use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
-use tokio_vsock::{VsockAddr, VsockStream};
-use tonic::transport::Channel;
-use tower::service_fn;
-
-use crate::proto::oak::{
-    attestation::v1::Evidence,
+use oak_grpc::oak::{
     containers::{
         launcher_client::LauncherClient as GrpcLauncherClient,
         v1::{hostlib_key_provisioning_client::HostlibKeyProvisioningClient, KeyProvisioningRole},
@@ -28,6 +22,11 @@ use crate::proto::oak::{
     },
     key_provisioning::v1::GroupKeys,
 };
+use oak_proto_rust::oak::attestation::v1::Evidence;
+use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use tokio_vsock::{VsockAddr, VsockStream};
+use tonic::transport::Channel;
+use tower::service_fn;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {

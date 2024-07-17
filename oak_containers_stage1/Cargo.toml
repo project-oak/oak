@@ -18,6 +18,7 @@ oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
+oak_grpc = { workspace = true }
 nix = { version = "*", features = ["mman"] }
 p256 = { version = "*" }
 prost = { workspace = true }

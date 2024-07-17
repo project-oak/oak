@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
@@ -38,12 +37,12 @@ rust_library(
     crate_features = ["bazel"],
     crate_name = "oak_containers_orchestrator",
     deps = [
-        ":build",
         "//oak_attestation",
         "//oak_attestation_verification",
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:ciborium",
@@ -81,38 +80,12 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:tikv-jemallocator",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-util",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    crate_features = ["bazel"],
-    data = [
-        "//proto/containers:hostlib_key_provisioning_proto",
-        "//proto/containers:interfaces_proto",
-        "//proto/containers:orchestrator_crypto_proto",
-        "//proto/key_provisioning:key_provisioning_proto",
-        "//proto/session:messages_proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:protoc",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )

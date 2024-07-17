@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use bytes::BytesMut;
-use oak_proto_rust::oak::oak_functions::lookup_data::Entry;
+use oak_proto_rust::oak::functions::lookup_data::Entry;
 use prost::Message;
 use rand::Rng;
 

@@ -18,7 +18,7 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
-use oak_proto_rust::oak::oak_functions::{
+use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
     FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
 };
@@ -133,11 +133,10 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
     let mut lookup_data_buffer = lookup_data_buffer;
     let mut entries = hashbrown::HashMap::new();
     while lookup_data_buffer.has_remaining() {
-        let entry =
-            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
-                &mut lookup_data_buffer,
-            )
-            .context("couldn't decode entry")?;
+        let entry = oak_proto_rust::oak::functions::lookup_data::Entry::decode_length_delimited(
+            &mut lookup_data_buffer,
+        )
+        .context("couldn't decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

@@ -13,27 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-pub mod proto {
-    pub mod oak {
-        pub mod debug {
-            tonic::include_proto!("oak.debug");
-        }
-    }
-    pub mod perftools {
-        pub mod profiles {
-            tonic::include_proto!("perftools.profiles");
-        }
-    }
-}
+
 use std::time::Duration;
 
-use pprof::protos::Message as _;
-use proto::{
-    oak::debug::{debug_service_server::DebugServiceServer, CpuProfileRequest, CpuProfileResponse},
+use oak_grpc::{
+    oak::debug::{
+        debug_service_server::{DebugService, DebugServiceServer},
+        CpuProfileRequest, CpuProfileResponse,
+    },
     perftools::profiles::Profile,
 };
-
-use crate::proto::oak::debug::debug_service_server::DebugService;
+use pprof::protos::Message as _;
 
 // Interrupt frequency, in Hz.
 const SAMPLE_FREQUENCY: i32 = 100;

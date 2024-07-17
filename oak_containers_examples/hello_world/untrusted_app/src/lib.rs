@@ -20,11 +20,6 @@ mod proto {
                 tonic::include_proto!("oak.containers.example");
             }
         }
-        pub mod session {
-            pub mod v1 {
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
     }
 }
 

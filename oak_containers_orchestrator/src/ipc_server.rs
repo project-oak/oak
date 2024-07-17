@@ -16,6 +16,11 @@
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 
 use anyhow::Context;
+use oak_grpc::oak::containers::{
+    orchestrator_server::{Orchestrator, OrchestratorServer},
+    v1::orchestrator_crypto_server::OrchestratorCryptoServer,
+    GetApplicationConfigResponse,
+};
 use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;
@@ -24,11 +29,6 @@ use tonic::{transport::Server, Request, Response};
 use crate::{
     crypto::{CryptoService, GroupKeys, InstanceKeys},
     launcher_client::LauncherClient,
-    proto::oak::containers::{
-        orchestrator_server::{Orchestrator, OrchestratorServer},
-        v1::orchestrator_crypto_server::OrchestratorCryptoServer,
-        GetApplicationConfigResponse,
-    },
 };
 
 pub struct ServiceImplementation {

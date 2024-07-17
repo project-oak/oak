@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
@@ -33,11 +32,11 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        ":build",
         "//micro_rpc",
         "//oak_client",
         "//oak_launcher_utils",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:clap",
@@ -74,27 +73,5 @@ rust_binary(
         "@oak_crates_index//:regex",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:ubyte",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-    },
-    crate_features = ["bazel"],
-    data = [
-        "//proto/session:messages_proto",
-        "//proto/session:service_streaming_proto",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )

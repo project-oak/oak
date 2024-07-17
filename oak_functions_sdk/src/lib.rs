@@ -25,7 +25,7 @@ use alloc::{string::ToString, vec::Vec};
 use core::ops::Deref;
 
 use micro_rpc::{Status, StatusCode};
-use oak_proto_rust::oak::oak_functions::wasm::v1::{
+use oak_proto_rust::oak::functions::wasm::v1::{
     BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
     LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse,
     StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,

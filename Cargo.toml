@@ -49,6 +49,7 @@ members = [
   "oak_kernel_measurement",
   "oak_launcher_utils",
   "oak_proto_rust",
+  "oak_proto_rust/grpc",
   "oak_restricted_kernel",
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
@@ -127,6 +128,7 @@ oak_functions_test_module = { path = "./oak_functions_test_module" }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
+oak_grpc = { path = "./oak_proto_rust/grpc" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./oak_linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }

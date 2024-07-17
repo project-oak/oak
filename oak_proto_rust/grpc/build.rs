@@ -17,16 +17,19 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "bazel"))]
-    let included_protos = vec![std::path::PathBuf::from("..")];
+    let included_protos = vec![std::path::PathBuf::from("../..")];
     #[cfg(feature = "bazel")]
-    let included_protos = oak_proto_build_utils::get_common_proto_path("..");
+    let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
-    // Generate gRPC code for connecting to the launcher.
+    // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
         &[
-            "../proto/containers/interfaces.proto",
-            "../proto/key_provisioning/key_provisioning.proto",
-            "../proto/containers/hostlib_key_provisioning.proto",
+            "../../proto/containers/interfaces.proto",
+            "../../proto/containers/orchestrator_crypto.proto",
+            "../../proto/containers/hostlib_key_provisioning.proto",
+            "../../proto/session/service_streaming.proto",
+            "../../proto/oak_debug/service/oak_debug.proto",
+            "../../proto/oak_functions/service/oak_functions.proto",
         ],
         &included_protos,
         CodegenOptions {
@@ -34,6 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             build_server: true,
             extern_paths: vec![
                 ExternPath::new(".oak.crypto.v1", "::oak_proto_rust::oak::crypto::v1"),
+                ExternPath::new(".oak.functions", "::oak_proto_rust::oak::functions"),
                 ExternPath::new(".oak.session.v1", "::oak_proto_rust::oak::session::v1"),
                 ExternPath::new(".oak.attestation.v1", "::oak_proto_rust::oak::attestation::v1"),
             ],

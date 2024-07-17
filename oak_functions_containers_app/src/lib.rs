@@ -28,7 +28,7 @@ use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
-use oak_proto_rust::oak::oak_functions::{
+use oak_proto_rust::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
@@ -47,17 +47,7 @@ use tracing::Span;
 #[cfg(feature = "native")]
 pub mod native_handler;
 
-use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
-
-pub mod proto {
-    pub mod oak {
-        pub mod functions {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.functions");
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto, session};
-    }
-}
+use oak_grpc::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<H: Handler> {

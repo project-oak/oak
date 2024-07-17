@@ -14,14 +14,6 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    pub mod oak {
-        pub mod functions {
-            tonic::include_proto!("oak.functions");
-        }
-    }
-}
-
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -31,13 +23,12 @@ use std::{
 use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_containers_app::serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_proto_rust::oak::oak_functions::InitializeRequest;
+use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient;
+use oak_proto_rust::oak::functions::InitializeRequest;
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
-
-use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
 
 #[tokio::test]
 async fn test_lookup() {

@@ -21,7 +21,7 @@ use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
 use oak_launcher_utils::launcher;
-use oak_proto_rust::oak::oak_functions::OakFunctionsAsyncClient;
+use oak_proto_rust::oak::functions::OakFunctionsAsyncClient;
 use ubyte::ByteUnit;
 use xtask::workspace_path;
 

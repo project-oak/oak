@@ -18,7 +18,7 @@ use alloc::{format, sync::Arc};
 
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
-use oak_proto_rust::oak::oak_functions::{
+use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
     ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
     FinishNextLookupDataResponse, InitializeRequest, LookupDataChunk, LookupDataEntry,

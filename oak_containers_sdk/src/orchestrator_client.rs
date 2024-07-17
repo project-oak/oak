@@ -14,10 +14,9 @@
 // limitations under the License.
 
 use anyhow::{Context, Result};
+use oak_grpc::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
-
-use crate::proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to

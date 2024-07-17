@@ -17,16 +17,19 @@ use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
 use futures::{Stream, StreamExt};
-use oak_client::proto::oak::attestation::v1::TeePlatform;
 use oak_crypto::{encryption_key::EncryptionKey, encryptor::ServerEncryptor};
-use oak_proto_rust::oak::attestation::v1::{
-    endorsements, ApplicationKeys, Endorsements, Evidence, OakStandaloneEndorsements,
-    RootLayerEvidence,
+use oak_grpc::oak::session::v1::streaming_session_server::{
+    StreamingSession, StreamingSessionServer,
 };
-use oak_standalone_rust_bs_proto::oak::session::v1::{
-    request_wrapper, response_wrapper,
-    streaming_session_server::{StreamingSession, StreamingSessionServer},
-    EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        endorsements, ApplicationKeys, Endorsements, Evidence, OakStandaloneEndorsements,
+        RootLayerEvidence, TeePlatform,
+    },
+    session::v1::{
+        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
+        InvokeResponse, RequestWrapper, ResponseWrapper,
+    },
 };
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;

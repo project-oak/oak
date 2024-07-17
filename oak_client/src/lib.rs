@@ -14,19 +14,6 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    pub mod oak {
-        pub mod session {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                #![allow(clippy::large_enum_variant)]
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto};
-    }
-}
-
 pub mod client;
 pub mod transport;
 pub mod verifier;

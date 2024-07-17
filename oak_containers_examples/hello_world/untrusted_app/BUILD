@@ -37,6 +37,7 @@ rust_library(
         "//oak_containers_launcher:lib",
         "//oak_crypto",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:futures",

@@ -13,25 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.containers.v1");
-            }
-        }
-        pub mod key_provisioning {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.key_provisioning.v1");
-            }
-        }
-    }
-}
-
 mod qemu;
 mod server;
 
@@ -42,6 +23,9 @@ use std::{
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
+use oak_grpc::oak::key_provisioning::v1::{
+    key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
+};
 use oak_proto_rust::oak::{
     attestation::v1::{endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements},
     session::v1::EndorsedEvidence,
@@ -56,9 +40,6 @@ use tokio::{
 use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
 use tonic::transport::Channel as TonicChannel;
 
-use crate::proto::oak::key_provisioning::v1::{
-    key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
-};
 pub use crate::qemu::VmType;
 
 /// The local IP address assigned to the VM guest.

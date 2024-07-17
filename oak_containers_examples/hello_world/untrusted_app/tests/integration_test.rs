@@ -22,10 +22,10 @@ use std::{
 };
 
 use oak_client::{
-    client::OakClient, proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
-    transport::GrpcStreamingTransport, verifier::InsecureAttestationVerifier,
+    client::OakClient, transport::GrpcStreamingTransport, verifier::InsecureAttestationVerifier,
 };
 use oak_containers_launcher::Args;
+use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 

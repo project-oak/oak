@@ -15,6 +15,7 @@ log = "*"
 micro_rpc = { workspace = true }
 oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
+oak_grpc = { workspace = true }
 prost = { workspace = true }
 regex = "*"
 tokio = { version = "*", features = [

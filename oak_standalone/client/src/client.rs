@@ -16,13 +16,12 @@
 use anyhow::Context;
 use oak_client::{
     client::OakClient,
-    proto::oak::attestation::v1::{
-        extracted_evidence, Endorsements, Evidence, ExtractedEvidence, OakStandaloneData,
-    },
     transport::{EvidenceProvider, Transport},
     verifier::AttestationVerifier,
 };
-
+use oak_proto_rust::oak::attestation::v1::{
+    extracted_evidence, Endorsements, Evidence, ExtractedEvidence, OakStandaloneData,
+};
 /// An [AttestationVerifier] that skips attestation, but still receives the
 /// public key from the server to set up an encryption channel.
 struct StandaloneAttestationVerifier {}

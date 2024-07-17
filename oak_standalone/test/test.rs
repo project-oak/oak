@@ -19,10 +19,8 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use oak_client::{
-    proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
-    transport::GrpcStreamingTransport,
-};
+use oak_client::transport::GrpcStreamingTransport;
+use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 

@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
@@ -30,7 +29,6 @@ rust_binary(
     tags = ["noci"],
     target_compatible_with = ["@platforms//:incompatible"],
     deps = [
-        ":build",
         "//oak_containers_orchestrator:lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bitflags",
@@ -44,30 +42,5 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@systemd",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    crate_features = ["bazel"],
-    data = [
-        "//proto/containers:interfaces_proto",
-        "//proto/crypto:crypto_proto",
-        "//proto/session:messages_proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:protoc",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )

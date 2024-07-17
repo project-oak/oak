@@ -30,7 +30,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/attestation/expected_value.proto",
         "../proto/attestation/verification.proto",
         "../proto/containers/hello_world.proto",
-        "../proto/containers/interfaces.proto",
         "../proto/crypto/crypto.proto",
         "../proto/digest.proto",
         "../proto/oak_functions/abi.proto",

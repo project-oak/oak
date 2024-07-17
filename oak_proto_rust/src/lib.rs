@@ -65,17 +65,13 @@ pub mod oak {
         }
     }
 
-    pub mod containers {
-        include_proto!("oak.containers");
-    }
-
     pub mod crypto {
         pub mod v1 {
             include_proto!("oak.crypto.v1");
         }
     }
 
-    pub mod oak_functions {
+    pub mod functions {
         use prost::Message;
         include_proto!("oak.functions");
         pub mod abi {

@@ -31,7 +31,7 @@ use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_containers_app::native_handler::NativeHandler;
 use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_proto_rust::oak::oak_functions::config::{
+use oak_proto_rust::oak::functions::config::{
     application_config::CommunicationChannel, ApplicationConfig, HandlerType,
     TcpCommunicationChannel, WasmtimeConfig,
 };

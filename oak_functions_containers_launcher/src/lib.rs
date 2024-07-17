@@ -13,33 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod proto {
-    pub mod oak {
-        pub mod functions {
-            tonic::include_proto!("oak.functions");
-            pub mod config {
-                tonic::include_proto!("oak.functions.config");
-            }
-        }
-        pub use oak_proto_rust::oak::{attestation, crypto};
-    }
-}
-
 mod lookup;
 pub mod server;
 
 use anyhow::Context;
 use oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 use oak_functions_launcher::LookupDataConfig;
+use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient;
+use oak_proto_rust::oak::functions::{InitializeRequest, InitializeResponse};
 use tokio::time::Duration;
 use tokio_vsock::VsockStream;
 use tonic::transport::Endpoint;
 use tower::service_fn;
-
-use crate::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
-    InitializeResponse,
-};
 
 pub struct UntrustedApp {
     pub oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,

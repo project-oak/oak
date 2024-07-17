@@ -13,6 +13,7 @@ futures-util = "*"
 log = "*"
 oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
+oak_grpc = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }
 tonic = { workspace = true }

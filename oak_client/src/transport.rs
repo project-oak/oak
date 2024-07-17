@@ -16,14 +16,16 @@
 
 use anyhow::Context;
 use futures::channel::mpsc;
-use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use tonic::transport::Channel;
-
-use crate::proto::oak::session::v1::{
-    request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    EndorsedEvidence, GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
+use oak_proto_rust::oak::{
+    crypto::v1::{EncryptedRequest, EncryptedResponse},
+    session::v1::{
+        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceRequest,
+        GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse, RequestWrapper,
+        ResponseWrapper,
+    },
 };
+use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
     response_stream: tonic::Streaming<ResponseWrapper>,

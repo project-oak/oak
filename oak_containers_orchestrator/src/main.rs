@@ -19,8 +19,8 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::{
     crypto::generate_instance_keys, launcher_client::LauncherClient,
-    proto::oak::containers::v1::KeyProvisioningRole,
 };
+use oak_grpc::oak::containers::v1::KeyProvisioningRole;
 use tokio_util::sync::CancellationToken;
 
 #[global_allocator]

@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
@@ -33,9 +32,9 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        ":build",
         "//oak_crypto",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
@@ -43,27 +42,5 @@ rust_library(
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-    },
-    crate_features = ["bazel"],
-    data = [
-        "//proto/containers:interfaces_proto",
-        "//proto/containers:orchestrator_crypto_proto",
-        "//proto/crypto:crypto_proto",
-        "//proto/session:messages_proto",
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )
