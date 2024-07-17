@@ -1,6 +1,7 @@
-use std::borrow::{Borrow, Cow};
-use std::sync::Arc;
-use std::{fmt, hash};
+extern crate alloc;
+
+use alloc::{borrow::Cow, boxed::Box, string::String, sync::Arc, vec::Vec};
+use core::{borrow::Borrow, fmt, hash};
 
 /// The key part of attribute [KeyValue] pairs.
 ///
@@ -16,8 +17,10 @@ impl Key {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Key;
-    /// use std::sync::Arc;
+    /// extern crate alloc;
+    ///
+    /// use opentelemetry_rk::Key;
+    /// use alloc::sync::Arc;
     ///
     /// let key1 = Key::new("my_static_str");
     /// let key2 = Key::new(String::from("my_owned_string"));
@@ -165,13 +168,13 @@ impl OtelString {
 }
 
 impl PartialOrd for OtelString {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for OtelString {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.as_str().cmp(other.as_str())
     }
 }
@@ -233,15 +236,15 @@ fn display_array_str<T: fmt::Display>(slice: &[T], fmt: &mut fmt::Formatter<'_>)
 }
 
 macro_rules! into_array {
-    ($(($t:ty, $val:expr),)+) => {
-        $(
-            impl From<$t> for Array {
-                fn from(t: $t) -> Self {
-                    $val(t)
-                }
-            }
-        )+
-    }
+  ($(($t:ty, $val:expr),)+) => {
+      $(
+          impl From<$t> for Array {
+              fn from(t: $t) -> Self {
+                  $val(t)
+              }
+          }
+      )+
+  }
 }
 
 into_array!(
@@ -352,26 +355,26 @@ impl Value {
 }
 
 macro_rules! from_values {
-   (
-        $(
-            ($t:ty, $val:expr);
-        )+
-    ) => {
-        $(
-            impl From<$t> for Value {
-                fn from(t: $t) -> Self {
-                    $val(t)
-                }
-            }
-        )+
-    }
+ (
+      $(
+          ($t:ty, $val:expr);
+      )+
+  ) => {
+      $(
+          impl From<$t> for Value {
+              fn from(t: $t) -> Self {
+                  $val(t)
+              }
+          }
+      )+
+  }
 }
 
 from_values!(
-    (bool, Value::Bool);
-    (i64, Value::I64);
-    (f64, Value::F64);
-    (StringValue, Value::String);
+  (bool, Value::Bool);
+  (i64, Value::I64);
+  (f64, Value::F64);
+  (StringValue, Value::String);
 );
 
 impl From<&'static str> for Value {
@@ -434,6 +437,7 @@ impl KeyValue {
     }
 }
 
+// (TODO) Port errors to no_std
 /// Marker trait for errors returned by exporters
 pub trait ExportError: std::error::Error + Send + Sync + 'static {
     /// The name of exporter that returned this error
@@ -461,7 +465,7 @@ pub struct InstrumentationLibrary {
     /// # Examples
     ///
     /// ```
-    /// let library = opentelemetry::InstrumentationLibrary::builder("my-crate").
+    /// let library = opentelemetry_rk::InstrumentationLibrary::builder("my-crate").
     ///     with_version(env!("CARGO_PKG_VERSION")).
     ///     with_schema_url("https://opentelemetry.io/schemas/1.17.0").
     ///     build();
@@ -554,7 +558,7 @@ impl InstrumentationLibraryBuilder {
     /// # Examples
     ///
     /// ```
-    /// let library = opentelemetry::InstrumentationLibrary::builder("my-crate")
+    /// let library = opentelemetry_rk::InstrumentationLibrary::builder("my-crate")
     ///     .with_version("v0.1.0")
     ///     .build();
     /// ```
@@ -568,7 +572,7 @@ impl InstrumentationLibraryBuilder {
     /// # Examples
     ///
     /// ```
-    /// let library = opentelemetry::InstrumentationLibrary::builder("my-crate")
+    /// let library = opentelemetry_rk::InstrumentationLibrary::builder("my-crate")
     ///     .with_schema_url("https://opentelemetry.io/schemas/1.17.0")
     ///     .build();
     /// ```
@@ -582,9 +586,9 @@ impl InstrumentationLibraryBuilder {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::KeyValue;
+    /// use opentelemetry_rk::KeyValue;
     ///
-    /// let library = opentelemetry::InstrumentationLibrary::builder("my-crate")
+    /// let library = opentelemetry_rk::InstrumentationLibrary::builder("my-crate")
     ///     .with_attributes(vec![KeyValue::new("k", "v")])
     ///     .build();
     /// ```

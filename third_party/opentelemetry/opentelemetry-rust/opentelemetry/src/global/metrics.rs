@@ -1,18 +1,17 @@
+extern crate alloc;
+
 use crate::metrics::{self, Meter, MeterProvider};
 use crate::KeyValue;
 use core::fmt;
-use once_cell::sync::Lazy;
-use std::{
-    borrow::Cow,
-    sync::{Arc, RwLock},
+use oak_core::sync::OnceCell;
+use alloc::{
+  borrow::Cow,
+  vec::Vec,
+  sync::Arc,
 };
 
 /// The global `MeterProvider` singleton.
-static GLOBAL_METER_PROVIDER: Lazy<RwLock<GlobalMeterProvider>> = Lazy::new(|| {
-    RwLock::new(GlobalMeterProvider::new(
-        metrics::noop::NoopMeterProvider::new(),
-    ))
-});
+static GLOBAL_METER_PROVIDER: OnceCell<GlobalMeterProvider> = OnceCell::new();
 
 /// Allows a specific [MeterProvider] to be used generically by the
 /// [GlobalMeterProvider] by mirroring the interface and boxing the return types.
@@ -91,20 +90,23 @@ impl GlobalMeterProvider {
 pub fn set_meter_provider<P>(new_provider: P)
 where
     P: metrics::MeterProvider + Send + Sync + 'static,
+
 {
-    let mut global_provider = GLOBAL_METER_PROVIDER
-        .write()
-        .expect("GLOBAL_METER_PROVIDER RwLock poisoned");
-    *global_provider = GlobalMeterProvider::new(new_provider);
+    let _ = GLOBAL_METER_PROVIDER.set(GlobalMeterProvider::new(new_provider));
 }
 
 /// Returns an instance of the currently configured global [`MeterProvider`]
 /// through [`GlobalMeterProvider`].
 pub fn meter_provider() -> GlobalMeterProvider {
-    GLOBAL_METER_PROVIDER
-        .read()
-        .expect("GLOBAL_METER_PROVIDER RwLock poisoned")
-        .clone()
+  if GLOBAL_METER_PROVIDER.get().is_none() {
+    let _ = GLOBAL_METER_PROVIDER.set(
+      GlobalMeterProvider::new(metrics::noop::NoopMeterProvider::new()));
+}
+
+  GLOBAL_METER_PROVIDER
+      .get()
+      .expect("GLOBAL_METER_PROVIDER not initialized")
+      .clone()
 }
 
 /// Creates a named [`Meter`] via the configured [`GlobalMeterProvider`].
@@ -127,8 +129,8 @@ pub fn meter(name: impl Into<Cow<'static, str>>) -> Meter {
 /// # Example
 ///
 /// ```
-/// use opentelemetry::global::meter_with_version;
-/// use opentelemetry::KeyValue;
+/// use opentelemetry_rk::global::meter_with_version;
+/// use opentelemetry_rk::KeyValue;
 ///
 /// let meter = meter_with_version(
 ///     "io.opentelemetry",

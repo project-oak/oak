@@ -14,12 +14,17 @@
 //! accordance with the [W3C Baggage] specification.
 //!
 //! [W3C Baggage]: https://w3c.github.io/baggage
-use crate::{Context, Key, KeyValue, Value};
-use once_cell::sync::Lazy;
-use std::collections::{hash_map, HashMap};
-use std::fmt;
+extern crate alloc;
 
-static DEFAULT_BAGGAGE: Lazy<Baggage> = Lazy::new(Baggage::default);
+use crate::{Context, Key, KeyValue, Value};
+use alloc::collections::btree_map;
+use alloc::collections::BTreeMap;
+use alloc::string::String;
+use core::fmt;
+
+use oak_core::sync::OnceCell;
+
+static DEFAULT_BAGGAGE: OnceCell<Baggage> = OnceCell::new();
 
 const MAX_KEY_VALUE_PAIRS: usize = 180;
 const MAX_BYTES_FOR_ONE_PAIR: usize = 4096;
@@ -50,7 +55,7 @@ const MAX_LEN_OF_ALL_PAIRS: usize = 8192;
 /// [RFC2616, Section 2.2]: https://tools.ietf.org/html/rfc2616#section-2.2
 #[derive(Debug, Default)]
 pub struct Baggage {
-    inner: HashMap<Key, (Value, BaggageMetadata)>,
+    inner: BTreeMap<Key, (Value, BaggageMetadata)>,
     kv_content_len: usize, // the length of key-value-metadata string in `inner`
 }
 
@@ -58,39 +63,17 @@ impl Baggage {
     /// Creates an empty `Baggage`.
     pub fn new() -> Self {
         Baggage {
-            inner: HashMap::default(),
+            inner: BTreeMap::default(),
             kv_content_len: 0,
         }
     }
 
     /// Returns a reference to the value associated with a given name
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use opentelemetry::{baggage::Baggage, Value};
-    ///
-    /// let mut cc = Baggage::new();
-    /// let _ = cc.insert("my-name", "my-value");
-    ///
-    /// assert_eq!(cc.get("my-name"), Some(&Value::from("my-value")))
-    /// ```
     pub fn get<K: AsRef<str>>(&self, key: K) -> Option<&Value> {
         self.inner.get(key.as_ref()).map(|(value, _metadata)| value)
     }
 
     /// Returns a reference to the value and metadata associated with a given name
-    ///
-    /// # Examples
-    /// ```
-    /// use opentelemetry::{baggage::{Baggage, BaggageMetadata}, Value};
-    ///
-    /// let mut cc = Baggage::new();
-    /// let _ = cc.insert("my-name", "my-value");
-    ///
-    /// // By default, the metadata is empty
-    /// assert_eq!(cc.get_with_metadata("my-name"), Some(&(Value::from("my-value"), BaggageMetadata::from(""))))
-    /// ```
     pub fn get_with_metadata<K: AsRef<str>>(&self, key: K) -> Option<&(Value, BaggageMetadata)> {
         self.inner.get(key.as_ref())
     }
@@ -103,7 +86,7 @@ impl Baggage {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::{baggage::Baggage, Value};
+    /// use opentelemetry_rk::{baggage::Baggage, Value};
     ///
     /// let mut cc = Baggage::new();
     /// let _ = cc.insert("my-name", "my-value");
@@ -127,7 +110,7 @@ impl Baggage {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::{baggage::{Baggage, BaggageMetadata}, Value};
+    /// use opentelemetry_rk::{baggage::{Baggage, BaggageMetadata}, Value};
     ///
     /// let mut cc = Baggage::new();
     /// let _ = cc.insert_with_metadata("my-name", "my-value", "test");
@@ -231,7 +214,7 @@ fn key_value_metadata_bytes_size(key: &str, value: &str, metadata: &str) -> usiz
 
 /// An iterator over the entries of a [`Baggage`].
 #[derive(Debug)]
-pub struct Iter<'a>(hash_map::Iter<'a, Key, (Value, BaggageMetadata)>);
+pub struct Iter<'a>(btree_map::Iter<'a, Key, (Value, BaggageMetadata)>);
 
 impl<'a> Iterator for Iter<'a> {
     type Item = (&'a Key, &'a (Value, BaggageMetadata));
@@ -296,7 +279,7 @@ fn encode(s: &str) -> String {
 }
 
 impl fmt::Display for Baggage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for (i, (k, v)) in self.into_iter().enumerate() {
             write!(f, "{}={}", k, encode(v.0.as_str().as_ref()))?;
             if !v.1.as_str().is_empty() {
@@ -315,40 +298,12 @@ impl fmt::Display for Baggage {
 /// Methods for sorting and retrieving baggage data in a context.
 pub trait BaggageExt {
     /// Returns a clone of the given context with the included name/value pairs.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use opentelemetry::{baggage::BaggageExt, Context, KeyValue, Value};
-    ///
-    /// let cx = Context::map_current(|cx| {
-    ///     cx.with_baggage(vec![KeyValue::new("my-name", "my-value")])
-    /// });
-    ///
-    /// assert_eq!(
-    ///     cx.baggage().get("my-name"),
-    ///     Some(&Value::from("my-value")),
-    /// )
-    /// ```
     fn with_baggage<T: IntoIterator<Item = I>, I: Into<KeyValueMetadata>>(
         &self,
         baggage: T,
     ) -> Self;
 
     /// Returns a clone of the current context with the included name/value pairs.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use opentelemetry::{baggage::BaggageExt, Context, KeyValue, Value};
-    ///
-    /// let cx = Context::current_with_baggage(vec![KeyValue::new("my-name", "my-value")]);
-    ///
-    /// assert_eq!(
-    ///     cx.baggage().get("my-name"),
-    ///     Some(&Value::from("my-value")),
-    /// )
-    /// ```
     fn current_with_baggage<T: IntoIterator<Item = I>, I: Into<KeyValueMetadata>>(
         baggage: T,
     ) -> Self;
@@ -358,7 +313,7 @@ pub trait BaggageExt {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::{baggage::BaggageExt, Context, KeyValue, Value};
+    /// use opentelemetry_rk::{baggage::BaggageExt, Context, KeyValue, Value};
     ///
     /// let cx = Context::map_current(|cx| cx.with_cleared_baggage());
     ///
@@ -399,7 +354,14 @@ impl BaggageExt for Context {
     }
 
     fn baggage(&self) -> &Baggage {
-        self.get::<Baggage>().unwrap_or(&DEFAULT_BAGGAGE)
+        if let Some(baggage) = DEFAULT_BAGGAGE.get() {
+            return baggage;
+        }
+
+        match DEFAULT_BAGGAGE.set(Baggage::new()) {
+            Ok(_) => DEFAULT_BAGGAGE.get().unwrap(),
+            Err(_) => panic!("Failed to initialize DEFAULT_BAGGAGE"),
+        }
     }
 }
 

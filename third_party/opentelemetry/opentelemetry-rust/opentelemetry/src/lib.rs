@@ -11,7 +11,7 @@
 //! ```no_run
 //! # #[cfg(feature = "trace")]
 //! # {
-//! use opentelemetry::{global, trace::{TraceContextExt, Tracer}, Context };
+//! use opentelemetry_rk::{global, trace::{TraceContextExt, Tracer}, Context };
 //!
 //! fn do_something() {
 //!     let tracer = global::tracer("my_component");
@@ -38,7 +38,7 @@
 //! ```
 //! # #[cfg(feature = "trace")]
 //! # {
-//! use opentelemetry::{global, trace::{Span, Tracer}, KeyValue};
+//! use opentelemetry_rk::{global, trace::{Span, Tracer}, KeyValue};
 //!
 //! // get a tracer from a provider
 //! let tracer = global::tracer("my_service");
@@ -72,7 +72,7 @@
 //! ```
 //! # #[cfg(feature = "metrics")]
 //! # {
-//! use opentelemetry::{global, KeyValue};
+//! use opentelemetry_rk::{global, KeyValue};
 //!
 //! // get a meter from a provider
 //! let meter = global::meter("my_service");
@@ -197,9 +197,9 @@ pub use context::{Context, ContextGuard};
 
 mod common;
 
-#[cfg(any(feature = "testing", test))]
-#[doc(hidden)]
-pub mod testing;
+// #[cfg(any(feature = "testing", test))]
+// #[doc(hidden)]
+// pub mod testing;
 
 pub use common::{
     Array, ExportError, InstrumentationLibrary, InstrumentationLibraryBuilder, Key, KeyValue,
@@ -210,7 +210,7 @@ pub use common::{
 #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
 pub mod metrics;
 
-pub mod propagation;
+// pub mod propagation;
 
 #[cfg(feature = "trace")]
 #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
@@ -220,23 +220,3 @@ pub mod trace;
 #[cfg_attr(docsrs, doc(cfg(feature = "logs")))]
 pub mod logs;
 
-#[doc(hidden)]
-#[cfg(any(feature = "metrics", feature = "trace"))]
-pub mod time {
-    use std::time::SystemTime;
-
-    #[doc(hidden)]
-    #[cfg(any(
-        not(target_arch = "wasm32"),
-        all(target_arch = "wasm32", target_os = "wasi")
-    ))]
-    pub fn now() -> SystemTime {
-        SystemTime::now()
-    }
-
-    #[doc(hidden)]
-    #[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
-    pub fn now() -> SystemTime {
-        SystemTime::UNIX_EPOCH + std::time::Duration::from_millis(js_sys::Date::now() as u64)
-    }
-}

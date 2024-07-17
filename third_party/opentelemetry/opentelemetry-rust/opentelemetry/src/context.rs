@@ -1,12 +1,14 @@
 #[cfg(feature = "trace")]
 use crate::trace::context::SynchronizedSpan;
-use std::any::{Any, TypeId};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt;
-use std::hash::{BuildHasherDefault, Hasher};
-use std::marker::PhantomData;
-use std::sync::Arc;
+extern crate alloc;
+use alloc::{collections::BTreeMap, sync::Arc};
+use core::{
+    any::{Any, TypeId},
+    cell::RefCell,
+    fmt,
+    hash::Hasher,
+    marker::PhantomData,
+};
 
 thread_local! {
     static CURRENT_CONTEXT: RefCell<Context> = RefCell::new(Context::default());
@@ -46,7 +48,7 @@ thread_local! {
 /// # Examples
 ///
 /// ```
-/// use opentelemetry::Context;
+/// use opentelemetry_rk::Context;
 ///
 /// // Application-specific `a` and `b` values
 /// #[derive(Debug, PartialEq)]
@@ -78,7 +80,7 @@ thread_local! {
 pub struct Context {
     #[cfg(feature = "trace")]
     pub(super) span: Option<Arc<SynchronizedSpan>>,
-    entries: HashMap<TypeId, Arc<dyn Any + Sync + Send>, BuildHasherDefault<IdHasher>>,
+    entries: BTreeMap<TypeId, Arc<dyn Any + Sync + Send>>,
 }
 
 impl Context {
@@ -97,7 +99,7 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// #[derive(Debug, PartialEq)]
     /// struct ValueA(&'static str);
@@ -133,7 +135,7 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// // Given some value types defined in your application
     /// #[derive(Debug, PartialEq)]
@@ -165,7 +167,7 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// // Given some value types defined in your application
     /// #[derive(Debug, PartialEq)]
@@ -192,7 +194,7 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// // Given some value types defined in your application
     /// #[derive(Debug, PartialEq)]
@@ -232,7 +234,7 @@ impl Context {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// #[derive(Debug, PartialEq)]
     /// struct ValueA(&'static str);
@@ -251,7 +253,7 @@ impl Context {
     /// Guards do not need to be explicitly dropped:
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// #[derive(Debug, PartialEq)]
     /// struct ValueA(&'static str);
@@ -278,7 +280,7 @@ impl Context {
     /// entered:
     ///
     /// ```
-    /// use opentelemetry::Context;
+    /// use opentelemetry_rk::Context;
     ///
     /// #[derive(Debug, PartialEq)]
     /// struct ValueA(&'static str);

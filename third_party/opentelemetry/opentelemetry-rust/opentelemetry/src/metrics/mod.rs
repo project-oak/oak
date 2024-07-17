@@ -1,12 +1,15 @@
 //! # OpenTelemetry Metrics API
 
-use std::any::Any;
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
-use std::result;
-use std::sync::PoisonError;
-use std::{borrow::Cow, sync::Arc};
-use thiserror::Error;
+extern crate alloc;
+
+use alloc::{borrow::Cow, boxed::Box, string::String, sync::Arc, vec::Vec};
+use core::any::Any;
+use core::{
+    cmp::Ordering,
+    hash::{Hash, Hasher},
+    result,
+};
+// use thiserror::Error;
 
 mod instruments;
 mod meter;
@@ -25,23 +28,24 @@ pub use meter::{CallbackRegistration, Meter, MeterProvider, Observer};
 /// A specialized `Result` type for metric operations.
 pub type Result<T> = result::Result<T, MetricsError>;
 
+// (TODO) Port errors to no_std
 /// Errors returned by the metrics API.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum MetricsError {
     /// Other errors not covered by specific cases.
-    #[error("Metrics error: {0}")]
+    // #[error("Metrics error: {0}")]
     Other(String),
     /// Invalid configuration
-    #[error("Config error {0}")]
+    // #[error("Config error {0}")]
     Config(String),
     /// Fail to export metrics
-    #[error("Metrics exporter {} failed with {0}", .0.exporter_name())]
+    // #[error("Metrics exporter {} failed with {0}", .0.exporter_name())]
     ExportErr(Box<dyn ExportError>),
     /// Invalid instrument configuration such invalid instrument name, invalid instrument description, invalid instrument unit, etc.
     /// See [spec](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/api.md#general-characteristics)
     /// for full list of requirements.
-    #[error("Invalid instrument configuration: {0}")]
+    // #[error("Invalid instrument configuration: {0}")]
     InvalidInstrumentConfiguration(&'static str),
 }
 
@@ -51,11 +55,11 @@ impl<T: ExportError> From<T> for MetricsError {
     }
 }
 
-impl<T> From<PoisonError<T>> for MetricsError {
-    fn from(err: PoisonError<T>) -> Self {
-        MetricsError::Other(err.to_string())
-    }
-}
+// impl<T> From<PoisonError<T>> for MetricsError {
+//     fn from(err: PoisonError<T>) -> Self {
+//         MetricsError::Other(err.to_string())
+//     }
+// }
 
 struct F64Hashable(f64);
 

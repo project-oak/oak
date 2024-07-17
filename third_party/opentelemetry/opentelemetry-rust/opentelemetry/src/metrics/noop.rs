@@ -3,6 +3,8 @@
 //! This implementation is returned as the global Meter if no `MeterProvider`
 //! has been set. It is expected to have minimal resource utilization and
 //! runtime impact.
+extern crate alloc;
+
 use crate::{
     metrics::{
         AsyncInstrument, CallbackRegistration, InstrumentProvider, Meter, MeterProvider, Observer,
@@ -10,7 +12,8 @@ use crate::{
     },
     KeyValue,
 };
-use std::{any::Any, borrow::Cow, sync::Arc};
+use alloc::{borrow::Cow, sync::Arc};
+use core::any::Any;
 
 /// A no-op instance of a `MetricProvider`
 #[derive(Debug, Default)]

@@ -18,8 +18,8 @@
 //! ```
 //! # #[cfg(feature="trace")]
 //! # {
-//! use opentelemetry::trace::{Tracer, noop::NoopTracerProvider};
-//! use opentelemetry::global;
+//! use opentelemetry_rk::trace::{Tracer, noop::NoopTracerProvider};
+//! use opentelemetry_rk::global;
 //!
 //! fn init_tracer() {
 //!     // Swap this no-op provider for your tracing service of choice (jaeger, zipkin, etc)
@@ -50,8 +50,8 @@
 //! ```
 //! # #[cfg(feature="trace")]
 //! # {
-//! use opentelemetry::trace::{Tracer, TracerProvider};
-//! use opentelemetry::global;
+//! use opentelemetry_rk::trace::{Tracer, TracerProvider};
+//! use opentelemetry_rk::global;
 //!
 //! pub fn my_traced_library_function() {
 //!     // End users of your library will configure their global tracer provider
@@ -89,8 +89,8 @@
 //! ```
 //! # #[cfg(feature="metrics")]
 //! # {
-//! use opentelemetry::metrics::{Meter};
-//! use opentelemetry::{global, KeyValue};
+//! use opentelemetry_rk::metrics::{Meter};
+//! use opentelemetry_rk::{global, KeyValue};
 //!
 //!    fn do_something_instrumented() {
 //!     let meter = global::meter("my-component");
@@ -113,7 +113,7 @@
 //! ```
 //! # #[cfg(feature="metrics")]
 //! # {
-//! use opentelemetry::{global, KeyValue};
+//! use opentelemetry_rk::{global, KeyValue};
 //!
 //! fn main() {
 //!    // Set the global meter provider
@@ -125,7 +125,7 @@
 //! [`MeterProvider`]: crate::metrics::MeterProvider
 //! [`set_meter_provider`]: crate::global::set_meter_provider
 
-mod error_handler;
+// mod error_handler;
 #[cfg(feature = "metrics")]
 mod metrics;
 #[cfg(feature = "trace")]
@@ -133,7 +133,7 @@ mod propagation;
 #[cfg(feature = "trace")]
 mod trace;
 
-pub use error_handler::{handle_error, set_error_handler, Error};
+// pub use error_handler::{handle_error, set_error_handler, Error};
 #[cfg(feature = "metrics")]
 #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
 pub use metrics::*;

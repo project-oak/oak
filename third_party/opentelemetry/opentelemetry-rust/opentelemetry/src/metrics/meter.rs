@@ -1,7 +1,8 @@
+extern crate alloc;
+
+use alloc::{borrow::Cow, sync::Arc};
+use core::any::Any;
 use core::fmt;
-use std::any::Any;
-use std::borrow::Cow;
-use std::sync::Arc;
 
 use crate::metrics::{
     AsyncInstrumentBuilder, Counter, Gauge, Histogram, InstrumentBuilder, InstrumentProvider,
@@ -26,8 +27,8 @@ pub trait MeterProvider {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::{global, metrics::MeterProvider};
-    /// use opentelemetry::KeyValue;
+    /// use opentelemetry_rk::{global, metrics::MeterProvider};
+    /// use opentelemetry_rk::KeyValue;
     ///
     /// let provider = global::meter_provider();
     ///
@@ -69,7 +70,7 @@ pub trait MeterProvider {
 /// Provides access to instrument instances for recording measurements.
 ///
 /// ```
-/// use opentelemetry::{global, KeyValue};
+/// use opentelemetry_rk::{global, KeyValue};
 ///
 /// let meter = global::meter("my-meter");
 ///

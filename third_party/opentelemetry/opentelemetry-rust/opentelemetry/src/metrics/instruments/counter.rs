@@ -1,10 +1,12 @@
+extern crate alloc;
+
 use crate::{
     metrics::{AsyncInstrument, AsyncInstrumentBuilder, InstrumentBuilder, MetricsError},
     KeyValue,
 };
+use alloc::sync::Arc;
+use core::any::Any;
 use core::fmt;
-use std::any::Any;
-use std::sync::Arc;
 
 /// An SDK implemented instrument that records increasing values.
 pub trait SyncCounter<T> {
@@ -21,7 +23,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("Counter<{}>", std::any::type_name::<T>()))
+        f.write_fmt(format_args!("Counter<{}>", core::any::type_name::<T>()))
     }
 }
 
@@ -72,7 +74,7 @@ impl<T> fmt::Debug for ObservableCounter<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "ObservableCounter<{}>",
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         ))
     }
 }

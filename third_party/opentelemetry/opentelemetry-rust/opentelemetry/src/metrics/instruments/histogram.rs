@@ -1,9 +1,11 @@
+extern crate alloc;
+
 use crate::{
     metrics::{InstrumentBuilder, MetricsError},
     KeyValue,
 };
+use alloc::sync::Arc;
 use core::fmt;
-use std::sync::Arc;
 
 /// An SDK implemented instrument that records a distribution of values.
 pub trait SyncHistogram<T> {
@@ -20,7 +22,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("Histogram<{}>", std::any::type_name::<T>()))
+        f.write_fmt(format_args!("Histogram<{}>", core::any::type_name::<T>()))
     }
 }
 

@@ -1,10 +1,12 @@
+extern crate alloc;
+
 use crate::{
     metrics::{AsyncInstrument, AsyncInstrumentBuilder, InstrumentBuilder, MetricsError},
     KeyValue,
 };
 use core::fmt;
-use std::any::Any;
-use std::sync::Arc;
+use core::any::Any;
+use alloc::sync::Arc;
 
 /// An SDK implemented instrument that records independent values
 pub trait SyncGauge<T> {
@@ -21,7 +23,7 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_fmt(format_args!("Gauge<{}>", std::any::type_name::<T>()))
+        f.write_fmt(format_args!("Gauge<{}>", core::any::type_name::<T>()))
     }
 }
 
@@ -78,7 +80,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "ObservableGauge<{}>",
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         ))
     }
 }

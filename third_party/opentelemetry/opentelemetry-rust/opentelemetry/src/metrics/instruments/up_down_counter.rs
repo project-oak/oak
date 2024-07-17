@@ -1,10 +1,12 @@
+extern crate alloc;
+
 use crate::{
     metrics::{InstrumentBuilder, MetricsError},
     KeyValue,
 };
+use alloc::sync::Arc;
+use core::any::Any;
 use core::fmt;
-use std::any::Any;
-use std::sync::Arc;
 
 use super::{AsyncInstrument, AsyncInstrumentBuilder};
 
@@ -25,7 +27,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "UpDownCounter<{}>",
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         ))
     }
 }
@@ -77,7 +79,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "ObservableUpDownCounter<{}>",
-            std::any::type_name::<T>()
+            core::any::type_name::<T>()
         ))
     }
 }
@@ -108,7 +110,7 @@ impl<T> AsyncInstrument<T> for ObservableUpDownCounter<T> {
         self.0.observe(measurement, attributes)
     }
 
-    fn as_any(&self) -> Arc<dyn std::any::Any> {
+    fn as_any(&self) -> Arc<dyn core::any::Any> {
         self.0.as_any()
     }
 }

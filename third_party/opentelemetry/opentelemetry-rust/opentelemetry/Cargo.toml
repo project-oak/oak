@@ -1,5 +1,5 @@
 [package]
-name = "opentelemetry"
+name = "opentelemetry_rk"
 version = "0.23.0"
 description = "OpenTelemetry API for Rust"
 homepage = "https://github.com/open-telemetry/opentelemetry-rust"
@@ -11,6 +11,23 @@ categories = [
     "api-bindings",
     "asynchronous",
 ]
+include = [
+  "src/lib.rs",
+  "src/baggage.rs",
+  "src/context.rs",
+  "src/common.rs",
+  "src/metrics/*",
+  "src/global/metrics.rs",
+  "src/global/mod.rs",
+  "benches/*",
+]
+exclude = [
+  "src/global/trace.rs",
+  "src/trace/context.rs",
+  "src/logs/*",
+  "src/propagation/*",
+  "src/global/propagation.rs",
+]
 keywords = ["opentelemetry", "logging", "tracing", "metrics", "async"]
 license = "Apache-2.0"
 edition = "2021"
@@ -21,28 +38,26 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-futures-core = { workspace = true }
-futures-sink = "0.3"
-once_cell = { workspace = true }
-pin-project-lite = { workspace = true, optional = true }
-thiserror = { workspace = true }
+pin-project-lite = { version = "0.2", optional = true }
+oak_core = { path = "../../../../oak_core" }
+once_cell = { version = "1.13" }
 
 [target.'cfg(all(target_arch = "wasm32", not(target_os = "wasi")))'.dependencies]
 js-sys = "0.3.63"
 
 [features]
-default = ["trace", "metrics", "logs"]
+default = ["metrics"]
 trace = ["pin-project-lite"]
 metrics = []
-testing = ["trace", "metrics"]
+testing = ["metrics"]
 logs = []
 logs_level_enabled = ["logs"]
 otel_unstable = []
 
 [dev-dependencies]
-opentelemetry_sdk = { path = "../opentelemetry-sdk", features = ["logs_level_enabled"]} # for documentation tests
-criterion = { workspace = true }
-rand = { workspace = true }
+# opentelemetry_sdk = { path = "../opentelemetry-sdk", features = ["logs_level_enabled"]} # for documentation tests
+criterion = { version = "0.5" }
+rand = { version = "0.8", default-features = false , features = ["std", "std_rng"] }
 
 [[bench]]
 name = "metrics"

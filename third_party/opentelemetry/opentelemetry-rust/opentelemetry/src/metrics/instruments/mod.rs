@@ -1,10 +1,11 @@
+extern crate alloc;
+
 use crate::metrics::{Meter, MetricsError, Result};
 use crate::KeyValue;
+use alloc::{borrow::Cow, boxed::Box, sync::Arc, vec::Vec};
+use core::any::Any;
 use core::fmt;
-use std::any::Any;
-use std::borrow::Cow;
-use std::marker;
-use std::sync::Arc;
+use core::marker;
 
 use super::InstrumentProvider;
 
@@ -90,7 +91,7 @@ impl<T> fmt::Debug for InstrumentBuilder<'_, T> {
             .field("name", &self.name)
             .field("description", &self.description)
             .field("unit", &self.unit)
-            .field("kind", &std::any::type_name::<T>())
+            .field("kind", &core::any::type_name::<T>())
             .finish()
     }
 }
@@ -188,7 +189,7 @@ where
             .field("name", &self.name)
             .field("description", &self.description)
             .field("unit", &self.unit)
-            .field("kind", &std::any::type_name::<I>())
+            .field("kind", &core::any::type_name::<I>())
             .field("callbacks_len", &self.callbacks.len())
             .finish()
     }
