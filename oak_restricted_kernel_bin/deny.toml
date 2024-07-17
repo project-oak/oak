@@ -11,7 +11,7 @@ unmaintained = "deny"
 unsound = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = []
+ignore = [{ id = "RUSTSEC-2024-0344", reason = "b/352738247" }]
 
 [bans]
 multiple-versions = "allow"
