@@ -23,9 +23,30 @@ use oak_attestation_verification::util::{
 };
 use oak_proto_rust::oak::HexDigest;
 
+#[cfg(feature = "bazel")]
+const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
+
+#[cfg(feature = "bazel")]
+const ENDORSEMENT_SIGNATURE_PATH: &str =
+    "oak_attestation_verification/testdata/endorsement.json.sig";
+
+#[cfg(feature = "bazel")]
+const ENDORSER_PUBLIC_KEY_PATH: &str =
+    "oak_attestation_verification/testdata/oak_containers_stage1.pem";
+
+#[cfg(feature = "bazel")]
+const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
+
+#[cfg(not(feature = "bazel"))]
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+
+#[cfg(not(feature = "bazel"))]
 const ENDORSEMENT_SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
+
+#[cfg(not(feature = "bazel"))]
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
+
+#[cfg(not(feature = "bazel"))]
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
 const HASH1: &str = "e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7";

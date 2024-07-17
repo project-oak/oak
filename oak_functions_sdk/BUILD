@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -39,4 +39,22 @@ rust_library(
             "@oak_crates_index//:prost",
         ],
     }),
+)
+
+rust_test_suite(
+    name = "integration_tests",
+    srcs = glob(["tests/**"]),
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = [
+        "//oak_functions_sdk/tests/lookup_module",
+        "//oak_functions_sdk/tests/testing_module",
+    ],
+    deps = [
+        ":oak_functions_sdk",
+        "//oak_functions_abi",
+        "//oak_functions_service",
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:lazy_static",
+        "@oak_crates_index//:tokio",
+    ],
 )

@@ -27,12 +27,18 @@ use oak_functions_service::{
 
 lazy_static! {
     static ref LOOKUP_WASM_MODULE_BYTES: Vec<u8> = {
+        #[cfg(feature = "bazel")]
+        let wasm_path = String::from("oak_functions_sdk/tests/lookup_module/lookup_module.wasm");
+        #[cfg(not(feature = "bazel"))]
         let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(
             "oak_functions_sdk_abi_test_get_storage_item",
         );
         std::fs::read(wasm_path).expect("couldn't read compiled module")
     };
     static ref TESTING_WASM_MODULE_BYTES: Vec<u8> = {
+        #[cfg(feature = "bazel")]
+        let wasm_path = String::from("oak_functions_sdk/tests/testing_module/testing_module.wasm");
+        #[cfg(not(feature = "bazel"))]
         let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(
             "oak_functions_sdk_abi_test_invoke_testing",
         );

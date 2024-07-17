@@ -56,6 +56,9 @@ pkg_tar(
     name = "tar",
     srcs = [":main"],
     package_dir = "/usr/local/bin",
+    visibility = [
+        "//oak_containers_hello_world_untrusted_app:__pkg__",
+    ],
 )
 
 oci_image(

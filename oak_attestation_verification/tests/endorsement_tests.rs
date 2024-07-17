@@ -26,14 +26,39 @@ use oak_attestation_verification::{
 };
 
 // The digest of the endorsement under ENDORSEMENT_PATH.
+#[cfg(feature = "bazel")]
+const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
+
+#[cfg(feature = "bazel")]
+const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
+
+#[cfg(feature = "bazel")]
+const ENDORSER_PUBLIC_KEY_PATH: &str =
+    "oak_attestation_verification/testdata/oak_containers_stage1.pem";
+
+#[cfg(feature = "bazel")]
+const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
+
+// Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
+// from https://rekor.sigstore.dev/api/v1/log/publicKey.
+#[cfg(feature = "bazel")]
+const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
+
+#[cfg(not(feature = "bazel"))]
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+
+#[cfg(not(feature = "bazel"))]
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
+#[cfg(not(feature = "bazel"))]
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
+
+#[cfg(not(feature = "bazel"))]
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 
 // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
 // from https://rekor.sigstore.dev/api/v1/log/publicKey.
+#[cfg(not(feature = "bazel"))]
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC

@@ -41,20 +41,73 @@ use oak_proto_rust::oak::{
 };
 use prost::Message;
 
+#[cfg(feature = "bazel")]
+const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
+#[cfg(feature = "bazel")]
+const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
+#[cfg(feature = "bazel")]
+const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
+#[cfg(feature = "bazel")]
+const CONTAINERS_VCEK_MILAN_CERT_DER: &str =
+    "oak_attestation_verification/testdata/oc_vcek_milan.der";
+#[cfg(feature = "bazel")]
+const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
+#[cfg(feature = "bazel")]
+const ENDORSER_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/oak-development.pem";
+#[cfg(feature = "bazel")]
+const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
+#[cfg(feature = "bazel")]
+const CONTAINERS_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
+#[cfg(feature = "bazel")]
+const RK_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/rk_evidence.binarypb";
+#[cfg(feature = "bazel")]
+const RK_OBSOLETE_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/rk_evidence_20240312.binarypb";
+#[cfg(feature = "bazel")]
+const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
+#[cfg(feature = "bazel")]
+const GENOA_OC_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/genoa_oc_evidence.binarypb";
+#[cfg(feature = "bazel")]
+const GENOA_VCEK_CERT_DER: &str = "oak_attestation_verification/testdata/vcek_genoa.der";
+#[cfg(feature = "bazel")]
+const GENOA_OC_REFERENCE_PATH: &str =
+    "oak_attestation_verification/testdata/genoa_oc_reference_values.binarypb";
+#[cfg(feature = "bazel")]
+// These expected values were generaeted by running verification on the fake
+// evidence.
+const FAKE_EXPECTED_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/fake_expected_values.binarypb";
+
+#[cfg(not(feature = "bazel"))]
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+#[cfg(not(feature = "bazel"))]
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
+#[cfg(not(feature = "bazel"))]
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
+#[cfg(not(feature = "bazel"))]
 const CONTAINERS_VCEK_MILAN_CERT_DER: &str = "testdata/oc_vcek_milan.der";
+#[cfg(not(feature = "bazel"))]
 const RK_VCEK_MILAN_CERT_DER: &str = "testdata/rk_vcek_milan.der";
+#[cfg(not(feature = "bazel"))]
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
+#[cfg(not(feature = "bazel"))]
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
+#[cfg(not(feature = "bazel"))]
 const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
+#[cfg(not(feature = "bazel"))]
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
+#[cfg(not(feature = "bazel"))]
 const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
+#[cfg(not(feature = "bazel"))]
 const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
+#[cfg(not(feature = "bazel"))]
 const GENOA_OC_EVIDENCE_PATH: &str = "testdata/genoa_oc_evidence.binarypb";
+#[cfg(not(feature = "bazel"))]
 const GENOA_VCEK_CERT_DER: &str = "testdata/vcek_genoa.der";
+#[cfg(not(feature = "bazel"))]
 const GENOA_OC_REFERENCE_PATH: &str = "testdata/genoa_oc_reference_values.binarypb";
+#[cfg(not(feature = "bazel"))]
 // These expected values were generaeted by running verification on the fake
 // evidence.
 const FAKE_EXPECTED_VALUES_PATH: &str = "testdata/fake_expected_values.binarypb";
