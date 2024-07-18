@@ -124,6 +124,11 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 features = ["spin_no_std"],
                 version = "*",
             ),
+            "lock_api": crate.spec(
+                default_features = False,
+                features = [],
+                version = "*",
+            ),
             "log": crate.spec(
                 features = [],
                 version = "*",
@@ -165,6 +170,7 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
+            "spinning_top": crate.spec(version = "*"),
             "static_assertions": crate.spec(version = "*"),
             "strum": crate.spec(
                 default_features = False,

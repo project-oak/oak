@@ -49,6 +49,31 @@ rust_library(
     ]),
 )
 
+rust_library(
+    name = "oak_sev_guest_no_rust_crypto",
+    srcs = glob(["src/**"]),
+    crate_name = "oak_sev_guest",
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
+    deps = [
+        "//oak_sev_snp_attestation_report",
+        "@oak_crates_index//:snafu",
+        "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:strum",
+        "@oak_crates_index//:zerocopy",
+        "@oak_no_std_crates_index//:aes-gcm",
+        "@oak_no_std_crates_index//:bitflags",
+        "@oak_no_std_crates_index//:lock_api",
+        "@oak_no_std_crates_index//:spinning_top",
+    ] +
+    # TODO: b/334871992 - This select is probably not required after b/334871992.
+    select_std_crates([
+        "x86_64",
+    ]),
+)
+
 rust_test(
     name = "oak_sev_guest_test",
     size = "small",

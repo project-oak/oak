@@ -37,3 +37,20 @@ rust_library(
         "x86_64",
     ]),
 )
+
+rust_library(
+    name = "sev_serial_no_rust_crypto",
+    srcs = glob(["src/**"]),
+    crate_name = "sev_serial",
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
+    ]),
+    deps = [
+        "//oak_sev_guest:oak_sev_guest_no_rust_crypto",
+    ] +
+    # TODO: b/334871992 - This select is probably not required after b/334871992.
+    select_std_crates([
+        "x86_64",
+    ]),
+)

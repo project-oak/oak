@@ -1,5 +1,5 @@
 {
-  "checksum": "1d19b1d58dedb0b127de96f213a3b94b4aada6d7e5e86288731ecca86360c0c7",
+  "checksum": "df9e5bd3a417451b5b3dbf4f55032e969cac6fe42a3b171c04eaf5e00a479466",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1981,6 +1981,10 @@
               "target": "lazy_static"
             },
             {
+              "id": "lock_api 0.4.12",
+              "target": "lock_api"
+            },
+            {
               "id": "log 0.4.22",
               "target": "log"
             },
@@ -2015,6 +2019,10 @@
             {
               "id": "sha2 0.10.8",
               "target": "sha2"
+            },
+            {
+              "id": "spinning_top 0.2.5",
+              "target": "spinning_top"
             },
             {
               "id": "static_assertions 1.1.0",
@@ -6894,6 +6902,7 @@
     "hkdf 0.12.4",
     "hpke 0.11.0",
     "lazy_static 1.5.0",
+    "lock_api 0.4.12",
     "log 0.4.22",
     "maplit 1.0.2",
     "p256 0.13.2",
@@ -6903,6 +6912,7 @@
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "sha2 0.10.8",
+    "spinning_top 0.2.5",
     "static_assertions 1.1.0",
     "strum 0.26.3",
     "virtio-drivers 0.7.3",
