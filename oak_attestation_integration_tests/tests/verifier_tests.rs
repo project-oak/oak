@@ -102,7 +102,7 @@ fn verify_mock_evidence() {
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("code={} reason={}", p.status, p.reason);
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
