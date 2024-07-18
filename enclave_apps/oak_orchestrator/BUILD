@@ -14,26 +14,26 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-rust_library(
-    name = "oak_restricted_kernel_orchestrator",
-    srcs = ["src/lib.rs"],
-    crate_features = ["exchange_evidence"],
-    target_compatible_with = [
-        "//:x86_64-none-setting",
-    ],
+rust_binary(
+    name = "oak_orchestrator",
+    srcs = ["src/main.rs"],
+    platform = "//:x86_64-unknown-none",
     deps = [
-        "//oak_attestation",
-        "//oak_channel",
+        "//micro_rpc",
         "//oak_dice",
-        "//oak_restricted_kernel_dice",
+        "//oak_restricted_kernel_interface",
+        "//oak_restricted_kernel_orchestrator",
+        "//oak_restricted_kernel_sdk",
+        "//testing/oak_echo_service",
+        "@oak_crates_index//:zerocopy",
         "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:prost",
+        "@oak_no_std_crates_index//:zeroize",
     ],
 )
