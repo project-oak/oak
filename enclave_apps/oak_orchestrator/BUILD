@@ -26,12 +26,10 @@ rust_binary(
     srcs = ["src/main.rs"],
     platform = "//:x86_64-unknown-none",
     deps = [
-        "//micro_rpc",
         "//oak_dice",
         "//oak_restricted_kernel_interface",
         "//oak_restricted_kernel_orchestrator",
         "//oak_restricted_kernel_sdk",
-        "//testing/oak_echo_service",
         "@oak_crates_index//:zerocopy",
         "@oak_no_std_crates_index//:log",
         "@oak_no_std_crates_index//:zeroize",
