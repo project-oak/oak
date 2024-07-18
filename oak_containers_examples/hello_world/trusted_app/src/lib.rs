@@ -13,13 +13,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            pub mod example {
-                tonic::include_proto!("oak.containers.example");
-            }
-        }
-    }
-}
 pub mod app_service;

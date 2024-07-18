@@ -17,15 +17,15 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        &["../../../proto/containers/hello_world.proto"],
+        &["../../../oak_containers_examples/hello_world/proto/hello_world.proto"],
         &["../../.."],
         CodegenOptions {
             build_server: true,
+            build_client: true,
             extern_paths: vec![ExternPath::new(
                 ".oak.crypto.v1",
                 "::oak_proto_rust::oak::crypto::v1",
             )],
-            ..Default::default()
         },
     )?;
 

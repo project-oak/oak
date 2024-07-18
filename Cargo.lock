@@ -2430,6 +2430,7 @@ dependencies = [
  "oak_containers_sdk",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_hello_world_proto",
  "oak_proto_rust",
  "prost",
  "prost-types",
@@ -2455,6 +2456,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc",
  "oak_grpc_utils",
+ "oak_hello_world_proto",
  "oak_proto_rust",
  "once_cell",
  "prost",
@@ -2981,6 +2983,17 @@ dependencies = [
  "log",
  "nix 0.27.1",
  "simple_logger",
+]
+
+[[package]]
+name = "oak_hello_world_proto"
+version = "0.1.0"
+dependencies = [
+ "oak_grpc_utils",
+ "oak_proto_rust",
+ "prost",
+ "prost-types",
+ "tonic",
 ]
 
 [[package]]

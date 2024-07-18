@@ -14,14 +14,13 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use tokio::time::Duration;
-use tonic::transport::Endpoint;
-
-use crate::proto::oak::containers::example::{
+use oak_hello_world_proto::oak::containers::example::{
     trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
     HelloRequest,
 };
+use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+use tokio::time::Duration;
+use tonic::transport::Endpoint;
 
 /// Utility struct used to interface with the launcher
 pub struct TrustedApplicationClient {

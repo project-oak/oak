@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
@@ -30,7 +29,7 @@ rust_library(
     ],
     crate_name = "oak_containers_hello_world_trusted_app",
     deps = [
-        ":build",
+        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
@@ -51,26 +50,5 @@ rust_binary(
         "//oak_containers_sdk",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-    },
-    data = [
-        "//proto/containers:hello_world_proto",
-        "//proto/crypto:crypto_proto",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )

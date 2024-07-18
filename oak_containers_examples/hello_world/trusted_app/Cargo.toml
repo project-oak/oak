@@ -10,6 +10,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+oak_hello_world_proto = { path = "../proto" }
 oak_containers_sdk = { workspace = true }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }

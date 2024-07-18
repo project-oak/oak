@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,8 +31,8 @@ rust_library(
     ],
     crate_name = "oak_containers_hello_world_untrusted_app",
     deps = [
-        ":build",
         "//oak_client",
+        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_launcher:lib",
         "//oak_crypto",
         "//oak_functions_test_utils",
@@ -62,35 +61,5 @@ rust_binary(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
-    ],
-)
-
-# TODO: b/349587497 - Remove build script. Depend on //oak_proto_rust insetad.
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-    },
-    data = [
-        "//proto/containers:hello_world_proto",
-        "//proto/session:service_streaming_proto",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "@oak_crates_index//:prost-build",
-    ],
-)
-
-rust_test(
-    name = "tests",
-    crate = ":lib",
-    deps = [
-        "@oak_crates_index//:assertables",
     ],
 )

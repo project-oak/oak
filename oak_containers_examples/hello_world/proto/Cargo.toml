@@ -1,0 +1,18 @@
+[package]
+name = "oak_hello_world_proto"
+version = "0.1.0"
+authors = ["Project Oak Team <project-oak-team@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+oak_proto_rust = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+tonic = { workspace = true, features = ["codegen"] }
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }

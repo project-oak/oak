@@ -25,26 +25,6 @@ package(
 )
 
 proto_library(
-    name = "hello_world_proto",
-    srcs = ["hello_world.proto"],
-    deps = [
-        "//proto/crypto:crypto_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "hello_world_cc_proto",
-    deps = [":hello_world_proto"],
-)
-
-cc_grpc_library(
-    name = "hello_world_cc_grpc",
-    srcs = [":hello_world_proto"],
-    grpc_only = True,
-    deps = [":hello_world_cc_proto"],
-)
-
-proto_library(
     name = "hostlib_key_provisioning_proto",
     srcs = ["hostlib_key_provisioning.proto"],
     deps = [
@@ -97,9 +77,6 @@ cc_grpc_library(
 build_test(
     name = "build_test",
     targets = [
-        ":hello_world_proto",
-        ":hello_world_cc_proto",
-        ":hello_world_cc_grpc",
         ":hostlib_key_provisioning_proto",
         ":interfaces_proto",
         ":interfaces_cc_proto",

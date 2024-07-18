@@ -13,21 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    generate_grpc_code(
-        &["../../../proto/containers/hello_world.proto"],
-        &["../../.."],
-        CodegenOptions {
-            build_client: true,
-            extern_paths: vec![
-                ExternPath::new(".oak.session.v1", "::oak_proto_rust::oak::session::v1"),
-                ExternPath::new(".oak.crypto.v1", "::oak_proto_rust::oak::crypto::v1"),
-            ],
-            ..Default::default()
-        },
-    )?;
-
-    Ok(())
+pub mod oak {
+    pub mod containers {
+        pub mod example {
+            tonic::include_proto!("oak.containers.example");
+        }
+    }
 }
