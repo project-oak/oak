@@ -24,5 +24,4 @@ tokio = { version = "*", features = [
   "sync",
   "rt-multi-thread",
 ] }
-xtask = { workspace = true }
 log = "*"

@@ -38,7 +38,7 @@ fn init_logging() {
 }
 async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     init_logging();
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }

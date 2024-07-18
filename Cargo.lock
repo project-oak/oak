@@ -1890,7 +1890,6 @@ dependencies = [
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "tokio",
- "xtask",
 ]
 
 [[package]]
@@ -2453,6 +2452,7 @@ dependencies = [
  "oak_client",
  "oak_containers_launcher",
  "oak_crypto",
+ "oak_functions_test_utils",
  "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
@@ -2462,7 +2462,6 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tower",
- "xtask",
 ]
 
 [[package]]
@@ -2801,7 +2800,6 @@ dependencies = [
  "tonic",
  "tower",
  "ubyte",
- "xtask",
 ]
 
 [[package]]

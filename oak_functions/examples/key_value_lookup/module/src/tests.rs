@@ -30,7 +30,7 @@ use test::Bencher;
 #[tokio::test]
 async fn test_server() {
     // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
-    if xtask::testing::skip_test() || cfg!(feature = "bazel") {
+    if oak_functions_test_utils::skip_test() || cfg!(feature = "bazel") {
         log::info!("skipping test");
         return;
     }
@@ -76,7 +76,7 @@ async fn test_server() {
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
-    if xtask::testing::skip_test() || cfg!(feature = "bazel") {
+    if oak_functions_test_utils::skip_test() || cfg!(feature = "bazel") {
         log::info!("skipping test");
         return;
     }

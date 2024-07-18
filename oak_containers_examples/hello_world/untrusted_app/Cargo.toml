@@ -33,4 +33,4 @@ tower = "*"
 
 [dev-dependencies]
 once_cell = "*"
-xtask = { workspace = true }
+oak_functions_test_utils = { workspace = true }

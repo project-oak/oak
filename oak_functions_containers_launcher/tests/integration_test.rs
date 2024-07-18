@@ -47,7 +47,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_virtio() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -57,7 +57,7 @@ async fn test_launcher_key_value_lookup_virtio() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_network() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -68,7 +68,7 @@ async fn test_launcher_key_value_lookup_network() {
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }

@@ -23,7 +23,6 @@ use once_cell::sync::Lazy;
 
 pub mod files;
 pub mod internal;
-pub mod testing;
 
 pub static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 

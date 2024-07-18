@@ -10,7 +10,7 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
+// See the License for the speific language governing permissions and
 // limitations under the License.
 
 //! Integration tests for the Oak Functions Launcher.
@@ -28,7 +28,7 @@ use xtask::workspace_path;
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -57,7 +57,7 @@ async fn test_launcher_key_value_lookup() {
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -96,7 +96,7 @@ async fn test_launcher_echo() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_large_lookup_data() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -174,7 +174,7 @@ async fn test_load_large_lookup_data() {
 #[ignore = "too expensive"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_two_gib_lookup_data() {
-    if xtask::testing::skip_test() {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }

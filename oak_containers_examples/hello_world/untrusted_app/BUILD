@@ -36,6 +36,7 @@ rust_library(
         "//oak_client",
         "//oak_containers_launcher:lib",
         "//oak_crypto",
+        "//oak_functions_test_utils",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",

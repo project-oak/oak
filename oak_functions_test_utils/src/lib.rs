@@ -271,3 +271,9 @@ pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process:
         .current_dir(workspace_path(&[]))
         .output()
 }
+
+/// Whether to skip the test. For instance, GitHub Actions does not support KVM,
+/// so we cannot run tests that require nested virtualization.
+pub fn skip_test() -> bool {
+    std::env::var("OAK_KVM_TESTS").unwrap_or_default().to_lowercase() == "skip"
+}
