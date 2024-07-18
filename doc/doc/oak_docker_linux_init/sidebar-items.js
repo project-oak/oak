@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["DOCKER_COMMAND_PATH"],"fn":["main"],"mod":["init"]};
