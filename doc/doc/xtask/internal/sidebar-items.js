@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Command","Dependency","StatusResultValue","Step"],"fn":["kill_process","process_gone","read_to_end","run_step"],"struct":["CargoBinary","CargoManifest","Cmd","Completion","Context","DependencySpec","Opt","RunTestsOpt","SingleStatusResult","Status","StepResult"],"trait":["Runnable","Running"]};
+window.SIDEBAR_ITEMS = {"enum":["Command","StatusResultValue","Step"],"fn":["kill_process","process_gone","read_to_end","run_step"],"struct":["Cmd","Completion","Context","Opt","SingleStatusResult","Status","StepResult"],"trait":["Runnable","Running"]};
