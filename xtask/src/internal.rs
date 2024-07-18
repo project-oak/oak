@@ -15,7 +15,7 @@
 //
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -43,7 +43,6 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    RunTests,
     RunCargoClippy,
     RunCargoDeny,
     RunCargoUdeps,
@@ -59,81 +58,6 @@ pub struct Completion {
         default_value = ".xtask_bash_completion"
     )]
     pub file_name: PathBuf,
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct RunTestsOpt {
-    #[arg(long, help = "Remove generated files after running tests for each crate")]
-    pub cleanup: bool,
-}
-
-/// Partial representation of Cargo manifest files.
-///
-/// Only the fields that are required for extracting specific information (e.g.,
-/// names of fuzz targets) are included.
-#[derive(serde::Deserialize, Debug)]
-pub struct CargoManifest {
-    #[serde(default)]
-    pub bin: Vec<CargoBinary>,
-    #[serde(default)]
-    pub dependencies: HashMap<String, Dependency>,
-    #[serde(default)]
-    #[serde(rename = "dev-dependencies")]
-    pub dev_dependencies: HashMap<String, Dependency>,
-    #[serde(default)]
-    #[serde(rename = "build-dependencies")]
-    pub build_dependencies: HashMap<String, Dependency>,
-}
-
-/// Partial information about a Cargo binary, as included in a Cargo manifest.
-#[derive(serde::Deserialize, Debug)]
-pub struct CargoBinary {
-    #[serde(default)]
-    pub name: String,
-}
-
-/// Partial representation of a dependency in a `Cargo.toml` file.
-#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
-#[serde(untagged)]
-pub enum Dependency {
-    /// Plaintext specification of a dependency with only the version number.
-    Text(String),
-    /// Json specification of a dependency.
-    Json(DependencySpec),
-}
-
-/// Partial representation of a Json specification of a dependency in a
-/// `Cargo.toml` file.
-#[derive(serde::Deserialize, Debug, PartialEq, PartialOrd)]
-pub struct DependencySpec {
-    #[serde(default)]
-    pub path: Option<String>,
-}
-
-impl CargoManifest {
-    pub fn all_dependencies_with_toml_path(self) -> Vec<String> {
-        let all_deps = vec![
-            self.dependencies.into_values().collect(),
-            self.dev_dependencies.into_values().collect(),
-            self.build_dependencies.into_values().collect(),
-        ];
-        let all_deps: Vec<Dependency> = itertools::concat(all_deps);
-
-        // Collect all the dependencies that specify a path.
-        all_deps
-            .iter()
-            .map(|dep| match dep {
-                Dependency::Json(spec) => spec.path.clone(),
-                Dependency::Text(_) => None,
-            })
-            .filter(|path| path.is_some())
-            .map(|path| {
-                let mut path = PathBuf::from(path.unwrap());
-                path.push("Cargo.toml");
-                path.to_str().unwrap().to_string()
-            })
-            .collect()
-    }
 }
 
 /// A construct to keep track of the status of the execution. It only cares

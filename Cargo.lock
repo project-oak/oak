@@ -5973,10 +5973,8 @@ dependencies = [
  "clap",
  "clap_complete",
  "colored",
- "itertools 0.12.1",
  "nix 0.27.1",
  "once_cell",
- "serde",
  "tokio",
  "walkdir",
 ]

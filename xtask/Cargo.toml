@@ -15,10 +15,8 @@ chrono = { version = "*", default-features = false, features = [
 clap = { version = "*", features = ["derive"] }
 clap_complete = "*"
 colored = "*"
-itertools = "*"
 nix = { version = "*", features = ["signal"] }
 once_cell = "*"
-serde = { version = "*", features = ["derive"] }
 tokio = { version = "*", features = [
   "fs",
   "io-util",

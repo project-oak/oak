@@ -25,7 +25,7 @@
 
 #![feature(async_closure)]
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use clap::{CommandFactory, Parser};
 use colored::*;
@@ -88,7 +88,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
@@ -109,93 +108,12 @@ fn cleanup() {
     }
 }
 
-fn run_tests() -> Step {
-    Step::Multiple {
-        name: "tests".to_string(),
-        steps: vec![run_cargo_tests(&RunTestsOpt { cleanup: false })],
-    }
-}
-
-fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
-    Step::Multiple {
-        name: "cargo tests".to_string(),
-        steps: vec![run_cargo_test(opt), run_cargo_doc()],
-    }
-}
-
 fn run_completion(completion: &Completion) -> Step {
     let mut file = std::fs::File::create(completion.file_name.clone()).expect("file not created");
     clap_complete::generate(clap_complete::Shell::Bash, &mut Opt::command(), "xtask", &mut file);
 
     // Return an empty step. Otherwise we cannot call run_completion from match_cmd.
     Step::Multiple { name: "cargo completion".to_string(), steps: vec![] }
-}
-
-fn run_cargo_test(opt: &RunTestsOpt) -> Step {
-    Step::Multiple {
-        name: "cargo test".to_string(),
-        steps: crate_manifest_files()
-            .map(|entry| {
-                // Run `cargo test` in the directory of the crate, not the top-level directory.
-                // This is needed as otherwise any crate-specific `.cargo/config.toml` files
-                // would be ignored. If a crate does not have a config file,
-                // Cargo will just backtrack up the tree and pick up the
-                // `.cargo/config.toml` file from the root directory.
-                let test_run_step = |name| Step::Single {
-                    name,
-                    command: Cmd::new_in_dir(
-                        "cargo",
-                        [
-                            "test",
-                            "--all-features",
-                            &format!(
-                                "--manifest-path={}",
-                                entry.file_name().unwrap().to_str().unwrap()
-                            ),
-                        ],
-                        entry.parent().unwrap(),
-                    ),
-                };
-
-                // If `cleanup` is enabled, add a cleanup step to remove the generated files.
-                if opt.cleanup {
-                    Step::Multiple {
-                        name: entry.to_str().unwrap().to_string(),
-                        steps: vec![
-                            test_run_step("run".to_string()),
-                            Step::Single {
-                                name: "cleanup".to_string(),
-                                command: Cmd::new(
-                                    "rm",
-                                    ["-rf", entry.with_file_name("target").to_str().unwrap()],
-                                ),
-                            },
-                        ],
-                    }
-                } else {
-                    test_run_step(entry.to_str().unwrap().to_string())
-                }
-            })
-            .collect(),
-    }
-}
-
-fn run_cargo_doc() -> Step {
-    Step::Multiple {
-        name: "cargo doc".to_string(),
-        steps: crate_manifest_files()
-            .map(to_string)
-            .map(|entry| {
-                let mut path = PathBuf::from(entry);
-                path.pop();
-                let path = to_string(path).replace("./", "");
-                Step::Single {
-                    name: path.clone(),
-                    command: Cmd::new("bash", ["./scripts/check_docs", &path]),
-                }
-            })
-            .collect(),
-    }
 }
 
 fn run_cargo_clippy() -> Step {
