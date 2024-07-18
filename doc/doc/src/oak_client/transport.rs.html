@@ -117,6 +117,35 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -133,9 +162,10 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span>std::future::Future;
+
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>futures::channel::mpsc;
-<span class="kw">use </span>oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
     session::v1::{
@@ -144,20 +174,48 @@
         ResponseWrapper,
     },
 };
-<span class="kw">use </span>tonic::transport::Channel;
 
-<span class="kw">pub struct </span>GrpcStreamingTransport {
+<span class="doccomment">/// A [Transport] implementation that uses a single gRPC streaming session to
+/// get the evidence and then invokve the desired request.
+</span><span class="kw">pub struct </span>GrpcStreamingTransport {
     response_stream: tonic::Streaming&lt;ResponseWrapper&gt;,
     request_tx_channel: mpsc::Sender&lt;RequestWrapper&gt;,
 }
 
 <span class="kw">impl </span>GrpcStreamingTransport {
-    <span class="kw">pub async fn </span>new(rpc_client: StreamingSessionClient&lt;Channel&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>rpc_client = rpc_client;
+    <span class="doccomment">/// Create a new [GrpcStreamingTransport].
+    ///
+    /// The provided stream_creator will be immediately invokved to create a new
+    /// stream session, and all actions on the newly created instance will use
+    /// that stream. If the stream dies, a new client/transport pair will need
+    /// to be created.
+    ///
+    /// The `stream_creator` is a closure to create a new stream. Typically this
+    /// will be used with a gRPC client instance that exposes a
+    /// bi-directional streaming method.
+    ///
+    /// For example, if you have a gRPC service like:
+    /// ```
+    /// service {
+    ///     rpc MyMethod(stream RequestWrapper) returns (stream ResponseWrapper);
+    /// }
+    /// ```
+    ///
+    /// You will call:
+    /// ```
+    /// let transport =
+    ///   GrpcStreamingTransport::new(|rx| client.my_method(rx))
+    /// ```
+    </span><span class="kw">pub async fn </span>new&lt;Fut&gt;(
+        stream_creator: <span class="kw">impl </span>FnOnce(mpsc::Receiver&lt;RequestWrapper&gt;) -&gt; Fut,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt;
+    <span class="kw">where
+        </span>Fut: Future&lt;Output = tonic::Result&lt;tonic::Response&lt;tonic::Streaming&lt;ResponseWrapper&gt;&gt;&gt;&gt;,
+    {
         <span class="kw">let </span>(tx, rx) = mpsc::channel(<span class="number">10</span>);
 
         <span class="kw">let </span>response_stream =
-            rpc_client.stream(rx).<span class="kw">await</span>.context(<span class="string">"couldn't send stream request"</span>)<span class="question-mark">?</span>.into_inner();
+            stream_creator(rx).<span class="kw">await</span>.context(<span class="string">"couldn't send stream request"</span>)<span class="question-mark">?</span>.into_inner();
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ response_stream, request_tx_channel: tx })
     }
