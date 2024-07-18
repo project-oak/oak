@@ -2671,17 +2671,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_docker_linux_init"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "nix 0.27.1",
- "simple_logger",
- "subprocess",
-]
-
-[[package]]
 name = "oak_echo_linux_init"
 version = "0.1.0"
 dependencies = [
@@ -4605,16 +4594,6 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 2.0.48",
-]
-
-[[package]]
-name = "subprocess"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c2e86926081dda636c546d8c5e641661049d7562a68f5488be4a1f7f66f6086"
-dependencies = [
- "libc",
- "winapi",
 ]
 
 [[package]]
