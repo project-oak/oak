@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -42,15 +42,11 @@ rust_library(
         "@oak_crates_index//:zerocopy",
         "@oak_no_std_crates_index//:aes-gcm",
         "@oak_no_std_crates_index//:bitflags",
-    ] + select({
-        # TODO: b/334871992 - This select is probably not required after b/334871992.
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:x86_64",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:x86_64",
-        ],
-    }),
+    ] +
+    # TODO: b/334871992 - This select is probably not required after b/334871992.
+    select_std_crates([
+        "x86_64",
+    ]),
 )
 
 rust_test(

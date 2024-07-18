@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,14 +31,7 @@ DEPS = [
     "@oak_no_std_crates_index//:log",
     "@oak_no_std_crates_index//:rand_core",
     "@oak_no_std_crates_index//:wasmi",
-] + select({
-    "@platforms//os:none": [
-        "@oak_no_std_crates_index//:prost",
-    ],
-    "//conditions:default": [
-        "@oak_crates_index//:prost",
-    ],
-})
+] + select_std_crates(["prost"])
 
 rust_library(
     name = "oak_functions_service",

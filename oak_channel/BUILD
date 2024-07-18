@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -25,18 +25,11 @@ package(
 _OAK_CHANNEL_DEPS = [
     "//oak_core",
     "@oak_crates_index//:static_assertions",
-] + select({
-    "@platforms//os:none": [
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:bytes",
-    ],
-    "//conditions:default": [
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:bitflags",
-        "@oak_crates_index//:bytes",
-    ],
-})
+] + select_std_crates([
+    "anyhow",
+    "bitflags",
+    "bytes",
+])
 
 rust_library(
     name = "oak_channel",

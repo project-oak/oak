@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "auto_std_crates", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -49,7 +49,7 @@ rust_library(
         "//oak_restricted_kernel_interface",
         "//stage0_dice",
         "@oak_crates_index//:zerocopy",
-    ] + auto_std_crates([
+    ] + select_std_crates([
         "lazy_static",
         "anyhow",
         "p256",

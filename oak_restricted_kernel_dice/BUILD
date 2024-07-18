@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,19 +32,12 @@ rust_library(
     deps = [
         "//oak_crypto",
         "//oak_dice",
-    ] + select({
-        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:coset",
-            "@oak_no_std_crates_index//:hkdf",
-            "@oak_no_std_crates_index//:p256",
-            "@oak_no_std_crates_index//:sha2",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:coset",
-            "@oak_crates_index//:hkdf",
-            "@oak_crates_index//:p256",
-            "@oak_crates_index//:sha2",
-        ],
-    }),
+    ] +
+    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+    select_std_crates([
+        "coset",
+        "hkdf",
+        "p256",
+        "sha2",
+    ]),
 )

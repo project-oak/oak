@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
+load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,14 +32,7 @@ rust_library(
         "//micro_rpc",
         "//oak_functions_abi",
         "//oak_proto_rust",
-    ] + select({
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:prost",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:prost",
-        ],
-    }),
+    ] + select_std_crates(["prost"]),
 )
 
 rust_test_suite(

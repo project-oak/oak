@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -31,13 +31,9 @@ rust_library(
     ]),
     deps = [
         "//oak_sev_guest",
-    ] + select({
-        # TODO: b/334871992 - This select is probably not required after b/334871992.
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:x86_64",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:x86_64",
-        ],
-    }),
+    ] +
+    # TODO: b/334871992 - This select is probably not required after b/334871992.
+    select_std_crates([
+        "x86_64",
+    ]),
 )

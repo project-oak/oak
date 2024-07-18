@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -39,38 +39,21 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:static_assertions",
-    ] + select({
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:aead",
-            "@oak_no_std_crates_index//:aes-gcm",
-            "@oak_no_std_crates_index//:anyhow",
-            "@oak_no_std_crates_index//:ecdsa",
-            "@oak_no_std_crates_index//:hkdf",
-            "@oak_no_std_crates_index//:hpke",
-            "@oak_no_std_crates_index//:p256",
-            "@oak_no_std_crates_index//:pkcs8",
-            "@oak_no_std_crates_index//:primeorder",
-            "@oak_no_std_crates_index//:rand_chacha",
-            "@oak_no_std_crates_index//:rand_core",
-            "@oak_no_std_crates_index//:sha2",
-            "@oak_no_std_crates_index//:zeroize",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:aead",
-            "@oak_crates_index//:aes-gcm",
-            "@oak_crates_index//:anyhow",  # //oak_client requires stdful version.
-            "@oak_crates_index//:ecdsa",
-            "@oak_crates_index//:hkdf",
-            "@oak_crates_index//:hpke",
-            "@oak_crates_index//:p256",  # //oak_containers_orchestrator requires stdful version.
-            "@oak_crates_index//:pkcs8",
-            "@oak_crates_index//:primeorder",
-            "@oak_crates_index//:rand_chacha",
-            "@oak_crates_index//:rand_core",
-            "@oak_crates_index//:sha2",
-            "@oak_crates_index//:zeroize",
-        ],
-    }),
+    ] + select_std_crates([
+        "aead",
+        "aes-gcm",
+        "anyhow",  # oak_client requires stdful version.
+        "ecdsa",
+        "hkdf",
+        "hpke",
+        "p256",  # oak_containers_orchestrator requires stdful version.
+        "pkcs8",
+        "primeorder",
+        "rand_chacha",
+        "rand_core",
+        "sha2",
+        "zeroize",
+    ]),
 )
 
 rust_test(

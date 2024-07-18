@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -26,13 +27,9 @@ rust_library(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_sev_guest",
-    ] + select({
-        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:x86_64",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:x86_64",
-        ],
-    }),
+    ] +
+    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+    select_std_crates([
+        "x86_64",
+    ]),
 )

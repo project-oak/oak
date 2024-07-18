@@ -16,7 +16,7 @@
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -37,20 +37,7 @@ rust_library(
     ]),
     deps = [
         ":build",
-    ] + select({
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:prost",
-        ],
-        "//conditions:default": [
-            # When not building for bare metal, use the crate with std. Crates that require std
-            # and that also require prost won't work with @oak_no_std_crates_index//:prost. For
-            # example, oak_containers_orchestrator uses tonic which uses both prost and std.
-            # Both oak_containers_orchestrator and tonic need to see the same prost symbols.
-            # It doesn't work if one sees "@oak_no_std_crates_index//:prost" and the other
-            # sees "@oak_crates_index//:prost".
-            "@oak_crates_index//:prost",
-        ],
-    }),
+    ] + select_std_crates(["prost"]),
 )
 
 cargo_build_script(

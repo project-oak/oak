@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -51,21 +51,21 @@ rust_library(
         "@oak_no_std_crates_index//:rand_core",
         "@oak_no_std_crates_index//:sha2",
         "@oak_no_std_crates_index//:zeroize",
-    ] + select({
-        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+    ] +
+    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+    select_std_crates([
+        "coset",
+        "p256",
+        "prost",
+        "x86_64",
+    ]) +
+    # See comment on micro_rpc/BUILD.
+    select({
         "@platforms//os:none": [
             "//third_party/prost-types",
-            "@oak_no_std_crates_index//:coset",
-            "@oak_no_std_crates_index//:p256",
-            "@oak_no_std_crates_index//:prost",
-            "@oak_no_std_crates_index//:x86_64",
         ],
         "//conditions:default": [
-            "@oak_crates_index//:coset",
-            "@oak_crates_index//:p256",
-            "@oak_crates_index//:prost",
             "@oak_crates_index//:prost-types",
-            "@oak_crates_index//:x86_64",
         ],
     }),
 )

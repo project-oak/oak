@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -36,29 +36,17 @@ rust_library(
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
         "@oak_crates_index//:zerocopy",
-    ] + select({
-        # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:bitflags",
-            "@oak_no_std_crates_index//:ciborium",
-            "@oak_no_std_crates_index//:coset",
-            "@oak_no_std_crates_index//:hex",
-            "@oak_no_std_crates_index//:hkdf",
-            "@oak_no_std_crates_index//:p256",
-            "@oak_no_std_crates_index//:rand_core",
-            "@oak_no_std_crates_index//:sha2",
-            "@oak_no_std_crates_index//:zeroize",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:bitflags",
-            "@oak_crates_index//:ciborium",
-            "@oak_crates_index//:coset",
-            "@oak_crates_index//:hex",
-            "@oak_crates_index//:hkdf",
-            "@oak_crates_index//:p256",
-            "@oak_crates_index//:rand_core",
-            "@oak_crates_index//:sha2",
-            "@oak_crates_index//:zeroize",
-        ],
-    }),
+    ] +
+    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
+    select_std_crates([
+        "bitflags",
+        "ciborium",
+        "coset",
+        "hex",
+        "hkdf",
+        "p256",
+        "rand_core",
+        "sha2",
+        "zeroize",
+    ]),
 )

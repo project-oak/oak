@@ -17,7 +17,7 @@
 load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "either_platform", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -38,14 +38,15 @@ rust_library(
     deps = [
         ":build",
         "//micro_rpc",
-    ] + select({
+    ] + select_std_crates([
+        "prost",
+    ]) +
+    # See comment on micro_rpc/BUILD.
+    select({
         "@platforms//os:none": [
             "//third_party/prost-types",
-            "@oak_no_std_crates_index//:prost",
         ],
         "//conditions:default": [
-            # See comment on micro_rpc/BUILD.
-            "@oak_crates_index//:prost",
             "@oak_crates_index//:prost-types",
         ],
     }),

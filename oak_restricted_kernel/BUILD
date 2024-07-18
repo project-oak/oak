@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -47,31 +48,17 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "@oak_crates_index//:zeroize",
     "@oak_no_std_crates_index//:log",
     "@oak_no_std_crates_index//:bitflags",
-] + select({
-    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-    "@platforms//os:none": [
-        "@oak_no_std_crates_index//:acpi",
-        "@oak_no_std_crates_index//:aml",
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:coset",
-        "@oak_no_std_crates_index//:goblin",
-        "@oak_no_std_crates_index//:hex",
-        "@oak_no_std_crates_index//:hpke",
-        "@oak_no_std_crates_index//:p256",
-        "@oak_no_std_crates_index//:x86_64",
-    ],
-    "//conditions:default": [
-        "@oak_crates_index//:acpi",
-        "@oak_crates_index//:aml",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:coset",
-        "@oak_crates_index//:goblin",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:hpke",
-        "@oak_crates_index//:p256",
-        "@oak_crates_index//:x86_64",
-    ],
-})
+] + select_std_crates([
+    "acpi",
+    "aml",
+    "anyhow",
+    "coset",
+    "goblin",
+    "hex",
+    "hpke",
+    "p256",
+    "x86_64",
+])
 
 rust_library(
     name = "oak_restricted_kernel_virtio_console_channel",

@@ -18,6 +18,7 @@
 # we can't use it in our oak_no_std_crates_index.
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -29,12 +30,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
-    deps = select({
-        "@platforms//os:none": [
-            "@oak_no_std_crates_index//:prost",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:prost",
-        ],
-    }),
+    deps = select_std_crates([
+        "prost",
+    ]),
 )
