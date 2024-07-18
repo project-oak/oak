@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["HandshakeType"],"struct":["ClientHandshaker","ServerHandshaker"],"trait":["EncryptionKeyHandle","Handshaker"]};
+window.SIDEBAR_ITEMS = {"enum":["HandshakeType"],"struct":["ClientHandshaker","ServerHandshaker"],"trait":["Handshaker"]};

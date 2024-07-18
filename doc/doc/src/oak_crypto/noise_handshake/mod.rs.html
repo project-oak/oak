@@ -217,15 +217,6 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -257,14 +248,17 @@
 
 <span class="kw">use </span>oak_proto_rust::oak::crypto::v1::SessionKeys;
 
-<span class="kw">pub use </span><span class="kw">crate</span>::noise_handshake::crypto_wrapper::{
-    aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
-    p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
-    P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
-};
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
+};
+<span class="kw">pub use crate</span>::{
+    identity_key::IdentityKeyHandle,
+    noise_handshake::crypto_wrapper::{
+        aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
+        p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
+        P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
+    },
 };
 
 <span class="comment">// This is assumed to be vastly larger than any connection will ever reach.
@@ -375,36 +369,24 @@
     <span class="kw">pub </span>response: Vec&lt;u8&gt;,
 }
 
-<span class="doccomment">/// Performs the Responder side of the Noise protocol with the NK or NN pattern.
-/// |identity_private_key_bytes| contains the private key scalar for the
-/// service's provisioned identity. |in_data| is provided by the Initiator and
-/// contains its ephemeral public key and encrypted payload.
-///
-/// The identity public key is computed from the private key, but could
-/// alternatively be stored separately to reduce computation if needed to
-/// reduce per-transaction computation.
-/// See https://noiseexplorer.com/patterns/NK/
-</span><span class="kw">pub fn </span>respond_nk(identity_private_key_bytes: <span class="kw-2">&amp;</span>[u8], in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
+<span class="kw">pub fn </span>respond_nk(identity_key: <span class="kw-2">&amp;</span><span class="kw">dyn </span>IdentityKeyHandle, in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
     <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
-
-    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    </span><span class="kw">let </span>identity_scalar: P256Scalar =
-        identity_private_key_bytes.try_into().map_err(|<span class="kw">_</span>| Error::InvalidPrivateKey)<span class="question-mark">?</span>;
-    <span class="kw">let </span>identity_pub = identity_scalar.compute_public_key();
-    noise.mix_hash_point(identity_pub.as_slice());
+    </span>noise.mix_hash_point(
+        identity_key.get_public_key().map_err(|<span class="kw">_</span>| Error::InvalidPrivateKey)<span class="question-mark">?</span>.as_slice(),
+    );
 
     <span class="comment">// unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
     </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
     noise.mix_hash(peer_pub.as_slice());
     noise.mix_key(peer_pub.as_slice());
 
-    <span class="kw">let </span>es_ecdh_bytes = crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span>identity_scalar, <span class="kw-2">&amp;</span>peer_pub)
-        .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
+    <span class="kw">let </span>es_ecdh_bytes =
+        identity_key.derive_dh_secret(peer_pub.to_vec()).map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(es_ecdh_bytes.as_slice());
     finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>peer_pub)
 }
