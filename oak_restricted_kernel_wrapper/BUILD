@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
@@ -22,16 +21,39 @@ package(
 )
 
 rust_binary(
-    name = "oak_restricted_kernel_wrapper",
+    name = "oak_restricted_kernel_wrapper_virtio_console_channel",
     srcs = glob(["src/**/*.rs"]),
     compile_data = ["src/asm/boot.s"],
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
         "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel",
     ],
+    features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
+    linker_script = ":layout.ld",
     platform = "//:x86_64-unknown-none",
     rustc_env = {
         "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel)",
+    },
+    deps = [
+        "@//oak_linux_boot_params",
+        "@oak_no_std_crates_index//:elf",
+        "@oak_no_std_crates_index//:x86_64",
+    ],
+)
+
+rust_binary(
+    name = "oak_restricted_kernel_wrapper_simple_io_channel",
+    srcs = glob(["src/**/*.rs"]),
+    compile_data = ["src/asm/boot.s"],
+    crate_features = ["bazel"],  # TODO: b/333064338 remove.
+    data = [
+        "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel",
+    ],
+    features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
+    linker_script = ":layout.ld",
+    platform = "//:x86_64-unknown-none",
+    rustc_env = {
+        "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel)",
     },
     deps = [
         "@//oak_linux_boot_params",

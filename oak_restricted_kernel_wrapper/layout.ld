@@ -16,6 +16,21 @@
 
 ENTRY(_wrapper_entry)
 
+PHDRS
+{
+    /*
+     * While lld (on Cargo's toolchain) will automatically create any phdrs referenced
+     * using `.section { ...} :phdr` syntax, ld (on Bazel's toolchain) won't auto-create them,
+     * so we declare them manually here.
+     */
+    setupdata PT_LOAD;
+    boot PT_LOAD;
+    text PT_LOAD;
+    rodata PT_LOAD;
+    data PT_LOAD;
+    bss PT_LOAD;
+}
+
 SECTIONS {
     /*
      * The setup-data for the kernel. In the Linux kernel this also includes
