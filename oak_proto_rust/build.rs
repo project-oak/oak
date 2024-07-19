@@ -52,7 +52,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
         &[
             "../proto/oak_functions/testing.proto",
-            "../proto/crypto/crypto.proto",
             "../proto/oak_functions/sdk/oak_functions_wasm.proto",
         ],
         &included_protos,

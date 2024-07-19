@@ -15,14 +15,22 @@
 //
 
 #![feature(iter_intersperse)]
-
-//! This crate allows compiling protobuf services to Rust in `build.rs` scripts.
-
-use std::path::Path;
-
 use anyhow::Context;
-use prost_build::{Method, Service};
+mod prost;
 
+pub use prost::compile;
+
+#[derive(Default, Clone)]
+pub struct ExternPath {
+    proto_path: String,
+    rust_path: String,
+}
+
+impl ExternPath {
+    pub fn new(proto_path: &str, rust_path: &str) -> Self {
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
+    }
+}
 #[derive(Copy, Clone, Debug, Default)]
 pub enum ReceiverType {
     /// &mut self
@@ -61,86 +69,35 @@ pub struct CompileOptions {
     /// See https://docs.rs/prost-build/0.12.4/prost_build/struct.Config.html#method.enable_type_names
     pub enable_type_names: bool,
 }
-
-#[derive(Default, Clone)]
-pub struct ExternPath {
-    proto_path: String,
-    rust_path: String,
+/// A service definition to generate micro_rpc code for.
+#[derive(Debug)]
+pub struct Service {
+    pub name: String,
+    pub methods: Vec<Method>,
 }
 
-impl ExternPath {
-    pub fn new(proto_path: &str, rust_path: &str) -> Self {
-        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
-    }
+#[derive(Debug)]
+pub struct Method {
+    pub name: String,
+    pub id: u32,
+    pub input_type: String,
+    pub output_type: String,
 }
 
-/// Compile Rust server code from the services in the provided protobuf file.
-///
-/// Each method in a service definition must have exactly one comment line of
-/// the form `// method_id: 42`, which is used to generate a stable identifier
-/// for that method, which is part of the serialization protocol used for
-/// invocation.
-///
-/// For a service called `TestName`, `compile` generates the following objects:
-///
-/// - a struct named `TestNameServer`, which implements the
-///   `micro_rpc::InvocationHandler` trait, dispatching each request to the
-///   appropriate method on the underlying service implementation.
-/// - a trait named `TestName`, with a method for each method defined in the
-///   protobuf service, and an additional default method named `serve` which
-///   returns an instance of `TestNameServer`; the developer of a service would
-///   usually define a concrete struct and manually implement this trait for it,
-/// - a struct named `TestNameClient`, exposing a method for each method defined
-///   in the protobuf service. This may be used to directly invoke the
-///   underlying handler in order to indirectly invoke methods on the
-///   corresponding `Server` object on the other side of the handler.
-/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with
-///   async support.
-pub fn compile(
-    protos: &[impl AsRef<Path>],
-    includes: &[impl AsRef<Path>],
-    options: CompileOptions,
-) {
-    protos.iter().for_each(|filename| {
-        println!("cargo:rerun-if-changed={}", filename.as_ref().as_os_str().to_string_lossy())
-    });
-    let mut config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
-    for extern_path in options.extern_paths {
-        config.extern_path(extern_path.proto_path, extern_path.rust_path);
-    }
-    if options.enable_type_names {
-        config.enable_type_names();
-    }
-    config
-        // Use BTreeMap to allow using this function in no-std crates.
-        .btree_map(["."])
-        .bytes(options.bytes)
-        .compile_protos(protos, includes)
-        .expect("couldn't compile protobuffer schema");
-}
-
-struct ServiceGenerator {
-    options: CompileOptions,
-}
-
-impl prost_build::ServiceGenerator for ServiceGenerator {
-    fn generate(&mut self, service: Service, buf: &mut String) {
-        *buf += "\n";
-        *buf += &generate_service(&service, self.options.receiver_type)
-            .expect("couldn't generate services");
-        *buf += "\n";
-        *buf += &generate_service_client(&service, false).expect("couldn't generate clients");
-        *buf += "\n";
-        *buf += &generate_service_client(&service, true).expect("couldn't generate async clients");
-    }
+pub fn generate_file(service: &Service, receiver_type: ReceiverType, buf: &mut String) {
+    *buf += "\n";
+    *buf += &generate_service(service, receiver_type).expect("couldn't generate services");
+    *buf += "\n";
+    *buf += &generate_service_client(service, false).expect("couldn't generate clients");
+    *buf += "\n";
+    *buf += &generate_service_client(service, true).expect("couldn't generate async clients");
 }
 
 /// Generate the Rust objects from the input [`Service`] instance, corresponding
 /// to a `service` entry.
 fn generate_service(service: &Service, receiver_type: ReceiverType) -> anyhow::Result<String> {
-    let server_name = server_name(service);
-    let service_name = service_name(service);
+    let service_name = &service.name;
+    let server_name = server_name(service_name);
     let mut lines = Vec::new();
     lines.extend(vec![
         format!("#[derive(Clone)]"),
@@ -233,10 +190,10 @@ fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Res
 }
 
 fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result<Vec<String>> {
-    let method_id = method_id(method)?;
-    let request_type = request_type(method);
-    let response_type = response_type(method);
-    let method_name = method_name(method);
+    let method_id = method.id;
+    let request_type = &method.input_type;
+    let response_type = &method.output_type;
+    let method_name = &method.name;
     let fn_modifier = if asynchronous { "async " } else { "" };
     Ok(vec![
         format!(
@@ -259,9 +216,9 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     // correct type, and dispatch a reference to that parsed object to the
     // underlying service implementation, provided by the developer, which deals
     // with type safe generated objects instead of raw byte buffers.
-    let method_id = method_id(method)?;
-    let request_type = request_type(method);
-    let method_name = method_name(method);
+    let method_id = method.id;
+    let request_type = &method.input_type;
+    let method_name = &method.name;
     Ok(vec![
         format!("            {method_id} => {{"),
         // We need the angle brackets around the type in order to make sure it works with Rust well
@@ -284,58 +241,21 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
 }
 
 fn generate_service_method(method: &Method, receiver_type: ReceiverType) -> Vec<String> {
-    let method_name = method_name(method);
-    let request_type = request_type(method);
-    let response_type = response_type(method);
+    let method_name = &method.name;
+    let request_type = &method.input_type;
+    let response_type = &method.output_type;
     let self_type = receiver_type.value();
     vec![format!(
         "    fn {method_name}({self_type}, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;"
     )]
 }
 
-/// Returns the value of the `method_id` comment on the method.
-fn method_id(method: &Method) -> anyhow::Result<u32> {
-    let method_ids = method
-        .comments
-        .leading
-        .iter()
-        .filter_map(|line| line.strip_prefix(" method_id: "))
-        .collect::<Vec<_>>();
-    if method_ids.is_empty() {
-        anyhow::bail!("no method_id comment on method {}", method.proto_name,)
-    } else if method_ids.len() > 1 {
-        anyhow::bail!("multiple method_id comments on method {}", method.proto_name)
-    } else {
-        Ok(method_ids[0].parse()?)
-    }
+/// The type name of the generated Rust server struct.
+fn server_name(service_name: &str) -> String {
+    format!("{}Server", service_name)
 }
 
 /// The type name of the generated Rust client struct.
 fn client_name(service: &Service, asynchronous: bool) -> String {
     format!("{}{}", service.name, if asynchronous { "AsyncClient" } else { "Client" })
-}
-
-/// The type name of the generated Rust server struct.
-fn server_name(service: &Service) -> String {
-    format!("{}Server", service.name)
-}
-
-/// The type name of the generated Rust service struct.
-fn service_name(service: &Service) -> String {
-    service.name.to_string()
-}
-
-/// The method name of the generated Rust client method.
-fn method_name(method: &Method) -> String {
-    method.name.to_string()
-}
-
-/// The type name of the generated Rust request struct.
-fn request_type(method: &Method) -> String {
-    method.input_type.to_string()
-}
-
-/// The type name of the generated Rust response struct.
-fn response_type(method: &Method) -> String {
-    method.output_type.to_string()
 }
