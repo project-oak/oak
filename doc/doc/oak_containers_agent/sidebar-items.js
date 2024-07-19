@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["metrics"]};
+window.SIDEBAR_ITEMS = {"fn":["set_error_handler"],"mod":["metrics"]};
