@@ -42,7 +42,12 @@ prost = "*"
 stderrlog = "*"
 tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
-tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "sync",
+  "process",
+] }
 tokio-stream = { version = "*", features = ["net"] }
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true, features = ["gzip"] }
@@ -52,7 +57,6 @@ tracing = "*"
 
 [dev-dependencies]
 oak_functions_test_utils = { workspace = true }
-xtask = { workspace = true }
 
 [[bin]]
 name = "oak_functions_containers_app"

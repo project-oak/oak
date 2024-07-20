@@ -29,7 +29,6 @@ use oak_proto_rust::oak::functions::{InvokeRequest, OakFunctionsAsyncClient};
 use prost::Message;
 use test::Bencher;
 use ubyte::ByteUnit;
-use xtask::workspace_path;
 
 struct OakFunctionsTestConfig {
     wasm_path: PathBuf,
@@ -55,13 +54,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: workspace_path(&[
-            "stage0_bin",
-            "target",
-            "x86_64-unknown-none",
-            "release",
-            "stage0_bin",
-        ]),
+        bios_binary: ["..", "stage0_bin", "target", "x86_64-unknown-none", "release", "stage0_bin"]
+            .iter()
+            .collect(),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),

@@ -17,7 +17,7 @@
 #![feature(const_fmt_arguments_new)]
 #![feature(async_closure)]
 
-use std::{path::PathBuf, sync::Mutex};
+use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
 
@@ -25,8 +25,3 @@ pub mod files;
 pub mod internal;
 
 pub static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
-
-// Creates a path relative to the workspace root.
-pub fn workspace_path(relative_path: &[&str]) -> PathBuf {
-    [&[env!("WORKSPACE_ROOT")], relative_path].concat().iter().collect()
-}

@@ -18,14 +18,13 @@ use std::sync::Arc;
 
 use oak_functions_service::{logger::StandaloneLogger, lookup::LookupDataManager};
 use tokio::{fs, process::Command};
-use xtask::workspace_path;
 
 #[tokio::test]
 async fn test_native_handler() {
     let status = Command::new("bazel")
         .arg("build")
         .arg("//cc/oak_functions/native_sdk:key_value_lookup")
-        .current_dir(workspace_path(&[]))
+        .current_dir("..")
         .spawn()
         .expect("failed to spawn bazel")
         .wait()
@@ -34,11 +33,9 @@ async fn test_native_handler() {
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
 
-    let _library = fs::read(
-        workspace_path(&[]).join("bazel-bin/cc/oak_functions/native_sdk/libkey_value_lookup.so"),
-    )
-    .await
-    .expect("failed to read test library");
+    let _library = fs::read("../bazel-bin/cc/oak_functions/native_sdk/libkey_value_lookup.so")
+        .await
+        .expect("failed to read test library");
 
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::<1>::new_empty(logger));

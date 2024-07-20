@@ -43,7 +43,6 @@ rust_test(
         "//oak_functions_abi",
         "//oak_functions_client:lib",
         "//oak_functions_test_utils",
-        "//xtask:lib",
         "@oak_crates_index//:log",
         "@oak_crates_index//:maplit",
         "@oak_crates_index//:pretty_assertions",

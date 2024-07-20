@@ -2770,7 +2770,6 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
- "xtask",
 ]
 
 [[package]]
@@ -2854,7 +2853,6 @@ dependencies = [
  "tonic-web",
  "ubyte",
  "which 5.0.0",
- "xtask",
 ]
 
 [[package]]
