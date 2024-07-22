@@ -62,7 +62,6 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_tdx_guest",["",[],["lib.rs","tdcall.rs","vmcall.rs"]]],\
 ["oak_virtio",["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]]],\
 ["sev_serial",["",[],["lib.rs"]]],\
-["snp_measurement",["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]]],\
-["xtask",["",[],["files.rs","internal.rs","lib.rs"]]]\
+["snp_measurement",["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]]]\
 ]'));
 createSrcSidebar();

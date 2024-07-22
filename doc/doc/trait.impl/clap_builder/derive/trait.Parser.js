@@ -6,6 +6,5 @@
 "oak_functions_launcher":[["impl Parser for <a class=\"struct\" href=\"oak_functions_launcher/struct.Args.html\" title=\"struct oak_functions_launcher::Args\">Args</a>"]],
 "oak_kernel_measurement":[["impl Parser for <a class=\"struct\" href=\"oak_kernel_measurement/struct.Cli.html\" title=\"struct oak_kernel_measurement::Cli\">Cli</a>"]],
 "oak_launcher_utils":[["impl Parser for <a class=\"struct\" href=\"oak_launcher_utils/launcher/struct.Params.html\" title=\"struct oak_launcher_utils::launcher::Params\">Params</a>"]],
-"snp_measurement":[["impl Parser for <a class=\"struct\" href=\"snp_measurement/struct.Cli.html\" title=\"struct snp_measurement::Cli\">Cli</a>"]],
-"xtask":[["impl Parser for <a class=\"struct\" href=\"xtask/internal/struct.Opt.html\" title=\"struct xtask::internal::Opt\">Opt</a>"],["impl Parser for <a class=\"struct\" href=\"xtask/internal/struct.Completion.html\" title=\"struct xtask::internal::Completion\">Completion</a>"]]
+"snp_measurement":[["impl Parser for <a class=\"struct\" href=\"snp_measurement/struct.Cli.html\" title=\"struct snp_measurement::Cli\">Cli</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

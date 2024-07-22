@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"macro":["spread"],"mod":["files","internal"],"static":["PROCESSES"]};

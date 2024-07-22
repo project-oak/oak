@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Command","StatusResultValue","Step"],"fn":["kill_process","process_gone","read_to_end","run_step"],"struct":["Cmd","Completion","Context","Opt","SingleStatusResult","Status","StepResult"],"trait":["Runnable","Running"]};
