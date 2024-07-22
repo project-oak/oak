@@ -29,9 +29,8 @@ use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use oak_proto_rust::oak::functions::{
-    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
-};
+use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
+use oak_proto_rust::oak::functions::{InitializeRequest, InitializeResponse};
 use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]

@@ -22,7 +22,6 @@ use oak_grpc::oak::session::v1::streaming_session_server::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    functions,
     session::v1::{
         request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
         InvokeResponse, RequestWrapper, ResponseWrapper,
@@ -73,12 +72,12 @@ impl StreamingSession for SessionProxy {
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
                         #[allow(clippy::needless_update)]
-                        let enclave_invoke_request = functions::InvokeRequest {
+                        let enclave_invoke_request = oak_proto_rust::oak::functions::InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
                         };
                         let mut enclave_client =
-                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            oak_micro_rpc::oak::functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         let enclave_invoke_response = enclave_client
                             .handle_user_request(&enclave_invoke_request)
                             .await

@@ -29,7 +29,7 @@ rust_binary(
         "//micro_rpc",
         "//oak_functions_enclave_service:lib",
         "//oak_functions_service:lib",
-        "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
         "//oak_restricted_kernel_sdk",
     ],
 )

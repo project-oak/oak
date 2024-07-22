@@ -50,7 +50,7 @@ fn main() -> ! {
         None,
         WasmConfig::default(),
     );
-    let server = oak_proto_rust::oak::functions::OakFunctionsServer::new(service);
+    let server = oak_micro_rpc::oak::functions::OakFunctionsServer::new(service);
     start_blocking_server(Box::<FileDescriptorChannel>::default(), server, &mut invocation_stats)
         .expect("server encountered an unrecoverable error");
 }

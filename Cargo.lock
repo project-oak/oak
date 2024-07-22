@@ -2625,6 +2625,7 @@ version = "0.1.0"
 dependencies = [
  "oak_grpc",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "pprof",
  "prost",
  "prost-types",
@@ -2795,6 +2796,7 @@ dependencies = [
  "oak_dice",
  "oak_functions_service",
  "oak_functions_test_utils",
+ "oak_micro_rpc",
  "oak_proto_rust",
  "oak_restricted_kernel_sdk",
  "prost",
@@ -2824,6 +2826,7 @@ dependencies = [
  "oak_grpc",
  "oak_grpc_utils",
  "oak_launcher_utils",
+ "oak_micro_rpc",
  "oak_proto_rust",
  "prost",
  "rand",
@@ -2845,6 +2848,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_service",
  "oak_functions_test_utils",
+ "oak_micro_rpc",
  "oak_proto_rust",
  "tokio",
 ]
@@ -2883,6 +2887,7 @@ dependencies = [
  "oak_dice",
  "oak_functions_abi",
  "oak_functions_test_utils",
+ "oak_micro_rpc",
  "oak_proto_rust",
  "parking_lot",
  "pprof",
@@ -2902,6 +2907,7 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_functions_sdk",
+ "oak_micro_rpc",
  "oak_proto_rust",
  "prost",
 ]
@@ -3010,6 +3016,16 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_micro_rpc"
+version = "0.1.0"
+dependencies = [
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_proto_rust",
+ "prost",
 ]
 
 [[package]]

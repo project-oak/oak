@@ -31,7 +31,14 @@ macro_rules! include_proto {
     };
 }
 
+pub mod perftools {
+    pub mod profiles {
+        include_proto!("perftools.profiles");
+    }
+}
+
 pub mod oak {
+
     // Do not lint generated code.
     #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 
@@ -65,6 +72,17 @@ pub mod oak {
         }
     }
 
+    pub mod containers {
+        include_proto!("oak.containers");
+        pub mod v1 {
+            include_proto!("oak.containers.v1");
+        }
+    }
+
+    pub mod debug {
+        include_proto!("oak.debug");
+    }
+
     pub mod crypto {
         pub mod v1 {
             include_proto!("oak.crypto.v1");
@@ -72,7 +90,6 @@ pub mod oak {
     }
 
     pub mod functions {
-        use prost::Message;
         include_proto!("oak.functions");
         pub mod abi {
             include_proto!("oak.functions.abi");
@@ -84,15 +101,19 @@ pub mod oak {
             include_proto!("oak.functions.lookup_data");
         }
         pub mod testing {
-            use prost::Message;
             include_proto!("oak.functions.testing");
         }
 
         pub mod wasm {
             pub mod v1 {
-                use prost::Message;
                 include_proto!("oak.functions.wasm.v1");
             }
+        }
+    }
+
+    pub mod key_provisioning {
+        pub mod v1 {
+            include_proto!("oak.key_provisioning.v1");
         }
     }
 

@@ -9,6 +9,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 oak_grpc = { workspace = true }
+oak_proto_rust = { workspace = true }
 pprof = { version = "*", features = ["frame-pointer", "prost-codec"] }
 prost = "*"
 prost-types = "*"

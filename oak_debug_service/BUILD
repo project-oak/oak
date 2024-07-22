@@ -25,6 +25,7 @@ rust_library(
     name = "oak_debug_service",
     srcs = glob(["src/**"]),
     deps = [
+        "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:pprof",
         "@oak_crates_index//:prost",

@@ -19,8 +19,8 @@ use anyhow::Context;
 use oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
     v1::orchestrator_crypto_server::OrchestratorCryptoServer,
-    GetApplicationConfigResponse,
 };
+use oak_proto_rust::oak::containers::GetApplicationConfigResponse;
 use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;

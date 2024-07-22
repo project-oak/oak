@@ -22,13 +22,15 @@ use anyhow::anyhow;
 use futures::{FutureExt, Stream};
 use oak_grpc::oak::containers::{
     launcher_server::{Launcher, LauncherServer},
-    v1::{
-        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
-        GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-    },
-    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
 };
-use oak_proto_rust::oak::attestation::v1::Evidence;
+use oak_proto_rust::oak::{
+    attestation::v1::Evidence,
+    containers::{
+        v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+};
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{

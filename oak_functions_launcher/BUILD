@@ -37,6 +37,7 @@ rust_library(
         "//oak_launcher_utils",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_proto_rust/micro_rpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:clap",

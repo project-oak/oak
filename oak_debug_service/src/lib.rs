@@ -16,11 +16,9 @@
 
 use std::time::Duration;
 
-use oak_grpc::{
-    oak::debug::{
-        debug_service_server::{DebugService, DebugServiceServer},
-        CpuProfileRequest, CpuProfileResponse,
-    },
+use oak_grpc::oak::debug::debug_service_server::{DebugService, DebugServiceServer};
+use oak_proto_rust::{
+    oak::debug::{CpuProfileRequest, CpuProfileResponse},
     perftools::profiles::Profile,
 };
 use pprof::protos::Message as _;

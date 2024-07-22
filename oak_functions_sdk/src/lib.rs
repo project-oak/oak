@@ -25,10 +25,11 @@ use alloc::{string::ToString, vec::Vec};
 use core::ops::Deref;
 
 use micro_rpc::{Status, StatusCode};
+use oak_micro_rpc::oak::functions::wasm::v1::StdWasmApiClient;
 use oak_proto_rust::oak::functions::wasm::v1::{
     BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
-    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse,
-    StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
+    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, TestRequest,
+    TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
 
 /// See [`StdWasmApiClient::read_request`].

@@ -18,9 +18,10 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
+use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
 use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
-    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry, OakFunctionsAsyncClient,
+    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
 };
 use prost::Message;
 use ubyte::ByteUnit;

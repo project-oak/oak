@@ -20,7 +20,7 @@ oak_functions_enclave_service = { path = "../../oak_functions_enclave_service", 
 oak_functions_service = { path = "../../oak_functions_service", default-features = false }
 log = "*"
 micro_rpc = { workspace = true }
-oak_proto_rust = { workspace = true }
+oak_micro_rpc = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
 
 [[bin]]

@@ -24,11 +24,12 @@ use oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
+use oak_micro_rpc::oak::functions::OakFunctions;
 use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, AbortNextLookupDataResponse, Empty,
     ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
-    InvokeResponse, LookupDataChunk, OakFunctions, ReserveRequest, ReserveResponse,
+    InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
 };
 use prost::Message;
 

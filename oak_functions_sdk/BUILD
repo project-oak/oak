@@ -32,6 +32,7 @@ rust_library(
         "//micro_rpc",
         "//oak_functions_abi",
         "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
     ] + select_std_crates(["prost"]),
 )
 

@@ -43,9 +43,3 @@ pub mod oak {
         tonic::include_proto!("oak.debug");
     }
 }
-
-pub mod perftools {
-    pub mod profiles {
-        tonic::include_proto!("perftools.profiles");
-    }
-}

@@ -14,15 +14,15 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_grpc::oak::{
-    containers::{
-        launcher_client::LauncherClient as GrpcLauncherClient,
-        v1::{hostlib_key_provisioning_client::HostlibKeyProvisioningClient, KeyProvisioningRole},
-        SendAttestationEvidenceRequest,
-    },
+use oak_grpc::oak::containers::{
+    launcher_client::LauncherClient as GrpcLauncherClient,
+    v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
+};
+use oak_proto_rust::oak::{
+    attestation::v1::Evidence,
+    containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
-use oak_proto_rust::oak::attestation::v1::Evidence;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use tokio_vsock::{VsockAddr, VsockStream};
 use tonic::transport::Channel;

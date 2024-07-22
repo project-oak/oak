@@ -21,7 +21,7 @@ use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 use oak_containers_orchestrator::{
     crypto::generate_instance_keys, launcher_client::LauncherClient,
 };
-use oak_grpc::oak::containers::v1::KeyProvisioningRole;
+use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use tokio_util::sync::CancellationToken;
 
 #[global_allocator]

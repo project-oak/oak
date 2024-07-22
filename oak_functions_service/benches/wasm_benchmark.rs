@@ -33,8 +33,9 @@ use oak_functions_service::{
     wasm::{wasmtime::WasmtimeHandler, WasmHandler},
     Handler,
 };
+use oak_micro_rpc::oak::functions::testing::TestModuleClient;
 use oak_proto_rust::oak::functions::testing::{
-    lookup_request::Mode, LookupRequest, LookupResponse, TestModuleClient,
+    lookup_request::Mode, LookupRequest, LookupResponse,
 };
 
 #[criterion]

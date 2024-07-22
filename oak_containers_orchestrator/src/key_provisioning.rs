@@ -16,8 +16,10 @@
 use std::sync::Arc;
 
 use oak_attestation_verification::verifier::verify_dice_chain;
-use oak_grpc::oak::key_provisioning::v1::{
-    key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
+use oak_grpc::oak::key_provisioning::v1::key_provisioning_server::{
+    KeyProvisioning, KeyProvisioningServer,
+};
+use oak_proto_rust::oak::key_provisioning::v1::{
     GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys as GroupKeysProto,
 };
 use tokio::net::TcpListener;

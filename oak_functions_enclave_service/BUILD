@@ -28,6 +28,7 @@ DEPS = [
     "//oak_core",
     "//oak_crypto",
     "//oak_proto_rust",
+    "//oak_proto_rust/micro_rpc",
     "//oak_restricted_kernel_sdk",
     "@oak_no_std_crates_index//:log",
 ] + select_std_crates([
@@ -82,6 +83,7 @@ rust_test_suite(
         "//oak_functions_service:lib",
         "//oak_functions_test_utils",
         "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",

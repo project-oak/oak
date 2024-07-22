@@ -13,34 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "bazel"))]
     let included_protos = vec![std::path::PathBuf::from("../..")];
     #[cfg(feature = "bazel")]
     let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
-    // Generate gRPC code for Orchestrator services.
-    generate_grpc_code(
+    micro_rpc_build::compile(
+        &["../../proto/oak_functions/service/oak_functions.proto"],
+        &included_protos,
+        micro_rpc_build::CompileOptions {
+            receiver_type: micro_rpc_build::ReceiverType::RefSelf,
+            extern_paths: vec![micro_rpc_build::ExternPath::new(".oak", "oak_proto_rust::oak")],
+            ..Default::default()
+        },
+    );
+
+    micro_rpc_build::compile(
         &[
-            "../../proto/containers/interfaces.proto",
-            "../../proto/containers/orchestrator_crypto.proto",
-            "../../proto/containers/hostlib_key_provisioning.proto",
-            "../../proto/session/service_streaming.proto",
-            "../../proto/oak_debug/service/oak_debug.proto",
-            "../../proto/oak_functions/service/oak_functions.proto",
+            "../../proto/oak_functions/testing.proto",
+            "../../proto/oak_functions/sdk/oak_functions_wasm.proto",
         ],
         &included_protos,
-        CodegenOptions {
-            build_client: true,
-            build_server: true,
-            extern_paths: vec![
-                ExternPath::new(".oak", "::oak_proto_rust::oak"),
-                ExternPath::new(".perftools", "::oak_proto_rust::perftools"),
-            ],
+        micro_rpc_build::CompileOptions {
+            extern_paths: vec![micro_rpc_build::ExternPath::new(".oak", "oak_proto_rust::oak")],
+            ..Default::default()
         },
-    )?;
+    );
 
     Ok(())
 }

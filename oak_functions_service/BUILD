@@ -26,6 +26,7 @@ DEPS = [
     "//micro_rpc",
     "//oak_functions_abi",
     "//oak_proto_rust",
+    "//oak_proto_rust/micro_rpc",
     "@oak_crates_index//:spinning_top",
 ] + select_std_crates([
     "anyhow",

@@ -79,6 +79,7 @@ rust_binary(
     deps = [
         ":lib",
         "//oak_containers_agent:lib",
+        "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

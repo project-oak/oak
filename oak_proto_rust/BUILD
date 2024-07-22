@@ -37,7 +37,6 @@ rust_library(
     ]),
     deps = [
         ":build",
-        "//micro_rpc",
     ] + select_std_crates([
         "prost",
     ]) +
@@ -73,7 +72,11 @@ cargo_build_script(
         "//proto/attestation:reference_value_proto",
         "//proto/attestation:tcb_version_proto",
         "//proto/attestation:verification_proto",
+        "//proto/containers:hostlib_key_provisioning_proto",
+        "//proto/containers:interfaces_proto",
+        "//proto/containers:orchestrator_crypto_proto",
         "//proto/crypto:crypto_proto",
+        "//proto/oak_debug/service:oak_debug_proto",
         "//proto/oak_functions:abi_proto",
         "//proto/oak_functions:application_config_proto",
         "//proto/oak_functions:lookup_data_proto",
@@ -89,7 +92,6 @@ cargo_build_script(
         "@com_google_protobuf//:protoc",
     ],
     deps = [
-        "//micro_rpc_build",
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
     ],

@@ -29,5 +29,6 @@ rust_shared_library(
         "//micro_rpc",
         "//oak_functions_sdk",
         "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
     ],
 )

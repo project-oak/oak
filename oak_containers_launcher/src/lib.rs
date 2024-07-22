@@ -23,11 +23,10 @@ use std::{
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use oak_grpc::oak::key_provisioning::v1::{
-    key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
-};
+use oak_grpc::oak::key_provisioning::v1::key_provisioning_client::KeyProvisioningClient;
 use oak_proto_rust::oak::{
     attestation::v1::{endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements},
+    key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     session::v1::EndorsedEvidence,
 };
 pub use qemu::Params as QemuParams;

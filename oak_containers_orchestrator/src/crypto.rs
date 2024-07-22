@@ -21,14 +21,14 @@ use oak_crypto::{
     encryptor::ServerEncryptor,
 };
 use oak_dice::cert::generate_ecdsa_key_pair;
-use oak_grpc::oak::{
+use oak_grpc::oak::containers::v1::orchestrator_crypto_server::OrchestratorCrypto;
+use oak_proto_rust::oak::{
     containers::v1::{
-        orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
-        DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
+        DeriveSessionKeysRequest, DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
     },
+    crypto::v1::EncryptedRequest,
     key_provisioning::v1::GroupKeys as GroupKeysProto,
 };
-use oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 use tonic::{Request, Response};
 
 pub fn generate_instance_keys() -> (InstanceKeys, InstancePublicKeys) {

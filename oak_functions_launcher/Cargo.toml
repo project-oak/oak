@@ -33,6 +33,7 @@ micro_rpc = { workspace = true }
 oak_channel = { workspace = true, features = ["client"] }
 oak_crypto = { workspace = true }
 oak_grpc = { workspace = true }
+oak_micro_rpc = { workspace = true }
 oak_proto_rust = { workspace = true }
 hashbrown = "*"
 ubyte = "*"
