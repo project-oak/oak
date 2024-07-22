@@ -53,17 +53,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
 
 [[package]]
-name = "async-trait"
-version = "0.1.76"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "531b97fb4cd3dfdce92c35dedbfdc1f0b9d8091c8ca943d6dae340ef5012d514"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.38",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -511,23 +500,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8640c5d730cb13ebd907d8d04b52f55ac9a2eec55b440c8892f40d56c76c1d"
 
 [[package]]
-name = "micro_rpc"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "micro_rpc_build",
- "prost",
-]
-
-[[package]]
-name = "micro_rpc_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost-build",
-]
-
-[[package]]
 name = "multimap"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,8 +545,6 @@ dependencies = [
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
- "micro_rpc",
- "micro_rpc_build",
  "prost",
  "prost-build",
  "prost-types",

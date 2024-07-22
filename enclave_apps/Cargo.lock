@@ -860,8 +860,6 @@ dependencies = [
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
- "micro_rpc",
- "micro_rpc_build",
  "prost",
  "prost-build",
  "prost-types",

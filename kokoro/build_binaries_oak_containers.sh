@@ -5,6 +5,7 @@ source "$(dirname "$0")/common.sh"
 
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#containers --command just kokoro_oak_containers
+./scripts/git_check_diff
 
 mkdir -p "${KOKORO_ARTIFACTS_DIR}/test_logs/"
 cp --preserve=timestamps \
