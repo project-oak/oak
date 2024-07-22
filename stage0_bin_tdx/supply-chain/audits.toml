@@ -1,0 +1,194 @@
+# cargo-vet audits file
+[criteria.crypto-safe]
+description = """
+All crypto algorithms in this crate have been reviewed by a relevant expert.
+
+**Note**: If a crate does not implement crypto, use `does-not-implement-crypto`,
+which implies `crypto-safe`, but does not require expert review in order to
+audit for."""
+
+[criteria.does-not-implement-crypto]
+description = """
+Inspection reveals that the crate in question does not attempt to implement any
+cryptographic algorithms on its own.
+
+Note that certification of this does not require an expert on all forms of
+cryptography: it's expected for crates we import to be \"good enough\" citizens,
+so they'll at least be forthcoming if they try to implement something
+cryptographic. When in doubt, please ask an expert."""
+implies = "crypto-safe"
+
+[[audits.autocfg]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "1.1.0"
+notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.bitflags]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.3.2"
+notes = "Limited use of unsafe code that is well commented and unproblematic. Does not implement crypto algorithms."
+
+[[audits.bitflags]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+delta = "1.3.2 -> 2.4.0"
+notes = "Version 2.4.0 has significantly less unsafe code than the previous version. The two new unsafe blocks that have been added are well documented."
+
+[[audits.byteorder]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.4.3"
+notes = """
+The crate contains lots of unsafe code without comments explaining why it is safe, but the usage looks reasonable and each unsafe section is short and easy to reason about.
+
+Also this crate does not implement any cryptographic primitives.
+"""
+
+[[audits.cfg-if]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.0.0"
+notes = "Crate does not implement any cryptographic algorithms and doesn't modify code at all."
+
+[[audits.doc-comment]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "0.3.3"
+notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.getrandom]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.9"
+notes = """
+Code is well commented and unsafe blocks generally have comments regarding safety.
+No obvious security issues uncovered.
+
+I reviewed the RDRAND implementation most closely, as this is what is used in oak_core & stage0.
+Implementations for other targets appear to be safe to deploy.
+I would not consider this crate to be implementing crypto algorithms itself.
+However, outside of RDRAND and js I'm not equipped to evaluate the trustworthiness of the random number generation itself.
+
+Therefore, I would not necessarily endorse this crate as a safe primitive for implementing crypo algorithms using its random number generation.
+"""
+
+[[audits.heck]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "safe-to-deploy"
+version = "0.4.0"
+notes = "This crate does not have any unsafe code and does not use any ambient capabilities such as filesystem or network access."
+
+[[audits.lock_api]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.4.9"
+notes = "Logic is reasonable. Limited unsafe code that is well commented to explain safety. No ambient capabilities. No crypto implementation."
+
+[[audits.rustversion]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "1.0.9"
+notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.scopeguard]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.1.0"
+notes = "Logic is sound, no crypto use, no ambient capabilities, no unsafe code."
+
+[[audits.spinning_top]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.4"
+notes = "The crate's logic is sound. No ambient capabilities. Implements unsafe traits, but uses no unsafe code."
+
+[[audits.static_assertions]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = """
+By design, all the macros in `static_assertions` run at compile time, which means they do not deal with untrusted input at all.
+Only one short block of unsafe code in `assert_eq_size_ptr`, which looks reasonable.
+"""
+
+[[audits.strum]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.1"
+notes = """
+This crate doesn't contain any unsafe code. Most of the work is delegated to the strum_macros crate.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
+[[audits.strum_macros]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.3"
+notes = """
+This crate doesn'tt contain any unsafe code. The macro implementations look reasonable.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
+[[audits.synstructure]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "0.12.6"
+notes = "Crate does not implement any cryptographic algorithms"
+
+[[audits.typenum]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = "safe-to-deploy"
+version = "1.15.0"
+notes = "No unsafe code (enforced by compiler). No access to ambient capabilities. Logic appears sound."
+
+[[audits.unicode-ident]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.0.4"
+notes = "Crate contains no unsafe code and doesn't implement any cryptography."
+
+[[audits.unicode-xid]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "0.2.4"
+notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.volatile]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.4.5"
+notes = "Unsafe code is generally commented to explain safety and easily comprehensible. No crypto is implemented, no powerful dependencies imported."
+
+[[audits.x86_64]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.14.10"
+notes = """
+This crate contains a lot of unsafe code as it deals with low-level machine state, which is obviously unsafe to call with untrusted input.
+All potentially dangerous operations look like they have been marked as `unsafe` appropriately, so the onus is on the caller to ensure
+safety. The unsafe blocks in the code are tiny and usually cover one or two lines of assembly (for example, to load a data structure).
+The crate does not implement any cryptograhic algorithms.
+"""
+
+[[audits.zerocopy]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.6.1"
+notes = """
+There is a lot of unsafe code, but it is well documented and the reasoning about soundness in the comments is clear and logical.
+
+This crate does not implement any cryptographic algorithms.
+"""
+
+[[audits.zerocopy-derive]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.3.1"
+notes = """
+Handling of untrusted input data is delegated to the `zerocopy` crate itself.
+This crate does not implement any cryptographic algorithms.
+"""

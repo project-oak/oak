@@ -1,0 +1,75 @@
+# cargo-vet config file
+
+[cargo-vet]
+version = "0.8"
+
+[imports.google]
+url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
+
+[imports.google.criteria-map]
+crypto-safe = "crypto-safe"
+does-not-implement-crypto = "does-not-implement-crypto"
+
+[imports.mozilla]
+url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
+
+[policy.bitflags]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.block-buffer]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.cpufeatures]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.crypto-common]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.digest]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.generic-array]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.elf]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.linked_list_allocator]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.log]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.oak_core]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.oak_linux_boot_params]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.oak_sev_guest]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.sev_serial]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.sha2]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.spinning_top]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.static_assertions]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.strum]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.x86_64]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.zerocopy]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[[exemptions.elf]]
+version = "0.7.2"
+criteria = ["safe-to-deploy", "crypto-safe"]

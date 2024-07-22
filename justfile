@@ -122,6 +122,11 @@ stage0_bin:
         cargo objcopy --release -- --output-target=binary \
         target/x86_64-unknown-none/release/stage0_bin
 
+stage0_bin_tdx:
+    env --chdir=stage0_bin_tdx \
+        cargo objcopy --release -- --output-target=binary \
+        target/x86_64-unknown-none/release/stage0_bin_tdx
+
 stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
     rm --recursive --force {{output_dir}}
     mkdir --parents {{output_dir}}
