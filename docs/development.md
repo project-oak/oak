@@ -159,14 +159,6 @@ above):
     -----------------------
     ```
 
-## xtask
-
-`xtask` is a utility binary to perform a number of common tasks within the Oak
-repository. It can be run by invoking `./scripts/xtask` from the root of the
-repository, and it has a number of flags and sub-commands available, which
-should be self-explanatory, and it also supports flag autocompletion when
-invoked from inside a Nix shell.
-
 ## Run Oak Functions Examples
 
 Running the integration tests for Oak Functions will confirm that all core

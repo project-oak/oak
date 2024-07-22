@@ -87,25 +87,6 @@
             };
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
           src = ./.;
-          # Build xtask as a package so that we can use it in the devShell and cache it in the
-          # future, without rebuilding it every time.
-          xtask = craneLib.buildPackage {
-            inherit src;
-            pname = "xtask";
-            version = "0.1.0";
-            cargoExtraArgs = "--package=xtask";
-            buildInputs = [
-              pkgs.protobuf
-            ];
-          };
-          # Build the dependencies of xtask as a package so that we can use it in the devShell and
-          # cache it in the future, without rebuilding it every time.
-          cargoDeps = craneLib.buildDepsOnly {
-            inherit src;
-            pname = "cargodeps";
-            version = "0.1.0";
-            cargoExtraArgs = "--package=xtask";
-          };
         in
         {
           packages = { inherit linux_kernel; inherit vanilla_linux_kernel; };
@@ -123,9 +104,6 @@
                 ps
                 which
               ];
-              shellHook = ''
-                source .xtask_bash_completion
-              '';
             };
             # Minimal shell with only the dependencies needed to run the Rust tests.
             rust = with pkgs; mkShell {

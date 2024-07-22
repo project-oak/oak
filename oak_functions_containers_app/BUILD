@@ -41,6 +41,7 @@ rust_library(
     deps = [
         "//micro_rpc",
         "//oak_attestation",
+        "//oak_containers_agent:lib",
         "//oak_containers_orchestrator",
         "//oak_containers_sdk",
         "//oak_crypto",

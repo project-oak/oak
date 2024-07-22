@@ -7,6 +7,10 @@
 
 export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { "--config=ci" }
 
+# Quick-and-dirty Cargo.toml workspace finder for cargo commands.
+# We plan to remove Cargo.toml files soon, and then this can go as well.
+export CARGO_WORKSPACE_LIST_CMD := 'grep "\[workspace" **/Cargo.toml --exclude="third_party/*"'
+
 key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
@@ -285,10 +289,31 @@ bazel-fmt:
 bazel-rustfmt:
     bazel build --config=rustfmt --config=unsafe-fast-presubmit //...:all -- -third_party/...
 
-xtask job:
-    ./scripts/xtask {{job}}
+clippy-ci: bazel-clippy cargo-clippy
 
-clippy-ci: (xtask "run-cargo-clippy") bazel-clippy
+cargo-clippy:
+    #!/bin/sh
+    for workspace in "$($CARGO_WORKSPACE_LIST_CMD)"
+    do
+        env chdir=$workspace cargo-clippy --all-features --all-targets --no-deps -- --deny=warnings
+    done
+
+
+cargo-deny:
+    #!/bin/sh
+    for workspace in "$($CARGO_WORKSPACE_LIST_CMD)"
+    do
+        env chdir=$workspace cargo-deny check
+    done
+
+cargo-udeps:
+    #!/bin/sh
+    for workspace in "$($CARGO_WORKSPACE_LIST_CMD)"
+    do
+        env chdir=$workspace cargo udeps --all-targets --backend=depinfo --workspace
+    done
+
+
 check-format-ci:
     bazel build --config=unsafe-fast-presubmit linter && bazel-bin/linter/linter --verbose
 
@@ -298,7 +323,6 @@ check-format-ci:
 bazel-cache-test:
     mkdir --parents target
     bazel test --config=unsafe-fast-presubmit --build_event_text_file=./target/bazel_bep_1.txt --execution_log_binary_file=./target/bazel_exec_1.log -- //cc/bazel_cache_test:test
-
 
 format:
     bazel build linter && bazel-bin/linter/linter --fix
