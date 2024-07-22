@@ -159,6 +159,32 @@ above):
     -----------------------
     ```
 
+### Caching
+
+The setup optionally uses cachix for caching nix derivations.
+
+The `cachix` CLI is already installed in the nix setup locally. In order to be
+able to **write** to the remote cache, first authorize with the following
+command, using the token shared in
+[valentine](https://valentine.corp.google.com/#/show/1721691800385167):
+
+```bash
+cachix authtoken <TOKEN>
+```
+
+Then, in order to populate cache for a local derivation, first build it locally,
+and then push it to the remote cache. The command below is running the `true`
+command inside the default nix shell, and creating a profile called
+`dev-profile` that links to it; then the `cachix` CLI reads that symlink and
+pushes all the artifacts to the cache, if they are not already there.
+
+```bash
+nix develop --profile dev-profile --command true
+cachix push oak-1 dev-profile
+```
+
+To view stats about the cache, see https://app.cachix.org/cache/oak-1 .
+
 ## Run Oak Functions Examples
 
 Running the integration tests for Oak Functions will confirm that all core

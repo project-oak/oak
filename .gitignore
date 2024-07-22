@@ -125,4 +125,5 @@ toolchain/toolchain.tar.bz2
 **/.venv/
 
 # Nix outputs
-result
+/result
+/dev-profile*
