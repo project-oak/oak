@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ReceiverType"],"fn":["compile"],"struct":["CompileOptions","ExternPath"]};
+window.SIDEBAR_ITEMS = {"enum":["ReceiverType"],"fn":["compile","generate_file"],"struct":["CompileOptions","ExternPath","Method","Service"]};

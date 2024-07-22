@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["workspace_path"],"macro":["spread"],"mod":["files","internal"],"static":["PROCESSES"]};
+window.SIDEBAR_ITEMS = {"macro":["spread"],"mod":["files","internal"],"static":["PROCESSES"]};

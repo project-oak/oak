@@ -261,86 +261,6 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -358,14 +278,22 @@
 //
 
 </span><span class="attr">#![feature(iter_intersperse)]
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">mod </span>prost;
 
-</span><span class="doccomment">//! This crate allows compiling protobuf services to Rust in `build.rs` scripts.
+<span class="kw">pub use </span>prost::compile;
 
-</span><span class="kw">use </span>std::path::Path;
+<span class="attr">#[derive(Default, Clone)]
+</span><span class="kw">pub struct </span>ExternPath {
+    proto_path: String,
+    rust_path: String,
+}
 
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>prost_build::{Method, Service};
-
+<span class="kw">impl </span>ExternPath {
+    <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
+    }
+}
 <span class="attr">#[derive(Copy, Clone, Debug, Default)]
 </span><span class="kw">pub enum </span>ReceiverType {
     <span class="doccomment">/// &amp;mut self
@@ -404,86 +332,35 @@
     /// See https://docs.rs/prost-build/0.12.4/prost_build/struct.Config.html#method.enable_type_names
     </span><span class="kw">pub </span>enable_type_names: bool,
 }
-
-<span class="attr">#[derive(Default, Clone)]
-</span><span class="kw">pub struct </span>ExternPath {
-    proto_path: String,
-    rust_path: String,
+<span class="doccomment">/// A service definition to generate micro_rpc code for.
+</span><span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Service {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>methods: Vec&lt;Method&gt;,
 }
 
-<span class="kw">impl </span>ExternPath {
-    <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        ExternPath { proto_path: proto_path.to_string(), rust_path: rust_path.to_string() }
-    }
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Method {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>id: u32,
+    <span class="kw">pub </span>input_type: String,
+    <span class="kw">pub </span>output_type: String,
 }
 
-<span class="doccomment">/// Compile Rust server code from the services in the provided protobuf file.
-///
-/// Each method in a service definition must have exactly one comment line of
-/// the form `// method_id: 42`, which is used to generate a stable identifier
-/// for that method, which is part of the serialization protocol used for
-/// invocation.
-///
-/// For a service called `TestName`, `compile` generates the following objects:
-///
-/// - a struct named `TestNameServer`, which implements the
-///   `micro_rpc::InvocationHandler` trait, dispatching each request to the
-///   appropriate method on the underlying service implementation.
-/// - a trait named `TestName`, with a method for each method defined in the
-///   protobuf service, and an additional default method named `serve` which
-///   returns an instance of `TestNameServer`; the developer of a service would
-///   usually define a concrete struct and manually implement this trait for it,
-/// - a struct named `TestNameClient`, exposing a method for each method defined
-///   in the protobuf service. This may be used to directly invoke the
-///   underlying handler in order to indirectly invoke methods on the
-///   corresponding `Server` object on the other side of the handler.
-/// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with
-///   async support.
-</span><span class="kw">pub fn </span>compile(
-    protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
-    includes: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
-    options: CompileOptions,
-) {
-    protos.iter().for_each(|filename| {
-        <span class="macro">println!</span>(<span class="string">"cargo:rerun-if-changed={}"</span>, filename.as_ref().as_os_str().to_string_lossy())
-    });
-    <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
-    <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
-        config.extern_path(extern_path.proto_path, extern_path.rust_path);
-    }
-    <span class="kw">if </span>options.enable_type_names {
-        config.enable_type_names();
-    }
-    config
-        <span class="comment">// Use BTreeMap to allow using this function in no-std crates.
-        </span>.btree_map([<span class="string">"."</span>])
-        .bytes(options.bytes)
-        .compile_protos(protos, includes)
-        .expect(<span class="string">"couldn't compile protobuffer schema"</span>);
-}
-
-<span class="kw">struct </span>ServiceGenerator {
-    options: CompileOptions,
-}
-
-<span class="kw">impl </span>prost_build::ServiceGenerator <span class="kw">for </span>ServiceGenerator {
-    <span class="kw">fn </span>generate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, service: Service, buf: <span class="kw-2">&amp;mut </span>String) {
-        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
-        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service(<span class="kw-2">&amp;</span>service, <span class="self">self</span>.options.receiver_type)
-            .expect(<span class="string">"couldn't generate services"</span>);
-        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
-        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">false</span>).expect(<span class="string">"couldn't generate clients"</span>);
-        <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
-        <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(<span class="kw-2">&amp;</span>service, <span class="bool-val">true</span>).expect(<span class="string">"couldn't generate async clients"</span>);
-    }
+<span class="kw">pub fn </span>generate_file(service: <span class="kw-2">&amp;</span>Service, receiver_type: ReceiverType, buf: <span class="kw-2">&amp;mut </span>String) {
+    <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
+    <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service(service, receiver_type).expect(<span class="string">"couldn't generate services"</span>);
+    <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
+    <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(service, <span class="bool-val">false</span>).expect(<span class="string">"couldn't generate clients"</span>);
+    <span class="kw-2">*</span>buf += <span class="string">"\n"</span>;
+    <span class="kw-2">*</span>buf += <span class="kw-2">&amp;</span>generate_service_client(service, <span class="bool-val">true</span>).expect(<span class="string">"couldn't generate async clients"</span>);
 }
 
 <span class="doccomment">/// Generate the Rust objects from the input [`Service`] instance, corresponding
 /// to a `service` entry.
 </span><span class="kw">fn </span>generate_service(service: <span class="kw-2">&amp;</span>Service, receiver_type: ReceiverType) -&gt; anyhow::Result&lt;String&gt; {
-    <span class="kw">let </span>server_name = server_name(service);
-    <span class="kw">let </span>service_name = service_name(service);
+    <span class="kw">let </span>service_name = <span class="kw-2">&amp;</span>service.name;
+    <span class="kw">let </span>server_name = server_name(service_name);
     <span class="kw">let </span><span class="kw-2">mut </span>lines = Vec::new();
     lines.extend(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">"#[derive(Clone)]"</span>),
@@ -576,10 +453,10 @@
 }
 
 <span class="kw">fn </span>generate_client_method(method: <span class="kw-2">&amp;</span>Method, asynchronous: bool) -&gt; anyhow::Result&lt;Vec&lt;String&gt;&gt; {
-    <span class="kw">let </span>method_id = method_id(method)<span class="question-mark">?</span>;
-    <span class="kw">let </span>request_type = request_type(method);
-    <span class="kw">let </span>response_type = response_type(method);
-    <span class="kw">let </span>method_name = method_name(method);
+    <span class="kw">let </span>method_id = method.id;
+    <span class="kw">let </span>request_type = <span class="kw-2">&amp;</span>method.input_type;
+    <span class="kw">let </span>response_type = <span class="kw-2">&amp;</span>method.output_type;
+    <span class="kw">let </span>method_name = <span class="kw-2">&amp;</span>method.name;
     <span class="kw">let </span>fn_modifier = <span class="kw">if </span>asynchronous { <span class="string">"async " </span>} <span class="kw">else </span>{ <span class="string">"" </span>};
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(
@@ -602,9 +479,9 @@
     // correct type, and dispatch a reference to that parsed object to the
     // underlying service implementation, provided by the developer, which deals
     // with type safe generated objects instead of raw byte buffers.
-    </span><span class="kw">let </span>method_id = method_id(method)<span class="question-mark">?</span>;
-    <span class="kw">let </span>request_type = request_type(method);
-    <span class="kw">let </span>method_name = method_name(method);
+    </span><span class="kw">let </span>method_id = method.id;
+    <span class="kw">let </span>request_type = <span class="kw-2">&amp;</span>method.input_type;
+    <span class="kw">let </span>method_name = <span class="kw-2">&amp;</span>method.name;
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">"            {method_id} =&gt; {{"</span>),
         <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well
@@ -627,59 +504,22 @@
 }
 
 <span class="kw">fn </span>generate_service_method(method: <span class="kw-2">&amp;</span>Method, receiver_type: ReceiverType) -&gt; Vec&lt;String&gt; {
-    <span class="kw">let </span>method_name = method_name(method);
-    <span class="kw">let </span>request_type = request_type(method);
-    <span class="kw">let </span>response_type = response_type(method);
+    <span class="kw">let </span>method_name = <span class="kw-2">&amp;</span>method.name;
+    <span class="kw">let </span>request_type = <span class="kw-2">&amp;</span>method.input_type;
+    <span class="kw">let </span>response_type = <span class="kw-2">&amp;</span>method.output_type;
     <span class="kw">let </span>self_type = receiver_type.value();
     <span class="macro">vec!</span>[<span class="macro">format!</span>(
         <span class="string">"    fn {method_name}({self_type}, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;"
     </span>)]
 }
 
-<span class="doccomment">/// Returns the value of the `method_id` comment on the method.
-</span><span class="kw">fn </span>method_id(method: <span class="kw-2">&amp;</span>Method) -&gt; anyhow::Result&lt;u32&gt; {
-    <span class="kw">let </span>method_ids = method
-        .comments
-        .leading
-        .iter()
-        .filter_map(|line| line.strip_prefix(<span class="string">" method_id: "</span>))
-        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-    <span class="kw">if </span>method_ids.is_empty() {
-        <span class="macro">anyhow::bail!</span>(<span class="string">"no method_id comment on method {}"</span>, method.proto_name,)
-    } <span class="kw">else if </span>method_ids.len() &gt; <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(<span class="string">"multiple method_id comments on method {}"</span>, method.proto_name)
-    } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(method_ids[<span class="number">0</span>].parse()<span class="question-mark">?</span>)
-    }
+<span class="doccomment">/// The type name of the generated Rust server struct.
+</span><span class="kw">fn </span>server_name(service_name: <span class="kw-2">&amp;</span>str) -&gt; String {
+    <span class="macro">format!</span>(<span class="string">"{}Server"</span>, service_name)
 }
 
 <span class="doccomment">/// The type name of the generated Rust client struct.
 </span><span class="kw">fn </span>client_name(service: <span class="kw-2">&amp;</span>Service, asynchronous: bool) -&gt; String {
     <span class="macro">format!</span>(<span class="string">"{}{}"</span>, service.name, <span class="kw">if </span>asynchronous { <span class="string">"AsyncClient" </span>} <span class="kw">else </span>{ <span class="string">"Client" </span>})
-}
-
-<span class="doccomment">/// The type name of the generated Rust server struct.
-</span><span class="kw">fn </span>server_name(service: <span class="kw-2">&amp;</span>Service) -&gt; String {
-    <span class="macro">format!</span>(<span class="string">"{}Server"</span>, service.name)
-}
-
-<span class="doccomment">/// The type name of the generated Rust service struct.
-</span><span class="kw">fn </span>service_name(service: <span class="kw-2">&amp;</span>Service) -&gt; String {
-    service.name.to_string()
-}
-
-<span class="doccomment">/// The method name of the generated Rust client method.
-</span><span class="kw">fn </span>method_name(method: <span class="kw-2">&amp;</span>Method) -&gt; String {
-    method.name.to_string()
-}
-
-<span class="doccomment">/// The type name of the generated Rust request struct.
-</span><span class="kw">fn </span>request_type(method: <span class="kw-2">&amp;</span>Method) -&gt; String {
-    method.input_type.to_string()
-}
-
-<span class="doccomment">/// The type name of the generated Rust response struct.
-</span><span class="kw">fn </span>response_type(method: <span class="kw-2">&amp;</span>Method) -&gt; String {
-    method.output_type.to_string()
 }
 </code></pre></div></section></main></body></html>
