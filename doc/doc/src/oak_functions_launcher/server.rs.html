@@ -114,7 +114,6 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -139,7 +138,6 @@
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    functions,
     session::v1::{
         request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
         InvokeResponse, RequestWrapper, ResponseWrapper,
@@ -190,12 +188,12 @@
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
                         <span class="attr">#[allow(clippy::needless_update)]
-                        </span><span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
+                        </span><span class="kw">let </span>enclave_invoke_request = oak_proto_rust::oak::functions::InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
                         };
                         <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
-                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            oak_micro_rpc::oak::functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         <span class="kw">let </span>enclave_invoke_response = enclave_client
                             .handle_user_request(<span class="kw-2">&amp;</span>enclave_invoke_request)
                             .<span class="kw">await

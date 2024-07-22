@@ -113,8 +113,8 @@
 <span class="kw">use </span>oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
     v1::orchestrator_crypto_server::OrchestratorCryptoServer,
-    GetApplicationConfigResponse,
 };
+<span class="kw">use </span>oak_proto_rust::oak::containers::GetApplicationConfigResponse;
 <span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener};
 <span class="kw">use </span>tokio_stream::wrappers::UnixListenerStream;
 <span class="kw">use </span>tokio_util::sync::CancellationToken;

@@ -192,14 +192,14 @@
     encryptor::ServerEncryptor,
 };
 <span class="kw">use </span>oak_dice::cert::generate_ecdsa_key_pair;
-<span class="kw">use </span>oak_grpc::oak::{
+<span class="kw">use </span>oak_grpc::oak::containers::v1::orchestrator_crypto_server::OrchestratorCrypto;
+<span class="kw">use </span>oak_proto_rust::oak::{
     containers::v1::{
-        orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
-        DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
+        DeriveSessionKeysRequest, DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
     },
+    crypto::v1::EncryptedRequest,
     key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
 };
-<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::EncryptedRequest;
 <span class="kw">use </span>tonic::{Request, Response};
 
 <span class="kw">pub fn </span>generate_instance_keys() -&gt; (InstanceKeys, InstancePublicKeys) {

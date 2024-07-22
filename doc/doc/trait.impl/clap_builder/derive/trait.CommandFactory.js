@@ -1,6 +1,6 @@
 (function() {var implementors = {
 "oak_attestation_explain_cli":[["impl CommandFactory for <a class=\"struct\" href=\"oak_attestation_explain_cli/struct.Params.html\" title=\"struct oak_attestation_explain_cli::Params\">Params</a>"]],
-"oak_containers_launcher":[["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_launcher/struct.QemuParams.html\" title=\"struct oak_containers_launcher::QemuParams\">Params</a>"],["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_launcher/struct.Args.html\" title=\"struct oak_containers_launcher::Args\">Args</a>"]],
+"oak_containers_launcher":[["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_launcher/struct.Args.html\" title=\"struct oak_containers_launcher::Args\">Args</a>"],["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_launcher/struct.QemuParams.html\" title=\"struct oak_containers_launcher::QemuParams\">Params</a>"]],
 "oak_containers_stage1":[["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_stage1/struct.Args.html\" title=\"struct oak_containers_stage1::Args\">Args</a>"]],
 "oak_containers_syslogd":[["impl CommandFactory for <a class=\"struct\" href=\"oak_containers_syslogd/struct.Args.html\" title=\"struct oak_containers_syslogd::Args\">Args</a>"]],
 "oak_functions_launcher":[["impl CommandFactory for <a class=\"struct\" href=\"oak_functions_launcher/struct.Args.html\" title=\"struct oak_functions_launcher::Args\">Args</a>"]],

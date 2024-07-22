@@ -105,6 +105,27 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -138,7 +159,14 @@
     };
 }
 
+<span class="kw">pub mod </span>perftools {
+    <span class="kw">pub mod </span>profiles {
+        <span class="macro">include_proto!</span>(<span class="string">"perftools.profiles"</span>);
+    }
+}
+
 <span class="kw">pub mod </span>oak {
+
     <span class="comment">// Do not lint generated code.
     </span><span class="attr">#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 
@@ -172,6 +200,17 @@
         }
     }
 
+    <span class="kw">pub mod </span>containers {
+        <span class="macro">include_proto!</span>(<span class="string">"oak.containers"</span>);
+        <span class="kw">pub mod </span>v1 {
+            <span class="macro">include_proto!</span>(<span class="string">"oak.containers.v1"</span>);
+        }
+    }
+
+    <span class="kw">pub mod </span>debug {
+        <span class="macro">include_proto!</span>(<span class="string">"oak.debug"</span>);
+    }
+
     <span class="kw">pub mod </span>crypto {
         <span class="kw">pub mod </span>v1 {
             <span class="macro">include_proto!</span>(<span class="string">"oak.crypto.v1"</span>);
@@ -179,7 +218,6 @@
     }
 
     <span class="kw">pub mod </span>functions {
-        <span class="kw">use </span>prost::Message;
         <span class="macro">include_proto!</span>(<span class="string">"oak.functions"</span>);
         <span class="kw">pub mod </span>abi {
             <span class="macro">include_proto!</span>(<span class="string">"oak.functions.abi"</span>);
@@ -191,15 +229,19 @@
             <span class="macro">include_proto!</span>(<span class="string">"oak.functions.lookup_data"</span>);
         }
         <span class="kw">pub mod </span>testing {
-            <span class="kw">use </span>prost::Message;
             <span class="macro">include_proto!</span>(<span class="string">"oak.functions.testing"</span>);
         }
 
         <span class="kw">pub mod </span>wasm {
             <span class="kw">pub mod </span>v1 {
-                <span class="kw">use </span>prost::Message;
                 <span class="macro">include_proto!</span>(<span class="string">"oak.functions.wasm.v1"</span>);
             }
+        }
+    }
+
+    <span class="kw">pub mod </span>key_provisioning {
+        <span class="kw">pub mod </span>v1 {
+            <span class="macro">include_proto!</span>(<span class="string">"oak.key_provisioning.v1"</span>);
         }
     }
 

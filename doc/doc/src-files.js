@@ -46,6 +46,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_kernel_measurement",["",[],["main.rs"]]],\
 ["oak_launcher_utils",["",[],["channel.rs","launcher.rs","lib.rs"]]],\
 ["oak_linux_boot_params",["",[],["lib.rs"]]],\
+["oak_micro_rpc",["",[],["lib.rs"]]],\
 ["oak_proto_rust",["",[],["lib.rs"]]],\
 ["oak_restricted_kernel",["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs","virtual_address_allocator.rs"]],["syscall",[],["channel.rs","create_process.rs","dice_data.rs","fd.rs","key.rs","mmap.rs","mod.rs","process.rs","stdio.rs","switch_process.rs"]]],["acpi.rs","args.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","processes.rs","shutdown.rs","snp.rs","virtio.rs"]]],\
 ["oak_restricted_kernel_dice",["",[],["lib.rs"]]],\

@@ -1025,32 +1025,9 @@
 <a href="#1023" id="1023">1023</a>
 <a href="#1024" id="1024">1024</a>
 <a href="#1025" id="1025">1025</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the
-/// response into smaller pieces to respect proto/gRPC limits. The image needs to
-/// be reassembled in the stage1 or the orchestrator.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetImageResponse {
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>image_chunk: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetApplicationConfigResponse {
-    <span class="doccomment">/// Arbitrary config that the container can retrieve from the orchestrator.
-    /// Included in the attestation measurements conducted by the orchestrator.
-    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>SendAttestationEvidenceRequest {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;
-        ::oak_proto_rust::oak::attestation::v1::Evidence,
-    &gt;,
-}
-<span class="doccomment">/// Generated client implementations.
+<a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+</pre></div><pre class="rust"><code><span class="doccomment">/// Generated client implementations.
 </span><span class="kw">pub mod </span>launcher_client {
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
@@ -1143,7 +1120,11 @@
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;tonic::codec::Streaming&lt;<span class="kw">super</span>::GetImageResponse&gt;&gt;,
+            tonic::Response&lt;
+                tonic::codec::Streaming&lt;
+                    ::oak_proto_rust::oak::containers::GetImageResponse,
+                &gt;,
+            &gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1169,7 +1150,11 @@
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;tonic::codec::Streaming&lt;<span class="kw">super</span>::GetImageResponse&gt;&gt;,
+            tonic::Response&lt;
+                tonic::codec::Streaming&lt;
+                    ::oak_proto_rust::oak::containers::GetImageResponse,
+                &gt;,
+            &gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1199,7 +1184,9 @@
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;<span class="kw">super</span>::GetApplicationConfigResponse&gt;,
+            tonic::Response&lt;
+                ::oak_proto_rust::oak::containers::GetApplicationConfigResponse,
+            &gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1228,7 +1215,9 @@
         /// this API a second time will result in an error.
         </span><span class="kw">pub async fn </span>send_attestation_evidence(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            request: <span class="kw">impl </span>tonic::IntoRequest&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;,
+            request: <span class="kw">impl </span>tonic::IntoRequest&lt;
+                ::oak_proto_rust::oak::containers::SendAttestationEvidenceRequest,
+            &gt;,
         ) -&gt; std::result::Result&lt;tonic::Response&lt;()&gt;, tonic::Status&gt; {
             <span class="self">self</span>.inner
                 .ready()
@@ -1369,7 +1358,9 @@
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoRequest&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;<span class="kw">super</span>::GetApplicationConfigResponse&gt;,
+            tonic::Response&lt;
+                ::oak_proto_rust::oak::containers::GetApplicationConfigResponse,
+            &gt;,
             tonic::Status,
         &gt; {
             <span class="self">self</span>.inner
@@ -1432,7 +1423,10 @@
     </span><span class="kw">pub trait </span>Launcher: Send + Sync + <span class="lifetime">'static </span>{
         <span class="doccomment">/// Server streaming response type for the GetOakSystemImage method.
         </span><span class="kw">type </span>GetOakSystemImageStream: tonic::codegen::tokio_stream::Stream&lt;
-                Item = std::result::Result&lt;<span class="kw">super</span>::GetImageResponse, tonic::Status&gt;,
+                Item = std::result::Result&lt;
+                    ::oak_proto_rust::oak::containers::GetImageResponse,
+                    tonic::Status,
+                &gt;,
             &gt;
             + Send
             + <span class="lifetime">'static</span>;
@@ -1447,7 +1441,10 @@
         &gt;;
         <span class="doccomment">/// Server streaming response type for the GetContainerBundle method.
         </span><span class="kw">type </span>GetContainerBundleStream: tonic::codegen::tokio_stream::Stream&lt;
-                Item = std::result::Result&lt;<span class="kw">super</span>::GetImageResponse, tonic::Status&gt;,
+                Item = std::result::Result&lt;
+                    ::oak_proto_rust::oak::containers::GetImageResponse,
+                    tonic::Status,
+                &gt;,
             &gt;
             + Send
             + <span class="lifetime">'static</span>;
@@ -1466,7 +1463,9 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;<span class="kw">super</span>::GetApplicationConfigResponse&gt;,
+            tonic::Response&lt;
+                ::oak_proto_rust::oak::containers::GetApplicationConfigResponse,
+            &gt;,
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Sends Attestation Evidence containing the Attestation Report with
@@ -1475,7 +1474,9 @@
         /// this API a second time will result in an error.
         </span><span class="kw">async fn </span>send_attestation_evidence(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;,
+            request: tonic::Request&lt;
+                ::oak_proto_rust::oak::containers::SendAttestationEvidenceRequest,
+            &gt;,
         ) -&gt; std::result::Result&lt;tonic::Response&lt;()&gt;, tonic::Status&gt;;
         <span class="doccomment">/// Notifies the launcher that the trusted app is ready to serve requests and
         /// listening on the pre-arranged port (8080).
@@ -1570,7 +1571,7 @@
                     </span><span class="kw">struct </span>GetOakSystemImageSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::ServerStreamingService&lt;()&gt;
                     <span class="kw">for </span>GetOakSystemImageSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetImageResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::containers::GetImageResponse;
                         <span class="kw">type </span>ResponseStream = T::GetOakSystemImageStream;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::ResponseStream&gt;,
@@ -1612,7 +1613,7 @@
                     </span><span class="kw">struct </span>GetContainerBundleSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::ServerStreamingService&lt;()&gt;
                     <span class="kw">for </span>GetContainerBundleSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetImageResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::containers::GetImageResponse;
                         <span class="kw">type </span>ResponseStream = T::GetContainerBundleStream;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::ResponseStream&gt;,
@@ -1654,7 +1655,7 @@
                     </span><span class="kw">struct </span>GetApplicationConfigSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Launcher&gt; tonic::server::UnaryService&lt;()&gt;
                     <span class="kw">for </span>GetApplicationConfigSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetApplicationConfigResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::containers::GetApplicationConfigResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,
@@ -1696,8 +1697,9 @@
                     </span><span class="kw">struct </span>SendAttestationEvidenceSvc&lt;T: Launcher&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;
                         T: Launcher,
-                    &gt; tonic::server::UnaryService&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;
-                    <span class="kw">for </span>SendAttestationEvidenceSvc&lt;T&gt; {
+                    &gt; tonic::server::UnaryService&lt;
+                        ::oak_proto_rust::oak::containers::SendAttestationEvidenceRequest,
+                    &gt; <span class="kw">for </span>SendAttestationEvidenceSvc&lt;T&gt; {
                         <span class="kw">type </span>Response = ();
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
@@ -1706,7 +1708,7 @@
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
                             request: tonic::Request&lt;
-                                <span class="kw">super</span>::SendAttestationEvidenceRequest,
+                                ::oak_proto_rust::oak::containers::SendAttestationEvidenceRequest,
                             &gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
@@ -1835,7 +1837,9 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
         ) -&gt; std::result::Result&lt;
-            tonic::Response&lt;<span class="kw">super</span>::GetApplicationConfigResponse&gt;,
+            tonic::Response&lt;
+                ::oak_proto_rust::oak::containers::GetApplicationConfigResponse,
+            &gt;,
             tonic::Status,
         &gt;;
         <span class="doccomment">/// Notifies the orchestrator that the trusted app is ready to serve requests
@@ -1931,7 +1935,7 @@
                     </span><span class="kw">struct </span>GetApplicationConfigSvc&lt;T: Orchestrator&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;T: Orchestrator&gt; tonic::server::UnaryService&lt;()&gt;
                     <span class="kw">for </span>GetApplicationConfigSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetApplicationConfigResponse;
+                        <span class="kw">type </span>Response = ::oak_proto_rust::oak::containers::GetApplicationConfigResponse;
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
                             tonic::Status,

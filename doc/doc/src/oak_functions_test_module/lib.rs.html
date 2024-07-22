@@ -106,9 +106,9 @@
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>micro_rpc::Transport;
+<span class="kw">use </span>oak_micro_rpc::oak::functions::testing::{TestModule, TestModuleServer};
 <span class="kw">use </span>oak_proto_rust::oak::functions::testing::{
     lookup_request::Mode, EchoAndPanicRequest, EchoAndPanicResponse, LookupRequest, LookupResponse,
-    TestModule, TestModuleServer,
 };
 
 <span class="attr">#[cfg_attr(not(test), no_mangle)]

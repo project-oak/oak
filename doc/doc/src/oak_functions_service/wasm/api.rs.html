@@ -164,6 +164,7 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -184,10 +185,11 @@
 <span class="kw">use </span>core::cell::Cell;
 
 <span class="kw">use </span>log::Level;
+<span class="kw">use </span>oak_micro_rpc::oak::functions::wasm::v1::{StdWasmApi, StdWasmApiServer};
 <span class="kw">use </span>oak_proto_rust::oak::functions::wasm::v1::{
     BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
-    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, StdWasmApi,
-    StdWasmApiServer, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
+    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse, TestRequest,
+    TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
 
 <span class="kw">use super</span>::{WasmApi, WasmApiFactory};

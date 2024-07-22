@@ -305,6 +305,8 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -329,13 +331,15 @@
 <span class="kw">use </span>futures::{FutureExt, Stream};
 <span class="kw">use </span>oak_grpc::oak::containers::{
     launcher_server::{Launcher, LauncherServer},
-    v1::{
-        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
-        GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-    },
-    GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::Evidence;
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::Evidence,
+    containers::{
+        v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+};
 <span class="kw">use </span>opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{

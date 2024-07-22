@@ -161,15 +161,15 @@
 // limitations under the License.
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_grpc::oak::{
-    containers::{
-        launcher_client::LauncherClient <span class="kw">as </span>GrpcLauncherClient,
-        v1::{hostlib_key_provisioning_client::HostlibKeyProvisioningClient, KeyProvisioningRole},
-        SendAttestationEvidenceRequest,
-    },
+<span class="kw">use </span>oak_grpc::oak::containers::{
+    launcher_client::LauncherClient <span class="kw">as </span>GrpcLauncherClient,
+    v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
+};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::Evidence,
+    containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::Evidence;
 <span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 <span class="kw">use </span>tokio_vsock::{VsockAddr, VsockStream};
 <span class="kw">use </span>tonic::transport::Channel;
