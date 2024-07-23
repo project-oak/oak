@@ -86,3 +86,44 @@ pub fn cpuid(leaf: u32) -> CpuidResult {
     #[cfg(not(feature = "sev"))]
     return base::cpuid(leaf);
 }
+/// Wrapper that can access a MSR either directly or through the GHCB, depending
+/// on the environment.
+pub struct Msr {
+    #[cfg(feature = "sev")]
+    msr_id: u32,
+    msr: base::Msr,
+}
+
+impl Msr {
+    pub const fn new(reg: u32) -> Self {
+        Self {
+            #[cfg(feature = "sev")]
+            msr_id: reg,
+            msr: base::Msr::new(reg),
+        }
+    }
+
+    /// Read the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    pub unsafe fn read(&self) -> u64 {
+        #[cfg(feature = "sev")]
+        return sev::read_msr(&self.msr, self.msr_id);
+        #[cfg(not(feature = "sev"))]
+        return self.msr.read();
+    }
+
+    /// Write the MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    pub unsafe fn write(&mut self, val: u64) {
+        #[cfg(feature = "sev")]
+        return sev::write_msr(&mut self.msr, self.msr_id, val);
+        #[cfg(not(feature = "sev"))]
+        return self.msr.write(val);
+    }
+}

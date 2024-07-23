@@ -16,52 +16,9 @@
 
 use bitflags::bitflags;
 use strum::FromRepr;
-use x86_64::{registers::model_specific::Msr as DirectMsr, PhysAddr};
+use x86_64::PhysAddr;
 
-use crate::sev::GHCB_WRAPPER;
-
-/// Wrapper that can access a MSR either directly or through the GHCB, depending
-/// on the environment.
-pub struct Msr {
-    msr_id: u32,
-    msr: DirectMsr,
-}
-
-impl Msr {
-    pub const fn new(reg: u32) -> Self {
-        Self { msr_id: reg, msr: DirectMsr::new(reg) }
-    }
-
-    /// Read the MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn read(&self) -> u64 {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .msr_read(self.msr_id)
-                .expect("couldn't read the MSR using the GHCB protocol")
-        } else {
-            self.msr.read()
-        }
-    }
-
-    /// Write the MSR.
-    ///
-    /// ## Safety
-    ///
-    /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn write(&mut self, val: u64) {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .msr_write(self.msr_id, val)
-                .expect("couldn't write the MSR using the GHCB protocol")
-        } else {
-            self.msr.write(val)
-        }
-    }
-}
+use crate::hal::Msr;
 
 bitflags! {
     /// Flags in the APIC Base Address Register (MSR 0x1B)

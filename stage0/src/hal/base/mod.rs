@@ -19,3 +19,4 @@ mod mmio;
 
 pub use cpuid::*;
 pub use mmio::*;
+pub use x86_64::registers::model_specific::Msr;
