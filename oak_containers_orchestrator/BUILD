@@ -75,11 +75,12 @@ rust_library(
 
 rust_test(
     name = "lib_test",
-    srcs = [
-        "src/dice.rs",
-    ],
+    crate = ":lib",
     crate_features = ["bazel"],
     data = [
+        "//oak_containers_orchestrator/testdata:cdi.json",
+        "//oak_containers_orchestrator/testdata:oci_spec_base.json",
+        "//oak_containers_orchestrator/testdata:oci_spec_target.json",
         "//oak_containers_orchestrator/testdata:test_dice",
     ],
     deps = [

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
@@ -34,4 +34,9 @@ rust_library(
         "@oak_crates_index//:spinning_top",
         "@oak_no_std_crates_index//:getrandom",
     ],
+)
+
+rust_test(
+    name = "oak_core_tests",
+    crate = ":oak_core",
 )

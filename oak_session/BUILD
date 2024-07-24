@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -35,8 +35,13 @@ rust_library(
     ],
 )
 
-rust_test_suite(
+rust_test(
     name = "oak_session_tests",
+    crate = ":oak_session",
+)
+
+rust_test_suite(
+    name = "oak_session_integration_tests",
     srcs = glob(["tests/*.rs"]),
     deps = [
         ":oak_session",
