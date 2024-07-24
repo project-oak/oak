@@ -307,6 +307,7 @@
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -605,6 +606,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>virtio_shutdown = shutdown.clone();
     <span class="kw">let </span>virtio_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .serve_with_incoming_shutdown(
             vsock_listener.incoming(),
             virtio_shutdown.changed().map(|<span class="kw">_</span>| ()),
