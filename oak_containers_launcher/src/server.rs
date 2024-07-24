@@ -296,6 +296,7 @@ pub async fn new(
     let mut virtio_shutdown = shutdown.clone();
     let virtio_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .serve_with_incoming_shutdown(
             vsock_listener.incoming(),
             virtio_shutdown.changed().map(|_| ()),
