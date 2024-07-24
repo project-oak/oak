@@ -39,10 +39,14 @@ const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
 pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
+    load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
+}
+
+fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceBuilder> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)
-        .open(STAGE1_DICE_DATA_PATH)
+        .open(path)
         .context("couldn't open DICE data file")?;
     let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
 
@@ -54,7 +58,14 @@ pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
 
     buffer.zeroize();
     file.rewind()?;
-    file.write_all(&buffer).context("couldn't overwrite DICE data file")?;
+    let zeros: Vec<u8> = vec![0; size];
+    // Write `size` bytes of value zero over the file in an attempt to overwrite
+    // (wipeout) the keys in the memory. Truncating the file or deleting it
+    // leaves the data in the memory and might be accessible by scanning the
+    // memory.
+    // Still the following line does not guarantee overwriting the keys as the
+    // filesystem might pick other memory pages to write the data on.
+    file.write_all(&zeros).context("couldn't overwrite DICE data file")?;
     result.try_into()
 }
 
@@ -89,4 +100,29 @@ pub fn measure_container_and_config(
             ),
         ]),
     )]
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use super::*;
+
+    #[test]
+    fn test_load_stage1_dice_data() {
+        const DICE_DATA_PATH: &str = "dice";
+        const DICE_DATA_SIZE: usize = 2483;
+
+        #[cfg(feature = "bazel")]
+        fs::copy("oak_containers_orchestrator/testdata/test_dice", DICE_DATA_PATH).unwrap();
+        #[cfg(not(feature = "bazel"))]
+        fs::copy("testdata/test_dice", DICE_DATA_PATH).unwrap();
+
+        load_stage1_dice_data_from_path(DICE_DATA_PATH).unwrap();
+        let mut file = OpenOptions::new().read(true).open(DICE_DATA_PATH).unwrap();
+        let mut buffer = Vec::with_capacity(DICE_DATA_SIZE);
+        file.read_to_end(&mut buffer).unwrap();
+        assert_eq!(buffer.len(), DICE_DATA_SIZE);
+        assert_eq!(buffer, vec![0; DICE_DATA_SIZE]);
+    }
 }

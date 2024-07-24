@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -37,6 +37,53 @@ rust_library(
     crate_features = ["bazel"],
     crate_name = "oak_containers_orchestrator",
     deps = [
+        "//oak_attestation",
+        "//oak_attestation_verification",
+        "//oak_crypto",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:ciborium",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:hpke",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:nix",
+        "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:opentelemetry-otlp",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:procfs",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:syslog",
+        "@oak_crates_index//:tar",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tokio-util",
+        "@oak_crates_index//:tokio-vsock",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tower",
+        "@oak_crates_index//:walkdir",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
+rust_test(
+    name = "lib_test",
+    srcs = [
+        "src/dice.rs",
+    ],
+    crate_features = ["bazel"],
+    data = [
+        "//oak_containers_orchestrator/testdata:test_dice",
+    ],
+    deps = [
+        ":lib",
         "//oak_attestation",
         "//oak_attestation_verification",
         "//oak_crypto",
