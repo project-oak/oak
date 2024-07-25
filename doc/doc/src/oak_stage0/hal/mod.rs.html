@@ -86,6 +86,8 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -134,7 +136,8 @@
     ///
     /// Panics if the read would go outside the memory range.
     </span><span class="kw">pub fn </span>read_u32(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u32 {
-        <span class="kw">if </span>(offset * size_of::&lt;u32&gt;()) &gt;= S::SIZE <span class="kw">as </span>usize {
+        <span class="kw">let </span>offset = offset * size_of::&lt;u32&gt;();
+        <span class="kw">if </span>offset &gt;= S::SIZE <span class="kw">as </span>usize {
             <span class="macro">panic!</span>(<span class="string">"invalid MMIO access for read: offset would read beyond memory boundary"</span>);
         }
         <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
@@ -153,7 +156,8 @@
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
     </span><span class="kw">pub unsafe fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u32) {
-        <span class="kw">if </span>(offset * size_of::&lt;u32&gt;()) &gt;= S::SIZE <span class="kw">as </span>usize {
+        <span class="kw">let </span>offset = offset * size_of::&lt;u32&gt;();
+        <span class="kw">if </span>offset &gt;= S::SIZE <span class="kw">as </span>usize {
             <span class="macro">panic!</span>(<span class="string">"invalid MMIO access for write: offset would write beyond memory boundary"</span>);
         }
         <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
