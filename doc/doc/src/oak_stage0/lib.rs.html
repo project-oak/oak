@@ -468,15 +468,6 @@
 <a href="#466" id="466">466</a>
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
-<a href="#469" id="469">469</a>
-<a href="#470" id="470">470</a>
-<a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a>
-<a href="#473" id="473">473</a>
-<a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -801,16 +792,7 @@
     };
 
     <span class="kw">let </span>event_log_proto = generate_event_log(stage0event);
-    <span class="kw">let </span>event_type_url_str = event_log_proto.events[<span class="number">0</span>].event.as_ref().unwrap().type_url.as_str();
-    <span class="kw">let </span>eventlog_sha2_256_digest = measure_byte_slice(
-        <span class="macro">format!</span>(
-            <span class="string">"{}{}{:?}"</span>,
-            event_type_url_str.len(),
-            event_type_url_str,
-            event_log_proto.events[<span class="number">0</span>].event.as_ref().unwrap().value.as_bytes()
-        )
-        .as_bytes(),
-    );
+    <span class="kw">let </span>eventlog_sha2_256_digest = measure_byte_slice(event_log_proto.encoded_events[<span class="number">0</span>].as_bytes());
 
     <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
@@ -951,7 +933,7 @@
     <span class="kw">let </span>event = Event { tag, event: <span class="prelude-val">Some</span>(any.unwrap()) };
     <span class="macro">log::info!</span>(<span class="string">"Any:{:?}"</span>, event.event.clone().unwrap());
     <span class="kw">let </span><span class="kw-2">mut </span>eventlog = EventLog::default();
-    eventlog.events.push(event);
+    eventlog.encoded_events.push(event.encode_to_vec());
     eventlog
 }
 </code></pre></div></section></main></body></html>

@@ -1209,6 +1209,9 @@
 <a href="#1207" id="1207">1207</a>
 <a href="#1208" id="1208">1208</a>
 <a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1900,8 +1903,11 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>EventLog {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
+    <span class="doccomment">/// TODO: b/333748757 - Remove 'events' once 'encoded_events' is in google3.
+    </span><span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;Event&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, repeated, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>encoded_events: ::prost::alloc::vec::Vec&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
