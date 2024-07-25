@@ -9,6 +9,7 @@ members = [
   "oak_attestation",
   "oak_attestation_explain",
   "oak_attestation_explain_cli",
+  "oak_attestation_explain_wasm",
   "oak_attestation_integration_tests",
   "oak_attestation_verification",
   "oak_attestation_verification_test_utils",

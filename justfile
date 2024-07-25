@@ -239,6 +239,13 @@ ensure_no_std package:
 
 all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_verification") (ensure_no_std "oak_restricted_kernel_sdk")
 
+oak_attestation_explain_wasm:
+    env --chdir=oak_attestation_explain_wasm \
+    wasm-pack build \
+    --target web  # "web" bundles for native web use \
+    --release \
+    --no-pack # prevents generating a package.json, we don't need it since we don't use a web bundler
+
 # Entry points for Kokoro CI.
 
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin \

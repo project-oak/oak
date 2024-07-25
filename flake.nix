@@ -122,6 +122,7 @@
                 systemd
                 qemu_kvm
                 python312
+                wasm-pack
               ];
             };
             # For some reason node does not know how to find the prettier plugin, so we need to

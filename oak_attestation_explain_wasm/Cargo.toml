@@ -1,0 +1,20 @@
+[package]
+name = "oak_attestation_explain_wasm"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["js"]
+js = ["getrandom/js"]
+
+[dependencies]
+wasm-bindgen = "*"
+getrandom = "*"
+oak_attestation_explain = { workspace = true }
+oak_proto_rust = { workspace = true }
+prost = { workspace = true, default-features = false }
+oak_attestation_verification = { workspace = true }
