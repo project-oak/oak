@@ -2474,6 +2474,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_hello_world_web_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "getrandom",
+ "js-sys",
+ "oak_attestation_verification",
+ "oak_client",
+ "oak_proto_rust",
+ "prost",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "oak_containers_launcher"
 version = "0.1.0"
 dependencies = [
@@ -5242,6 +5260,18 @@ dependencies = [
  "quote",
  "syn 2.0.48",
  "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-futures"
+version = "0.4.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bde2032aeb86bdfaecc8b261eef3cba735cc426c1f3a3416d1e0791be95fc461"
+dependencies = [
+ "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

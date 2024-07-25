@@ -14,26 +14,35 @@
 // limitations under the License.
 //
 
+#[cfg(feature = "grpc_streaming_transport_implementation")]
 use std::future::Future;
 
+#[cfg(feature = "grpc_streaming_transport_implementation")]
 use anyhow::Context;
+#[cfg(feature = "grpc_streaming_transport_implementation")]
 use futures::channel::mpsc;
+#[cfg(feature = "grpc_streaming_transport_implementation")]
+use oak_proto_rust::oak::session::v1::{
+    request_wrapper, response_wrapper, RequestWrapper, ResponseWrapper,
+};
+#[cfg(feature = "grpc_streaming_transport_implementation")]
+use oak_proto_rust::oak::session::v1::{
+    GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
+};
 use oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
-    session::v1::{
-        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceRequest,
-        GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse, RequestWrapper,
-        ResponseWrapper,
-    },
+    session::v1::EndorsedEvidence,
 };
 
 /// A [Transport] implementation that uses a single gRPC streaming session to
 /// get the evidence and then invokve the desired request.
+#[cfg(feature = "grpc_streaming_transport_implementation")]
 pub struct GrpcStreamingTransport {
     response_stream: tonic::Streaming<ResponseWrapper>,
     request_tx_channel: mpsc::Sender<RequestWrapper>,
 }
 
+#[cfg(feature = "grpc_streaming_transport_implementation")]
 impl GrpcStreamingTransport {
     /// Create a new [GrpcStreamingTransport].
     ///
@@ -87,7 +96,7 @@ impl GrpcStreamingTransport {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait Transport {
     async fn invoke(
         &mut self,
@@ -95,7 +104,8 @@ pub trait Transport {
     ) -> anyhow::Result<EncryptedResponse>;
 }
 
-#[async_trait::async_trait]
+#[cfg(feature = "grpc_streaming_transport_implementation")]
+#[async_trait::async_trait(?Send)]
 impl Transport for GrpcStreamingTransport {
     async fn invoke(
         &mut self,
@@ -119,12 +129,13 @@ impl Transport for GrpcStreamingTransport {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait EvidenceProvider {
     async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence>;
 }
 
-#[async_trait::async_trait]
+#[cfg(feature = "grpc_streaming_transport_implementation")]
+#[async_trait::async_trait(?Send)]
 impl EvidenceProvider for GrpcStreamingTransport {
     async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         let response_wrapper = self

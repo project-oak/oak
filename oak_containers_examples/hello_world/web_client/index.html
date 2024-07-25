@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Oak Attestation Explanation</title>
+    <meta charset="UTF-8" />
+    <script type="module">
+      import {
+        LitElement,
+        html,
+        css,
+      } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
+      import init, { greet } from './oak_containers_hello_world_web_client.js';
+
+      class EnclaveGreeter extends LitElement {
+        static styles = css`
+          :host {
+            display: block;
+            font-family: Arial, sans-serif;
+          }
+          input,
+          button {
+            margin: 5px;
+          }
+        `;
+
+        static properties = {
+          name: { type: String },
+          port: { type: Number },
+          greeting: { type: String },
+        };
+
+        constructor() {
+          super();
+          this.name = '';
+          this.port = 8080;
+          this.greeting = '';
+        }
+
+        render() {
+          return html`
+            <h1>Enclave Greeter</h1>
+            <input
+              type="text"
+              .value=${this.name}
+              @input=${this.updateName}
+              placeholder="Enter your name"
+            />
+            <input
+              type="number"
+              .value=${this.port}
+              @input=${this.updatePort}
+              placeholder="Enter port number"
+            />
+            <button @click=${this.handleGreet}>Greet</button>
+            <p>${this.greeting}</p>
+          `;
+        }
+
+        updateName(e) {
+          this.name = e.target.value;
+        }
+
+        updatePort(e) {
+          this.port = parseInt(e.target.value, 10);
+        }
+
+        async handleGreet() {
+          await init();
+          try {
+            const result = await greet(this.port, this.name);
+            this.greeting = result;
+          } catch (error) {
+            this.greeting = 'Error: ' + error;
+          }
+        }
+      }
+
+      customElements.define('enclave-greeter', EnclaveGreeter);
+    </script>
+  </head>
+
+  <body>
+    <enclave-greeter></enclave-greeter>
+  </body>
+</html>

@@ -5,6 +5,10 @@ authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["grpc_streaming_transport_implementation"]
+grpc_streaming_transport_implementation = ["tonic"]
+
 [dependencies]
 anyhow = "*"
 async-trait = "*"
@@ -15,7 +19,7 @@ oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }
-tonic = { workspace = true }
+tonic = { workspace = true, optional = true }
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }

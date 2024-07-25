@@ -88,7 +88,7 @@ impl DemoTransport {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl oak_client::transport::Transport for DemoTransport {
     async fn invoke(
         &mut self,
@@ -111,7 +111,7 @@ impl oak_client::transport::Transport for DemoTransport {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl oak_client::transport::EvidenceProvider for DemoTransport {
     async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         let wrapper = RequestWrapper {

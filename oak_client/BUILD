@@ -29,6 +29,9 @@ rust_library(
         "src/transport.rs",
         "src/verifier.rs",
     ],
+    crate_features = [
+        "grpc_streaming_transport_implementation",
+    ],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
