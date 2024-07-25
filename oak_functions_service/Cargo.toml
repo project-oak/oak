@@ -32,7 +32,14 @@ rand_core = { version = "*", default-features = false, features = [
 ] }
 spinning_top = "*"
 wasmi = { version = "*", default-features = false }
-wasmtime = { version = "*", optional = true }
+wasmtime = { version = "*", optional = true, default-features = false, features = [
+  "async",
+  "cranelift",
+  "cache",
+  "parallel-compilation",
+  "pooling-allocator",
+  "runtime",
+] }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }

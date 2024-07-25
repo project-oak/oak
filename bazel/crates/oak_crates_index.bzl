@@ -463,6 +463,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 # Try to figure out a minimal set of features we need (e.g. disable wasm profiling)
                 features = [
+                    "async",
                     "cranelift",
                     "cache",
                     "parallel-compilation",

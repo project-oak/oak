@@ -429,7 +429,7 @@ impl WasmtimeHandler {
                     max_tables_per_component,
                     total_memories,
                     total_tables,
-                    // total_stacks,
+                    total_stacks,
                     total_core_instances,
                     max_core_instance_size as usize,
                     max_tables_per_module,
