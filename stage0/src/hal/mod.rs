@@ -46,7 +46,8 @@ impl<S: PageSize> Mmio<S> {
     ///
     /// Panics if the read would go outside the memory range.
     pub fn read_u32(&self, offset: usize) -> u32 {
-        if (offset * size_of::<u32>()) >= S::SIZE as usize {
+        let offset = offset * size_of::<u32>();
+        if offset >= S::SIZE as usize {
             panic!("invalid MMIO access for read: offset would read beyond memory boundary");
         }
         #[cfg(feature = "sev")]
@@ -65,7 +66,8 @@ impl<S: PageSize> Mmio<S> {
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
     pub unsafe fn write_u32(&mut self, offset: usize, value: u32) {
-        if (offset * size_of::<u32>()) >= S::SIZE as usize {
+        let offset = offset * size_of::<u32>();
+        if offset >= S::SIZE as usize {
             panic!("invalid MMIO access for write: offset would write beyond memory boundary");
         }
         #[cfg(feature = "sev")]
