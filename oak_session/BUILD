@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,15 +23,23 @@ package(
 
 rust_library(
     name = "oak_session",
-    srcs = glob([
-        "src/*.rs",
-    ]),
+    srcs = glob(["src/*.rs"]),
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
     deps = [
         "//oak_crypto",
         "//oak_proto_rust",
+        "@oak_crates_index//:aead",
         "@oak_crates_index//:anyhow",
+    ],
+)
+
+rust_test_suite(
+    name = "oak_session_tests",
+    srcs = glob(["tests/*.rs"]),
+    deps = [
+        ":oak_session",
+        "//oak_crypto",
     ],
 )

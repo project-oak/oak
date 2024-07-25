@@ -24,11 +24,9 @@ extern crate std;
 
 pub mod attestation;
 pub mod config;
+pub mod encryptors;
 pub mod handshake;
 mod session;
-
-#[cfg(test)]
-mod tests;
 
 pub use session::{ClientSession, ServerSession, Session};
 

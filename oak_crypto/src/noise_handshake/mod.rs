@@ -27,6 +27,7 @@ mod tests;
 
 use alloc::vec::Vec;
 
+use anyhow::anyhow;
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 use crate::noise_handshake::{
@@ -141,6 +142,23 @@ impl Crypter {
 impl From<Crypter> for SessionKeys {
     fn from(value: Crypter) -> Self {
         SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
+    }
+}
+
+impl TryFrom<SessionKeys> for Crypter {
+    type Error = anyhow::Error;
+
+    fn try_from(sk: SessionKeys) -> Result<Self, Self::Error> {
+        Ok(Crypter::new(
+            sk.response_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
+            sk.request_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
+        ))
     }
 }
 

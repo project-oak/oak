@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
-
-use crate::{
+use oak_crypto::{
+    encryptor::Encryptor,
+    identity_key::{IdentityKey, IdentityKeyHandle},
+};
+use oak_session::{
     config::HandshakerConfig,
+    encryptors::OrderedChannelEncryptor,
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
     ProtocolEngine,
 };
@@ -70,4 +73,20 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     let session_keys_server = server_handshaker.derive_session_keys().unwrap();
     assert_eq!(session_keys_client.request_key, session_keys_server.response_key);
     assert_eq!(session_keys_server.request_key, session_keys_client.response_key);
+
+    let mut encryptor_client: OrderedChannelEncryptor = session_keys_client.try_into().unwrap();
+    let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
+
+    let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
+    for message in &test_messages {
+        let ciphertext = encryptor_client.encrypt(message.as_slice()).unwrap();
+        let plaintext = encryptor_server.decrypt(ciphertext.as_slice()).unwrap();
+        assert_eq!(message, &plaintext);
+    }
+
+    for message in &test_messages {
+        let ciphertext = encryptor_server.encrypt(message.as_slice()).unwrap();
+        let plaintext = encryptor_client.decrypt(ciphertext.as_slice()).unwrap();
+        assert_eq!(message, &plaintext);
+    }
 }
