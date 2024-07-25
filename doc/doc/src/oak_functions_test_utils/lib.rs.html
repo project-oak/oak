@@ -262,23 +262,6 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -310,13 +293,9 @@
     ])
 });
 
-<span class="kw">use </span>std::{
-    collections::HashMap, future::Future, io::Write, path::PathBuf, pin::Pin, task::Poll,
-    time::Duration,
-};
+<span class="kw">use </span>std::{collections::HashMap, future::Future, io::Write, path::PathBuf, pin::Pin, task::Poll};
 
 <span class="kw">use </span>command_group::stdlib::CommandGroup;
-<span class="kw">use </span>nix::unistd::Pid;
 <span class="kw">use </span>oak_client::verifier::InsecureAttestationVerifier;
 <span class="kw">use </span>oak_functions_abi::Response;
 <span class="kw">use </span>oak_functions_client::OakFunctionsClient;
@@ -422,19 +401,6 @@
         <span class="string">"{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}"</span>,
         <span class="macro">env!</span>(<span class="string">"WORKSPACE_ROOT"</span>),
     )
-}
-
-<span class="doccomment">/// Kills all the processes identified by the provided handle.
-///
-/// First tries to send them a `SIGINT` signal, then, if they are still running,
-/// it sends them a `SIGKILL` signal.
-</span><span class="kw">pub fn </span>kill_process(handle: duct::ReaderHandle) {
-    handle.pids().iter().for_each(|pid| {
-        nix::sys::signal::kill(Pid::from_raw(<span class="kw-2">*</span>pid <span class="kw">as </span>i32), nix::sys::signal::SIGINT).unwrap()
-    });
-    <span class="comment">// Wait for the process to terminate cleanly, then forcefully kill it.
-    </span>std::thread::sleep(Duration::from_secs(<span class="number">2</span>));
-    handle.kill().unwrap();
 }
 
 <span class="doccomment">/// A wrapper around a termination signal [`oneshot::Receiver`].
