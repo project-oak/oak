@@ -8,7 +8,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 command-group = "*"
-duct = "*"
 log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }

@@ -29,13 +29,9 @@ pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     ])
 });
 
-use std::{
-    collections::HashMap, future::Future, io::Write, path::PathBuf, pin::Pin, task::Poll,
-    time::Duration,
-};
+use std::{collections::HashMap, future::Future, io::Write, path::PathBuf, pin::Pin, task::Poll};
 
 use command_group::stdlib::CommandGroup;
-use nix::unistd::Pid;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
 use oak_functions_client::OakFunctionsClient;
@@ -141,19 +137,6 @@ pub fn rust_crate_enclave_out_path(crate_name: &str) -> String {
         "{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}",
         env!("WORKSPACE_ROOT"),
     )
-}
-
-/// Kills all the processes identified by the provided handle.
-///
-/// First tries to send them a `SIGINT` signal, then, if they are still running,
-/// it sends them a `SIGKILL` signal.
-pub fn kill_process(handle: duct::ReaderHandle) {
-    handle.pids().iter().for_each(|pid| {
-        nix::sys::signal::kill(Pid::from_raw(*pid as i32), nix::sys::signal::SIGINT).unwrap()
-    });
-    // Wait for the process to terminate cleanly, then forcefully kill it.
-    std::thread::sleep(Duration::from_secs(2));
-    handle.kill().unwrap();
 }
 
 /// A wrapper around a termination signal [`oneshot::Receiver`].
