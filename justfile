@@ -47,7 +47,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --communication-channel={{communication_channel}}
 
 run_oak_functions_launcher wasm_path port lookup_data_path:
-    target/x86_64-unknown-linux-gnu/debug/oak_functions_launcher \
+    target/x86_64-unknown-linux-gnu/release/oak_functions_launcher \
         --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
         --vmm-binary=$(which qemu-system-x86_64) \
@@ -58,7 +58,9 @@ run_oak_functions_launcher wasm_path port lookup_data_path:
         --port={{port}} \
         --lookup-data={{lookup_data_path}} \
 
-
+# Run an integration test for Oak Functions making sure all the dependencies are built.
+run_oak_functions_test: oak_orchestrator oak_functions_launcher oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper
+    cargo test --package=key_value_lookup test_server
 
 # Builds a variant of the restricted kernel and creates a bzImage of it.
 # Then creates provenance subjects for it.
