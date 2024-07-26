@@ -127,6 +127,8 @@ impl Instance {
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
+        // Log guest errors and other interesting events to stderr.
+        cmd.args(["-d", "int,unimp,guest_errors"]);
         // Needed to expose advanced CPU features. Specifically RDRAND which is required
         // for remote attestation.
         cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
