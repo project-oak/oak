@@ -25,7 +25,7 @@ use oak_grpc::oak::containers::{
     v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
 };
 use oak_proto_rust::oak::{
-    attestation::v1::Evidence,
+    attestation::v1::{Endorsements, Evidence},
     containers::{
         v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
         GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
@@ -69,6 +69,7 @@ struct LauncherServerImplementation {
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     app_ready_notifier: Mutex<Option<oneshot::Sender<()>>>,
+    endorsements: Endorsements,
 }
 
 #[tonic::async_trait]
@@ -166,6 +167,13 @@ impl Launcher for LauncherServerImplementation {
                 tonic::Status::internal("couldn't send attestation evidence".to_string())
             })?;
         Ok(tonic::Response::new(()))
+    }
+
+    async fn get_endorsements(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<Endorsements>, tonic::Status> {
+        Ok(tonic::Response::new(self.endorsements.clone()))
     }
 
     async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
@@ -273,6 +281,7 @@ pub async fn new(
     evidence_sender: oneshot::Sender<Evidence>,
     app_ready_notifier: oneshot::Sender<()>,
     shutdown: watch::Receiver<()>,
+    endorsements: Endorsements,
 ) -> Result<(), anyhow::Error> {
     let server_impl = Arc::new(LauncherServerImplementation {
         system_image,
@@ -280,6 +289,7 @@ pub async fn new(
         application_config,
         evidence_sender: Mutex::new(Some(evidence_sender)),
         app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
+        endorsements,
     });
 
     let mut tcp_shutdown = shutdown.clone();

@@ -25,7 +25,7 @@ use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use oak_grpc::oak::key_provisioning::v1::key_provisioning_client::KeyProvisioningClient;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements},
+    attestation::v1::{endorsements, Endorsements, Evidence, OakContainersEndorsements},
     key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     session::v1::EndorsedEvidence,
 };
@@ -176,6 +176,7 @@ impl Launcher {
         let (shutdown_sender, mut shutdown_receiver) = watch::channel::<()>(());
         shutdown_receiver.mark_unchanged(); // Don't immediately notify on the initial value.
         let (app_notifier_sender, app_notifier_receiver) = oneshot::channel::<()>();
+        let endorsements = get_endorsements();
         let server = tokio::spawn(server::new(
             listener,
             vsock_listener,
@@ -185,6 +186,7 @@ impl Launcher {
             evidence_sender,
             app_notifier_sender,
             shutdown_receiver,
+            endorsements,
         ));
 
         let trusted_app_channel = match args.communication_channel {
@@ -276,18 +278,7 @@ impl Launcher {
                 .context("couldn't get attestation evidence before timeout")?
                 .context("no attestation evidence available")?;
 
-            // Initialize attestation endorsements.
-            // TODO(#4074): Add layer endorsements.
-            let oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
-                root_layer: None,
-                kernel_layer: None,
-                application_layer: None,
-            };
-            let endorsements = Endorsements {
-                r#type: Some(endorsements::Type::OakRestrictedKernel(
-                    oak_restricted_kernel_endorsements,
-                )),
-            };
+            let endorsements = get_endorsements();
 
             let endorsed_evidence =
                 EndorsedEvidence { evidence: Some(evidence), endorsements: Some(endorsements) };
@@ -339,5 +330,16 @@ impl Launcher {
         }
         let _ = self.vmm.kill().await;
         self.server.abort();
+    }
+}
+
+fn get_endorsements() -> Endorsements {
+    Endorsements {
+        r#type: Some(endorsements::Type::OakContainers(OakContainersEndorsements {
+            root_layer: None,
+            kernel_layer: None,
+            system_layer: None,
+            container_layer: None,
+        })),
     }
 }

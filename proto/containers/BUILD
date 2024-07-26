@@ -37,6 +37,7 @@ proto_library(
     name = "interfaces_proto",
     srcs = ["interfaces.proto"],
     deps = [
+        "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
         "@com_google_protobuf//:empty_proto",
     ],
