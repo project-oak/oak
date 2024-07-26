@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#
+# bazel-clippy without all the noise
+
+# Command to run bazel clippy
+COMMAND="bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/..."
+
+# Run the command and filter the output
+$COMMAND 2>&1 | awk '
+    # Filter out lines starting with "Aspect @rules_rust//rust/private:clippy" and ending with "up-to-date:" or "(nothing to build)"
+    /^Aspect @rules_rust\/\/rust\/private:clippy.*(up-to-date:|\(nothing to build\))$/ {next}
+
+    # Filter out lines indicating successful clippy checks
+    /^ *bazel-.*\.clippy\.ok$/ {next}
+
+    # Filter out INFO lines
+    /^\([0-9:]+\) INFO:/ {next}
+
+    # Print any other lines that dont match the above patterns
+    {print}
+'

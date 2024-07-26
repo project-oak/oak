@@ -297,7 +297,7 @@ list-bare-metal-crates:
     {{bare_metal_crates_query}}
 
 bazel-clippy:
-    bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/...
+    scripts/clippy_clean
 
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index
