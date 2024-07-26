@@ -254,6 +254,8 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -383,6 +385,8 @@
 
         <span class="comment">// Construct the command-line arguments for `qemu`.
         </span>cmd.arg(<span class="string">"-enable-kvm"</span>);
+        <span class="comment">// Log guest errors and other interesting events to stderr.
+        </span>cmd.args([<span class="string">"-d"</span>, <span class="string">"int,unimp,guest_errors"</span>]);
         <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required
         // for remote attestation.
         </span>cmd.args([<span class="string">"-cpu"</span>, <span class="string">"IvyBridge-IBRS,enforce"</span>]);
