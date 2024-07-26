@@ -22,14 +22,14 @@ package(
 
 rust_library(
     name = "opentelemetry_rk",
-    srcs = glob(["src/metrics/**"])
-    + [
-     "src/global/metrics.rs",
-     "src/global/mod.rs",
-     "src/baggage.rs",
-     "src/common.rs",
-     "src/context.rs",
-     "src/lib.rs",
+    srcs = glob(["src/metrics/**"]) + [
+        "src/baggage.rs",
+        "src/common.rs",
+        "src/context.rs",
+        "src/global/error_handler.rs",
+        "src/global/metrics.rs",
+        "src/global/mod.rs",
+        "src/lib.rs",
     ],
     deps = [
         "//oak_core",

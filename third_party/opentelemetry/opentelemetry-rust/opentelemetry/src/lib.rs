@@ -186,6 +186,7 @@
     html_logo_url = "https://raw.githubusercontent.com/open-telemetry/opentelemetry-rust/main/assets/logo.svg"
 )]
 #![cfg_attr(test, deny(warnings))]
+#![feature(error_in_core)]
 
 pub mod global;
 

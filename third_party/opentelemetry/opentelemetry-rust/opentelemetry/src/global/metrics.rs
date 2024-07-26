@@ -2,13 +2,9 @@ extern crate alloc;
 
 use crate::metrics::{self, Meter, MeterProvider};
 use crate::KeyValue;
+use alloc::{borrow::Cow, sync::Arc, vec::Vec};
 use core::fmt;
 use oak_core::sync::OnceCell;
-use alloc::{
-  borrow::Cow,
-  vec::Vec,
-  sync::Arc,
-};
 
 /// The global `MeterProvider` singleton.
 static GLOBAL_METER_PROVIDER: OnceCell<GlobalMeterProvider> = OnceCell::new();
@@ -90,23 +86,25 @@ impl GlobalMeterProvider {
 pub fn set_meter_provider<P>(new_provider: P)
 where
     P: metrics::MeterProvider + Send + Sync + 'static,
-
 {
-    let _ = GLOBAL_METER_PROVIDER.set(GlobalMeterProvider::new(new_provider));
+    GLOBAL_METER_PROVIDER
+        .set(GlobalMeterProvider::new(new_provider))
+        .expect("Couldn't set GLOBAL_METER_PROVIDER");
 }
 
 /// Returns an instance of the currently configured global [`MeterProvider`]
 /// through [`GlobalMeterProvider`].
 pub fn meter_provider() -> GlobalMeterProvider {
-  if GLOBAL_METER_PROVIDER.get().is_none() {
-    let _ = GLOBAL_METER_PROVIDER.set(
-      GlobalMeterProvider::new(metrics::noop::NoopMeterProvider::new()));
-}
+    if GLOBAL_METER_PROVIDER.get().is_none() {
+        let _ = GLOBAL_METER_PROVIDER.set(GlobalMeterProvider::new(
+            metrics::noop::NoopMeterProvider::new(),
+        ));
+    }
 
-  GLOBAL_METER_PROVIDER
-      .get()
-      .expect("GLOBAL_METER_PROVIDER not initialized")
-      .clone()
+    GLOBAL_METER_PROVIDER
+        .get()
+        .expect("GLOBAL_METER_PROVIDER not initialized")
+        .clone()
 }
 
 /// Creates a named [`Meter`] via the configured [`GlobalMeterProvider`].

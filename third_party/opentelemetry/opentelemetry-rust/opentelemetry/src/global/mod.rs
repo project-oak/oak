@@ -125,7 +125,7 @@
 //! [`MeterProvider`]: crate::metrics::MeterProvider
 //! [`set_meter_provider`]: crate::global::set_meter_provider
 
-// mod error_handler;
+mod error_handler;
 #[cfg(feature = "metrics")]
 mod metrics;
 #[cfg(feature = "trace")]
@@ -133,7 +133,7 @@ mod propagation;
 #[cfg(feature = "trace")]
 mod trace;
 
-// pub use error_handler::{handle_error, set_error_handler, Error};
+pub use error_handler::{handle_error, set_error_handler, Error};
 #[cfg(feature = "metrics")]
 #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
 pub use metrics::*;

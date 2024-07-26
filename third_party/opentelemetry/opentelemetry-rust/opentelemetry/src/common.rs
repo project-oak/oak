@@ -437,9 +437,8 @@ impl KeyValue {
     }
 }
 
-// (TODO) Port errors to no_std
 /// Marker trait for errors returned by exporters
-pub trait ExportError: std::error::Error + Send + Sync + 'static {
+pub trait ExportError: core::error::Error + Send + Sync + 'static {
     /// The name of exporter that returned this error
     fn exporter_name(&self) -> &'static str;
 }

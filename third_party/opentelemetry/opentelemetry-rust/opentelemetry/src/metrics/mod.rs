@@ -6,10 +6,10 @@ use alloc::{borrow::Cow, boxed::Box, string::String, sync::Arc, vec::Vec};
 use core::any::Any;
 use core::{
     cmp::Ordering,
+    fmt,
     hash::{Hash, Hasher},
     result,
 };
-// use thiserror::Error;
 
 mod instruments;
 mod meter;
@@ -28,7 +28,6 @@ pub use meter::{CallbackRegistration, Meter, MeterProvider, Observer};
 /// A specialized `Result` type for metric operations.
 pub type Result<T> = result::Result<T, MetricsError>;
 
-// (TODO) Port errors to no_std
 /// Errors returned by the metrics API.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -55,11 +54,23 @@ impl<T: ExportError> From<T> for MetricsError {
     }
 }
 
-// impl<T> From<PoisonError<T>> for MetricsError {
-//     fn from(err: PoisonError<T>) -> Self {
-//         MetricsError::Other(err.to_string())
-//     }
-// }
+impl fmt::Display for MetricsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MetricsError::Other(msg) => write!(f, "Metrics error: {}", msg),
+            MetricsError::Config(msg) => write!(f, "Config error: {}", msg),
+            MetricsError::ExportErr(err) => write!(
+                f,
+                "Metrics exporter {} failed with {}",
+                err.exporter_name(),
+                err
+            ),
+            MetricsError::InvalidInstrumentConfiguration(msg) => {
+                write!(f, "Invalid instrument configuration: {}", msg)
+            }
+        }
+    }
+}
 
 struct F64Hashable(f64);
 

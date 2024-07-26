@@ -19,6 +19,7 @@ include = [
   "src/metrics/*",
   "src/global/metrics.rs",
   "src/global/mod.rs",
+  "src/global/error_handler.rs",
   "benches/*",
 ]
 exclude = [
@@ -38,16 +39,14 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-pin-project-lite = { version = "0.2", optional = true }
 oak_core = { path = "../../../../oak_core" }
-once_cell = { version = "1.13" }
 
 [target.'cfg(all(target_arch = "wasm32", not(target_os = "wasi")))'.dependencies]
 js-sys = "0.3.63"
 
 [features]
 default = ["metrics"]
-trace = ["pin-project-lite"]
+trace = []
 metrics = []
 testing = ["metrics"]
 logs = []
