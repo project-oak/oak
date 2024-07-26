@@ -19,15 +19,6 @@ load("//bazel/private:oci_runtime_bundle.bzl", _oci_runtime_bundle = "oci_runtim
 
 oci_runtime_bundle = _oci_runtime_bundle
 
-RUST_NIGHTLY_VERSION = "nightly/2024-02-01"
-
-RUST_VERSIONS = [
-    "1.76.0",
-    RUST_NIGHTLY_VERSION,
-]
-
-RUST_EDITION = "2021"
-
 def either_platform(platform_list):
     """Helper to mark either platform from platform_list as compatible.
 

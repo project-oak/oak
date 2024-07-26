@@ -24,8 +24,8 @@
  """
 
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
-load("//bazel:defs.bzl", "RUST_NIGHTLY_VERSION")
 load("//bazel/crates:jemalloc.bzl", "jemalloc_repository")
+load("//bazel/rust:defs.bzl", "RUST_NIGHTLY_VERSION")
 
 def oak_crates_index(cargo_lockfile, lockfile):
     jemalloc_repository()

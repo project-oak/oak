@@ -24,6 +24,7 @@
  """
 
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
+load("//bazel/rust:defs.bzl", "RUST_NIGHTLY_VERSION")
 
 def oak_no_std_crates_index(cargo_lockfile, lockfile):
     # All creates in this repository must support no_std.
@@ -193,6 +194,7 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 version = "0.31.2",
             ),
         },
+        rust_version = RUST_NIGHTLY_VERSION,
         supported_platform_triples = [
             # Linux for dependencies of build scripts (they run on host):
             "x86_64-unknown-linux-gnu",
