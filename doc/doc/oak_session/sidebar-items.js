@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","config","handshake"],"struct":["ClientSession","ServerSession"],"trait":["ProtocolEngine","Session"]};
+window.SIDEBAR_ITEMS = {"mod":["attestation","config","encryptors","handshake"],"struct":["ClientSession","ServerSession"],"trait":["ProtocolEngine","Session"]};
