@@ -7,15 +7,36 @@ COMMAND="bazel build --config=clippy --config=unsafe-fast-presubmit //...:all --
 
 # Run the command and filter the output
 $COMMAND 2>&1 | awk '
+BEGIN {
+    line_count = 0
+    print "   /‾‾\\"
+    print "   ▏  ▕"
+    print "  (o) (o)"
+    print "   ▏▏ ▕ /"
+    print "   ▏▏ ▕▕"
+    print "   ▏\\_/▕"
+    print "   \\___/"
+    print "     /\\"
+    print "/‾‾‾‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\\"
+}
+{
     # Filter out lines starting with "Aspect @rules_rust//rust/private:clippy" and ending with "up-to-date:" or "(nothing to build)"
-    /^Aspect @rules_rust\/\/rust\/private:clippy.*(up-to-date:|\(nothing to build\))$/ {next}
+    if ($0 ~ /^Aspect @rules_rust\/\/rust\/private:clippy.*(up-to-date:|\(nothing to build\))$/) next
 
     # Filter out lines indicating successful clippy checks
-    /^ *bazel-.*\.clippy\.ok$/ {next}
+    if ($0 ~ /^ *bazel-.*\.clippy\.ok$/) next
 
     # Filter out INFO lines
-    /^\([0-9:]+\) INFO:/ {next}
+    if ($0 ~ /^\([0-9:]+\) INFO:/) next
 
     # Print any other lines that dont match the above patterns
-    {print}
+    print $0
+    line_count++
+}
+END {
+    if (line_count == 0) {
+        print " no issues found, have a wonderful day."
+    }
+    print "\\________________________________________________________/"
+}
 '
