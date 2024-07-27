@@ -18,18 +18,55 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use clap::Parser;
 use tokio::net::TcpListener;
 
+#[derive(clap::ValueEnum, clap::Parser, Clone, Debug, Default)]
+pub enum ServerType {
+    #[default]
+    Grpc,
+    Rest,
+}
+
+#[derive(clap::Parser, Debug)]
+#[group(skip)]
+
+pub struct Args {
+    #[arg(value_enum)]
+    pub server_type: ServerType,
+
+    #[command(flatten)]
+    pub launcher_args: oak_containers_launcher::Args,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    env_logger::init();
+
     let args = {
-        let mut args = oak_containers_launcher::Args::default_for_root("./");
+        let mut args = Args {
+            server_type: ServerType::Grpc,
+            launcher_args: oak_containers_launcher::Args::default_for_root("./"),
+        };
         args.update_from(std::env::args_os());
         args
     };
 
-    env_logger::init();
+    println!("ARGS: {args:?}");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 8006);
     let listener = TcpListener::bind(addr).await?;
 
-    oak_containers_hello_world_untrusted_app::service::create(listener, args).await
+    println!("SERVER ADDR {:?}", listener.local_addr());
+
+    match args.server_type {
+        ServerType::Rest => {
+            oak_containers_hello_world_untrusted_app::http_service::serve(
+                listener,
+                args.launcher_args,
+            )
+            .await
+        }
+        ServerType::Grpc => {
+            oak_containers_hello_world_untrusted_app::service::create(listener, args.launcher_args)
+                .await
+        }
+    }
 }

@@ -18,7 +18,7 @@ opentelemetry_sdk = { version = "*", default-features = false, features = [
 opentelemetry-otlp = { version = "*", default-features = false, features = [
   "logs",
 ] }
-nix = "*"
+nix = "0.27.1"
 signal-hook = "*"
 signal-hook-tokio = { version = "*", features = ["futures-v0_3"] }
 tokio = { version = "*", features = [

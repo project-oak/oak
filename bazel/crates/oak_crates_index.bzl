@@ -180,15 +180,6 @@ def oak_crates_index(cargo_lockfile, lockfile):
                 default_features = False,
                 version = "*",
             ),
-            "hyper": crate.spec(
-                features = [
-                    "client",
-                    "http1",
-                    "runtime",
-                    "server",
-                ],
-                version = "*",
-            ),
             "hpke": crate.spec(
                 default_features = False,
                 features = [
@@ -199,6 +190,14 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             # Use same version as cargo, newer versions has compatibility issues.
             "http": crate.spec(version = "0.2.11"),
+            "http-body-util": crate.spec(version = "*"),
+            "hyper": crate.spec(
+                features = [
+                    "full",
+                ],
+                version = "*",
+            ),
+            "hyper-util": crate.spec(version = "*", features = ["full"]),
             "ignore": crate.spec(version = "*"),
             "itertools": crate.spec(version = "*"),
             "lazy_static": crate.spec(version = "*"),

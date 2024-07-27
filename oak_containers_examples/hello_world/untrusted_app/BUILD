@@ -25,11 +25,16 @@ rust_library(
     name = "lib",
     srcs = [
         "src/app_client.rs",
+        "src/demo_transport.rs",
+        "src/http_service.rs",
         "src/lib.rs",
         "src/service.rs",
         "tests/integration_test.rs",
     ],
     crate_name = "oak_containers_hello_world_untrusted_app",
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
     deps = [
         "//oak_client",
         "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
@@ -40,7 +45,11 @@ rust_library(
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:http-body-util",
+        "@oak_crates_index//:hyper",
+        "@oak_crates_index//:hyper-util",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",

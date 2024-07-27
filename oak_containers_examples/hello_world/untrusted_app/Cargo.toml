@@ -11,9 +11,14 @@ oak_grpc_utils = { workspace = true }
 [dependencies]
 anyhow = "*"
 async-stream = "*"
+async-trait = "*"
+bytes = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 futures = "*"
+http-body-util = "*"
+hyper = { version = "1.4.1", features = ["full"] }
+hyper-util = { version = "*", features = ["full"] }
 log = "*"
 oak_client = { workspace = true }
 oak_containers_launcher = { workspace = true }
