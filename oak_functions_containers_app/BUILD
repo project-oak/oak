@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "select_std_crates")
 
 package(
@@ -24,96 +24,112 @@ package(
 
 exports_files(["README.md"])
 
+LIB_DEPS = [
+    "//micro_rpc",
+    "//oak_attestation",
+    "//oak_containers_agent:lib",
+    "//oak_containers_orchestrator",
+    "//oak_containers_sdk",
+    "//oak_crypto",
+    "//oak_debug_service",
+    "//oak_functions_abi",
+    "//oak_proto_rust",
+    "//oak_proto_rust/grpc",
+    "@oak_crates_index//:http",
+    "@oak_crates_index//:libloading",
+    "@oak_crates_index//:opentelemetry",
+    "@oak_crates_index//:ouroboros",
+    "@oak_crates_index//:tempfile",
+    "@oak_crates_index//:tikv-jemallocator",
+    "@oak_crates_index//:tokio",
+    "@oak_crates_index//:tokio-stream",
+    "@oak_crates_index//:tonic",
+    "@oak_crates_index//:tower",
+    "@oak_crates_index//:tower-http",
+    "@oak_crates_index//:tracing",
+] + select_std_crates([
+    "anyhow",
+    "prost",
+])
+
+LIB_SRCS = [
+    "src/lib.rs",
+    "src/native_handler.rs",
+    "tests/integration_test.rs",
+    "tests/native_test.rs",
+]
+
 rust_library(
     name = "lib",
-    srcs = [
-        "src/lib.rs",
-        "src/native_handler.rs",
-        "tests/integration_test.rs",
-        "tests/native_test.rs",
-    ],
+    srcs = LIB_SRCS,
     compile_data = [":README.md"],
     crate_features = [
         "deny_sensitive_logging",
         "native",
     ],
     crate_name = "oak_functions_containers_app",
-    deps = [
-        "//micro_rpc",
-        "//oak_attestation",
-        "//oak_containers_agent:lib",
-        "//oak_containers_orchestrator",
-        "//oak_containers_sdk",
-        "//oak_crypto",
-        "//oak_debug_service",
-        "//oak_functions_abi",
-        "//oak_functions_service:lib_unrestricted",
-        "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "@oak_crates_index//:http",
-        "@oak_crates_index//:libloading",
-        "@oak_crates_index//:opentelemetry",
-        "@oak_crates_index//:ouroboros",
-        "@oak_crates_index//:tempfile",
-        "@oak_crates_index//:tikv-jemallocator",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
-        "@oak_crates_index//:tower",
-        "@oak_crates_index//:tower-http",
-        "@oak_crates_index//:tracing",
-    ] + select_std_crates([
-        "anyhow",
-        "prost",
-    ]),
+    deps = LIB_DEPS + ["//oak_functions_service:lib_unrestricted"],
 )
 
-# APP_DEPS = [
-#     ":lib",
-#     "//oak_containers_orchestrator:lib",
-#     "//oak_containers_sdk",
-#     "//oak_crypto",
-#     "//oak_proto_rust",
-#     "@oak_crates_index//:clap",
-#     "@oak_crates_index//:opentelemetry",
-#     "@oak_crates_index//:opentelemetry-otlp",
-#     "@oak_crates_index//:opentelemetry_sdk",
-#     "@oak_crates_index//:stderrlog",
-#     "@oak_crates_index//:tikv-jemallocator",
-#     "@oak_crates_index//:tonic",
-#     "@oak_crates_index//:tokio",
-#     "@oak_crates_index//:tokio-stream",
-#     "@oak_crates_index//:tokio-vsock",
-#     "@oak_crates_index//:wasmtime",
-# ] + select_std_crates([
-#     "anyhow",
-#     "log",
-#     "prost",
-# ])
+rust_library(
+    name = "lib_insecure",
+    srcs = LIB_SRCS,
+    compile_data = [":README.md"],
+    crate_features = [
+        "allow_sensitive_logging",
+        "native",
+    ],
+    crate_name = "oak_functions_containers_app",
+    deps = LIB_DEPS + ["//oak_functions_service:lib_insecure_unrestricted"],
+)
 
-# rust_binary(
-#     name = "app",
-#     srcs = ["src/main.rs"],
-#     crate_features = [
-#         "deny_sensitive_logging",
-#         "native",
-#     ],
-#     deps = APP_DEPS + [
-#         "//oak_functions_service:lib_unrestricted",
-#     ]
-# )
+APP_DEPS = [
+    "//oak_containers_agent:lib",
+    "//oak_containers_orchestrator:lib",
+    "//oak_containers_sdk",
+    "//oak_crypto",
+    "//oak_proto_rust",
+    "@oak_crates_index//:clap",
+    "@oak_crates_index//:opentelemetry",
+    "@oak_crates_index//:opentelemetry-otlp",
+    "@oak_crates_index//:opentelemetry_sdk",
+    "@oak_crates_index//:stderrlog",
+    "@oak_crates_index//:tikv-jemallocator",
+    "@oak_crates_index//:tonic",
+    "@oak_crates_index//:tokio",
+    "@oak_crates_index//:tokio-stream",
+    "@oak_crates_index//:tokio-vsock",
+] + select_std_crates([
+    "anyhow",
+    "log",
+    "prost",
+])
 
-# rust_binary(
-#     name = "app_insecure",
-#     srcs = ["src/main.rs"],
-#     crate_features = [
-#         "allow_sensitive_logging",
-#         "native",
-#     ],
-#     deps = APP_DEPS + [
-#         "//oak_functions_service:lib_insecure_unrestricted",
-#     ]
-# )
+rust_binary(
+    name = "oak_functions_containers_app",
+    srcs = ["src/main.rs"],
+    crate_features = [
+        "deny_sensitive_logging",
+        "native",
+    ],
+    deps = APP_DEPS + [
+        ":lib",
+        "//oak_functions_service:lib_unrestricted",
+    ],
+)
+
+rust_binary(
+    name = "oak_functions_containers_app_insecure",
+    srcs = ["src/main.rs"],
+    crate_features = [
+        "allow_sensitive_logging",
+        "native",
+    ],
+    deps = APP_DEPS + [
+        ":lib_insecure",
+        "//oak_functions_service:lib_insecure_unrestricted",
+    ],
+)
 
 rust_test(
     name = "lib_test",
