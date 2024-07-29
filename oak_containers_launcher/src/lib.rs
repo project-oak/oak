@@ -87,12 +87,9 @@ pub struct Args {
 impl Args {
     pub fn default_for_root(root: &str) -> Self {
         let system_image = format!("{root}oak_containers_system_image/target/image.tar.xz",).into();
-        let container_bundle = format!(
-            "{root}oak_containers_examples/hello_world/container/target/oak_container_example_oci_filesystem_bundle.tar",
-        ).into();
         Self {
             system_image,
-            container_bundle,
+            container_bundle: "".into(),
             application_config: Vec::new(),
             qemu_params: qemu::Params::default_for_root(root),
             communication_channel: ChannelType::default(),

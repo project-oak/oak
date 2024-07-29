@@ -14,7 +14,10 @@
 # limitations under the License.
 #
 
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("//bazel:defs.bzl", "oci_runtime_bundle")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -51,4 +54,22 @@ rust_binary(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",
     ],
+)
+
+pkg_tar(
+    name = "tar",
+    srcs = [":oak_containers_hello_world_trusted_app"],
+    package_dir = "/usr/local/bin",
+)
+
+oci_image(
+    name = "image",
+    base = "@distroless_cc_debian12",
+    entrypoint = ["/usr/local/bin/oak_containers_hello_world_trusted_app"],
+    tars = [":tar"],
+)
+
+oci_runtime_bundle(
+    name = "bundle",
+    image = ":image",
 )

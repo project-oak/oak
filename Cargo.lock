@@ -2443,26 +2443,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_containers_hello_world_trusted_app"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "bytes",
- "oak_containers_sdk",
- "oak_crypto",
- "oak_grpc_utils",
- "oak_hello_world_proto",
- "oak_proto_rust",
- "prost",
- "prost-types",
- "tokio",
- "tokio-stream",
- "tonic",
- "tower",
-]
-
-[[package]]
 name = "oak_containers_hello_world_untrusted_app"
 version = "0.1.0"
 dependencies = [

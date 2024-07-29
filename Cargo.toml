@@ -16,7 +16,6 @@ members = [
   "oak_channel",
   "oak_client",
   "oak_containers_agent",
-  "oak_containers_examples/hello_world/trusted_app",
   "oak_containers_examples/hello_world/untrusted_app",
   "oak_containers_launcher",
   "oak_containers_orchestrator",
