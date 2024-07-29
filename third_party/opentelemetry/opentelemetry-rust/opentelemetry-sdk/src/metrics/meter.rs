@@ -1,7 +1,10 @@
-use core::fmt;
-use std::{any::Any, borrow::Cow, collections::HashSet, sync::Arc};
+extern crate alloc;
 
-use opentelemetry::{
+use alloc::{borrow::Cow, sync::Arc};
+use core::{any::Any, fmt};
+use hashbrown::HashSet;
+
+use opentelemetry_rk::{
     global,
     metrics::{
         noop::{NoopAsyncInstrument, NoopRegistration},
@@ -45,7 +48,7 @@ const INSTRUMENT_UNIT_INVALID_CHAR: &str = "characters in instrument unit must b
 ///
 /// See the [Meter API] docs for usage.
 ///
-/// [Meter API]: opentelemetry::metrics::Meter
+/// [Meter API]: opentelemetry_rk::metrics::Meter
 pub struct SdkMeter {
     scope: Scope,
     pipes: Arc<Pipelines>,
@@ -717,7 +720,7 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use opentelemetry::metrics::{InstrumentProvider, MeterProvider, MetricsError};
+    use opentelemetry_rk::metrics::{InstrumentProvider, MeterProvider, MetricsError};
 
     use super::{
         InstrumentValidationPolicy, SdkMeter, INSTRUMENT_NAME_FIRST_ALPHABETIC,

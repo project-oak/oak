@@ -30,7 +30,7 @@ pub use env::EnvResourceDetector;
 pub use env::SdkProvidedResourceDetector;
 pub use telemetry::TelemetryResourceDetector;
 
-use opentelemetry::{Key, KeyValue, Value};
+use opentelemetry_rk::{Key, KeyValue, Value};
 use std::borrow::Cow;
 use std::collections::{hash_map, HashMap};
 use std::ops::Deref;

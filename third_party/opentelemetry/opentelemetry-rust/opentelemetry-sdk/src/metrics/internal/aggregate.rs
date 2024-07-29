@@ -1,7 +1,10 @@
-use std::{marker, sync::Arc};
+extern crate alloc;
+
+use alloc::sync::Arc;
+use core::marker;
 
 use once_cell::sync::Lazy;
-use opentelemetry::KeyValue;
+use opentelemetry_rk::KeyValue;
 
 use crate::{
     metrics::data::{Aggregation, Gauge, Temporality},

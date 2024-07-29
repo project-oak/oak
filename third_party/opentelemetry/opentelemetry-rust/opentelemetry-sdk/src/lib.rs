@@ -11,7 +11,7 @@
 //! ```no_run
 //! # #[cfg(feature = "trace")]
 //! # {
-//! use opentelemetry::{global, trace::{Tracer, TracerProvider as _}};
+//! use opentelemetry_rk::{global, trace::{Tracer, TracerProvider as _}};
 //! use opentelemetry_sdk::trace::TracerProvider;
 //!
 //! fn main() {
@@ -54,7 +54,7 @@
 //! ```
 //! # #[cfg(feature = "metrics")]
 //! # {
-//! use opentelemetry::{global, KeyValue};
+//! use opentelemetry_rk::{global, KeyValue};
 //!
 //! // get a meter from a provider
 //! let meter = global::meter("my_service");
@@ -132,7 +132,7 @@ pub mod metrics;
 #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
 pub mod propagation;
 pub mod resource;
-pub mod runtime;
+// pub mod runtime;
 #[cfg(any(feature = "testing", test))]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "testing", test))))]
 pub mod testing;
@@ -142,9 +142,9 @@ pub mod testing;
 #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
 pub mod trace;
 
-#[doc(hidden)]
-pub mod util;
+// #[doc(hidden)]
+// pub mod util;
 
 pub use instrumentation::{InstrumentationLibrary, Scope};
-#[doc(inline)]
+// #[doc(inline)]
 pub use resource::Resource;

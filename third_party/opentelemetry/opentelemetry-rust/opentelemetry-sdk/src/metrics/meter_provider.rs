@@ -1,14 +1,12 @@
-use core::fmt;
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-};
+extern crate alloc;
 
-use opentelemetry::{
+use alloc::{borrow::Cow, sync::Arc};
+use core::fmt;
+use core::sync::atomic::{AtomicBool, Ordering};
+use hashbrown::HashMap;
+use spinning_top::Spinlock as Mutex;
+
+use opentelemetry_rk::{
     global,
     metrics::{noop::NoopMeterCore, Meter, MeterProvider, MetricsError, Result},
     KeyValue,
@@ -24,7 +22,7 @@ use super::{meter::SdkMeter, pipeline::Pipelines, reader::MetricReader, view::Vi
 /// [Resource], have the same [View]s applied to them, and have their produced
 /// metric telemetry passed to the configured [MetricReader]s.
 ///
-/// [Meter]: opentelemetry::metrics::Meter
+/// [Meter]: opentelemetry_rk::metrics::Meter
 #[derive(Clone, Debug)]
 pub struct SdkMeterProvider {
     inner: Arc<SdkMeterProviderInner>,
@@ -57,7 +55,7 @@ impl SdkMeterProvider {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry::{global, Context};
+    /// use opentelemetry_rk::{global, Context};
     /// use opentelemetry_sdk::metrics::SdkMeterProvider;
     ///
     /// fn init_metrics() -> SdkMeterProvider {
@@ -162,7 +160,7 @@ impl MeterProvider for SdkMeterProvider {
 
         let scope = builder.build();
 
-        if let Ok(mut meters) = self.inner.meters.lock() {
+        if let Some(mut meters) = self.inner.meters.try_lock() {
             let meter = meters
                 .entry(scope)
                 .or_insert_with_key(|scope| {
@@ -192,7 +190,7 @@ impl MeterProviderBuilder {
     ///
     /// By default, if this option is not used, the default [Resource] will be used.
     ///
-    /// [Meter]: opentelemetry::metrics::Meter
+    /// [Meter]: opentelemetry_rk::metrics::Meter
     pub fn with_resource(mut self, resource: Resource) -> Self {
         self.resource = Some(resource);
         self
@@ -252,9 +250,9 @@ mod tests {
     };
     use crate::testing::metrics::metric_reader::TestMetricReader;
     use crate::Resource;
-    use opentelemetry::global;
-    use opentelemetry::metrics::MeterProvider;
-    use opentelemetry::{Key, KeyValue, Value};
+    use opentelemetry_rk::global;
+    use opentelemetry_rk::metrics::MeterProvider;
+    use opentelemetry_rk::{Key, KeyValue, Value};
     use std::env;
 
     #[test]
@@ -445,14 +443,14 @@ mod tests {
         let provider = super::SdkMeterProvider::builder().build();
         let _meter1 = provider.meter("test");
         let _meter2 = provider.meter("test");
-        assert_eq!(provider.inner.meters.lock().unwrap().len(), 1);
+        assert_eq!(provider.inner.meters.try_lock().unwrap().len(), 1);
         let _meter3 =
             provider.versioned_meter("test", Some("1.0.0"), Some("http://example.com"), None);
         let _meter4 =
             provider.versioned_meter("test", Some("1.0.0"), Some("http://example.com"), None);
         let _meter5 =
             provider.versioned_meter("test", Some("1.0.0"), Some("http://example.com"), None);
-        assert_eq!(provider.inner.meters.lock().unwrap().len(), 2);
+        assert_eq!(provider.inner.meters.try_lock().unwrap().len(), 2);
 
         // the below are different meters, as meter names are case sensitive
         let _meter6 =
@@ -461,6 +459,6 @@ mod tests {
             provider.versioned_meter("Abc", Some("1.0.0"), Some("http://example.com"), None);
         let _meter8 =
             provider.versioned_meter("abc", Some("1.0.0"), Some("http://example.com"), None);
-        assert_eq!(provider.inner.meters.lock().unwrap().len(), 5);
+        assert_eq!(provider.inner.meters.try_lock().unwrap().len(), 5);
     }
 }

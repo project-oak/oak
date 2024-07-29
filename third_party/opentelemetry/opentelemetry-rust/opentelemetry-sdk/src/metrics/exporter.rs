@@ -1,7 +1,6 @@
 //! Interfaces for exporting metrics
-use async_trait::async_trait;
 
-use opentelemetry::metrics::Result;
+use opentelemetry_rk::metrics::Result;
 
 use crate::metrics::{
     data::ResourceMetrics,
@@ -11,7 +10,6 @@ use crate::metrics::{
 /// Exporter handles the delivery of metric data to external receivers.
 ///
 /// This is the final component in the metric push pipeline.
-#[async_trait]
 pub trait PushMetricsExporter:
     AggregationSelector + TemporalitySelector + Send + Sync + 'static
 {
@@ -21,10 +19,10 @@ pub trait PushMetricsExporter:
     /// implement any retry logic. All errors returned by this function are
     /// considered unrecoverable and will be reported to a configured error
     /// Handler.
-    async fn export(&self, metrics: &mut ResourceMetrics) -> Result<()>;
+    fn export(&self, metrics: &mut ResourceMetrics) -> Result<()>;
 
     /// Flushes any metric data held by an exporter.
-    async fn force_flush(&self) -> Result<()>;
+    fn force_flush(&self) -> Result<()>;
 
     /// Releases any held computational resources.
     ///

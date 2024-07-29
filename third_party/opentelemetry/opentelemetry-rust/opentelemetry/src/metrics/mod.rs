@@ -10,6 +10,7 @@ use core::{
     hash::{Hash, Hasher},
     result,
 };
+use std::sync::PoisonError;
 
 mod instruments;
 mod meter;
@@ -51,6 +52,12 @@ pub enum MetricsError {
 impl<T: ExportError> From<T> for MetricsError {
     fn from(err: T) -> Self {
         MetricsError::ExportErr(Box::new(err))
+    }
+}
+
+impl<T> From<PoisonError<T>> for MetricsError {
+    fn from(err: PoisonError<T>) -> Self {
+        MetricsError::Other(err.to_string())
     }
 }
 

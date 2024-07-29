@@ -386,6 +386,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             ),
             "syslog": crate.spec(version = "*"),
             "tar": crate.spec(version = "*"),
+            "temp-env": crate.spec(version = "0.3.6"),
             "tempfile": crate.spec(version = "*"),
             "tikv-jemallocator": crate.spec(version = "*"),
             "time": crate.spec(

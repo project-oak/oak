@@ -1,9 +1,10 @@
-use std::{collections::HashMap, sync::Mutex, time::SystemTime};
+use hashbrown::HashMap;
+use std::{sync::Mutex, time::SystemTime};
 
 use crate::metrics::data::{self, Aggregation, Temporality};
 use crate::{metrics::data::HistogramDataPoint, metrics::AttributeSet};
-use opentelemetry::KeyValue;
-use opentelemetry::{global, metrics::MetricsError};
+use opentelemetry_rk::KeyValue;
+use opentelemetry_rk::{global, metrics::MetricsError};
 
 use super::{
     aggregate::{is_under_cardinality_limit, STREAM_OVERFLOW_ATTRIBUTE_SET},

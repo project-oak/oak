@@ -1,6 +1,6 @@
 use super::instrument::{Instrument, Stream};
 use glob::Pattern;
-use opentelemetry::{
+use opentelemetry_rk::{
     global,
     metrics::{MetricsError, Result},
 };

@@ -1,56 +1,49 @@
 [package]
-name = "opentelemetry_sdk"
+name = "opentelemetry_rk_sdk"
 version = "0.23.0"
 description = "The SDK for the OpenTelemetry metrics collection and distributed tracing framework"
 homepage = "https://github.com/open-telemetry/opentelemetry-rust"
 repository = "https://github.com/open-telemetry/opentelemetry-rust"
+include = [
+  "src/metrics/*",
+  "src/instrumentation.rs",
+  "src/lib.rs",
+  "src/testing/*",
+]
 readme = "README.md"
 license = "Apache-2.0"
 edition = "2021"
 rust-version = "1.65"
 
 [dependencies]
-opentelemetry = { version = "0.23", path = "../opentelemetry/" }
-opentelemetry-http = { version = "0.12", path = "../opentelemetry-http", optional = true }
-async-std = { workspace = true, features = ["unstable"], optional = true }
-async-trait = { workspace = true, optional = true }
-futures-channel = "0.3"
-futures-executor = { workspace = true }
-futures-util = { workspace = true, features = ["std", "sink", "async-await-macro"] }
+opentelemetry_rk = { version = "0.23", path = "../opentelemetry/" }
+async-std = { version = "1.10", features = ["unstable"], optional = true }
+hashbrown = "*"
+siphasher = "1.0.1"
 once_cell = { workspace = true }
-percent-encoding = { version = "2.0", optional = true }
-rand = { workspace = true, features = ["std", "std_rng","small_rng"], optional = true }
 glob = { version = "0.3.1", optional =true}
-serde = { workspace = true, features = ["derive", "rc"], optional = true }
-serde_json = { workspace = true, optional = true }
-thiserror = { workspace = true }
-url = { workspace = true, optional = true }
-tokio = { workspace = true, features = ["rt", "time"], optional = true }
-tokio-stream = { workspace = true, optional = true }
-http = { workspace = true, optional = true }
+spinning_top = "*"
+tokio = { version = "1", features = ["rt", "time"], optional = true }
+tokio-stream = { version = "0.1.1", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
-criterion = { workspace = true, features = ["html_reports"] }
-temp-env = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+temp-env = { version = "0.3.6" }
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
 pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
 
 [features]
-default = ["trace", "metrics", "logs"]
-trace = ["opentelemetry/trace", "rand", "async-trait", "percent-encoding"]
-jaeger_remote_sampler = ["trace", "opentelemetry-http", "http", "serde", "serde_json", "url"]
-logs = ["opentelemetry/logs", "async-trait", "serde_json"]
-logs_level_enabled = ["logs", "opentelemetry/logs_level_enabled"]
-metrics = ["opentelemetry/metrics", "glob", "async-trait"]
-testing = ["opentelemetry/testing", "trace", "metrics", "logs", "rt-async-std", "rt-tokio", "rt-tokio-current-thread", "tokio/macros", "tokio/rt-multi-thread"]
-rt-tokio = ["tokio", "tokio-stream"]
-rt-tokio-current-thread = ["tokio", "tokio-stream"]
-rt-async-std = ["async-std"]
+default = ["metrics"]
+trace = []
+logs = []
+logs_level_enabled = []
+metrics = ["opentelemetry_rk/metrics", "glob"]
+testing = ["opentelemetry_rk/testing", "metrics", "async-std", "tokio", "tokio-stream", "tokio/macros", "tokio/rt-multi-thread"]
 
 [[bench]]
 name = "context"

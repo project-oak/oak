@@ -1,7 +1,7 @@
-use std::fmt;
+use core::fmt;
 
 use crate::metrics::internal::{EXPO_MAX_SCALE, EXPO_MIN_SCALE};
-use opentelemetry::metrics::{MetricsError, Result};
+use opentelemetry_rk::metrics::{MetricsError, Result};
 
 /// The way recorded measurements are summarized.
 #[derive(Clone, Debug, PartialEq)]
@@ -153,7 +153,7 @@ mod tests {
         internal::{EXPO_MAX_SCALE, EXPO_MIN_SCALE},
         Aggregation,
     };
-    use opentelemetry::metrics::{MetricsError, Result};
+    use opentelemetry_rk::metrics::{MetricsError, Result};
 
     #[test]
     fn validate_aggregation() {

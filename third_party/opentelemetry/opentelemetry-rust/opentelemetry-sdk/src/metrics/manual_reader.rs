@@ -1,9 +1,11 @@
-use std::{
-    fmt,
-    sync::{Mutex, Weak},
-};
+extern crate alloc;
 
-use opentelemetry::{
+use core::fmt;
+
+use alloc::sync::Weak;
+use spinning_top::Spinlock as Mutex;
+
+use opentelemetry_rk::{
     global,
     metrics::{MetricsError, Result},
 };
@@ -96,16 +98,14 @@ impl MetricReader for ManualReader {
     ///  Register a pipeline which enables the caller to read metrics from the SDK
     ///  on demand.
     fn register_pipeline(&self, pipeline: Weak<Pipeline>) {
-        let _ = self.inner.lock().map(|mut inner| {
-            // Only register once. If producer is already set, do nothing.
-            if inner.sdk_producer.is_none() {
-                inner.sdk_producer = Some(pipeline);
-            } else {
-                global::handle_error(MetricsError::Config(
-                    "duplicate reader registration, did not register manual reader".into(),
-                ))
-            }
-        });
+        let mut inner = self.inner.lock();
+        if inner.sdk_producer.is_none() {
+            inner.sdk_producer = Some(pipeline);
+        } else {
+            global::handle_error(MetricsError::Config(
+                "duplicate reader registration, did not register manual reader".into(),
+            ))
+        }
     }
 
     /// Gathers all metrics from the SDK and other [MetricProducer]s, calling any
@@ -113,7 +113,7 @@ impl MetricReader for ManualReader {
     ///
     /// Returns an error if called after shutdown.
     fn collect(&self, rm: &mut ResourceMetrics) -> Result<()> {
-        let inner = self.inner.lock()?;
+        let inner = self.inner.lock();
         match &inner.sdk_producer.as_ref().and_then(|w| w.upgrade()) {
             Some(producer) => producer.produce(rm)?,
             None => {
@@ -145,7 +145,7 @@ impl MetricReader for ManualReader {
 
     /// Closes any connections and frees any resources used by the reader.
     fn shutdown(&self) -> Result<()> {
-        let mut inner = self.inner.lock()?;
+        let mut inner = self.inner.lock();
 
         // Any future call to collect will now return an error.
         inner.sdk_producer = None;

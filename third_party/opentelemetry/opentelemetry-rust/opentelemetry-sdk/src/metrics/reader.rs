@@ -1,7 +1,10 @@
 //! Interfaces for reading and producing metrics
-use std::{fmt, sync::Weak};
+extern crate alloc;
 
-use opentelemetry::metrics::Result;
+use alloc::sync::Weak;
+use core::fmt;
+
+use opentelemetry_rk::metrics::Result;
 
 use super::{
     aggregation::Aggregation,

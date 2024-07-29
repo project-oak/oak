@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{metrics::data::DataPoint, metrics::AttributeSet};
-use opentelemetry::{global, metrics::MetricsError, KeyValue};
+use opentelemetry_rk::{global, metrics::MetricsError, KeyValue};
 
 use super::{
     aggregate::{is_under_cardinality_limit, STREAM_OVERFLOW_ATTRIBUTE_SET},

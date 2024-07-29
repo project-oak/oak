@@ -1,7 +1,7 @@
 use std::{collections::HashMap, f64::consts::LOG2_E, sync::Mutex, time::SystemTime};
 
 use once_cell::sync::Lazy;
-use opentelemetry::{metrics::MetricsError, KeyValue};
+use opentelemetry_rk::{metrics::MetricsError, KeyValue};
 
 use crate::{
     metrics::data::{self, Aggregation, Temporality},
@@ -100,7 +100,7 @@ impl<T: Number<T>> ExpoHistogramDataPoint<T> {
             if (self.scale - scale_delta as i8) < EXPO_MIN_SCALE {
                 // With a scale of -10 there is only two buckets for the whole range of f64 values.
                 // This can only happen if there is a max size of 1.
-                opentelemetry::global::handle_error(MetricsError::Other(
+                opentelemetry_rk::global::handle_error(MetricsError::Other(
                     "exponential histogram scale underflow".into(),
                 ));
                 return;
@@ -518,7 +518,7 @@ impl<T: Number<T>> ExpoHistogram<T> {
 mod tests {
     use std::ops::Neg;
 
-    use opentelemetry::KeyValue;
+    use opentelemetry_rk::KeyValue;
 
     use crate::metrics::internal::{self, AggregateBuilder};
 

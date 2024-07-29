@@ -1,5 +1,5 @@
 {
-  "checksum": "ae8ca124c466643453a2769c94a0ee8755879ef2a146f18498e32618a6eccd1c",
+  "checksum": "20d4413dc89a39b95e83f3db14c8d36cb777686ffa84850111fea5107ee331cf",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6867,6 +6867,10 @@
             {
               "id": "tar 0.4.40",
               "target": "tar"
+            },
+            {
+              "id": "temp-env 0.3.6",
+              "target": "temp_env"
             },
             {
               "id": "tempfile 3.10.1",
@@ -22962,6 +22966,60 @@
       ],
       "license_file": "LICENSE"
     },
+    "temp-env 0.3.6": {
+      "name": "temp-env",
+      "version": "0.3.6",
+      "package_url": "https://github.com/vmx/temp-env",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/temp-env/0.3.6/download",
+          "sha256": "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "temp_env",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "temp_env",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "parking_lot 0.12.3",
+              "target": "parking_lot"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.6"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "tempfile 3.10.1": {
       "name": "tempfile",
       "version": "3.10.1",
@@ -30891,6 +30949,7 @@
     "syn 2.0.58",
     "syslog 6.1.1",
     "tar 0.4.40",
+    "temp-env 0.3.6",
     "tempfile 3.10.1",
     "tikv-jemallocator 0.5.4",
     "time 0.3.34",

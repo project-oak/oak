@@ -1,11 +1,11 @@
-use core::fmt;
-use std::{
-    borrow::Cow,
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
-};
+extern crate alloc;
 
-use opentelemetry::{
+use alloc::{borrow::Cow, sync::Arc};
+use core::fmt;
+use hashbrown::{HashMap, HashSet};
+use spinning_top::Spinlock as Mutex;
+
+use opentelemetry_rk::{
     global,
     metrics::{CallbackRegistration, MetricsError, Result},
     KeyValue,
@@ -74,17 +74,14 @@ impl Pipeline {
     /// additions, it is the callers responsibility to ensure this is called with
     /// unique values.
     fn add_sync(&self, scope: Scope, i_sync: InstrumentSync) {
-        let _ = self.inner.lock().map(|mut inner| {
-            inner.aggregations.entry(scope).or_default().push(i_sync);
-        });
+        let mut pipeline = self.inner.lock();
+        pipeline.aggregations.entry(scope).or_default().push(i_sync);
     }
 
     /// Registers a single instrument callback to be run when `produce` is called.
     fn add_callback(&self, callback: GenericCallback) {
-        let _ = self
-            .inner
-            .lock()
-            .map(|mut inner| inner.callbacks.push(callback));
+        let mut pipeline = self.inner.lock();
+        pipeline.callbacks.push(callback);
     }
 
     /// Registers a multi-instrument callback to be run when `produce` is called.
@@ -92,12 +89,12 @@ impl Pipeline {
         &self,
         callback: GenericCallback,
     ) -> Result<impl FnOnce(&Pipeline) -> Result<()>> {
-        let mut inner = self.inner.lock()?;
+        let mut inner = self.inner.lock();
         inner.multi_callbacks.push(Some(callback));
         let idx = inner.multi_callbacks.len() - 1;
 
         Ok(move |this: &Pipeline| {
-            let mut inner = this.inner.lock()?;
+            let mut inner = this.inner.lock();
             // can't compare trait objects so use index + tombstones to drop
             inner.multi_callbacks[idx] = None;
             Ok(())
@@ -118,7 +115,7 @@ impl Pipeline {
 impl SdkProducer for Pipeline {
     /// Returns aggregated metrics from a single collection.
     fn produce(&self, rm: &mut ResourceMetrics) -> Result<()> {
-        let inner = self.inner.lock()?;
+        let inner = self.inner.lock();
         for cb in &inner.callbacks {
             // TODO consider parallel callbacks.
             cb();
@@ -381,7 +378,7 @@ where
         // cache lookup to ensure the correct comparison.
         id.normalize();
 
-        let mut cache = self.aggregators.lock()?;
+        let mut cache = self.aggregators.lock();
 
         let cached = cache.entry(id).or_insert_with(|| {
             let filter = stream
@@ -418,21 +415,20 @@ where
     ///
     /// If that instrument conflicts with id, a warning is logged.
     fn log_conflict(&self, id: &InstrumentId) {
-        if let Ok(views) = self.views.lock() {
-            if let Some(existing) = views.get(id.name.to_lowercase().as_str()) {
-                if existing == id {
-                    return;
-                }
-
-                global::handle_error(MetricsError::Other(format!(
-                    "duplicate metric stream definitions, names: ({} and {}), descriptions: ({} and {}), kinds: ({:?} and {:?}), units: ({:?} and {:?}), and numbers: ({} and {})",
-                    existing.name, id.name,
-                    existing.description, id.description,
-                    existing.kind, id.kind,
-                    existing.unit, id.unit,
-                    existing.number, id.number,
-               )))
+        let views = self.views.lock();
+        if let Some(existing) = views.get(id.name.to_lowercase().as_str()) {
+            if existing == id {
+                return;
             }
+
+            global::handle_error(MetricsError::Other(format!(
+              "duplicate metric stream definitions, names: ({} and {}), descriptions: ({} and {}), kinds: ({:?} and {:?}), units: ({:?} and {:?}), and numbers: ({} and {})",
+              existing.name, id.name,
+              existing.description, id.description,
+              existing.kind, id.kind,
+              existing.unit, id.unit,
+              existing.number, id.number,
+         )))
         }
     }
 
@@ -442,7 +438,7 @@ where
             description: stream.description.clone(),
             kind,
             unit: stream.unit.clone(),
-            number: Cow::Borrowed(std::any::type_name::<T>()),
+            number: Cow::Borrowed(core::any::type_name::<T>()),
         }
     }
 }

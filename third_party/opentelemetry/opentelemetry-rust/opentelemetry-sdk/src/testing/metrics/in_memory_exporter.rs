@@ -6,8 +6,8 @@ use crate::metrics::reader::{
 };
 use crate::metrics::{data, Aggregation, InstrumentKind};
 use async_trait::async_trait;
-use opentelemetry::metrics::MetricsError;
-use opentelemetry::metrics::Result;
+use opentelemetry_rk::metrics::MetricsError;
+use opentelemetry_rk::metrics::Result;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Mutex};

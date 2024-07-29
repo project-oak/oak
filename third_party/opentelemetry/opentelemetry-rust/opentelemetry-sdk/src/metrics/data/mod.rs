@@ -1,8 +1,11 @@
 //! Types for delivery of pre-aggregated metric time series data.
+extern crate alloc;
 
-use std::{any, borrow::Cow, fmt, time::SystemTime};
+use alloc::borrow::Cow;
+use core::{any, fmt};
+use std::time::SystemTime;
 
-use opentelemetry::KeyValue;
+use opentelemetry_rk::KeyValue;
 
 use crate::{instrumentation::Scope, Resource};
 

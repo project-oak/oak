@@ -54,6 +54,13 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "metrics")]
+impl From<MetricsError> for Error {
+  fn from(err: MetricsError) -> Self {
+    Error::Metric(err)
+  }
+}
+
 struct ErrorHandler(Box<dyn Fn(Error) + Send + Sync>);
 
 /// Handle error using the globally configured error handler.

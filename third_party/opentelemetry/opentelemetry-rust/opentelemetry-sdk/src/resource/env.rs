@@ -3,7 +3,7 @@
 //! Implementation of `ResourceDetector` to extract a `Resource` from environment
 //! variables.
 use crate::resource::{Resource, ResourceDetector};
-use opentelemetry::{Key, KeyValue, Value};
+use opentelemetry_rk::{Key, KeyValue, Value};
 use std::env;
 use std::time::Duration;
 
@@ -95,7 +95,7 @@ mod tests {
         SdkProvidedResourceDetector, OTEL_RESOURCE_ATTRIBUTES, OTEL_SERVICE_NAME,
     };
     use crate::resource::{EnvResourceDetector, Resource, ResourceDetector};
-    use opentelemetry::{Key, KeyValue, Value};
+    use opentelemetry_rk::{Key, KeyValue, Value};
     use std::time::Duration;
 
     #[test]

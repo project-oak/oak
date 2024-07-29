@@ -1,6 +1,10 @@
-use std::{any::Any, borrow::Cow, collections::HashSet, hash::Hash, marker, sync::Arc};
+extern crate alloc;
 
-use opentelemetry::{
+use alloc::{borrow::Cow, sync::Arc};
+use core::{any::Any, hash::Hash, marker};
+use hashbrown::HashSet;
+
+use opentelemetry_rk::{
     metrics::{
         AsyncInstrument, MetricsError, Result, SyncCounter, SyncGauge, SyncHistogram,
         SyncUpDownCounter,
@@ -312,7 +316,7 @@ pub(crate) struct IdInner {
 }
 
 impl<T> Hash for ObservableId<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.inner.hash(state)
     }
 }

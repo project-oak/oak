@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "opentelemetry/",
+    "opentelemetry-sdk/",
 ]
 
 resolver = "2"

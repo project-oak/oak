@@ -8,4 +8,4 @@ pub mod logs;
 #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
 pub mod trace;
 
-pub use opentelemetry::ExportError;
+pub use opentelemetry_rk::ExportError;

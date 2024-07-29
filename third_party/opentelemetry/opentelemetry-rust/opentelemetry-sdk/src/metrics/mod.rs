@@ -47,7 +47,7 @@ pub(crate) mod internal;
 pub(crate) mod manual_reader;
 pub(crate) mod meter;
 mod meter_provider;
-pub(crate) mod periodic_reader;
+// pub(crate) mod periodic_reader;
 pub(crate) mod pipeline;
 pub mod reader;
 pub(crate) mod view;
@@ -57,15 +57,15 @@ pub use instrument::*;
 pub use manual_reader::*;
 pub use meter::*;
 pub use meter_provider::*;
-pub use periodic_reader::*;
+// pub use periodic_reader::*;
 pub use pipeline::Pipeline;
 pub use view::*;
 
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
-use std::hash::{Hash, Hasher};
+use siphasher::sip::SipHasher;
+use core::hash::{Hash, Hasher};
+use hashbrown::HashSet;
 
-use opentelemetry::{Key, KeyValue, Value};
+use opentelemetry_rk::{Key, KeyValue, Value};
 
 /// A unique set of attributes that can be used as instrument identifiers.
 ///
@@ -94,7 +94,7 @@ impl From<&[KeyValue]> for AttributeSet {
 }
 
 fn calculate_hash(values: &[KeyValue]) -> u64 {
-    let mut hasher = DefaultHasher::new();
+    let mut hasher = SipHasher::new(); // DefaultHasher::new();
     values.iter().fold(&mut hasher, |mut hasher, item| {
         item.hash(&mut hasher);
         hasher
@@ -145,8 +145,8 @@ mod tests {
     use crate::metrics::reader::TemporalitySelector;
     use crate::testing::metrics::InMemoryMetricsExporterBuilder;
     use crate::{runtime, testing::metrics::InMemoryMetricsExporter};
-    use opentelemetry::metrics::{Counter, Meter, UpDownCounter};
-    use opentelemetry::{metrics::MeterProvider as _, KeyValue};
+    use opentelemetry_rk::metrics::{Counter, Meter, UpDownCounter};
+    use opentelemetry_rk::{metrics::MeterProvider as _, KeyValue};
     use rand::{rngs, Rng, SeedableRng};
     use std::borrow::Cow;
     use std::sync::{Arc, Mutex};

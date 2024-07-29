@@ -8,8 +8,8 @@ use std::{
 
 use crate::metrics::data::{self, Aggregation, DataPoint, Temporality};
 use crate::metrics::AttributeSet;
-use opentelemetry::KeyValue;
-use opentelemetry::{global, metrics::MetricsError};
+use opentelemetry_rk::KeyValue;
+use opentelemetry_rk::{global, metrics::MetricsError};
 
 use super::{
     aggregate::{is_under_cardinality_limit, STREAM_OVERFLOW_ATTRIBUTE_SET},
