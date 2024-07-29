@@ -308,6 +308,16 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -335,7 +345,7 @@
     v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::Evidence,
+    attestation::v1::{Endorsements, Evidence},
     containers::{
         v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
         GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
@@ -379,6 +389,7 @@
     <span class="comment">// Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     </span>app_ready_notifier: Mutex&lt;<span class="prelude-ty">Option</span>&lt;oneshot::Sender&lt;()&gt;&gt;&gt;,
+    endorsements: Endorsements,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -476,6 +487,13 @@
                 tonic::Status::internal(<span class="string">"couldn't send attestation evidence"</span>.to_string())
             })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
+    }
+
+    <span class="kw">async fn </span>get_endorsements(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        _request: Request&lt;()&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;Endorsements&gt;, tonic::Status&gt; {
+        <span class="prelude-val">Ok</span>(tonic::Response::new(<span class="self">self</span>.endorsements.clone()))
     }
 
     <span class="kw">async fn </span>notify_app_ready(<span class="kw-2">&amp;</span><span class="self">self</span>, _request: Request&lt;()&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
@@ -583,6 +601,7 @@
     evidence_sender: oneshot::Sender&lt;Evidence&gt;,
     app_ready_notifier: oneshot::Sender&lt;()&gt;,
     shutdown: watch::Receiver&lt;()&gt;,
+    endorsements: Endorsements,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     <span class="kw">let </span>server_impl = Arc::new(LauncherServerImplementation {
         system_image,
@@ -590,6 +609,7 @@
         application_config,
         evidence_sender: Mutex::new(<span class="prelude-val">Some</span>(evidence_sender)),
         app_ready_notifier: Mutex::new(<span class="prelude-val">Some</span>(app_ready_notifier)),
+        endorsements,
     });
 
     <span class="kw">let </span><span class="kw-2">mut </span>tcp_shutdown = shutdown.clone();
