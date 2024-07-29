@@ -17,8 +17,7 @@
 use core::fmt::Write;
 
 use log::info;
-use oak_sev_guest::io::PortFactoryWrapper;
-use sev_serial::SerialPort;
+use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 use spinning_top::Spinlock;
 
 extern crate log;
@@ -27,6 +26,7 @@ extern crate log;
 // COM1)
 const COM1_BASE: u16 = 0x3f8;
 
+type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
 pub static SERIAL1: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
 struct Logger {}

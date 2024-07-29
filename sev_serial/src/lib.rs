@@ -18,7 +18,7 @@
 
 use core::fmt::Write;
 
-use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
 /// The offset from the base address to the interrupt register.
 const INTERRUPT_ENABLE: u16 = 1;
@@ -65,25 +65,35 @@ const OUTPUT_EMPTY: u8 = 1 << 5;
 ///
 /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more
 /// information on the GHCB IOIO protocol.
-pub struct SerialPort {
+pub struct SerialPort<F, R, W>
+where
+    F: IoPortFactory<'static, u8, R, W>,
+    R: PortReader<u8> + 'static,
+    W: PortWriter<u8> + 'static,
+{
     /// The base address of the serial port.
     base_address: u16,
     /// The factory for creating port readers and writers.
-    io_port_factory: PortFactoryWrapper,
+    io_port_factory: F,
     /// The port writer for writing a byte of data.
-    data: PortWrapper<u8>,
+    data: W,
     /// The port reader for checking the line status.
-    line_status: PortWrapper<u8>,
+    line_status: R,
 }
 
-impl SerialPort {
+impl<F, R, W> SerialPort<F, R, W>
+where
+    F: IoPortFactory<'static, u8, R, W>,
+    R: PortReader<u8> + 'static,
+    W: PortWriter<u8> + 'static,
+{
     /// Creates a new instance of a serial port with the given base address.
     ///
     /// # Safety
     ///
     /// This function is unsafe as callers must make sure that the base address
     /// represents a valid serial port device.
-    pub unsafe fn new(base_address: u16, io_port_factory: PortFactoryWrapper) -> Self {
+    pub unsafe fn new(base_address: u16, io_port_factory: F) -> Self {
         let data = io_port_factory.new_writer(base_address);
         let line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
         Self { base_address, io_port_factory, data, line_status }
@@ -134,7 +144,12 @@ impl SerialPort {
     }
 }
 
-impl Write for SerialPort {
+impl<F, R, W> Write for SerialPort<F, R, W>
+where
+    F: IoPortFactory<'static, u8, R, W>,
+    R: PortReader<u8> + 'static,
+    W: PortWriter<u8> + 'static,
+{
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         for byte in s.bytes() {
             self.send(byte).map_err(|_| core::fmt::Error)?;

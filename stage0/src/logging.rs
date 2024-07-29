@@ -16,7 +16,7 @@
 
 use core::{fmt::Write, ops::DerefMut};
 
-use sev_serial::SerialPort;
+use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 use spinning_top::Spinlock;
 
 use crate::io_port_factory;
@@ -26,6 +26,7 @@ extern crate log;
 // Base I/O port for the first serial port in the system (colloquially known as
 // COM1)
 static SERIAL_BASE: u16 = 0x3f8;
+type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
 static SERIAL_PORT: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
 struct Logger {}

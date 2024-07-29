@@ -19,10 +19,9 @@ use core::fmt::Write;
 use lazy_static::lazy_static;
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
-    io::PortFactoryWrapper,
+    io::{PortFactoryWrapper, PortWrapper},
     msr::{get_sev_status, SevStatus},
 };
-use sev_serial::SerialPort;
 use spinning_top::Spinlock;
 
 extern crate log;
@@ -38,6 +37,7 @@ lazy_static! {
     };
 }
 
+type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
 lazy_static! {
     pub static ref SERIAL1: Spinlock<SerialPort> = {
         let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
