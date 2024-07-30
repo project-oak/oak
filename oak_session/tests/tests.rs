@@ -79,14 +79,14 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
 
     let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
     for message in &test_messages {
-        let ciphertext = encryptor_client.encrypt(message.as_slice()).unwrap();
-        let plaintext = encryptor_server.decrypt(ciphertext.as_slice()).unwrap();
+        let ciphertext = encryptor_client.encrypt(message.as_slice().into()).unwrap();
+        let plaintext = encryptor_server.decrypt(ciphertext.as_slice().into()).unwrap();
         assert_eq!(message, &plaintext);
     }
 
     for message in &test_messages {
-        let ciphertext = encryptor_server.encrypt(message.as_slice()).unwrap();
-        let plaintext = encryptor_client.decrypt(ciphertext.as_slice()).unwrap();
+        let ciphertext = encryptor_server.encrypt(message.as_slice().into()).unwrap();
+        let plaintext = encryptor_client.decrypt(ciphertext.as_slice().into()).unwrap();
         assert_eq!(message, &plaintext);
     }
 }

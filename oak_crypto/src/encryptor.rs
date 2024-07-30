@@ -20,7 +20,6 @@
 
 use alloc::vec::Vec;
 
-use aead::Payload;
 use anyhow::Context;
 use oak_proto_rust::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse};
 
@@ -32,15 +31,20 @@ use crate::{
     },
 };
 
+pub struct Payload {
+    pub message: Vec<u8>,
+    pub aad: Option<Vec<u8>>,
+}
+
+impl From<&[u8]> for Payload {
+    fn from(value: &[u8]) -> Self {
+        Payload { message: value.to_vec(), aad: None }
+    }
+}
+
 pub trait Encryptor {
-    fn encrypt<'msg, 'aad>(
-        &mut self,
-        plaintext: impl Into<Payload<'msg, 'aad>>,
-    ) -> anyhow::Result<Vec<u8>>;
-    fn decrypt<'msg, 'aad>(
-        &mut self,
-        ciphertext: impl Into<Payload<'msg, 'aad>>,
-    ) -> anyhow::Result<Vec<u8>>;
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Vec<u8>>;
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Vec<u8>>;
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the

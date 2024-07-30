@@ -19,9 +19,11 @@
 
 use alloc::vec::Vec;
 
-use aead::Payload;
 use anyhow::{anyhow, Context, Error};
-use oak_crypto::{encryptor::Encryptor, noise_handshake::Crypter};
+use oak_crypto::{
+    encryptor::{Encryptor, Payload},
+    noise_handshake::Crypter,
+};
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 // This is the default implementation of the encryptor to use for the Noise
@@ -31,18 +33,16 @@ pub struct OrderedChannelEncryptor {
 }
 
 impl Encryptor for OrderedChannelEncryptor {
-    fn encrypt<'msg, 'aad>(
-        &mut self,
-        plaintext: impl Into<Payload<'msg, 'aad>>,
-    ) -> anyhow::Result<Vec<u8>> {
-        self.crypter.encrypt(plaintext.into().msg).map_err(|e| anyhow!("Encryption error: {e:#?}"))
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Vec<u8>> {
+        self.crypter
+            .encrypt(plaintext.message.as_slice())
+            .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 
-    fn decrypt<'msg, 'aad>(
-        &mut self,
-        ciphertext: impl Into<Payload<'msg, 'aad>>,
-    ) -> anyhow::Result<Vec<u8>> {
-        self.crypter.decrypt(ciphertext.into().msg).map_err(|e| anyhow!("Encryption error: {e:#?}"))
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Vec<u8>> {
+        self.crypter
+            .decrypt(ciphertext.message.as_slice())
+            .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 }
 

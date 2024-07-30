@@ -14,12 +14,15 @@
 // limitations under the License.
 //
 
-use alloc::{vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 
-use oak_crypto::identity_key::IdentityKeyHandle;
+use anyhow::Error;
+use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
+use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 use crate::{
     attestation::{AttestationType, AttestationVerifier, Attester},
+    encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
 };
 
@@ -27,6 +30,7 @@ use crate::{
 pub struct SessionConfig<'a> {
     attestation_provider_config: AttestationProviderConfig<'a>,
     handshaker_config: HandshakerConfig<'a>,
+    encryptor_config: EncryptorConfig<'a>,
 }
 
 impl<'a> SessionConfig<'a> {
@@ -60,7 +64,15 @@ impl<'a> SessionConfigBuilder<'a> {
             peer_attestation_binding_public_key: None,
         };
 
-        let config = SessionConfig { attestation_provider_config, handshaker_config };
+        let encryptor_config = EncryptorConfig {
+            encryptor_provider: &|sk| {
+                <SessionKeys as TryInto<OrderedChannelEncryptor>>::try_into(sk)
+                    .map(|v| Box::new(v) as Box<dyn Encryptor>)
+            },
+        };
+
+        let config =
+            SessionConfig { attestation_provider_config, handshaker_config, encryptor_config };
         Self { config }
     }
 
@@ -92,6 +104,14 @@ impl<'a> SessionConfigBuilder<'a> {
         self
     }
 
+    pub fn set_encryption_provider(
+        mut self,
+        encryptor_provider: &'a dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>,
+    ) -> Self {
+        self.config.encryptor_config.encryptor_provider = encryptor_provider;
+        self
+    }
+
     pub fn build(self) -> SessionConfig<'a> {
         self.config
     }
@@ -114,4 +134,8 @@ pub struct HandshakerConfig<'a> {
     pub peer_static_public_key: Option<Vec<u8>>,
     // Public key that can be used to bind the attestation obtained from the peer to the handshake.
     pub peer_attestation_binding_public_key: Option<Vec<u8>>,
+}
+
+pub struct EncryptorConfig<'a> {
+    pub encryptor_provider: &'a dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>,
 }
