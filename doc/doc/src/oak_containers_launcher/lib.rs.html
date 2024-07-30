@@ -342,9 +342,6 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -434,12 +431,9 @@
 <span class="kw">impl </span>Args {
     <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">"{root}oak_containers_system_image/target/image.tar.xz"</span>,).into();
-        <span class="kw">let </span>container_bundle = <span class="macro">format!</span>(
-            <span class="string">"{root}oak_containers_examples/hello_world/container/target/oak_container_example_oci_filesystem_bundle.tar"</span>,
-        ).into();
         <span class="self">Self </span>{
             system_image,
-            container_bundle,
+            container_bundle: <span class="string">""</span>.into(),
             application_config: Vec::new(),
             qemu_params: qemu::Params::default_for_root(root),
             communication_channel: ChannelType::default(),
