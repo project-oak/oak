@@ -3,6 +3,7 @@ name = "oak_attestation_explain_wasm"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2018"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
