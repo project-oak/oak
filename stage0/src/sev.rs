@@ -226,7 +226,7 @@ pub fn unshare_page(page: Page<Size4KiB>) {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
         pt[page.p1_index()].set_addr(
-            PhysAddr::new(page_start | crate::ENCRYPTED.get().unwrap_or(&0)),
+            PhysAddr::new(page_start | crate::encrypted()),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
     }

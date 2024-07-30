@@ -25,7 +25,6 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
-use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
@@ -87,8 +86,6 @@ const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
 const PAGE_SIZE: usize = 4096;
 
-static ENCRYPTED: OnceCell<u64> = OnceCell::new();
-
 extern "C" {
     #[link_name = "stack_start"]
     static BOOT_STACK_POINTER: c_void;
@@ -141,17 +138,24 @@ pub fn sev_status() -> SevStatus {
     unsafe { SEV_STATUS }
 }
 
+/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+pub fn encrypted() -> u64 {
+    #[no_mangle]
+    static mut ENCRYPTED: u64 = 0;
+
+    // Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    unsafe { ENCRYPTED }
+}
+
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-pub fn rust64_start(encrypted: u64) -> ! {
-    // We assume 0-th bit is never the encrypted bit.
-    let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
-
-    paging::init_page_table_refs(encrypted);
+pub fn rust64_start() -> ! {
+    paging::init_page_table_refs(encrypted());
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
@@ -162,8 +166,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
     logging::init_logging();
     log::info!("starting...");
     log::info!("Enabled SEV features: {:?}", sev_status());
-
-    ENCRYPTED.set(encrypted).expect("encrypted bit already initialized");
 
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         // Safety: This is safe for SEV-ES and SNP because we're using an originally
@@ -186,7 +188,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     zero_page.fill_e820_table(&mut fwcfg);
 
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        sev::validate_memory(zero_page.e820_table(), encrypted);
+        sev::validate_memory(zero_page.e820_table(), encrypted());
     }
 
     /* Set up the machine according to the 64-bit Linux boot protocol.
@@ -212,7 +214,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     create_idt(idt);
     idt.load();
 
-    paging::map_additional_memory(encrypted);
+    paging::map_additional_memory(encrypted());
 
     // Initialize the short-term heap. Any allocations that rely on a global
     // allocator before this point will fail.
@@ -412,7 +414,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
         sev::deinit_ghcb();
     }
-    paging::remap_first_huge_page(encrypted);
+    paging::remap_first_huge_page(encrypted());
 
     unsafe {
         jump_to_kernel(entry, zero_page);

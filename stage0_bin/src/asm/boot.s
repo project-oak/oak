@@ -185,6 +185,8 @@ _protected_mode_start:
     mov $1, %esi
     mov %ebx, %ecx
     shl %cl, %esi             # construct the encrypted bit mask, store it in ESI
+    movl $0, (ENCRYPTED)      # ... and store it in the ENCRYPTED variable as well
+    mov %esi, (ENCRYPTED+4)   # (lower half zeroed out as we expect it to be > 32, as above)
 
     # We set the encrypted bit for each of the page table entries that we previously created.
     # The encrypted bit is in the second half of each 8-byte entry, so we add an extra offset of 4 bytes.

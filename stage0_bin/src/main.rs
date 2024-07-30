@@ -30,8 +30,8 @@ mod asm;
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 #[no_mangle]
-pub extern "C" fn rust64_start(encrypted: u64) -> ! {
-    oak_stage0::rust64_start(encrypted)
+pub extern "C" fn rust64_start() -> ! {
+    oak_stage0::rust64_start()
 }
 
 #[panic_handler]
