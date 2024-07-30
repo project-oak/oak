@@ -20,6 +20,9 @@ package(
 )
 
 exports_files([
+    "cb_evidence.binarypb",
+    "cb_endorsement.binarypb",
+    "cb_reference_values.binarypb",
     "endorsement.json",
     "endorsement.json.sig",
     "fake_evidence.binarypb",

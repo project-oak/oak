@@ -59,6 +59,13 @@ const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor
 #[cfg(feature = "bazel")]
 const CONTAINERS_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
 #[cfg(feature = "bazel")]
+const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
+#[cfg(feature = "bazel")]
+const CB_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/cb_endorsement.binarypb";
+#[cfg(feature = "bazel")]
+const CB_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/cb_reference_values.binarypb";
+#[cfg(feature = "bazel")]
 const RK_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/rk_evidence.binarypb";
 #[cfg(feature = "bazel")]
 const RK_OBSOLETE_EVIDENCE_PATH: &str =
@@ -96,6 +103,12 @@ const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 #[cfg(not(feature = "bazel"))]
 const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
 #[cfg(not(feature = "bazel"))]
+const CB_EVIDENCE_PATH: &str = "testdata/cb_evidence.binarypb";
+#[cfg(not(feature = "bazel"))]
+const CB_ENDORSEMENT_PATH: &str = "testdata/cb_endorsement.binarypb";
+#[cfg(not(feature = "bazel"))]
+const CB_REFERENCE_VALUES_PATH: &str = "testdata/cb_reference_values.binarypb";
+#[cfg(not(feature = "bazel"))]
 const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
 #[cfg(not(feature = "bazel"))]
 const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
@@ -114,6 +127,27 @@ const FAKE_EXPECTED_VALUES_PATH: &str = "testdata/fake_expected_values.binarypb"
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
+
+// Creates a valid AMD SEV-SNP evidence instance for a confidential borg
+// application.
+fn create_cb_evidence() -> Evidence {
+    let serialized = fs::read(CB_EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Creates a valid AMD SEV-SNP endorsement instance for a confidential borg
+// application.
+fn create_cb_endorsements() -> Endorsements {
+    let serialized = fs::read(CB_ENDORSEMENT_PATH).expect("could not read endorsement");
+    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsement")
+}
+
+// Creates a valid AMD SEV-SNP refernece values instance for a confidential borg
+// application.
+fn create_cb_reference_values() -> ReferenceValues {
+    let serialized = fs::read(CB_REFERENCE_VALUES_PATH).expect("could not read references");
+    ReferenceValues::decode(serialized.as_slice()).expect("could not decode references")
+}
 
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
 fn create_containers_evidence() -> Evidence {
@@ -268,6 +302,22 @@ fn verify_containers_explicit_reference_values() {
     let endorsements = create_containers_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_cb_succeeds() {
+    let evidence = create_cb_evidence();
+    let endorsements = create_cb_endorsements();
+    let reference_values = create_cb_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);

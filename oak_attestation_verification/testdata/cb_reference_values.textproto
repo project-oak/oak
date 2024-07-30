@@ -1,0 +1,42 @@
+cb {
+  root_layer {
+    amd_sev {
+      stage0 {
+        skip {
+        }
+      }
+      min_tcb_version {
+        boot_loader: 3
+        snp: 20
+        microcode: 209
+      }
+    }
+  }
+  kernel_layer {
+    event {
+      digests {
+        digests {
+          sha2_256: "dCm\177w\243\rE\312\206\336\235w\227\352<&\300\353\2175q\221\"6u\357\253}\265y\321"
+        }
+      }
+    }
+  }
+  system_layer {
+    event {
+      digests {
+        digests {
+          sha2_256: "(\027\207iGV?>`\241\350\204\035W\220\346[#\251\037\316\370\227\264\235?\270(\363#\260e"
+        }
+      }
+    }
+  }
+  application_layer {
+    event {
+      digests {
+        digests {
+          sha2_256: "\035\3773\222\262[}\332\237QZ\030\242\205\2751\332\376\tz\nK\334\363\337jH\202?\270^%"
+        }
+      }
+    }
+  }
+}
