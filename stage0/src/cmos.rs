@@ -14,10 +14,9 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+use oak_sev_guest::io::{PortReader, PortWriter};
 
-use crate::io_port_factory;
-
+use crate::hal::Port;
 const CMOS_INDEX_PORT: u16 = 0x0070;
 const CMOS_DATA_PORT: u16 = 0x0071;
 
@@ -33,8 +32,8 @@ const CMOS_MEM_HIGHMEM_HIGH: u8 = 0x5d;
 const NMI_DISABLE_BIT: u8 = 0x80;
 
 pub struct Cmos {
-    index_port: PortWrapper<u8>,
-    data_port: PortWrapper<u8>,
+    index_port: Port<u8>,
+    data_port: Port<u8>,
 }
 
 impl Cmos {
@@ -47,10 +46,7 @@ impl Cmos {
     /// actually available on those ports, otherwise the behaviour is
     /// undefined.
     pub unsafe fn new() -> Self {
-        Self {
-            index_port: io_port_factory().new_writer(CMOS_INDEX_PORT),
-            data_port: io_port_factory().new_reader(CMOS_DATA_PORT),
-        }
+        Self { index_port: Port::new(CMOS_INDEX_PORT), data_port: Port::new(CMOS_DATA_PORT) }
     }
 
     /// Returns the low RAM size (memory under the 4 GiB mark)

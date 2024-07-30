@@ -16,17 +16,16 @@
 
 use core::{fmt::Write, ops::DerefMut};
 
-use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 use spinning_top::Spinlock;
 
-use crate::io_port_factory;
+use crate::hal::{Port, PortFactory};
 
 extern crate log;
 
 // Base I/O port for the first serial port in the system (colloquially known as
 // COM1)
 static SERIAL_BASE: u16 = 0x3f8;
-type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
+type SerialPort = sev_serial::SerialPort<PortFactory, Port<u8>, Port<u8>>;
 static SERIAL_PORT: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
 struct Logger {}
@@ -54,7 +53,7 @@ static LOGGER: Logger = Logger {};
 pub fn init_logging() {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    let mut port = unsafe { SerialPort::new(SERIAL_BASE, io_port_factory()) };
+    let mut port = unsafe { SerialPort::new(SERIAL_BASE, PortFactory) };
     port.init().expect("couldn't initialize logging serial port");
     {
         let mut lock = SERIAL_PORT.lock();

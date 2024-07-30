@@ -29,7 +29,7 @@ use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
-use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use oak_sev_guest::msr::SevStatus;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -446,15 +446,6 @@ fn measure_byte_slice(source: &[u8]) -> Measurement {
     let digest = digest.finalize();
     measurement[..].copy_from_slice(&digest[..]);
     measurement
-}
-
-/// Creates a factory for accessing raw I/O ports.
-fn io_port_factory() -> PortFactoryWrapper {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        PortFactoryWrapper::new_ghcb(ghcb)
-    } else {
-        PortFactoryWrapper::new_raw()
-    }
 }
 
 fn generate_event_log(measurements: Stage0Measurements) -> EventLog {

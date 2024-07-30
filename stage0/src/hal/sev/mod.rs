@@ -17,7 +17,9 @@
 mod cpuid;
 mod mmio;
 mod msr;
+mod port;
 
 pub use cpuid::*;
 pub use mmio::*;
 pub use msr::*;
+pub use port::*;

@@ -18,8 +18,9 @@ mod base;
 #[cfg(feature = "sev")]
 mod sev;
 
-use core::{arch::x86_64::CpuidResult, mem::size_of};
+use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,
@@ -125,5 +126,62 @@ impl Msr {
         return sev::write_msr(&mut self.msr, self.msr_id, val);
         #[cfg(not(feature = "sev"))]
         return self.msr.write(val);
+    }
+}
+
+pub struct PortFactory;
+
+#[cfg(feature = "sev")]
+pub use sev::GhcbPortRead as PortRead;
+#[cfg(feature = "sev")]
+pub use sev::GhcbPortWrite as PortWrite;
+#[cfg(not(feature = "sev"))]
+pub use x86_64::structures::port::PortRead;
+#[cfg(not(feature = "sev"))]
+pub use x86_64::structures::port::PortWrite;
+
+impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for PortFactory
+where
+    T: PortRead + PortWrite + 'a,
+{
+    fn new_reader(&self, port: u16) -> Port<T> {
+        Port::new(port)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<T> {
+        Port::new(port)
+    }
+}
+
+/// Access to x86 IO ports.
+pub struct Port<T> {
+    port: u16,
+    phantom: PhantomData<T>,
+}
+
+impl<T> Port<T> {
+    pub fn new(port: u16) -> Self {
+        Self { port, phantom: PhantomData }
+    }
+}
+
+impl<T: PortRead> PortReader<T> for Port<T> {
+    unsafe fn try_read(&mut self) -> Result<T, &'static str> {
+        #[cfg(feature = "sev")]
+        return <T as sev::GhcbPortRead>::read_from_port(self.port);
+        #[cfg(not(feature = "sev"))]
+        return Ok(<T as PortRead>::read_from_port(self.port));
+    }
+}
+
+impl<T: PortWrite> PortWriter<T> for Port<T> {
+    unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
+        #[cfg(feature = "sev")]
+        return <T as sev::GhcbPortWrite>::write_to_port(self.port, value);
+        #[cfg(not(feature = "sev"))]
+        return {
+            <T as PortWrite>::write_to_port(self.port, value);
+            Ok(())
+        };
     }
 }

@@ -14,24 +14,21 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+use oak_sev_guest::io::PortWriter;
 
-use crate::io_port_factory;
+use crate::hal::Port;
 
 const PIC0_BASE: u16 = 0x20;
 const PIC1_BASE: u16 = 0xA0;
 
 pub struct Pic {
-    command: PortWrapper<u8>,
-    data: PortWrapper<u8>,
+    command: Port<u8>,
+    data: Port<u8>,
 }
 
 impl Pic {
     pub fn new(base: u16) -> Self {
-        Self {
-            command: io_port_factory().new_writer(base),
-            data: io_port_factory().new_writer(base + 1),
-        }
+        Self { command: Port::new(base), data: Port::new(base + 1) }
     }
 
     pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
