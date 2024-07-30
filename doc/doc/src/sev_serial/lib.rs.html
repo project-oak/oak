@@ -144,6 +144,21 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -164,7 +179,7 @@
 
 </span><span class="kw">use </span>core::fmt::Write;
 
-<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
 <span class="doccomment">/// The offset from the base address to the interrupt register.
 </span><span class="kw">const </span>INTERRUPT_ENABLE: u16 = <span class="number">1</span>;
@@ -211,25 +226,35 @@
 ///
 /// See section 4.1.2 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt; for more
 /// information on the GHCB IOIO protocol.
-</span><span class="kw">pub struct </span>SerialPort {
+</span><span class="kw">pub struct </span>SerialPort&lt;F, R, W&gt;
+<span class="kw">where
+    </span>F: IoPortFactory&lt;<span class="lifetime">'static</span>, u8, R, W&gt;,
+    R: PortReader&lt;u8&gt; + <span class="lifetime">'static</span>,
+    W: PortWriter&lt;u8&gt; + <span class="lifetime">'static</span>,
+{
     <span class="doccomment">/// The base address of the serial port.
     </span>base_address: u16,
     <span class="doccomment">/// The factory for creating port readers and writers.
-    </span>io_port_factory: PortFactoryWrapper,
+    </span>io_port_factory: F,
     <span class="doccomment">/// The port writer for writing a byte of data.
-    </span>data: PortWrapper&lt;u8&gt;,
+    </span>data: W,
     <span class="doccomment">/// The port reader for checking the line status.
-    </span>line_status: PortWrapper&lt;u8&gt;,
+    </span>line_status: R,
 }
 
-<span class="kw">impl </span>SerialPort {
+<span class="kw">impl</span>&lt;F, R, W&gt; SerialPort&lt;F, R, W&gt;
+<span class="kw">where
+    </span>F: IoPortFactory&lt;<span class="lifetime">'static</span>, u8, R, W&gt;,
+    R: PortReader&lt;u8&gt; + <span class="lifetime">'static</span>,
+    W: PortWriter&lt;u8&gt; + <span class="lifetime">'static</span>,
+{
     <span class="doccomment">/// Creates a new instance of a serial port with the given base address.
     ///
     /// # Safety
     ///
     /// This function is unsafe as callers must make sure that the base address
     /// represents a valid serial port device.
-    </span><span class="kw">pub unsafe fn </span>new(base_address: u16, io_port_factory: PortFactoryWrapper) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>new(base_address: u16, io_port_factory: F) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>data = io_port_factory.new_writer(base_address);
         <span class="kw">let </span>line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
         <span class="self">Self </span>{ base_address, io_port_factory, data, line_status }
@@ -280,7 +305,12 @@
     }
 }
 
-<span class="kw">impl </span>Write <span class="kw">for </span>SerialPort {
+<span class="kw">impl</span>&lt;F, R, W&gt; Write <span class="kw">for </span>SerialPort&lt;F, R, W&gt;
+<span class="kw">where
+    </span>F: IoPortFactory&lt;<span class="lifetime">'static</span>, u8, R, W&gt;,
+    R: PortReader&lt;u8&gt; + <span class="lifetime">'static</span>,
+    W: PortWriter&lt;u8&gt; + <span class="lifetime">'static</span>,
+{
     <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>str) -&gt; core::fmt::Result {
         <span class="kw">for </span>byte <span class="kw">in </span>s.bytes() {
             <span class="self">self</span>.send(byte).map_err(|<span class="kw">_</span>| core::fmt::Error)<span class="question-mark">?</span>;

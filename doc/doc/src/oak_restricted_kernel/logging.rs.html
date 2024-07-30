@@ -89,8 +89,7 @@
 </span><span class="kw">use </span>core::fmt::Write;
 
 <span class="kw">use </span>log::info;
-<span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
-<span class="kw">use </span>sev_serial::SerialPort;
+<span class="kw">use </span>oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 <span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="kw">extern crate </span>log;
@@ -99,6 +98,7 @@
 // COM1)
 </span><span class="kw">const </span>COM1_BASE: u16 = <span class="number">0x3f8</span>;
 
+<span class="kw">type </span>SerialPort = sev_serial::SerialPort&lt;PortFactoryWrapper, PortWrapper&lt;u8&gt;, PortWrapper&lt;u8&gt;&gt;;
 <span class="kw">pub static </span>SERIAL1: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;SerialPort&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
 <span class="kw">struct </span>Logger {}

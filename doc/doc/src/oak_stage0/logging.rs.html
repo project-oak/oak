@@ -64,6 +64,7 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -82,7 +83,7 @@
 
 </span><span class="kw">use </span>core::{fmt::Write, ops::DerefMut};
 
-<span class="kw">use </span>sev_serial::SerialPort;
+<span class="kw">use </span>oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
 <span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
@@ -92,6 +93,7 @@
 <span class="comment">// Base I/O port for the first serial port in the system (colloquially known as
 // COM1)
 </span><span class="kw">static </span>SERIAL_BASE: u16 = <span class="number">0x3f8</span>;
+<span class="kw">type </span>SerialPort = sev_serial::SerialPort&lt;PortFactoryWrapper, PortWrapper&lt;u8&gt;, PortWrapper&lt;u8&gt;&gt;;
 <span class="kw">static </span>SERIAL_PORT: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;SerialPort&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
 <span class="kw">struct </span>Logger {}
