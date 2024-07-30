@@ -20,7 +20,11 @@ use oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
     v1::orchestrator_crypto_server::OrchestratorCryptoServer,
 };
-use oak_proto_rust::oak::containers::GetApplicationConfigResponse;
+use oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    containers::GetApplicationConfigResponse,
+    session::v1::EndorsedEvidence,
+};
 use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;
@@ -34,6 +38,8 @@ use crate::{
 pub struct ServiceImplementation {
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
+    evidence: Evidence,
+    endorsements: Endorsements,
 }
 
 #[tonic::async_trait]
@@ -54,10 +60,23 @@ impl Orchestrator for ServiceImplementation {
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))
     }
+
+    async fn get_endorsed_evidence(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<EndorsedEvidence>, tonic::Status> {
+        Ok(tonic::Response::new(EndorsedEvidence {
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(self.endorsements.clone()),
+        }))
+    }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create<P>(
     socket_address: P,
+    evidence: Evidence,
+    endorsements: Endorsements,
     instance_keys: InstanceKeys,
     group_keys: Arc<GroupKeys>,
     application_config: Vec<u8>,
@@ -71,6 +90,8 @@ where
         // TODO(#4442): Remove once apps use the new crypto service.
         application_config,
         launcher_client,
+        evidence,
+        endorsements,
     };
     let crypto_service_instance = CryptoService::new(instance_keys, group_keys);
 

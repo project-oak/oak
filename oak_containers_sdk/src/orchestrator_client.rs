@@ -15,6 +15,7 @@
 
 use anyhow::{Context, Result};
 use oak_grpc::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
+use oak_proto_rust::oak::session::v1::EndorsedEvidence;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -59,5 +60,9 @@ impl OrchestratorClient {
     pub async fn notify_app_ready(&mut self) -> Result<()> {
         self.inner.notify_app_ready(tonic::Request::new(())).await?;
         Ok(())
+    }
+
+    pub async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
+        Ok(self.inner.get_endorsed_evidence(()).await?.into_inner())
     }
 }

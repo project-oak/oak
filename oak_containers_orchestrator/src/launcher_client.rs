@@ -19,7 +19,7 @@ use oak_grpc::oak::containers::{
     v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::Evidence,
+    attestation::v1::{Endorsements, Evidence},
     containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
@@ -91,6 +91,15 @@ impl LauncherClient {
             .config;
 
         Ok(application_config)
+    }
+    pub async fn get_endorsements(&self) -> Result<Endorsements, Box<dyn std::error::Error>> {
+        Ok(self
+            .inner
+            .clone()
+            .get_endorsements(())
+            .await
+            .context("couldn't get response from launcher")?
+            .into_inner())
     }
 
     pub async fn send_attestation_evidence(

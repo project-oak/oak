@@ -39,6 +39,7 @@ proto_library(
     deps = [
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
+        "//proto/session:messages_proto",
         "@com_google_protobuf//:empty_proto",
     ],
 )
@@ -60,6 +61,8 @@ proto_library(
     srcs = ["orchestrator_crypto.proto"],
     deps = [
         "//proto/crypto:crypto_proto",
+        "//proto/session:messages_proto",
+        "@com_google_protobuf//:empty_proto",
     ],
 )
 

@@ -110,8 +110,9 @@ async fn main() -> anyhow::Result<()> {
         },
         None,
     )?;
+
     launcher_client
-        .send_attestation_evidence(evidence)
+        .send_attestation_evidence(evidence.clone())
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
@@ -131,6 +132,11 @@ async fn main() -> anyhow::Result<()> {
         tokio::fs::create_dir_all(path).await?;
     }
 
+    let endorsements = launcher_client
+        .get_endorsements()
+        .await
+        .map_err(|e| anyhow!("coudln't get endorsements from launcher: {e:?}"))?;
+
     // Start application and gRPC servers.
     let user = nix::unistd::User::from_name(&args.runtime_user)
         .context(format!("error resolving user {}", args.runtime_user))?
@@ -139,6 +145,8 @@ async fn main() -> anyhow::Result<()> {
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
+            evidence,
+            endorsements,
             instance_keys,
             group_keys.clone().context("group keys were not provisioned")?,
             application_config,
