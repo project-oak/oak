@@ -1,7 +1,6 @@
 use std::{
     collections::{hash_map::Entry, HashMap},
     sync::Mutex,
-    time::SystemTime,
 };
 
 use crate::{metrics::data::DataPoint, metrics::AttributeSet};
@@ -14,7 +13,6 @@ use super::{
 
 /// Timestamped measurement data.
 struct DataPointValue<T> {
-    timestamp: SystemTime,
     value: T,
 }
 
@@ -31,7 +29,6 @@ impl<T: Number<T>> LastValue<T> {
 
     pub(crate) fn measure(&self, measurement: T, attrs: AttributeSet) {
         let d: DataPointValue<T> = DataPointValue {
-            timestamp: SystemTime::now(),
             value: measurement,
         };
         if let Ok(mut values) = self.values.lock() {
@@ -70,9 +67,7 @@ impl<T: Number<T>> LastValue<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                time: Some(value.timestamp),
                 value: value.value,
-                start_time: None,
                 exemplars: vec![],
             });
         }

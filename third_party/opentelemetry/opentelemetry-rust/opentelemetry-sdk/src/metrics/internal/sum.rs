@@ -1,9 +1,10 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::vec;
+extern crate alloc;
+
+use core::sync::atomic::{AtomicBool, Ordering};
+use alloc::vec;
 use std::{
     collections::HashMap,
     sync::{Mutex, RwLock},
-    time::SystemTime,
 };
 
 use crate::metrics::data::{self, Aggregation, DataPoint, Temporality};
@@ -82,7 +83,6 @@ impl<T: Number<T>> ValueMap<T> {
 pub(crate) struct Sum<T: Number<T>> {
     value_map: ValueMap<T>,
     monotonic: bool,
-    start: Mutex<SystemTime>,
 }
 
 impl<T: Number<T>> Sum<T> {
@@ -95,7 +95,6 @@ impl<T: Number<T>> Sum<T> {
         Sum {
             value_map: ValueMap::new(),
             monotonic,
-            start: Mutex::new(SystemTime::now()),
         }
     }
 
@@ -107,7 +106,6 @@ impl<T: Number<T>> Sum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let t = SystemTime::now();
 
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
@@ -136,7 +134,6 @@ impl<T: Number<T>> Sum<T> {
                 .reserve_exact(n - s_data.data_points.capacity());
         }
 
-        let prev_start = self.start.lock().map(|start| *start).unwrap_or(t);
         if self
             .value_map
             .has_no_value_attribute_value
@@ -144,8 +141,6 @@ impl<T: Number<T>> Sum<T> {
         {
             s_data.data_points.push(DataPoint {
                 attributes: vec![],
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: self.value_map.no_attribute_value.get_and_reset_value(),
                 exemplars: vec![],
             });
@@ -157,16 +152,9 @@ impl<T: Number<T>> Sum<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: value.get_value(),
                 exemplars: vec![],
             });
-        }
-
-        // The delta collection cycle resets.
-        if let Ok(mut start) = self.start.lock() {
-            *start = t;
         }
 
         (
@@ -179,7 +167,6 @@ impl<T: Number<T>> Sum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let t = SystemTime::now();
 
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
@@ -208,8 +195,6 @@ impl<T: Number<T>> Sum<T> {
                 .reserve_exact(n - s_data.data_points.capacity());
         }
 
-        let prev_start = self.start.lock().map(|start| *start).unwrap_or(t);
-
         if self
             .value_map
             .has_no_value_attribute_value
@@ -217,8 +202,6 @@ impl<T: Number<T>> Sum<T> {
         {
             s_data.data_points.push(DataPoint {
                 attributes: vec![],
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: self.value_map.no_attribute_value.get_value(),
                 exemplars: vec![],
             });
@@ -234,8 +217,6 @@ impl<T: Number<T>> Sum<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: value.get_value(),
                 exemplars: vec![],
             });
@@ -252,7 +233,6 @@ impl<T: Number<T>> Sum<T> {
 pub(crate) struct PrecomputedSum<T: Number<T>> {
     value_map: ValueMap<T>,
     monotonic: bool,
-    start: Mutex<SystemTime>,
     reported: Mutex<HashMap<AttributeSet, T>>,
 }
 
@@ -261,7 +241,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         PrecomputedSum {
             value_map: ValueMap::new(),
             monotonic,
-            start: Mutex::new(SystemTime::now()),
             reported: Mutex::new(Default::default()),
         }
     }
@@ -274,8 +253,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let t = SystemTime::now();
-        let prev_start = self.start.lock().map(|start| *start).unwrap_or(t);
 
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
@@ -316,8 +293,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         {
             s_data.data_points.push(DataPoint {
                 attributes: vec![],
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: self.value_map.no_attribute_value.get_and_reset_value(),
                 exemplars: vec![],
             });
@@ -334,16 +309,9 @@ impl<T: Number<T>> PrecomputedSum<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: delta,
                 exemplars: vec![],
             });
-        }
-
-        // The delta collection cycle resets.
-        if let Ok(mut start) = self.start.lock() {
-            *start = t;
         }
 
         *reported = new_reported;
@@ -359,8 +327,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let t = SystemTime::now();
-        let prev_start = self.start.lock().map(|start| *start).unwrap_or(t);
 
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
@@ -401,8 +367,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         {
             s_data.data_points.push(DataPoint {
                 attributes: vec![],
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: self.value_map.no_attribute_value.get_value(),
                 exemplars: vec![],
             });
@@ -419,8 +383,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: Some(prev_start),
-                time: Some(t),
                 value: delta,
                 exemplars: vec![],
             });

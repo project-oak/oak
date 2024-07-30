@@ -3,7 +3,6 @@ extern crate alloc;
 
 use alloc::borrow::Cow;
 use core::{any, fmt};
-use std::time::SystemTime;
 
 use opentelemetry_rk::KeyValue;
 
@@ -101,10 +100,6 @@ pub struct DataPoint<T> {
     /// Attributes is the set of key value pairs that uniquely identify the
     /// time series.
     pub attributes: Vec<KeyValue>,
-    /// The time when the time series was started.
-    pub start_time: Option<SystemTime>,
-    /// The time when the time series was recorded.
-    pub time: Option<SystemTime>,
     /// The value of this data point.
     pub value: T,
     /// The sampled [Exemplar]s collected during the time series.
@@ -115,8 +110,6 @@ impl<T: Copy> Clone for DataPoint<T> {
     fn clone(&self) -> Self {
         Self {
             attributes: self.attributes.clone(),
-            start_time: self.start_time,
-            time: self.time,
             value: self.value,
             exemplars: self.exemplars.clone(),
         }
@@ -147,10 +140,6 @@ impl<T: fmt::Debug + Send + Sync + 'static> Aggregation for Histogram<T> {
 pub struct HistogramDataPoint<T> {
     /// The set of key value pairs that uniquely identify the time series.
     pub attributes: Vec<KeyValue>,
-    /// The time when the time series was started.
-    pub start_time: SystemTime,
-    /// The time when the time series was recorded.
-    pub time: SystemTime,
 
     /// The number of updates this histogram has been calculated with.
     pub count: u64,
@@ -176,8 +165,6 @@ impl<T: Copy> Clone for HistogramDataPoint<T> {
     fn clone(&self) -> Self {
         Self {
             attributes: self.attributes.clone(),
-            start_time: self.start_time,
-            time: self.time,
             count: self.count,
             bounds: self.bounds.clone(),
             bucket_counts: self.bucket_counts.clone(),
@@ -214,10 +201,6 @@ impl<T: fmt::Debug + Send + Sync + 'static> Aggregation for ExponentialHistogram
 pub struct ExponentialHistogramDataPoint<T> {
     /// The set of key value pairs that uniquely identify the time series.
     pub attributes: Vec<KeyValue>,
-    /// When the time series was started.
-    pub start_time: SystemTime,
-    /// The time when the time series was recorded.
-    pub time: SystemTime,
 
     /// The number of updates this histogram has been calculated with.
     pub count: usize,
@@ -277,8 +260,6 @@ pub struct Exemplar<T> {
     /// The attributes recorded with the measurement but filtered out of the
     /// time series' aggregated data.
     pub filtered_attributes: Vec<KeyValue>,
-    /// The time when the measurement was recorded.
-    pub time: SystemTime,
     /// The measured value.
     pub value: T,
     /// The ID of the span that was active during the measurement.
@@ -295,7 +276,6 @@ impl<T: Copy> Clone for Exemplar<T> {
     fn clone(&self) -> Self {
         Self {
             filtered_attributes: self.filtered_attributes.clone(),
-            time: self.time,
             value: self.value,
             span_id: self.span_id,
             trace_id: self.trace_id,

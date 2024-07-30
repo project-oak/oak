@@ -1,5 +1,5 @@
 use hashbrown::HashMap;
-use std::{sync::Mutex, time::SystemTime};
+use std::sync::Mutex;
 
 use crate::metrics::data::{self, Aggregation, Temporality};
 use crate::{metrics::data::HistogramDataPoint, metrics::AttributeSet};
@@ -117,7 +117,6 @@ impl<T: Number<T>> HistValues<T> {
 pub(crate) struct Histogram<T> {
     hist_values: HistValues<T>,
     record_min_max: bool,
-    start: Mutex<SystemTime>,
 }
 
 impl<T: Number<T>> Histogram<T> {
@@ -125,7 +124,6 @@ impl<T: Number<T>> Histogram<T> {
         Histogram {
             hist_values: HistValues::new(boundaries, record_sum),
             record_min_max,
-            start: Mutex::new(SystemTime::now()),
         }
     }
 
@@ -141,12 +139,7 @@ impl<T: Number<T>> Histogram<T> {
             Ok(guard) if !guard.is_empty() => guard,
             _ => return (0, None),
         };
-        let t = SystemTime::now();
-        let start = self
-            .start
-            .lock()
-            .map(|s| *s)
-            .unwrap_or_else(|_| SystemTime::now());
+
         let h = dest.and_then(|d| d.as_mut().downcast_mut::<data::Histogram<T>>());
         let mut new_agg = if h.is_none() {
             Some(data::Histogram {
@@ -171,8 +164,6 @@ impl<T: Number<T>> Histogram<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: start,
-                time: t,
                 count: b.count,
                 bounds: self.hist_values.bounds.clone(),
                 bucket_counts: b.counts.clone(),
@@ -194,12 +185,6 @@ impl<T: Number<T>> Histogram<T> {
                 exemplars: vec![],
             });
         }
-
-        // The delta collection cycle resets.
-        if let Ok(mut start) = self.start.lock() {
-            *start = t;
-        }
-
         (n, new_agg.map(|a| Box::new(a) as Box<_>))
     }
 
@@ -211,12 +196,7 @@ impl<T: Number<T>> Histogram<T> {
             Ok(guard) if !guard.is_empty() => guard,
             _ => return (0, None),
         };
-        let t = SystemTime::now();
-        let start = self
-            .start
-            .lock()
-            .map(|s| *s)
-            .unwrap_or_else(|_| SystemTime::now());
+
         let h = dest.and_then(|d| d.as_mut().downcast_mut::<data::Histogram<T>>());
         let mut new_agg = if h.is_none() {
             Some(data::Histogram {
@@ -245,8 +225,6 @@ impl<T: Number<T>> Histogram<T> {
                     .iter()
                     .map(|(k, v)| KeyValue::new(k.clone(), v.clone()))
                     .collect(),
-                start_time: start,
-                time: t,
                 count: b.count,
                 bounds: self.hist_values.bounds.clone(),
                 bucket_counts: b.counts.clone(),
