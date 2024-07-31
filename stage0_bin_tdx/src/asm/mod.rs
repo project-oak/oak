@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 use core::arch::global_asm;
 
-global_asm!(include_str!("reset_vector_tdx.s"), options(att_syntax, raw));
 global_asm!(
     include_str!("tdx.s"),
     pml4 = sym crate::paging::PML4,
     pdpt = sym crate::paging::PDPT,
     pd_0 = sym crate::paging::PD_0,
     pd_3 = sym crate::paging::PD_3,
-    options(att_syntax)
-);
+    options(att_syntax));
+
+global_asm!(include_str!("reset_vector_tdx.s"), options(att_syntax, raw));

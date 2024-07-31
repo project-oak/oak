@@ -28,26 +28,53 @@ const SUCCESS: u64 = 0;
 bitflags! {
     /// Attributes of a TD.
     ///
-    /// See section 18.2.1 of [Architecture Specification: Intel® Trust Domain Extensions(Intel® TDX)
-    /// Module](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-module-1eas.pdf)
-    /// for more information.
+    /// See section 3.4.1 of [Intel® Trust Domain Extensions (Intel® TDX) Module
+    /// Architecture Application Binary Interface (ABI) Reference Specification]
+    /// (https://cdrdv2.intel.com/v1/dl/getContent/733579) Draft 1.5.05.44 for
+    /// more information.
     #[derive(Default)]
     pub struct Attributes: u64 {
         /// The guest TD runs in off-TD debug mode.
         ///
         /// If this is enabled the TD should be considered untrusted.
         const DEBUG = 1 << 0;
-        /// Whether system profiling is enabled on the TD.
-        ///
-        /// If this is enabled the TD should be considered untrusted.
-        const SYSPROF = 1 << 1;
+        /// The TD participates in HGS+ operation. HGS+ monitors the TD
+        /// operation as part of the whole system.
+        /// This bit may be set, if supported by the TDX module, regardless
+        /// on CPU support.
+        const HGS_PLUS_PROF = 1 << 4;
+        /// The TD participates in system profiling using performance monitoring
+        /// counters. Those counters are not context-switched on TD entry and
+        /// exit; they monitor the TD operation as part of the whole system.
+        /// This bit may be set, if supported by the TDX module, regardless on
+        /// CPU support.
+        const PERF_PROF = 1 << 5;
+        /// The TD participates in system profiling using core out-of-band
+        /// telemetry. Core telemetry monitors the TD operation as part of the
+        /// whole system.
+        /// This bit may be set, if supported by the TDX module, regardless of
+        /// CPU support.
+        const PMT_PROF = 1 << 6;
+        /// TD is allowed to use Linear Address Space Separation.
+        /// This bit may only be set if both the TDX module and the CPU support
+        /// LASS.
+        const LASS = 1 << 27;
+        /// Disable EPT violation conversion to #VE on guest TD access of
+        /// PENDING pages
+        const SEPT_VE_DISABLE = 1 << 28;
+        /// Whether the TD is migratable
+        const MIGRATABLE = 1 << 29;
         /// Whether the TD is allowed to use Supervisor Protection Keys.
         const PKS = 1 << 30;
         /// Whether the TD is allowed to use Key Locker.
         ///
         /// Must be 0 for the current version.
         const KL = 1 << 31;
-        /// Wehther the TD is allowed to use Perfmon and PERF_METRICS.
+        /// The TD is a TDX Connect Provisioning Agent.
+        /// This bit may only be set if both the TDX module and the CPU support
+        /// TDX Connect.
+        const TPA = 1 << 62;
+        /// Whether the TD is allowed to use Perfmon and PERF_METRICS.
         const PERFMON = 1 << 63;
     }
 }

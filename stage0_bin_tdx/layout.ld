@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Project Oak Authors
+ * Copyright 2024 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,20 +66,6 @@ SECTIONS {
         KEEP(*(.boot))
         . = ALIGN(4K);
     } > ram_low
-
-    .ap_text : AT(TOP - 4K) {
-        ap_text_start = .;
-        *(.ap_text .ap_text.*)
-        ap_text_size = . - ap_text_start;
-    } > ram_low
-
-    .ap_bss (NOLOAD) : AT (ADDR(.ap_text) + SIZEOF(.ap_text)) {
-        ap_bss_start = .;
-        *(.ap_bss .ap_bss.*)
-        ap_bss_size = . - ap_bss_start;
-    } > ram_low
-
-    ASSERT(. <= 0x10000, "AP bootstrap code needs to be in the first 64K")
 
     .bss (NOLOAD) : {
         bss_start = .;
@@ -260,6 +246,48 @@ SECTIONS {
 
     ASSERT(. == TOP - BFV_SIZE + 120 + 24 + 4, "wrong BFV header size")
 
+    /* The ROM area is read only. We need to hard code the page table here
+     * and use it to switch to 64-bit long mode. After entering the 64-bit
+     * long mode, we are able to make tdcall to accept memory for ram_low
+     * section and create another set of page tables there.
+     * offset is     : 0x00001000
+     * memory address: 0xffe01000 */
+    .page_tables ALIGN(4K): AT (TOP - BFV_SIZE + 0x1000) {
+        bios_pml4 = .;                              /*    CR3    */
+        QUAD(ADDR(.page_tables) + 0x1000 + 0x23)    /* 0..512GiB */
+        FILL(0)
+        . = bios_pml4 + 0x1000;
+
+        /* offset is     : 0x00002000 */
+        /* memory address: 0xffe02000 */
+        bios_pdpt = .;
+        QUAD(ADDR(.page_tables) + 0x2000 + 0x23)    /* 0..1GiB */
+        QUAD(0)
+        QUAD(0)
+        QUAD(ADDR(.page_tables) + 0x3000 + 0x23)    /* 3..4GiB */
+        FILL(0)
+        . = bios_pdpt + 0x1000;
+
+        /* offset is     : 0x00003000 */
+        /* memory address: 0xffe03000 */
+        bios_pd_0 = .;
+        QUAD(0x0 + 0xA3) /* 0..2MiB, HUGE_PAGE | PAGE_ACCESSED | PAGE_READ_WRITE | PAGE_PRESENT */
+        FILL(0)
+        . = bios_pd_0 + 0x1000;
+
+        /* offset is     : 0x00004000 */
+        /* memory address: 0xffe04000 */
+        bios_pd_3 = .;
+        FILL(0)
+        . = bios_pd_3 + 0xFF8;
+        QUAD(0xFFE000A1) /* 4GiB-2MiB..4GiB, HUGE_PAGE | PAGE_ACCESSED | PAGE_PRESENT */
+    } > bios
+    ASSERT((bios_pml4 == ADDR(.page_tables)), "wrong pml4 address")
+    ASSERT((bios_pdpt == ADDR(.page_tables) + 0x1000), "wrong pdpt address")
+    ASSERT((bios_pd_0 == ADDR(.page_tables) + 0x2000), "wrong pd_0 address")
+    ASSERT((bios_pd_3 == ADDR(.page_tables) + 0x3000), "wrong pd_3 address")
+    ASSERT((. == ADDR(.page_tables) + 0x4000), "wrong page table size")
+
     .rodata : {
         /* Include large section (.lrodata) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.
@@ -273,11 +301,13 @@ SECTIONS {
          */
         *(.text .text.* .ltext.*)
         *(.tdx.bootstrap)
+        text_end = .;
     } > bios
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
      * possible; max TOP - 32k. */
 
+    /* TODO: remove this section */
     .text16 ALIGN(TOP - 4K + SIZEOF(.ap_text), 16) : {
         *(.text16 .text16.*)
     } > bios
@@ -295,12 +325,10 @@ SECTIONS {
          *  - C=0
          */
         cs = . - ADDR(.rodata.gdt);
-        QUAD(SEGMENT_4K |
-             SEGMENT_LONG |
+        QUAD(SEGMENT_LONG |
              SEGMENT_PRESENT |
              SEGMENT_USER |
              SEGMENT_CODE |
-             SEGMENT_WRITABLE |
              SEGMENT_ACCESSED)
         /* 64-bit data segment (see Section 4.8.2):
          *  - P=1 (present)
@@ -337,7 +365,6 @@ SECTIONS {
              SEGMENT_PRESENT |
              SEGMENT_USER |
              SEGMENT_CODE |
-             SEGMENT_WRITABLE |
              SEGMENT_ACCESSED |
              (0xF << (32 + 16)) | /* Segment Limit [19:16] */
              0xFFFF)              /* Segment Limit [15:0] */
@@ -359,7 +386,7 @@ SECTIONS {
      */
     .guid_tables TOP - 0x20 - (16             /* Intel TDX metadata GUID             */
                                   + 16        /* TDVF decriptor       <-----------|  */
-                                  + 2*32      /* TDVF sections                    |  */
+                                  + 3*32      /* TDVF sections                    |  */
                                   + 22        /* Intel TDX metadata offset block  |  */
                                   + 18        /* footer */) : {
 
@@ -410,12 +437,20 @@ SECTIONS {
          * header to describe a chunk. Since it is smaller than 16MB we can
          * just use EFI_FFS_FILE_HEADER.
         */
-        LONG(0x0)                      /* TDX_BFV_RAW_DATA_OFFSET */
+        LONG(0x0)                          /* TDX_BFV_RAW_DATA_OFFSET */
         LONG(BFV_SIZE)                     /* TDX_BFV_RAW_DATA_SIZE */
         QUAD(TOP - BFV_SIZE)               /* TDX_BFV_MEMORY_BASE */
         QUAD(BFV_SIZE)                     /* TDX_BFV_MEMORY_SIZE */
         LONG(0)                      /* TDX_METADATA_SECTION_TYPE_BFV */
         LONG(0x00000001)             /* TDX_METADATA_ATTRIBUTES_EXTENDMR */
+
+        /* The ram_low (TEMP_MEM). UEFI Section type 3 */
+        LONG(0)                      /* RAM_LOW firmware offset */
+        LONG(0)                      /* RAM_LOW binary size */
+        QUAD(0x0)                    /* RAM_LOW BASE */
+        QUAD(0xA0000)                /* RAM_LOW SIZE 640KiB */
+        LONG(3)                      /* TDX_METADATA_SECTION_TYPE_TEMP_MEM */
+        LONG(0)
         HIDDEN(tdx_metadata_structure_end = .);
 
         /*
