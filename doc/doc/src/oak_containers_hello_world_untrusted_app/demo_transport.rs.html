@@ -222,7 +222,7 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">impl </span>oak_client::transport::Transport <span class="kw">for </span>DemoTransport {
     <span class="kw">async fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -245,7 +245,7 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">impl </span>oak_client::transport::EvidenceProvider <span class="kw">for </span>DemoTransport {
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="kw">let </span>wrapper = RequestWrapper {

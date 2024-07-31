@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["greet"],"struct":["DemoRestBasedTransport","GreeterClient"]};

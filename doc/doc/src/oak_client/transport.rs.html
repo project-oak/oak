@@ -146,6 +146,17 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -162,27 +173,36 @@
 // limitations under the License.
 //
 
+</span><span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
 </span><span class="kw">use </span>std::future::Future;
 
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>futures::channel::mpsc;
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+</span><span class="kw">use </span>anyhow::Context;
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+</span><span class="kw">use </span>futures::channel::mpsc;
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+</span><span class="kw">use </span>oak_proto_rust::oak::session::v1::{
+    request_wrapper, response_wrapper, RequestWrapper, ResponseWrapper,
+};
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+</span><span class="kw">use </span>oak_proto_rust::oak::session::v1::{
+    GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
+};
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
-    session::v1::{
-        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceRequest,
-        GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse, RequestWrapper,
-        ResponseWrapper,
-    },
+    session::v1::EndorsedEvidence,
 };
 
 <span class="doccomment">/// A [Transport] implementation that uses a single gRPC streaming session to
 /// get the evidence and then invokve the desired request.
+</span><span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
 </span><span class="kw">pub struct </span>GrpcStreamingTransport {
     response_stream: tonic::Streaming&lt;ResponseWrapper&gt;,
     request_tx_channel: mpsc::Sender&lt;RequestWrapper&gt;,
 }
 
-<span class="kw">impl </span>GrpcStreamingTransport {
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+</span><span class="kw">impl </span>GrpcStreamingTransport {
     <span class="doccomment">/// Create a new [GrpcStreamingTransport].
     ///
     /// The provided stream_creator will be immediately invokved to create a new
@@ -235,7 +255,7 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">pub trait </span>Transport {
     <span class="kw">async fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -243,7 +263,8 @@
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt;;
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">impl </span>Transport <span class="kw">for </span>GrpcStreamingTransport {
     <span class="kw">async fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -267,12 +288,13 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt;;
 }
 
-<span class="attr">#[async_trait::async_trait]
+<span class="attr">#[cfg(feature = <span class="string">"grpc_streaming_transport_implementation"</span>)]
+#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
 </span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>GrpcStreamingTransport {
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="kw">let </span>response_wrapper = <span class="self">self

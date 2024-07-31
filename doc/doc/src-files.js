@@ -15,6 +15,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_client",["",[],["client.rs","lib.rs","transport.rs","verifier.rs"]]],\
 ["oak_containers_agent",["",[],["lib.rs","metrics.rs"]]],\
 ["oak_containers_hello_world_untrusted_app",["",[],["app_client.rs","demo_transport.rs","http_service.rs","lib.rs","service.rs"]]],\
+["oak_containers_hello_world_web_client",["",[],["lib.rs"]]],\
 ["oak_containers_launcher",["",[],["lib.rs","qemu.rs","server.rs"]]],\
 ["oak_containers_orchestrator",["",[],["cdi.rs","container_runtime.rs","crypto.rs","dice.rs","ipc_server.rs","key_provisioning.rs","launcher_client.rs","lib.rs","logging.rs"]]],\
 ["oak_containers_sdk",["",[],["crypto.rs","lib.rs","orchestrator_client.rs"]]],\
