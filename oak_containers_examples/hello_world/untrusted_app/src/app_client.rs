@@ -14,11 +14,8 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_hello_world_proto::oak::containers::example::{
-    trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
-    HelloRequest,
-};
-use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+use oak_hello_world_proto::oak::containers::example::trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient;
+use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
@@ -41,16 +38,16 @@ impl TrustedApplicationClient {
         Ok(Self { inner })
     }
 
-    pub async fn hello(
+    pub async fn session(
         &mut self,
-        encrypted_request: EncryptedRequest,
-    ) -> anyhow::Result<EncryptedResponse> {
-        self.inner
-            .hello(HelloRequest { encrypted_request: Some(encrypted_request) })
+        request: impl tonic::IntoStreamingRequest<Message = RequestWrapper>,
+    ) -> anyhow::Result<tonic::Streaming<ResponseWrapper>> {
+        Ok(self
+            .inner
+            // How to safely map this request stream?
+            .session(request)
             .await
             .context("couldn't send hello request")?
-            .into_inner()
-            .encrypted_response
-            .context("no response provided")
+            .into_inner())
     }
 }

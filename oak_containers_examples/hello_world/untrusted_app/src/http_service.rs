@@ -22,11 +22,7 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{body, server::conn::http1, service::service_fn, Request, Response};
 use hyper_util::rt::{TokioIo, TokioTimer};
-use oak_containers_launcher::Launcher;
-use oak_proto_rust::oak::session::v1::{
-    request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
-    RequestWrapper, ResponseWrapper,
-};
+use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use prost::Message;
 use tokio::{net::TcpListener, sync::Mutex};
 
@@ -34,35 +30,20 @@ use crate::app_client::TrustedApplicationClient;
 
 async fn handle_request(
     request: RequestWrapper,
-    launcher: Arc<Mutex<Launcher>>,
     trusted_app: Arc<Mutex<TrustedApplicationClient>>,
-) -> anyhow::Result<ResponseWrapper> {
-    let request = request.request.context("No request in wrapper")?;
+) -> tonic::Result<ResponseWrapper> {
+    // This is not how we should actually use the streaming interface, but it
+    // works for HPKE, as long as all requests go to the same machine.
+    let mut response_stream =
+        trusted_app.lock().await.session(tokio_stream::iter(vec![request])).await.map_err(
+            |err| tonic::Status::internal(format!("starting streaming session failed: {err:?}")),
+        )?;
 
-    let response = match request {
-        request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
-            let endorsed_evidence = {
-                launcher.lock().await.get_endorsed_evidence().await.map_err(|err| {
-                    tonic::Status::internal(format!("launcher evidence get failed: {err:?}"))
-                })?
-            };
-            response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
-                endorsed_evidence: Some(endorsed_evidence),
-            })
-        }
-        request_wrapper::Request::InvokeRequest(InvokeRequest { encrypted_request }) => {
-            let encrypted_response = trusted_app
-                .lock()
-                .await
-                .hello(encrypted_request.expect("empty encrypted request"))
-                .await
-                .map_err(|err| tonic::Status::internal(format!("hello failed: {err:?}")))?;
-            response_wrapper::Response::InvokeResponse(InvokeResponse {
-                encrypted_response: Some(encrypted_response),
-            })
-        }
-    };
-    Ok(ResponseWrapper { response: Some(response) })
+    response_stream
+        .message()
+        .await?
+        .context("no response wrapper was returned")
+        .map_err(|err| tonic::Status::internal(format!("failed to get response {err:?}")))
 }
 
 /// Start a demo HTTP server that will conform to the demo HTTP protocol
@@ -81,7 +62,6 @@ pub async fn serve(
         .await
         .map_err(|error| anyhow!("Failed to create trusted application client: {error:?}"))?;
 
-    let launcher = Arc::new(Mutex::new(launcher));
     let app_client = Arc::new(Mutex::new(app_client));
 
     loop {
@@ -89,7 +69,6 @@ pub async fn serve(
 
         let io = TokioIo::new(tcp);
 
-        let launcher = Arc::clone(&launcher);
         let app_client = Arc::clone(&app_client);
 
         tokio::task::spawn(async move {
@@ -99,13 +78,11 @@ pub async fn serve(
                     io,
                     service_fn(|request: Request<body::Incoming>| {
                         // These need to be cloned before entering the async move block.
-                        let launcher = Arc::clone(&launcher);
                         let app_client = Arc::clone(&app_client);
                         async move {
                             let serialized = request.collect().await?.to_bytes().to_vec();
                             let request_wrapper = RequestWrapper::decode(&serialized[..])?;
-                            let response =
-                                handle_request(request_wrapper, launcher, app_client).await?;
+                            let response = handle_request(request_wrapper, app_client).await?;
                             let serialized = response.encode_to_vec();
                             Ok::<_, anyhow::Error>(Response::new(Full::new(Bytes::from(
                                 serialized,

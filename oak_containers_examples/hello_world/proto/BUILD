@@ -29,7 +29,7 @@ proto_library(
     name = "hello_world_proto",
     srcs = ["hello_world.proto"],
     deps = [
-        "//proto/crypto:crypto_proto",
+        "//proto/session:service_streaming_proto",
     ],
 )
 

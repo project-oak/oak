@@ -18,16 +18,9 @@ syntax = "proto3";
 
 package oak.containers.example;
 
-import "proto/crypto/crypto.proto";
-
-message HelloRequest {
-  oak.crypto.v1.EncryptedRequest encrypted_request = 1;
-}
-
-message HelloResponse {
-  oak.crypto.v1.EncryptedResponse encrypted_response = 1;
-}
+import "proto/session/service_streaming.proto";
 
 service TrustedApplication {
-  rpc Hello(HelloRequest) returns (HelloResponse) {}
+  rpc Session(stream oak.session.v1.RequestWrapper)
+      returns (stream oak.session.v1.ResponseWrapper) {}
 }

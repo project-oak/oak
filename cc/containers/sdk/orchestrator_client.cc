@@ -32,6 +32,7 @@ namespace oak::containers::sdk {
 
 namespace {
 using ::oak::containers::GetApplicationConfigResponse;
+using ::oak::session::v1::EndorsedEvidence;
 }  // namespace
 
 absl::StatusOr<std::string> OrchestratorClient::GetApplicationConfig() const {
@@ -44,6 +45,19 @@ absl::StatusOr<std::string> OrchestratorClient::GetApplicationConfig() const {
                         status.error_message());
   }
   return std::move(*response.mutable_config());
+}
+
+absl::StatusOr<EndorsedEvidence> OrchestratorClient::GetEndorsedEvidence()
+    const {
+  grpc::ClientContext context;
+  context.set_authority(kContextAuthority);
+  EndorsedEvidence response;
+  if (auto status = stub_->GetEndorsedEvidence(&context, {}, &response);
+      !status.ok()) {
+    return absl::Status(static_cast<absl::StatusCode>(status.error_code()),
+                        status.error_message());
+  }
+  return std::move(response);
 }
 
 absl::Status OrchestratorClient::NotifyAppReady() const {

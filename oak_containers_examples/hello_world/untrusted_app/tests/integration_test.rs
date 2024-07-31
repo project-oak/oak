@@ -20,6 +20,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
     sync::Once,
+    time::Duration,
 };
 
 use oak_client::{
@@ -59,12 +60,18 @@ async fn run_hello_world_test<TC: TransportCreator<T>, T: Transport + EvidencePr
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await.expect("couldn't bind listener");
 
-    let transport = TC::create(listener, args).await;
+    let url = format!("http://{}:{}", addr.ip(), addr.port());
+
+    println!("Connecting to test server on {}", url);
 
     let verifier = InsecureAttestationVerifier {};
+    let transport = TC::create(listener, args).await;
+
     let mut client = OakClient::create(transport, &verifier).await.expect("Couldn't create client");
 
     let result = client.invoke(b"end to end test xyzzy").await.expect("Invoke failed");
+    // Sleep a bit to let logs come through, helps for debugging failures.
+    tokio::time::sleep(Duration::from_secs(5)).await;
     assert_eq!(result, b"Hello from the trusted side, end to end test xyzzy! Btw, the Trusted App has a config with a length of 0 bytes.")
 }
 

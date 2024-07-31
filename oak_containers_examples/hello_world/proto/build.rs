@@ -22,10 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         CodegenOptions {
             build_server: true,
             build_client: true,
-            extern_paths: vec![ExternPath::new(
-                ".oak.crypto.v1",
-                "::oak_proto_rust::oak::crypto::v1",
-            )],
+            extern_paths: vec![ExternPath::new(".oak", "::oak_proto_rust::oak")],
         },
     )?;
 

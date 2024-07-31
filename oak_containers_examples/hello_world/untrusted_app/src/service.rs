@@ -13,18 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{pin::Pin, sync::Arc};
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
-use futures::{Stream, StreamExt};
-use oak_containers_launcher::Launcher;
+use futures::{channel::mpsc, Stream, StreamExt};
 use oak_grpc::oak::session::v1::streaming_session_server::{
     StreamingSession, StreamingSessionServer,
 };
-use oak_proto_rust::oak::session::v1::{
-    request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
-    RequestWrapper, ResponseWrapper,
-};
+use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -32,17 +28,60 @@ use crate::app_client::TrustedApplicationClient;
 
 /// The sample application's implementation of Oak's streaming service protocol.
 struct StreamingSessionImpl {
-    launcher: Arc<Mutex<Launcher>>,
     trusted_app: Arc<Mutex<TrustedApplicationClient>>,
 }
 
 impl StreamingSessionImpl {
-    pub fn new(launcher: Launcher, trusted_app: TrustedApplicationClient) -> Self {
-        Self {
-            launcher: Arc::new(Mutex::new(launcher)),
-            trusted_app: Arc::new(Mutex::new(trusted_app)),
-        }
+    pub fn new(trusted_app: TrustedApplicationClient) -> Self {
+        Self { trusted_app: Arc::new(Mutex::new(trusted_app)) }
     }
+}
+
+#[derive(Debug)]
+enum Action {
+    Receive(Option<Result<RequestWrapper, tonic::Status>>),
+    Send(Option<Result<ResponseWrapper, tonic::Status>>),
+}
+
+async fn forward_stream<Fut>(
+    request_stream: tonic::Streaming<RequestWrapper>,
+    upstream_starter: impl FnOnce(mpsc::Receiver<RequestWrapper>) -> Fut,
+) -> Result<impl Stream<Item = Result<ResponseWrapper, tonic::Status>>, tonic::Status>
+where
+    Fut: Future<Output = Result<tonic::Streaming<ResponseWrapper>, tonic::Status>>,
+{
+    let mut request_stream = request_stream;
+    let (mut tx, rx) = mpsc::channel(10);
+
+    let mut upstream = upstream_starter(rx).await?;
+
+    Ok(async_stream::try_stream! {
+        loop {
+            // This block waits for either a request message or a resposne message,
+            // so that it can forward the requests on to the TEE application, or
+            // forward the respones back to the client.
+            let action: Action = async {
+                tokio::select! {
+                    req = request_stream.next() => Action::Receive(req),
+                    resp = upstream.next() => Action::Send(resp),
+                }
+            }.await;
+
+
+            match action {
+                Action::Receive(req) => match req {
+                    None => break,
+                    Some(req) => tx
+                        .try_send(req.map_err(|err| tonic::Status::internal(format!("incoming request error: {err:?}")))?)
+                        .map_err(|err| tonic::Status::internal(format!("sending request failed: {err:?}")))?,
+                }
+                Action::Send(resp) => match resp {
+                    None => break,
+                    Some(resp) => yield resp.map_err(|err| tonic::Status::internal(format!("upstream response error: {err:?}")))?
+                }
+            }
+        }
+    })
 }
 
 #[tonic::async_trait]
@@ -54,43 +93,17 @@ impl StreamingSession for StreamingSessionImpl {
         &self,
         request: tonic::Request<tonic::Streaming<RequestWrapper>>,
     ) -> Result<tonic::Response<Self::StreamStream>, tonic::Status> {
-        let mut request_stream = request.into_inner();
+        let request_stream = request.into_inner();
 
-        let launcher = Arc::clone(&self.launcher);
-        let trusted_app = Arc::clone(&self.trusted_app);
+        let trusted_app = self.trusted_app.clone();
 
-        let response_stream = async_stream::try_stream! {
-            while let Some(request) = request_stream.next().await {
-                let request = request
-                    .map_err(|err| {
-                        tonic::Status::internal(format!("error reading message from request stream: {err}"))
-                    })?
-                    .request
-                    .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
-
-                let response = match request {
-                    request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
-                        let endorsed_evidence = {
-                            launcher.lock().await.get_endorsed_evidence().await
-                            .map_err(|err| tonic::Status::internal(format!("launcher evidence get failed: {err:?}")))?
-                        };
-                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
-                            endorsed_evidence: Some(endorsed_evidence),
-                        })
-                    }
-                    request_wrapper::Request::InvokeRequest(InvokeRequest { encrypted_request }) => {
-                        let encrypted_response = trusted_app.lock().await.hello(encrypted_request.expect("empty encrypted request")).await
-                            .map_err(|err| tonic::Status::internal(format!("hello failed: {err:?}")))?;
-                        response_wrapper::Response::InvokeResponse(
-                            InvokeResponse { encrypted_response: Some(encrypted_response) }
-                        )
-                    }
-                };
-                yield ResponseWrapper {
-                    response: Some(response),
-                };
-            }
-        };
+        let response_stream = forward_stream(request_stream, |rx| async move {
+            let mut app = trusted_app.lock().await;
+            app.session(rx).await.map_err(|err| {
+                tonic::Status::internal(format!("Failed to start trusted app stream: {err:?}"))
+            })
+        })
+        .await?;
 
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::StreamStream))
     }
@@ -111,7 +124,7 @@ pub async fn create(
         .await
         .map_err(|error| anyhow!("Failed to create trusted application client: {error:?}"))?;
     tonic::transport::Server::builder()
-        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(launcher, app_client)))
+        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

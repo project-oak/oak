@@ -39,6 +39,8 @@ class OrchestratorClient {
 
   absl::StatusOr<std::string> GetApplicationConfig() const;
   absl::Status NotifyAppReady() const;
+  absl::StatusOr<oak::session::v1::EndorsedEvidence> GetEndorsedEvidence()
+      const;
 
  private:
   explicit OrchestratorClient(const std::shared_ptr<grpc::Channel>& channel)

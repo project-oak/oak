@@ -17,6 +17,7 @@
 
 #include "absl/log/check.h"
 #include "absl/log/initialize.h"
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "app_service.h"
 #include "cc/containers/hello_world_trusted_app/app_service.h"
@@ -36,15 +37,23 @@ int main(int argc, char* argv[]) {
   absl::StatusOr<std::string> application_config =
       client.GetApplicationConfig();
   QCHECK_OK(application_config);
+
+  absl::StatusOr<oak::session::v1::EndorsedEvidence> endorsed_evidence =
+      client.GetEndorsedEvidence();
+  QCHECK_OK(endorsed_evidence);
+
   TrustedApplicationImpl service(
       std::make_unique<::oak::containers::sdk::InstanceEncryptionKeyHandle>(),
-      *application_config);
+      *endorsed_evidence, *application_config);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   QCHECK_OK(client.NotifyAppReady());
+
+  std::clog << "Trusted Application is running on port 8080";
+
   server->Wait();
   return 0;
 }
