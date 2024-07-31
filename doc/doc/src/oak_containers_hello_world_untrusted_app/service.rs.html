@@ -118,6 +118,19 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -133,18 +146,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span>std::{pin::Pin, sync::Arc};
+</span><span class="kw">use </span>std::{future::Future, pin::Pin, sync::Arc};
 
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>futures::{Stream, StreamExt};
-<span class="kw">use </span>oak_containers_launcher::Launcher;
+<span class="kw">use </span>futures::{channel::mpsc, Stream, StreamExt};
 <span class="kw">use </span>oak_grpc::oak::session::v1::streaming_session_server::{
     StreamingSession, StreamingSessionServer,
 };
-<span class="kw">use </span>oak_proto_rust::oak::session::v1::{
-    request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
-    RequestWrapper, ResponseWrapper,
-};
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 <span class="kw">use </span>tokio::{net::TcpListener, sync::Mutex};
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
@@ -152,17 +161,60 @@
 
 <span class="doccomment">/// The sample application's implementation of Oak's streaming service protocol.
 </span><span class="kw">struct </span>StreamingSessionImpl {
-    launcher: Arc&lt;Mutex&lt;Launcher&gt;&gt;,
     trusted_app: Arc&lt;Mutex&lt;TrustedApplicationClient&gt;&gt;,
 }
 
 <span class="kw">impl </span>StreamingSessionImpl {
-    <span class="kw">pub fn </span>new(launcher: Launcher, trusted_app: TrustedApplicationClient) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            launcher: Arc::new(Mutex::new(launcher)),
-            trusted_app: Arc::new(Mutex::new(trusted_app)),
-        }
+    <span class="kw">pub fn </span>new(trusted_app: TrustedApplicationClient) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ trusted_app: Arc::new(Mutex::new(trusted_app)) }
     }
+}
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">enum </span>Action {
+    Receive(<span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;RequestWrapper, tonic::Status&gt;&gt;),
+    Send(<span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;ResponseWrapper, tonic::Status&gt;&gt;),
+}
+
+<span class="kw">async fn </span>forward_stream&lt;Fut&gt;(
+    request_stream: tonic::Streaming&lt;RequestWrapper&gt;,
+    upstream_starter: <span class="kw">impl </span>FnOnce(mpsc::Receiver&lt;RequestWrapper&gt;) -&gt; Fut,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;ResponseWrapper, tonic::Status&gt;&gt;, tonic::Status&gt;
+<span class="kw">where
+    </span>Fut: Future&lt;Output = <span class="prelude-ty">Result</span>&lt;tonic::Streaming&lt;ResponseWrapper&gt;, tonic::Status&gt;&gt;,
+{
+    <span class="kw">let </span><span class="kw-2">mut </span>request_stream = request_stream;
+    <span class="kw">let </span>(<span class="kw-2">mut </span>tx, rx) = mpsc::channel(<span class="number">10</span>);
+
+    <span class="kw">let </span><span class="kw-2">mut </span>upstream = upstream_starter(rx).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="macro">async_stream::try_stream! </span>{
+        <span class="kw">loop </span>{
+            <span class="comment">// This block waits for either a request message or a resposne message,
+            // so that it can forward the requests on to the TEE application, or
+            // forward the respones back to the client.
+            </span><span class="kw">let </span>action: Action = <span class="kw">async </span>{
+                <span class="macro">tokio::select! </span>{
+                    req = request_stream.next() =&gt; Action::Receive(req),
+                    resp = upstream.next() =&gt; Action::Send(resp),
+                }
+            }.<span class="kw">await</span>;
+
+
+            <span class="kw">match </span>action {
+                Action::Receive(req) =&gt; <span class="kw">match </span>req {
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+                    <span class="prelude-val">Some</span>(req) =&gt; tx
+                        .try_send(req.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"incoming request error: {err:?}"</span>)))<span class="question-mark">?</span>)
+                        .map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"sending request failed: {err:?}"</span>)))<span class="question-mark">?</span>,
+                }
+                Action::Send(resp) =&gt; <span class="kw">match </span>resp {
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+                    <span class="prelude-val">Some</span>(resp) =&gt; <span class="kw">yield </span>resp.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"upstream response error: {err:?}"</span>)))<span class="question-mark">?
+                </span>}
+            }
+        }
+    })
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -174,43 +226,17 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;tonic::Streaming&lt;RequestWrapper&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamStream&gt;, tonic::Status&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>request_stream = request.into_inner();
+        <span class="kw">let </span>request_stream = request.into_inner();
 
-        <span class="kw">let </span>launcher = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.launcher);
-        <span class="kw">let </span>trusted_app = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.trusted_app);
+        <span class="kw">let </span>trusted_app = <span class="self">self</span>.trusted_app.clone();
 
-        <span class="kw">let </span>response_stream = <span class="macro">async_stream::try_stream! </span>{
-            <span class="kw">while let </span><span class="prelude-val">Some</span>(request) = request_stream.next().<span class="kw">await </span>{
-                <span class="kw">let </span>request = request
-                    .map_err(|err| {
-                        tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"error reading message from request stream: {err}"</span>))
-                    })<span class="question-mark">?
-                    </span>.request
-                    .ok_or_else(|| tonic::Status::invalid_argument(<span class="string">"empty request message"</span>))<span class="question-mark">?</span>;
-
-                <span class="kw">let </span>response = <span class="kw">match </span>request {
-                    request_wrapper::Request::GetEndorsedEvidenceRequest(<span class="kw">_</span>) =&gt; {
-                        <span class="kw">let </span>endorsed_evidence = {
-                            launcher.lock().<span class="kw">await</span>.get_endorsed_evidence().<span class="kw">await
-                            </span>.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"launcher evidence get failed: {err:?}"</span>)))<span class="question-mark">?
-                        </span>};
-                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
-                            endorsed_evidence: <span class="prelude-val">Some</span>(endorsed_evidence),
-                        })
-                    }
-                    request_wrapper::Request::InvokeRequest(InvokeRequest { encrypted_request }) =&gt; {
-                        <span class="kw">let </span>encrypted_response = trusted_app.lock().<span class="kw">await</span>.hello(encrypted_request.expect(<span class="string">"empty encrypted request"</span>)).<span class="kw">await
-                            </span>.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"hello failed: {err:?}"</span>)))<span class="question-mark">?</span>;
-                        response_wrapper::Response::InvokeResponse(
-                            InvokeResponse { encrypted_response: <span class="prelude-val">Some</span>(encrypted_response) }
-                        )
-                    }
-                };
-                <span class="kw">yield </span>ResponseWrapper {
-                    response: <span class="prelude-val">Some</span>(response),
-                };
-            }
-        };
+        <span class="kw">let </span>response_stream = forward_stream(request_stream, |rx| <span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>app = trusted_app.lock().<span class="kw">await</span>;
+            app.session(rx).<span class="kw">await</span>.map_err(|err| {
+                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"Failed to start trusted app stream: {err:?}"</span>))
+            })
+        })
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(tonic::Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::StreamStream))
     }
@@ -231,7 +257,7 @@
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"Failed to create trusted application client: {error:?}"</span>))<span class="question-mark">?</span>;
     tonic::transport::Server::builder()
-        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(launcher, app_client)))
+        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"server error: {:?}"</span>, error))

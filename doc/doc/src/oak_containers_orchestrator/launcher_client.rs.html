@@ -145,6 +145,15 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -166,7 +175,7 @@
     v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::Evidence,
+    attestation::v1::{Endorsements, Evidence},
     containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
@@ -238,6 +247,15 @@
             .config;
 
         <span class="prelude-val">Ok</span>(application_config)
+    }
+    <span class="kw">pub async fn </span>get_endorsements(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Endorsements, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.inner
+            .clone()
+            .get_endorsements(())
+            .<span class="kw">await
+            </span>.context(<span class="string">"couldn't get response from launcher"</span>)<span class="question-mark">?
+            </span>.into_inner())
     }
 
     <span class="kw">pub async fn </span>send_attestation_evidence(

@@ -63,6 +63,11 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -80,6 +85,7 @@
 
 </span><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>oak_grpc::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::EndorsedEvidence;
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
@@ -124,6 +130,10 @@
     <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="self">self</span>.inner.notify_app_ready(tonic::Request::new(())).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.inner.get_endorsed_evidence(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner())
     }
 }
 </code></pre></div></section></main></body></html>

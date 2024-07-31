@@ -99,29 +99,6 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -146,11 +123,7 @@
 <span class="kw">use </span>http_body_util::{BodyExt, Full};
 <span class="kw">use </span>hyper::{body, server::conn::http1, service::service_fn, Request, Response};
 <span class="kw">use </span>hyper_util::rt::{TokioIo, TokioTimer};
-<span class="kw">use </span>oak_containers_launcher::Launcher;
-<span class="kw">use </span>oak_proto_rust::oak::session::v1::{
-    request_wrapper, response_wrapper, GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse,
-    RequestWrapper, ResponseWrapper,
-};
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tokio::{net::TcpListener, sync::Mutex};
 
@@ -158,35 +131,20 @@
 
 <span class="kw">async fn </span>handle_request(
     request: RequestWrapper,
-    launcher: Arc&lt;Mutex&lt;Launcher&gt;&gt;,
     trusted_app: Arc&lt;Mutex&lt;TrustedApplicationClient&gt;&gt;,
-) -&gt; anyhow::Result&lt;ResponseWrapper&gt; {
-    <span class="kw">let </span>request = request.request.context(<span class="string">"No request in wrapper"</span>)<span class="question-mark">?</span>;
+) -&gt; tonic::Result&lt;ResponseWrapper&gt; {
+    <span class="comment">// This is not how we should actually use the streaming interface, but it
+    // works for HPKE, as long as all requests go to the same machine.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>response_stream =
+        trusted_app.lock().<span class="kw">await</span>.session(tokio_stream::iter(<span class="macro">vec!</span>[request])).<span class="kw">await</span>.map_err(
+            |err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"starting streaming session failed: {err:?}"</span>)),
+        )<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>response = <span class="kw">match </span>request {
-        request_wrapper::Request::GetEndorsedEvidenceRequest(<span class="kw">_</span>) =&gt; {
-            <span class="kw">let </span>endorsed_evidence = {
-                launcher.lock().<span class="kw">await</span>.get_endorsed_evidence().<span class="kw">await</span>.map_err(|err| {
-                    tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"launcher evidence get failed: {err:?}"</span>))
-                })<span class="question-mark">?
-            </span>};
-            response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
-                endorsed_evidence: <span class="prelude-val">Some</span>(endorsed_evidence),
-            })
-        }
-        request_wrapper::Request::InvokeRequest(InvokeRequest { encrypted_request }) =&gt; {
-            <span class="kw">let </span>encrypted_response = trusted_app
-                .lock()
-                .<span class="kw">await
-                </span>.hello(encrypted_request.expect(<span class="string">"empty encrypted request"</span>))
-                .<span class="kw">await
-                </span>.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"hello failed: {err:?}"</span>)))<span class="question-mark">?</span>;
-            response_wrapper::Response::InvokeResponse(InvokeResponse {
-                encrypted_response: <span class="prelude-val">Some</span>(encrypted_response),
-            })
-        }
-    };
-    <span class="prelude-val">Ok</span>(ResponseWrapper { response: <span class="prelude-val">Some</span>(response) })
+    response_stream
+        .message()
+        .<span class="kw">await</span><span class="question-mark">?
+        </span>.context(<span class="string">"no response wrapper was returned"</span>)
+        .map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"failed to get response {err:?}"</span>)))
 }
 
 <span class="doccomment">/// Start a demo HTTP server that will conform to the demo HTTP protocol
@@ -205,7 +163,6 @@
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"Failed to create trusted application client: {error:?}"</span>))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>launcher = Arc::new(Mutex::new(launcher));
     <span class="kw">let </span>app_client = Arc::new(Mutex::new(app_client));
 
     <span class="kw">loop </span>{
@@ -213,7 +170,6 @@
 
         <span class="kw">let </span>io = TokioIo::new(tcp);
 
-        <span class="kw">let </span>launcher = Arc::clone(<span class="kw-2">&amp;</span>launcher);
         <span class="kw">let </span>app_client = Arc::clone(<span class="kw-2">&amp;</span>app_client);
 
         tokio::task::spawn(<span class="kw">async move </span>{
@@ -223,13 +179,11 @@
                     io,
                     service_fn(|request: Request&lt;body::Incoming&gt;| {
                         <span class="comment">// These need to be cloned before entering the async move block.
-                        </span><span class="kw">let </span>launcher = Arc::clone(<span class="kw-2">&amp;</span>launcher);
-                        <span class="kw">let </span>app_client = Arc::clone(<span class="kw-2">&amp;</span>app_client);
+                        </span><span class="kw">let </span>app_client = Arc::clone(<span class="kw-2">&amp;</span>app_client);
                         <span class="kw">async move </span>{
                             <span class="kw">let </span>serialized = request.collect().<span class="kw">await</span><span class="question-mark">?</span>.to_bytes().to_vec();
                             <span class="kw">let </span>request_wrapper = RequestWrapper::decode(<span class="kw-2">&amp;</span>serialized[..])<span class="question-mark">?</span>;
-                            <span class="kw">let </span>response =
-                                handle_request(request_wrapper, launcher, app_client).<span class="kw">await</span><span class="question-mark">?</span>;
+                            <span class="kw">let </span>response = handle_request(request_wrapper, app_client).<span class="kw">await</span><span class="question-mark">?</span>;
                             <span class="kw">let </span>serialized = response.encode_to_vec();
                             <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, anyhow::Error&gt;(Response::new(Full::new(Bytes::from(
                                 serialized,
