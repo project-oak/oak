@@ -52,8 +52,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
 
 <span class="kw">pub fn </span>cpuid(leaf: u32) -&gt; CpuidResult {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock().get_cpuid(CpuidInput { eax: leaf, ecx: <span class="number">0</span>, xcr0: <span class="number">0</span>, xss: <span class="number">0 </span>}).unwrap().into()
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+        ghcb.get_cpuid(CpuidInput { eax: leaf, ecx: <span class="number">0</span>, xcr0: <span class="number">0</span>, xss: <span class="number">0 </span>}).unwrap().into()
     } <span class="kw">else </span>{
         <span class="kw">crate</span>::hal::base::cpuid(leaf)
     }

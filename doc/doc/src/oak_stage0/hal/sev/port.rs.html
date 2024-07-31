@@ -137,8 +137,8 @@
 
 <span class="kw">impl </span>GhcbPortRead <span class="kw">for </span>u8 {
     <span class="kw">unsafe fn </span>read_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u8(port)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u8(port)
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(&lt;u8 <span class="kw">as </span>PortRead&gt;::read_from_port(port))
         }
@@ -150,8 +150,8 @@
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u8(port, value)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u8(port, value)
         } <span class="kw">else </span>{
             &lt;u8 <span class="kw">as </span>PortWrite&gt;::write_to_port(port, value);
             <span class="prelude-val">Ok</span>(())
@@ -161,8 +161,8 @@
 
 <span class="kw">impl </span>GhcbPortRead <span class="kw">for </span>u16 {
     <span class="kw">unsafe fn </span>read_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u16(port)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u16(port)
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(&lt;u16 <span class="kw">as </span>PortRead&gt;::read_from_port(port))
         }
@@ -174,8 +174,8 @@
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u16(port, value)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u16(port, value)
         } <span class="kw">else </span>{
             &lt;u16 <span class="kw">as </span>PortWrite&gt;::write_to_port(port, value);
             <span class="prelude-val">Ok</span>(())
@@ -185,8 +185,8 @@
 
 <span class="kw">impl </span>GhcbPortRead <span class="kw">for </span>u32 {
     <span class="kw">unsafe fn </span>read_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u32(port)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u32(port)
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(&lt;u32 <span class="kw">as </span>PortRead&gt;::read_from_port(port))
         }
@@ -198,8 +198,8 @@
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u32(port, value)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u32(port, value)
         } <span class="kw">else </span>{
             &lt;u32 <span class="kw">as </span>PortWrite&gt;::write_to_port(port, value);
             <span class="prelude-val">Ok</span>(())

@@ -460,7 +460,6 @@
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
 <a href="#460" id="460">460</a>
-<a href="#461" id="461">461</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -623,7 +622,7 @@
     <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
     </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        sev::init_ghcb(<span class="kw-2">&amp;</span>BOOT_ALLOC);
+        sev::GHCB_WRAPPER.init(<span class="kw-2">&amp;</span>BOOT_ALLOC);
     }
 
     logging::init_logging();
@@ -753,9 +752,8 @@
             secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
         } <span class="kw">else </span>{
             <span class="comment">// Plain old SEV-ES, use the GHCB protocol.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-                ghcb.lock()
-                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+                ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
                     .expect(<span class="string">"failed to set AP Jump Table"</span>);
             }
         }
@@ -875,7 +873,7 @@
     // hugepage for the first 2M of memory.
     </span>drop(fwcfg);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
-        sev::deinit_ghcb();
+        sev::GHCB_WRAPPER.deinit();
     }
     paging::remap_first_huge_page(encrypted());
 
