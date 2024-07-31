@@ -7,8 +7,14 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
 source "$SCRIPTS_DIR/common"
 
-mkdir -p './bazel-cache'
-mkdir -p './cargo-cache'
+# The directory of the workspace on the host. Normally this is just the PWD, but in Kokoro it is
+# different.
+HOST_WORKSPACE_DIR=''
+if [[ -n "${KOKORO_HOST_ROOT_DIR:-}" ]]; then
+  HOST_WORKSPACE_DIR="$KOKORO_HOST_ROOT_DIR/src/git/oak"
+else
+  HOST_WORKSPACE_DIR="$PWD"
+fi
 
 docker_run_flags=(
   '--rm'
@@ -21,9 +27,7 @@ docker_run_flags=(
   '--env=RUST_LOGS'
   '--env=JUST_TIMESTAMP'
   '--env=JUST_TIMESTAMP_FORMAT'
-  "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
-  "--volume=$PWD/cargo-cache:/home/docker/.cargo"
-  "--volume=$PWD:/workspace"
+  "--mount=type=bind,source=$HOST_WORKSPACE_DIR,target=/workspace"
   # Enable Docker-in-Docker by giving the container access to the host docker
   # daemon.
   "--volume=$XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock"
