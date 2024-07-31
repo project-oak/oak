@@ -26,14 +26,14 @@ use oak_session::{
 #[test]
 fn process_nk_handshake() {
     let identity_key = IdentityKey::generate();
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshaker::create(&HandshakerConfig {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: None,
         peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
         peer_attestation_binding_public_key: None,
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
+    let server_handshaker = ServerHandshaker::new(&HandshakerConfig {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: Some(&identity_key),
         peer_static_public_key: None,
@@ -44,14 +44,14 @@ fn process_nk_handshake() {
 
 #[test]
 fn process_nn_handshake() {
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshaker::create(&HandshakerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
         peer_attestation_binding_public_key: None,
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
+    let server_handshaker = ServerHandshaker::new(&HandshakerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,

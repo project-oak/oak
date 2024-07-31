@@ -28,9 +28,9 @@ use crate::{
 
 #[allow(dead_code)]
 pub struct SessionConfig<'a> {
-    attestation_provider_config: AttestationProviderConfig<'a>,
-    handshaker_config: HandshakerConfig<'a>,
-    encryptor_config: EncryptorConfig<'a>,
+    pub attestation_provider_config: AttestationProviderConfig<'a>,
+    pub handshaker_config: HandshakerConfig<'a>,
+    pub encryptor_config: EncryptorConfig<'a>,
 }
 
 impl<'a> SessionConfig<'a> {
