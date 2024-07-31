@@ -15,7 +15,6 @@
 //
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_client::{
     client::OakClient,
     transport::{EvidenceProvider, Transport},
@@ -51,17 +50,26 @@ impl DemoRestBasedTransport {
 
     async fn send_and_receive(
         &self,
-        request: request_wrapper::Request,
+        request_wrapper: &RequestWrapper,
     ) -> anyhow::Result<ResponseWrapper> {
-        let request_wrapper = RequestWrapper { request: Some(request) };
         let serialized = request_wrapper.encode_to_vec();
-        let encoded = BASE64_STANDARD.encode(&serialized);
 
-        let url = format!("http://localhost:{}/{}", self.port, encoded);
+        let url = format!("http://localhost:{}", self.port);
 
         let mut opts = RequestInit::new();
-        opts.method("GET");
+        opts.method("POST");
         opts.mode(RequestMode::Cors);
+
+        // Create a Uint8Array from the serialized data
+        let js_array: js_sys::Uint8Array = js_sys::Uint8Array::from(&serialized[..]);
+
+        // Set the body of the request
+        opts.body(Some(&js_array.into()));
+
+        // Set the Content-Type header
+        let headers = web_sys::Headers::new().unwrap();
+        headers.append("Content-Type", "application/octet-stream").unwrap();
+        opts.headers(&headers);
 
         let request = Request::new_with_str_and_init(&url, &opts)
             .map_err(|e| anyhow::anyhow!("Error creating request: {:?}", e))?;
@@ -72,6 +80,10 @@ impl DemoRestBasedTransport {
             .map_err(|e| anyhow::anyhow!("Error fetching: {:?}", e))?;
 
         let resp: Response = resp_value.dyn_into().unwrap();
+
+        if !resp.ok() {
+            return Err(anyhow::anyhow!("HTTP error! status: {}", resp.status()));
+        }
 
         let body = JsFuture::from(resp.array_buffer().unwrap())
             .await
@@ -91,9 +103,11 @@ impl Transport for DemoRestBasedTransport {
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
         let response_wrapper = self
-            .send_and_receive(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                encrypted_request: Some(encrypted_request.clone()),
-            }))
+            .send_and_receive(&RequestWrapper {
+                request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
+                    encrypted_request: Some(encrypted_request.clone()),
+                })),
+            })
             .await
             .context("Sending invoke request")?;
 
@@ -112,9 +126,11 @@ impl Transport for DemoRestBasedTransport {
 impl EvidenceProvider for DemoRestBasedTransport {
     async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         let response_wrapper = self
-            .send_and_receive(request_wrapper::Request::GetEndorsedEvidenceRequest(
-                GetEndorsedEvidenceRequest {},
-            ))
+            .send_and_receive(&RequestWrapper {
+                request: Some(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                    GetEndorsedEvidenceRequest {},
+                )),
+            })
             .await
             .context("Sending get_endorsed_evidence request")?;
 

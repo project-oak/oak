@@ -8,3 +8,36 @@
 
 Implementation of the untrusted part (outside the TEE) of the Oak Containers
 Hello World example application.
+
+## Web Client
+
+To run the server:
+
+1. Build the Oak Containers binaries:
+
+   ```sh
+   just all_oak_containers_binaries
+   ```
+
+2. Start the server:
+
+   ```sh
+   cargo run --manifest-path oak_containers_examples/hello_world/untrusted_app/Cargo.toml -- rest --container-bundle bazel-bin/oak_containers_examples/hello_world/trusted_app/bundle.tar
+   ```
+
+To access the web client:
+
+1. Open an unsafe instance of Chrome with CORS disabled, via the
+   `--disable-web-security` flag:
+
+   - On macOS this can be done via:
+
+     ```sh
+     open -n -a /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --args --user-data-dir="/tmp/chrome_dev_test" --disable-web-security --new-window "http://localhost:8080/"
+     ```
+
+   - On other platforms, locate your chrome executable and launch it with the
+     `--disable-web-security` flag.
+
+Note: Using an unsafe browser instance is for development purposes only and
+should not be used for general browsing.

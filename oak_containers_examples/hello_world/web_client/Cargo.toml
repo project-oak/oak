@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "*"
 async-trait = "*"
-base64 = "*"
 js-sys = "*"
 getrandom = { version = "*", features = ["js"] }
 oak_attestation_verification = { workspace = true }
@@ -26,4 +25,6 @@ web-sys = { version = "*", features = [
   "RequestMode",
   "Response",
   "Window",
+  "console",
+  "Headers",
 ] }
