@@ -158,6 +158,22 @@
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -175,7 +191,6 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>oak_client::{
     client::OakClient,
     transport::{EvidenceProvider, Transport},
@@ -211,17 +226,26 @@
 
     <span class="kw">async fn </span>send_and_receive(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: request_wrapper::Request,
+        request_wrapper: <span class="kw-2">&amp;</span>RequestWrapper,
     ) -&gt; anyhow::Result&lt;ResponseWrapper&gt; {
-        <span class="kw">let </span>request_wrapper = RequestWrapper { request: <span class="prelude-val">Some</span>(request) };
         <span class="kw">let </span>serialized = request_wrapper.encode_to_vec();
-        <span class="kw">let </span>encoded = BASE64_STANDARD.encode(<span class="kw-2">&amp;</span>serialized);
 
-        <span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"http://localhost:{}/{}"</span>, <span class="self">self</span>.port, encoded);
+        <span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"http://localhost:{}"</span>, <span class="self">self</span>.port);
 
         <span class="kw">let </span><span class="kw-2">mut </span>opts = RequestInit::new();
-        opts.method(<span class="string">"GET"</span>);
+        opts.method(<span class="string">"POST"</span>);
         opts.mode(RequestMode::Cors);
+
+        <span class="comment">// Create a Uint8Array from the serialized data
+        </span><span class="kw">let </span>js_array: js_sys::Uint8Array = js_sys::Uint8Array::from(<span class="kw-2">&amp;</span>serialized[..]);
+
+        <span class="comment">// Set the body of the request
+        </span>opts.body(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>js_array.into()));
+
+        <span class="comment">// Set the Content-Type header
+        </span><span class="kw">let </span>headers = web_sys::Headers::new().unwrap();
+        headers.append(<span class="string">"Content-Type"</span>, <span class="string">"application/octet-stream"</span>).unwrap();
+        opts.headers(<span class="kw-2">&amp;</span>headers);
 
         <span class="kw">let </span>request = Request::new_with_str_and_init(<span class="kw-2">&amp;</span>url, <span class="kw-2">&amp;</span>opts)
             .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Error creating request: {:?}"</span>, e))<span class="question-mark">?</span>;
@@ -232,6 +256,10 @@
             </span>.map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Error fetching: {:?}"</span>, e))<span class="question-mark">?</span>;
 
         <span class="kw">let </span>resp: Response = resp_value.dyn_into().unwrap();
+
+        <span class="kw">if </span>!resp.ok() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"HTTP error! status: {}"</span>, resp.status()));
+        }
 
         <span class="kw">let </span>body = JsFuture::from(resp.array_buffer().unwrap())
             .<span class="kw">await
@@ -251,9 +279,11 @@
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
         <span class="kw">let </span>response_wrapper = <span class="self">self
-            </span>.send_and_receive(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                encrypted_request: <span class="prelude-val">Some</span>(encrypted_request.clone()),
-            }))
+            </span>.send_and_receive(<span class="kw-2">&amp;</span>RequestWrapper {
+                request: <span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(InvokeRequest {
+                    encrypted_request: <span class="prelude-val">Some</span>(encrypted_request.clone()),
+                })),
+            })
             .<span class="kw">await
             </span>.context(<span class="string">"Sending invoke request"</span>)<span class="question-mark">?</span>;
 
@@ -272,9 +302,11 @@
 </span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>DemoRestBasedTransport {
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="kw">let </span>response_wrapper = <span class="self">self
-            </span>.send_and_receive(request_wrapper::Request::GetEndorsedEvidenceRequest(
-                GetEndorsedEvidenceRequest {},
-            ))
+            </span>.send_and_receive(<span class="kw-2">&amp;</span>RequestWrapper {
+                request: <span class="prelude-val">Some</span>(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                    GetEndorsedEvidenceRequest {},
+                )),
+            })
             .<span class="kw">await
             </span>.context(<span class="string">"Sending get_endorsed_evidence request"</span>)<span class="question-mark">?</span>;
 
