@@ -459,15 +459,6 @@
 <a href="#457" id="457">457</a>
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
-<a href="#460" id="460">460</a>
-<a href="#461" id="461">461</a>
-<a href="#462" id="462">462</a>
-<a href="#463" id="463">463</a>
-<a href="#464" id="464">464</a>
-<a href="#465" id="465">465</a>
-<a href="#466" id="466">466</a>
-<a href="#467" id="467">467</a>
-<a href="#468" id="468">468</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -499,7 +490,7 @@
 <span class="kw">use </span>oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
-<span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+<span class="kw">use </span>oak_sev_guest::msr::SevStatus;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
@@ -916,15 +907,6 @@
     <span class="kw">let </span>digest = digest.finalize();
     measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
     measurement
-}
-
-<span class="doccomment">/// Creates a factory for accessing raw I/O ports.
-</span><span class="kw">fn </span>io_port_factory() -&gt; PortFactoryWrapper {
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
-        PortFactoryWrapper::new_ghcb(ghcb)
-    } <span class="kw">else </span>{
-        PortFactoryWrapper::new_raw()
-    }
 }
 
 <span class="kw">fn </span>generate_event_log(measurements: Stage0Measurements) -&gt; EventLog {

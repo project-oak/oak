@@ -78,9 +78,6 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -97,24 +94,21 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+</span><span class="kw">use </span>oak_sev_guest::io::PortWriter;
 
-<span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
+<span class="kw">use </span><span class="kw">crate</span>::hal::Port;
 
 <span class="kw">const </span>PIC0_BASE: u16 = <span class="number">0x20</span>;
 <span class="kw">const </span>PIC1_BASE: u16 = <span class="number">0xA0</span>;
 
 <span class="kw">pub struct </span>Pic {
-    command: PortWrapper&lt;u8&gt;,
-    data: PortWrapper&lt;u8&gt;,
+    command: Port&lt;u8&gt;,
+    data: Port&lt;u8&gt;,
 }
 
 <span class="kw">impl </span>Pic {
     <span class="kw">pub fn </span>new(base: u16) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            command: io_port_factory().new_writer(base),
-            data: io_port_factory().new_writer(base + <span class="number">1</span>),
-        }
+        <span class="self">Self </span>{ command: Port::new(base), data: Port::new(base + <span class="number">1</span>) }
     }
 
     <span class="kw">pub unsafe fn </span>write_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>, command: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {

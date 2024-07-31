@@ -571,14 +571,14 @@
 
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
-<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+<span class="kw">use </span>oak_sev_guest::io::{PortReader, PortWriter};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-<span class="kw">use crate</span>::{io_port_factory, sev::Shared, BootAllocator};
+<span class="kw">use crate</span>::{hal::Port, sev::Shared, BootAllocator};
 
 <span class="comment">// See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 </span><span class="kw">const </span>FWCFG_PORT_SELECTOR: u16 = <span class="number">0x510</span>;
@@ -690,10 +690,10 @@
 ///
 /// See &lt;https://www.qemu.org/docs/master/specs/fw_cfg.html&gt; for more details.
 </span><span class="kw">pub struct </span>FwCfg {
-    selector: PortWrapper&lt;u16&gt;,
-    data: PortWrapper&lt;u8&gt;,
-    dma_high: PortWrapper&lt;u32&gt;,
-    dma_low: PortWrapper&lt;u32&gt;,
+    selector: Port&lt;u16&gt;,
+    data: Port&lt;u8&gt;,
+    dma_high: Port&lt;u32&gt;,
+    dma_low: Port&lt;u32&gt;,
     dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
     dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
     dma_enabled: bool,
@@ -711,12 +711,12 @@
     /// any adverse effects.
     </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="self">Self </span>{
-            selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
-            data: io_port_factory().new_reader(FWCFG_PORT_DATA),
-            dma_high: io_port_factory().new_writer(FWCFG_PORT_DMA),
+            selector: Port::new(FWCFG_PORT_SELECTOR),
+            data: Port::new(FWCFG_PORT_DATA),
+            dma_high: Port::new(FWCFG_PORT_DMA),
             <span class="comment">// The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
-            </span>dma_low: io_port_factory().new_writer(FWCFG_PORT_DMA + <span class="number">4</span>),
+            </span>dma_low: Port::new(FWCFG_PORT_DMA + <span class="number">4</span>),
             dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
             dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: <span class="bool-val">false</span>,
