@@ -55,7 +55,7 @@ pub enum InstrumentKind {
 /// Instruments can be used as criteria for views.
 ///
 /// ```
-/// use opentelemetry_sdk::metrics::{new_view, Aggregation, Instrument, Stream};
+/// use opentelemetry_rk_sdk::metrics::{new_view, Aggregation, Instrument, Stream};
 ///
 /// let criteria = Instrument::new().name("counter_*");
 /// let mask = Stream::new().aggregation(Aggregation::Sum);
@@ -159,7 +159,7 @@ impl Instrument {
 /// Streams can be used as masks in views.
 ///
 /// ```
-/// use opentelemetry_sdk::metrics::{new_view, Aggregation, Instrument, Stream};
+/// use opentelemetry_rk_sdk::metrics::{new_view, Aggregation, Instrument, Stream};
 ///
 /// let criteria = Instrument::new().name("counter_*");
 /// let mask = Stream::new().aggregation(Aggregation::Sum);

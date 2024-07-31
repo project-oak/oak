@@ -34,6 +34,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 temp-env = { version = "0.3.6" }
+rand = { version = "0.8", features = ["std", "std_rng","small_rng"], default-features = false }
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
 pprof = { version = "0.13", features = ["flamegraph", "criterion"] }

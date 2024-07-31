@@ -56,7 +56,7 @@ impl SdkMeterProvider {
     ///
     /// ```
     /// use opentelemetry_rk::{global, Context};
-    /// use opentelemetry_sdk::metrics::SdkMeterProvider;
+    /// use opentelemetry_rk_sdk::metrics::SdkMeterProvider;
     ///
     /// fn init_metrics() -> SdkMeterProvider {
     ///     // Setup metric pipelines with readers + views, default has no
@@ -75,13 +75,13 @@ impl SdkMeterProvider {
     ///     // create instruments + record measurements
     ///
     ///     // force all instruments to flush
-    ///     provider.force_flush()?;
+    ///     provider.force_flush();
     ///
     ///     // record more measurements..
     ///
     ///     // shutdown ensures any cleanup required by the provider is done,
     ///     // and also invokes shutdown on the readers.
-    ///     provider.shutdown()?;
+    ///     provider.shutdown();
     ///
     ///     Ok(())
     /// }

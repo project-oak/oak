@@ -5,7 +5,6 @@ use crate::metrics::reader::{
     TemporalitySelector,
 };
 use crate::metrics::{data, Aggregation, InstrumentKind};
-use async_trait::async_trait;
 use opentelemetry_rk::metrics::MetricsError;
 use opentelemetry_rk::metrics::Result;
 use std::collections::VecDeque;
@@ -27,11 +26,11 @@ use std::sync::{Arc, Mutex};
 /// # Example
 ///
 /// ```
-///# use opentelemetry_sdk::{metrics, runtime};
-///# use opentelemetry::{KeyValue};
-///# use opentelemetry::metrics::MeterProvider;
-///# use opentelemetry_sdk::testing::metrics::InMemoryMetricsExporter;
-///# use opentelemetry_sdk::metrics::PeriodicReader;
+///# use opentelemetry_rk_sdk::{metrics};
+///# use opentelemetry_rk::{KeyValue};
+///# use opentelemetry_rk::metrics::MeterProvider;
+///# use opentelemetry_rk_sdk::testing::metrics::InMemoryMetricsExporter;
+///# use opentelemetry_rk_sdk::metrics::ManualReader;
 ///
 ///# #[tokio::main]
 ///# async fn main() {
@@ -40,7 +39,7 @@ use std::sync::{Arc, Mutex};
 ///
 ///  // Create a MeterProvider and register the exporter
 ///  let meter_provider = metrics::SdkMeterProvider::builder()
-///      .with_reader(PeriodicReader::builder(exporter.clone(), runtime::Tokio).build())
+///      .with_reader(ManualReader::builder().build())
 ///      .build();
 ///
 ///  // Create and record metrics using the MeterProvider
@@ -91,7 +90,7 @@ impl Default for InMemoryMetricsExporter {
 /// # Example
 ///
 /// ```
-/// # use opentelemetry_sdk::testing::metrics::{InMemoryMetricsExporter, InMemoryMetricsExporterBuilder};
+/// # use opentelemetry_rk_sdk::testing::metrics::{InMemoryMetricsExporter, InMemoryMetricsExporterBuilder};
 ///
 /// let exporter = InMemoryMetricsExporterBuilder::new().build();
 /// ```
@@ -164,7 +163,7 @@ impl InMemoryMetricsExporter {
     /// # Example
     ///
     /// ```
-    /// # use opentelemetry_sdk::testing::metrics::InMemoryMetricsExporter;
+    /// # use opentelemetry_rk_sdk::testing::metrics::InMemoryMetricsExporter;
     ///
     /// let exporter = InMemoryMetricsExporter::default();
     /// let finished_metrics = exporter.get_finished_metrics().unwrap();
@@ -181,7 +180,7 @@ impl InMemoryMetricsExporter {
     /// # Example
     ///
     /// ```
-    /// # use opentelemetry_sdk::testing::metrics::InMemoryMetricsExporter;
+    /// # use opentelemetry_rk_sdk::testing::metrics::InMemoryMetricsExporter;
     ///
     /// let exporter = InMemoryMetricsExporter::default();
     /// exporter.reset();
@@ -282,9 +281,8 @@ impl TemporalitySelector for InMemoryMetricsExporter {
     }
 }
 
-#[async_trait]
 impl PushMetricsExporter for InMemoryMetricsExporter {
-    async fn export(&self, metrics: &mut ResourceMetrics) -> Result<()> {
+    fn export(&self, metrics: &mut ResourceMetrics) -> Result<()> {
         self.metrics
             .lock()
             .map(|mut metrics_guard| {
@@ -293,7 +291,7 @@ impl PushMetricsExporter for InMemoryMetricsExporter {
             .map_err(MetricsError::from)
     }
 
-    async fn force_flush(&self) -> Result<()> {
+    fn force_flush(&self) -> Result<()> {
         Ok(()) // In this implementation, flush does nothing
     }
 

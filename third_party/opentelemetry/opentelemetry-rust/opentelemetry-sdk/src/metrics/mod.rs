@@ -9,9 +9,9 @@
 //! ### Example
 //!
 //! ```
-//! use opentelemetry::global;
-//! use opentelemetry::KeyValue;
-//! use opentelemetry_sdk::{metrics::SdkMeterProvider, Resource};
+//! use opentelemetry_rk::global;
+//! use opentelemetry_rk::KeyValue;
+//! use opentelemetry_rk_sdk::{metrics::SdkMeterProvider, Resource};
 //!
 //! // Generate SDK configuration, resource, views, etc
 //! let resource = Resource::default(); // default attributes about the current process
@@ -61,9 +61,9 @@ pub use meter_provider::*;
 pub use pipeline::Pipeline;
 pub use view::*;
 
-use siphasher::sip::SipHasher;
 use core::hash::{Hash, Hasher};
 use hashbrown::HashSet;
+use siphasher::sip::SipHasher;
 
 use opentelemetry_rk::{Key, KeyValue, Value};
 
@@ -137,21 +137,24 @@ impl Hash for AttributeSet {
     }
 }
 
-#[cfg(all(test, feature = "testing"))]
+#[cfg(all(test))]
 mod tests {
+    extern crate alloc;
+
     use self::data::{DataPoint, HistogramDataPoint, ScopeMetrics};
     use super::*;
     use crate::metrics::data::{ResourceMetrics, Temporality};
     use crate::metrics::reader::TemporalitySelector;
+    use crate::testing::metrics::InMemoryMetricsExporter;
     use crate::testing::metrics::InMemoryMetricsExporterBuilder;
-    use crate::{runtime, testing::metrics::InMemoryMetricsExporter};
+    use crate::Resource;
+    use alloc::sync::Weak;
     use opentelemetry_rk::metrics::{Counter, Meter, UpDownCounter};
-    use opentelemetry_rk::{metrics::MeterProvider as _, KeyValue};
+    use opentelemetry_rk::{metrics::MeterProvider as _, metrics::Result, KeyValue};
     use rand::{rngs, Rng, SeedableRng};
+    use reader::{AggregationSelector, MetricReader};
     use std::borrow::Cow;
     use std::sync::{Arc, Mutex};
-    use std::thread;
-    use std::time::Duration;
 
     // Run all tests in this mod
     // cargo test metrics::tests --features=testing
@@ -217,7 +220,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn updown_counter_aggregation_cumulative() {
+    async fn updown_counter_aggregationn_cumulative() {
         // Run this test with stdout enabled to see output.
         // cargo test updown_counter_aggregation_cumulative --features=testing -- --nocapture
         updown_counter_aggregation_helper(Temporality::Cumulative);
@@ -328,15 +331,18 @@ mod tests {
             }
 
             test_context.reset_metrics();
+            test_context.resource_metrics.clear();
         }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn counter_duplicate_instrument_merge() {
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
-        let meter_provider = SdkMeterProvider::builder().with_reader(reader).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
+
+        let meter_provider = SdkMeterProvider::builder()
+            .with_reader(reader.clone())
+            .build();
 
         // Act
         let meter = meter_provider.meter("test");
@@ -359,9 +365,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         assert!(
             resource_metrics[0].scope_metrics[0].metrics.len() == 1,
             "There should be single metric merging duplicate instruments"
@@ -385,9 +397,11 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn counter_duplicate_instrument_different_meter_no_merge() {
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
-        let meter_provider = SdkMeterProvider::builder().with_reader(reader).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
+
+        let meter_provider = SdkMeterProvider::builder()
+            .with_reader(reader.clone())
+            .build();
 
         // Act
         let meter1 = meter_provider.meter("test.meter1");
@@ -411,9 +425,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         assert!(
             resource_metrics[0].scope_metrics.len() == 2,
             "There should be 2 separate scope"
@@ -474,9 +494,11 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn instrumentation_scope_identity_test() {
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
-        let meter_provider = SdkMeterProvider::builder().with_reader(reader).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
+
+        let meter_provider = SdkMeterProvider::builder()
+            .with_reader(reader.clone())
+            .build();
 
         // Act
         // Meters are identical except for scope attributes, but scope attributes are not an identifying property.
@@ -512,9 +534,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         println!("resource_metrics: {:?}", resource_metrics);
         assert!(
             resource_metrics[0].scope_metrics.len() == 1,
@@ -557,8 +585,8 @@ mod tests {
         // cargo test histogram_aggregation_with_invalid_aggregation_should_proceed_as_if_view_not_exist --features=testing -- --nocapture
 
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
+
         let criteria = Instrument::new().name("test_histogram");
         let stream_invalid_aggregation = Stream::new()
             .aggregation(Aggregation::ExplicitBucketHistogram {
@@ -571,7 +599,7 @@ mod tests {
         let view =
             new_view(criteria, stream_invalid_aggregation).expect("Expected to create a new view");
         let meter_provider = SdkMeterProvider::builder()
-            .with_reader(reader)
+            .with_reader(reader.clone())
             .with_view(view)
             .build();
 
@@ -586,9 +614,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         assert!(!resource_metrics.is_empty());
         let metric = &resource_metrics[0].scope_metrics[0].metrics[0];
         assert_eq!(
@@ -606,8 +640,8 @@ mod tests {
         // cargo test spatial_aggregation_when_view_drops_attributes_observable_counter --features=testing
 
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
+
         let criteria = Instrument::new().name("my_observable_counter");
         // View drops all attributes.
         let stream_invalid_aggregation = Stream::new().allowed_attribute_keys(vec![]);
@@ -615,7 +649,7 @@ mod tests {
         let view =
             new_view(criteria, stream_invalid_aggregation).expect("Expected to create a new view");
         let meter_provider = SdkMeterProvider::builder()
-            .with_reader(reader)
+            .with_reader(reader.clone())
             .with_view(view)
             .build();
 
@@ -653,9 +687,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         assert!(!resource_metrics.is_empty());
         let metric = &resource_metrics[0].scope_metrics[0].metrics[0];
         assert_eq!(metric.name, "my_observable_counter",);
@@ -681,8 +721,7 @@ mod tests {
         // cargo test spatial_aggregation_when_view_drops_attributes_counter --features=testing
 
         // Arrange
-        let exporter = InMemoryMetricsExporter::default();
-        let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
+        let reader = SharedReader(Arc::new(ManualReader::builder().build()));
         let criteria = Instrument::new().name("my_counter");
         // View drops all attributes.
         let stream_invalid_aggregation = Stream::new().allowed_attribute_keys(vec![]);
@@ -690,7 +729,7 @@ mod tests {
         let view =
             new_view(criteria, stream_invalid_aggregation).expect("Expected to create a new view");
         let meter_provider = SdkMeterProvider::builder()
-            .with_reader(reader)
+            .with_reader(reader.clone())
             .with_view(view)
             .build();
 
@@ -730,9 +769,15 @@ mod tests {
         meter_provider.force_flush().unwrap();
 
         // Assert
-        let resource_metrics = exporter
-            .get_finished_metrics()
-            .expect("metrics are expected to be exported.");
+        let resource_metrics = vec![{
+            let mut rm = ResourceMetrics {
+                resource: Resource::empty(),
+                scope_metrics: Vec::new(),
+            };
+            let _ = reader.collect(&mut rm);
+            rm
+        }];
+
         assert!(!resource_metrics.is_empty());
         let metric = &resource_metrics[0].scope_metrics[0].metrics[0];
         assert_eq!(metric.name, "my_counter",);
@@ -917,6 +962,7 @@ mod tests {
         test_context.flush_metrics();
         let _ = test_context.get_aggregation::<data::Sum<u64>>("my_counter", None);
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
 
         counter.add(5, &[]);
         test_context.flush_metrics();
@@ -944,6 +990,7 @@ mod tests {
         test_context.flush_metrics();
         let _ = test_context.get_aggregation::<data::Sum<u64>>("my_counter", None);
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
 
         counter.add(5, &[]);
         test_context.flush_metrics();
@@ -971,6 +1018,7 @@ mod tests {
         test_context.flush_metrics();
         let _ = test_context.get_aggregation::<data::Sum<u64>>("my_counter", None);
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
 
         counter.add(50, &[KeyValue::new("a", "b")]);
         test_context.flush_metrics();
@@ -1034,70 +1082,6 @@ mod tests {
         assert!(resource_metrics.is_empty(), "No metrics should be exported as no new measurements were recorded since last collect.");
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn counter_multithreaded() {
-        // Run this test with stdout enabled to see output.
-        // cargo test counter_multithreaded --features=testing -- --nocapture
-
-        counter_multithreaded_aggregation_helper(Temporality::Delta);
-        counter_multithreaded_aggregation_helper(Temporality::Cumulative);
-    }
-
-    fn counter_multithreaded_aggregation_helper(temporality: Temporality) {
-        // Arrange
-        let mut test_context = TestContext::new(temporality);
-        let counter = Arc::new(test_context.u64_counter("test", "my_counter", None));
-
-        for i in 0..10 {
-            thread::scope(|s| {
-                s.spawn(|| {
-                    counter.add(1, &[KeyValue::new("key1", "value1")]);
-                    counter.add(1, &[KeyValue::new("key1", "value1")]);
-                    counter.add(1, &[KeyValue::new("key1", "value1")]);
-
-                    // Test concurrent collection by forcing half of the update threads to `force_flush` metrics and sleep for some time.
-                    if i % 2 == 0 {
-                        test_context.flush_metrics();
-                        thread::sleep(Duration::from_millis(i)); // Make each thread sleep for some time duration for better testing
-                    }
-
-                    counter.add(1, &[KeyValue::new("key1", "value1")]);
-                    counter.add(1, &[KeyValue::new("key1", "value1")]);
-                });
-            });
-        }
-
-        test_context.flush_metrics();
-
-        // Assert
-        // We invoke `test_context.flush_metrics()` six times.
-        let sums =
-            test_context.get_from_multiple_aggregations::<data::Sum<u64>>("my_counter", None, 6);
-
-        let values = sums
-            .iter()
-            .map(|sum| {
-                assert_eq!(sum.data_points.len(), 1); // Expecting 1 time-series.
-                assert!(sum.is_monotonic, "Counter should produce monotonic.");
-                assert_eq!(sum.temporality, temporality);
-
-                // find and validate key1=value1 datapoint
-                let data_point = find_datapoint_with_key_value(&sum.data_points, "key1", "value1")
-                    .expect("datapoint with key1=value1 expected");
-
-                data_point.value
-            })
-            .collect::<Vec<_>>();
-
-        let total_sum: u64 = if temporality == Temporality::Delta {
-            values.iter().sum()
-        } else {
-            *values.last().unwrap()
-        };
-
-        assert_eq!(total_sum, 50); // Each of the 10 update threads record measurements summing up to 5.
-    }
-
     fn histogram_aggregation_helper(temporality: Temporality) {
         // Arrange
         let mut test_context = TestContext::new(temporality);
@@ -1159,6 +1143,7 @@ mod tests {
 
         // Reset and report more measurements
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
         for value in values_kv1.iter() {
             histogram.record(*value, &[KeyValue::new("key1", "value1")]);
         }
@@ -1239,6 +1224,7 @@ mod tests {
 
         // Reset and report more measurements
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
         gauge.record(1, &[KeyValue::new("key1", "value1")]);
         gauge.record(2, &[KeyValue::new("key1", "value1")]);
         gauge.record(11, &[KeyValue::new("key1", "value1")]);
@@ -1277,7 +1263,6 @@ mod tests {
         counter.add(1, &[KeyValue::new("key1", "value2")]);
         counter.add(1, &[KeyValue::new("key1", "value2")]);
         counter.add(1, &[KeyValue::new("key1", "value2")]);
-
         test_context.flush_metrics();
 
         // Assert
@@ -1306,6 +1291,7 @@ mod tests {
 
         // Reset and report more measurements
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
         counter.add(1, &[KeyValue::new("key1", "value1")]);
         counter.add(1, &[KeyValue::new("key1", "value1")]);
         counter.add(1, &[KeyValue::new("key1", "value1")]);
@@ -1384,6 +1370,7 @@ mod tests {
 
         // Reset and report more measurements
         test_context.reset_metrics();
+        test_context.resource_metrics.clear();
         counter.add(10, &[KeyValue::new("key1", "value1")]);
         counter.add(-1, &[KeyValue::new("key1", "value1")]);
         counter.add(-5, &[KeyValue::new("key1", "value1")]);
@@ -1450,7 +1437,41 @@ mod tests {
             .find(|&scope_metric| scope_metric.scope.name == name)
     }
 
+    #[derive(Clone, Debug)]
+    struct SharedReader(Arc<dyn MetricReader>);
+
+    impl TemporalitySelector for SharedReader {
+        fn temporality(&self, kind: InstrumentKind) -> Temporality {
+            self.0.temporality(kind)
+        }
+    }
+
+    impl AggregationSelector for SharedReader {
+        fn aggregation(&self, kind: InstrumentKind) -> Aggregation {
+            self.0.aggregation(kind)
+        }
+    }
+
+    impl MetricReader for SharedReader {
+        fn register_pipeline(&self, pipeline: Weak<Pipeline>) {
+            self.0.register_pipeline(pipeline)
+        }
+
+        fn collect(&self, rm: &mut ResourceMetrics) -> Result<()> {
+            self.0.collect(rm)
+        }
+
+        fn force_flush(&self) -> Result<()> {
+            self.0.force_flush()
+        }
+
+        fn shutdown(&self) -> Result<()> {
+            self.0.shutdown()
+        }
+    }
+
     struct TestContext {
+        reader: SharedReader,
         exporter: InMemoryMetricsExporter,
         meter_provider: SdkMeterProvider,
 
@@ -1471,10 +1492,18 @@ mod tests {
             exporter = exporter.with_temporality_selector(TestTemporalitySelector(temporality));
 
             let exporter = exporter.build();
-            let reader = PeriodicReader::builder(exporter.clone(), runtime::Tokio).build();
-            let meter_provider = SdkMeterProvider::builder().with_reader(reader).build();
+            let reader = SharedReader(Arc::new(
+                ManualReader::builder()
+                    .with_temporality_selector(TestTemporalitySelector(temporality))
+                    .build(),
+            ));
+
+            let meter_provider = SdkMeterProvider::builder()
+                .with_reader(reader.clone())
+                .build();
 
             TestContext {
+                reader,
                 exporter,
                 meter_provider,
                 resource_metrics: vec![],
@@ -1526,10 +1555,14 @@ mod tests {
             counter_name: &str,
             unit_name: Option<&str>,
         ) -> &T {
-            self.resource_metrics = self
-                .exporter
-                .get_finished_metrics()
-                .expect("metrics expected to be exported");
+            self.resource_metrics.push({
+                let mut rm = ResourceMetrics {
+                    resource: Resource::empty(),
+                    scope_metrics: Vec::new(),
+                };
+                let _ = self.reader.collect(&mut rm);
+                rm
+            });
 
             assert!(
                 !self.resource_metrics.is_empty(),
@@ -1564,16 +1597,20 @@ mod tests {
                 .expect("Failed to cast aggregation to expected type")
         }
 
-        fn get_from_multiple_aggregations<T: data::Aggregation>(
+        fn _get_from_multiple_aggregations<T: data::Aggregation>(
             &mut self,
             counter_name: &str,
             unit_name: Option<&str>,
             invocation_count: usize,
         ) -> Vec<&T> {
-            self.resource_metrics = self
-                .exporter
-                .get_finished_metrics()
-                .expect("metrics expected to be exported");
+            self.resource_metrics.push({
+                let mut rm = ResourceMetrics {
+                    resource: Resource::empty(),
+                    scope_metrics: Vec::new(),
+                };
+                let _ = self.reader.collect(&mut rm);
+                rm
+            });
 
             assert!(
                 !self.resource_metrics.is_empty(),

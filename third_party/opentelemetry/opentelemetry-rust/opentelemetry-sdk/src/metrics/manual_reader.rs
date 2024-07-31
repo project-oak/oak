@@ -27,7 +27,7 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use opentelemetry_sdk::metrics::ManualReader;
+/// use opentelemetry_rk_sdk::metrics::ManualReader;
 ///
 /// // can specify additional reader configuration
 /// let reader = ManualReader::builder().build();
