@@ -19,9 +19,8 @@ use x86_64::structures::paging::PageSize;
 use crate::{hal::base::Mmio, sev::GHCB_WRAPPER};
 
 pub fn read_u32<S: PageSize>(mmio: &Mmio<S>, offset: usize) -> u32 {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock()
-            .mmio_read_u32(mmio.base_address + offset)
+    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+        ghcb.mmio_read_u32(mmio.base_address + offset)
             .expect("couldn't read the MSR using the GHCB protocol")
     } else {
         mmio.read_u32(offset)
@@ -29,9 +28,8 @@ pub fn read_u32<S: PageSize>(mmio: &Mmio<S>, offset: usize) -> u32 {
 }
 
 pub unsafe fn write_u32<S: PageSize>(mmio: &mut Mmio<S>, offset: usize, value: u32) {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock()
-            .mmio_write_u32(mmio.base_address + offset, value)
+    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+        ghcb.mmio_write_u32(mmio.base_address + offset, value)
             .expect("couldn't read the MSR using the GHCB protocol")
     } else {
         mmio.write_u32(offset, value)

@@ -160,7 +160,7 @@ pub fn rust64_start() -> ! {
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
     if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        sev::init_ghcb(&BOOT_ALLOC);
+        sev::GHCB_WRAPPER.init(&BOOT_ALLOC);
     }
 
     logging::init_logging();
@@ -290,9 +290,8 @@ pub fn rust64_start() -> ! {
             secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
         } else {
             // Plain old SEV-ES, use the GHCB protocol.
-            if let Some(ghcb) = GHCB_WRAPPER.get() {
-                ghcb.lock()
-                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+            if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+                ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
                     .expect("failed to set AP Jump Table");
             }
         }
@@ -412,7 +411,7 @@ pub fn rust64_start() -> ! {
     // hugepage for the first 2M of memory.
     drop(fwcfg);
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
-        sev::deinit_ghcb();
+        sev::GHCB_WRAPPER.deinit();
     }
     paging::remap_first_huge_page(encrypted());
 

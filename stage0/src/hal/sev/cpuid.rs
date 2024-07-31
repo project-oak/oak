@@ -21,8 +21,8 @@ use oak_sev_guest::cpuid::CpuidInput;
 use crate::sev::GHCB_WRAPPER;
 
 pub fn cpuid(leaf: u32) -> CpuidResult {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock().get_cpuid(CpuidInput { eax: leaf, ecx: 0, xcr0: 0, xss: 0 }).unwrap().into()
+    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+        ghcb.get_cpuid(CpuidInput { eax: leaf, ecx: 0, xcr0: 0, xss: 0 }).unwrap().into()
     } else {
         crate::hal::base::cpuid(leaf)
     }

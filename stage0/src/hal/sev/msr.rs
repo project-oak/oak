@@ -22,8 +22,8 @@ use crate::sev::GHCB_WRAPPER;
 ///
 /// The caller must guarantee that the MSR is valid.
 pub unsafe fn read_msr(msr: &crate::hal::base::Msr, msr_id: u32) -> u64 {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock().msr_read(msr_id).expect("couldn't read the MSR using the GHCB protocol")
+    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+        ghcb.msr_read(msr_id).expect("couldn't read the MSR using the GHCB protocol")
     } else {
         msr.read()
     }
@@ -35,8 +35,8 @@ pub unsafe fn read_msr(msr: &crate::hal::base::Msr, msr_id: u32) -> u64 {
 ///
 /// The caller must guarantee that the MSR is valid.
 pub unsafe fn write_msr(msr: &mut crate::hal::base::Msr, msr_id: u32, val: u64) {
-    if let Some(ghcb) = GHCB_WRAPPER.get() {
-        ghcb.lock().msr_write(msr_id, val).expect("couldn't write the MSR using the GHCB protocol")
+    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+        ghcb.msr_write(msr_id, val).expect("couldn't write the MSR using the GHCB protocol")
     } else {
         msr.write(val)
     }

@@ -32,8 +32,8 @@ pub trait GhcbPortWrite: PortWrite {
 
 impl GhcbPortRead for u8 {
     unsafe fn read_from_port(port: u16) -> Result<Self, &'static str> {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u8(port)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u8(port)
         } else {
             Ok(<u8 as PortRead>::read_from_port(port))
         }
@@ -45,8 +45,8 @@ impl GhcbPortWrite for u8 {
     where
         Self: Sized,
     {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u8(port, value)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u8(port, value)
         } else {
             <u8 as PortWrite>::write_to_port(port, value);
             Ok(())
@@ -56,8 +56,8 @@ impl GhcbPortWrite for u8 {
 
 impl GhcbPortRead for u16 {
     unsafe fn read_from_port(port: u16) -> Result<Self, &'static str> {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u16(port)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u16(port)
         } else {
             Ok(<u16 as PortRead>::read_from_port(port))
         }
@@ -69,8 +69,8 @@ impl GhcbPortWrite for u16 {
     where
         Self: Sized,
     {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u16(port, value)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u16(port, value)
         } else {
             <u16 as PortWrite>::write_to_port(port, value);
             Ok(())
@@ -80,8 +80,8 @@ impl GhcbPortWrite for u16 {
 
 impl GhcbPortRead for u32 {
     unsafe fn read_from_port(port: u16) -> Result<Self, &'static str> {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_read_u32(port)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u32(port)
         } else {
             Ok(<u32 as PortRead>::read_from_port(port))
         }
@@ -93,8 +93,8 @@ impl GhcbPortWrite for u32 {
     where
         Self: Sized,
     {
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock().io_write_u32(port, value)
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u32(port, value)
         } else {
             <u32 as PortWrite>::write_to_port(port, value);
             Ok(())

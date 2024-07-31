@@ -24,18 +24,14 @@ use core::{
 
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-pub use oak_sev_guest::ghcb::Ghcb;
 use oak_sev_guest::{
     crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
     guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
-    msr::{
-        change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SevStatus, SnpPageStateChangeRequest,
-    },
+    msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
-use spinning_top::Spinlock;
+use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -50,7 +46,56 @@ use zeroize::Zeroize;
 
 use crate::{sev_status, BootAllocator};
 
-pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
+pub static GHCB_WRAPPER: Ghcb = Ghcb::new();
+
+pub struct Ghcb {
+    ghcb: OnceCell<Spinlock<GhcbProtocol<'static, oak_sev_guest::ghcb::Ghcb>>>,
+}
+
+impl Ghcb {
+    const fn new() -> Self {
+        Self { ghcb: OnceCell::new() }
+    }
+
+    pub fn init(&self, alloc: &'static BootAllocator) {
+        let ghcb = Box::leak(Box::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
+        let ghcb_addr = VirtAddr::from_ptr(ghcb);
+
+        share_page(Page::containing_address(ghcb_addr));
+
+        ghcb.reset();
+
+        // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
+        if self
+            .ghcb
+            .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
+                Some(PhysAddr::new(vaddr.as_u64()))
+            })))
+            .is_err()
+        {
+            panic!("couldn't initialize GHCB wrapper");
+        }
+
+        // SNP requires that the GHCB is registered with the hypervisor.
+        if sev_status().contains(SevStatus::SNP_ACTIVE) {
+            self.get()
+                .unwrap()
+                .register_with_hypervisor()
+                .expect("couldn't register the GHCB address with the hypervisor");
+        }
+    }
+
+    pub fn deinit(&self) {
+        let ghcb_addr = VirtAddr::new(self.ghcb.get().unwrap().lock().get_gpa().as_u64());
+        unshare_page(Page::containing_address(ghcb_addr));
+    }
+
+    pub fn get(
+        &self,
+    ) -> Option<MutexGuard<'_, RawSpinlock, GhcbProtocol<'static, oak_sev_guest::ghcb::Ghcb>>> {
+        self.ghcb.get().map(|mutex| mutex.lock())
+    }
+}
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -150,42 +195,8 @@ impl<T, A: Allocator> AsMut<T> for Shared<T, A> {
     }
 }
 
-pub fn init_ghcb(alloc: &'static BootAllocator) {
-    let ghcb = Box::leak(Box::new_in(Ghcb::default(), alloc));
-    let ghcb_addr = VirtAddr::from_ptr(ghcb);
-
-    share_page(Page::containing_address(ghcb_addr));
-
-    // SNP requires that the GHCB is registered with the hypervisor.
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() as usize)
-            .expect("invalid address for GHCB location");
-        register_ghcb_location(ghcb_location_request)
-            .expect("couldn't register the GHCB address with the hypervisor");
-    }
-
-    ghcb.reset();
-
-    // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
-    if GHCB_WRAPPER
-        .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
-            Some(PhysAddr::new(vaddr.as_u64()))
-        })))
-        .is_err()
-    {
-        panic!("couldn't initialize GHCB wrapper");
-    }
-}
-
-/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP
-/// enabled.
-pub fn deinit_ghcb() {
-    let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
-    unshare_page(Page::containing_address(ghcb_addr));
-}
-
 /// Shares a single 4KiB page with the hypervisor.
-pub fn share_page(page: Page<Size4KiB>) {
+fn share_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
@@ -211,7 +222,7 @@ pub fn share_page(page: Page<Size4KiB>) {
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD
 /// SEV-SNP enabled.
-pub fn unshare_page(page: Page<Size4KiB>) {
+fn unshare_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
@@ -467,7 +478,6 @@ impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
             GHCB_WRAPPER
                 .get()
                 .expect("GHCB not initialized")
-                .lock()
                 .page_state_change(frame, assignment)?;
         }
 
@@ -668,7 +678,6 @@ pub fn send_guest_message_request<
     GHCB_WRAPPER
         .get()
         .ok_or("GHCB not initialized")?
-        .lock()
         .do_guest_message_request(request_address, response_address)?;
     response_message.validate()?;
     encryptor.decrypt_message::<Response>(response_message.as_ref())
