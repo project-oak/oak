@@ -459,6 +459,8 @@
 <a href="#457" id="457">457</a>
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -486,7 +488,6 @@
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
-<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
@@ -548,8 +549,6 @@
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
-<span class="kw">static </span>ENCRYPTED: OnceCell&lt;u64&gt; = OnceCell::new();
-
 <span class="kw">extern </span><span class="string">"C" </span>{
     <span class="attr">#[link_name = <span class="string">"stack_start"</span>]
     </span><span class="kw">static </span>BOOT_STACK_POINTER: c_void;
@@ -602,17 +601,24 @@
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
 }
 
+<span class="doccomment">/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+</span><span class="kw">pub fn </span>encrypted() -&gt; u64 {
+    <span class="attr">#[no_mangle]
+    </span><span class="kw">static </span><span class="kw-2">mut </span>ENCRYPTED: u64 = <span class="number">0</span>;
+
+    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    </span><span class="kw">unsafe </span>{ ENCRYPTED }
+}
+
 <span class="doccomment">/// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-</span><span class="kw">pub fn </span>rust64_start(encrypted: u64) -&gt; ! {
-    <span class="comment">// We assume 0-th bit is never the encrypted bit.
-    </span><span class="kw">let </span>encrypted = <span class="kw">if </span>encrypted &gt; <span class="number">0 </span>{ <span class="number">1 </span>&lt;&lt; encrypted } <span class="kw">else </span>{ <span class="number">0 </span>};
-
-    paging::init_page_table_refs(encrypted);
+</span><span class="kw">pub fn </span>rust64_start() -&gt; ! {
+    paging::init_page_table_refs(encrypted());
 
     <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
@@ -623,8 +629,6 @@
     logging::init_logging();
     <span class="macro">log::info!</span>(<span class="string">"starting..."</span>);
     <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
-
-    ENCRYPTED.set(encrypted).expect(<span class="string">"encrypted bit already initialized"</span>);
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
         <span class="comment">// Safety: This is safe for SEV-ES and SNP because we're using an originally
@@ -647,7 +651,7 @@
     zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        sev::validate_memory(zero_page.e820_table(), encrypted);
+        sev::validate_memory(zero_page.e820_table(), encrypted());
     }
 
     <span class="comment">/* Set up the machine according to the 64-bit Linux boot protocol.
@@ -673,7 +677,7 @@
     create_idt(idt);
     idt.load();
 
-    paging::map_additional_memory(encrypted);
+    paging::map_additional_memory(encrypted());
 
     <span class="comment">// Initialize the short-term heap. Any allocations that rely on a global
     // allocator before this point will fail.
@@ -873,7 +877,7 @@
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
         sev::deinit_ghcb();
     }
-    paging::remap_first_huge_page(encrypted);
+    paging::remap_first_huge_page(encrypted());
 
     <span class="kw">unsafe </span>{
         jump_to_kernel(entry, zero_page);

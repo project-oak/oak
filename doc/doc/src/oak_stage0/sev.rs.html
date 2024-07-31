@@ -903,7 +903,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         <span class="kw">let </span>pt = <span class="kw-2">&amp;mut </span>page_tables.pt_0;
         pt[page.p1_index()].set_addr(
-            PhysAddr::new(page_start | <span class="kw">crate</span>::ENCRYPTED.get().unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>)),
+            PhysAddr::new(page_start | <span class="kw">crate</span>::encrypted()),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
     }
