@@ -2,13 +2,9 @@
 .section .tdx.bootstrap, "ax"
 .code32
 
-.global gp_handler
-.global vc_handler
+.global ap_start
 
-# dummy handlers. will remove
-gp_handler:
-    hlt
-vc_handler:
+ap_start:
     hlt
 
 # Translated from TD-shim's reset vector

@@ -50,14 +50,6 @@ HIDDEN(PAGE_SIZE = 1 << 7);
 
 /* Gate descriptor flags */
 HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
-HIDDEN(DESCRIPTOR_INTERRUPT_GATE = 0xE << 40);
-
-/* SEV metadata section types; values defined in
- * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
- */
-HIDDEN(SEV_SECTION_UNMEASURED = 0x1);
-HIDDEN(SEV_SECTION_SECRET = 0x2);
-HIDDEN(SEV_SECTION_CPUID = 0x3);
 
 SECTIONS {
     /* Lowest 1MB of memory (the real mode address space) where we place a lot of our data structures, as
@@ -162,7 +154,8 @@ SECTIONS {
         QUAD(BFV_SIZE)
         /* FV header: 4 bytes FV Signature set to EFI_FVH_SIGNATURE '_FVH' */
         LONG(0x4856465F)
-        /* FV header: 4 bytes attributes. https://github.com/confidential-containers/td-shim/blob/main/td-shim/src/fv.rs#L51 */
+        /* FV header: 4 bytes attributes. */
+        /* https://github.com/confidential-containers/td-shim/blob/a7ab6cc310dcf9af0b20895a11898bb53ac156dd/td-shim/src/fv.rs#L51  */
         LONG(0x0004f6ff)
         /* FV header: 2 bytes header length. We have 2 block map entries so it's 56+16=72 bytes */
         SHORT(0x0048)
@@ -198,7 +191,7 @@ SECTIONS {
         BYTE(0xf0)
         /* Attributes */
         BYTE(0x00)
-        /* Size https://github.com/confidential-containers/td-shim/blob/main/td-shim/src/fv.rs#L38 */
+        /* Size https://github.com/confidential-containers/td-shim/blob/a7ab6cc310dcf9af0b20895a11898bb53ac156dd/td-shim/src/fv.rs#L38 */
         BYTE(0x2c) BYTE(0x00) BYTE(0x00)
         /* State */
         BYTE(0x07)
@@ -280,7 +273,6 @@ SECTIONS {
          */
         *(.text .text.* .ltext.*)
         *(.tdx.bootstrap)
-        text_end = .;
     } > bios
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
@@ -351,118 +343,25 @@ SECTIONS {
              0xFFFF)              /* Segment Limit [15:0] */
     } > bios
 
-    /* 32-bit interrupt table */
-    /* See Section 8.2 in AMD64 Architecture Programmer's Manual, Volume 2 for more details. */
-    .rodata.idt ALIGN(8) : {
-        QUAD(0) /*  0 - #DE */
-        QUAD(0) /*  1 - #DB */
-        QUAD(0) /*  2 - #NMI */
-        QUAD(0) /*  3 - #BP */
-        QUAD(0) /*  4 - #OF */
-        QUAD(0) /*  5 - #BR */
-        QUAD(0) /*  6 - #UD */
-        QUAD(0) /*  7 - #NM */
-        QUAD(0) /*  8 - #DF */
-        QUAD(0) /*  9 - reserved */
-        QUAD(0) /* 10 - #TS */
-        QUAD(0) /* 11 - #NP */
-        QUAD(0) /* 12 - #SS */
-        QUAD(   /* 13 - #GP */
-            (gp_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
-            DESCRIPTOR_PRESENT |
-            DESCRIPTOR_INTERRUPT_GATE |
-            cs32 << 16 |                      /* code segment selector */
-            gp_handler & 0xFFFF)              /* target offset [15:0] */
-        QUAD(0) /* 14 - #PF */
-        QUAD(0) /* 15 - reserved */
-        QUAD(0) /* 16 - #MF */
-        QUAD(0) /* 17 - #AC */
-        QUAD(0) /* 18 - #MC */
-        QUAD(0) /* 19 - #XF */
-        QUAD(0) /* 20 - reserved */
-        QUAD(0) /* 21 - #CP */
-        QUAD(0) /* 22 - reserved */
-        QUAD(0) /* 23 - reserved */
-        QUAD(0) /* 24 - reserved */
-        QUAD(0) /* 25 - reserved */
-        QUAD(0) /* 26 - reserved */
-        QUAD(0) /* 27 - reserved */
-        QUAD(0) /* 28 - #HV */
-        QUAD(   /* 29 - #VC */
-            (vc_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
-            DESCRIPTOR_PRESENT |
-            DESCRIPTOR_INTERRUPT_GATE |
-            cs32 << 16 |                      /* code segment selector */
-            vc_handler & 0xFFFF)              /* target offset [15:0] */
-        QUAD(0) /* 30 - #SX */
-        QUAD(0) /* 31 - reserved */
-    } > bios
-    
     .rodata.gdt_desc ALIGN(8) : {
         SHORT(SIZEOF(.rodata.gdt) - 1)
         LONG(ADDR(.rodata.gdt))
     } > bios
 
-    .rodata.idt_desc ALIGN(8) : {
-        SHORT(SIZEOF(.rodata.idt) - 1)
-        LONG(ADDR(.rodata.idt))
-    } > bios
-
     gdt_desc_offset = ADDR(.rodata.gdt_desc);
-    idt_desc_offset = ADDR(.rodata.idt_desc);
 
     /* GUIDed tables have to *end* at 0x20 from the end of the file.
-     * Documentation about the GUID table format can be found in QEMU docs:
-     * https://github.com/qemu/qemu/blob/master/docs/specs/sev-guest-firmware.rst
-     * and EDK2 source code:
+     * Documentation about the GUID table format can be found in EDK2 source code:
      * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm
      *
      * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - (16             /* AMD SEV header       <--------|     */
-                                  + 3*12      /* AMD SEV metadata sections     |     */
-                                  + 16        /* Intel TDX metadata GUID       |     */
-                                  + 16        /* TDVF decriptor       <--------|--|  */
-                                  + 2*32      /* TDVF sections                 |  |  */
-                                  + 22        /* AMD SEV metadata offset block |  |  */
-                                  + 22        /* AMD SEV-ES reset block           |  */
+    .guid_tables TOP - 0x20 - (16             /* Intel TDX metadata GUID             */
+                                  + 16        /* TDVF decriptor       <-----------|  */
+                                  + 2*32      /* TDVF sections                    |  */
                                   + 22        /* Intel TDX metadata offset block  |  */
                                   + 18        /* footer */) : {
-        /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
-         * them together at the end of the file, thus we put them in the .guid_tables section along with
-         * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
-         * https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm
-         *
-         * Size: header is 16 bytes + a number of 12-byte sections.
-         */
-        HIDDEN(sev_guided_structure_start = .);
-        /* Header: uint32 signature ("ASEV"), uint32 length, uint32 version, uint32 number of sections */
-        BYTE(0x41) BYTE(0x53) BYTE(0x45) BYTE(0x56)
-        LONG(sev_guided_structure_end - sev_guided_structure_start)
-        LONG(1)
-        LONG((sev_guided_structure_end - sev_guided_structure_start - 16) / 12)
-        /* Each section has the basic structure of uint32 address, uint32 length, uint32 type
-         * The locations of these pages have been chosen to be the same as EDK2:
-         * https://github.com/tianocore/edk2/blob/c05a218a9758225ddf94eedb365633f2154551da/OvmfPkg/OvmfPkgX64.fdf
-         * Thankfully none of these clashed with existing data structures that we're setting up.
-         */
-        /* Unmeasured page location */
-        /* We mark the stack as unmeasured, as we need to support interrupts before we even know whether
-         * we're running under some form of SEV, and interrupts require a functioning stack.
-         */
-        LONG(ADDR(.stack))
-        LONG(SIZEOF(.stack))
-        LONG(SEV_SECTION_UNMEASURED)
-        /* Secrets page location */
-        LONG(SEV_SECRETS)
-        LONG(0x1000)
-        LONG(SEV_SECTION_SECRET)
-        /* CPUID page location */
-        LONG(SEV_CPUID)
-        LONG(0x1000)
-        LONG(SEV_SECTION_CPUID)
-        HIDDEN(sev_guided_structure_end = .);
 
         /* TDX metadata.
          *
@@ -524,28 +423,6 @@ SECTIONS {
          * Size: each entry is 22 bytes + a 18-byte footer.
          */
         HIDDEN(tables_start = .);
-        /* SEV metadata descriptor: uint32 offset, uint16 size, 16-byte GUID */
-        HIDDEN(sev_metadata_offset_start = .);
-        LONG(TOP - sev_guided_structure_start)
-        SHORT(sev_metadata_offset_end - sev_metadata_offset_start)
-        LONG(0xdc886566)
-        SHORT(0x984a)
-        SHORT(0x4798)
-        SHORT(0x5ea7)
-        BYTE(0x55) BYTE(0x85) BYTE(0xa7) BYTE(0xbf) BYTE(0x67) BYTE(0xcc)
-        HIDDEN(sev_metadata_offset_end = .);
-
-        /* SEV-ES reset block: uint32 addr, uint16 size, 16-byte GUID */
-        HIDDEN(sev_es_reset_block_start = .);
-        LONG(sev_es_start)
-        SHORT(sev_es_reset_block_end - sev_es_reset_block_start)
-        LONG(0x00f771de)
-        SHORT(0x1a7e)
-        SHORT(0x4fcb)
-        SHORT(0x0e89)
-        BYTE(0x68) BYTE(0xc7) BYTE(0x7e) BYTE(0x2f) BYTE(0xb4) BYTE(0x4e)
-        HIDDEN(sev_es_reset_block_end = .);
-
         /* TDX metadata offset block: uint32 addr, uint16 size, 16-byte GUID */
         /* https://github.com/tianocore/edk2/blob/master/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm#L58 */
         HIDDEN(tdx_metadata_offset_start = .);

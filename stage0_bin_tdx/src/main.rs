@@ -24,14 +24,8 @@ pub use oak_stage0::paging;
 mod asm;
 
 /// Entry point for the Rust code in the stage0 BIOS.
-///
-/// # Arguments
-///
-/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
-///   tables.
-#[no_mangle]
-pub extern "C" fn rust64_start(encrypted: u64) -> ! {
-    oak_stage0::rust64_start(encrypted)
+pub extern "C" fn rust64_start() -> ! {
+    oak_stage0::rust64_start()
 }
 
 #[panic_handler]

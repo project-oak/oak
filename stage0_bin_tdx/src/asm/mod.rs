@@ -25,5 +25,3 @@ global_asm!(
     pd_3 = sym crate::paging::PD_3,
     options(att_syntax)
 );
-
-global_asm!(include_str!("ap_boot.s"), options(att_syntax, raw));
