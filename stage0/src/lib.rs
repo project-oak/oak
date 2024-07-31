@@ -187,9 +187,7 @@ pub fn rust64_start() -> ! {
 
     zero_page.fill_e820_table(&mut fwcfg);
 
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        sev::validate_memory(zero_page.e820_table(), encrypted());
-    }
+    hal::accept_memory(zero_page.e820_table());
 
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.

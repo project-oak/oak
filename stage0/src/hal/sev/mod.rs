@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+mod accept_memory;
 mod cpuid;
 mod mmio;
 mod msr;
@@ -22,4 +23,12 @@ mod port;
 pub use cpuid::*;
 pub use mmio::*;
 pub use msr::*;
+use oak_linux_boot_params::BootE820Entry;
+use oak_sev_guest::msr::SevStatus;
 pub use port::*;
+
+pub fn accept_memory(e820_table: &[BootE820Entry]) {
+    if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
+        accept_memory::validate_memory(e820_table, crate::encrypted())
+    }
+}

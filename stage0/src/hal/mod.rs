@@ -20,6 +20,7 @@ mod sev;
 
 use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
+use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
@@ -184,4 +185,12 @@ impl<T: PortWrite> PortWriter<T> for Port<T> {
             Ok(())
         };
     }
+}
+
+/// Marks all memory of the VM as private and accepted.
+///
+/// The exact method is platform-specific, e.g. running PVALIDATE for SEV-SNP.
+pub fn accept_memory(e820_table: &[BootE820Entry]) {
+    #[cfg(feature = "sev")]
+    sev::accept_memory(e820_table)
 }
