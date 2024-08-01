@@ -128,7 +128,6 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -156,7 +155,7 @@
     PhysAddr,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::BOOT_ALLOC;
+<span class="kw">use crate</span>::{BootAllocator, BOOT_ALLOC};
 
 <span class="kw">pub static </span><span class="kw-2">mut </span>PML4: PageTable = PageTable::new();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PDPT: PageTable = PageTable::new();
@@ -165,7 +164,6 @@
 
 <span class="doccomment">/// Wrapper for the page table references so that we can access them via a mutex
 /// rather than directly via unsafe code.
-</span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>PageTableRefs {
     <span class="doccomment">/// The root page-map level 4 table coverting virtual memory ranges
     /// 0..128TiB and (16EiB-128TiB)..16EiB.
@@ -183,14 +181,14 @@
 
     <span class="doccomment">/// The page table covering virtual memory range 0..2MiB where we want 4KiB
     /// pages.
-    </span><span class="kw">pub </span>pt_0: <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>PageTable,
+    </span><span class="kw">pub </span>pt_0: Box&lt;PageTable, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
 }
 
 <span class="doccomment">/// References to all the pages tables we care about.
 </span><span class="kw">pub static </span>PAGE_TABLE_REFS: OnceCell&lt;Spinlock&lt;PageTableRefs&gt;&gt; = OnceCell::new();
 
 <span class="doccomment">/// Initialises the page table references.
-</span><span class="kw">pub fn </span>init_page_table_refs(encrypted: u64) {
+</span><span class="kw">pub fn </span>init_page_table_refs() {
     <span class="comment">// Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
@@ -202,15 +200,15 @@
     <span class="comment">// Set up a new page table that maps the first 2MiB as 4KiB pages, so that we
     // can share individual 4KiB pages with the hypervisor as needed. We are
     // using an identity mapping between virtual and physical addresses.
-    </span><span class="kw">let </span>pt_0 = Box::leak(Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC));
+    </span><span class="kw">let </span><span class="kw-2">mut </span>pt_0 = Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
     pt_0.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
         entry.set_addr(
-            PhysAddr::new(((i <span class="kw">as </span>u64) * Size4KiB::SIZE) | encrypted),
+            PhysAddr::new(((i <span class="kw">as </span>u64) * Size4KiB::SIZE) | <span class="kw">crate</span>::encrypted()),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
     });
     pd_0[<span class="number">0</span>].set_addr(
-        PhysAddr::new(pt_0 <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64 | encrypted),
+        PhysAddr::new(pt_0.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64 | <span class="kw">crate</span>::encrypted()),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
 
@@ -225,13 +223,13 @@
 
 <span class="doccomment">/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
 /// 2MiB that was already mapped as 512 4KiB pages.
-</span><span class="kw">pub fn </span>map_additional_memory(encrypted: u64) {
+</span><span class="kw">pub fn </span>map_additional_memory() {
     {
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
         pd.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
             entry.set_addr(
-                PhysAddr::new(((i <span class="kw">as </span>u64) * Size2MiB::SIZE) | encrypted),
+                PhysAddr::new(((i <span class="kw">as </span>u64) * Size2MiB::SIZE) | <span class="kw">crate</span>::encrypted()),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
             );
         });
@@ -242,7 +240,7 @@
 
 <span class="comment">// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
 // pages, as a single 2MiB huge page again.
-</span><span class="kw">pub fn </span>remap_first_huge_page(encrypted: u64) {
+</span><span class="kw">pub fn </span>remap_first_huge_page() {
     {
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
@@ -251,7 +249,7 @@
         // is 0x00.
         </span><span class="attr">#[allow(clippy::identity_op)]
         </span>pd[<span class="number">0</span>].set_addr(
-            PhysAddr::new(<span class="number">0x0 </span>| encrypted),
+            PhysAddr::new(<span class="number">0x0 </span>| <span class="kw">crate</span>::encrypted()),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
         );
     }
