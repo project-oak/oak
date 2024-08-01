@@ -231,7 +231,7 @@ pub fn rust64_start() -> ! {
     }
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
-    let cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
+    let cmdline_sha2_256_digest = cmdline.measure();
 
     let kernel_info =
         kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -289,7 +289,7 @@ pub fn rust64_start() -> ! {
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
-                measure_byte_slice(ram_disk)
+                ram_disk.measure()
             })
             .unwrap_or_default();
 
@@ -298,7 +298,7 @@ pub fn rust64_start() -> ! {
     // stage1 loads smoothly.
     zero_page.set_type_of_loader(zero_page::BOOT_LOADER_TYPE_UNDEFINED);
 
-    let memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
+    let memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     // Generate Stage0 Event Log data.
     let stage0event = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
@@ -311,7 +311,7 @@ pub fn rust64_start() -> ! {
     };
 
     let event_log_proto = generate_event_log(stage0event);
-    let eventlog_sha2_256_digest = measure_byte_slice(event_log_proto.encoded_events[0].as_bytes());
+    let eventlog_sha2_256_digest = event_log_proto.encoded_events[0].measure();
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
@@ -427,14 +427,20 @@ fn phys_to_virt(address: PhysAddr) -> VirtAddr {
     VirtAddr::new(address.as_u64())
 }
 
-/// Calculates the SHA2-256 digest of `source`.
-fn measure_byte_slice(source: &[u8]) -> Measurement {
-    let mut measurement = Measurement::default();
-    let mut digest = Sha256::default();
-    digest.update(source);
-    let digest = digest.finalize();
-    measurement[..].copy_from_slice(&digest[..]);
-    measurement
+trait Measured {
+    /// Calculates the SHA2-256 digest of `source`.
+    fn measure(&self) -> Measurement;
+}
+
+impl<T: zerocopy::AsBytes + ?Sized> Measured for T {
+    fn measure(&self) -> Measurement {
+        let mut measurement = Measurement::default();
+        let mut digest = Sha256::default();
+        digest.update(self.as_bytes());
+        let digest = digest.finalize();
+        measurement[..].copy_from_slice(&digest[..]);
+        measurement
+    }
 }
 
 fn generate_event_log(measurements: Stage0Measurements) -> EventLog {

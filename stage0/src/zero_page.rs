@@ -24,7 +24,7 @@ use zerocopy::{AsBytes, FromBytes};
 use crate::{
     cmos::Cmos,
     fw_cfg::{find_suitable_dma_address, FwCfg},
-    BOOT_ALLOC,
+    Measured, BOOT_ALLOC,
 };
 
 /// Boot metadata for the Linux kernel.
@@ -93,7 +93,7 @@ impl ZeroPage {
         *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
         *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
 
-        let measurement = crate::measure_byte_slice(buf);
+        let measurement = buf.measure();
 
         // The header information starts at offset 0x01F1 from the start of the setup
         // data.

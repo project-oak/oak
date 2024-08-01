@@ -21,7 +21,10 @@ use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
 
-use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
+use crate::{
+    fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
+    Measured,
+};
 
 /// The default start location and entry point for the kernel if a kernel wasn't
 /// supplied via the QEMU fw_cfg device.
@@ -150,7 +153,7 @@ pub fn try_load_kernel_image(
     let actual_size = fw_cfg.read_file(&file, buf).expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 
-    let measurement = crate::measure_byte_slice(buf);
+    let measurement = buf.measure();
 
     if bzimage {
         // For a bzImage the 64-bit entry point is at offset 0x200 from the start of the
