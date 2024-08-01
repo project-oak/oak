@@ -65,7 +65,7 @@
 
 <span class="kw">pub fn </span>accept_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
     <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
-        accept_memory::validate_memory(e820_table, <span class="kw">crate</span>::encrypted())
+        accept_memory::validate_memory(e820_table)
     }
 }
 </code></pre></div></section></main></body></html>

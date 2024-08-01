@@ -128,6 +128,44 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -151,7 +189,10 @@
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     instructions::tlb::flush_all,
-    structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB, Size4KiB},
+    structures::paging::{
+        page_table::{PageTableEntry, PageTableFlags},
+        PageSize, PageTable, Size2MiB, Size4KiB,
+    },
     PhysAddr,
 };
 
@@ -187,6 +228,40 @@
 <span class="doccomment">/// References to all the pages tables we care about.
 </span><span class="kw">pub static </span>PAGE_TABLE_REFS: OnceCell&lt;Spinlock&lt;PageTableRefs&gt;&gt; = OnceCell::new();
 
+<span class="kw">pub enum </span>PageEncryption {
+    Encrypted,
+    Unencrypted,
+}
+
+<span class="kw">pub trait </span>PageTableEntryWithState {
+    <span class="kw">fn </span>set_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption);
+    <span class="kw">fn </span>address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PhysAddr;
+}
+
+<span class="doccomment">/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+</span><span class="kw">fn </span>encrypted() -&gt; u64 {
+    <span class="attr">#[no_mangle]
+    </span><span class="kw">static </span><span class="kw-2">mut </span>ENCRYPTED: u64 = <span class="number">0</span>;
+
+    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    </span><span class="kw">unsafe </span>{ ENCRYPTED }
+}
+
+<span class="kw">impl </span>PageTableEntryWithState <span class="kw">for </span>PageTableEntry {
+    <span class="kw">fn </span>set_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
+        <span class="kw">let </span>addr = <span class="kw">match </span>state {
+            PageEncryption::Encrypted =&gt; PhysAddr::new(addr.as_u64() | encrypted()),
+            PageEncryption::Unencrypted =&gt; addr,
+        };
+        <span class="self">self</span>.set_addr(addr, flags);
+    }
+
+    <span class="kw">fn </span>address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PhysAddr {
+        PhysAddr::new(<span class="self">self</span>.addr().as_u64() &amp; !encrypted())
+    }
+}
+
 <span class="doccomment">/// Initialises the page table references.
 </span><span class="kw">pub fn </span>init_page_table_refs() {
     <span class="comment">// Safety: accessing the mutable statics here is safe since we only do it once
@@ -202,14 +277,16 @@
     // using an identity mapping between virtual and physical addresses.
     </span><span class="kw">let </span><span class="kw-2">mut </span>pt_0 = Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
     pt_0.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
-        entry.set_addr(
-            PhysAddr::new(((i <span class="kw">as </span>u64) * Size4KiB::SIZE) | <span class="kw">crate</span>::encrypted()),
+        entry.set_address(
+            PhysAddr::new((i <span class="kw">as </span>u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Encrypted,
         );
     });
-    pd_0[<span class="number">0</span>].set_addr(
-        PhysAddr::new(pt_0.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64 | <span class="kw">crate</span>::encrypted()),
+    pd_0[<span class="number">0</span>].set_address(
+        PhysAddr::new(pt_0.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        PageEncryption::Encrypted,
     );
 
     <span class="kw">let </span>page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };
@@ -228,9 +305,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
         pd.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
-            entry.set_addr(
-                PhysAddr::new(((i <span class="kw">as </span>u64) * Size2MiB::SIZE) | <span class="kw">crate</span>::encrypted()),
+            entry.set_address(
+                PhysAddr::new((i <span class="kw">as </span>u64) * Size2MiB::SIZE),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+                PageEncryption::Encrypted,
             );
         });
     }
@@ -245,12 +323,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
 
-        <span class="comment">// Allow identity-op to keep the fact that the address we're talking about here
-        // is 0x00.
-        </span><span class="attr">#[allow(clippy::identity_op)]
-        </span>pd[<span class="number">0</span>].set_addr(
-            PhysAddr::new(<span class="number">0x0 </span>| <span class="kw">crate</span>::encrypted()),
+        pd[<span class="number">0</span>].set_address(
+            PhysAddr::new(<span class="number">0x0</span>),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+            PageEncryption::Encrypted,
         );
     }
 

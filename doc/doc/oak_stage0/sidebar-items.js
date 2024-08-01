@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["create_gdt","create_idt","encrypted","jump_to_kernel","panic","rust64_start","sev_status"],"mod":["paging"]};
+window.SIDEBAR_ITEMS = {"fn":["create_gdt","create_idt","jump_to_kernel","panic","rust64_start","sev_status"],"mod":["paging"]};

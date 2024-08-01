@@ -448,16 +448,6 @@
 <a href="#446" id="446">446</a>
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
-<a href="#457" id="457">457</a>
-<a href="#458" id="458">458</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -596,16 +586,6 @@
     <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
-}
-
-<span class="doccomment">/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
-</span><span class="kw">pub fn </span>encrypted() -&gt; u64 {
-    <span class="attr">#[no_mangle]
-    </span><span class="kw">static </span><span class="kw-2">mut </span>ENCRYPTED: u64 = <span class="number">0</span>;
-
-    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    </span><span class="kw">unsafe </span>{ ENCRYPTED }
 }
 
 <span class="doccomment">/// Entry point for the Rust code in the stage0 BIOS.

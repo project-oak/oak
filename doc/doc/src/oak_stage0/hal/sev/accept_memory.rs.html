@@ -410,18 +410,6 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -454,6 +442,8 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTableEntryWithState};
 
 <span class="comment">//
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
@@ -504,7 +494,6 @@
 <span class="kw">fn </span>pvalidate_range&lt;S: NotGiantPageSize + ValidatablePageSize, T: PageSize, F&gt;(
     range: <span class="kw-2">&amp;</span>PhysFrameRange&lt;S&gt;,
     memory: <span class="kw-2">&amp;mut </span>MappedPage&lt;T&gt;,
-    encrypted: u64,
     flags: PageTableFlags,
     success_counter: <span class="kw-2">&amp;</span>AtomicUsize,
     <span class="kw-2">mut </span>f: F,
@@ -532,7 +521,11 @@
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_addr(frame.start_address() + encrypted, PageTableFlags::PRESENT | flags)
+            entry.set_address(
+                frame.start_address(),
+                PageTableFlags::PRESENT | flags,
+                PageEncryption::Encrypted,
+            )
         })
         .count()
         &gt; <span class="number">0
@@ -547,7 +540,7 @@
             .zip(pages)
             .filter(|(entry, <span class="kw">_</span>)| !entry.is_unused())
             .map(|(entry, page)| (entry, page.pvalidate(success_counter)))
-            .map(|(entry, result)| result.or_else(|err| f(entry.addr(), err)))
+            .map(|(entry, result)| result.or_else(|err| f(entry.address(), err)))
             .find(|result| result.is_err())
         {
             <span class="kw">return </span>err;
@@ -582,27 +575,14 @@
     ///
     /// Args:
     ///   pt: pointer to the page table we can mutate to map 4 KiB pages to
-    /// memory   encrypted: value of the encrypted bit in the page table
-    </span><span class="kw">fn </span>pvalidate(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
-        encrypted: u64,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt;;
+    ///       memory
+    </span><span class="kw">fn </span>pvalidate(<span class="kw-2">&amp;</span><span class="self">self</span>, pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt;;
 }
 
 <span class="kw">impl </span>Validatable4KiB <span class="kw">for </span>PhysFrameRange&lt;Size4KiB&gt; {
-    <span class="kw">fn </span>pvalidate(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
-        encrypted: u64,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
-        pvalidate_range(
-            <span class="self">self</span>,
-            pt,
-            encrypted,
-            PageTableFlags::empty(),
-            <span class="kw-2">&amp;</span>counters::VALIDATED_4K,
-            |_addr, err| <span class="kw">match </span>err {
+    <span class="kw">fn </span>pvalidate(<span class="kw-2">&amp;</span><span class="self">self</span>, pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
+        pvalidate_range(<span class="self">self</span>, pt, PageTableFlags::empty(), <span class="kw-2">&amp;</span>counters::VALIDATED_4K, |_addr, err| {
+            <span class="kw">match </span>err {
                 InstructionError::ValidationStatusNotUpdated =&gt; {
                     <span class="comment">// We don't treat this as an error. It only happens if SEV-SNP is not enabled,
                     // or it is already validated. See the PVALIDATE instruction in
@@ -611,8 +591,8 @@
                     <span class="prelude-val">Ok</span>(())
                 }
                 other =&gt; <span class="prelude-val">Err</span>(other),
-            },
-        )
+            }
+        })
     }
 }
 
@@ -629,7 +609,6 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         pd: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size1GiB&gt;,
         pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
-        encrypted: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt;;
 }
 
@@ -638,26 +617,21 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         pd: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size1GiB&gt;,
         pt: <span class="kw-2">&amp;mut </span>MappedPage&lt;Size2MiB&gt;,
-        encrypted: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InstructionError&gt; {
         pvalidate_range(
             <span class="self">self</span>,
             pd,
-            encrypted,
             PageTableFlags::HUGE_PAGE,
             <span class="kw-2">&amp;</span>counters::VALIDATED_2M,
             |addr, err| <span class="kw">match </span>err {
                 InstructionError::FailSizeMismatch =&gt; {
                     <span class="comment">// 2MiB is no go, fail back to 4KiB pages.
-                    // This will not panic as every address that is 2 MiB-aligned is by definition
-                    // also 4 KiB-aligned.
                     </span>counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(<span class="number">1</span>, Ordering::SeqCst);
-                    <span class="kw">let </span>start = PhysFrame::&lt;Size4KiB&gt;::from_start_address(PhysAddr::new(
-                        addr.as_u64() &amp; !encrypted,
-                    ))
-                    .unwrap();
+                    <span class="comment">// This will not panic as every address that is 2 MiB-aligned is by definition
+                    // also 4 KiB-aligned.
+                    </span><span class="kw">let </span>start = PhysFrame::&lt;Size4KiB&gt;::from_start_address(addr).unwrap();
                     <span class="kw">let </span>range = PhysFrame::range(start, start + <span class="number">512</span>);
-                    range.pvalidate(pt, encrypted)
+                    range.pvalidate(pt)
                 }
                 InstructionError::ValidationStatusNotUpdated =&gt; {
                     <span class="comment">// We don't treat this as an error. It only happens if SEV-SNP is not enabled,
@@ -693,7 +667,7 @@
 
 <span class="doccomment">/// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
 /// `RAM`.
-</span><span class="kw">pub fn </span>validate_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], encrypted: u64) {
+</span><span class="kw">pub fn </span>validate_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
     <span class="macro">log::info!</span>(<span class="string">"starting SEV-SNP memory validation"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
@@ -705,9 +679,10 @@
     </span><span class="kw">if </span>page_tables.pdpt[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">"PDPT[1] is in use"</span>);
     }
-    page_tables.pdpt[<span class="number">1</span>].set_addr(
-        PhysAddr::new(<span class="kw-2">&amp;</span>validation_pd.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 | encrypted),
+    page_tables.pdpt[<span class="number">1</span>].set_address(
+        PhysAddr::new(<span class="kw-2">&amp;</span>validation_pd.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64),
         PageTableFlags::PRESENT,
+        PageEncryption::Encrypted,
     );
 
     <span class="comment">// Page table, for validation with 4 KiB pages.
@@ -718,9 +693,10 @@
     </span><span class="kw">if </span>page_tables.pd_0[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">"PD_0[1] is in use"</span>);
     }
-    page_tables.pd_0[<span class="number">1</span>].set_addr(
-        PhysAddr::new(<span class="kw-2">&amp;</span>validation_pt.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 | encrypted),
+    page_tables.pd_0[<span class="number">1</span>].set_address(
+        PhysAddr::new(<span class="kw-2">&amp;</span>validation_pt.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64),
         PageTableFlags::PRESENT,
+        PageEncryption::Encrypted,
     );
 
     <span class="comment">// We already pvalidated the memory in the first 640KiB of RAM in the boot
@@ -764,7 +740,7 @@
                 PhysFrame::from_start_address(limit).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate memory"</span>);
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt).expect(<span class="string">"failed to validate memory"</span>);
         }
 
         <span class="comment">// If hugepage_limit &gt; hugepage_start, we've got some contiguous 2M chunks that
@@ -778,7 +754,7 @@
             );
             range.page_state_change(PageAssignment::Private).unwrap();
             range
-                .pvalidate(<span class="kw-2">&amp;mut </span>validation_pd, <span class="kw-2">&amp;mut </span>validation_pt, encrypted)
+                .pvalidate(<span class="kw-2">&amp;mut </span>validation_pd, <span class="kw-2">&amp;mut </span>validation_pt)
                 .expect(<span class="string">"failed to validate memory"</span>);
         }
 
@@ -792,7 +768,7 @@
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate memory"</span>);
+            range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt).expect(<span class="string">"failed to validate memory"</span>);
         }
     }
 
@@ -817,7 +793,7 @@
         ))
         .unwrap(),
     );
-    range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt, encrypted).expect(<span class="string">"failed to validate SMBIOS memory"</span>);
+    range.pvalidate(<span class="kw-2">&amp;mut </span>validation_pt).expect(<span class="string">"failed to validate SMBIOS memory"</span>);
 
     <span class="comment">// Safety: the E820 table indicates that this is the correct memory segment.
     </span><span class="kw">let </span>legacy_smbios_range_bytes = <span class="kw">unsafe </span>{
