@@ -38,10 +38,7 @@ use x86_64::{
 use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
-use crate::{
-    paging::{PageEncryption, PageTableEntryWithState},
-    sev_status, BootAllocator,
-};
+use crate::{paging::PageEncryption, sev_status, BootAllocator};
 
 pub static GHCB_WRAPPER: Ghcb = Ghcb::new();
 

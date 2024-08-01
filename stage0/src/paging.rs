@@ -15,15 +15,18 @@
 //
 
 use alloc::boxed::Box;
-use core::ptr::addr_of_mut;
+use core::{
+    ops::{Index, IndexMut},
+    ptr::addr_of_mut,
+};
 
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb::flush_all,
     structures::paging::{
-        page_table::{PageTableEntry, PageTableFlags},
-        PageSize, PageTable, Size2MiB, Size4KiB,
+        page_table::{PageTableEntry as BasePageTableEntry, PageTableFlags},
+        PageSize, PageTable as BasePageTable, PageTableIndex, Size2MiB, Size4KiB,
     },
     PhysAddr,
 };
@@ -60,14 +63,114 @@ pub struct PageTableRefs {
 /// References to all the pages tables we care about.
 pub static PAGE_TABLE_REFS: OnceCell<Spinlock<PageTableRefs>> = OnceCell::new();
 
+/// Thin wrapper around x86::PageTable that uses our PageTableEntry type.
+#[repr(transparent)]
+pub struct PageTable(BasePageTable);
+
+impl PageTable {
+    pub const fn new() -> Self {
+        Self(BasePageTable::new())
+    }
+
+    pub fn zero(&mut self) {
+        self.0.zero()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
+        self.0.iter().map(|entry| entry.into())
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
+        self.0.iter_mut().map(|entry| entry.into())
+    }
+}
+
+impl Index<usize> for PageTable {
+    type Output = PageTableEntry;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.0.index(index).into()
+    }
+}
+
+impl Index<PageTableIndex> for PageTable {
+    type Output = PageTableEntry;
+
+    fn index(&self, index: PageTableIndex) -> &Self::Output {
+        self.0.index(index).into()
+    }
+}
+
+impl IndexMut<usize> for PageTable {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.0.index_mut(index).into()
+    }
+}
+
+impl IndexMut<PageTableIndex> for PageTable {
+    fn index_mut(&mut self, index: PageTableIndex) -> &mut Self::Output {
+        self.0.index_mut(index).into()
+    }
+}
+
+/// Thin wrapper around x86_64::PageTableEntry that forces use of PageEncryption
+/// for addresses.
+#[repr(transparent)]
+#[derive(Clone)]
+pub struct PageTableEntry(BasePageTableEntry);
+
+impl PageTableEntry {
+    /// Map the entry to the specified address with the specified flags and
+    /// encryption state.
+    pub fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
+        let addr = match state {
+            PageEncryption::Encrypted => PhysAddr::new(addr.as_u64() | encrypted()),
+            PageEncryption::Unencrypted => addr,
+        };
+        self.0.set_addr(addr, flags);
+    }
+
+    /// Returns the physical address mapped by this entry. May be zero.
+    pub fn address(&self) -> PhysAddr {
+        PhysAddr::new(self.0.addr().as_u64() & !encrypted())
+    }
+
+    /// Returns whether the entry is zero.
+    pub const fn is_unused(&self) -> bool {
+        self.0.is_unused()
+    }
+
+    /// Sets the entry to zero.
+    pub fn set_unused(&mut self) {
+        self.0.set_unused()
+    }
+
+    /// Returns the flags of this entry.
+    pub const fn flags(&self) -> PageTableFlags {
+        self.0.flags()
+    }
+}
+
+impl From<&BasePageTableEntry> for &PageTableEntry {
+    fn from(value: &BasePageTableEntry) -> Self {
+        // Safety: our PageTableEntry is a transparent wrapper so the memory layout is
+        // the same and does not impose any extra restrictions on valid values.
+        unsafe { &*(value as *const BasePageTableEntry as *const PageTableEntry) }
+    }
+}
+
+impl From<&mut BasePageTableEntry> for &mut PageTableEntry {
+    fn from(value: &mut BasePageTableEntry) -> Self {
+        // Safety: our PageTableEntry is a transparent wrapper so the memory layout is
+        // the same and does not impose any extra restrictions on valid values.
+        unsafe { &mut *(value as *mut BasePageTableEntry as *mut PageTableEntry) }
+    }
+}
+
+/// Encryption state of a page in the page table.
 pub enum PageEncryption {
     Encrypted,
     Unencrypted,
-}
-
-pub trait PageTableEntryWithState {
-    fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption);
-    fn address(&self) -> PhysAddr;
 }
 
 /// Returns the location of the ENCRYPTED bit when running under AMD SEV.
@@ -78,20 +181,6 @@ fn encrypted() -> u64 {
     // Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     unsafe { ENCRYPTED }
-}
-
-impl PageTableEntryWithState for PageTableEntry {
-    fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
-        let addr = match state {
-            PageEncryption::Encrypted => PhysAddr::new(addr.as_u64() | encrypted()),
-            PageEncryption::Unencrypted => addr,
-        };
-        self.set_addr(addr, flags);
-    }
-
-    fn address(&self) -> PhysAddr {
-        PhysAddr::new(self.addr().as_u64() & !encrypted())
-    }
 }
 
 /// Initialises the page table references.

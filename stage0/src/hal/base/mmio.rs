@@ -19,11 +19,11 @@ use core::alloc::Layout;
 
 use x86_64::{
     instructions::tlb::flush_all,
-    structures::paging::{page_table::PageTableEntry, PageSize, PageTableFlags, Size2MiB},
+    structures::paging::{PageSize, PageTableFlags, Size2MiB},
     PhysAddr, VirtAddr,
 };
 
-use crate::paging::{PageEncryption, PageTableEntryWithState, PAGE_TABLE_REFS};
+use crate::paging::{PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
 
 pub struct Mmio<S: PageSize> {
     pub base_address: PhysAddr,

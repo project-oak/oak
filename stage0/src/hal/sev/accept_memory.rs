@@ -25,13 +25,13 @@ use x86_64::{
     structures::paging::{
         frame::PhysFrameRange,
         page::{AddressNotAligned, NotGiantPageSize},
-        Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
+        Page, PageSize, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 use zeroize::Zeroize;
 
-use crate::paging::{PageEncryption, PageTableEntryWithState};
+use crate::paging::{PageEncryption, PageTable};
 
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
