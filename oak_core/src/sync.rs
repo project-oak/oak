@@ -43,6 +43,30 @@ impl<T> OnceCell<T> {
         }
     }
 
+    /// Unsafely deinitializes the cell, returning the contents.
+    ///
+    /// # Safety
+    ///
+    /// This operation is extremely dangerous. The caller needs to guarantee
+    /// that there are no references to the contents of the cell or this will
+    /// trigger undefined behaviour.
+    pub unsafe fn deinit(&self) -> Option<T> {
+        if !self.initialized.load(Ordering::Acquire) {
+            return None;
+        }
+
+        let _lock = self.lock.lock();
+
+        if !self.initialized.load(Ordering::Acquire) {
+            return None;
+        }
+
+        let old = core::mem::replace(&mut *self.value.get(), MaybeUninit::uninit());
+        self.initialized.store(false, Ordering::Release);
+
+        Some(old.assume_init())
+    }
+
     /// Gets a reference to the inner value if the cell has been initialized.
     pub fn get(&self) -> Option<&T> {
         if !self.initialized.load(Ordering::Acquire) {

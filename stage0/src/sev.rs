@@ -79,9 +79,9 @@ impl Ghcb {
         }
     }
 
-    pub fn deinit(&self) {
-        let ghcb_addr = VirtAddr::new(self.ghcb.get().unwrap().lock().get_gpa().as_u64());
-        unshare_page(Page::containing_address(ghcb_addr));
+    pub unsafe fn deinit(&self) {
+        let ghcb = self.ghcb.deinit().unwrap().into_inner().into_inner();
+        unshare_page(Page::containing_address(VirtAddr::from_ptr(ghcb)));
     }
 
     pub fn get(

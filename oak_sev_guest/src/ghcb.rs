@@ -337,6 +337,11 @@ where
         Self { ghcb, gpa }
     }
 
+    /// Consumes the GHCB protocol, yielding back the underlying GHCB block.
+    pub fn into_inner(self) -> &'a mut G {
+        self.ghcb
+    }
+
     /// Resets all of the inner GHCB information to its original state.
     pub fn reset(&mut self) {
         self.ghcb.as_mut().reset();

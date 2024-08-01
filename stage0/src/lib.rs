@@ -399,7 +399,9 @@ pub fn rust64_start() -> ! {
     // hugepage for the first 2M of memory.
     drop(fwcfg);
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
-        sev::GHCB_WRAPPER.deinit();
+        // Safety: we're in the last moments of stage0 and nobody should access the GHCB
+        // beyond this point.
+        unsafe { sev::GHCB_WRAPPER.deinit() };
     }
     paging::remap_first_huge_page();
 
