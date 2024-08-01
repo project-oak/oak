@@ -26,7 +26,9 @@ rust_library(
     srcs = [
         "src/crypto.rs",
         "src/lib.rs",
+        "src/oak_session_context.rs",
         "src/orchestrator_client.rs",
+        "src/tonic.rs",
     ],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
@@ -36,6 +38,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:async-stream",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",

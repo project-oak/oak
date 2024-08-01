@@ -27,10 +27,12 @@ package(
 rust_library(
     name = "lib",
     srcs = [
+        "src/app.rs",
         "src/app_service.rs",
         "src/lib.rs",
     ],
     crate_name = "oak_containers_hello_world_trusted_app",
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",

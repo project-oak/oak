@@ -14,7 +14,9 @@
 // limitations under the License.
 
 pub mod crypto;
+pub mod oak_session_context;
 pub mod orchestrator_client;
+pub mod tonic;
 
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
@@ -29,4 +31,5 @@ const ORCHESTRATOR_IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 // Re-export structs so that they are available at the top level of the SDK.
 pub use crypto::InstanceEncryptionKeyHandle;
+pub use oak_session_context::{ApplicationHandler, OakSessionContext};
 pub use orchestrator_client::OrchestratorClient;
