@@ -155,7 +155,7 @@ pub fn encrypted() -> u64 {
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 pub fn rust64_start() -> ! {
-    paging::init_page_table_refs(encrypted());
+    paging::init_page_table_refs();
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
     // implies SEV-ES).
@@ -212,7 +212,7 @@ pub fn rust64_start() -> ! {
     create_idt(idt);
     idt.load();
 
-    paging::map_additional_memory(encrypted());
+    paging::map_additional_memory();
 
     // Initialize the short-term heap. Any allocations that rely on a global
     // allocator before this point will fail.
@@ -411,7 +411,7 @@ pub fn rust64_start() -> ! {
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
         sev::GHCB_WRAPPER.deinit();
     }
-    paging::remap_first_huge_page(encrypted());
+    paging::remap_first_huge_page();
 
     unsafe {
         jump_to_kernel(entry, zero_page);
