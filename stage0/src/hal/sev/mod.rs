@@ -29,6 +29,6 @@ pub use port::*;
 
 pub fn accept_memory(e820_table: &[BootE820Entry]) {
     if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
-        accept_memory::validate_memory(e820_table, crate::encrypted())
+        accept_memory::validate_memory(e820_table)
     }
 }

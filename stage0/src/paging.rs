@@ -21,7 +21,10 @@ use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb::flush_all,
-    structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB, Size4KiB},
+    structures::paging::{
+        page_table::{PageTableEntry, PageTableFlags},
+        PageSize, PageTable, Size2MiB, Size4KiB,
+    },
     PhysAddr,
 };
 
@@ -57,6 +60,40 @@ pub struct PageTableRefs {
 /// References to all the pages tables we care about.
 pub static PAGE_TABLE_REFS: OnceCell<Spinlock<PageTableRefs>> = OnceCell::new();
 
+pub enum PageEncryption {
+    Encrypted,
+    Unencrypted,
+}
+
+pub trait PageTableEntryWithState {
+    fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption);
+    fn address(&self) -> PhysAddr;
+}
+
+/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+fn encrypted() -> u64 {
+    #[no_mangle]
+    static mut ENCRYPTED: u64 = 0;
+
+    // Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    unsafe { ENCRYPTED }
+}
+
+impl PageTableEntryWithState for PageTableEntry {
+    fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
+        let addr = match state {
+            PageEncryption::Encrypted => PhysAddr::new(addr.as_u64() | encrypted()),
+            PageEncryption::Unencrypted => addr,
+        };
+        self.set_addr(addr, flags);
+    }
+
+    fn address(&self) -> PhysAddr {
+        PhysAddr::new(self.addr().as_u64() & !encrypted())
+    }
+}
+
 /// Initialises the page table references.
 pub fn init_page_table_refs() {
     // Safety: accessing the mutable statics here is safe since we only do it once
@@ -72,14 +109,16 @@ pub fn init_page_table_refs() {
     // using an identity mapping between virtual and physical addresses.
     let mut pt_0 = Box::new_in(PageTable::new(), &BOOT_ALLOC);
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
-        entry.set_addr(
-            PhysAddr::new(((i as u64) * Size4KiB::SIZE) | crate::encrypted()),
+        entry.set_address(
+            PhysAddr::new((i as u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Encrypted,
         );
     });
-    pd_0[0].set_addr(
-        PhysAddr::new(pt_0.as_ref() as *const _ as usize as u64 | crate::encrypted()),
+    pd_0[0].set_address(
+        PhysAddr::new(pt_0.as_ref() as *const _ as usize as u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        PageEncryption::Encrypted,
     );
 
     let page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };
@@ -98,9 +137,10 @@ pub fn map_additional_memory() {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
         pd.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
-            entry.set_addr(
-                PhysAddr::new(((i as u64) * Size2MiB::SIZE) | crate::encrypted()),
+            entry.set_address(
+                PhysAddr::new((i as u64) * Size2MiB::SIZE),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+                PageEncryption::Encrypted,
             );
         });
     }
@@ -115,12 +155,10 @@ pub fn remap_first_huge_page() {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
 
-        // Allow identity-op to keep the fact that the address we're talking about here
-        // is 0x00.
-        #[allow(clippy::identity_op)]
-        pd[0].set_addr(
-            PhysAddr::new(0x0 | crate::encrypted()),
+        pd[0].set_address(
+            PhysAddr::new(0x0),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
+            PageEncryption::Encrypted,
         );
     }
 

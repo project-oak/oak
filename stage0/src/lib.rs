@@ -138,16 +138,6 @@ pub fn sev_status() -> SevStatus {
     unsafe { SEV_STATUS }
 }
 
-/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
-pub fn encrypted() -> u64 {
-    #[no_mangle]
-    static mut ENCRYPTED: u64 = 0;
-
-    // Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    unsafe { ENCRYPTED }
-}
-
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments

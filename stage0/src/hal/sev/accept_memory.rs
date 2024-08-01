@@ -31,6 +31,8 @@ use x86_64::{
 };
 use zeroize::Zeroize;
 
+use crate::paging::{PageEncryption, PageTableEntryWithState};
+
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
 // `PVALIDATE` can only be invoked on 2 MiB and 4 KiB pages.
@@ -80,7 +82,6 @@ impl<S: PageSize> MappedPage<S> {
 fn pvalidate_range<S: NotGiantPageSize + ValidatablePageSize, T: PageSize, F>(
     range: &PhysFrameRange<S>,
     memory: &mut MappedPage<T>,
-    encrypted: u64,
     flags: PageTableFlags,
     success_counter: &AtomicUsize,
     mut f: F,
@@ -108,7 +109,11 @@ where
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_addr(frame.start_address() + encrypted, PageTableFlags::PRESENT | flags)
+            entry.set_address(
+                frame.start_address(),
+                PageTableFlags::PRESENT | flags,
+                PageEncryption::Encrypted,
+            )
         })
         .count()
         > 0
@@ -123,7 +128,7 @@ where
             .zip(pages)
             .filter(|(entry, _)| !entry.is_unused())
             .map(|(entry, page)| (entry, page.pvalidate(success_counter)))
-            .map(|(entry, result)| result.or_else(|err| f(entry.addr(), err)))
+            .map(|(entry, result)| result.or_else(|err| f(entry.address(), err)))
             .find(|result| result.is_err())
         {
             return err;
@@ -158,27 +163,14 @@ trait Validatable4KiB {
     ///
     /// Args:
     ///   pt: pointer to the page table we can mutate to map 4 KiB pages to
-    /// memory   encrypted: value of the encrypted bit in the page table
-    fn pvalidate(
-        &self,
-        pt: &mut MappedPage<Size2MiB>,
-        encrypted: u64,
-    ) -> Result<(), InstructionError>;
+    ///       memory
+    fn pvalidate(&self, pt: &mut MappedPage<Size2MiB>) -> Result<(), InstructionError>;
 }
 
 impl Validatable4KiB for PhysFrameRange<Size4KiB> {
-    fn pvalidate(
-        &self,
-        pt: &mut MappedPage<Size2MiB>,
-        encrypted: u64,
-    ) -> Result<(), InstructionError> {
-        pvalidate_range(
-            self,
-            pt,
-            encrypted,
-            PageTableFlags::empty(),
-            &counters::VALIDATED_4K,
-            |_addr, err| match err {
+    fn pvalidate(&self, pt: &mut MappedPage<Size2MiB>) -> Result<(), InstructionError> {
+        pvalidate_range(self, pt, PageTableFlags::empty(), &counters::VALIDATED_4K, |_addr, err| {
+            match err {
                 InstructionError::ValidationStatusNotUpdated => {
                     // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
                     // or it is already validated. See the PVALIDATE instruction in
@@ -187,8 +179,8 @@ impl Validatable4KiB for PhysFrameRange<Size4KiB> {
                     Ok(())
                 }
                 other => Err(other),
-            },
-        )
+            }
+        })
     }
 }
 
@@ -205,7 +197,6 @@ trait Validatable2MiB {
         &self,
         pd: &mut MappedPage<Size1GiB>,
         pt: &mut MappedPage<Size2MiB>,
-        encrypted: u64,
     ) -> Result<(), InstructionError>;
 }
 
@@ -214,26 +205,21 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
         &self,
         pd: &mut MappedPage<Size1GiB>,
         pt: &mut MappedPage<Size2MiB>,
-        encrypted: u64,
     ) -> Result<(), InstructionError> {
         pvalidate_range(
             self,
             pd,
-            encrypted,
             PageTableFlags::HUGE_PAGE,
             &counters::VALIDATED_2M,
             |addr, err| match err {
                 InstructionError::FailSizeMismatch => {
                     // 2MiB is no go, fail back to 4KiB pages.
+                    counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(1, Ordering::SeqCst);
                     // This will not panic as every address that is 2 MiB-aligned is by definition
                     // also 4 KiB-aligned.
-                    counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(1, Ordering::SeqCst);
-                    let start = PhysFrame::<Size4KiB>::from_start_address(PhysAddr::new(
-                        addr.as_u64() & !encrypted,
-                    ))
-                    .unwrap();
+                    let start = PhysFrame::<Size4KiB>::from_start_address(addr).unwrap();
                     let range = PhysFrame::range(start, start + 512);
-                    range.pvalidate(pt, encrypted)
+                    range.pvalidate(pt)
                 }
                 InstructionError::ValidationStatusNotUpdated => {
                     // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
@@ -269,7 +255,7 @@ impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
 
 /// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type
 /// `RAM`.
-pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
+pub fn validate_memory(e820_table: &[BootE820Entry]) {
     log::info!("starting SEV-SNP memory validation");
 
     let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
@@ -281,9 +267,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PDPT[1] is in use");
     }
-    page_tables.pdpt[1].set_addr(
-        PhysAddr::new(&validation_pd.page_table as *const _ as u64 | encrypted),
+    page_tables.pdpt[1].set_address(
+        PhysAddr::new(&validation_pd.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
+        PageEncryption::Encrypted,
     );
 
     // Page table, for validation with 4 KiB pages.
@@ -294,9 +281,10 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
-    page_tables.pd_0[1].set_addr(
-        PhysAddr::new(&validation_pt.page_table as *const _ as u64 | encrypted),
+    page_tables.pd_0[1].set_address(
+        PhysAddr::new(&validation_pt.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
+        PageEncryption::Encrypted,
     );
 
     // We already pvalidated the memory in the first 640KiB of RAM in the boot
@@ -340,7 +328,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
                 PhysFrame::from_start_address(limit).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate memory");
+            range.pvalidate(&mut validation_pt).expect("failed to validate memory");
         }
 
         // If hugepage_limit > hugepage_start, we've got some contiguous 2M chunks that
@@ -354,7 +342,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
             );
             range.page_state_change(PageAssignment::Private).unwrap();
             range
-                .pvalidate(&mut validation_pd, &mut validation_pt, encrypted)
+                .pvalidate(&mut validation_pd, &mut validation_pt)
                 .expect("failed to validate memory");
         }
 
@@ -368,7 +356,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
                 PhysFrame::from_start_address(limit_address).unwrap(),
             );
             range.page_state_change(PageAssignment::Private).unwrap();
-            range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate memory");
+            range.pvalidate(&mut validation_pt).expect("failed to validate memory");
         }
     }
 
@@ -393,7 +381,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         ))
         .unwrap(),
     );
-    range.pvalidate(&mut validation_pt, encrypted).expect("failed to validate SMBIOS memory");
+    range.pvalidate(&mut validation_pt).expect("failed to validate SMBIOS memory");
 
     // Safety: the E820 table indicates that this is the correct memory segment.
     let legacy_smbios_range_bytes = unsafe {

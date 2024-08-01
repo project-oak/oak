@@ -38,7 +38,10 @@ use x86_64::{
 use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
-use crate::{sev_status, BootAllocator};
+use crate::{
+    paging::{PageEncryption, PageTableEntryWithState},
+    sev_status, BootAllocator,
+};
 
 pub static GHCB_WRAPPER: Ghcb = Ghcb::new();
 
@@ -199,9 +202,10 @@ fn share_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_addr(
+        pt[page.p1_index()].set_address(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Unencrypted,
         );
     }
     tlb::flush_all();
@@ -230,9 +234,10 @@ fn unshare_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_addr(
-            PhysAddr::new(page_start | crate::encrypted()),
+        pt[page.p1_index()].set_address(
+            PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Encrypted,
         );
     }
     tlb::flush_all();
