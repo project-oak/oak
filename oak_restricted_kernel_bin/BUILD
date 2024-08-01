@@ -21,12 +21,20 @@ package(
     licenses = ["notice"],
 )
 
+_RK_RUSTC_FLAGS = [
+    "-C",
+    "relocation-model=static",
+    "-C",
+    "target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+]
+
 rust_binary(
     name = "oak_restricted_kernel_bin_virtio_console_channel",
     srcs = ["src/main.rs"],
     crate_features = ["virtio_console_channel"],
     linker_script = "//oak_restricted_kernel:layout.ld",
     platform = "//:x86_64-unknown-none",
+    rustc_flags = _RK_RUSTC_FLAGS,
     deps = [
         "//oak_linux_boot_params",
         "//oak_restricted_kernel:oak_restricted_kernel_virtio_console_channel",
@@ -39,6 +47,7 @@ rust_binary(
     crate_features = ["simple_io_channel"],
     linker_script = "//oak_restricted_kernel:layout.ld",
     platform = "//:x86_64-unknown-none",
+    rustc_flags = _RK_RUSTC_FLAGS,
     deps = [
         "//oak_linux_boot_params",
         "//oak_restricted_kernel:oak_restricted_kernel_simple_io_channel",

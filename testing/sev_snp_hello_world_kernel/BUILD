@@ -26,6 +26,10 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     compile_data = ["src/asm/boot.s"],
     linker_script = ":layout.ld",
+    rustc_flags = [
+        "-C",
+        "relocation-model=static",
+    ],
     target_compatible_with = [
         "//:x86_64-none-setting",
     ],

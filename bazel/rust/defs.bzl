@@ -32,9 +32,7 @@ def setup_rust_dependencies():
 
     _BARE_METAL_RUSTC_FLAGS = [
         "-C",
-        "relocation-model=static",
-        "-C",
-        "target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+        "target-feature=+avx,+avx2,-soft-float",
     ]
 
     # Creates remote repositories for Rust toolchains, required for cross-compiling.

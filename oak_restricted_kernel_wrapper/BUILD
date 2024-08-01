@@ -34,6 +34,10 @@ rust_binary(
     rustc_env = {
         "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel)",
     },
+    rustc_flags = [
+        "-C",
+        "relocation-model=pie",
+    ],
     deps = [
         "@//oak_linux_boot_params",
         "@oak_no_std_crates_index//:elf",
@@ -55,6 +59,10 @@ rust_binary(
     rustc_env = {
         "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel)",
     },
+    rustc_flags = [
+        "-C",
+        "relocation-model=pie",
+    ],
     deps = [
         "@//oak_linux_boot_params",
         "@oak_no_std_crates_index//:elf",

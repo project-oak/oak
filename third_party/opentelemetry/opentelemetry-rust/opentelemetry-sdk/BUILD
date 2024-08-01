@@ -22,12 +22,12 @@ package(
 
 rust_library(
     name = "opentelemetry_rk_sdk",
-    srcs = glob(["src/metrics/**"])
-    + glob(["src/resource/**"])
-    + [
-     "src/instrumentation.rs",
-     "src/lib.rs",
-     "src/export/mod.rs",
+    srcs = glob(["src/metrics/**"]) + glob([
+        "src/resource/**",
+    ]) + [
+        "src/export/mod.rs",
+        "src/instrumentation.rs",
+        "src/lib.rs",
     ],
     deps = [
         "//oak_core",
@@ -37,28 +37,29 @@ rust_library(
 
 rust_library(
     name = "opentelemetry_rk_sdk_test_lib",
-    srcs = glob(["src/metrics/**"])
-    + glob(["src/resource/**"])
-    + glob(["src/testing/**"])
-    + [
-     "src/instrumentation.rs",
-     "src/lib.rs",
-     "src/export/mod.rs",
+    srcs = glob(["src/metrics/**"]) + glob([
+        "src/resource/**",
+    ]) + glob([
+        "src/testing/**",
+    ]) + [
+        "src/export/mod.rs",
+        "src/instrumentation.rs",
+        "src/lib.rs",
     ],
+    visibility = ["//visibility:private"],
     deps = [
         "//oak_core",
         "//third_party/opentelemetry/opentelemetry-rust/opentelemetry:opentelemetry_rk",
         "@oak_crates_index//:temp-env",
     ],
-    visibility = ["//visibility:private"],
 )
 
 rust_test(
     name = "opentelemetry_rk_sdk_test",
     size = "small",
     crate = ":opentelemetry_rk_sdk_test_lib",
-    deps = [
-      "@oak_crates_index//:temp-env",
-      ],
     features = ["testing"],
+    deps = [
+        "@oak_crates_index//:temp-env",
+    ],
 )
