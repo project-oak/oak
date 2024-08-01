@@ -458,8 +458,6 @@
 <a href="#456" id="456">456</a>
 <a href="#457" id="457">457</a>
 <a href="#458" id="458">458</a>
-<a href="#459" id="459">459</a>
-<a href="#460" id="460">460</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -649,9 +647,7 @@
 
     zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        sev::validate_memory(zero_page.e820_table(), encrypted());
-    }
+    hal::accept_memory(zero_page.e820_table());
 
     <span class="comment">/* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
