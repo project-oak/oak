@@ -28,16 +28,17 @@ rust_library(
     crate_name = "oak_stage0_dice",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
     ]),
     deps = [
         "//oak_dice",
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:hex",
-        "@oak_no_std_crates_index//:hkdf",
-        "@oak_no_std_crates_index//:rand_core",
-        "@oak_no_std_crates_index//:sha2",
+        "@oak_no_std_no_avx_crates_index//:hex",
+        "@oak_no_std_no_avx_crates_index//:hkdf",
+        "@oak_no_std_no_avx_crates_index//:rand_core",
+        "@oak_no_std_no_avx_crates_index//:sha2",
     ] +
     # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
     select_std_crates([

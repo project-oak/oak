@@ -138,6 +138,8 @@ create_oak_crate_repositories(
     lockfile = "//:cargo-bazel-test-lock.json",
     no_std_cargo_lockfile = "//:Cargo_no_std-test.bazel.lock",
     no_std_lockfile = "//:cargo-no-std-test-bazel-lock.json",
+    no_std_no_avx_cargo_lockfile = "//:Cargo_no_std_no_avx-test.bazel.lock",
+    no_std_no_avx_lockfile = "//:cargo-no-std-no-avx-test-bazel-lock.json",
 )
 
 load("@oak2//bazel/crates:crates.bzl", "load_oak_crate_repositories")

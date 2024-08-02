@@ -318,7 +318,7 @@ bazel-clippy:
     scripts/clippy_clean
 
 bazel-repin:
-    env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index
+    env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 bazel-fmt:
     buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.

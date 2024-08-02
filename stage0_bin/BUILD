@@ -13,35 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-rust_library(
-    name = "oak_attestation",
-    srcs = glob(["src/**"]),
-    target_compatible_with = either_platform([
-        "//:x86_64-linux-setting",
-        "//:x86_64-none-no_avx-setting",
-        "//:x86_64-none-setting",
-    ]),
+rust_binary(
+    name = "stage0_bin",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = {"@//stage0": "oak_stage0"},
+    compile_data = [
+        "src/asm/boot.s",
+        "src/asm/ap_boot.s",
+        "src/asm/reset_vector.s",
+    ],
+    features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
+    linker_script = ":layout.ld",
+    platform = "//:x86_64-firmware",
+    rustc_flags = [
+        "--codegen=relocation-model=static",
+        "--codegen=opt-level=z",
+        "--codegen=lto=fat",
+        "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=256K",
+    ],
     deps = [
-        "//micro_rpc",
-        "//oak_crypto",
-        "//oak_dice",
-        "//oak_proto_rust",
-    ] + select_std_crates([
-        "anyhow",
-        "ciborium",
-        "coset",
-        "p256",
-        "prost",
-        "rand_core",
-        "sha2",
-        "zeroize",
-    ]),
+        "//stage0",
+    ],
 )

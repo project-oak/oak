@@ -54,6 +54,28 @@ HIDDEN(SEV_SECTION_UNMEASURED = 0x1);
 HIDDEN(SEV_SECTION_SECRET = 0x2);
 HIDDEN(SEV_SECTION_CPUID = 0x3);
 
+/*
+ * LD doesn't follow the order of the layout script when placing segments without explicit phdrs
+ * defined, so we define all the phdrs explicitly.
+ */
+PHDRS
+{
+    boot PT_LOAD;
+    ap_text PT_LOAD;
+    ap_bss PT_LOAD;
+    bss PT_LOAD;
+    stack PT_LOAD;
+    ebda PT_LOAD;
+    rodata PT_LOAD;
+    text PT_LOAD;
+    data PT_LOAD;
+    descriptors PT_LOAD;
+    text16 PT_LOAD;
+    guid_tables PT_LOAD;
+    descriptors PT_LOAD;
+    reset_vector PT_LOAD;
+}
+
 SECTIONS {
     /* Lowest 1MB of memory (the real mode address space) where we place a lot of our data structures, as
      * that region is usually avoided by OS kernels.
@@ -61,26 +83,26 @@ SECTIONS {
      * https://wiki.osdev.org/Memory_Map_(x86)
      * https://google.github.io/crosvm/appendix/memory_layout.html
      * https://github.com/tianocore/edk2/blob/master/OvmfPkg/OvmfPkgX64.fdf
-     * 
+     *
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
-    
+
     .boot 0x1000 (NOLOAD) : {
         KEEP(*(.boot))
         . = ALIGN(4K);
-    } > ram_low
+    } > ram_low : boot
 
     .ap_text : AT(TOP - 4K) {
         ap_text_start = .;
         *(.ap_text .ap_text.*)
-        ap_text_size = . - ap_text_start;
-    } > ram_low
+        ap_text_size = SIZEOF(.ap_text);
+    } > ram_low : ap_text
 
     .ap_bss (NOLOAD) : AT (ADDR(.ap_text) + SIZEOF(.ap_text)) {
         ap_bss_start = .;
         *(.ap_bss .ap_bss.*)
-        ap_bss_size = . - ap_bss_start;
-    } > ram_low
+        ap_bss_size = SIZEOF(.ap_bss);
+    } > ram_low : ap_bss
 
     ASSERT(. <= 0x10000, "AP bootstrap code needs to be in the first 64K")
 
@@ -90,24 +112,14 @@ SECTIONS {
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         *(.bss .bss.* .lbss.*)
-        bss_size = . - bss_start;
-    } > ram_low
-
-    .data : 
-    AT ( ADDR (.text) + SIZEOF (.text) ) {
-        data_start = .;
-        /* Include large section (.ldata) to support large code model.
-         * See <https://lld.llvm.org/ELF/large_sections.html>.
-         */
-        *(.data .data.* .ldata.*)
-        data_size = . - data_start;
-    } > ram_low
+        bss_size = SIZEOF(.bss);
+    } > ram_low : bss
 
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
         . += 32K;
         stack_start = .;
-    } > ram_low
+    } > ram_low : stack
 
     /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
      * the first KiB of the EBDA.
@@ -117,18 +129,18 @@ SECTIONS {
         KEEP(*(.ebda.rsdp))
         . = ALIGN(1K);
         *(.ebda .ebda.*)
-    } > ram_low
-    
+    } > ram_low : ebda
+
     ASSERT(. <= 0xA0000, "EBDA overflow")
 
     . = ORIGIN(bios);
 
     .rodata : {
-        /* Include large section (.lrodata) to support large code model. 
+        /* Include large section (.lrodata) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         KEEP(*(.rodata .rodata.* .lrodata.*))
-    } > bios
+    } > bios : rodata
 
     .text : {
         /* Include large section (.ltext) to support large code model.
@@ -136,16 +148,27 @@ SECTIONS {
          */
         *(.text .text.* .ltext.*)
         text_end = .;
-    } > bios
+    } > bios : text
+
+    .data :
+    AT ( ADDR (.text) + SIZEOF (.text) ) {
+        data_start = .;
+        /* Include large section (.ldata) to support large code model.
+         * See <https://lld.llvm.org/ELF/large_sections.html>.
+         */
+        *(.data .data.* .ldata.*)
+        data_size = SIZEOF(.data);
+    } > ram_low : data
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
      * possible; max TOP - 32k. */
 
     .text16 ALIGN(TOP - 4K + SIZEOF(.ap_text), 16) : {
         *(.text16 .text16.*)
-    } > bios
+    } > bios : text16
 
-    .rodata.gdt ALIGN(8) : {
+    .gdt ALIGN(8) : {
+        HIDDEN(gdt_start = ABSOLUTE(.));
          /* Null segment */
         QUAD(0)
         /* 64-bit code segment (see Section 4.8.1):
@@ -157,7 +180,7 @@ SECTIONS {
          *  - C/D=1 (code)
          *  - C=0
          */
-        cs = . - ADDR(.rodata.gdt);
+        cs = (. - gdt_start);
         QUAD(SEGMENT_LONG |
              SEGMENT_PRESENT |
              SEGMENT_USER |
@@ -175,7 +198,7 @@ SECTIONS {
          * Although according to the manual in 64-bit mode WRITABLE should be ignored, at least qemu
          * will cause a #GP if we try to load SS with a segment descriptor that doesn't have it set.
          */
-        ds = . - ADDR(.rodata.gdt);
+        ds = (. - gdt_start);
         QUAD(SEGMENT_4K |
              SEGMENT_DEFAULT_32BIT_OP |
              SEGMENT_PRESENT |
@@ -192,7 +215,7 @@ SECTIONS {
          *  - C/D=1 (code segment)
          *  - limit = 0xFFFFF (in 4K blocks because G=1)
          */
-        cs32 = . - ADDR(.rodata.gdt);
+        cs32 = (. - gdt_start);
         QUAD(SEGMENT_4K |
              SEGMENT_DEFAULT_32BIT_OP |
              SEGMENT_PRESENT |
@@ -201,11 +224,11 @@ SECTIONS {
              SEGMENT_ACCESSED |
              (0xF << (32 + 16)) | /* Segment Limit [19:16] */
              0xFFFF)              /* Segment Limit [15:0] */
-    } > bios
+    } > bios : descriptors
 
     /* 32-bit interrupt table */
     /* See Section 8.2 in AMD64 Architecture Programmer's Manual, Volume 2 for more details. */
-    .rodata.idt ALIGN(8) : {
+    .idt ALIGN(8) : {
         QUAD(0) /*  0 - #DE */
         QUAD(0) /*  1 - #DB */
         QUAD(0) /*  2 - #NMI */
@@ -248,20 +271,20 @@ SECTIONS {
             vc_handler & 0xFFFF)              /* target offset [15:0] */
         QUAD(0) /* 30 - #SX */
         QUAD(0) /* 31 - reserved */
-    } > bios
-    
-    .rodata.gdt_desc ALIGN(8) : {
-        SHORT(SIZEOF(.rodata.gdt) - 1)
-        LONG(ADDR(.rodata.gdt))
-    } > bios
+    } > bios : descriptors
 
-    .rodata.idt_desc ALIGN(8) : {
-        SHORT(SIZEOF(.rodata.idt) - 1)
-        LONG(ADDR(.rodata.idt))
-    } > bios
+    .gdt_desc ALIGN(8) : {
+        SHORT(SIZEOF(.gdt) - 1)
+        LONG(ADDR(.gdt))
+    } > bios : descriptors
 
-    gdt_desc_offset = ADDR(.rodata.gdt_desc) & 0xFFFF;
-    idt_desc_offset = ADDR(.rodata.idt_desc) & 0xFFFF;
+    .idt_desc ALIGN(8) : {
+        SHORT(SIZEOF(.idt) - 1)
+        LONG(ADDR(.idt))
+    } > bios : descriptors
+
+    gdt_desc_offset = ADDR(.gdt_desc) & 0xFFFF;
+    idt_desc_offset = ADDR(.idt_desc) & 0xFFFF;
 
     /* GUIDed tables have to *end* at 0x20 from the end of the file.
      * Documentation about the GUID table format can be found in QEMU docs:
@@ -347,16 +370,18 @@ SECTIONS {
         SHORT(0xeaba)
         BYTE(0xa3) BYTE(0x66) BYTE(0xc5) BYTE(0x5a) BYTE(0x08) BYTE(0x2d)
         HIDDEN(tables_end = .);
-    } > bios
+    } > bios : guid_tables
 
     ASSERT((. == TOP - 0x20), "GUID tables are to expected to end at top - 0x20")
 
     /* The reset vector needs to be placed 0x10 from the end of the file. */
     .reset_vector TOP - 0x10 : {
         *(.reset_vector)
+        current = ABSOLUTE(.);
         FILL(0x00)
-        . = TOP;
-    } > bios
+        . += TOP - current;
+    } > bios : reset_vector
+    ASSERT((. == TOP), "The reset vector must end at top")
 
     /DISCARD/ : {
         *(.eh_frame)

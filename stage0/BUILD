@@ -25,8 +25,10 @@ package(
 rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
+    crate_features = ["sev"],
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
@@ -43,14 +45,14 @@ rust_library(
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:bitflags",
-        "@oak_no_std_crates_index//:elf",
-        "@oak_no_std_crates_index//:hex",
-        "@oak_no_std_crates_index//:hkdf",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:rand_core",
-        "@oak_no_std_crates_index//:sha2",
-        "@oak_no_std_crates_index//:zeroize",
+        "@oak_no_std_no_avx_crates_index//:bitflags",
+        "@oak_no_std_no_avx_crates_index//:elf",
+        "@oak_no_std_no_avx_crates_index//:hex",
+        "@oak_no_std_no_avx_crates_index//:hkdf",
+        "@oak_no_std_no_avx_crates_index//:log",
+        "@oak_no_std_no_avx_crates_index//:rand_core",
+        "@oak_no_std_no_avx_crates_index//:sha2",
+        "@oak_no_std_no_avx_crates_index//:zeroize",
     ] +
     # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
     select_std_crates([

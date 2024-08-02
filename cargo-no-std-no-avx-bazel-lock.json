@@ -1,5 +1,5 @@
 {
-  "checksum": "f059e884389142dbaeb1c0c7eebba4aa9c8734d3620e90eb6f5b8bf02040536c",
+  "checksum": "a1d186633245b3a1c12f76b801e6e867bd0cdcd156457904097504daeb77ca0c",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -5271,6 +5271,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "force-soft"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {

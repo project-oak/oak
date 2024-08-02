@@ -27,6 +27,7 @@ rust_library(
     srcs = glob(["src/**"]),
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
     ]),
     deps = [
@@ -44,6 +45,7 @@ rust_library(
     crate_name = "sev_serial",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.
     ]),
     deps = [

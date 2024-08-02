@@ -30,6 +30,7 @@ rust_library(
     ],
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
@@ -55,6 +56,7 @@ rust_library(
     crate_name = "oak_sev_guest",
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [

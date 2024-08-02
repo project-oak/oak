@@ -44,3 +44,15 @@ constraint_value(
     name = "soft_float_OFF",
     constraint_setting = "soft_float",
 )
+
+constraint_setting(name = "code_model")
+
+constraint_value(
+    name = "code_model_LARGE",
+    constraint_setting = "code_model",
+)
+
+constraint_value(
+    name = "code_model_NORMAL",
+    constraint_setting = "code_model",
+)

@@ -321,9 +321,24 @@ load("//bazel/rust:deps.bzl", "load_rust_repositories")
 
 load_rust_repositories()
 
-load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
+load("//bazel/rust:defs.bzl", "RUST_NIGHTLY_DATE", "setup_rust_dependencies")
 
 setup_rust_dependencies()
+
+load("//bazel/rust:stdlibs.bzl", "stdlibs")
+
+# Download rust std library sources to enable rebuilding.
+stdlibs(
+    name = "stdlibs",
+    build_file = "//bazel/rust:stdlibs.BUILD",
+    nightly_date = RUST_NIGHTLY_DATE,
+    sha256 = "13522984cb33bffab69eae981bfd0b0f44f914d81db93523852c0ab32f01b11e",
+)
+
+# Register a toolchain using the rebuilt std libraries.
+register_toolchains(
+    "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none",
+)
 
 new_local_repository(
     name = "systemd",

@@ -31,7 +31,9 @@ load_oak_crate_repositories()
 
 load("@oak_crates_index//:defs.bzl", "crate_repositories")
 load("@oak_no_std_crates_index//:defs.bzl", no_std_crate_repositories = "crate_repositories")
+load("@oak_no_std_no_avx_crates_index//:defs.bzl", no_std_no_avx_crate_repositories = "crate_repositories")
 
 def load_oak_crate_repositories():
     crate_repositories()
     no_std_crate_repositories()
+    no_std_no_avx_crate_repositories()

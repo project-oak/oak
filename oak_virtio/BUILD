@@ -27,6 +27,7 @@ rust_library(
     srcs = glob(["src/**"]),
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [

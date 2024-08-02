@@ -37,6 +37,7 @@ rust_library(
     target_compatible_with = either_platform([
         "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
     ]),
     deps = _OAK_CHANNEL_DEPS,
 )

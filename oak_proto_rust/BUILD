@@ -33,6 +33,7 @@ rust_library(
     target_compatible_with = either_platform([
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
         "//:wasm32-none-setting",
     ]),
     deps = [

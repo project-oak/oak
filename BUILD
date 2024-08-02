@@ -51,6 +51,7 @@ platform(
         "@platforms//os:none",
         "//bazel/rust:avx_ON",
         "//bazel/rust:soft_float_OFF",
+        "//bazel/rust:code_model_NORMAL",
     ],
 )
 
@@ -61,6 +62,21 @@ platform(
         "@platforms//os:none",
         "//bazel/rust:avx_OFF",
         "//bazel/rust:soft_float_ON",
+        "//bazel/rust:code_model_NORMAL",
+    ],
+)
+
+platform(
+    name = "x86_64-firmware",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_OFF",
+        "//bazel/rust:soft_float_ON",
+        # We need a large code model for the firmware, since the relative
+        # offsets between the firmware execution memory (below 1MiB) and the
+        # firmware ROM (just below 4GiB) exceeds 2GiB.
+        "//bazel/rust:code_model_LARGE",
     ],
 )
 
@@ -83,15 +99,28 @@ platform(
 # To mark targets to build for x86_64 on bare metal, use this setting.
 # This way you can exclude your target from being built for
 # wasm on bare metal or for x86_64 on Linux.
+#
+# This specifically targets bare metal targets where AVX is enabled.
 selects.config_setting_group(
     name = "x86_64-none-setting",
     match_all = [
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
+        "//bazel/rust:avx_ON",
     ],
 )
 
-# Same as previous setting, but for wasm on bare metal.
+# Same as previous setting, but for bare metal with AVX disabled.
+selects.config_setting_group(
+    name = "x86_64-none-no_avx-setting",
+    match_all = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_OFF",
+    ],
+)
+
+# Same as previous setting, but for wasm.
 selects.config_setting_group(
     name = "wasm32-none-setting",
     match_all = [
