@@ -22,6 +22,8 @@ use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
+use oak_stage0_dice::DerivedKey;
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,
@@ -187,10 +189,49 @@ impl<T: PortWrite> PortWriter<T> for Port<T> {
     }
 }
 
-/// Marks all memory of the VM as private and accepted.
+/// Performs platform-specific initializations (for example, accepts guest
+/// memory)
 ///
-/// The exact method is platform-specific, e.g. running PVALIDATE for SEV-SNP.
-pub fn accept_memory(e820_table: &[BootE820Entry]) {
+/// What exactly is done depends on the platform (SEV or TDX).
+///
+/// This code is run early in the startup process. You will have access to the
+/// boot allocator and logging, but _not_ the global heap allocator.
+pub fn initialize_platform(e820_table: &[BootE820Entry]) {
     #[cfg(feature = "sev")]
-    sev::accept_memory(e820_table)
+    sev::initialize_platform(e820_table)
+}
+
+/// Returns an attestation report.
+///
+/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+/// report. In other cases it generates an empty attestation report for testing.
+/// The additional data will be set in both cases to bind the DICE chain to the
+/// attestation report.
+///
+/// # Arguments
+///
+/// * `report_data` - The custom data that must be included in the report. This
+///   is typically used to bind information (such as the hash of a public key)
+///   to the report.
+pub fn get_attestation(
+    report_data: [u8; REPORT_DATA_SIZE],
+) -> Result<AttestationReport, &'static str> {
+    #[cfg(feature = "sev")]
+    return sev::get_attestation(report_data);
+    #[cfg(not(feature = "sev"))]
+    return base::get_attestation(report_data);
+}
+
+/// Requests a derived key.
+///
+/// The key is derived from the VCEK. The key derivation mixes in the VM launch
+/// measurement and guest policy and uses VMPL0.
+///
+/// We use this key as the unique device secret for deriving compound devices
+/// identifiers for each layer, and eventually a sealing key in the last layer.
+pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
+    #[cfg(feature = "sev")]
+    return sev::get_derived_key();
+    #[cfg(not(feature = "sev"))]
+    return base::get_derived_key();
 }

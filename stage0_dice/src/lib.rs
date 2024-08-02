@@ -42,7 +42,7 @@ use p256::ecdsa::SigningKey;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
-type DerivedKey = [u8; 32];
+pub type DerivedKey = [u8; 32];
 
 /// Measurements of various components in Stage1.
 #[derive(Default)]

@@ -19,4 +19,7 @@ mod mmio;
 
 pub use cpuid::*;
 pub use mmio::*;
+pub use oak_stage0_dice::{
+    mock_attestation_report as get_attestation, mock_derived_key as get_derived_key,
+};
 pub use x86_64::registers::model_specific::Msr;

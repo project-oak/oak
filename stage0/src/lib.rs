@@ -50,7 +50,6 @@ mod acpi_tables;
 mod allocator;
 mod apic;
 mod cmos;
-mod dice_attestation;
 mod fw_cfg;
 mod hal;
 mod initramfs;
@@ -177,7 +176,7 @@ pub fn rust64_start() -> ! {
 
     zero_page.fill_e820_table(&mut fwcfg);
 
-    hal::accept_memory(zero_page.e820_table());
+    hal::initialize_platform(zero_page.e820_table());
 
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
@@ -212,9 +211,6 @@ pub fn rust64_start() -> ! {
         zero_page.try_fill_hdr_from_setup_data(&mut fwcfg).unwrap_or_default();
 
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        // Initialize the Guest Message encryptor for generating attestation reports and
-        // a unique device secret.
-        sev::init_guest_message_encryptor().expect("couldn't initialize guest message encryptor");
         // Safety: we're only interested in the pointer value of SEV_SECRETS, not its
         // contents.
         let cc_blob = Box::leak(Box::new_in(
@@ -347,8 +343,8 @@ pub fn rust64_start() -> ! {
     let dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             &measurements,
-            dice_attestation::get_attestation,
-            dice_attestation::get_derived_key,
+            hal::get_attestation,
+            hal::get_derived_key,
             tee_platform,
         ),
         &crate::BOOT_ALLOC,

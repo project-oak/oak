@@ -23,9 +23,7 @@ use core::{
 
 use oak_core::sync::OnceCell;
 use oak_sev_guest::{
-    crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
-    guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
@@ -35,8 +33,6 @@ use x86_64::{
     structures::paging::{Page, PageSize, PageTableFlags, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
-use zeroize::Zeroize;
 
 use crate::{paging::PageEncryption, sev_status, BootAllocator};
 
@@ -90,10 +86,6 @@ impl Ghcb {
         self.ghcb.get().map(|mutex| mutex.lock())
     }
 }
-
-/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
-/// message protocol.
-static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlock::new(None);
 
 /// Allocator that forces allocations to be 4K-aligned (and sized) and marks the
 /// pages as shared.
@@ -244,48 +236,4 @@ fn unshare_page(page: Page<Size4KiB>) {
             panic!("shared page revalidation failed");
         }
     }
-}
-
-/// Initializes the Guest Message encryptor using VMPCK0.
-pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
-    // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
-    // requirements on the underlying bytes.
-    let key = &mut unsafe { crate::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)?);
-    // Once the we have read VMPCK0 we wipe it so that later boot stages cannot
-    // request attestation reports or derived sealing keys for VMPL0. This stops
-    // later boot stages from creating counterfeit DICE chains.
-    key.zeroize();
-    // The sev-guest driver in the upstream kernel does not initialize with such
-    // an empty vmpck. So we fill it up with 0xFF.
-    key.fill(0xFF);
-    Ok(())
-}
-
-/// Sends a request to the Secure Processor using the Guest Message Protocol.
-pub fn send_guest_message_request<
-    Request: AsBytes + FromBytes + Message,
-    Response: AsBytes + FromBytes + Message,
->(
-    request: Request,
-) -> Result<Response, &'static str> {
-    let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    let encryptor = guard.as_mut().ok_or("guest message encryptor is not initialized")?;
-    let alloc = &crate::SHORT_TERM_ALLOC;
-    let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
-    encryptor.encrypt_message(request, request_message.as_mut())?;
-    let response_message = Shared::new_in(GuestMessage::new(), alloc);
-
-    let request_address =
-        PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref() as *const GuestMessage).as_u64());
-    let response_address = PhysAddr::new(
-        VirtAddr::from_ptr(response_message.as_ref() as *const GuestMessage).as_u64(),
-    );
-
-    GHCB_WRAPPER
-        .get()
-        .ok_or("GHCB not initialized")?
-        .do_guest_message_request(request_address, response_address)?;
-    response_message.validate()?;
-    encryptor.decrypt_message::<Response>(response_message.as_ref())
 }
