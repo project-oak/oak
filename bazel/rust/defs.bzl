@@ -14,8 +14,13 @@ RUST_VERSIONS = [
 
 RUST_EDITION = "2021"
 
-def setup_rust_dependencies():
-    """Set up the various rust-related dependencies. Call this after load_rust_repositories()."""
+def setup_rust_dependencies(oak_repo_name = "oak"):
+    """Set up the various rust-related dependencies. Call this after load_rust_repositories().
+
+
+    Args:
+        oak_repo_name: to be used when Oak repo is renamed.
+    """
     rules_rust_dependencies()
 
     rust_register_toolchains(
@@ -30,23 +35,38 @@ def setup_rust_dependencies():
         },
     )
 
-    _BARE_METAL_RUSTC_FLAGS = [
-        "-C",
-        "target-feature=+avx,+avx2,-soft-float",
-    ]
-
     # Creates remote repositories for Rust toolchains, required for cross-compiling.
     rust_repository_set(
         name = "rust_toolchain_repo",
         edition = RUST_EDITION,
         exec_triple = "x86_64-unknown-linux-gnu",
         extra_rustc_flags = {
-            "x86_64-unknown-none": _BARE_METAL_RUSTC_FLAGS,
+            "x86_64-unknown-none": ["-C", "target-feature=+avx,+avx2,-soft-float"],
         },
         extra_target_triples = {
             "x86_64-unknown-none": [
                 "@platforms//cpu:x86_64",
                 "@platforms//os:none",
+                "@%s//bazel/rust:avx_ON" % oak_repo_name,
+                "@%s//bazel/rust:soft_float_OFF" % oak_repo_name,
+            ],
+        },
+        versions = RUST_VERSIONS,
+    )
+
+    rust_repository_set(
+        name = "rust_noavx_softfloat_toolchain_repo",
+        edition = RUST_EDITION,
+        exec_triple = "x86_64-unknown-linux-gnu",
+        extra_rustc_flags = {
+            "x86_64-unknown-none": ["-C", "target-feature=+soft-float"],
+        },
+        extra_target_triples = {
+            "x86_64-unknown-none": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "@%s//bazel/rust:avx_OFF" % oak_repo_name,
+                "@%s//bazel/rust:soft_float_ON" % oak_repo_name,
             ],
         },
         versions = RUST_VERSIONS,

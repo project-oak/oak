@@ -123,7 +123,7 @@ load_rust_repositories()
 
 load("@oak2//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
-setup_rust_dependencies()
+setup_rust_dependencies(oak_repo_name = "oak2")
 
 load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies", "rules_cc_toolchains")
 

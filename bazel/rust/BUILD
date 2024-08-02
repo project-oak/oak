@@ -14,4 +14,33 @@
 # limitations under the License.
 #
 
-package(licenses = ["notice"])
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+# Controls the use of the +avx and +avx2 C compiler features.
+constraint_setting(name = "avx")
+
+constraint_value(
+    name = "avx_ON",
+    constraint_setting = "avx",
+)
+
+constraint_value(
+    name = "avx_OFF",
+    constraint_setting = "avx",
+)
+
+# Controls the use of the soft-float C compiler feature.
+constraint_setting(name = "soft_float")
+
+constraint_value(
+    name = "soft_float_ON",
+    constraint_setting = "soft_float",
+)
+
+constraint_value(
+    name = "soft_float_OFF",
+    constraint_setting = "soft_float",
+)

@@ -49,6 +49,18 @@ platform(
     constraint_values = [
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
+        "//bazel/rust:avx_ON",
+        "//bazel/rust:soft_float_OFF",
+    ],
+)
+
+platform(
+    name = "x86_64-unknown-none-noavx-softfloat",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_OFF",
+        "//bazel/rust:soft_float_ON",
     ],
 )
 

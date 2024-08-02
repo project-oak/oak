@@ -30,7 +30,7 @@ rust_binary(
     ],
     features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
     linker_script = ":layout.ld",
-    platform = "//:x86_64-unknown-none",
+    platform = "//:x86_64-unknown-none-noavx-softfloat",
     rustc_env = {
         "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel)",
     },
@@ -55,7 +55,7 @@ rust_binary(
     ],
     features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
     linker_script = ":layout.ld",
-    platform = "//:x86_64-unknown-none",
+    platform = "//:x86_64-unknown-none-noavx-softfloat",
     rustc_env = {
         "PAYLOAD_PATH": "$(location //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel)",
     },
