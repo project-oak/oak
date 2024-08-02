@@ -437,13 +437,13 @@
     structures::paging::{
         frame::PhysFrameRange,
         page::{AddressNotAligned, NotGiantPageSize},
-        Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
+        Page, PageSize, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zeroize::Zeroize;
 
-<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTableEntryWithState};
+<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTable};
 
 <span class="comment">//
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,

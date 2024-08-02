@@ -739,6 +739,11 @@
 <a href="#737" id="737">737</a>
 <a href="#738" id="738">738</a>
 <a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1076,6 +1081,11 @@
         </span><span class="kw">let </span>gpa = translate(virtual_address)
             .expect(<span class="string">"couldn't translate the GHCB virtual address to a physical address"</span>);
         <span class="self">Self </span>{ ghcb, gpa }
+    }
+
+    <span class="doccomment">/// Consumes the GHCB protocol, yielding back the underlying GHCB block.
+    </span><span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>G {
+        <span class="self">self</span>.ghcb
     }
 
     <span class="doccomment">/// Resets all of the inner GHCB information to its original state.

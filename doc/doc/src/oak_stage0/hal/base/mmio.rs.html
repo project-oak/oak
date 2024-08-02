@@ -112,11 +112,11 @@
 
 <span class="kw">use </span>x86_64::{
     instructions::tlb::flush_all,
-    structures::paging::{page_table::PageTableEntry, PageSize, PageTableFlags, Size2MiB},
+    structures::paging::{PageSize, PageTableFlags, Size2MiB},
     PhysAddr, VirtAddr,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTableEntryWithState, PAGE_TABLE_REFS};
+<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
 
 <span class="kw">pub struct </span>Mmio&lt;S: PageSize&gt; {
     <span class="kw">pub </span>base_address: PhysAddr,

@@ -120,6 +120,30 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -163,6 +187,30 @@
             lock: Spinlock::new(()),
             value: UnsafeCell::new(MaybeUninit::uninit()),
         }
+    }
+
+    <span class="doccomment">/// Unsafely deinitializes the cell, returning the contents.
+    ///
+    /// # Safety
+    ///
+    /// This operation is extremely dangerous. The caller needs to guarantee
+    /// that there are no references to the contents of the cell or this will
+    /// trigger undefined behaviour.
+    </span><span class="kw">pub unsafe fn </span>deinit(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;T&gt; {
+        <span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
+            <span class="kw">return </span><span class="prelude-val">None</span>;
+        }
+
+        <span class="kw">let </span>_lock = <span class="self">self</span>.lock.lock();
+
+        <span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
+            <span class="kw">return </span><span class="prelude-val">None</span>;
+        }
+
+        <span class="kw">let </span>old = core::mem::replace(<span class="kw-2">&amp;mut *</span><span class="self">self</span>.value.get(), MaybeUninit::uninit());
+        <span class="self">self</span>.initialized.store(<span class="bool-val">false</span>, Ordering::Release);
+
+        <span class="prelude-val">Some</span>(old.assume_init())
     }
 
     <span class="doccomment">/// Gets a reference to the inner value if the cell has been initialized.

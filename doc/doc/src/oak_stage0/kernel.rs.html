@@ -228,6 +228,9 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -251,7 +254,10 @@
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
-<span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
+<span class="kw">use crate</span>::{
+    fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
+    Measured,
+};
 
 <span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn't
 /// supplied via the QEMU fw_cfg device.
@@ -380,7 +386,7 @@
     <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">"could not read kernel file"</span>);
     <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">"kernel size did not match expected size"</span>);
 
-    <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
+    <span class="kw">let </span>measurement = buf.measure();
 
     <span class="kw">if </span>bzimage {
         <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the

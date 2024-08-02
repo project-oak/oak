@@ -448,6 +448,14 @@
 <a href="#446" id="446">446</a>
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -681,7 +689,7 @@
     }
 
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
-    <span class="kw">let </span>cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
+    <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
 
     <span class="kw">let </span>kernel_info =
         kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -739,7 +747,7 @@
         initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
-                measure_byte_slice(ram_disk)
+                ram_disk.measure()
             })
             .unwrap_or_default();
 
@@ -748,7 +756,7 @@
     // stage1 loads smoothly.
     </span>zero_page.set_type_of_loader(zero_page::BOOT_LOADER_TYPE_UNDEFINED);
 
-    <span class="kw">let </span>memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
+    <span class="kw">let </span>memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     <span class="comment">// Generate Stage0 Event Log data.
     </span><span class="kw">let </span>stage0event = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
@@ -761,7 +769,7 @@
     };
 
     <span class="kw">let </span>event_log_proto = generate_event_log(stage0event);
-    <span class="kw">let </span>eventlog_sha2_256_digest = measure_byte_slice(event_log_proto.encoded_events[<span class="number">0</span>].as_bytes());
+    <span class="kw">let </span>eventlog_sha2_256_digest = event_log_proto.encoded_events[<span class="number">0</span>].measure();
 
     <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
@@ -849,7 +857,9 @@
     // hugepage for the first 2M of memory.
     </span>drop(fwcfg);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
-        sev::GHCB_WRAPPER.deinit();
+        <span class="comment">// Safety: we're in the last moments of stage0 and nobody should access the GHCB
+        // beyond this point.
+        </span><span class="kw">unsafe </span>{ sev::GHCB_WRAPPER.deinit() };
     }
     paging::remap_first_huge_page();
 
@@ -877,14 +887,20 @@
     </span>VirtAddr::new(address.as_u64())
 }
 
-<span class="doccomment">/// Calculates the SHA2-256 digest of `source`.
-</span><span class="kw">fn </span>measure_byte_slice(source: <span class="kw-2">&amp;</span>[u8]) -&gt; Measurement {
-    <span class="kw">let </span><span class="kw-2">mut </span>measurement = Measurement::default();
-    <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
-    digest.update(source);
-    <span class="kw">let </span>digest = digest.finalize();
-    measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
-    measurement
+<span class="kw">trait </span>Measured {
+    <span class="doccomment">/// Calculates the SHA2-256 digest of `source`.
+    </span><span class="kw">fn </span>measure(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Measurement;
+}
+
+<span class="kw">impl</span>&lt;T: zerocopy::AsBytes + <span class="question-mark">?</span>Sized&gt; Measured <span class="kw">for </span>T {
+    <span class="kw">fn </span>measure(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Measurement {
+        <span class="kw">let </span><span class="kw-2">mut </span>measurement = Measurement::default();
+        <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
+        digest.update(<span class="self">self</span>.as_bytes());
+        <span class="kw">let </span>digest = digest.finalize();
+        measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
+        measurement
+    }
 }
 
 <span class="kw">fn </span>generate_event_log(measurements: Stage0Measurements) -&gt; EventLog {
