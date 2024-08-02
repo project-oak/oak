@@ -48,11 +48,7 @@ impl Ghcb {
     }
 
     pub fn init(&self, alloc: &'static BootAllocator) {
-        let ghcb = Box::leak(Box::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
-        let ghcb_addr = VirtAddr::from_ptr(ghcb);
-
-        share_page(Page::containing_address(ghcb_addr));
-
+        let ghcb = Shared::leak(Shared::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
         ghcb.reset();
 
         // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
@@ -75,9 +71,16 @@ impl Ghcb {
         }
     }
 
-    pub unsafe fn deinit(&self) {
+    /// Deallocates the GHCB block.
+    ///
+    /// # Safety
+    ///
+    /// The caller needs to guarantee that nobody has a reference to the GHCB
+    /// when this function is called and that nobody will try to use the GHCB
+    /// after the function returns.
+    pub unsafe fn deinit(&self, alloc: &'static BootAllocator) {
         let ghcb = self.ghcb.deinit().unwrap().into_inner().into_inner();
-        unshare_page(Page::containing_address(VirtAddr::from_ptr(ghcb)));
+        let _ = Shared::from_raw_in(ghcb, alloc);
     }
 
     pub fn get(
@@ -152,6 +155,27 @@ impl<T, A: Allocator> Shared<T, A> {
         A: 'static,
     {
         Self { inner: Box::new_in(t, SharedAllocator::new(alloc)) }
+    }
+
+    /// See `Box::from_raw_in` for documentation.
+    ///
+    /// # Safety
+    ///
+    /// The caller needs to guarantee that (a) the pointer was obtained by
+    /// `Shared::leak` and (b) the allocator you pass in is exactly the same as
+    /// was used for the original allocation of the `Shared`.
+    ///
+    /// Again, see `Box::from_raw_in` for more details.
+    pub unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Shared<T, A> {
+        Self { inner: Box::from_raw_in(raw, SharedAllocator::new(alloc)) }
+    }
+
+    /// See `Box::leak` for documentation.
+    pub fn leak<'a>(s: Shared<T, A>) -> &'a mut T
+    where
+        A: 'a,
+    {
+        Box::leak(s.inner)
     }
 }
 

@@ -397,7 +397,7 @@ pub fn rust64_start() -> ! {
     if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
         // Safety: we're in the last moments of stage0 and nobody should access the GHCB
         // beyond this point.
-        unsafe { sev::GHCB_WRAPPER.deinit() };
+        unsafe { sev::GHCB_WRAPPER.deinit(&BOOT_ALLOC) };
     }
     paging::remap_first_huge_page();
 
