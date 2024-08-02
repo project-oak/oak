@@ -32,6 +32,9 @@
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -48,7 +51,9 @@
 // limitations under the License.
 
 </span><span class="kw">pub mod </span>crypto;
+<span class="kw">pub mod </span>oak_session_context;
 <span class="kw">pub mod </span>orchestrator_client;
+<span class="kw">pub mod </span>tonic;
 
 <span class="comment">// Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
@@ -63,5 +68,6 @@
 
 <span class="comment">// Re-export structs so that they are available at the top level of the SDK.
 </span><span class="kw">pub use </span>crypto::InstanceEncryptionKeyHandle;
+<span class="kw">pub use </span>oak_session_context::{ApplicationHandler, OakSessionContext};
 <span class="kw">pub use </span>orchestrator_client::OrchestratorClient;
 </code></pre></div></section></main></body></html>
