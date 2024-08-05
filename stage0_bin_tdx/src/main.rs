@@ -62,7 +62,7 @@ fn write_u32(n: u32) {
     for c in b.iter().rev() {
         write_byte_hex(*c);
     }
-    write_u8_to_serial('\r' as u8);
+    write_u8_to_serial(b'\n');
 }
 
 fn write_u64(n: u64) {
@@ -70,14 +70,14 @@ fn write_u64(n: u64) {
     for c in b.iter().rev() {
         write_byte_hex(*c);
     }
-    write_u8_to_serial('\r' as u8);
+    write_u8_to_serial(b'\n');
 }
 
 fn write_str(s: &str) {
     for c in s.bytes() {
         write_u8_to_serial(c);
     }
-    write_u8_to_serial(b'\r');
+    write_u8_to_serial(b'\n');
 }
 
 fn debug_u32_variable(s: &str, val: u32) {

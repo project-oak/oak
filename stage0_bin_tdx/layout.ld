@@ -249,17 +249,13 @@ SECTIONS {
     /* The ROM area is read only. We need to hard code the page table here
      * and use it to switch to 64-bit long mode. After entering the 64-bit
      * long mode, we are able to make tdcall to accept memory for ram_low
-     * section and create another set of page tables there.
-     * offset is     : 0x00001000
-     * memory address: 0xffe01000 */
+     * section and create another set of page tables there. */
     .page_tables ALIGN(4K): AT (TOP - BFV_SIZE + 0x1000) {
         bios_pml4 = .;                              /*    CR3    */
         QUAD(ADDR(.page_tables) + 0x1000 + 0x23)    /* 0..512GiB */
         FILL(0)
         . = bios_pml4 + 0x1000;
 
-        /* offset is     : 0x00002000 */
-        /* memory address: 0xffe02000 */
         bios_pdpt = .;
         QUAD(ADDR(.page_tables) + 0x2000 + 0x23)    /* 0..1GiB */
         QUAD(0)
@@ -268,15 +264,11 @@ SECTIONS {
         FILL(0)
         . = bios_pdpt + 0x1000;
 
-        /* offset is     : 0x00003000 */
-        /* memory address: 0xffe03000 */
         bios_pd_0 = .;
         QUAD(0x0 + 0xA3) /* 0..2MiB, HUGE_PAGE | PAGE_ACCESSED | PAGE_READ_WRITE | PAGE_PRESENT */
         FILL(0)
         . = bios_pd_0 + 0x1000;
 
-        /* offset is     : 0x00004000 */
-        /* memory address: 0xffe04000 */
         bios_pd_3 = .;
         FILL(0)
         . = bios_pd_3 + 0xFF8;
