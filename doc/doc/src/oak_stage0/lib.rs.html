@@ -851,7 +851,7 @@
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
         <span class="comment">// Safety: we're in the last moments of stage0 and nobody should access the GHCB
         // beyond this point.
-        </span><span class="kw">unsafe </span>{ sev::GHCB_WRAPPER.deinit() };
+        </span><span class="kw">unsafe </span>{ sev::GHCB_WRAPPER.deinit(<span class="kw-2">&amp;</span>BOOT_ALLOC) };
     }
     paging::remap_first_huge_page();
 
