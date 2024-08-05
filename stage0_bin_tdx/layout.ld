@@ -246,40 +246,6 @@ SECTIONS {
 
     ASSERT(. == TOP - BFV_SIZE + 120 + 24 + 4, "wrong BFV header size")
 
-    /* The ROM area is read only. We need to hard code the page table here
-     * and use it to switch to 64-bit long mode. After entering the 64-bit
-     * long mode, we are able to make tdcall to accept memory for ram_low
-     * section and create another set of page tables there. */
-    .page_tables ALIGN(4K): AT (TOP - BFV_SIZE + 0x1000) {
-        bios_pml4 = .;                              /*    CR3    */
-        QUAD(ADDR(.page_tables) + 0x1000 + 0x23)    /* 0..512GiB */
-        FILL(0)
-        . = bios_pml4 + 0x1000;
-
-        bios_pdpt = .;
-        QUAD(ADDR(.page_tables) + 0x2000 + 0x23)    /* 0..1GiB */
-        QUAD(0)
-        QUAD(0)
-        QUAD(ADDR(.page_tables) + 0x3000 + 0x23)    /* 3..4GiB */
-        FILL(0)
-        . = bios_pdpt + 0x1000;
-
-        bios_pd_0 = .;
-        QUAD(0x0 + 0xA3) /* 0..2MiB, HUGE_PAGE | PAGE_ACCESSED | PAGE_READ_WRITE | PAGE_PRESENT */
-        FILL(0)
-        . = bios_pd_0 + 0x1000;
-
-        bios_pd_3 = .;
-        FILL(0)
-        . = bios_pd_3 + 0xFF8;
-        QUAD(0xFFE000A1) /* 4GiB-2MiB..4GiB, HUGE_PAGE | PAGE_ACCESSED | PAGE_PRESENT */
-    } > bios
-    ASSERT((bios_pml4 == ADDR(.page_tables)), "wrong pml4 address")
-    ASSERT((bios_pdpt == ADDR(.page_tables) + 0x1000), "wrong pdpt address")
-    ASSERT((bios_pd_0 == ADDR(.page_tables) + 0x2000), "wrong pd_0 address")
-    ASSERT((bios_pd_3 == ADDR(.page_tables) + 0x3000), "wrong pd_3 address")
-    ASSERT((. == ADDR(.page_tables) + 0x4000), "wrong page table size")
-
     .rodata : {
         /* Include large section (.lrodata) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.

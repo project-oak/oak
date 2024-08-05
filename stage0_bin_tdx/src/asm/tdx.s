@@ -43,9 +43,44 @@ _tdx_32bit_long_mode_start:
     bts $0x05, %eax # PAE
     movl %eax, %cr4
 
-    # page tables are set in the linker script
-    movl $bios_pml4, %ecx
-    movl %ecx, %cr3
+    # Clear BSS: base address goes to EDI, value (0) goes to EAX,
+    # count goes into ECX. Page tables will be located in BSS
+    movl $bss_start, %edi
+    movl $bss_size,  %ecx
+    xorl %eax, %eax
+    rep stosb
+
+    # Set the first entry of PML4 to point to PDPT (0..512GiB).
+    movl ${pdpt}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    movl %esi, ({pml4})        # set first half of PML4[0]
+
+    # Set the first entry of PDPT to point to PD_0 (0..1GiB).
+    movl ${pd_0}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    movl %esi, ({pdpt})        # set first half of PDPT[0]
+
+    # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
+    movl ${pdpt}, %eax
+    movl ${pd_3}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    movl %esi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
+
+    # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
+    movl $0x83, %esi           # esi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
+    movl %esi, ({pd_0})        # set first half of PD_0[0]
+
+    # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
+    # This is where the firmware ROM image is mapped, so we don't make it writable.
+    movl ${pd_3}, %eax
+    movl $0xFFE00000, %esi     # address of 4GiB-2MiB
+    orl $0x81, %esi           # esi |= 129 (PRESENT and HUGE_PAGE)
+    movl %esi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
+
+    # Reload PML4 to use the writable PML4
+    #xorl %eax, %eax
+    movl ${pml4}, %eax
+    movl %eax, %cr3
 
     # In a TDX VM, IA32_EFER msr is set by tdx module.
     # No need for rdmsr/wrmsr
@@ -80,50 +115,11 @@ _tdx_64bit_start:
     movl $data_size,  %ecx
     rep movsd
 
-    # Clear BSS: base address goes to EDI, value (0) goes to EAX,
-    # count goes into ECX.
-    movq $bss_start, %rdi
-    movq $bss_size,  %rcx
-    xorq %rax, %rax
-    rep stosq
-
     # Set up the stack. Stack now is in ram_low
     movl $stack_start, %esp
     push $0
 
     movl $0xdeadbeaf, (TEST_DATA)
-
-    # Set the first entry of PML4 to point to PDPT (0..512GiB).
-    movl ${pdpt}, %esi
-    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
-    movl %esi, ({pml4})        # set first half of PML4[0]
-
-    # Set the first entry of PDPT to point to PD_0 (0..1GiB).
-    movl ${pd_0}, %esi
-    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
-    movl %esi, ({pdpt})        # set first half of PDPT[0]
-
-    # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
-    movl ${pdpt}, %eax
-    movl ${pd_3}, %esi
-    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
-    movl %esi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
-
-    # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
-    movl $0x83, %esi           # esi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
-    movl %esi, ({pd_0})        # set first half of PD_0[0]
-
-    # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
-    # This is where the firmware ROM image is mapped, so we don't make it writable.
-    movl ${pd_3}, %eax
-    movl $0xFFE00000, %esi     # address of 4GiB-2MiB
-    orl $0x81, %esi           # esi |= 129 (PRESENT and HUGE_PAGE)
-    movl %esi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
-
-    # Reload PML4 to use the writable PML4
-    xorq %rax, %rax
-    movl ${pml4}, %eax
-    movq %rax, %cr3
 
     # ...and jump to Rust code.
     jmp rust64_start
