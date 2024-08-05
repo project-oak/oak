@@ -349,7 +349,18 @@ git-check-diff:
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.
 bazel-cache-test:
     mkdir --parents target
-    bazel test --config=unsafe-fast-presubmit --build_event_text_file=./target/bazel_bep_1.txt --execution_log_binary_file=./target/bazel_exec_1.log -- //cc/bazel_cache_test:test
+    bazel build \
+      --config=unsafe-fast-presubmit \
+      --build_event_text_file=target/bazel_bep_1.txt \
+      --execution_log_binary_file=target/bazel_exec_1.log \
+      -- \
+      //oak_dice:all
+    bazel test \
+      --config=unsafe-fast-presubmit \
+      --build_event_text_file=target/bazel_bep_2.txt \
+      --execution_log_binary_file=target/bazel_exec_2.log \
+      -- \
+      //cc/bazel_cache_test:test
 
 format:
     bazel build linter && bazel-bin/linter/linter --fix

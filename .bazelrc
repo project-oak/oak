@@ -71,7 +71,8 @@ test:ci --test_arg=--nocapture
 # Inherit from the ci config.
 build:unsafe-fast-presubmit --config=ci
 build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
-build:unsafe-fast-presubmit --remote_upload_local_results=false
+build:unsafe-fast-presubmit --remote_upload_local_results=true
+build:unsafe-fast-presubmit --google_default_credentials=true
 
 # https://github.com/bazelbuild/bazel/issues/9342
 # --experimental_check_desugar_deps (on by default) breaks Android builds with remote execution
