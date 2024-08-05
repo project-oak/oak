@@ -21,11 +21,14 @@ mod sev;
 use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
 use oak_linux_boot_params::BootE820Entry;
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use oak_sev_guest::{
+    io::{IoPortFactory, PortReader, PortWriter},
+    msr::PageAssignment,
+};
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
+    structures::paging::{Page, PageSize, Size4KiB},
     PhysAddr,
 };
 
@@ -143,6 +146,8 @@ pub use x86_64::structures::port::PortRead;
 #[cfg(not(feature = "sev"))]
 pub use x86_64::structures::port::PortWrite;
 
+use crate::paging::PageEncryption;
+
 impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for PortFactory
 where
     T: PortRead + PortWrite + 'a,
@@ -250,4 +255,38 @@ pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
     return sev::get_derived_key();
     #[cfg(not(feature = "sev"))]
     return base::get_derived_key();
+}
+
+/// Ask for the page state to be changed by the hypervisor.
+pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) {
+    #[cfg(feature = "sev")]
+    sev::change_page_state(page, state).unwrap();
+}
+
+/// Validate one page of memory.
+///
+/// This operation is required for SEV after going from a SHARED state to a
+/// PRIVATE state.
+pub fn revalidate_page(page: Page<Size4KiB>) {
+    #[cfg(feature = "sev")]
+    sev::revalidate_page(page).unwrap();
+}
+
+/// Mask to use in the page tables for the given encrypion state.
+///
+/// SEV and TDX have opposite behaviours: for SEV, encrypted pages are marked;
+/// for TDX, unencrypted pages are marked.
+pub fn page_table_mask(encryption_state: PageEncryption) -> u64 {
+    #[cfg(feature = "sev")]
+    return sev::page_table_mask(encryption_state);
+    #[cfg(not(feature = "sev"))]
+    return 0;
+}
+
+/// Encrypted/shared bit mask irrespective of its semantics.
+pub fn encrypted() -> u64 {
+    #[cfg(feature = "sev")]
+    return sev::encrypted();
+    #[cfg(not(feature = "sev"))]
+    return 0;
 }

@@ -18,7 +18,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
-    msr::PageAssignment,
+    msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
 use x86_64::{
     instructions::tlb,
@@ -407,4 +407,25 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
         "  RMP page size mismatch errors (fallback to 4K): {}",
         counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
     );
+}
+
+pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) -> Result<(), &'static str> {
+    if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
+        let request = SnpPageStateChangeRequest::new(page.start_address().as_u64() as usize, state)
+            .expect("invalid address for page location");
+        change_snp_page_state(request)?;
+    }
+    Ok(())
+}
+
+pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
+    if crate::sev_status().contains(SevStatus::SEV_ENABLED) {
+        let counter = AtomicUsize::new(0);
+        if let Err(err) = page.pvalidate(&counter) {
+            if err != InstructionError::ValidationStatusNotUpdated {
+                return Err("shared page revalidation failed");
+            }
+        }
+    }
+    Ok(())
 }

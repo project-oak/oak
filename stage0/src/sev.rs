@@ -22,19 +22,17 @@ use core::{
 };
 
 use oak_core::sync::OnceCell;
-use oak_sev_guest::{
-    ghcb::GhcbProtocol,
-    instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
-    msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
-};
+use oak_sev_guest::{ghcb::GhcbProtocol, msr::SevStatus};
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{
-    instructions::tlb,
-    structures::paging::{Page, PageSize, PageTableFlags, Size2MiB, Size4KiB},
+    structures::paging::{Page, PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
 
-use crate::{paging::PageEncryption, sev_status, BootAllocator};
+use crate::{
+    paging::{share_page, unshare_page},
+    sev_status, BootAllocator,
+};
 
 pub static GHCB_WRAPPER: Ghcb = Ghcb::new();
 
@@ -113,14 +111,12 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
         let layout =
             layout.align_to(Size4KiB::SIZE as usize).map_err(|_| AllocError)?.pad_to_align();
         let allocation = self.inner.allocate(layout)?;
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
-                // Safety: the allocation has succeeded and the offset won't exceed the size of
-                // the allocation.
-                share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
-                    allocation.as_non_null_ptr().as_ptr().add(offset)
-                })))
-            }
+        for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
+            // Safety: the allocation has succeeded and the offset won't exceed the size of
+            // the allocation.
+            share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                allocation.as_non_null_ptr().as_ptr().add(offset)
+            })))
         }
         Ok(allocation)
     }
@@ -131,14 +127,12 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
             .map_err(|_| AllocError)
             .unwrap()
             .pad_to_align();
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
-                // Safety: the allocation has succeeded and the offset won't exceed the size of
-                // the allocation.
-                unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
-                    ptr.as_ptr().add(offset)
-                })))
-            }
+        for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
+            // Safety: the allocation has succeeded and the offset won't exceed the size of
+            // the allocation.
+            unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                ptr.as_ptr().add(offset)
+            })))
         }
         self.inner.deallocate(ptr, layout)
     }
@@ -202,62 +196,5 @@ impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
 impl<T, A: Allocator> AsMut<T> for Shared<T, A> {
     fn as_mut(&mut self) -> &mut T {
         &mut self.inner
-    }
-}
-
-/// Shares a single 4KiB page with the hypervisor.
-fn share_page(page: Page<Size4KiB>) {
-    let page_start = page.start_address().as_u64();
-    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
-    // range.
-    assert!(page_start < Size2MiB::SIZE);
-    // Remove the ENCRYPTED bit from the entry that maps the page.
-    {
-        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
-        let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_address(
-            PhysAddr::new(page_start),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            PageEncryption::Unencrypted,
-        );
-    }
-    tlb::flush_all();
-
-    // SNP requires extra handling beyond just removing the encrypted bit.
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Shared)
-            .expect("invalid address for page location");
-        change_snp_page_state(request).expect("couldn't change SNP state for page");
-    }
-}
-
-/// Stops sharing a single 4KiB page with the hypervisor when running with AMD
-/// SEV-SNP enabled.
-fn unshare_page(page: Page<Size4KiB>) {
-    let page_start = page.start_address().as_u64();
-    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
-    // range.
-    assert!(page_start < Size2MiB::SIZE);
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
-            .expect("invalid address for page location");
-        change_snp_page_state(request).expect("couldn't change SNP state for page");
-    }
-    // Mark the page as encrypted.
-    {
-        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
-        let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_address(
-            PhysAddr::new(page_start),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-            PageEncryption::Encrypted,
-        );
-    }
-    tlb::flush_all();
-    // We have to revalidate the page again after un-sharing it.
-    if let Err(err) = pvalidate(page_start as usize, SevPageSize::Page4KiB, Validation::Validated) {
-        if err != InstructionError::ValidationStatusNotUpdated {
-            panic!("shared page revalidation failed");
-        }
     }
 }

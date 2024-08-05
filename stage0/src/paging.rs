@@ -21,12 +21,13 @@ use core::{
 };
 
 use oak_core::sync::OnceCell;
+use oak_sev_guest::msr::PageAssignment;
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb::flush_all,
     structures::paging::{
         page_table::{PageTableEntry as BasePageTableEntry, PageTableFlags},
-        PageSize, PageTable as BasePageTable, PageTableIndex, Size2MiB, Size4KiB,
+        Page, PageSize, PageTable as BasePageTable, PageTableIndex, Size2MiB, Size4KiB,
     },
     PhysAddr,
 };
@@ -123,16 +124,13 @@ impl PageTableEntry {
     /// Map the entry to the specified address with the specified flags and
     /// encryption state.
     pub fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
-        let addr = match state {
-            PageEncryption::Encrypted => PhysAddr::new(addr.as_u64() | encrypted()),
-            PageEncryption::Unencrypted => addr,
-        };
+        let addr = PhysAddr::new(addr.as_u64() | crate::hal::page_table_mask(state));
         self.0.set_addr(addr, flags);
     }
 
     /// Returns the physical address mapped by this entry. May be zero.
     pub fn address(&self) -> PhysAddr {
-        PhysAddr::new(self.0.addr().as_u64() & !encrypted())
+        PhysAddr::new(self.0.addr().as_u64() & !crate::hal::encrypted())
     }
 
     /// Returns whether the entry is zero.
@@ -171,16 +169,6 @@ impl From<&mut BasePageTableEntry> for &mut PageTableEntry {
 pub enum PageEncryption {
     Encrypted,
     Unencrypted,
-}
-
-/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
-fn encrypted() -> u64 {
-    #[no_mangle]
-    static mut ENCRYPTED: u64 = 0;
-
-    // Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    unsafe { ENCRYPTED }
 }
 
 /// Initialises the page table references.
@@ -252,4 +240,49 @@ pub fn remap_first_huge_page() {
     }
 
     flush_all();
+}
+
+/// Shares a single 4KiB page with the hypervisor.
+pub fn share_page(page: Page<Size4KiB>) {
+    let page_start = page.start_address().as_u64();
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
+    assert!(page_start < Size2MiB::SIZE);
+    // Remove the ENCRYPTED bit from the entry that maps the page.
+    {
+        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        let pt = &mut page_tables.pt_0;
+        pt[page.p1_index()].set_address(
+            PhysAddr::new(page_start),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Unencrypted,
+        );
+    }
+    flush_all();
+
+    crate::hal::change_page_state(page, PageAssignment::Shared);
+}
+
+/// Stops sharing a single 4KiB page with the hypervisor when running with AMD
+/// SEV-SNP enabled.
+pub fn unshare_page(page: Page<Size4KiB>) {
+    let page_start = page.start_address().as_u64();
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
+    // range.
+    assert!(page_start < Size2MiB::SIZE);
+    crate::hal::change_page_state(page, PageAssignment::Private);
+    // Mark the page as encrypted.
+    {
+        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        let pt = &mut page_tables.pt_0;
+        pt[page.p1_index()].set_address(
+            PhysAddr::new(page_start),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+            PageEncryption::Encrypted,
+        );
+    }
+    flush_all();
+
+    // We have to revalidate the page again after un-sharing it.
+    crate::hal::revalidate_page(page);
 }

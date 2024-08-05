@@ -21,6 +21,7 @@ mod mmio;
 mod msr;
 mod port;
 
+pub use accept_memory::*;
 pub use cpuid::*;
 pub use dice_attestation::*;
 pub use mmio::*;
@@ -29,7 +30,7 @@ use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::msr::SevStatus;
 pub use port::*;
 
-use crate::BOOT_ALLOC;
+use crate::{paging::PageEncryption, BOOT_ALLOC};
 
 pub fn early_initialize_platform() {
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
@@ -59,5 +60,26 @@ pub fn initialize_platform(e820_table: &[BootE820Entry]) {
         dice_attestation::init_guest_message_encryptor()
             .expect("couldn't initialize guest message encryptor");
         accept_memory::validate_memory(e820_table)
+    }
+}
+
+/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+pub(crate) fn encrypted() -> u64 {
+    #[no_mangle]
+    static mut ENCRYPTED: u64 = 0;
+
+    // Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    unsafe { ENCRYPTED }
+}
+
+pub fn page_table_mask(encryption_state: PageEncryption) -> u64 {
+    if crate::sev_status().contains(SevStatus::SEV_ENABLED) {
+        match encryption_state {
+            PageEncryption::Encrypted => encrypted(),
+            PageEncryption::Unencrypted => 0,
+        }
+    } else {
+        0
     }
 }
