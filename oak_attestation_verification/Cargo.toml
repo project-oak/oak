@@ -11,7 +11,7 @@ std = ["time/formatting"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = { version = "*", default-features = false }
-base64 = { version = "0.21", default-features = false, features = ["alloc"] }
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 coset = { version = "*", default-features = false }
 ecdsa = { version = "*", default-features = false, features = ["pkcs8", "pem"] }
 getrandom = { version = "*", default-features = false, features = [
