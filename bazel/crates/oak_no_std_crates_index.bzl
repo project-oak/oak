@@ -26,10 +26,11 @@
 load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 load("//bazel/rust:defs.bzl", "RUST_NIGHTLY_VERSION")
 
-def oak_no_std_crates_index(cargo_lockfile, lockfile):
+def oak_no_std_crates_index(cargo_lockfile, lockfile, extra_annotations = {}, extra_packages = {}):
     # All creates in this repository must support no_std.
     crates_repository(
         name = "oak_no_std_crates_index",
+        annotations = extra_annotations,
         cargo_lockfile = cargo_lockfile,  # In Cargo-free mode this is used as output, not input.
         lockfile = lockfile,  # Shares most contents with cargo_lockfile.
         packages = {
@@ -193,7 +194,7 @@ def oak_no_std_crates_index(cargo_lockfile, lockfile):
                 # same version as cargo, newer versions had compatibility issues
                 version = "0.31.2",
             ),
-        },
+        } | extra_packages,
         rust_version = RUST_NIGHTLY_VERSION,
         supported_platform_triples = [
             # Linux for dependencies of build scripts (they run on host):

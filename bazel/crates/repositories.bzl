@@ -36,9 +36,23 @@ load("//bazel/crates:oak_no_std_crates_index.bzl", "oak_no_std_crates_index")
 
 def create_oak_crate_repositories(
         cargo_lockfile = "//:Cargo.bazel.lock",
+        extra_annotations = {},
+        extra_no_std_annotations = {},
+        extra_no_std_packages = {},
+        extra_packages = {},
         lockfile = "//:cargo-bazel-lock.json",
         no_std_cargo_lockfile = "//:Cargo_no_std.bazel.lock",
         no_std_lockfile = "//:cargo-no-std-bazel-lock.json"):
     crate_universe_dependencies(bootstrap = True)
-    oak_crates_index(cargo_lockfile, lockfile)
-    oak_no_std_crates_index(no_std_cargo_lockfile, no_std_lockfile)
+    oak_crates_index(
+        cargo_lockfile,
+        lockfile,
+        extra_annotations = extra_annotations,
+        extra_packages = extra_packages,
+    )
+    oak_no_std_crates_index(
+        no_std_cargo_lockfile,
+        no_std_lockfile,
+        extra_annotations = extra_no_std_annotations,
+        extra_packages = extra_no_std_packages,
+    )

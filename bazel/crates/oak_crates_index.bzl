@@ -27,7 +27,7 @@ load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository")
 load("//bazel/crates:jemalloc.bzl", "jemalloc_repository")
 load("//bazel/rust:defs.bzl", "RUST_NIGHTLY_VERSION")
 
-def oak_crates_index(cargo_lockfile, lockfile):
+def oak_crates_index(cargo_lockfile, lockfile, extra_annotations = {}, extra_packages = {}):
     jemalloc_repository()
 
     # Default crate repository - some crates may require std.
@@ -58,7 +58,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "tokio": [crate.annotation(
                 rustc_flags = ["--cfg=tokio_unstable"],
             )],
-        },
+        } | extra_annotations,
         cargo_lockfile = cargo_lockfile,  # In Cargo-free mode this is used as output, not input.
         lockfile = lockfile,  # Shares most contents with cargo_lockfile.
         packages = {
@@ -493,7 +493,7 @@ def oak_crates_index(cargo_lockfile, lockfile):
             "rand_chacha": crate.spec(
                 version = "*",
             ),
-        },
+        } | extra_packages,
         rust_version = RUST_NIGHTLY_VERSION,
         # We request bare metal support. Because of feature unification, some creates
         # in this repository may end up requiring std, thus not being compatible
