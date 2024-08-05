@@ -290,7 +290,7 @@
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
-<span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
+<span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
 
 <span class="doccomment">/// Measurements of various components in Stage1.
 </span><span class="attr">#[derive(Default)]

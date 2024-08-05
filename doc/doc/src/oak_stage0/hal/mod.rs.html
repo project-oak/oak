@@ -196,6 +196,47 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -220,6 +261,8 @@
 
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 <span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+<span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
+<span class="kw">use </span>oak_stage0_dice::DerivedKey;
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,
@@ -385,11 +428,50 @@
     }
 }
 
-<span class="doccomment">/// Marks all memory of the VM as private and accepted.
+<span class="doccomment">/// Performs platform-specific initializations (for example, accepts guest
+/// memory)
 ///
-/// The exact method is platform-specific, e.g. running PVALIDATE for SEV-SNP.
-</span><span class="kw">pub fn </span>accept_memory(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
+/// What exactly is done depends on the platform (SEV or TDX).
+///
+/// This code is run early in the startup process. You will have access to the
+/// boot allocator and logging, but _not_ the global heap allocator.
+</span><span class="kw">pub fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
     <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::accept_memory(e820_table)
+    </span>sev::initialize_platform(e820_table)
+}
+
+<span class="doccomment">/// Returns an attestation report.
+///
+/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+/// report. In other cases it generates an empty attestation report for testing.
+/// The additional data will be set in both cases to bind the DICE chain to the
+/// attestation report.
+///
+/// # Arguments
+///
+/// * `report_data` - The custom data that must be included in the report. This
+///   is typically used to bind information (such as the hash of a public key)
+///   to the report.
+</span><span class="kw">pub fn </span>get_attestation(
+    report_data: [u8; REPORT_DATA_SIZE],
+) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span><span class="kw">return </span>sev::get_attestation(report_data);
+    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
+    </span><span class="kw">return </span>base::get_attestation(report_data);
+}
+
+<span class="doccomment">/// Requests a derived key.
+///
+/// The key is derived from the VCEK. The key derivation mixes in the VM launch
+/// measurement and guest policy and uses VMPL0.
+///
+/// We use this key as the unique device secret for deriving compound devices
+/// identifiers for each layer, and eventually a sealing key in the last layer.
+</span><span class="kw">pub fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span><span class="kw">return </span>sev::get_derived_key();
+    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
+    </span><span class="kw">return </span>base::get_derived_key();
 }
 </code></pre></div></section></main></body></html>

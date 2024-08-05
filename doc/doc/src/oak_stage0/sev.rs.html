@@ -239,58 +239,6 @@
 <a href="#237" id="237">237</a>
 <a href="#238" id="238">238</a>
 <a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -316,9 +264,7 @@
 
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_sev_guest::{
-    crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
-    guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize <span class="kw">as </span>SevPageSize, Validation},
     msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
@@ -328,8 +274,6 @@
     structures::paging::{Page, PageSize, PageTableFlags, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
-<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">use crate</span>::{paging::PageEncryption, sev_status, BootAllocator};
 
@@ -383,10 +327,6 @@
         <span class="self">self</span>.ghcb.get().map(|mutex| mutex.lock())
     }
 }
-
-<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
-/// message protocol.
-</span><span class="kw">static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
 <span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the
 /// pages as shared.
@@ -537,49 +477,5 @@
             <span class="macro">panic!</span>(<span class="string">"shared page revalidation failed"</span>);
         }
     }
-}
-
-<span class="doccomment">/// Initializes the Guest Message encryptor using VMPCK0.
-</span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
-    // requirements on the underlying bytes.
-    </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
-    <span class="comment">// Once the we have read VMPCK0 we wipe it so that later boot stages cannot
-    // request attestation reports or derived sealing keys for VMPL0. This stops
-    // later boot stages from creating counterfeit DICE chains.
-    </span>key.zeroize();
-    <span class="comment">// The sev-guest driver in the upstream kernel does not initialize with such
-    // an empty vmpck. So we fill it up with 0xFF.
-    </span>key.fill(<span class="number">0xFF</span>);
-    <span class="prelude-val">Ok</span>(())
-}
-
-<span class="doccomment">/// Sends a request to the Secure Processor using the Guest Message Protocol.
-</span><span class="kw">pub fn </span>send_guest_message_request&lt;
-    Request: AsBytes + FromBytes + Message,
-    Response: AsBytes + FromBytes + Message,
-&gt;(
-    request: Request,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    <span class="kw">let </span>encryptor = guard.as_mut().ok_or(<span class="string">"guest message encryptor is not initialized"</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
-    <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
-    encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;
-    <span class="kw">let </span>response_message = Shared::new_in(GuestMessage::new(), alloc);
-
-    <span class="kw">let </span>request_address =
-        PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage).as_u64());
-    <span class="kw">let </span>response_address = PhysAddr::new(
-        VirtAddr::from_ptr(response_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage).as_u64(),
-    );
-
-    GHCB_WRAPPER
-        .get()
-        .ok_or(<span class="string">"GHCB not initialized"</span>)<span class="question-mark">?
-        </span>.do_guest_message_request(request_address, response_address)<span class="question-mark">?</span>;
-    response_message.validate()<span class="question-mark">?</span>;
-    encryptor.decrypt_message::&lt;Response&gt;(response_message.as_ref())
 }
 </code></pre></div></section></main></body></html>

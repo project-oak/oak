@@ -452,10 +452,6 @@
 <a href="#450" id="450">450</a>
 <a href="#451" id="451">451</a>
 <a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -508,7 +504,6 @@
 <span class="kw">mod </span>allocator;
 <span class="kw">mod </span>apic;
 <span class="kw">mod </span>cmos;
-<span class="kw">mod </span>dice_attestation;
 <span class="kw">mod </span>fw_cfg;
 <span class="kw">mod </span>hal;
 <span class="kw">mod </span>initramfs;
@@ -635,7 +630,7 @@
 
     zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
-    hal::accept_memory(zero_page.e820_table());
+    hal::initialize_platform(zero_page.e820_table());
 
     <span class="comment">/* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
@@ -670,9 +665,6 @@
         zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="comment">// Initialize the Guest Message encryptor for generating attestation reports and
-        // a unique device secret.
-        </span>sev::init_guest_message_encryptor().expect(<span class="string">"couldn't initialize guest message encryptor"</span>);
         <span class="comment">// Safety: we're only interested in the pointer value of SEV_SECRETS, not its
         // contents.
         </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
@@ -805,8 +797,8 @@
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             <span class="kw-2">&amp;</span>measurements,
-            dice_attestation::get_attestation,
-            dice_attestation::get_derived_key,
+            hal::get_attestation,
+            hal::get_derived_key,
             tee_platform,
         ),
         <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
