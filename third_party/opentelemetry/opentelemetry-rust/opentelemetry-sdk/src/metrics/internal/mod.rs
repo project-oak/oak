@@ -5,9 +5,9 @@ mod last_value;
 mod sum;
 
 use core::fmt;
-use std::ops::{Add, AddAssign, Sub};
-use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
-use std::sync::Mutex;
+use spinning_top::Spinlock as Mutex;
+use core::ops::{Add, AddAssign, Sub};
+use core::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 pub(crate) use aggregate::{AggregateBuilder, ComputeAggregation, Measure};
 pub(crate) use exponential_histogram::{EXPO_MAX_SCALE, EXPO_MIN_SCALE};
@@ -147,17 +147,17 @@ impl F64AtomicTracker {
 
 impl AtomicTracker<f64> for F64AtomicTracker {
     fn add(&self, value: f64) {
-        let mut guard = self.inner.lock().expect("F64 mutex was poisoned");
+        let mut guard = self.inner.try_lock().expect("F64 mutex was poisoned");
         *guard += value;
     }
 
     fn get_value(&self) -> f64 {
-        let guard = self.inner.lock().expect("F64 mutex was poisoned");
+        let guard = self.inner.try_lock().expect("F64 mutex was poisoned");
         *guard
     }
 
     fn get_and_reset_value(&self) -> f64 {
-        let mut guard = self.inner.lock().expect("F64 mutex was poisoned");
+        let mut guard = self.inner.try_lock().expect("F64 mutex was poisoned");
         let value = *guard;
         *guard = 0.0;
 

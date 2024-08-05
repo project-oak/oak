@@ -1,7 +1,6 @@
-use std::{
-    collections::{hash_map::Entry, HashMap},
-    sync::Mutex,
-};
+use hashbrown::hash_map::Entry;
+use hashbrown::HashMap;
+use spinning_top::Spinlock as Mutex;
 
 use crate::{metrics::data::DataPoint, metrics::AttributeSet};
 use opentelemetry_rk::{global, metrics::MetricsError, KeyValue};
@@ -31,7 +30,7 @@ impl<T: Number<T>> LastValue<T> {
         let d: DataPointValue<T> = DataPointValue {
             value: measurement,
         };
-        if let Ok(mut values) = self.values.lock() {
+        if let Some(mut values) = self.values.try_lock() {
             let size = values.len();
             match values.entry(attrs) {
                 Entry::Occupied(mut occupied_entry) => {
@@ -51,8 +50,8 @@ impl<T: Number<T>> LastValue<T> {
 
     pub(crate) fn compute_aggregation(&self, dest: &mut Vec<DataPoint<T>>) {
         dest.clear();
-        let mut values = match self.values.lock() {
-            Ok(guard) if !guard.is_empty() => guard,
+        let mut values = match self.values.try_lock() {
+            Some(guard) if !guard.is_empty() => guard,
             _ => return,
         };
 

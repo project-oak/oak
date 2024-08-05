@@ -1,5 +1,5 @@
 use hashbrown::HashMap;
-use std::sync::Mutex;
+use spinning_top::Spinlock as Mutex;
 
 use crate::metrics::data::{self, Aggregation, Temporality};
 use crate::{metrics::data::HistogramDataPoint, metrics::AttributeSet};
@@ -75,9 +75,9 @@ impl<T: Number<T>> HistValues<T> {
         // `(bounds[bounds.len()-1], +∞)`.
         let idx = self.bounds.partition_point(|&x| x < f);
 
-        let mut values = match self.values.lock() {
-            Ok(guard) => guard,
-            Err(_) => return,
+        let mut values = match self.values.try_lock() {
+            Some(guard) => guard,
+            None => return,
         };
         let size = values.len();
 
@@ -135,8 +135,8 @@ impl<T: Number<T>> Histogram<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let mut values = match self.hist_values.values.lock() {
-            Ok(guard) if !guard.is_empty() => guard,
+        let mut values = match self.hist_values.values.try_lock() {
+            Some(guard) if !guard.is_empty() => guard,
             _ => return (0, None),
         };
 
@@ -192,8 +192,8 @@ impl<T: Number<T>> Histogram<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-        let values = match self.hist_values.values.lock() {
-            Ok(guard) if !guard.is_empty() => guard,
+        let values = match self.hist_values.values.try_lock() {
+            Some(guard) if !guard.is_empty() => guard,
             _ => return (0, None),
         };
 

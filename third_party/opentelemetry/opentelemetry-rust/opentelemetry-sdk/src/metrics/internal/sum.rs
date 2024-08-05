@@ -1,16 +1,13 @@
 extern crate alloc;
 
-use core::sync::atomic::{AtomicBool, Ordering};
-use alloc::vec;
-use std::{
-    collections::HashMap,
-    sync::{Mutex, RwLock},
-};
-
 use crate::metrics::data::{self, Aggregation, DataPoint, Temporality};
 use crate::metrics::AttributeSet;
+use alloc::vec;
+use core::sync::atomic::{AtomicBool, Ordering};
+use hashbrown::HashMap;
 use opentelemetry_rk::KeyValue;
 use opentelemetry_rk::{global, metrics::MetricsError};
+use spinning_top::{RwSpinlock as RwLock, Spinlock as Mutex};
 
 use super::{
     aggregate::{is_under_cardinality_limit, STREAM_OVERFLOW_ATTRIBUTE_SET},
@@ -46,13 +43,13 @@ impl<T: Number<T>> ValueMap<T> {
             self.no_attribute_value.add(measurement);
             self.has_no_value_attribute_value
                 .store(true, Ordering::Release);
-        } else if let Ok(values) = self.values.read() {
+        } else if let Some(values) = self.values.try_read() {
             if let Some(value_to_update) = values.get(&attrs) {
                 value_to_update.add(measurement);
                 return;
             } else {
                 drop(values);
-                if let Ok(mut values) = self.values.write() {
+                if let Some(mut values) = self.values.try_write() {
                     // Recheck after acquiring write lock, in case another
                     // thread has added the value.
                     if let Some(value_to_update) = values.get(&attrs) {
@@ -63,7 +60,7 @@ impl<T: Number<T>> ValueMap<T> {
                         new_value.add(measurement);
                         values.insert(attrs, new_value);
                     } else if let Some(overflow_value) =
-                        values.get_mut(&STREAM_OVERFLOW_ATTRIBUTE_SET)
+                        values.get_mut(&*STREAM_OVERFLOW_ATTRIBUTE_SET)
                     {
                         overflow_value.add(measurement);
                         return;
@@ -106,7 +103,6 @@ impl<T: Number<T>> Sum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
             Some(data::Sum {
@@ -122,9 +118,9 @@ impl<T: Number<T>> Sum<T> {
         s_data.is_monotonic = self.monotonic;
         s_data.data_points.clear();
 
-        let mut values = match self.value_map.values.write() {
-            Ok(v) => v,
-            Err(_) => return (0, None),
+        let mut values = match self.value_map.values.try_write() {
+            Some(v) => v,
+            _ => return (0, None),
         };
 
         let n = values.len() + 1;
@@ -167,7 +163,6 @@ impl<T: Number<T>> Sum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
             Some(data::Sum {
@@ -183,9 +178,9 @@ impl<T: Number<T>> Sum<T> {
         s_data.is_monotonic = self.monotonic;
         s_data.data_points.clear();
 
-        let values = match self.value_map.values.write() {
-            Ok(v) => v,
-            Err(_) => return (0, None),
+        let values = match self.value_map.values.try_write() {
+            Some(v) => v,
+            _ => return (0, None),
         };
 
         let n = values.len() + 1;
@@ -253,7 +248,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
             Some(data::Sum {
@@ -269,9 +263,9 @@ impl<T: Number<T>> PrecomputedSum<T> {
         s_data.temporality = Temporality::Delta;
         s_data.is_monotonic = self.monotonic;
 
-        let mut values = match self.value_map.values.write() {
-            Ok(v) => v,
-            Err(_) => return (0, None),
+        let mut values = match self.value_map.values.try_write() {
+            Some(v) => v,
+            _ => return (0, None),
         };
 
         let n = values.len() + 1;
@@ -281,9 +275,9 @@ impl<T: Number<T>> PrecomputedSum<T> {
                 .reserve_exact(n - s_data.data_points.capacity());
         }
         let mut new_reported = HashMap::with_capacity(n);
-        let mut reported = match self.reported.lock() {
-            Ok(r) => r,
-            Err(_) => return (0, None),
+        let mut reported = match self.reported.try_lock() {
+            Some(r) => r,
+            _ => return (0, None),
         };
 
         if self
@@ -327,7 +321,6 @@ impl<T: Number<T>> PrecomputedSum<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let s_data = dest.and_then(|d| d.as_mut().downcast_mut::<data::Sum<T>>());
         let mut new_agg = if s_data.is_none() {
             Some(data::Sum {
@@ -343,9 +336,9 @@ impl<T: Number<T>> PrecomputedSum<T> {
         s_data.temporality = Temporality::Cumulative;
         s_data.is_monotonic = self.monotonic;
 
-        let values = match self.value_map.values.write() {
-            Ok(v) => v,
-            Err(_) => return (0, None),
+        let values = match self.value_map.values.try_write() {
+            Some(v) => v,
+            _ => return (0, None),
         };
 
         let n = values.len() + 1;
@@ -355,9 +348,9 @@ impl<T: Number<T>> PrecomputedSum<T> {
                 .reserve_exact(n - s_data.data_points.capacity());
         }
         let mut new_reported = HashMap::with_capacity(n);
-        let mut reported = match self.reported.lock() {
-            Ok(r) => r,
-            Err(_) => return (0, None),
+        let mut reported = match self.reported.try_lock() {
+            Some(r) => r,
+            _ => return (0, None),
         };
 
         if self

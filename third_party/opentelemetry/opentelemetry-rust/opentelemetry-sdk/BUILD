@@ -46,20 +46,21 @@ rust_library(
         "src/instrumentation.rs",
         "src/lib.rs",
     ],
-    visibility = ["//visibility:private"],
     deps = [
         "//oak_core",
         "//third_party/opentelemetry/opentelemetry-rust/opentelemetry:opentelemetry_rk",
         "@oak_crates_index//:temp-env",
     ],
+    visibility = ["//visibility:private"],
+    features = ["testing", "metrics"],
 )
 
 rust_test(
     name = "opentelemetry_rk_sdk_test",
     size = "small",
     crate = ":opentelemetry_rk_sdk_test_lib",
-    features = ["testing"],
     deps = [
-        "@oak_crates_index//:temp-env",
-    ],
+      "@oak_crates_index//:temp-env",
+      ],
+    features = ["testing", "metrics"],
 )

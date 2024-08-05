@@ -3,7 +3,6 @@ extern crate alloc;
 use alloc::sync::Arc;
 use core::marker;
 
-use once_cell::sync::Lazy;
 use opentelemetry_rk::KeyValue;
 
 use crate::{
@@ -20,10 +19,12 @@ use super::{
 };
 
 const STREAM_CARDINALITY_LIMIT: u32 = 2000;
-pub(crate) static STREAM_OVERFLOW_ATTRIBUTE_SET: Lazy<AttributeSet> = Lazy::new(|| {
+lazy_static::lazy_static! {
+  pub(crate) static ref STREAM_OVERFLOW_ATTRIBUTE_SET: AttributeSet = {
     let key_values: [KeyValue; 1] = [KeyValue::new("otel.metric.overflow", "true")];
     AttributeSet::from(&key_values[..])
-});
+  };
+}
 
 /// Checks whether aggregator has hit cardinality limit for metric streams
 pub(crate) fn is_under_cardinality_limit(size: usize) -> bool {
@@ -220,8 +221,9 @@ mod tests {
         DataPoint, ExponentialBucket, ExponentialHistogram, ExponentialHistogramDataPoint,
         Histogram, HistogramDataPoint, Sum,
     };
+    extern crate alloc;
 
-    use std::vec;
+    use alloc::vec;
 
     use super::*;
 

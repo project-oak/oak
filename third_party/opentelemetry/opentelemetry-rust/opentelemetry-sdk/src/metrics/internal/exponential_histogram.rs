@@ -1,6 +1,6 @@
-use std::{collections::HashMap, f64::consts::LOG2_E, sync::Mutex};
+use hashbrown::HashMap;
+use spinning_top::Spinlock as Mutex;
 
-use once_cell::sync::Lazy;
 use opentelemetry_rk::{metrics::MetricsError, KeyValue};
 
 use crate::{
@@ -12,6 +12,8 @@ use super::Number;
 
 pub(crate) const EXPO_MAX_SCALE: i8 = 20;
 pub(crate) const EXPO_MIN_SCALE: i8 = -10;
+
+const LOG2_E: f64 = 1.44269504088896340735992468100189214_f64;
 
 /// A single data point in an exponential histogram.
 #[derive(Debug, PartialEq)]
@@ -167,32 +169,32 @@ fn scale_change(max_size: i32, bin: i32, start_bin: i32, length: i32) -> u32 {
     count
 }
 
-/// Constants used in calculating the logarithm index.
-static SCALE_FACTORS: Lazy<[f64; 21]> = Lazy::new(|| {
-    [
-        LOG2_E * 2f64.powi(0),
-        LOG2_E * 2f64.powi(1),
-        LOG2_E * 2f64.powi(2),
-        LOG2_E * 2f64.powi(3),
-        LOG2_E * 2f64.powi(4),
-        LOG2_E * 2f64.powi(5),
-        LOG2_E * 2f64.powi(6),
-        LOG2_E * 2f64.powi(7),
-        LOG2_E * 2f64.powi(8),
-        LOG2_E * 2f64.powi(9),
-        LOG2_E * 2f64.powi(10),
-        LOG2_E * 2f64.powi(11),
-        LOG2_E * 2f64.powi(12),
-        LOG2_E * 2f64.powi(13),
-        LOG2_E * 2f64.powi(14),
-        LOG2_E * 2f64.powi(15),
-        LOG2_E * 2f64.powi(16),
-        LOG2_E * 2f64.powi(17),
-        LOG2_E * 2f64.powi(18),
-        LOG2_E * 2f64.powi(19),
-        LOG2_E * 2f64.powi(20),
-    ]
-});
+lazy_static::lazy_static! {
+  /// Constants used in calculating the logarithm index.
+  static ref SCALE_FACTORS: [f64; 21] = [
+  LOG2_E * 2f64.powi(0),
+  LOG2_E * 2f64.powi(1),
+  LOG2_E * 2f64.powi(2),
+  LOG2_E * 2f64.powi(3),
+  LOG2_E * 2f64.powi(4),
+  LOG2_E * 2f64.powi(5),
+  LOG2_E * 2f64.powi(6),
+  LOG2_E * 2f64.powi(7),
+  LOG2_E * 2f64.powi(8),
+  LOG2_E * 2f64.powi(9),
+  LOG2_E * 2f64.powi(10),
+  LOG2_E * 2f64.powi(11),
+  LOG2_E * 2f64.powi(12),
+  LOG2_E * 2f64.powi(13),
+  LOG2_E * 2f64.powi(14),
+  LOG2_E * 2f64.powi(15),
+  LOG2_E * 2f64.powi(16),
+  LOG2_E * 2f64.powi(17),
+  LOG2_E * 2f64.powi(18),
+  LOG2_E * 2f64.powi(19),
+  LOG2_E * 2f64.powi(20),
+  ];
+}
 
 /// Breaks the number into a normalized fraction and a base-2 exponent.
 ///
@@ -344,7 +346,7 @@ impl<T: Number<T>> ExpoHistogram<T> {
             return;
         }
 
-        if let Ok(mut values) = self.values.lock() {
+        if let Some(mut values) = self.values.try_lock() {
             let v = values.entry(attrs).or_insert_with(|| {
                 ExpoHistogramDataPoint::new(
                     self.max_size,
@@ -361,7 +363,6 @@ impl<T: Number<T>> ExpoHistogram<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let h = dest.and_then(|d| d.as_mut().downcast_mut::<data::ExponentialHistogram<T>>());
         let mut new_agg = if h.is_none() {
             Some(data::ExponentialHistogram {
@@ -375,9 +376,9 @@ impl<T: Number<T>> ExpoHistogram<T> {
         h.temporality = Temporality::Delta;
         h.data_points.clear();
 
-        let mut values = match self.values.lock() {
-            Ok(g) => g,
-            Err(_) => return (0, None),
+        let mut values = match self.values.try_lock() {
+            Some(g) => g,
+            _ => return (0, None),
         };
 
         let n = values.len();
@@ -424,7 +425,6 @@ impl<T: Number<T>> ExpoHistogram<T> {
         &self,
         dest: Option<&mut dyn Aggregation>,
     ) -> (usize, Option<Box<dyn Aggregation>>) {
-
         let h = dest.and_then(|d| d.as_mut().downcast_mut::<data::ExponentialHistogram<T>>());
         let mut new_agg = if h.is_none() {
             Some(data::ExponentialHistogram {
@@ -437,9 +437,9 @@ impl<T: Number<T>> ExpoHistogram<T> {
         let h = h.unwrap_or_else(|| new_agg.as_mut().expect("present if h is none"));
         h.temporality = Temporality::Cumulative;
 
-        let values = match self.values.lock() {
-            Ok(g) => g,
-            Err(_) => return (0, None),
+        let values = match self.values.try_lock() {
+            Some(g) => g,
+            _ => return (0, None),
         };
         h.data_points.clear();
 
@@ -658,7 +658,7 @@ mod tests {
             for v in test.values {
                 h.measure(v, alice.clone());
             }
-            let values = h.values.lock().unwrap();
+            let values = h.values.try_lock().unwrap();
             let dp = values.get(&alice).unwrap();
 
             assert_eq!(test.expected.max, dp.max);
@@ -709,7 +709,7 @@ mod tests {
             for v in test.values {
                 h.measure(v, alice.clone());
             }
-            let values = h.values.lock().unwrap();
+            let values = h.values.try_lock().unwrap();
             let dp = values.get(&alice).unwrap();
 
             assert_eq!(test.expected.max, dp.max);
@@ -1434,12 +1434,7 @@ mod tests {
                 test_name
             );
             for (a, b) in a.data_points.iter().zip(b.data_points.iter()) {
-                assert_data_points_eq(
-                    a,
-                    b,
-                    "mismatching gauge data points",
-                    test_name,
-                );
+                assert_data_points_eq(a, b, "mismatching gauge data points", test_name);
             }
         } else if let Some(a) = a.as_any().downcast_ref::<data::Sum<T>>() {
             let b = b.as_any().downcast_ref::<data::Sum<T>>().unwrap();
@@ -1460,12 +1455,7 @@ mod tests {
                 test_name
             );
             for (a, b) in a.data_points.iter().zip(b.data_points.iter()) {
-                assert_data_points_eq(
-                    a,
-                    b,
-                    "mismatching sum data points",
-                    test_name,
-                );
+                assert_data_points_eq(a, b, "mismatching sum data points", test_name);
             }
         } else if let Some(a) = a.as_any().downcast_ref::<data::Histogram<T>>() {
             let b = b.as_any().downcast_ref::<data::Histogram<T>>().unwrap();
@@ -1481,12 +1471,7 @@ mod tests {
                 test_name
             );
             for (a, b) in a.data_points.iter().zip(b.data_points.iter()) {
-                assert_hist_data_points_eq(
-                    a,
-                    b,
-                    "mismatching hist data points",
-                    test_name,
-                );
+                assert_hist_data_points_eq(a, b, "mismatching hist data points", test_name);
             }
         } else if let Some(a) = a.as_any().downcast_ref::<data::ExponentialHistogram<T>>() {
             let b = b

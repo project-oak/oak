@@ -18,14 +18,11 @@ rust-version = "1.65"
 [dependencies]
 oak_core = { path = "../../../../oak_core" }
 opentelemetry_rk = { version = "0.23", path = "../opentelemetry/" }
-async-std = { version = "1.10", features = ["unstable"], optional = true }
 hashbrown = "*"
+lazy_static = { version = "*", features = ["spin_no_std"] }
 siphasher = "1.0.1"
-once_cell = { workspace = true }
 glob = { version = "0.3.1", optional =true}
 spinning_top = "*"
-tokio = { version = "1", features = ["rt", "time"], optional = true }
-tokio-stream = { version = "0.1.1", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
@@ -35,6 +32,9 @@ rustdoc-args = ["--cfg", "docsrs"]
 criterion = { version = "0.5", features = ["html_reports"] }
 temp-env = { version = "0.3.6" }
 rand = { version = "0.8", features = ["std", "std_rng","small_rng"], default-features = false }
+tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
+tokio-stream = { version = "0.1.1" }
+async-std = { version = "1.10", features = ["unstable"]}
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
 pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
@@ -44,8 +44,8 @@ default = ["metrics"]
 trace = []
 logs = []
 logs_level_enabled = []
-metrics = ["opentelemetry_rk/metrics", "glob"]
-testing = ["opentelemetry_rk/testing", "metrics", "async-std", "tokio", "tokio-stream", "tokio/macros", "tokio/rt-multi-thread"]
+metrics = ["opentelemetry_rk/metrics"]
+testing = ["opentelemetry_rk/testing", "metrics"]
 
 [[bench]]
 name = "context"
