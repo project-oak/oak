@@ -11,3 +11,5 @@ mkdir -p "${KOKORO_ARTIFACTS_DIR}/test_logs/"
 cp --preserve=timestamps \
     ./target/nextest/default/*.xml \
     "${KOKORO_ARTIFACTS_DIR}/test_logs/" || true
+
+kokoro_cleanup

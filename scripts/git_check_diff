@@ -10,6 +10,10 @@ source "$SCRIPTS_DIR/common"
 #   To add an exception for this directory, call:
 #   git config --global --add safe.directory /workspace
 git config --global --add safe.directory /workspace
+# Same, but specific for the Kokoro host git root. Note that the variables terminate with a slash
+# already, therefore we need to concatenate them without adding additional slashes.
+git config --global --add safe.directory "${KOKORO_HOST_ROOT_DIR}src/git/oak"
+git config --global --add safe.directory "${KOKORO_ROOT_DIR}src/git/oak"
 
 # Check that any generated files match those that are checked in.
 if [[ $(git status --short) ]]; then

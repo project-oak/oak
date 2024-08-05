@@ -15,3 +15,5 @@ mkdir --parents "${KOKORO_ARTIFACTS_DIR}/binaries/test"
 cp --preserve=timestamps \
     ./target/bazel_* \
     "${KOKORO_ARTIFACTS_DIR}/binaries/test"
+
+kokoro_cleanup
