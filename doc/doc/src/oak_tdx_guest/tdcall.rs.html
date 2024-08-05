@@ -301,6 +301,33 @@
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -331,26 +358,53 @@
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Attributes of a TD.
     ///
-    /// See section 18.2.1 of [Architecture Specification: Intel® Trust Domain Extensions(Intel® TDX)
-    /// Module](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-module-1eas.pdf)
-    /// for more information.
+    /// See section 3.4.1 of [Intel® Trust Domain Extensions (Intel® TDX) Module
+    /// Architecture Application Binary Interface (ABI) Reference Specification]
+    /// (https://cdrdv2.intel.com/v1/dl/getContent/733579) Draft 1.5.05.44 for
+    /// more information.
     </span><span class="attr">#[derive(Default)]
     </span><span class="kw">pub struct </span>Attributes: u64 {
         <span class="doccomment">/// The guest TD runs in off-TD debug mode.
         ///
         /// If this is enabled the TD should be considered untrusted.
         </span><span class="kw">const </span>DEBUG = <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
-        <span class="doccomment">/// Whether system profiling is enabled on the TD.
-        ///
-        /// If this is enabled the TD should be considered untrusted.
-        </span><span class="kw">const </span>SYSPROF = <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
+        <span class="doccomment">/// The TD participates in HGS+ operation. HGS+ monitors the TD
+        /// operation as part of the whole system.
+        /// This bit may be set, if supported by the TDX module, regardless
+        /// on CPU support.
+        </span><span class="kw">const </span>HGS_PLUS_PROF = <span class="number">1 </span>&lt;&lt; <span class="number">4</span>;
+        <span class="doccomment">/// The TD participates in system profiling using performance monitoring
+        /// counters. Those counters are not context-switched on TD entry and
+        /// exit; they monitor the TD operation as part of the whole system.
+        /// This bit may be set, if supported by the TDX module, regardless on
+        /// CPU support.
+        </span><span class="kw">const </span>PERF_PROF = <span class="number">1 </span>&lt;&lt; <span class="number">5</span>;
+        <span class="doccomment">/// The TD participates in system profiling using core out-of-band
+        /// telemetry. Core telemetry monitors the TD operation as part of the
+        /// whole system.
+        /// This bit may be set, if supported by the TDX module, regardless of
+        /// CPU support.
+        </span><span class="kw">const </span>PMT_PROF = <span class="number">1 </span>&lt;&lt; <span class="number">6</span>;
+        <span class="doccomment">/// TD is allowed to use Linear Address Space Separation.
+        /// This bit may only be set if both the TDX module and the CPU support
+        /// LASS.
+        </span><span class="kw">const </span>LASS = <span class="number">1 </span>&lt;&lt; <span class="number">27</span>;
+        <span class="doccomment">/// Disable EPT violation conversion to #VE on guest TD access of
+        /// PENDING pages
+        </span><span class="kw">const </span>SEPT_VE_DISABLE = <span class="number">1 </span>&lt;&lt; <span class="number">28</span>;
+        <span class="doccomment">/// Whether the TD is migratable
+        </span><span class="kw">const </span>MIGRATABLE = <span class="number">1 </span>&lt;&lt; <span class="number">29</span>;
         <span class="doccomment">/// Whether the TD is allowed to use Supervisor Protection Keys.
         </span><span class="kw">const </span>PKS = <span class="number">1 </span>&lt;&lt; <span class="number">30</span>;
         <span class="doccomment">/// Whether the TD is allowed to use Key Locker.
         ///
         /// Must be 0 for the current version.
         </span><span class="kw">const </span>KL = <span class="number">1 </span>&lt;&lt; <span class="number">31</span>;
-        <span class="doccomment">/// Wehther the TD is allowed to use Perfmon and PERF_METRICS.
+        <span class="doccomment">/// The TD is a TDX Connect Provisioning Agent.
+        /// This bit may only be set if both the TDX module and the CPU support
+        /// TDX Connect.
+        </span><span class="kw">const </span>TPA = <span class="number">1 </span>&lt;&lt; <span class="number">62</span>;
+        <span class="doccomment">/// Whether the TD is allowed to use Perfmon and PERF_METRICS.
         </span><span class="kw">const </span>PERFMON = <span class="number">1 </span>&lt;&lt; <span class="number">63</span>;
     }
 }
