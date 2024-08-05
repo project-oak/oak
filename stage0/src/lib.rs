@@ -27,6 +27,7 @@ use core::{arch::asm, ffi::c_void, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
 use oak_dice::evidence::{
     DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
+    STAGE0_DICE_PROTO_MAGIC,
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
@@ -247,21 +248,21 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     let tee_platform = P::tee_platform();
 
-    let dice_data = Box::leak(Box::new_in(
-        oak_stage0_dice::generate_dice_data(
-            &measurements,
-            P::get_attestation,
-            P::get_derived_key,
-            tee_platform,
-        ),
-        &crate::BOOT_ALLOC,
-    ));
+    let (dice_data_struct, dice_data_proto) = oak_stage0_dice::generate_dice_data(
+        &measurements,
+        P::get_attestation,
+        P::get_derived_key,
+        tee_platform,
+    );
+    let dice_data = Box::leak(Box::new_in(dice_data_struct, &crate::BOOT_ALLOC));
+
     // Reserve the memory containing the DICE data.
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,
         dice_data.as_bytes().len(),
         E820EntryType::RESERVED,
     ));
+    let mut sensitive_dice_data_length = core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
 
     // Write Eventlog data to memory.
     let mut event_log = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
@@ -279,9 +280,29 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
+    sensitive_dice_data_length += PAGE_SIZE;
+
+    // TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
+    // write all of it in memory.
+    // Write DiceData protobuf bytes to memory.
+    let mut encoded_dice_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
+    // Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
+    // the size of the encoded DiceData proto.
+    assert!(dice_data_proto.encoded_len() < PAGE_SIZE - 8 * 2);
+    // Insert a magic number to ensure the correctness of the data being read.
+    encoded_dice_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
+    encoded_dice_proto.extend_from_slice(dice_data_proto.encoded_len().to_le_bytes().as_slice());
+    encoded_dice_proto.extend_from_slice(dice_data_proto.encode_to_vec().as_bytes());
+
+    // Reserve memory containing DICE proto Data.
+    zero_page.insert_e820_entry(BootE820Entry::new(
+        encoded_dice_proto.as_bytes().as_ptr() as usize,
+        PAGE_SIZE,
+        E820EntryType::RESERVED,
+    ));
+    sensitive_dice_data_length += PAGE_SIZE;
 
     // Append the DICE data address to the kernel command-line.
-    let sensitive_dice_data_length = core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
     let extra = format!(
         "--{DICE_DATA_CMDLINE_PARAM}={dice_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
     );

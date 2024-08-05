@@ -37,6 +37,9 @@ use oak_dice::{
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
+use oak_proto_rust::oak::attestation::v1::{
+    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+};
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
 use sha2::{Digest, Sha256};
@@ -158,7 +161,7 @@ pub fn generate_dice_data<
     get_attestation: F,
     get_derived_key: G,
     tee_platform: TeePlatform,
-) -> Stage0DiceData {
+) -> (Stage0DiceData, DiceData) {
     let mut result = Stage0DiceData::new_zeroed();
     // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
     // certificate.
@@ -204,6 +207,22 @@ pub fn generate_dice_data<
     salt.extend_from_slice(&measurements.ram_disk_sha2_256_digest[..]);
     let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);
 
+    let result_evidence = Evidence {
+        root_layer: Some(RootLayerEvidence {
+            remote_attestation_report: report_bytes.to_vec(),
+            eca_public_key: stage0_eca_verifying_key.to_vec(),
+            platform: tee_platform as i32,
+        }),
+        layers: vec![LayerEvidence { eca_certificate: stage1_eca_cert.clone() }],
+        application_keys: None,
+    };
+
+    let result_ca =
+        CertificateAuthority { eca_private_key: stage1_eca_signing_key.to_bytes().to_vec() };
+
+    let result_dice_data =
+        DiceData { evidence: Some(result_evidence), certificate_authority: Some(result_ca) };
+
     result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = tee_platform as u64;
     result
@@ -221,7 +240,7 @@ pub fn generate_dice_data<
     hkdf.expand(b"CDI_Seal", &mut result.layer_1_cdi.cdi[..])
         .expect("invalid length for HKDF output");
 
-    result
+    (result, result_dice_data)
 }
 
 /// Returns an attestation report.

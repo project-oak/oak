@@ -622,6 +622,7 @@ dependencies = [
  "hex",
  "hkdf",
  "oak_dice",
+ "oak_proto_rust",
  "oak_sev_snp_attestation_report",
  "p256",
  "rand_core",

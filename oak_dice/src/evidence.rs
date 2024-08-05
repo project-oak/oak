@@ -72,6 +72,9 @@ pub const EVENTLOG_CMDLINE_PARAM: &str = "oak-event-log";
 /// The magic number used to identify the Stage 0 DICE data in memory.
 pub const STAGE0_MAGIC: u64 = u64::from_le_bytes(*b"oak.dice");
 
+/// The magic number used to identify the Stage 0 DICE proto in memory.
+pub const STAGE0_DICE_PROTO_MAGIC: u64 = u64::from_le_bytes(*b"OakProto");
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u64)]
 /// The hardware platform providing the Trusted Execution Environment.

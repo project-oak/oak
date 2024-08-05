@@ -9,6 +9,7 @@ license = "Apache-2.0"
 coset = { version = "*", default-features = false }
 hkdf = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
+oak_proto_rust = { workspace = true }
 oak_dice = { workspace = true }
 oak_sev_snp_attestation_report = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }

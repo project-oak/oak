@@ -33,6 +33,7 @@ rust_library(
     ]),
     deps = [
         "//oak_dice",
+        "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:zerocopy",
         "@oak_no_std_no_avx_crates_index//:hex",
@@ -44,5 +45,6 @@ rust_library(
     select_std_crates([
         "coset",
         "p256",
+        "prost",
     ]),
 )
