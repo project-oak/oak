@@ -171,9 +171,9 @@
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt; {
-    attestation_provider_config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
-    handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
-    encryptor_config: EncryptorConfig&lt;<span class="lifetime">'a</span>&gt;,
+    <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
+    <span class="kw">pub </span>handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
+    <span class="kw">pub </span>encryptor_config: EncryptorConfig&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SessionConfig&lt;<span class="lifetime">'a</span>&gt; {

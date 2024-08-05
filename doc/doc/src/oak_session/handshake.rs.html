@@ -205,6 +205,14 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -227,7 +235,10 @@
 </span><span class="kw">use </span>core::convert::TryInto;
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>oak_crypto::noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn, Crypter};
+<span class="kw">use </span>oak_crypto::{
+    identity_key::IdentityKeyHandle,
+    noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn, Crypter},
+};
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
     session::v1::{
@@ -250,23 +261,23 @@
 }
 
 <span class="kw">pub trait </span>Handshaker {
-    <span class="kw">fn </span>derive_session_keys(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt;;
+    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt;;
 }
 
 <span class="doccomment">/// Client-side Handshaker that initiates the crypto handshake with the server.
 </span><span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>ClientHandshaker {
+    handshake_type: HandshakeType,
     handshake_initiator: HandshakeInitiator,
     handshake_result: <span class="prelude-ty">Option</span>&lt;([u8; HANDSHAKE_HASH_LEN], Crypter)&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>create(handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+<span class="kw">impl </span>ClientHandshaker {
+    <span class="kw">pub fn </span>create(handshaker_config: <span class="kw-2">&amp;</span>HandshakerConfig) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>handshake_type = handshaker_config.handshake_type;
         <span class="kw">let </span>peer_static_public_key = handshaker_config.peer_static_public_key.clone();
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            handshaker_config,
+            handshake_type,
             handshake_initiator: <span class="kw">match </span>handshake_type {
                 HandshakeType::NoiseKK =&gt; <span class="macro">core::unimplemented!</span>(),
                 HandshakeType::NoiseKN =&gt; <span class="macro">core::unimplemented!</span>(),
@@ -284,13 +295,13 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Handshaker <span class="kw">for </span>ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
+<span class="kw">impl </span>Handshaker <span class="kw">for </span>ClientHandshaker {
+    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
         <span class="self">self</span>.handshake_result.take().map(|(_handshake_hash, crypter)| crypter.into())
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;HandshakeResponse, HandshakeRequest&gt; <span class="kw">for </span>ClientHandshaker&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;HandshakeResponse, HandshakeRequest&gt; <span class="kw">for </span>ClientHandshaker {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;HandshakeRequest&gt;&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>initial_message = <span class="self">self</span>.handshake_initiator.build_initial_message();
         <span class="kw">let </span>(ciphertext, ephemeral_public_key) =
@@ -299,7 +310,7 @@
             r#handshake_type: <span class="prelude-val">Some</span>(handshake_request::HandshakeType::NoiseHandshakeMessage(
                 NoiseHandshakeMessage {
                     ephemeral_public_key,
-                    static_public_key: <span class="kw">match </span><span class="self">self</span>.handshaker_config.handshake_type {
+                    static_public_key: <span class="kw">match </span><span class="self">self</span>.handshake_type {
                         HandshakeType::NoiseKK
                         | HandshakeType::NoiseKN
                         | HandshakeType::NoiseNK
@@ -337,19 +348,25 @@
 /// the client.
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
+    handshake_type: HandshakeType,
+    self_identity_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>IdentityKeyHandle&gt;,
     handshake_response: <span class="prelude-ty">Option</span>&lt;HandshakeResponse&gt;,
     handshake_result: <span class="prelude-ty">Option</span>&lt;SessionKeys&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ handshaker_config, handshake_response: <span class="prelude-val">None</span>, handshake_result: <span class="prelude-val">None </span>}
+    <span class="kw">pub fn </span>new(handshaker_config: <span class="kw-2">&amp;</span>HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            handshake_type: handshaker_config.handshake_type,
+            self_identity_key: handshaker_config.self_static_private_key,
+            handshake_response: <span class="prelude-val">None</span>,
+            handshake_result: <span class="prelude-val">None</span>,
+        }
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Handshaker <span class="kw">for </span>ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
+    <span class="kw">fn </span>derive_session_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
         <span class="self">self</span>.handshake_result.take()
     }
 }
@@ -371,12 +388,11 @@
                     noise_message.ciphertext.as_slice(),
                 ]
                 .concat();
-                <span class="kw">match </span><span class="self">self</span>.handshaker_config.handshake_type {
+                <span class="kw">match </span><span class="self">self</span>.handshake_type {
                     HandshakeType::NoiseKK =&gt; <span class="macro">core::unimplemented!</span>(),
                     HandshakeType::NoiseKN =&gt; <span class="macro">core::unimplemented!</span>(),
                     HandshakeType::NoiseNK =&gt; respond_nk(
-                        <span class="self">self</span>.handshaker_config
-                            .self_static_private_key
+                        <span class="self">self</span>.self_identity_key
                             .context(<span class="string">"handshaker_config missing the self private key"</span>)<span class="question-mark">?</span>,
                         <span class="kw-2">&amp;</span>in_data,
                     )
@@ -396,7 +412,7 @@
             r#handshake_type: <span class="prelude-val">Some</span>(handshake_response::HandshakeType::NoiseHandshakeMessage(
                 NoiseHandshakeMessage {
                     ephemeral_public_key,
-                    static_public_key: <span class="kw">match </span><span class="self">self</span>.handshaker_config.handshake_type {
+                    static_public_key: <span class="kw">match </span><span class="self">self</span>.handshake_type {
                         HandshakeType::NoiseKK
                         | HandshakeType::NoiseKN
                         | HandshakeType::NoiseNK

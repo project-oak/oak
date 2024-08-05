@@ -134,6 +134,72 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -153,11 +219,19 @@
 </span><span class="doccomment">//! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-</span><span class="kw">use </span>alloc::vec::Vec;
+</span><span class="kw">use </span>alloc::{boxed::Box, vec::Vec};
 
-<span class="kw">use </span>oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+<span class="kw">use </span>anyhow::{anyhow, Context, Error};
+<span class="kw">use </span>oak_crypto::encryptor::Encryptor;
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::{
+    session_request::Request, session_response::Response, SessionRequest, SessionResponse,
+};
 
-<span class="kw">use crate</span>::{config::SessionConfig, ProtocolEngine};
+<span class="kw">use crate</span>::{
+    config::SessionConfig,
+    handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
+    ProtocolEngine,
+};
 
 <span class="doccomment">/// Trait that represents an end-to-end encrypted bidirectional streaming
 /// session between two peers.
@@ -193,39 +267,96 @@
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
+    handshaker: ClientHandshaker,
+    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    outgoing_requests: Vec&lt;SessionRequest&gt;,
+    incoming_responses: Vec&lt;SessionResponse&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientSession&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ config }
+    <span class="kw">pub fn </span>create(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            config,
+            handshaker: ClientHandshaker::create(<span class="kw-2">&amp;</span>config.handshaker_config)
+                .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
+            encryptor: <span class="prelude-val">None</span>,
+            outgoing_requests: <span class="macro">vec!</span>[],
+            incoming_responses: <span class="macro">vec!</span>[],
+        })
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Session <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="self">self</span>.encryptor.is_some()
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="macro">core::unimplemented!</span>();
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.encryptor {
+            <span class="prelude-val">Some</span>(encryptor) =&gt; {
+                <span class="kw">let </span>ciphertext = encryptor
+                    .encrypt(plaintext.into())
+                    .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.outgoing_requests
+                    .push(SessionRequest { r#request: <span class="prelude-val">Some</span>(Request::Ciphertext(ciphertext)) });
+                <span class="prelude-val">Ok</span>(())
+            }
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>)),
+        }
     }
 
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">match </span>(<span class="kw-2">&amp;mut </span><span class="self">self</span>.encryptor, <span class="self">self</span>.incoming_responses.pop()) {
+            (<span class="prelude-val">Some</span>(encryptor), <span class="prelude-val">Some</span>(response)) =&gt; {
+                <span class="kw">let </span>ciphertext = <span class="kw">match </span>response.r#response {
+                    <span class="prelude-val">Some</span>(Response::Ciphertext(ciphertext)) =&gt; ciphertext,
+                    <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of SessionResponse"</span>)),
+                };
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
+                    encryptor
+                        .decrypt(ciphertext.as_slice().into())
+                        .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
+                ))
+            }
+            (<span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            (<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>)),
+        }
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionResponse, SessionRequest&gt; <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionRequest&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">if </span><span class="self">self</span>.is_open() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop());
+        };
+        <span class="prelude-val">Ok</span>(<span class="self">self
+            </span>.handshaker
+            .get_outgoing_message()<span class="question-mark">?
+            </span>.map(|h| SessionRequest { r#request: <span class="prelude-val">Some</span>(Request::HandshakeRequest(h)) }))
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _incoming_message: <span class="kw-2">&amp;</span>SessionResponse,
+        incoming_message: <span class="kw-2">&amp;</span>SessionResponse,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">if </span><span class="self">self</span>.is_open() {
+            <span class="self">self</span>.incoming_responses.push(incoming_message.clone());
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()));
+        }
+        <span class="kw">match </span>incoming_message.r#response.as_ref() {
+            <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)) =&gt; {
+                <span class="kw">let </span>result = <span class="self">self</span>.handshaker.put_incoming_message(handshake_message);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
+                    <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
+                        (<span class="self">self</span>.config.encryptor_config.encryptor_provider)(session_keys)
+                            .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
+                    )
+                }
+                result
+            }
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
+        }
     }
 }
 
@@ -233,12 +364,13 @@
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
+    handshaker: ServerHandshaker&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ config }
+        <span class="self">Self </span>{ config, handshaker: ServerHandshaker::new(<span class="kw-2">&amp;</span>config.handshaker_config) }
     }
 }
 
