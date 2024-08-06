@@ -1,6 +1,5 @@
-extern crate alloc;
-
-use alloc::{borrow::Cow, sync::Arc};
+use alloc::string::ToString;
+use alloc::{borrow::Cow, boxed::Box, sync::Arc, vec::Vec};
 use core::{any::Any, fmt};
 use hashbrown::HashSet;
 
@@ -718,7 +717,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use alloc::sync::Arc;
+    use alloc::vec::Vec;
 
     use opentelemetry_rk::metrics::{InstrumentProvider, MeterProvider, MetricsError};
 

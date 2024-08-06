@@ -1,3 +1,4 @@
+use alloc::vec;
 use hashbrown::hash_map::Entry;
 use hashbrown::HashMap;
 use spinning_top::Spinlock as Mutex;
@@ -27,9 +28,7 @@ impl<T: Number<T>> LastValue<T> {
     }
 
     pub(crate) fn measure(&self, measurement: T, attrs: AttributeSet) {
-        let d: DataPointValue<T> = DataPointValue {
-            value: measurement,
-        };
+        let d: DataPointValue<T> = DataPointValue { value: measurement };
         if let Some(mut values) = self.values.try_lock() {
             let size = values.len();
             match values.entry(attrs) {
@@ -48,7 +47,7 @@ impl<T: Number<T>> LastValue<T> {
         }
     }
 
-    pub(crate) fn compute_aggregation(&self, dest: &mut Vec<DataPoint<T>>) {
+    pub(crate) fn compute_aggregation(&self, dest: &mut vec::Vec<DataPoint<T>>) {
         dest.clear();
         let mut values = match self.values.try_lock() {
             Some(guard) if !guard.is_empty() => guard,

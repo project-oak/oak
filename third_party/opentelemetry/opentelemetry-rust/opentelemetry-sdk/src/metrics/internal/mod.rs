@@ -5,9 +5,9 @@ mod last_value;
 mod sum;
 
 use core::fmt;
-use spinning_top::Spinlock as Mutex;
 use core::ops::{Add, AddAssign, Sub};
 use core::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use spinning_top::Spinlock as Mutex;
 
 pub(crate) use aggregate::{AggregateBuilder, ComputeAggregation, Measure};
 pub(crate) use exponential_histogram::{EXPO_MAX_SCALE, EXPO_MIN_SCALE};

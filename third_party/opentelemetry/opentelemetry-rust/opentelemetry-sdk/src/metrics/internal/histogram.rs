@@ -1,3 +1,4 @@
+use alloc::{boxed::Box, vec};
 use hashbrown::HashMap;
 use spinning_top::Spinlock as Mutex;
 
@@ -13,7 +14,7 @@ use super::{
 
 #[derive(Default)]
 struct Buckets<T> {
-    counts: Vec<u64>,
+    counts: vec::Vec<u64>,
     count: u64,
     total: T,
     min: T,
@@ -47,12 +48,12 @@ impl<T: Number<T>> Buckets<T> {
 /// Summarizes a set of measurements with explicitly defined buckets.
 struct HistValues<T> {
     record_sum: bool,
-    bounds: Vec<f64>,
+    bounds: vec::Vec<f64>,
     values: Mutex<HashMap<AttributeSet, Buckets<T>>>,
 }
 
 impl<T: Number<T>> HistValues<T> {
-    fn new(mut bounds: Vec<f64>, record_sum: bool) -> Self {
+    fn new(mut bounds: vec::Vec<f64>, record_sum: bool) -> Self {
         bounds.retain(|v| !v.is_nan());
         bounds.sort_by(|a, b| a.partial_cmp(b).expect("NaNs filtered out"));
 
@@ -120,7 +121,7 @@ pub(crate) struct Histogram<T> {
 }
 
 impl<T: Number<T>> Histogram<T> {
-    pub(crate) fn new(boundaries: Vec<f64>, record_min_max: bool, record_sum: bool) -> Self {
+    pub(crate) fn new(boundaries: vec::Vec<f64>, record_min_max: bool, record_sum: bool) -> Self {
         Histogram {
             hist_values: HistValues::new(boundaries, record_sum),
             record_min_max,

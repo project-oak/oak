@@ -30,12 +30,10 @@ pub use env::EnvResourceDetector;
 pub use env::SdkProvidedResourceDetector;
 pub use telemetry::TelemetryResourceDetector;
 
+use alloc::{borrow::Cow, boxed::Box, sync::Arc, vec::Vec};
+use core::ops::Deref;
+use hashbrown::{hash_map, HashMap};
 use opentelemetry_rk::{Key, KeyValue, Value};
-use std::borrow::Cow;
-use std::collections::{hash_map, HashMap};
-use std::ops::Deref;
-use std::sync::Arc;
-use std::time::Duration;
 
 /// Inner structure of `Resource` holding the actual data.
 /// This structure is designed to be shared among `Resource` instances via `Arc`.
@@ -54,14 +52,11 @@ pub struct Resource {
 
 impl Default for Resource {
     fn default() -> Self {
-        Self::from_detectors(
-            Duration::from_secs(0),
-            vec![
-                Box::new(SdkProvidedResourceDetector),
-                Box::new(TelemetryResourceDetector),
-                Box::new(EnvResourceDetector::new()),
-            ],
-        )
+        Self::from_detectors(vec![
+            Box::new(SdkProvidedResourceDetector),
+            Box::new(TelemetryResourceDetector),
+            Box::new(EnvResourceDetector::new()),
+        ])
     }
 }
 
@@ -129,10 +124,10 @@ impl Resource {
     /// Create a new `Resource` from resource detectors.
     ///
     /// timeout will be applied to each detector.
-    pub fn from_detectors(timeout: Duration, detectors: Vec<Box<dyn ResourceDetector>>) -> Self {
+    pub fn from_detectors(detectors: Vec<Box<dyn ResourceDetector>>) -> Self {
         let mut resource = Resource::empty();
         for detector in detectors {
-            let detected_res = detector.detect(timeout);
+            let detected_res = detector.detect();
             // This call ensures that if the Arc is not uniquely owned,
             // the data is cloned before modification, preserving safety.
             // If the Arc is uniquely owned, it simply returns a mutable reference to the data.
@@ -254,13 +249,12 @@ pub trait ResourceDetector {
     ///
     /// If source information to construct a Resource is invalid, for example,
     /// missing required values. an empty Resource should be returned.
-    fn detect(&self, timeout: Duration) -> Resource;
+    fn detect(&self) -> Resource;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time;
 
     #[test]
     fn new_resource() {
@@ -346,34 +340,5 @@ mod tests {
         let other_resource = Resource::new(vec![KeyValue::new("key", "")]);
 
         assert_eq!(resource.merge(&other_resource).schema_url(), None);
-    }
-
-    #[test]
-    fn detect_resource() {
-        temp_env::with_vars(
-            [
-                (
-                    "OTEL_RESOURCE_ATTRIBUTES",
-                    Some("key=value, k = v , a= x, a=z"),
-                ),
-                ("IRRELEVANT", Some("20200810")),
-            ],
-            || {
-                let detector = EnvResourceDetector::new();
-                let resource = Resource::from_detectors(
-                    time::Duration::from_secs(5),
-                    vec![Box::new(detector)],
-                );
-                assert_eq!(
-                    resource,
-                    Resource::new(vec![
-                        KeyValue::new("key", "value"),
-                        KeyValue::new("k", "v"),
-                        KeyValue::new("a", "x"),
-                        KeyValue::new("a", "z"),
-                    ])
-                )
-            },
-        )
     }
 }

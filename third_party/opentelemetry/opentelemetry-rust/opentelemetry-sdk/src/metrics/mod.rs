@@ -61,6 +61,7 @@ pub use meter_provider::*;
 pub use pipeline::Pipeline;
 pub use view::*;
 
+use alloc::vec::Vec;
 use core::hash::{Hash, Hasher};
 use hashbrown::HashSet;
 use siphasher::sip::SipHasher;

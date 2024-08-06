@@ -1,5 +1,5 @@
 use super::instrument::{Instrument, Stream};
-use glob::Pattern;
+use alloc::boxed::Box;
 use opentelemetry_rk::{
     global,
     metrics::{MetricsError, Result},
@@ -119,11 +119,9 @@ pub fn new_view(criteria: Instrument, mask: Stream) -> Result<Box<dyn View>> {
         }
 
         let pattern = criteria.name.clone();
-        let glob_pattern =
-            Pattern::new(&pattern).map_err(|e| MetricsError::Config(e.to_string()))?;
 
         Box::new(move |i| {
-            glob_pattern.matches(&i.name)
+            simple_pattern_match(&pattern, &i.name)
                 && criteria.matches_description(i)
                 && criteria.matches_kind(i)
                 && criteria.matches_unit(i)
@@ -174,9 +172,54 @@ pub fn new_view(criteria: Instrument, mask: Stream) -> Result<Box<dyn View>> {
     }))
 }
 
+// Some basic custom pattern matching in leiu of glob::Pattern
+fn simple_pattern_match(pattern: &str, input: &str) -> bool {
+    let mut pattern_iter = pattern.chars();
+    let mut input_iter = input.chars();
+
+    loop {
+        match (pattern_iter.next(), input_iter.next()) {
+            (Some('*'), Some(_)) => {
+                while input_iter.next().is_some() {}
+                if pattern_iter.next().is_none() {
+                    return true;
+                }
+            }
+            (Some('*'), None) => return pattern_iter.next().is_none(),
+            (Some('?'), Some(_)) => (),
+            (Some(p), Some(i)) if p == i => (),
+            (None, None) => return true,
+            _ => return false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn simple_pattern_match_tests() {
+        assert!(simple_pattern_match("abc", "abc"));
+        assert!(!simple_pattern_match("abc", "abd"));
+
+        assert!(simple_pattern_match("a?c", "abc"));
+        assert!(simple_pattern_match("a?c", "adc"));
+        assert!(!simple_pattern_match("a?c", "ac"));
+        assert!(!simple_pattern_match("a?c", "abbc"));
+
+        assert!(simple_pattern_match("a??", "abc"));
+        assert!(simple_pattern_match("a??", "abd"));
+        assert!(!simple_pattern_match("a??", "ab"));
+        assert!(!simple_pattern_match("a??", "abcd"));
+
+        assert!(simple_pattern_match("a*c", "ac"));
+        assert!(simple_pattern_match("a*c", "abc"));
+        assert!(simple_pattern_match("a*c", "abbc"));
+        assert!(simple_pattern_match("*c", "abc"));
+        assert!(simple_pattern_match("a*", "abcde"));
+    }
+
     #[test]
     fn test_new_view_matching_all() {
         let criteria = Instrument::new().name("*");

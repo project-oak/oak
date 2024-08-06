@@ -1,6 +1,7 @@
 use core::fmt;
 
 use crate::metrics::internal::{EXPO_MAX_SCALE, EXPO_MIN_SCALE};
+use alloc::vec::Vec;
 use opentelemetry_rk::metrics::{MetricsError, Result};
 
 /// The way recorded measurements are summarized.
@@ -153,6 +154,7 @@ mod tests {
         internal::{EXPO_MAX_SCALE, EXPO_MIN_SCALE},
         Aggregation,
     };
+    use alloc::{boxed::Box, vec::Vec};
     use opentelemetry_rk::metrics::{MetricsError, Result};
 
     #[test]

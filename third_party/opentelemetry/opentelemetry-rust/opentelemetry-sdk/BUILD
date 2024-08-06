@@ -32,6 +32,10 @@ rust_library(
     deps = [
         "//oak_core",
         "//third_party/opentelemetry/opentelemetry-rust/opentelemetry:opentelemetry_rk",
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:lazy_static",
+        "@oak_crates_index//:libm",
+        "@oak_crates_index//:spinning_top",
     ],
 )
 
@@ -49,7 +53,10 @@ rust_library(
     deps = [
         "//oak_core",
         "//third_party/opentelemetry/opentelemetry-rust/opentelemetry:opentelemetry_rk",
-        "@oak_crates_index//:temp-env",
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:lazy_static",
+        "@oak_crates_index//:libm",
+        "@oak_crates_index//:spinning_top",
     ],
     visibility = ["//visibility:private"],
     features = ["testing", "metrics"],
@@ -57,10 +64,6 @@ rust_library(
 
 rust_test(
     name = "opentelemetry_rk_sdk_test",
-    size = "small",
     crate = ":opentelemetry_rk_sdk_test_lib",
-    deps = [
-      "@oak_crates_index//:temp-env",
-      ],
     features = ["testing", "metrics"],
 )

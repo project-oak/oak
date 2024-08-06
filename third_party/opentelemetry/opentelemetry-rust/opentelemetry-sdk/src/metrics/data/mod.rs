@@ -1,7 +1,5 @@
 //! Types for delivery of pre-aggregated metric time series data.
-extern crate alloc;
-
-use alloc::borrow::Cow;
+use alloc::{borrow::Cow, vec::Vec, boxed::Box};
 use core::{any, fmt};
 
 use opentelemetry_rk::KeyValue;

@@ -21,8 +21,8 @@ opentelemetry_rk = { version = "0.23", path = "../opentelemetry/" }
 hashbrown = "*"
 lazy_static = { version = "*", features = ["spin_no_std"] }
 siphasher = "1.0.1"
-glob = { version = "0.3.1", optional =true}
 spinning_top = "*"
+libm = "*"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -30,7 +30,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
-temp-env = { version = "0.3.6" }
 rand = { version = "0.8", features = ["std", "std_rng","small_rng"], default-features = false }
 tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
 tokio-stream = { version = "0.1.1" }

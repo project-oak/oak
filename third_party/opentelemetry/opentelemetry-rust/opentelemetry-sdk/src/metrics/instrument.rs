@@ -1,6 +1,4 @@
-extern crate alloc;
-
-use alloc::{borrow::Cow, sync::Arc};
+use alloc::{borrow::Cow, sync::Arc, vec::Vec};
 use core::{any::Any, hash::Hash, marker};
 use hashbrown::HashSet;
 

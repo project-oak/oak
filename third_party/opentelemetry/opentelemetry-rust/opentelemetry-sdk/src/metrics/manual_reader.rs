@@ -1,8 +1,6 @@
-extern crate alloc;
-
 use core::fmt;
 
-use alloc::sync::Weak;
+use alloc::{boxed::Box, sync::Weak, vec};
 use spinning_top::Spinlock as Mutex;
 
 use opentelemetry_rk::{
@@ -55,7 +53,7 @@ impl fmt::Debug for ManualReader {
 struct ManualReaderInner {
     sdk_producer: Option<Weak<dyn SdkProducer>>,
     is_shutdown: bool,
-    external_producers: Vec<Box<dyn MetricProducer>>,
+    external_producers: vec::Vec<Box<dyn MetricProducer>>,
 }
 
 impl ManualReader {
@@ -68,7 +66,7 @@ impl ManualReader {
     pub(crate) fn new(
         temporality_selector: Box<dyn TemporalitySelector>,
         aggregation_selector: Box<dyn AggregationSelector>,
-        producers: Vec<Box<dyn MetricProducer>>,
+        producers: vec::Vec<Box<dyn MetricProducer>>,
     ) -> Self {
         ManualReader {
             inner: Box::new(Mutex::new(ManualReaderInner {
@@ -150,7 +148,7 @@ impl MetricReader for ManualReader {
         // Any future call to collect will now return an error.
         inner.sdk_producer = None;
         inner.is_shutdown = true;
-        inner.external_producers = Vec::new();
+        inner.external_producers = vec::Vec::new();
 
         Ok(())
     }
@@ -160,7 +158,7 @@ impl MetricReader for ManualReader {
 pub struct ManualReaderBuilder {
     temporality_selector: Box<dyn TemporalitySelector>,
     aggregation_selector: Box<dyn AggregationSelector>,
-    producers: Vec<Box<dyn MetricProducer>>,
+    producers: vec::Vec<Box<dyn MetricProducer>>,
 }
 
 impl fmt::Debug for ManualReaderBuilder {

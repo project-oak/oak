@@ -2,7 +2,7 @@ extern crate alloc;
 
 use crate::metrics::data::{self, Aggregation, DataPoint, Temporality};
 use crate::metrics::AttributeSet;
-use alloc::vec;
+use alloc::{boxed::Box, vec};
 use core::sync::atomic::{AtomicBool, Ordering};
 use hashbrown::HashMap;
 use opentelemetry_rk::KeyValue;

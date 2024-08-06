@@ -1,4 +1,7 @@
+use alloc::{boxed::Box, vec};
+use core::iter;
 use hashbrown::HashMap;
+use libm::{fabs, log, pow};
 use spinning_top::Spinlock as Mutex;
 
 use opentelemetry_rk::{metrics::MetricsError, KeyValue};
@@ -71,7 +74,7 @@ impl<T: Number<T>> ExpoHistogramDataPoint<T> {
             self.sum += v;
         }
 
-        let abs_v = v.into_float().abs();
+        let abs_v = fabs(v.into_float());
 
         if abs_v == 0.0 {
             self.zero_count += 1;
@@ -135,7 +138,7 @@ impl<T: Number<T>> ExpoHistogramDataPoint<T> {
             }
             return (exp - correction) >> -self.scale;
         }
-        (exp << self.scale) + (frac.ln() * SCALE_FACTORS[self.scale as usize]) as i32 - 1
+        (exp << self.scale) + (log(frac) * SCALE_FACTORS[self.scale as usize]) as i32 - 1
     }
 }
 
@@ -172,28 +175,28 @@ fn scale_change(max_size: i32, bin: i32, start_bin: i32, length: i32) -> u32 {
 lazy_static::lazy_static! {
   /// Constants used in calculating the logarithm index.
   static ref SCALE_FACTORS: [f64; 21] = [
-  LOG2_E * 2f64.powi(0),
-  LOG2_E * 2f64.powi(1),
-  LOG2_E * 2f64.powi(2),
-  LOG2_E * 2f64.powi(3),
-  LOG2_E * 2f64.powi(4),
-  LOG2_E * 2f64.powi(5),
-  LOG2_E * 2f64.powi(6),
-  LOG2_E * 2f64.powi(7),
-  LOG2_E * 2f64.powi(8),
-  LOG2_E * 2f64.powi(9),
-  LOG2_E * 2f64.powi(10),
-  LOG2_E * 2f64.powi(11),
-  LOG2_E * 2f64.powi(12),
-  LOG2_E * 2f64.powi(13),
-  LOG2_E * 2f64.powi(14),
-  LOG2_E * 2f64.powi(15),
-  LOG2_E * 2f64.powi(16),
-  LOG2_E * 2f64.powi(17),
-  LOG2_E * 2f64.powi(18),
-  LOG2_E * 2f64.powi(19),
-  LOG2_E * 2f64.powi(20),
-  ];
+    LOG2_E * pow(2.0, 0.0),
+    LOG2_E * pow(2.0, 1.0),
+    LOG2_E * pow(2.0, 2.0),
+    LOG2_E * pow(2.0, 3.0),
+    LOG2_E * pow(2.0, 4.0),
+    LOG2_E * pow(2.0, 5.0),
+    LOG2_E * pow(2.0, 6.0),
+    LOG2_E * pow(2.0, 7.0),
+    LOG2_E * pow(2.0, 8.0),
+    LOG2_E * pow(2.0, 9.0),
+    LOG2_E * pow(2.0, 10.0),
+    LOG2_E * pow(2.0, 11.0),
+    LOG2_E * pow(2.0, 12.0),
+    LOG2_E * pow(2.0, 13.0),
+    LOG2_E * pow(2.0, 14.0),
+    LOG2_E * pow(2.0, 15.0),
+    LOG2_E * pow(2.0, 16.0),
+    LOG2_E * pow(2.0, 17.0),
+    LOG2_E * pow(2.0, 18.0),
+    LOG2_E * pow(2.0, 19.0),
+    LOG2_E * pow(2.0, 20.0),
+    ];
 }
 
 /// Breaks the number into a normalized fraction and a base-2 exponent.
@@ -227,7 +230,7 @@ fn frexp(x: f64) -> (f64, i32) {
 #[derive(Default, Debug, PartialEq)]
 struct ExpoBuckets {
     start_bin: i32,
-    counts: Vec<u64>,
+    counts: vec::Vec<u64>,
 }
 
 impl ExpoBuckets {
@@ -266,7 +269,7 @@ impl ExpoBuckets {
             }
 
             self.counts.extend(
-                std::iter::repeat(0).take((bin - self.start_bin) as usize - self.counts.len() + 1),
+                iter::repeat(0).take((bin - self.start_bin) as usize - self.counts.len() + 1),
             );
             self.counts[(bin - self.start_bin) as usize] = 1
         }
@@ -491,7 +494,8 @@ impl<T: Number<T>> ExpoHistogram<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Neg;
+    use alloc::vec::Vec;
+    use core::ops::Neg;
 
     use opentelemetry_rk::KeyValue;
 

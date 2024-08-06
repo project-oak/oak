@@ -1,6 +1,4 @@
-extern crate alloc;
-
-use alloc::{borrow::Cow, sync::Arc};
+use alloc::{borrow::Cow, boxed::Box, sync::Arc, vec::Vec};
 use core::fmt;
 use core::sync::atomic::{AtomicBool, Ordering};
 use hashbrown::HashMap;
@@ -55,7 +53,7 @@ impl SdkMeterProvider {
     /// # Examples
     ///
     /// ```
-    /// use opentelemetry_rk::{global, Context};
+    /// use opentelemetry_rk::global;
     /// use opentelemetry_rk_sdk::metrics::SdkMeterProvider;
     ///
     /// fn init_metrics() -> SdkMeterProvider {
@@ -245,15 +243,12 @@ impl fmt::Debug for MeterProviderBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use crate::resource::{
-        SERVICE_NAME, TELEMETRY_SDK_LANGUAGE, TELEMETRY_SDK_NAME, TELEMETRY_SDK_VERSION,
-    };
+    use crate::resource::SERVICE_NAME;
     use crate::testing::metrics::metric_reader::TestMetricReader;
     use crate::Resource;
     use opentelemetry_rk::global;
     use opentelemetry_rk::metrics::MeterProvider;
-    use opentelemetry_rk::{Key, KeyValue, Value};
-    use std::env;
+    use opentelemetry_rk::{Key, KeyValue};
 
     #[test]
     fn test_meter_provider_resource() {
@@ -268,40 +263,6 @@ mod tests {
                 expect.map(|s| s.to_string())
             );
         };
-        let assert_telemetry_resource = |provider: &super::SdkMeterProvider| {
-            assert_eq!(
-                provider.inner.pipes.0[0]
-                    .resource
-                    .get(TELEMETRY_SDK_LANGUAGE.into()),
-                Some(Value::from("rust"))
-            );
-            assert_eq!(
-                provider.inner.pipes.0[0]
-                    .resource
-                    .get(TELEMETRY_SDK_NAME.into()),
-                Some(Value::from("opentelemetry"))
-            );
-            assert_eq!(
-                provider.inner.pipes.0[0]
-                    .resource
-                    .get(TELEMETRY_SDK_VERSION.into()),
-                Some(Value::from(env!("CARGO_PKG_VERSION")))
-            );
-        };
-
-        // If users didn't provide a resource and there isn't a env var set. Use default one.
-        temp_env::with_var_unset("OTEL_RESOURCE_ATTRIBUTES", || {
-            let reader = TestMetricReader::new();
-            let default_meter_provider = super::SdkMeterProvider::builder()
-                .with_reader(reader)
-                .build();
-            assert_resource(
-                &default_meter_provider,
-                SERVICE_NAME,
-                Some("unknown_service"),
-            );
-            assert_telemetry_resource(&default_meter_provider);
-        });
 
         // If user provided a resource, use that.
         let reader2 = TestMetricReader::new();
@@ -314,70 +275,6 @@ mod tests {
             .build();
         assert_resource(&custom_meter_provider, SERVICE_NAME, Some("test_service"));
         assert_eq!(custom_meter_provider.inner.pipes.0[0].resource.len(), 1);
-
-        temp_env::with_var(
-            "OTEL_RESOURCE_ATTRIBUTES",
-            Some("key1=value1, k2, k3=value2"),
-            || {
-                // If `OTEL_RESOURCE_ATTRIBUTES` is set, read them automatically
-                let reader3 = TestMetricReader::new();
-                let env_resource_provider = super::SdkMeterProvider::builder()
-                    .with_reader(reader3)
-                    .build();
-                assert_resource(
-                    &env_resource_provider,
-                    SERVICE_NAME,
-                    Some("unknown_service"),
-                );
-                assert_resource(&env_resource_provider, "key1", Some("value1"));
-                assert_resource(&env_resource_provider, "k3", Some("value2"));
-                assert_telemetry_resource(&env_resource_provider);
-                assert_eq!(env_resource_provider.inner.pipes.0[0].resource.len(), 6);
-            },
-        );
-
-        // When `OTEL_RESOURCE_ATTRIBUTES` is set and also user provided config
-        temp_env::with_var(
-            "OTEL_RESOURCE_ATTRIBUTES",
-            Some("my-custom-key=env-val,k2=value2"),
-            || {
-                let reader4 = TestMetricReader::new();
-                let user_provided_resource_config_provider = super::SdkMeterProvider::builder()
-                    .with_reader(reader4)
-                    .with_resource(Resource::default().merge(&mut Resource::new(vec![
-                        KeyValue::new("my-custom-key", "my-custom-value"),
-                        KeyValue::new("my-custom-key2", "my-custom-value2"),
-                    ])))
-                    .build();
-                assert_resource(
-                    &user_provided_resource_config_provider,
-                    SERVICE_NAME,
-                    Some("unknown_service"),
-                );
-                assert_resource(
-                    &user_provided_resource_config_provider,
-                    "my-custom-key",
-                    Some("my-custom-value"),
-                );
-                assert_resource(
-                    &user_provided_resource_config_provider,
-                    "my-custom-key2",
-                    Some("my-custom-value2"),
-                );
-                assert_resource(
-                    &user_provided_resource_config_provider,
-                    "k2",
-                    Some("value2"),
-                );
-                assert_telemetry_resource(&user_provided_resource_config_provider);
-                assert_eq!(
-                    user_provided_resource_config_provider.inner.pipes.0[0]
-                        .resource
-                        .len(),
-                    7
-                );
-            },
-        );
 
         // If user provided a resource, it takes priority during collision.
         let reader5 = TestMetricReader::new();

@@ -1,6 +1,4 @@
-extern crate alloc;
-
-use alloc::sync::Arc;
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::marker;
 
 use opentelemetry_rk::KeyValue;

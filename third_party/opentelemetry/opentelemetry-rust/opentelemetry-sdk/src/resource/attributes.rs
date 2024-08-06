@@ -5,6 +5,8 @@
 /// # Examples
 ///
 /// - `shoppingcart`
+///
+#[allow(dead_code)]
 pub(crate) const SERVICE_NAME: &str = "service.name";
 
 /// The language of the telemetry SDK.

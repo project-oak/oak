@@ -1,7 +1,6 @@
 //! Interfaces for reading and producing metrics
-extern crate alloc;
 
-use alloc::sync::Weak;
+use alloc::{sync::Weak, vec};
 use core::fmt;
 
 use opentelemetry_rk::metrics::Result;

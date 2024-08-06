@@ -10,7 +10,6 @@ use core::{
     hash::{Hash, Hasher},
     result,
 };
-use std::sync::PoisonError;
 
 mod instruments;
 mod meter;
@@ -55,10 +54,11 @@ impl<T: ExportError> From<T> for MetricsError {
     }
 }
 
-impl<T> From<PoisonError<T>> for MetricsError {
-    fn from(err: PoisonError<T>) -> Self {
-        MetricsError::Other(err.to_string())
-    }
+#[cfg(feature = "testing")]
+impl<T> From<std::sync::PoisonError<T>> for MetricsError {
+  fn from(err: std::sync::PoisonError<T>) -> Self {
+      MetricsError::Other(err.to_string())
+  }
 }
 
 impl fmt::Display for MetricsError {

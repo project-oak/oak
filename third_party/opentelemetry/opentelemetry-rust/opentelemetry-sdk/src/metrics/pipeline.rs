@@ -1,6 +1,4 @@
-extern crate alloc;
-
-use alloc::{borrow::Cow, sync::Arc};
+use alloc::{borrow::Cow, boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use core::fmt;
 use hashbrown::{HashMap, HashSet};
 use spinning_top::Spinlock as Mutex;
