@@ -189,13 +189,29 @@ impl<T: PortWrite> PortWriter<T> for Port<T> {
     }
 }
 
-/// Performs platform-specific initializations (for example, accepts guest
-/// memory)
+/// Platform-specific early initialization.
 ///
-/// What exactly is done depends on the platform (SEV or TDX).
+/// This sets up the bare minimum to get things going; for example, under
+/// SEV-ES and above, we set up the GHCB here, but nothing more.
 ///
-/// This code is run early in the startup process. You will have access to the
-/// boot allocator and logging, but _not_ the global heap allocator.
+/// This gets executed very soon after stage0 starts and comes with many
+/// restrictions:
+///   - You do not have access to logging.
+///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
+///     work).
+pub fn early_initialize_platform() {
+    #[cfg(feature = "sev")]
+    sev::early_initialize_platform();
+}
+
+/// Platform-specific intialization.
+///
+/// This gets executed after `early_initalize_platform()` and some other
+/// auxiliary services, such as logging, have been set up; the main purpose is
+/// to accept all guest memory so that we can set up a heap allocator.
+///
+/// This does mean you do not have access to the heap allocator (BOOT_ALLOCATOR
+/// will still work).
 pub fn initialize_platform(e820_table: &[BootE820Entry]) {
     #[cfg(feature = "sev")]
     sev::initialize_platform(e820_table)

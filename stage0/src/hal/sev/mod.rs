@@ -29,7 +29,32 @@ use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::msr::SevStatus;
 pub use port::*;
 
+use crate::BOOT_ALLOC;
+
+pub fn early_initialize_platform() {
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
+    // implies SEV-ES).
+    if crate::sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+        crate::sev::GHCB_WRAPPER.init(&BOOT_ALLOC);
+    }
+    if crate::sev_status().contains(SevStatus::SEV_ENABLED) {
+        // Safety: This is safe for SEV-ES and SNP because we're using an originally
+        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
+        // If we get CPUID reads working, we may want to check that MTRR is
+        // supported, but only if we want to support very old processors.
+        // However, note that, this branch is only executed if
+        // we have encryption, and this wouldn't be true for very old processors.
+        unsafe {
+            crate::msr::MTRRDefType::write(
+                crate::msr::MTRRDefTypeFlags::MTRR_ENABLE,
+                crate::msr::MemoryType::WP,
+            );
+        }
+    }
+}
+
 pub fn initialize_platform(e820_table: &[BootE820Entry]) {
+    log::info!("Enabled SEV features: {:?}", crate::sev_status());
     if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
         dice_attestation::init_guest_message_encryptor()
             .expect("couldn't initialize guest message encryptor");

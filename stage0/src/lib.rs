@@ -145,29 +145,9 @@ pub fn sev_status() -> SevStatus {
 ///   tables.
 pub fn rust64_start() -> ! {
     paging::init_page_table_refs();
-
-    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
-    // implies SEV-ES).
-    if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        sev::GHCB_WRAPPER.init(&BOOT_ALLOC);
-    }
-
+    hal::early_initialize_platform();
     logging::init_logging();
     log::info!("starting...");
-    log::info!("Enabled SEV features: {:?}", sev_status());
-
-    if sev_status().contains(SevStatus::SEV_ENABLED) {
-        // Safety: This is safe for SEV-ES and SNP because we're using an originally
-        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
-        // If we get CPUID reads working, we may want to check that MTRR is
-        // supported, but only if we want to support very old processors.
-        // However, note that, this branch is only executed if
-        // we have encryption, and this wouldn't be true for very old processors.
-        unsafe {
-            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
-        }
-    }
-
     // Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
     let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
