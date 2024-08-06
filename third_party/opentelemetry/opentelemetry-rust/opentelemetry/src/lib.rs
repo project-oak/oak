@@ -187,20 +187,17 @@
 )]
 #![cfg_attr(test, deny(warnings))]
 #![feature(error_in_core)]
+#![cfg_attr(all(not(feature = "testing")), no_std)]
+
+extern crate alloc;
 
 pub mod global;
 
-pub mod baggage;
-
-mod context;
-
-pub use context::{Context, ContextGuard};
-
 mod common;
 
-// #[cfg(any(feature = "testing", test))]
-// #[doc(hidden)]
-// pub mod testing;
+#[cfg(any(feature = "testing", test))]
+#[doc(hidden)]
+pub mod testing;
 
 pub use common::{
     Array, ExportError, InstrumentationLibrary, InstrumentationLibraryBuilder, Key, KeyValue,
@@ -211,8 +208,6 @@ pub use common::{
 #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
 pub mod metrics;
 
-// pub mod propagation;
-
 #[cfg(feature = "trace")]
 #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
 pub mod trace;
@@ -220,4 +215,3 @@ pub mod trace;
 #[cfg(feature = "logs")]
 #[cfg_attr(docsrs, doc(cfg(feature = "logs")))]
 pub mod logs;
-

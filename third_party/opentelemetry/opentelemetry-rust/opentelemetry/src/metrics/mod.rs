@@ -56,9 +56,9 @@ impl<T: ExportError> From<T> for MetricsError {
 
 #[cfg(feature = "testing")]
 impl<T> From<std::sync::PoisonError<T>> for MetricsError {
-  fn from(err: std::sync::PoisonError<T>) -> Self {
-      MetricsError::Other(err.to_string())
-  }
+    fn from(err: std::sync::PoisonError<T>) -> Self {
+        MetricsError::Other(err.to_string())
+    }
 }
 
 impl fmt::Display for MetricsError {

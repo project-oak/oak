@@ -1,3 +1,4 @@
+use alloc::{boxed::Box, string::String};
 use core::fmt;
 use oak_core::sync::OnceCell;
 
@@ -5,7 +6,6 @@ use oak_core::sync::OnceCell;
 use crate::logs::LogError;
 #[cfg(feature = "metrics")]
 use crate::metrics::MetricsError;
-// use crate::propagation::PropagationError;
 #[cfg(feature = "trace")]
 use crate::trace::TraceError;
 
@@ -17,25 +17,20 @@ static GLOBAL_ERROR_HANDLER: OnceCell<Option<ErrorHandler>> = OnceCell::new();
 pub enum Error {
     #[cfg(feature = "trace")]
     #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
-    // #[error(transparent)]
+
     /// Failed to export traces.
     Trace(#[from] TraceError),
     #[cfg(feature = "metrics")]
     #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
-    // #[error(transparent)]
+
     /// An issue raised by the metrics module.
     Metric(MetricsError),
 
     #[cfg(feature = "logs")]
     #[cfg_attr(docsrs, doc(cfg(feature = "logs")))]
-    // #[error(transparent)]
     /// Failed to export logs.
     Log(LogError),
 
-    // #[error(transparent)]
-    // /// Error happens when injecting and extracting information using propagators.
-    // Propagation(#[from] PropagationError),
-    // #[error("{0}")]
     /// Other types of failures not covered by the variants above.
     Other(String),
 }
@@ -56,9 +51,9 @@ impl fmt::Display for Error {
 
 #[cfg(feature = "metrics")]
 impl From<MetricsError> for Error {
-  fn from(err: MetricsError) -> Self {
-    Error::Metric(err)
-  }
+    fn from(err: MetricsError) -> Self {
+        Error::Metric(err)
+    }
 }
 
 struct ErrorHandler(Box<dyn Fn(Error) + Send + Sync>);
@@ -73,17 +68,17 @@ pub fn handle_error<T: Into<Error>>(err: T) {
         match err.into() {
             #[cfg(feature = "metrics")]
             #[cfg_attr(docsrs, doc(cfg(feature = "metrics")))]
-            Error::Metric(err) => eprintln!("OpenTelemetry metrics error occurred. {}", err),
+            Error::Metric(err) => log::error!("OpenTelemetry error occurred. {}", err),
             #[cfg(feature = "trace")]
             #[cfg_attr(docsrs, doc(cfg(feature = "trace")))]
-            Error::Trace(err) => eprintln!("OpenTelemetry trace error occurred. {}", err),
+            Error::Trace(err) => log::error!("OpenTelemetry trace error occurred. {}", err),
             #[cfg(feature = "logs")]
             #[cfg_attr(docsrs, doc(cfg(feature = "logs")))]
-            Error::Log(err) => eprintln!("OpenTelemetry log error occurred. {}", err),
-            // Error::Propagation(err) => {
-            //     eprintln!("OpenTelemetry propagation error occurred. {}", err)
-            // }
-            Error::Other(err_msg) => eprintln!("OpenTelemetry error occurred. {}", err_msg),
+            Error::Log(err) => log::error!("OpenTelemetry log error occurred. {}", err),
+
+            Error::Other(err_msg) => {
+                log::error!("OpenTelemetry error occurred. {}", err_msg);
+            }
         }
     }
 }

@@ -1,6 +1,11 @@
-extern crate alloc;
-
-use alloc::{borrow::Cow, boxed::Box, string::String, sync::Arc, vec::Vec};
+use alloc::{
+    borrow::Cow,
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    sync::Arc,
+    vec::Vec,
+};
 use core::{borrow::Borrow, fmt, hash};
 
 /// The key part of attribute [KeyValue] pairs.

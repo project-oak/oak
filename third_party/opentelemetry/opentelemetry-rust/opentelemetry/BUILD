@@ -23,9 +23,7 @@ package(
 rust_library(
     name = "opentelemetry_rk",
     srcs = glob(["src/metrics/**"]) + [
-        "src/baggage.rs",
         "src/common.rs",
-        "src/context.rs",
         "src/global/error_handler.rs",
         "src/global/metrics.rs",
         "src/global/mod.rs",
@@ -33,12 +31,33 @@ rust_library(
     ],
     deps = [
         "//oak_core",
+        "@oak_no_std_crates_index//:log",
     ],
+)
+
+rust_library(
+    name = "opentelemetry_rk_test_lib",
+    srcs = glob([
+        "src/testing/**",])
+        + glob(["src/metrics/**"]) + [
+        "src/common.rs",
+        "src/global/error_handler.rs",
+        "src/global/metrics.rs",
+        "src/global/mod.rs",
+        "src/lib.rs",
+    ],
+    deps = [
+      "//oak_core",
+        ":opentelemetry_rk",
+        "@oak_no_std_crates_index//:log",
+    ],
+    visibility = ["//visibility:private"],
+    features = ["testing", "metrics"],
 )
 
 rust_test(
     name = "opentelemetry_rk_test",
     size = "small",
-    crate = ":opentelemetry_rk",
-    features = ["testing"],
+    crate = ":opentelemetry_rk_test_lib",
+    features = ["metrics", "testing"],
 )

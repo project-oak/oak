@@ -13,8 +13,6 @@ categories = [
 ]
 include = [
   "src/lib.rs",
-  "src/baggage.rs",
-  "src/context.rs",
   "src/common.rs",
   "src/metrics/*",
   "src/global/metrics.rs",
@@ -28,6 +26,8 @@ exclude = [
   "src/logs/*",
   "src/propagation/*",
   "src/global/propagation.rs",
+  "src/baggage.rs",
+  "src/context.rs",
 ]
 keywords = ["opentelemetry", "logging", "tracing", "metrics", "async"]
 license = "Apache-2.0"
@@ -40,6 +40,8 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 oak_core = { path = "../../../../oak_core" }
+log = "*"
+spinning_top = "*"
 
 [target.'cfg(all(target_arch = "wasm32", not(target_os = "wasi")))'.dependencies]
 js-sys = "0.3.63"

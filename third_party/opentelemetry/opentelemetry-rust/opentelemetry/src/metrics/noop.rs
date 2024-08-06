@@ -3,7 +3,6 @@
 //! This implementation is returned as the global Meter if no `MeterProvider`
 //! has been set. It is expected to have minimal resource utilization and
 //! runtime impact.
-extern crate alloc;
 
 use crate::{
     metrics::{
@@ -12,7 +11,7 @@ use crate::{
     },
     KeyValue,
 };
-use alloc::{borrow::Cow, sync::Arc};
+use alloc::{borrow::Cow, boxed::Box, sync::Arc, vec::Vec};
 use core::any::Any;
 
 /// A no-op instance of a `MetricProvider`
