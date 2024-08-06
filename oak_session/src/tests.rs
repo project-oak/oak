@@ -16,12 +16,17 @@ use oak_crypto::{
     encryptor::Encryptor,
     identity_key::{IdentityKey, IdentityKeyHandle},
 };
-use oak_session::{
-    config::HandshakerConfig,
+use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+
+use crate::{
+    attestation::AttestationType,
+    config::{HandshakerConfig, SessionConfig},
     encryptors::OrderedChannelEncryptor,
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
-    ProtocolEngine,
+    ClientSession, ProtocolEngine, ServerSession, Session,
 };
+
+const TEST_MESSAGES: &[&[u8]] = &[&[1u8, 2u8, 3u8, 4u8], &[4u8, 3u8, 2u8, 1u8], &[]];
 
 #[test]
 fn process_nk_handshake() {
@@ -77,16 +82,90 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     let mut encryptor_client: OrderedChannelEncryptor = session_keys_client.try_into().unwrap();
     let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
 
-    let test_messages = vec![vec![1u8, 2u8, 3u8, 4u8], vec![4u8, 3u8, 2u8, 1u8], vec![]];
-    for message in &test_messages {
-        let ciphertext = encryptor_client.encrypt(message.as_slice().into()).unwrap();
+    for &message in TEST_MESSAGES {
+        let ciphertext = encryptor_client.encrypt(message.into()).unwrap();
         let plaintext = encryptor_server.decrypt(ciphertext.as_slice().into()).unwrap();
+        assert_eq!(message, &plaintext);
         assert_eq!(message, &plaintext);
     }
 
-    for message in &test_messages {
-        let ciphertext = encryptor_server.encrypt(message.as_slice().into()).unwrap();
+    for &message in TEST_MESSAGES {
+        let ciphertext = encryptor_server.encrypt(message.into()).unwrap();
         let plaintext = encryptor_client.decrypt(ciphertext.as_slice().into()).unwrap();
         assert_eq!(message, &plaintext);
     }
+}
+
+#[test]
+fn session_nn_succeeds() {
+    let config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let mut client_session = ClientSession::create(&config).unwrap();
+    let mut server_session = ServerSession::new(&config);
+    do_session_handshake(&mut client_session, &mut server_session);
+
+    for &message in TEST_MESSAGES {
+        verify_session_message(&mut client_session, &mut server_session, message);
+        verify_session_message(&mut server_session, &mut client_session, message);
+    }
+}
+
+#[test]
+fn session_nk_succeeds() {
+    let identity_key = IdentityKey::generate();
+    let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_peer_static_public_key(identity_key.get_public_key().unwrap().as_slice())
+        .build();
+    let mut client_session = ClientSession::create(&client_config).unwrap();
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_private_key(&identity_key)
+        .build();
+    let mut server_session = ServerSession::new(&server_config);
+    do_session_handshake(&mut client_session, &mut server_session);
+
+    for &message in TEST_MESSAGES {
+        verify_session_message(&mut client_session, &mut server_session, message);
+        verify_session_message(&mut server_session, &mut client_session, message);
+    }
+}
+#[test]
+#[should_panic]
+fn session_nk_key_mismatch() {
+    let identity_key1 = IdentityKey::generate();
+    let identity_key2 = IdentityKey::generate();
+    let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_peer_static_public_key(identity_key1.get_public_key().unwrap().as_slice())
+        .build();
+    let mut client_session = ClientSession::create(&client_config).unwrap();
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_private_key(&identity_key2)
+        .build();
+    let mut server_session = ServerSession::new(&server_config);
+    do_session_handshake(&mut client_session, &mut server_session);
+}
+
+fn do_session_handshake(client_session: &mut ClientSession, server_session: &mut ServerSession) {
+    while !client_session.is_open() {
+        let request = client_session.get_outgoing_message().unwrap().unwrap();
+        assert!(server_session.put_incoming_message(&request).is_ok());
+        let response = server_session.get_outgoing_message().unwrap().unwrap();
+        assert!(client_session.put_incoming_message(&response).is_ok());
+    }
+    assert!(server_session.is_open());
+}
+
+trait ProtocolSession<I, O>: Session + ProtocolEngine<I, O> {}
+
+impl<'a> ProtocolSession<SessionResponse, SessionRequest> for ClientSession<'a> {}
+impl<'a> ProtocolSession<SessionRequest, SessionResponse> for ServerSession<'a> {}
+
+fn verify_session_message<I, O>(
+    session1: &mut dyn ProtocolSession<I, O>,
+    session2: &mut dyn ProtocolSession<O, I>,
+    message: &[u8],
+) {
+    assert!(session1.write(message).is_ok());
+    let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
+    assert!(session2.put_incoming_message(&outgoing_message).is_ok());
+    assert_eq!(message, session2.read().unwrap().unwrap());
 }

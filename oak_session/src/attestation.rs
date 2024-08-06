@@ -36,7 +36,7 @@ pub trait AttestationVerifier {
     ) -> anyhow::Result<AttestationResults>;
 }
 
-/// Configuration of the attestation behavior that the AttestationProtiver will
+/// Configuration of the attestation behavior that the AttestationProvider will
 /// perform between two parties: Client and Server.
 ///
 /// When configuring the Client: "Self" is the Client and "Peer" is the Server.
@@ -48,6 +48,8 @@ pub enum AttestationType {
     SelfUnidirectional,
     /// "Peer" attests itself to the "Self".
     PeerUnidirectional,
+    /// No attestation.
+    Unattested,
 }
 
 pub trait AttestationProvider {

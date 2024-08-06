@@ -28,6 +28,9 @@ pub mod encryptors;
 pub mod handshake;
 pub mod session;
 
+#[cfg(test)]
+mod tests;
+
 pub use session::{ClientSession, ServerSession, Session};
 
 /// Trait that represents a state-machine for protocol message generation.

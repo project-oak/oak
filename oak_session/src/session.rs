@@ -17,7 +17,7 @@
 //! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, collections::VecDeque, vec::Vec};
 
 use anyhow::{anyhow, Context, Error};
 use oak_crypto::encryptor::Encryptor;
@@ -62,16 +62,15 @@ pub trait Session {
 }
 
 // Client-side secure attested session entrypoint.
-#[allow(dead_code)]
 pub struct ClientSession<'a> {
     config: &'a SessionConfig<'a>,
     handshaker: ClientHandshaker,
+    // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor: Option<Box<dyn Encryptor>>,
-    outgoing_requests: Vec<SessionRequest>,
-    incoming_responses: Vec<SessionResponse>,
+    outgoing_requests: VecDeque<SessionRequest>,
+    incoming_responses: VecDeque<SessionResponse>,
 }
 
-#[allow(dead_code)]
 impl<'a> ClientSession<'a> {
     pub fn create(config: &'a SessionConfig<'a>) -> Result<Self, Error> {
         Ok(Self {
@@ -79,8 +78,8 @@ impl<'a> ClientSession<'a> {
             handshaker: ClientHandshaker::create(&config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
             encryptor: None,
-            outgoing_requests: vec![],
-            incoming_responses: vec![],
+            outgoing_requests: VecDeque::new(),
+            incoming_responses: VecDeque::new(),
         })
     }
 }
@@ -91,34 +90,40 @@ impl<'a> Session for ClientSession<'a> {
     }
 
     fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
-        match &mut self.encryptor {
-            Some(encryptor) => {
-                let ciphertext = encryptor
-                    .encrypt(plaintext.into())
-                    .context("couldn't encrypt the supplied plaintext")?;
-                self.outgoing_requests
-                    .push(SessionRequest { r#request: Some(Request::Ciphertext(ciphertext)) });
-                Ok(())
-            }
-            None => Err(anyhow!("the session is not open")),
+        if let Some(encryptor) = self.encryptor.as_mut() {
+            let ciphertext = encryptor
+                .encrypt(plaintext.into())
+                .context("couldn't encrypt the supplied plaintext")?;
+            self.outgoing_requests
+                .push_back(SessionRequest { request: Some(Request::Ciphertext(ciphertext)) });
+            Ok(())
+        } else {
+            Err(anyhow!("the session is not open"))
         }
     }
 
     fn read(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
-        match (&mut self.encryptor, self.incoming_responses.pop()) {
-            (Some(encryptor), Some(response)) => {
-                let ciphertext = match response.r#response {
-                    Some(Response::Ciphertext(ciphertext)) => ciphertext,
-                    _ => return Err(anyhow!("unexpected content of SessionResponse")),
-                };
-                Ok(Some(
-                    encryptor
-                        .decrypt(ciphertext.as_slice().into())
-                        .context("couldn't encrypt the supplied plaintext")?,
-                ))
+        if let Some(encryptor) = self.encryptor.as_mut() {
+            match self.incoming_responses.pop_front() {
+                Some(response) => {
+                    let ciphertext = match response.response {
+                        Some(Response::Ciphertext(ciphertext)) => ciphertext,
+                        _ => {
+                            return Err(anyhow!(
+                                "unexpected content of SessionResponse: no ciphertext set"
+                            ));
+                        }
+                    };
+                    Ok(Some(
+                        encryptor
+                            .decrypt(ciphertext.as_slice().into())
+                            .context("couldn't decrypt the supplied plaintext")?,
+                    ))
+                }
+                None => Ok(None),
             }
-            (_, None) => Ok(None),
-            (None, _) => Err(anyhow!("the session is not open")),
+        } else {
+            Err(anyhow!("the session is not open"))
         }
     }
 }
@@ -126,12 +131,12 @@ impl<'a> Session for ClientSession<'a> {
 impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionRequest>> {
         if self.is_open() {
-            return Ok(self.outgoing_requests.pop());
+            return Ok(self.outgoing_requests.pop_front());
         };
         Ok(self
             .handshaker
             .get_outgoing_message()?
-            .map(|h| SessionRequest { r#request: Some(Request::HandshakeRequest(h)) }))
+            .map(|h| SessionRequest { request: Some(Request::HandshakeRequest(h)) }))
     }
 
     fn put_incoming_message(
@@ -139,19 +144,29 @@ impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
         incoming_message: &SessionResponse,
     ) -> anyhow::Result<Option<()>> {
         if self.is_open() {
-            self.incoming_responses.push(incoming_message.clone());
-            return Ok(Some(()));
+            return match incoming_message.response {
+                Some(Response::Ciphertext(_)) => {
+                    self.incoming_responses.push_back(incoming_message.clone());
+                    Ok(Some(()))
+                }
+                _ => Err(anyhow!(
+                    "unexpected content of SessionResponse: session open but no ciphertext set"
+                )),
+            };
         }
-        match incoming_message.r#response.as_ref() {
+        match incoming_message.response.as_ref() {
             Some(Response::HandshakeResponse(handshake_message)) => {
-                let result = self.handshaker.put_incoming_message(handshake_message);
+                self.handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
+                    "invalid session state: handshake message received but handshaker doesn't
+                    expect any"
+                ))?;
                 if let Some(session_keys) = self.handshaker.derive_session_keys() {
                     self.encryptor = Some(
                         (self.config.encryptor_config.encryptor_provider)(session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
-                result
+                Ok(Some(()))
             }
             _ => Err(anyhow!("unexpected content of session response")),
         }
@@ -159,42 +174,111 @@ impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
 }
 
 // Server-side secure attested session entrypoint.
-#[allow(dead_code)]
 pub struct ServerSession<'a> {
     config: &'a SessionConfig<'a>,
     handshaker: ServerHandshaker<'a>,
+    // encryptor is initialized once the handshake is completed and the session becomes open
+    encryptor: Option<Box<dyn Encryptor>>,
+    outgoing_responses: VecDeque<SessionResponse>,
+    incoming_requests: VecDeque<SessionRequest>,
 }
 
-#[allow(dead_code)]
 impl<'a> ServerSession<'a> {
     pub fn new(config: &'a SessionConfig<'a>) -> Self {
-        Self { config, handshaker: ServerHandshaker::new(&config.handshaker_config) }
+        Self {
+            config,
+            handshaker: ServerHandshaker::new(&config.handshaker_config),
+            encryptor: None,
+            outgoing_responses: VecDeque::new(),
+            incoming_requests: VecDeque::new(),
+        }
     }
 }
 
 impl<'a> Session for ServerSession<'a> {
     fn is_open(&self) -> bool {
-        core::unimplemented!();
+        self.encryptor.is_some()
     }
 
-    fn write(&mut self, _plaintext: &[u8]) -> anyhow::Result<()> {
-        core::unimplemented!();
+    fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
+        if let Some(encryptor) = self.encryptor.as_mut() {
+            let ciphertext = encryptor
+                .encrypt(plaintext.into())
+                .context("couldn't encrypt the supplied plaintext")?;
+            self.outgoing_responses
+                .push_back(SessionResponse { response: Some(Response::Ciphertext(ciphertext)) });
+            Ok(())
+        } else {
+            Err(anyhow!("the session is not open"))
+        }
     }
 
     fn read(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
-        core::unimplemented!();
+        if let Some(encryptor) = self.encryptor.as_mut() {
+            match self.incoming_requests.pop_front() {
+                Some(request) => {
+                    let ciphertext = match request.request {
+                        Some(Request::Ciphertext(ciphertext)) => ciphertext,
+                        _ => {
+                            return Err(anyhow!(
+                                "unexpected content of SessionRequest: no ciphertext set"
+                            ));
+                        }
+                    };
+                    Ok(Some(
+                        encryptor
+                            .decrypt(ciphertext.as_slice().into())
+                            .context("couldn't decrypt the supplied plaintext")?,
+                    ))
+                }
+                None => Ok(None),
+            }
+        } else {
+            Err(anyhow!("the session is not open"))
+        }
     }
 }
 
-impl<'a> ProtocolEngine<SessionRequest, SessionResponse> for ClientSession<'a> {
+impl<'a> ProtocolEngine<SessionRequest, SessionResponse> for ServerSession<'a> {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionResponse>> {
-        core::unimplemented!();
+        Ok(self.outgoing_responses.pop_front())
     }
 
     fn put_incoming_message(
         &mut self,
-        _incoming_message: &SessionRequest,
+        incoming_message: &SessionRequest,
     ) -> anyhow::Result<Option<()>> {
-        core::unimplemented!();
+        if self.is_open() {
+            return match incoming_message.request {
+                Some(Request::Ciphertext(_)) => {
+                    self.incoming_requests.push_back(incoming_message.clone());
+                    Ok(Some(()))
+                }
+                _ => Err(anyhow!(
+                    "unexpected content of SessionRequest: session open but no ciphertext set"
+                )),
+            };
+        }
+        match incoming_message.request.as_ref() {
+            Some(Request::HandshakeRequest(handshake_message)) => {
+                self.handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
+                    "invalid session state: handshake message received but handshaker doesn't
+                     expect any"
+                ))?;
+                if let Some(outgoing_message) = self.handshaker.get_outgoing_message()? {
+                    self.outgoing_responses.push_back(SessionResponse {
+                        response: Some(Response::HandshakeResponse(outgoing_message)),
+                    });
+                }
+                if let Some(session_keys) = self.handshaker.derive_session_keys() {
+                    self.encryptor = Some(
+                        (self.config.encryptor_config.encryptor_provider)(session_keys)
+                            .context("couldn't create an encryptor from the session key")?,
+                    )
+                }
+                Ok(Some(()))
+            }
+            _ => Err(anyhow!("unexpected content of session request")),
+        }
     }
 }

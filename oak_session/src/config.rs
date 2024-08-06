@@ -34,8 +34,11 @@ pub struct SessionConfig<'a> {
 }
 
 impl<'a> SessionConfig<'a> {
-    pub fn builder(attestation_type: AttestationType) -> SessionConfigBuilder<'a> {
-        SessionConfigBuilder::new(attestation_type)
+    pub fn builder(
+        attestation_type: AttestationType,
+        handshake_type: HandshakeType,
+    ) -> SessionConfigBuilder<'a> {
+        SessionConfigBuilder::new(attestation_type, handshake_type)
     }
 }
 
@@ -44,13 +47,7 @@ pub struct SessionConfigBuilder<'a> {
 }
 
 impl<'a> SessionConfigBuilder<'a> {
-    fn new(attestation_type: AttestationType) -> Self {
-        let handshake_type = match attestation_type {
-            AttestationType::Bidirectional => HandshakeType::NoiseKK,
-            AttestationType::SelfUnidirectional => HandshakeType::NoiseKN,
-            AttestationType::PeerUnidirectional => HandshakeType::NoiseNK,
-        };
-
+    fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_provider_config = AttestationProviderConfig {
             attestation_type,
             self_attesters: vec![],
