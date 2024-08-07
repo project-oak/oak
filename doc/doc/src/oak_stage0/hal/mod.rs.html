@@ -253,6 +253,45 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -276,11 +315,14 @@
 <span class="kw">use </span>core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
-<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+<span class="kw">use </span>oak_sev_guest::{
+    io::{IoPortFactory, PortReader, PortWriter},
+    msr::PageAssignment,
+};
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>oak_stage0_dice::DerivedKey;
 <span class="kw">use </span>x86_64::{
-    structures::paging::{PageSize, Size4KiB},
+    structures::paging::{Page, PageSize, Size4KiB},
     PhysAddr,
 };
 
@@ -398,6 +440,8 @@
 <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
 </span><span class="kw">pub use </span>x86_64::structures::port::PortWrite;
 
+<span class="kw">use </span><span class="kw">crate</span>::paging::PageEncryption;
+
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">'a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>PortFactory
 <span class="kw">where
     </span>T: PortRead + PortWrite + <span class="lifetime">'a</span>,
@@ -505,5 +549,39 @@
     </span><span class="kw">return </span>sev::get_derived_key();
     <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
     </span><span class="kw">return </span>base::get_derived_key();
+}
+
+<span class="doccomment">/// Ask for the page state to be changed by the hypervisor.
+</span><span class="kw">pub fn </span>change_page_state(page: Page&lt;Size4KiB&gt;, state: PageAssignment) {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span>sev::change_page_state(page, state).unwrap();
+}
+
+<span class="doccomment">/// Validate one page of memory.
+///
+/// This operation is required for SEV after going from a SHARED state to a
+/// PRIVATE state.
+</span><span class="kw">pub fn </span>revalidate_page(page: Page&lt;Size4KiB&gt;) {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span>sev::revalidate_page(page).unwrap();
+}
+
+<span class="doccomment">/// Mask to use in the page tables for the given encrypion state.
+///
+/// SEV and TDX have opposite behaviours: for SEV, encrypted pages are marked;
+/// for TDX, unencrypted pages are marked.
+</span><span class="kw">pub fn </span>page_table_mask(encryption_state: PageEncryption) -&gt; u64 {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span><span class="kw">return </span>sev::page_table_mask(encryption_state);
+    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
+    </span><span class="kw">return </span><span class="number">0</span>;
+}
+
+<span class="doccomment">/// Encrypted/shared bit mask irrespective of its semantics.
+</span><span class="kw">pub fn </span>encrypted() -&gt; u64 {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span><span class="kw">return </span>sev::encrypted();
+    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
+    </span><span class="kw">return </span><span class="number">0</span>;
 }
 </code></pre></div></section></main></body></html>
