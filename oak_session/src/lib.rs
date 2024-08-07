@@ -26,7 +26,7 @@ pub mod attestation;
 pub mod config;
 pub mod encryptors;
 pub mod handshake;
-mod session;
+pub mod session;
 
 pub use session::{ClientSession, ServerSession, Session};
 
