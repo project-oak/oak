@@ -31,6 +31,7 @@ use x86_64::{
 };
 use zeroize::Zeroize;
 
+use super::{sev_status, GHCB_WRAPPER};
 use crate::paging::{PageEncryption, PageTable};
 
 //
@@ -243,7 +244,7 @@ impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
         // Future optimization: do this operation in batches of 253 frames (that's how
         // many can fit in one PageStateChange request) instead of one at a time.
         for frame in *self {
-            crate::sev::GHCB_WRAPPER
+            GHCB_WRAPPER
                 .get()
                 .expect("GHCB not initialized")
                 .page_state_change(frame, assignment)?;
@@ -410,7 +411,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
 }
 
 pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) -> Result<(), &'static str> {
-    if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let request = SnpPageStateChangeRequest::new(page.start_address().as_u64() as usize, state)
             .expect("invalid address for page location");
         change_snp_page_state(request)?;
@@ -419,7 +420,7 @@ pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) -> Result<
 }
 
 pub fn revalidate_page(page: Page<Size4KiB>) -> Result<(), &'static str> {
-    if crate::sev_status().contains(SevStatus::SEV_ENABLED) {
+    if sev_status().contains(SevStatus::SEV_ENABLED) {
         let counter = AtomicUsize::new(0);
         if let Err(err) = page.pvalidate(&counter) {
             if err != InstructionError::ValidationStatusNotUpdated {

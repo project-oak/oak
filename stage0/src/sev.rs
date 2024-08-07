@@ -21,72 +21,12 @@ use core::{
     ptr::NonNull,
 };
 
-use oak_core::sync::OnceCell;
-use oak_sev_guest::{ghcb::GhcbProtocol, msr::SevStatus};
-use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{
     structures::paging::{Page, PageSize, Size4KiB},
-    PhysAddr, VirtAddr,
+    VirtAddr,
 };
 
-use crate::{
-    paging::{share_page, unshare_page},
-    sev_status, BootAllocator,
-};
-
-pub static GHCB_WRAPPER: Ghcb = Ghcb::new();
-
-pub struct Ghcb {
-    ghcb: OnceCell<Spinlock<GhcbProtocol<'static, oak_sev_guest::ghcb::Ghcb>>>,
-}
-
-impl Ghcb {
-    const fn new() -> Self {
-        Self { ghcb: OnceCell::new() }
-    }
-
-    pub fn init(&self, alloc: &'static BootAllocator) {
-        let ghcb = Shared::leak(Shared::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
-        ghcb.reset();
-
-        // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
-        if self
-            .ghcb
-            .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
-                Some(PhysAddr::new(vaddr.as_u64()))
-            })))
-            .is_err()
-        {
-            panic!("couldn't initialize GHCB wrapper");
-        }
-
-        // SNP requires that the GHCB is registered with the hypervisor.
-        if sev_status().contains(SevStatus::SNP_ACTIVE) {
-            self.get()
-                .unwrap()
-                .register_with_hypervisor()
-                .expect("couldn't register the GHCB address with the hypervisor");
-        }
-    }
-
-    /// Deallocates the GHCB block.
-    ///
-    /// # Safety
-    ///
-    /// The caller needs to guarantee that nobody has a reference to the GHCB
-    /// when this function is called and that nobody will try to use the GHCB
-    /// after the function returns.
-    pub unsafe fn deinit(&self, alloc: &'static BootAllocator) {
-        let ghcb = self.ghcb.deinit().unwrap().into_inner().into_inner();
-        let _ = Shared::from_raw_in(ghcb, alloc);
-    }
-
-    pub fn get(
-        &self,
-    ) -> Option<MutexGuard<'_, RawSpinlock, GhcbProtocol<'static, oak_sev_guest::ghcb::Ghcb>>> {
-        self.ghcb.get().map(|mutex| mutex.lock())
-    }
-}
+use crate::paging::{share_page, unshare_page};
 
 /// Allocator that forces allocations to be 4K-aligned (and sized) and marks the
 /// pages as shared.

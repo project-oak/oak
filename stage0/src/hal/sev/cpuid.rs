@@ -18,7 +18,7 @@ use core::arch::x86_64::CpuidResult;
 
 use oak_sev_guest::cpuid::CpuidInput;
 
-use crate::sev::GHCB_WRAPPER;
+use super::GHCB_WRAPPER;
 
 pub fn cpuid(leaf: u32) -> CpuidResult {
     if let Some(mut ghcb) = GHCB_WRAPPER.get() {

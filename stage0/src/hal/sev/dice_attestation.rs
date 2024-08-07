@@ -29,7 +29,8 @@ use x86_64::{PhysAddr, VirtAddr};
 use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
-use crate::sev::{Shared, GHCB_WRAPPER};
+use super::{GHCB_WRAPPER, SEV_SECRETS};
+use crate::sev::Shared;
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -39,7 +40,7 @@ static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlo
 pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
     // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
     // requirements on the underlying bytes.
-    let key = &mut unsafe { crate::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
+    let key = &mut unsafe { SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
     GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)?);
     // Once the we have read VMPCK0 we wipe it so that later boot stages cannot
     // request attestation reports or derived sealing keys for VMPL0. This stops
@@ -79,7 +80,7 @@ fn send_guest_message_request<
 pub fn get_attestation(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -> Result<AttestationReport, &'static str> {
-    if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    if super::sev_status().contains(SevStatus::SNP_ACTIVE) {
         let mut report_request = AttestationRequest::new();
         report_request.report_data = report_data;
         let attestation_response: AttestationResponse = send_guest_message_request(report_request)?;
@@ -94,7 +95,7 @@ pub fn get_attestation(
 }
 
 pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
-    if crate::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    if super::sev_status().contains(SevStatus::SNP_ACTIVE) {
         let mut key_request = KeyRequest::new();
         let selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
         key_request.guest_field_select = selected_fields.bits();

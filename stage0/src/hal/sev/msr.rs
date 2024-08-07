@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::sev::GHCB_WRAPPER;
+use super::GHCB_WRAPPER;
 
 /// Read a MSR.
 ///

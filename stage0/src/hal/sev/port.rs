@@ -16,7 +16,7 @@
 
 use x86_64::structures::port::{PortRead, PortWrite};
 
-use crate::GHCB_WRAPPER;
+use super::GHCB_WRAPPER;
 
 pub trait GhcbPortRead: PortRead {
     unsafe fn read_from_port(port: u16) -> Result<Self, &'static str>

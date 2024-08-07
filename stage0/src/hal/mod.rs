@@ -20,6 +20,7 @@ mod sev;
 
 use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
+use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::{
     io::{IoPortFactory, PortReader, PortWriter},
@@ -146,7 +147,7 @@ pub use x86_64::structures::port::PortRead;
 #[cfg(not(feature = "sev"))]
 pub use x86_64::structures::port::PortWrite;
 
-use crate::paging::PageEncryption;
+use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for PortFactory
 where
@@ -222,6 +223,20 @@ pub fn initialize_platform(e820_table: &[BootE820Entry]) {
     sev::initialize_platform(e820_table)
 }
 
+/// Platform-specific cleanups just before stage0 jumps to the kernel.
+///
+/// The assumption is that after this operation there will no longer be any
+/// memory allocations or uses of the logging interface.
+pub fn deinit_platform() {
+    #[cfg(feature = "sev")]
+    sev::deinit_platform();
+}
+
+pub fn populate_zero_page(zero_page: &mut ZeroPage) {
+    #[cfg(feature = "sev")]
+    sev::populate_zero_page(zero_page);
+}
+
 /// Returns an attestation report.
 ///
 /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
@@ -289,4 +304,11 @@ pub fn encrypted() -> u64 {
     return sev::encrypted();
     #[cfg(not(feature = "sev"))]
     return 0;
+}
+
+pub fn tee_platform() -> TeePlatform {
+    #[cfg(feature = "sev")]
+    return sev::tee_platform();
+    #[cfg(not(feature = "sev"))]
+    return TeePlatform::None;
 }

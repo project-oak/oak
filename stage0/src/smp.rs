@@ -17,11 +17,9 @@
 use core::{
     arch::x86_64::_mm_pause,
     ffi::c_void,
-    mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use oak_sev_guest::ap_jump_table::ApJumpTable;
 use x86_64::PhysAddr;
 
 use crate::{
@@ -41,10 +39,6 @@ extern "C" {
 #[no_mangle]
 #[link_section = ".ap_bss"]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
-
-#[no_mangle]
-#[link_section = ".ap_bss"]
-pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
 
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;

@@ -22,13 +22,12 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, format, string::String, vec::Vec};
-use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
-use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
+use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
-use oak_sev_guest::msr::SevStatus;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -43,7 +42,7 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
-use crate::{alloc::string::ToString, kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+use crate::{alloc::string::ToString, kernel::KernelType};
 
 mod acpi;
 mod acpi_tables;
@@ -72,13 +71,6 @@ static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 // outlive Stage 0.
 #[cfg_attr(not(test), global_allocator)]
 static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
-
-#[link_section = ".boot"]
-#[no_mangle]
-static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
-#[link_section = ".boot"]
-#[no_mangle]
-static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
@@ -120,21 +112,6 @@ pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
         in(reg) Box::leak(zero_page),
         options(noreturn, att_syntax)
     );
-}
-
-/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU
-/// doesn't support it.
-///
-/// Initialized in the bootstrap assembly code.
-pub fn sev_status() -> SevStatus {
-    // Will be set in the bootstrap assembly code where we have to read the MSR
-    // anyway.
-    #[no_mangle]
-    static mut SEV_STATUS: SevStatus = SevStatus::empty();
-
-    // Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    unsafe { SEV_STATUS }
 }
 
 /// Entry point for the Rust code in the stage0 BIOS.
@@ -190,21 +167,7 @@ pub fn rust64_start() -> ! {
     let setup_data_sha2_256_digest =
         zero_page.try_fill_hdr_from_setup_data(&mut fwcfg).unwrap_or_default();
 
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its
-        // contents.
-        let cc_blob = Box::leak(Box::new_in(
-            oak_linux_boot_params::CCBlobSevInfo::new(
-                unsafe { SEV_SECRETS.as_ptr() },
-                SEV_CPUID.as_ptr(),
-            ),
-            &BOOT_ALLOC,
-        ));
-        let setup_data =
-            Box::leak(Box::new_in(oak_linux_boot_params::CCSetupData::new(cc_blob), &BOOT_ALLOC));
-
-        zero_page.add_setup_data(setup_data);
-    }
+    hal::populate_zero_page(&mut zero_page);
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_sha2_256_digest = cmdline.measure();
@@ -240,25 +203,6 @@ pub fn rust64_start() -> ! {
 
     if let Err(err) = smp::bootstrap_aps(rsdp) {
         log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
-    }
-
-    // Register the AP Jump Table, if required.
-    if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        // This assumes identity mapping. Which we have in stage0.
-        let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
-        if sev_status().contains(SevStatus::SNP_ACTIVE) {
-            // Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don't care about the contents of the secrets page beyond writing
-            // our jump table address into it.
-            let secrets = unsafe { SEV_SECRETS.assume_init_mut() };
-            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
-        } else {
-            // Plain old SEV-ES, use the GHCB protocol.
-            if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-                ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
-                    .expect("failed to set AP Jump Table");
-            }
-        }
     }
 
     let ram_disk_sha2_256_digest =
@@ -314,11 +258,7 @@ pub fn rust64_start() -> ! {
         eventlog_sha2_256_digest,
     };
 
-    let tee_platform = if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        TeePlatform::AmdSevSnp
-    } else {
-        TeePlatform::None
-    };
+    let tee_platform = hal::tee_platform();
 
     let dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
@@ -374,11 +314,10 @@ pub fn rust64_start() -> ! {
     // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
     // hugepage for the first 2M of memory.
     drop(fwcfg);
-    if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
-        // Safety: we're in the last moments of stage0 and nobody should access the GHCB
-        // beyond this point.
-        unsafe { sev::GHCB_WRAPPER.deinit(&BOOT_ALLOC) };
-    }
+    // After the call to `deinit_platform`:
+    //  - Do not log anything any more.
+    //  - Do not allocate memory.
+    hal::deinit_platform();
     paging::remap_first_huge_page();
 
     unsafe {

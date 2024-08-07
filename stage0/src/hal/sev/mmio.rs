@@ -16,7 +16,8 @@
 
 use x86_64::structures::paging::PageSize;
 
-use crate::{hal::base::Mmio, sev::GHCB_WRAPPER};
+use super::GHCB_WRAPPER;
+use crate::hal::base::Mmio;
 
 pub fn read_u32<S: PageSize>(mmio: &Mmio<S>, offset: usize) -> u32 {
     if let Some(mut ghcb) = GHCB_WRAPPER.get() {
