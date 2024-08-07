@@ -1,3 +1,4 @@
+
 // Copyright 2019, OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +15,15 @@
 
 syntax = "proto3";
 
-package opentelemetry.proto.resource.v1;
+package opentelemetry_rk.proto.resource.v1;
 
-import "opentelemetry/proto/common/v1/common.proto";
-
-option csharp_namespace = "OpenTelemetry.Proto.Resource.V1";
-option java_multiple_files = true;
-option java_package = "io.opentelemetry.proto.resource.v1";
-option java_outer_classname = "ResourceProto";
-option go_package = "go.opentelemetry.io/proto/otlp/resource/v1";
-
+import "third_party/opentelemetry/opentelemetry-proto/opentelemetry/proto/common/v1/common.proto";
 // Resource information.
 message Resource {
   // Set of attributes that describe the resource.
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  repeated opentelemetry.proto.common.v1.KeyValue attributes = 1;
-
+  repeated opentelemetry_rk.proto.common.v1.KeyValue attributes = 1;
   // dropped_attributes_count is the number of dropped attributes. If the value is 0, then
   // no attributes were dropped.
   uint32 dropped_attributes_count = 2;

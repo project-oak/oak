@@ -38,26 +38,34 @@ rust_library(
 rust_library(
     name = "opentelemetry_rk_test_lib",
     srcs = glob([
-        "src/testing/**",])
-        + glob(["src/metrics/**"]) + [
+        "src/testing/**",
+    ]) + glob([
+        "src/metrics/**",
+    ]) + [
         "src/common.rs",
         "src/global/error_handler.rs",
         "src/global/metrics.rs",
         "src/global/mod.rs",
         "src/lib.rs",
     ],
-    deps = [
-      "//oak_core",
-        ":opentelemetry_rk",
-        "@oak_no_std_crates_index//:log",
+    features = [
+        "testing",
+        "metrics",
     ],
     visibility = ["//visibility:private"],
-    features = ["testing", "metrics"],
+    deps = [
+        ":opentelemetry_rk",
+        "//oak_core",
+        "@oak_no_std_crates_index//:log",
+    ],
 )
 
 rust_test(
     name = "opentelemetry_rk_test",
     size = "small",
     crate = ":opentelemetry_rk_test_lib",
-    features = ["metrics", "testing"],
+    features = [
+        "metrics",
+        "testing",
+    ],
 )
