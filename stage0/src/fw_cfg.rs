@@ -29,7 +29,7 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::{hal::Port, sev::Shared, BootAllocator};
+use crate::{allocator::Shared, hal::Port, BootAllocator};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;

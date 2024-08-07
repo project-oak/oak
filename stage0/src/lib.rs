@@ -57,7 +57,6 @@ mod logging;
 mod msr;
 pub mod paging;
 mod pic;
-mod sev;
 mod smp;
 mod zero_page;
 

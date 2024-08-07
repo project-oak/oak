@@ -30,7 +30,7 @@ use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
 use super::{GHCB_WRAPPER, SEV_SECRETS};
-use crate::sev::Shared;
+use crate::allocator::Shared;
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.

@@ -37,7 +37,9 @@ pub use port::*;
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{PhysAddr, VirtAddr};
 
-use crate::{paging::PageEncryption, sev::Shared, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC};
+use crate::{
+    allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
+};
 
 #[link_section = ".boot"]
 #[no_mangle]
