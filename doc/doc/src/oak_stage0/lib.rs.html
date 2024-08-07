@@ -432,26 +432,6 @@
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
-<a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -599,29 +579,9 @@
 ///   tables.
 </span><span class="kw">pub fn </span>rust64_start() -&gt; ! {
     paging::init_page_table_refs();
-
-    <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
-    // implies SEV-ES).
-    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        sev::GHCB_WRAPPER.init(<span class="kw-2">&amp;</span>BOOT_ALLOC);
-    }
-
+    hal::early_initialize_platform();
     logging::init_logging();
     <span class="macro">log::info!</span>(<span class="string">"starting..."</span>);
-    <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
-
-    <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we're using an originally
-        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
-        // If we get CPUID reads working, we may want to check that MTRR is
-        // supported, but only if we want to support very old processors.
-        // However, note that, this branch is only executed if
-        // we have encryption, and this wouldn't be true for very old processors.
-        </span><span class="kw">unsafe </span>{
-            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
-        }
-    }
-
     <span class="comment">// Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
     </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);

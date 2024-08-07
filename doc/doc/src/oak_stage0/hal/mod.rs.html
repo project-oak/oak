@@ -237,6 +237,22 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -428,13 +444,29 @@
     }
 }
 
-<span class="doccomment">/// Performs platform-specific initializations (for example, accepts guest
-/// memory)
+<span class="doccomment">/// Platform-specific early initialization.
 ///
-/// What exactly is done depends on the platform (SEV or TDX).
+/// This sets up the bare minimum to get things going; for example, under
+/// SEV-ES and above, we set up the GHCB here, but nothing more.
 ///
-/// This code is run early in the startup process. You will have access to the
-/// boot allocator and logging, but _not_ the global heap allocator.
+/// This gets executed very soon after stage0 starts and comes with many
+/// restrictions:
+///   - You do not have access to logging.
+///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
+///     work).
+</span><span class="kw">pub fn </span>early_initialize_platform() {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span>sev::early_initialize_platform();
+}
+
+<span class="doccomment">/// Platform-specific intialization.
+///
+/// This gets executed after `early_initalize_platform()` and some other
+/// auxiliary services, such as logging, have been set up; the main purpose is
+/// to accept all guest memory so that we can set up a heap allocator.
+///
+/// This does mean you do not have access to the heap allocator (BOOT_ALLOCATOR
+/// will still work).
 </span><span class="kw">pub fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
     <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
     </span>sev::initialize_platform(e820_table)
