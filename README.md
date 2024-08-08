@@ -64,11 +64,11 @@ security mechanism on the machine itself and extract secret keys and data.
 Oak is a trusted computing server platform designed to run in VM-based Trusted
 Execution Environment (TEE). An application running on Oak, in the TEE hardware,
 can process private data confidentially, without the service provider hosting
-the server from accessing the data being processed. Oak uses Remote Attestation
-and Transparent Release to permit a client to verify workload identity and trace
-it to public source code. This enables the application running on Oak to make
-external verifiable claims of privacy, security, integrity, information flow,
-and functional correctness.
+the server being able to access the data being processed. Oak uses Remote
+Attestation and Transparent Release to permit a client to verify workload
+identity and trace it to public source code. This enables the application
+running on Oak to make external verifiable claims of privacy, security,
+integrity, information flow, and functional correctness.
 
 In an Oak environment, a client (e.g. Android, Chrome) connects to an Oak
 server, and establishes an end-to-end encrypted channel with an instance of a
