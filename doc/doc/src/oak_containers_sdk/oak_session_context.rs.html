@@ -114,8 +114,6 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -132,7 +130,7 @@
 // limitations under the License.
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_crypto::encryptor::ServerEncryptor;
+<span class="kw">use </span>oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, encryptor::ServerEncryptor};
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
     session::v1::{
@@ -142,8 +140,6 @@
 };
 
 <span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b""</span>;
-
-<span class="kw">use </span><span class="kw">crate</span>::InstanceEncryptionKeyHandle;
 
 <span class="doccomment">/// An Oak trusted application will write an implementation of
 /// `ApplicationHandler` that accepts a serialized request (including di)
@@ -158,14 +154,14 @@
 /// the instance of the class that actually implements the application
 /// logic.
 </span><span class="kw">pub struct </span>OakSessionContext {
-    encryption_key_handle: InstanceEncryptionKeyHandle,
+    encryption_key_handle: Box&lt;<span class="kw">dyn </span>AsyncEncryptionKeyHandle + Send + Sync&gt;,
     endorsed_evidence: EndorsedEvidence,
     application_handler: Box&lt;<span class="kw">dyn </span>ApplicationHandler&gt;,
 }
 
 <span class="kw">impl </span>OakSessionContext {
     <span class="kw">pub fn </span>new(
-        encryption_key_handle: InstanceEncryptionKeyHandle,
+        encryption_key_handle: Box&lt;<span class="kw">dyn </span>AsyncEncryptionKeyHandle + Send + Sync&gt;,
         endorsed_evidence: EndorsedEvidence,
         application_handler: Box&lt;<span class="kw">dyn </span>ApplicationHandler&gt;,
     ) -&gt; <span class="self">Self </span>{
@@ -187,7 +183,7 @@
 
         <span class="comment">// Associated data is ignored.
         </span><span class="kw">let </span>(server_encryptor, name_bytes, <span class="kw">_</span>) =
-            ServerEncryptor::decrypt_async(encrypted_request, <span class="kw-2">&amp;</span><span class="self">self</span>.encryption_key_handle)
+            ServerEncryptor::decrypt_async(encrypted_request, <span class="kw-2">&amp;*</span><span class="self">self</span>.encryption_key_handle)
                 .<span class="kw">await
                 </span>.context(<span class="string">"couldn't decrypt request"</span>)<span class="question-mark">?</span>;
 

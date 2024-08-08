@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["client","transport","verifier"]};
+window.SIDEBAR_ITEMS = {"mod":["client","standalone","transport","verifier"]};
