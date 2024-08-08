@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::PortWriter;
+use oak_sev_guest::io::{IoPortFactory, PortWriter};
 
-use crate::hal::Port;
+use crate::hal::{Port, PortFactory};
 
 const PIC0_BASE: u16 = 0x20;
 const PIC1_BASE: u16 = 0xA0;
@@ -27,8 +27,9 @@ pub struct Pic {
 }
 
 impl Pic {
-    pub fn new(base: u16) -> Self {
-        Self { command: Port::new(base), data: Port::new(base + 1) }
+    pub fn new<P: crate::Platform>(base: u16) -> Self {
+        let factory = PortFactory::new::<P>();
+        Self { command: factory.new_writer(base), data: factory.new_writer(base + 1) }
     }
 
     pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
@@ -66,9 +67,9 @@ impl Pic {
 ///
 /// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known
 /// I/O ports of 0x20 and 0xA0.
-pub unsafe fn disable_pic8259() -> Result<(), &'static str> {
-    let mut pic0 = Pic::new(PIC0_BASE);
-    let mut pic1 = Pic::new(PIC1_BASE);
+pub unsafe fn disable_pic8259<P: crate::Platform>() -> Result<(), &'static str> {
+    let mut pic0 = Pic::new::<P>(PIC0_BASE);
+    let mut pic1 = Pic::new::<P>(PIC1_BASE);
 
     // PIC0 interrupts will start at 0x20 (32), PIC1 at IRQ2, disable all interrupts
     pic0.init(0x20, 4, 0xFF)?;

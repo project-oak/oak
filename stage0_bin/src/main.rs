@@ -31,7 +31,7 @@ mod asm;
 ///   tables.
 #[no_mangle]
 pub extern "C" fn rust64_start() -> ! {
-    oak_stage0::rust64_start()
+    oak_stage0::rust64_start::<oak_stage0::Sev>()
 }
 
 #[panic_handler]

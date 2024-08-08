@@ -614,6 +614,7 @@ version = "0.1.0"
 dependencies = [
  "oak_stage0",
  "oak_tdx_guest",
+ "x86_64",
 ]
 
 [[package]]

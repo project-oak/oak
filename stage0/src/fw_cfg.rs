@@ -22,14 +22,18 @@ use core::{cmp::min, ffi::CStr};
 
 use bitflags::bitflags;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::io::{PortReader, PortWriter};
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::{allocator::Shared, hal::Port, BootAllocator};
+use crate::{
+    allocator::Shared,
+    hal::{Port, PortFactory},
+    BootAllocator,
+};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -160,14 +164,16 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause
     /// any adverse effects.
-    pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
+    pub unsafe fn new<P: crate::Platform>(
+        alloc: &'static BootAllocator,
+    ) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
-            selector: Port::new(FWCFG_PORT_SELECTOR),
-            data: Port::new(FWCFG_PORT_DATA),
-            dma_high: Port::new(FWCFG_PORT_DMA),
+            selector: PortFactory::new::<P>().new_writer(FWCFG_PORT_SELECTOR),
+            data: PortFactory::new::<P>().new_reader(FWCFG_PORT_DATA),
+            dma_high: PortFactory::new::<P>().new_writer(FWCFG_PORT_DMA),
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
-            dma_low: Port::new(FWCFG_PORT_DMA + 4),
+            dma_low: PortFactory::new::<P>().new_writer(FWCFG_PORT_DMA + 4),
             dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
             dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: false,

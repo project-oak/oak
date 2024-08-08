@@ -14,16 +14,12 @@
 // limitations under the License.
 //
 
-use x86_64::PhysAddr;
+use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
-use crate::{
-    hal,
-    msr::{
-        ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
-        MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
-        X2ApicIdRegister, X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister,
-        X2ApicVersionRegister,
-    },
+use crate::msr::{
+    ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
+    MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister, X2ApicIdRegister,
+    X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
 };
 
 /// Interrupt Command.
@@ -83,7 +79,7 @@ trait SpuriousInterrupts {
 }
 
 mod xapic {
-    use x86_64::PhysAddr;
+    use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
     use crate::hal;
@@ -96,11 +92,11 @@ mod xapic {
     const INTERRUPT_COMMAND_REGISTER_LOW_OFFSET: usize = 0x300 / core::mem::size_of::<u32>();
     const INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = 0x310 / core::mem::size_of::<u32>();
 
-    pub(crate) struct Xapic {
-        mmio: crate::hal::Mmio,
+    pub(crate) struct Xapic<M: hal::Mmio<Size4KiB>> {
+        mmio: M,
     }
 
-    impl Xapic {
+    impl<M: hal::Mmio<Size4KiB>> Xapic<M> {
         fn read(&self, register: usize) -> u32 {
             self.mmio.read_u32(register)
         }
@@ -109,7 +105,7 @@ mod xapic {
         }
     }
 
-    impl super::ApicId for Xapic {
+    impl<M: hal::Mmio<Size4KiB>> super::ApicId for Xapic<M> {
         /// Read the Local APIC ID register.
         ///
         /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual,
@@ -119,7 +115,7 @@ mod xapic {
         }
     }
 
-    impl super::InterprocessorInterrupt for Xapic {
+    impl<M: hal::Mmio<Size4KiB>> super::InterprocessorInterrupt for Xapic<M> {
         fn send(
             &mut self,
             destination: u32,
@@ -149,7 +145,7 @@ mod xapic {
         }
     }
 
-    impl super::ErrorStatus for Xapic {
+    impl<M: hal::Mmio<Size4KiB>> super::ErrorStatus for Xapic<M> {
         fn read(&self) -> ApicErrorFlags {
             ApicErrorFlags::from_bits_truncate(self.read(ERROR_STATUS_REGISTER_OFFSET))
         }
@@ -160,7 +156,7 @@ mod xapic {
         }
     }
 
-    impl super::ApicVersion for Xapic {
+    impl<M: hal::Mmio<Size4KiB>> super::ApicVersion for Xapic<M> {
         fn read(&self) -> (bool, u8, u8) {
             let val = self.read(APIC_VERSION_REGISTER_OFFSET);
 
@@ -172,7 +168,7 @@ mod xapic {
         }
     }
 
-    impl super::SpuriousInterrupts for Xapic {
+    impl<M: hal::Mmio<Size4KiB>> super::SpuriousInterrupts for Xapic<M> {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
             let val = self.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
@@ -187,8 +183,8 @@ mod xapic {
 
     /// Safety: caller needs to guarantee that `apic_base` points to the APIC
     /// MMIO memory.
-    pub(crate) unsafe fn init(apic_base: PhysAddr) -> Xapic {
-        Xapic { mmio: hal::Mmio::new(apic_base) }
+    pub(crate) unsafe fn init<P: crate::Platform>(apic_base: PhysAddr) -> Xapic<P::Mmio<Size4KiB>> {
+        Xapic { mmio: P::mmio::<Size4KiB>(apic_base) }
     }
 }
 
@@ -264,8 +260,8 @@ mod x2apic {
     }
 }
 
-enum Apic {
-    Xapic(xapic::Xapic),
+enum Apic<M: crate::hal::Mmio<Size4KiB>> {
+    Xapic(xapic::Xapic<M>),
     X2apic(
         X2ApicInterruptCommandRegister,
         X2ApicErrorStatusRegister,
@@ -277,14 +273,14 @@ enum Apic {
 /// Wrapper for the local APIC.
 ///
 /// Currenty only supports x2APIC mode.
-pub struct Lapic {
+pub struct Lapic<M: crate::hal::Mmio<Size4KiB>> {
     apic_id: u32,
-    interface: Apic,
+    interface: Apic<M>,
 }
 
-impl Lapic {
-    pub fn enable() -> Result<Self, &'static str> {
-        let x2apic = hal::cpuid(0x0000_0001).ecx & (1 << 21) > 0;
+impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
+    pub fn enable<P: crate::Platform<Mmio<Size4KiB> = M>>() -> Result<Self, &'static str> {
+        let x2apic = P::cpuid(0x0000_0001).ecx & (1 << 21) > 0;
         // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
         // explanation of the initialization procedure.
         let (aba, mut flags) = ApicBase::read();
@@ -312,7 +308,7 @@ impl Lapic {
         } else {
             log::info!("Using xAPIC for AP initialization.");
             // Safety: we trust the address provided by the ApicBase MSR.
-            let apic = unsafe { xapic::init(aba) };
+            let apic = unsafe { xapic::init::<P>(aba) };
             Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         // Version should be between [0x10...0x20).

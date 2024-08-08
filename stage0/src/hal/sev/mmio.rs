@@ -14,25 +14,47 @@
 // limitations under the License.
 //
 
-use x86_64::structures::paging::PageSize;
+use core::mem::size_of;
+
+use x86_64::{structures::paging::PageSize, PhysAddr};
 
 use super::GHCB_WRAPPER;
-use crate::hal::base::Mmio;
+use crate::hal::base::Mmio as BaseMmio;
 
-pub fn read_u32<S: PageSize>(mmio: &Mmio<S>, offset: usize) -> u32 {
-    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-        ghcb.mmio_read_u32(mmio.base_address + offset)
-            .expect("couldn't read the MSR using the GHCB protocol")
-    } else {
-        mmio.read_u32(offset)
+pub struct Mmio<S: PageSize> {
+    mmio: BaseMmio<S>,
+}
+
+impl<S: PageSize> Mmio<S> {
+    pub unsafe fn new(base_address: PhysAddr) -> Self {
+        Self { mmio: BaseMmio::new(base_address) }
     }
 }
 
-pub unsafe fn write_u32<S: PageSize>(mmio: &mut Mmio<S>, offset: usize, value: u32) {
-    if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-        ghcb.mmio_write_u32(mmio.base_address + offset, value)
-            .expect("couldn't read the MSR using the GHCB protocol")
-    } else {
-        mmio.write_u32(offset, value)
+impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
+    fn read_u32(&self, offset: usize) -> u32 {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            let offset = offset * size_of::<u32>();
+            if offset >= S::SIZE as usize {
+                panic!("invalid MMIO access for read: offset would read beyond memory boundary");
+            }
+            ghcb.mmio_read_u32(self.mmio.base_address + offset)
+                .expect("couldn't read the MSR using the GHCB protocol")
+        } else {
+            self.mmio.read_u32(offset)
+        }
+    }
+
+    unsafe fn write_u32(&mut self, offset: usize, value: u32) {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            let offset = offset * size_of::<u32>();
+            if offset >= S::SIZE as usize {
+                panic!("invalid MMIO access for write: offset would write beyond memory boundary");
+            }
+            ghcb.mmio_write_u32(self.mmio.base_address + offset, value)
+                .expect("couldn't read the MSR using the GHCB protocol")
+        } else {
+            self.mmio.write_u32(offset, value)
+        }
     }
 }

@@ -14,12 +14,58 @@
 // limitations under the License.
 //
 
-mod cpuid;
 mod mmio;
 
-pub use cpuid::*;
+use core::arch::x86_64::{CpuidResult, __cpuid};
+
 pub use mmio::*;
 pub use oak_stage0_dice::{
     mock_attestation_report as get_attestation, mock_derived_key as get_derived_key,
 };
 pub use x86_64::registers::model_specific::Msr;
+use x86_64::structures::{
+    paging::PageSize,
+    port::{PortRead, PortWrite},
+};
+
+pub struct Base {}
+
+impl crate::Platform for Base {
+    type Mmio<S: PageSize> = mmio::Mmio<S>;
+
+    fn cpuid(leaf: u32) -> CpuidResult {
+        // Safety: all CPUs we care about are modern enough to support CPUID.
+        unsafe { __cpuid(leaf) }
+    }
+
+    unsafe fn mmio<S: PageSize>(base_address: x86_64::PhysAddr) -> Self::Mmio<S> {
+        mmio::Mmio::new(base_address)
+    }
+
+    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str> {
+        Ok(u8::read_from_port(port))
+    }
+
+    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str> {
+        u8::write_to_port(port, value);
+        Ok(())
+    }
+
+    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str> {
+        Ok(u16::read_from_port(port))
+    }
+
+    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str> {
+        u16::write_to_port(port, value);
+        Ok(())
+    }
+
+    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str> {
+        Ok(u32::read_from_port(port))
+    }
+
+    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str> {
+        u32::write_to_port(port, value);
+        Ok(())
+    }
+}

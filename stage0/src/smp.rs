@@ -20,7 +20,7 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use x86_64::PhysAddr;
+use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
 use crate::{
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
@@ -40,7 +40,10 @@ extern "C" {
 #[link_section = ".ap_bss"]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
-pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
+pub fn start_ap<M: crate::hal::Mmio<Size4KiB>>(
+    lapic: &mut Lapic<M>,
+    physical_apic_id: u32,
+) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;
     // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no
     // connection to actual seconds.
@@ -74,7 +77,7 @@ pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static
 }
 
 // TODO(#4235): Bootstrap the APs.
-pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
+pub fn bootstrap_aps<P: crate::hal::Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
@@ -89,8 +92,8 @@ pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
     // Disable the local PIC and set up our local APIC, as we need to send IPIs to
     // APs via the APIC. Safety: we can reasonably expect the PICs to be
     // available.
-    unsafe { disable_pic8259()? };
-    let mut lapic = Lapic::enable()?;
+    unsafe { disable_pic8259::<P>()? };
+    let mut lapic = Lapic::<P::Mmio<Size4KiB>>::enable::<P>()?;
 
     let local_apic_id = lapic.local_apic_id();
 

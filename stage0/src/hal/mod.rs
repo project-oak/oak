@@ -18,7 +18,7 @@ mod base;
 #[cfg(feature = "sev")]
 mod sev;
 
-use core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
+use core::arch::x86_64::CpuidResult;
 
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
@@ -29,40 +29,28 @@ use oak_sev_guest::{
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
-    structures::paging::{Page, PageSize, Size4KiB},
+    structures::{
+        paging::{Page, PageSize, Size4KiB},
+        port::{PortRead, PortWrite},
+    },
     PhysAddr,
 };
+
+use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 /// Abstraction around MMIO (memory-mapped I/O) read/write access.
 ///
 /// Normally you can just access the memory directly via
 /// `read_volatile`/`write_volatile`, but for SEV-ES and above we need to go via
 /// the GHCB to do MMIO.
-pub struct Mmio<S: PageSize = Size4KiB> {
-    mmio: base::Mmio<S>,
-}
-
-impl<S: PageSize> Mmio<S> {
-    pub unsafe fn new(base_address: PhysAddr) -> Self {
-        Self { mmio: base::Mmio::new(base_address) }
-    }
-
+pub trait Mmio<S: PageSize> {
     /// Reads an u32 from the MMIO memory region.
     ///
     /// The offset is the number of u32-s (not byte offsets); that is, to read
     /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
     ///
     /// Panics if the read would go outside the memory range.
-    pub fn read_u32(&self, offset: usize) -> u32 {
-        let offset = offset * size_of::<u32>();
-        if offset >= S::SIZE as usize {
-            panic!("invalid MMIO access for read: offset would read beyond memory boundary");
-        }
-        #[cfg(feature = "sev")]
-        return sev::read_u32(&self.mmio, offset);
-        #[cfg(not(feature = "sev"))]
-        return self.mmio.read_u32(offset);
-    }
+    fn read_u32(&self, offset: usize) -> u32;
 
     /// Write an u32 from the MMIO memory region.
     ///
@@ -73,27 +61,28 @@ impl<S: PageSize> Mmio<S> {
     ///
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
-    pub unsafe fn write_u32(&mut self, offset: usize, value: u32) {
-        let offset = offset * size_of::<u32>();
-        if offset >= S::SIZE as usize {
-            panic!("invalid MMIO access for write: offset would write beyond memory boundary");
-        }
-        #[cfg(feature = "sev")]
-        return sev::write_u32(&mut self.mmio, offset, value);
-        #[cfg(not(feature = "sev"))]
-        return self.mmio.write_u32(offset, value);
-    }
+    unsafe fn write_u32(&mut self, offset: usize, value: u32);
 }
 
-/// Performs CPUID.
-///
-/// Under SEV-ES and above, you shouldn't call the CPUID instruction directly.
-pub fn cpuid(leaf: u32) -> CpuidResult {
-    #[cfg(feature = "sev")]
-    return sev::cpuid(leaf);
-    #[cfg(not(feature = "sev"))]
-    return base::cpuid(leaf);
+pub trait Platform {
+    type Mmio<S: PageSize>: Mmio<S>;
+
+    /// Performs the CPUID instruction.
+    fn cpuid(leaf: u32) -> CpuidResult;
+
+    unsafe fn mmio<S: PageSize>(base_address: PhysAddr) -> Self::Mmio<S>;
+
+    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str>;
+    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str>;
+    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str>;
+    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str>;
+    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str>;
+    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str>;
 }
+pub use base::Base;
+#[cfg(feature = "sev")]
+pub use sev::Sev;
+
 /// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.
 pub struct Msr {
@@ -136,62 +125,84 @@ impl Msr {
     }
 }
 
-pub struct PortFactory;
+#[derive(Clone)]
+pub struct PortFactory {
+    read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
+    read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
+    read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
+    write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
+    write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
+    write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
+}
 
-#[cfg(feature = "sev")]
-pub use sev::GhcbPortRead as PortRead;
-#[cfg(feature = "sev")]
-pub use sev::GhcbPortWrite as PortWrite;
-#[cfg(not(feature = "sev"))]
-pub use x86_64::structures::port::PortRead;
-#[cfg(not(feature = "sev"))]
-pub use x86_64::structures::port::PortWrite;
-
-use crate::{paging::PageEncryption, zero_page::ZeroPage};
-
-impl<'a, T> IoPortFactory<'a, T, Port<T>, Port<T>> for PortFactory
-where
-    T: PortRead + PortWrite + 'a,
-{
-    fn new_reader(&self, port: u16) -> Port<T> {
-        Port::new(port)
-    }
-
-    fn new_writer(&self, port: u16) -> Port<T> {
-        Port::new(port)
+impl PortFactory {
+    pub fn new<P: Platform>() -> Self {
+        Self {
+            read_u8: P::read_u8_from_port,
+            read_u16: P::read_u16_from_port,
+            read_u32: P::read_u32_from_port,
+            write_u8: P::write_u8_to_port,
+            write_u16: P::write_u16_to_port,
+            write_u32: P::write_u32_to_port,
+        }
     }
 }
 
-/// Access to x86 IO ports.
-pub struct Port<T> {
+impl IoPortFactory<'_, u8, Port<u8>, Port<u8>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u8> {
+        Port::new(port, self.read_u8, self.write_u8)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u8> {
+        Port::new(port, self.read_u8, self.write_u8)
+    }
+}
+
+impl IoPortFactory<'_, u16, Port<u16>, Port<u16>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u16> {
+        Port::new(port, self.read_u16, self.write_u16)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u16> {
+        Port::new(port, self.read_u16, self.write_u16)
+    }
+}
+
+impl IoPortFactory<'_, u32, Port<u32>, Port<u32>> for PortFactory {
+    fn new_reader(&self, port: u16) -> Port<u32> {
+        Port::new(port, self.read_u32, self.write_u32)
+    }
+
+    fn new_writer(&self, port: u16) -> Port<u32> {
+        Port::new(port, self.read_u32, self.write_u32)
+    }
+}
+
+pub struct Port<T: PortRead + PortWrite> {
     port: u16,
-    phantom: PhantomData<T>,
+    read: unsafe fn(u16) -> Result<T, &'static str>,
+    write: unsafe fn(u16, T) -> Result<(), &'static str>,
 }
 
-impl<T> Port<T> {
-    pub fn new(port: u16) -> Self {
-        Self { port, phantom: PhantomData }
+impl<T: PortRead + PortWrite> Port<T> {
+    fn new(
+        port: u16,
+        read: unsafe fn(u16) -> Result<T, &'static str>,
+        write: unsafe fn(u16, T) -> Result<(), &'static str>,
+    ) -> Self {
+        Self { port, read, write }
     }
 }
 
-impl<T: PortRead> PortReader<T> for Port<T> {
+impl<T: PortRead + PortWrite> PortReader<T> for Port<T> {
     unsafe fn try_read(&mut self) -> Result<T, &'static str> {
-        #[cfg(feature = "sev")]
-        return <T as sev::GhcbPortRead>::read_from_port(self.port);
-        #[cfg(not(feature = "sev"))]
-        return Ok(<T as PortRead>::read_from_port(self.port));
+        (self.read)(self.port)
     }
 }
 
-impl<T: PortWrite> PortWriter<T> for Port<T> {
+impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
-        #[cfg(feature = "sev")]
-        return <T as sev::GhcbPortWrite>::write_to_port(self.port, value);
-        #[cfg(not(feature = "sev"))]
-        return {
-            <T as PortWrite>::write_to_port(self.port, value);
-            Ok(())
-        };
+        (self.write)(self.port, value)
     }
 }
 

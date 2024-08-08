@@ -50,7 +50,7 @@ mod allocator;
 mod apic;
 mod cmos;
 mod fw_cfg;
-mod hal;
+pub mod hal;
 mod initramfs;
 mod kernel;
 mod logging;
@@ -59,6 +59,10 @@ pub mod paging;
 mod pic;
 mod smp;
 mod zero_page;
+
+pub use hal::Platform;
+#[cfg(feature = "sev")]
+pub use hal::Sev;
 
 type Measurement = [u8; 32];
 
@@ -119,18 +123,19 @@ pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-pub fn rust64_start() -> ! {
+pub fn rust64_start<P: hal::Platform>() -> ! {
     paging::init_page_table_refs();
     hal::early_initialize_platform();
-    logging::init_logging();
+    logging::init_logging::<P>();
     log::info!("starting...");
     // Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
-    let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
+    let mut fwcfg =
+        unsafe { fw_cfg::FwCfg::new::<P>(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
 
     let mut zero_page = Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC);
 
-    zero_page.fill_e820_table(&mut fwcfg);
+    zero_page.fill_e820_table::<P>(&mut fwcfg);
 
     hal::initialize_platform(zero_page.e820_table());
 
@@ -200,7 +205,7 @@ pub fn rust64_start() -> ! {
     let mut acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
 
-    if let Err(err) = smp::bootstrap_aps(rsdp) {
+    if let Err(err) = smp::bootstrap_aps::<P>(rsdp) {
         log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
     }
 

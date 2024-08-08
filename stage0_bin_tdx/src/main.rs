@@ -104,6 +104,50 @@ fn init_tdx_serial_port() {
     io_write_u8(0x3f8 + 0x3, 0x3).unwrap(); // LINE_CONTROL_8N1
     io_write_u8(0x3f8 + 0x4, 0x3).unwrap(); // DATA_TERMINAL_READY_AND_REQUEST_TO_SEND
 }
+
+struct Mmio {}
+impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for Mmio {
+    fn read_u32(&self, _: usize) -> u32 {
+        todo!()
+    }
+    unsafe fn write_u32(&mut self, _: usize, _: u32) {
+        todo!()
+    }
+}
+
+struct Tdx {}
+impl oak_stage0::Platform for Tdx {
+    type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
+    fn cpuid(_leaf: u32) -> core::arch::x86_64::CpuidResult {
+        unimplemented!()
+    }
+
+    unsafe fn mmio<S>(_: x86_64::addr::PhysAddr) -> <Self as oak_stage0::Platform>::Mmio<S>
+    where
+        S: x86_64::structures::paging::page::PageSize,
+    {
+        todo!()
+    }
+    unsafe fn read_u8_from_port(_: u16) -> Result<u8, &'static str> {
+        todo!()
+    }
+    unsafe fn write_u8_to_port(_: u16, _: u8) -> Result<(), &'static str> {
+        todo!()
+    }
+    unsafe fn read_u16_from_port(_: u16) -> Result<u16, &'static str> {
+        todo!()
+    }
+    unsafe fn write_u16_to_port(_: u16, _: u16) -> Result<(), &'static str> {
+        todo!()
+    }
+    unsafe fn read_u32_from_port(_: u16) -> Result<u32, &'static str> {
+        todo!()
+    }
+    unsafe fn write_u32_to_port(_: u16, _: u32) -> Result<(), &'static str> {
+        todo!()
+    }
+}
+
 /// Entry point for the Rust code in the stage0 BIOS.
 #[no_mangle]
 pub extern "C" fn rust64_start() -> ! {
@@ -125,7 +169,7 @@ pub extern "C" fn rust64_start() -> ! {
     }
 
     #[allow(unreachable_code)]
-    oak_stage0::rust64_start()
+    oak_stage0::rust64_start::<Tdx>()
 }
 
 #[panic_handler]

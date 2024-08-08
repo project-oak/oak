@@ -15,7 +15,7 @@
 //
 
 use alloc::alloc::{alloc, dealloc};
-use core::alloc::Layout;
+use core::{alloc::Layout, mem::size_of};
 
 use x86_64::{
     instructions::tlb::flush_all,
@@ -58,8 +58,14 @@ impl<S: PageSize> Mmio<S> {
 
         Mmio { base_address, layout, mmio_memory, old_pte, phantom: core::marker::PhantomData }
     }
+}
 
-    pub fn read_u32(&self, offset: usize) -> u32 {
+impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
+    fn read_u32(&self, offset: usize) -> u32 {
+        let offset = offset * size_of::<u32>();
+        if offset >= S::SIZE as usize {
+            panic!("invalid MMIO access for read: offset would read beyond memory boundary");
+        }
         // Safety:
         //   - offset is aligned to u32
         //   - we've checked it's within the page size
@@ -67,7 +73,11 @@ impl<S: PageSize> Mmio<S> {
         unsafe { self.mmio_memory.as_ptr::<u32>().add(offset).read_volatile() }
     }
 
-    pub unsafe fn write_u32(&mut self, offset: usize, value: u32) {
+    unsafe fn write_u32(&mut self, offset: usize, value: u32) {
+        let offset = offset * size_of::<u32>();
+        if offset >= S::SIZE as usize {
+            panic!("invalid MMIO access for write: offset would write beyond memory boundary");
+        }
         // Safety:
         //   - offset is aligned to u32
         //   - we've checked it's within the page size

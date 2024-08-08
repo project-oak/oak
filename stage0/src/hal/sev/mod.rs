@@ -15,27 +15,28 @@
 //
 
 mod accept_memory;
-mod cpuid;
 mod dice_attestation;
 mod mmio;
 mod msr;
-mod port;
 
 use alloc::boxed::Box;
-use core::mem::MaybeUninit;
+use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 
 pub use accept_memory::*;
-pub use cpuid::*;
 pub use dice_attestation::*;
-pub use mmio::*;
 pub use msr::*;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
-use oak_sev_guest::{ap_jump_table::ApJumpTable, ghcb::GhcbProtocol, msr::SevStatus};
-pub use port::*;
+use oak_sev_guest::{
+    ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
+};
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{
+    instructions::port::{PortRead, PortWrite},
+    structures::paging::PageSize,
+    PhysAddr, VirtAddr,
+};
 
 use crate::{
     allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
@@ -122,6 +123,77 @@ fn sev_status() -> SevStatus {
     // Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     unsafe { SEV_STATUS }
+}
+
+pub struct Sev {}
+
+impl crate::Platform for Sev {
+    type Mmio<S: PageSize> = mmio::Mmio<S>;
+
+    fn cpuid(leaf: u32) -> CpuidResult {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.get_cpuid(CpuidInput { eax: leaf, ecx: 0, xcr0: 0, xss: 0 }).unwrap().into()
+        } else {
+            crate::hal::Base::cpuid(leaf)
+        }
+    }
+
+    unsafe fn mmio<S: x86_64::structures::paging::PageSize>(
+        base_address: PhysAddr,
+    ) -> Self::Mmio<S> {
+        mmio::Mmio::new(base_address)
+    }
+
+    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u8(port)
+        } else {
+            Ok(u8::read_from_port(port))
+        }
+    }
+
+    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u8(port, value)
+        } else {
+            u8::write_to_port(port, value);
+            Ok(())
+        }
+    }
+
+    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u16(port)
+        } else {
+            Ok(u16::read_from_port(port))
+        }
+    }
+
+    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u16(port, value)
+        } else {
+            u16::write_to_port(port, value);
+            Ok(())
+        }
+    }
+
+    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_read_u32(port)
+        } else {
+            Ok(u32::read_from_port(port))
+        }
+    }
+
+    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str> {
+        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
+            ghcb.io_write_u32(port, value)
+        } else {
+            u32::write_to_port(port, value);
+            Ok(())
+        }
+    }
 }
 
 pub fn early_initialize_platform() {
