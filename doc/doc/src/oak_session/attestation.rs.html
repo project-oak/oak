@@ -119,6 +119,8 @@
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -157,7 +159,7 @@
     ) -&gt; anyhow::Result&lt;AttestationResults&gt;;
 }
 
-<span class="doccomment">/// Configuration of the attestation behavior that the AttestationProtiver will
+<span class="doccomment">/// Configuration of the attestation behavior that the AttestationProvider will
 /// perform between two parties: Client and Server.
 ///
 /// When configuring the Client: "Self" is the Client and "Peer" is the Server.
@@ -169,6 +171,8 @@
     </span>SelfUnidirectional,
     <span class="doccomment">/// "Peer" attests itself to the "Self".
     </span>PeerUnidirectional,
+    <span class="doccomment">/// No attestation.
+    </span>Unattested,
 }
 
 <span class="kw">pub trait </span>AttestationProvider {

@@ -200,6 +200,90 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -219,7 +303,7 @@
 </span><span class="doccomment">//! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-</span><span class="kw">use </span>alloc::{boxed::Box, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, collections::VecDeque, vec::Vec};
 
 <span class="kw">use </span>anyhow::{anyhow, Context, Error};
 <span class="kw">use </span>oak_crypto::encryptor::Encryptor;
@@ -264,25 +348,24 @@
 }
 
 <span class="comment">// Client-side secure attested session entrypoint.
-</span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
     handshaker: ClientHandshaker,
-    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
-    outgoing_requests: Vec&lt;SessionRequest&gt;,
-    incoming_responses: Vec&lt;SessionResponse&gt;,
+    <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
+    </span>encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    outgoing_requests: VecDeque&lt;SessionRequest&gt;,
+    incoming_responses: VecDeque&lt;SessionResponse&gt;,
 }
 
-<span class="attr">#[allow(dead_code)]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>create(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             config,
             handshaker: ClientHandshaker::create(<span class="kw-2">&amp;</span>config.handshaker_config)
                 .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
             encryptor: <span class="prelude-val">None</span>,
-            outgoing_requests: <span class="macro">vec!</span>[],
-            incoming_responses: <span class="macro">vec!</span>[],
+            outgoing_requests: VecDeque::new(),
+            incoming_responses: VecDeque::new(),
         })
     }
 }
@@ -293,34 +376,40 @@
     }
 
     <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.encryptor {
-            <span class="prelude-val">Some</span>(encryptor) =&gt; {
-                <span class="kw">let </span>ciphertext = encryptor
-                    .encrypt(plaintext.into())
-                    .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.outgoing_requests
-                    .push(SessionRequest { r#request: <span class="prelude-val">Some</span>(Request::Ciphertext(ciphertext)) });
-                <span class="prelude-val">Ok</span>(())
-            }
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>)),
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
+            <span class="kw">let </span>ciphertext = encryptor
+                .encrypt(plaintext.into())
+                .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.outgoing_requests
+                .push_back(SessionRequest { request: <span class="prelude-val">Some</span>(Request::Ciphertext(ciphertext)) });
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
         }
     }
 
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
-        <span class="kw">match </span>(<span class="kw-2">&amp;mut </span><span class="self">self</span>.encryptor, <span class="self">self</span>.incoming_responses.pop()) {
-            (<span class="prelude-val">Some</span>(encryptor), <span class="prelude-val">Some</span>(response)) =&gt; {
-                <span class="kw">let </span>ciphertext = <span class="kw">match </span>response.r#response {
-                    <span class="prelude-val">Some</span>(Response::Ciphertext(ciphertext)) =&gt; ciphertext,
-                    <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of SessionResponse"</span>)),
-                };
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
-                    encryptor
-                        .decrypt(ciphertext.as_slice().into())
-                        .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
-                ))
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
+            <span class="kw">match </span><span class="self">self</span>.incoming_responses.pop_front() {
+                <span class="prelude-val">Some</span>(response) =&gt; {
+                    <span class="kw">let </span>ciphertext = <span class="kw">match </span>response.response {
+                        <span class="prelude-val">Some</span>(Response::Ciphertext(ciphertext)) =&gt; ciphertext,
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                                <span class="string">"unexpected content of SessionResponse: no ciphertext set"
+                            </span>));
+                        }
+                    };
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
+                        encryptor
+                            .decrypt(ciphertext.as_slice().into())
+                            .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
+                    ))
+                }
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             }
-            (<span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-            (<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>)),
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
         }
     }
 }
@@ -328,12 +417,12 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionResponse, SessionRequest&gt; <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionRequest&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.is_open() {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop());
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop_front());
         };
         <span class="prelude-val">Ok</span>(<span class="self">self
             </span>.handshaker
             .get_outgoing_message()<span class="question-mark">?
-            </span>.map(|h| SessionRequest { r#request: <span class="prelude-val">Some</span>(Request::HandshakeRequest(h)) }))
+            </span>.map(|h| SessionRequest { request: <span class="prelude-val">Some</span>(Request::HandshakeRequest(h)) }))
     }
 
     <span class="kw">fn </span>put_incoming_message(
@@ -341,19 +430,29 @@
         incoming_message: <span class="kw-2">&amp;</span>SessionResponse,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.is_open() {
-            <span class="self">self</span>.incoming_responses.push(incoming_message.clone());
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()));
+            <span class="kw">return match </span>incoming_message.response {
+                <span class="prelude-val">Some</span>(Response::Ciphertext(<span class="kw">_</span>)) =&gt; {
+                    <span class="self">self</span>.incoming_responses.push_back(incoming_message.clone());
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
+                }
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                    <span class="string">"unexpected content of SessionResponse: session open but no ciphertext set"
+                </span>)),
+            };
         }
-        <span class="kw">match </span>incoming_message.r#response.as_ref() {
+        <span class="kw">match </span>incoming_message.response.as_ref() {
             <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)) =&gt; {
-                <span class="kw">let </span>result = <span class="self">self</span>.handshaker.put_incoming_message(handshake_message);
+                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                    <span class="string">"invalid session state: handshake message received but handshaker doesn't
+                    expect any"
+                </span>))<span class="question-mark">?</span>;
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
                         (<span class="self">self</span>.config.encryptor_config.encryptor_provider)(session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }
-                result
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
         }
@@ -361,43 +460,112 @@
 }
 
 <span class="comment">// Server-side secure attested session entrypoint.
-</span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
     handshaker: ServerHandshaker&lt;<span class="lifetime">'a</span>&gt;,
+    <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
+    </span>encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    outgoing_responses: VecDeque&lt;SessionResponse&gt;,
+    incoming_requests: VecDeque&lt;SessionRequest&gt;,
 }
 
-<span class="attr">#[allow(dead_code)]
-</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ config, handshaker: ServerHandshaker::new(<span class="kw-2">&amp;</span>config.handshaker_config) }
+        <span class="self">Self </span>{
+            config,
+            handshaker: ServerHandshaker::new(<span class="kw-2">&amp;</span>config.handshaker_config),
+            encryptor: <span class="prelude-val">None</span>,
+            outgoing_responses: VecDeque::new(),
+            incoming_requests: VecDeque::new(),
+        }
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Session <span class="kw">for </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="self">self</span>.encryptor.is_some()
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="macro">core::unimplemented!</span>();
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
+            <span class="kw">let </span>ciphertext = encryptor
+                .encrypt(plaintext.into())
+                .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.outgoing_responses
+                .push_back(SessionResponse { response: <span class="prelude-val">Some</span>(Response::Ciphertext(ciphertext)) });
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+        }
     }
 
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
+            <span class="kw">match </span><span class="self">self</span>.incoming_requests.pop_front() {
+                <span class="prelude-val">Some</span>(request) =&gt; {
+                    <span class="kw">let </span>ciphertext = <span class="kw">match </span>request.request {
+                        <span class="prelude-val">Some</span>(Request::Ciphertext(ciphertext)) =&gt; ciphertext,
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                                <span class="string">"unexpected content of SessionRequest: no ciphertext set"
+                            </span>));
+                        }
+                    };
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
+                        encryptor
+                            .decrypt(ciphertext.as_slice().into())
+                            .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
+                    ))
+                }
+                <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            }
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+        }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionRequest, SessionResponse&gt; <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionRequest, SessionResponse&gt; <span class="kw">for </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionResponse&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front())
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _incoming_message: <span class="kw-2">&amp;</span>SessionRequest,
+        incoming_message: <span class="kw-2">&amp;</span>SessionRequest,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
-        <span class="macro">core::unimplemented!</span>();
+        <span class="kw">if </span><span class="self">self</span>.is_open() {
+            <span class="kw">return match </span>incoming_message.request {
+                <span class="prelude-val">Some</span>(Request::Ciphertext(<span class="kw">_</span>)) =&gt; {
+                    <span class="self">self</span>.incoming_requests.push_back(incoming_message.clone());
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
+                }
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                    <span class="string">"unexpected content of SessionRequest: session open but no ciphertext set"
+                </span>)),
+            };
+        }
+        <span class="kw">match </span>incoming_message.request.as_ref() {
+            <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)) =&gt; {
+                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                    <span class="string">"invalid session state: handshake message received but handshaker doesn't
+                     expect any"
+                </span>))<span class="question-mark">?</span>;
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(outgoing_message) = <span class="self">self</span>.handshaker.get_outgoing_message()<span class="question-mark">? </span>{
+                    <span class="self">self</span>.outgoing_responses.push_back(SessionResponse {
+                        response: <span class="prelude-val">Some</span>(Response::HandshakeResponse(outgoing_message)),
+                    });
+                }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
+                    <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
+                        (<span class="self">self</span>.config.encryptor_config.encryptor_provider)(session_keys)
+                            .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
+                    )
+                }
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
+            }
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session request"</span>)),
+        }
     }
 }
 </code></pre></div></section></main></body></html>

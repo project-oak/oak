@@ -138,9 +138,6 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -177,8 +174,11 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SessionConfig&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>builder(attestation_type: AttestationType) -&gt; SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
-        SessionConfigBuilder::new(attestation_type)
+    <span class="kw">pub fn </span>builder(
+        attestation_type: AttestationType,
+        handshake_type: HandshakeType,
+    ) -&gt; SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
+        SessionConfigBuilder::new(attestation_type, handshake_type)
     }
 }
 
@@ -187,13 +187,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>new(attestation_type: AttestationType) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>handshake_type = <span class="kw">match </span>attestation_type {
-            AttestationType::Bidirectional =&gt; HandshakeType::NoiseKK,
-            AttestationType::SelfUnidirectional =&gt; HandshakeType::NoiseKN,
-            AttestationType::PeerUnidirectional =&gt; HandshakeType::NoiseNK,
-        };
-
+    <span class="kw">fn </span>new(attestation_type: AttestationType, handshake_type: HandshakeType) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>attestation_provider_config = AttestationProviderConfig {
             attestation_type,
             self_attesters: <span class="macro">vec!</span>[],
