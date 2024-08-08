@@ -20,8 +20,8 @@ BEGIN {
     print "/‾‾‾‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\\"
 }
 {
-    # Filter out lines starting with "Aspect @rules_rust//rust/private:clippy" and ending with "up-to-date:" or "(nothing to build)"
-    if ($0 ~ /^Aspect @rules_rust\/\/rust\/private:clippy.*(up-to-date:|\(nothing to build\))$/) next
+    # Filter out lines starting with "Aspect @rules_rust//rust/private:clippy"
+    if ($0 ~ /^Aspect @rules_rust\/\/rust\/private:clippy.*$/) next
 
     # Filter out lines indicating successful clippy checks
     if ($0 ~ /^ *bazel-.*\.clippy\.ok$/) next
