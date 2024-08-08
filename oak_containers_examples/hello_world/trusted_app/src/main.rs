@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let join_handle = tokio::spawn(oak_containers_hello_world_trusted_app::app_service::create(
         listener,
         OakSessionContext::new(
-            encryption_key_handle,
+            Box::new(encryption_key_handle),
             endorsed_evidence,
             Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
                 application_config,

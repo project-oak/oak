@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_crypto::encryptor::ServerEncryptor;
+use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, encryptor::ServerEncryptor};
 use oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
     session::v1::{
@@ -24,8 +24,6 @@ use oak_proto_rust::oak::{
 };
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
-
-use crate::InstanceEncryptionKeyHandle;
 
 /// An Oak trusted application will write an implementation of
 /// `ApplicationHandler` that accepts a serialized request (including di)
@@ -40,14 +38,14 @@ pub trait ApplicationHandler: Send + Sync {
 /// the instance of the class that actually implements the application
 /// logic.
 pub struct OakSessionContext {
-    encryption_key_handle: InstanceEncryptionKeyHandle,
+    encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     endorsed_evidence: EndorsedEvidence,
     application_handler: Box<dyn ApplicationHandler>,
 }
 
 impl OakSessionContext {
     pub fn new(
-        encryption_key_handle: InstanceEncryptionKeyHandle,
+        encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         endorsed_evidence: EndorsedEvidence,
         application_handler: Box<dyn ApplicationHandler>,
     ) -> Self {
@@ -69,7 +67,7 @@ impl OakSessionContext {
 
         // Associated data is ignored.
         let (server_encryptor, name_bytes, _) =
-            ServerEncryptor::decrypt_async(encrypted_request, &self.encryption_key_handle)
+            ServerEncryptor::decrypt_async(encrypted_request, &*self.encryption_key_handle)
                 .await
                 .context("couldn't decrypt request")?;
 

@@ -28,6 +28,7 @@ rust_library(
         "src/lib.rs",
         "src/oak_session_context.rs",
         "src/orchestrator_client.rs",
+        "src/standalone.rs",
         "src/tonic.rs",
     ],
     proc_macro_deps = [

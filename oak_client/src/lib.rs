@@ -15,5 +15,6 @@
 //
 
 pub mod client;
+pub mod standalone;
 pub mod transport;
 pub mod verifier;

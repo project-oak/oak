@@ -16,6 +16,7 @@
 pub mod crypto;
 pub mod oak_session_context;
 pub mod orchestrator_client;
+pub mod standalone;
 pub mod tonic;
 
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.

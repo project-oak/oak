@@ -16,7 +16,7 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "oci_runtime_bundle")
 
 package(
@@ -44,6 +44,22 @@ rust_library(
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_test(
+    name = "standalone_test",
+    srcs = ["tests/standalone_test.rs"],
+    deps = [
+        ":lib",
+        "//oak_client",
+        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
+        "//oak_containers_sdk",
+        "//oak_crypto",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
 )

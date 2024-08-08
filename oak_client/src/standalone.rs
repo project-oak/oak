@@ -12,21 +12,47 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+
+//! Utilities for creating an [`OakClient`] instance that can interact with Oak
+//! Standalone server instances.
+//!
+//! The Oak Standalone SDK allows easy development iteration and testing for an
+//! Oak-enabled trusted binary without requiring the entire Oak containers
+//! stack.
+//!
+//! Oak Standalone supports setting up an encrypted channel based on randomly
+//! generated public keys.
+//!
+//! It does not currently support any sort of attestation flow.
 
 use anyhow::Context;
-use oak_client::{
-    client::OakClient,
-    transport::{EvidenceProvider, Transport},
-    verifier::AttestationVerifier,
-};
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence, Endorsements, Evidence, ExtractedEvidence, OakStandaloneData,
 };
-/// An [AttestationVerifier] that skips attestation, but still receives the
-/// public key from the server to set up an encryption channel.
-struct StandaloneAttestationVerifier {}
 
-impl AttestationVerifier for StandaloneAttestationVerifier {
+use crate::verifier::AttestationVerifier;
+
+/// An [`AttestationVerifier`] that performs no attestation verification, but
+/// still receives the public key from the server to set up an encryption
+/// channel.
+///
+/// This verifier should only be used during development and testing using the
+/// Oak Standalone SDK featureset.
+///
+/// As we continually developing Oak Standalone, this implementation should
+/// converge towards the standard implementation, and perhaps eventually be
+/// removed completely.
+#[derive(Default)]
+pub struct StandaloneNoOpAttestationVerifier {}
+
+impl StandaloneNoOpAttestationVerifier {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl AttestationVerifier for StandaloneNoOpAttestationVerifier {
     fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<ExtractedEvidence> {
         // Ignore everything about Evidence, Endorsements.
         // For this PoC, we just pull the key directly out of ApplicationKeys,
@@ -46,14 +72,4 @@ impl AttestationVerifier for StandaloneAttestationVerifier {
             signing_public_key: vec![],
         })
     }
-}
-
-/// Create a new [OakClient] instance that is meant to interact with an Oak
-/// Standalone server facade.
-///
-/// Attestation will not be verified, but the server should provide an
-/// encryption PK that can be used to establish a crypto channel.
-pub async fn new<T: Transport + EvidenceProvider>(transport: T) -> anyhow::Result<OakClient<T>> {
-    let verifier = StandaloneAttestationVerifier {};
-    OakClient::create(transport, &verifier).await
 }

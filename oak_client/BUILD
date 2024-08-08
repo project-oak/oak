@@ -26,6 +26,7 @@ rust_library(
     srcs = [
         "src/client.rs",
         "src/lib.rs",
+        "src/standalone.rs",
         "src/transport.rs",
         "src/verifier.rs",
     ],
