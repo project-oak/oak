@@ -370,68 +370,6 @@
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -456,13 +394,12 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, string::String, vec::Vec};
-<span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+<span class="kw">use </span>core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
-<span class="kw">use </span>oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
+<span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
-<span class="kw">use </span>oak_sev_guest::msr::SevStatus;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
@@ -477,7 +414,7 @@
 };
 <span class="kw">use </span>zerocopy::AsBytes;
 
-<span class="kw">use crate</span>::{alloc::string::ToString, kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+<span class="kw">use crate</span>::{alloc::string::ToString, kernel::KernelType};
 
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;
@@ -492,7 +429,6 @@
 <span class="kw">mod </span>msr;
 <span class="kw">pub mod </span>paging;
 <span class="kw">mod </span>pic;
-<span class="kw">mod </span>sev;
 <span class="kw">mod </span>smp;
 <span class="kw">mod </span>zero_page;
 
@@ -506,13 +442,6 @@
 // outlive Stage 0.
 </span><span class="attr">#[cfg_attr(not(test), global_allocator)]
 </span><span class="kw">static </span>SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
-
-<span class="attr">#[link_section = <span class="string">".boot"</span>]
-#[no_mangle]
-</span><span class="kw">static </span><span class="kw-2">mut </span>SEV_SECRETS: MaybeUninit&lt;oak_sev_guest::secrets::SecretsPage&gt; = MaybeUninit::uninit();
-<span class="attr">#[link_section = <span class="string">".boot"</span>]
-#[no_mangle]
-</span><span class="kw">static </span>SEV_CPUID: MaybeUninit&lt;oak_sev_guest::cpuid::CpuidPage&gt; = MaybeUninit::uninit();
 
 <span class="doccomment">/// We create an identity map for the first 1GiB of memory.
 </span><span class="kw">const </span>TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
@@ -554,21 +483,6 @@
         <span class="kw">in</span>(reg) Box::leak(zero_page),
         options(noreturn, att_syntax)
     );
-}
-
-<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU
-/// doesn't support it.
-///
-/// Initialized in the bootstrap assembly code.
-</span><span class="kw">pub fn </span>sev_status() -&gt; SevStatus {
-    <span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR
-    // anyway.
-    </span><span class="attr">#[no_mangle]
-    </span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
-
-    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    </span><span class="kw">unsafe </span>{ SEV_STATUS }
 }
 
 <span class="doccomment">/// Entry point for the Rust code in the stage0 BIOS.
@@ -624,21 +538,7 @@
     <span class="kw">let </span>setup_data_sha2_256_digest =
         zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
 
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="comment">// Safety: we're only interested in the pointer value of SEV_SECRETS, not its
-        // contents.
-        </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
-            oak_linux_boot_params::CCBlobSevInfo::new(
-                <span class="kw">unsafe </span>{ SEV_SECRETS.as_ptr() },
-                SEV_CPUID.as_ptr(),
-            ),
-            <span class="kw-2">&amp;</span>BOOT_ALLOC,
-        ));
-        <span class="kw">let </span>setup_data =
-            Box::leak(Box::new_in(oak_linux_boot_params::CCSetupData::new(cc_blob), <span class="kw-2">&amp;</span>BOOT_ALLOC));
-
-        zero_page.add_setup_data(setup_data);
-    }
+    hal::populate_zero_page(<span class="kw-2">&amp;mut </span>zero_page);
 
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
     <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
@@ -674,25 +574,6 @@
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
         <span class="macro">log::warn!</span>(<span class="string">"Failed to bootstrap APs: {}. APs may not be properly initialized."</span>, err);
-    }
-
-    <span class="comment">// Register the AP Jump Table, if required.
-    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        <span class="comment">// This assumes identity mapping. Which we have in stage0.
-        </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
-        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-            <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don't care about the contents of the secrets page beyond writing
-            // our jump table address into it.
-            </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
-            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
-        } <span class="kw">else </span>{
-            <span class="comment">// Plain old SEV-ES, use the GHCB protocol.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
-                ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
-                    .expect(<span class="string">"failed to set AP Jump Table"</span>);
-            }
-        }
     }
 
     <span class="kw">let </span>ram_disk_sha2_256_digest =
@@ -748,11 +629,7 @@
         eventlog_sha2_256_digest,
     };
 
-    <span class="kw">let </span>tee_platform = <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        TeePlatform::AmdSevSnp
-    } <span class="kw">else </span>{
-        TeePlatform::None
-    };
+    <span class="kw">let </span>tee_platform = hal::tee_platform();
 
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
@@ -808,11 +685,10 @@
     // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
     // hugepage for the first 2M of memory.
     </span>drop(fwcfg);
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
-        <span class="comment">// Safety: we're in the last moments of stage0 and nobody should access the GHCB
-        // beyond this point.
-        </span><span class="kw">unsafe </span>{ sev::GHCB_WRAPPER.deinit(<span class="kw-2">&amp;</span>BOOT_ALLOC) };
-    }
+    <span class="comment">// After the call to `deinit_platform`:
+    //  - Do not log anything any more.
+    //  - Do not allocate memory.
+    </span>hal::deinit_platform();
     paging::remap_first_huge_page();
 
     <span class="kw">unsafe </span>{

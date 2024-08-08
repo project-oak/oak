@@ -431,6 +431,7 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -464,6 +465,7 @@
 };
 <span class="kw">use </span>zeroize::Zeroize;
 
+<span class="kw">use super</span>::{sev_status, GHCB_WRAPPER};
 <span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTable};
 
 <span class="comment">//
@@ -676,7 +678,7 @@
         <span class="comment">// Future optimization: do this operation in batches of 253 frames (that's how
         // many can fit in one PageStateChange request) instead of one at a time.
         </span><span class="kw">for </span>frame <span class="kw">in </span><span class="kw-2">*</span><span class="self">self </span>{
-            <span class="kw">crate</span>::sev::GHCB_WRAPPER
+            GHCB_WRAPPER
                 .get()
                 .expect(<span class="string">"GHCB not initialized"</span>)
                 .page_state_change(frame, assignment)<span class="question-mark">?</span>;
@@ -843,7 +845,7 @@
 }
 
 <span class="kw">pub fn </span>change_page_state(page: Page&lt;Size4KiB&gt;, state: PageAssignment) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page.start_address().as_u64() <span class="kw">as </span>usize, state)
             .expect(<span class="string">"invalid address for page location"</span>);
         change_snp_page_state(request)<span class="question-mark">?</span>;
@@ -852,7 +854,7 @@
 }
 
 <span class="kw">pub fn </span>revalidate_page(page: Page&lt;Size4KiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SEV_ENABLED) {
+    <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
         <span class="kw">let </span>counter = AtomicUsize::new(<span class="number">0</span>);
         <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = page.pvalidate(<span class="kw-2">&amp;</span>counter) {
             <span class="kw">if </span>err != InstructionError::ValidationStatusNotUpdated {

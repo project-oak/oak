@@ -292,6 +292,28 @@
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -314,6 +336,7 @@
 
 <span class="kw">use </span>core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
 
+<span class="kw">use </span>oak_dice::evidence::TeePlatform;
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 <span class="kw">use </span>oak_sev_guest::{
     io::{IoPortFactory, PortReader, PortWriter},
@@ -440,7 +463,7 @@
 <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
 </span><span class="kw">pub use </span>x86_64::structures::port::PortWrite;
 
-<span class="kw">use </span><span class="kw">crate</span>::paging::PageEncryption;
+<span class="kw">use crate</span>::{paging::PageEncryption, zero_page::ZeroPage};
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">'a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>PortFactory
 <span class="kw">where
@@ -516,6 +539,20 @@
     </span>sev::initialize_platform(e820_table)
 }
 
+<span class="doccomment">/// Platform-specific cleanups just before stage0 jumps to the kernel.
+///
+/// The assumption is that after this operation there will no longer be any
+/// memory allocations or uses of the logging interface.
+</span><span class="kw">pub fn </span>deinit_platform() {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span>sev::deinit_platform();
+}
+
+<span class="kw">pub fn </span>populate_zero_page(zero_page: <span class="kw-2">&amp;mut </span>ZeroPage) {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span>sev::populate_zero_page(zero_page);
+}
+
 <span class="doccomment">/// Returns an attestation report.
 ///
 /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
@@ -583,5 +620,12 @@
     </span><span class="kw">return </span>sev::encrypted();
     <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
     </span><span class="kw">return </span><span class="number">0</span>;
+}
+
+<span class="kw">pub fn </span>tee_platform() -&gt; TeePlatform {
+    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+    </span><span class="kw">return </span>sev::tee_platform();
+    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
+    </span><span class="kw">return </span>TeePlatform::None;
 }
 </code></pre></div></section></main></body></html>

@@ -106,6 +106,7 @@
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -137,7 +138,8 @@
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 <span class="kw">use </span>zeroize::Zeroize;
 
-<span class="kw">use </span><span class="kw">crate</span>::sev::{Shared, GHCB_WRAPPER};
+<span class="kw">use super</span>::{GHCB_WRAPPER, SEV_SECRETS};
+<span class="kw">use </span><span class="kw">crate</span>::allocator::Shared;
 
 <span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -147,7 +149,7 @@
 </span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no
     // requirements on the underlying bytes.
-    </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
+    </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
     GUEST_MESSAGE_ENCRYPTOR.lock().replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
     <span class="comment">// Once the we have read VMPCK0 we wipe it so that later boot stages cannot
     // request attestation reports or derived sealing keys for VMPL0. This stops
@@ -187,7 +189,7 @@
 <span class="kw">pub fn </span>get_attestation(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    <span class="kw">if </span><span class="kw">super</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span><span class="kw-2">mut </span>report_request = AttestationRequest::new();
         report_request.report_data = report_data;
         <span class="kw">let </span>attestation_response: AttestationResponse = send_guest_message_request(report_request)<span class="question-mark">?</span>;
@@ -202,7 +204,7 @@
 }
 
 <span class="kw">pub fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
+    <span class="kw">if </span><span class="kw">super</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span><span class="kw-2">mut </span>key_request = KeyRequest::new();
         <span class="kw">let </span>selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
         key_request.guest_field_select = selected_fields.bits();

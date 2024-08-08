@@ -49,7 +49,7 @@
 
 <span class="kw">use </span>oak_sev_guest::cpuid::CpuidInput;
 
-<span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
+<span class="kw">use </span><span class="kw">super</span>::GHCB_WRAPPER;
 
 <span class="kw">pub fn </span>cpuid(leaf: u32) -&gt; CpuidResult {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {

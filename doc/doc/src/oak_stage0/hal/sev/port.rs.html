@@ -121,7 +121,7 @@
 
 </span><span class="kw">use </span>x86_64::structures::port::{PortRead, PortWrite};
 
-<span class="kw">use </span><span class="kw">crate</span>::GHCB_WRAPPER;
+<span class="kw">use </span><span class="kw">super</span>::GHCB_WRAPPER;
 
 <span class="kw">pub trait </span>GhcbPortRead: PortRead {
     <span class="kw">unsafe fn </span>read_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;

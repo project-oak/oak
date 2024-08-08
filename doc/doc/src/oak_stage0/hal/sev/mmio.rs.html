@@ -37,6 +37,7 @@
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -55,7 +56,8 @@
 
 </span><span class="kw">use </span>x86_64::structures::paging::PageSize;
 
-<span class="kw">use crate</span>::{hal::base::Mmio, sev::GHCB_WRAPPER};
+<span class="kw">use </span><span class="kw">super</span>::GHCB_WRAPPER;
+<span class="kw">use </span><span class="kw">crate</span>::hal::base::Mmio;
 
 <span class="kw">pub fn </span>read_u32&lt;S: PageSize&gt;(mmio: <span class="kw-2">&amp;</span>Mmio&lt;S&gt;, offset: usize) -&gt; u32 {
     <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
