@@ -18,7 +18,7 @@
 //! leaf.
 //!
 //! See section 2.4.1 of [Guest-Host-Communication Interface (GHCI) for Intel®
-//! Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+//! Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 //! for more information.
 
 use core::arch::{asm, x86_64::CpuidResult};
@@ -47,7 +47,7 @@ bitflags! {
     /// RAX (bit 0), RCX (bit 1) and RSP (bit 4) must always be zero, so are not defined below.
     ///
     /// See section 2.4.1 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
-    /// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+    /// Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
     /// for more information.
     struct Registers: u64 {
         const RBX = 1 << 2;
@@ -109,7 +109,7 @@ pub enum MapGpaError {
 /// desired state (e.g. trying to share a page that was already shared).
 ///
 /// See section 3.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 ///
 /// # Safety
@@ -171,7 +171,7 @@ pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaErro
 /// Executes CPUID for the specified leaf and sub-leaf.
 ///
 /// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 pub fn call_cpuid(leaf: u32, sub_leaf: u32) -> Result<CpuidResult, &'static str> {
     // The VMCALL sub-function for Instruction.CPUID.
@@ -288,7 +288,7 @@ enum IoDirection {
 /// Performs a port-based IO read operation.
 ///
 /// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 fn io_read(port: u32, size: IoWidth) -> Result<u64, &'static str> {
     // The VMCALL sub-function for Instruction.IO.
@@ -347,7 +347,7 @@ fn io_read(port: u32, size: IoWidth) -> Result<u64, &'static str> {
 /// Performs a port-based IO write operation.
 ///
 /// See section 3.9 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 fn io_write(port: u32, size: IoWidth, data: u64) -> Result<(), &'static str> {
     // The VMCALL sub-function for Instruction.IO.
@@ -409,7 +409,7 @@ fn io_write(port: u32, size: IoWidth, data: u64) -> Result<(), &'static str> {
 /// Writes a value to the specified model-specific register.
 ///
 /// See section 3.11 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 ///
 /// # Safety
@@ -468,7 +468,7 @@ pub unsafe fn msr_write(msr: u32, data: u64) -> Result<(), &'static str> {
 /// Reads a value from the specified model-specific register.
 ///
 /// See section 3.10 of [Guest-Host-Communication Interface (GHCI) for Intel®
-/// Trust Domain Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 pub fn msr_read(msr: u32) -> Result<u64, &'static str> {
     // The VMCALL sub-function for Instruction.RDMSR.
@@ -517,4 +517,126 @@ pub fn msr_read(msr: u32) -> Result<u64, &'static str> {
     );
 
     Ok(data)
+}
+
+/// Emulated MMIO-write with help from tdx-module and VMM
+///
+/// See section 3.7 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
+/// for more information.
+pub fn mmio_write_u32(address: *const u32, data: u32) -> Result<(), &'static str> {
+    // The VMCALL sub-function for #VE.RequestMMIO
+    const SUB_FUNCTION: u64 = 0x30;
+
+    let mut vm_call_result: u64;
+    let mut sub_function_result: u64;
+    let registers = Registers::default()
+        .union(Registers::R12)
+        .union(Registers::R13)
+        .union(Registers::R14)
+        .union(Registers::R15);
+
+    // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. The size of access (1/2/4/8)
+    // goes into R12. The direction (0=Read, 1=Write) goes into R13. The MMIO
+    // address goes into R14 and the data to write (if R13 is 1) goes into R15.
+    // The return code of the sub function goes to R10.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits(),
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            in("r11") SUB_FUNCTION,
+            in("r12") IoWidth::Io32 as u64,
+            in("r13") IoDirection::Write as u64,
+            in("r14") address as u64,
+            in("r15") data as u64,
+            options(nomem, nostack),
+        );
+    }
+
+    // According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+
+    if sub_function_result == INVALID_OPERAND {
+        return Err("invalid operands provided by the TD, e.g., MMIO address");
+    }
+
+    // According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
+    assert_eq!(
+        sub_function_result, SUCCESS,
+        "TDG.VP.VMCALL<#VE.RequestMMIO> returned an invalid result"
+    );
+
+    Ok(())
+}
+
+/// Emulated MMIO-read with help from tdx-module and VMM
+///
+/// See section 3.7 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
+/// for more information.
+pub fn mmio_read(address: *const u32) -> Result<u32, &'static str> {
+    // The VMCALL sub-function for #VE.RequestMMIO
+    const SUB_FUNCTION: u64 = 0x30;
+
+    let mut vm_call_result: u64;
+    let mut sub_function_result: u64;
+    let registers =
+        Registers::default().union(Registers::R12).union(Registers::R13).union(Registers::R14);
+
+    let mut value_from_mmio_read: u64;
+
+    // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. The size of access (1/2/4/8)
+    // goes into R12. The direction (0=Read, 1=Write) goes into R13. The MMIO
+    // address goes into R14. The return code of the sub function goes to R10.
+    // The value read from MMIO goes into R11.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits(),
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            inout("r11") SUB_FUNCTION => value_from_mmio_read,
+            in("r12") IoWidth::Io32 as u64,
+            in("r13") IoDirection::Read as u64,
+            in("r14") address as u64,
+            options(nomem, nostack),
+        );
+    }
+
+    // According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+
+    if sub_function_result == INVALID_OPERAND {
+        return Err("invalid operands provided by the TD, e.g., MMIO address");
+    }
+
+    // According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
+    assert_eq!(
+        sub_function_result, SUCCESS,
+        "TDG.VP.VMCALL<#VE.RequestMMIO> returned an invalid result"
+    );
+
+    Ok(value_from_mmio_read as u32)
 }
