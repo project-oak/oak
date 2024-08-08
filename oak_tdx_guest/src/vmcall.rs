@@ -640,3 +640,72 @@ pub fn mmio_read(address: *const u32) -> Result<u32, &'static str> {
 
     Ok(value_from_mmio_read as u32)
 }
+
+/// TDVMCall Instruction.WBINVD
+///
+/// See section 3.12 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
+/// for more information.
+fn instruction_wbinvd(invalidate: bool) -> Result<(), &'static str> {
+    // The VMCALL sub-function for #VE.RequestMMIO
+    const SUB_FUNCTION: u64 = 0x36;
+
+    let mut vm_call_result: u64;
+    let mut sub_function_result: u64;
+    let registers = Registers::default().union(Registers::R12);
+
+    let operation = if invalidate {
+        0 /* WBINVD */
+    } else {
+        1 /* WBNOINVD */
+    };
+
+    // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. WBINVD/WBNOINVD (0/1) goes
+    // into R12. The return code of the sub function goes to R10.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits(),
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            in("r11") SUB_FUNCTION,
+            in("r12") operation as u64, // 0: WBINVD, 1: WBNOINVD
+            options(nomem, nostack),
+        );
+    }
+
+    // According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
+    assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+
+    if sub_function_result == INVALID_OPERAND {
+        return Err("Invalid R12 value requested.");
+    }
+
+    // According to the spec this sub-function will always return either 0 or
+    // INVALID_OPERAND.
+    assert_eq!(
+        sub_function_result, SUCCESS,
+        "TDG.VP.VMCALL<Instruction.WBINVD> returned an invalid result"
+    );
+
+    Ok(())
+}
+
+/// TDVMCALL WBINVD - Write Back and Invalidate Cache
+pub fn tdvmcall_wbinvd() -> Result<(), &'static str> {
+    instruction_wbinvd(true /* invalidate_cache */)
+}
+
+/// TDVMCALL WBNOINVD - Write Back and Do Not Invalidate Cache
+pub fn tdvmcall_wbnoinvd() -> Result<(), &'static str> {
+    instruction_wbinvd(false /* invalidate_cache */)
+}
