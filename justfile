@@ -100,7 +100,7 @@ oak_restricted_kernel_simple_io_init_rd_wrapper: oak_restricted_kernel_simple_io
     just restricted_kernel_bzimage_and_provenance_subjects oak_restricted_kernel_simple_io_init_rd
 
 oak_client_android_app:
-    bazel build --config=unsafe-fast-presubmit --compilation_mode opt \
+    bazel build --noexperimental_check_desugar_deps --compilation_mode opt \
         //java/src/main/java/com/google/oak/client/android:client_app
     # Copy out to a directory which does not change with bazel config and does
     # not interfere with cargo. It should be reused for other targets as well.
