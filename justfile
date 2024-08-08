@@ -319,7 +319,7 @@ cargo-clippy:
     #!/bin/sh
     for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
     do
-        env chdir=$workspace cargo clippy --all-features --all-targets --no-deps -- --deny=warnings
+        env --chdir=$(dirname "$workspace") cargo clippy --all-features --all-targets --no-deps -- --deny=warnings
     done
 
 
@@ -327,14 +327,14 @@ cargo-deny:
     #!/bin/sh
     for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
     do
-        env chdir=$workspace cargo deny check
+        env --chdir=$(dirname "$workspace") cargo deny check
     done
 
 cargo-udeps:
     #!/bin/sh
     for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
     do
-        env chdir=$workspace cargo udeps --all-targets --backend=depinfo --workspace
+        env --chdir=$(dirname "$workspace") cargo udeps --all-targets --backend=depinfo --workspace
     done
 
 

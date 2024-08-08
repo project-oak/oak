@@ -30,7 +30,7 @@ mod asm;
 #[no_mangle]
 static mut TEST_DATA: u32 = 0;
 
-static HELLO_OAK: &'static str = "Hello from stage0_bin_tdx!";
+static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
 
 fn write_u8_to_serial(c: u8) {
     // wait_for_empty_output
@@ -39,14 +39,14 @@ fn write_u8_to_serial(c: u8) {
             break;
         }
     }
-    io_write_u8(0x3f8, c as u8).unwrap();
+    io_write_u8(0x3f8, c).unwrap();
 }
 
 fn write_single_hex(c: u8) {
     if c < 0xa {
-        write_u8_to_serial(c + ('0' as u8));
+        write_u8_to_serial(c + (b'0'));
     } else {
-        write_u8_to_serial(c - 10 + ('a' as u8));
+        write_u8_to_serial(c - 10 + (b'a'));
     }
 }
 
