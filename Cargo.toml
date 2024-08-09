@@ -51,7 +51,6 @@ members = [
   "oak_proto_rust",
   "oak_proto_rust/grpc",
   "oak_proto_rust/micro_rpc",
-  "oak_restricted_kernel",
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
@@ -73,8 +72,6 @@ members = [
 exclude = [
   "enclave_applications",
   "micro_rpc_workspace_test",
-  "oak_restricted_kernel_bin",
-  "oak_restricted_kernel_wrapper",
   "stage0_bin",
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
