@@ -260,8 +260,6 @@
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -286,10 +284,8 @@
 <span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
     workspace_path(<span class="kw-2">&amp;</span>[
         <span class="string">"oak_restricted_kernel_wrapper"</span>,
-        <span class="string">"target"</span>,
-        <span class="string">"x86_64-unknown-none"</span>,
-        <span class="string">"release"</span>,
-        <span class="string">"oak_restricted_kernel_wrapper_bin"</span>,
+        <span class="string">"bin"</span>,
+        <span class="string">"wrapper_bzimage_virtio_console_channel"</span>,
     ])
 });
 
