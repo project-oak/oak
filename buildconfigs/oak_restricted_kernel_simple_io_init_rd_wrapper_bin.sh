@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_restricted_kernel_simple_io_init_rd_wrapper_bin
 export BUILD_COMMAND=(
   nix
   develop
-  .#rust
+  .#ci
   --command
   just
   oak_restricted_kernel_wrapper_simple_io_channel
