@@ -34,7 +34,9 @@ import java.util.logging.Logger;
 public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final Logger logger = Logger.getLogger(GrpcStreamingTransport.class.getName());
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(10);
+  public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+
+  private final Duration timeout;
 
   /**
    * QueueingStreamObserver with a queue containing responses received from the
@@ -48,13 +50,31 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   /**
    * Creates an instance of {@code GrpcStreamingTransport}.
    *
+   * The response timeout will be the value of {@code DEFAULT_TIMEOUT}.
+   *
    * @param stream a method reference to a gRPC client streaming method with the
    *               appropriate request
    *               and response types.
    */
   public GrpcStreamingTransport(
       Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
+    this(stream, DEFAULT_TIMEOUT);
+  }
+
+  /**
+   * Creates an instance of {@code GrpcStreamingTransport}.
+   *
+   * @param stream a method reference to a gRPC client streaming method with the
+   *               appropriate request
+   *               and response types.
+   * @param timeout The length of time to wait for a {@code InvokeResponse}
+   *                after sending an @{code InvokeRequest}.
+   */
+  public GrpcStreamingTransport(
+      Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream,
+      Duration timeout) {
     this.requestObserver = stream.apply(responseObserver);
+    this.timeout = timeout;
   }
 
   /**
@@ -69,24 +89,11 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
             .setGetEndorsedEvidenceRequest(GetEndorsedEvidenceRequest.newBuilder())
             .build();
     logger.log(Level.INFO, "sending get endorsed evidence request: " + requestWrapper);
-    this.requestObserver.onNext(requestWrapper);
 
-    ResponseWrapper responseWrapper;
-    try {
-      // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(TIMEOUT);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return Result.error("Thread interrupted while waiting for a response");
-    }
-    if (responseWrapper == null) {
-      return Result.error("No response message received");
-    }
-
-    logger.log(Level.INFO, "received get endorsed evidence response: " + responseWrapper);
-    GetEndorsedEvidenceResponse response = responseWrapper.getGetEndorsedEvidenceResponse();
-
-    return Result.success(response.getEndorsedEvidence());
+    return receiveResponse(requestWrapper).map(responseWrapper -> {
+      logger.log(Level.INFO, "received get endorsed evidence response: " + responseWrapper);
+      return responseWrapper.getGetEndorsedEvidenceResponse().getEndorsedEvidence();
+    });
   }
 
   /**
@@ -102,28 +109,31 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
             .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedRequest(encryptedRequest))
             .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
-    this.requestObserver.onNext(requestWrapper);
 
-    ResponseWrapper responseWrapper;
-    try {
-      // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(TIMEOUT);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return Result.error("Thread interrupted while waiting for a response");
-    }
-    if (responseWrapper == null) {
-      return Result.error("No response message received");
-    }
-
-    logger.log(Level.INFO, "received invoke response: " + responseWrapper);
-    EncryptedResponse encryptedResponse =
-        responseWrapper.getInvokeResponse().getEncryptedResponse();
-    return Result.success(encryptedResponse);
+    return receiveResponse(requestWrapper).map(responseWrapper -> {
+      logger.log(Level.INFO, "received invoke response: " + responseWrapper);
+      return responseWrapper.getInvokeResponse().getEncryptedResponse();
+    });
   }
 
   @Override
   public void close() throws Exception {
     this.requestObserver.onCompleted();
+  }
+
+  private Result<ResponseWrapper, String> receiveResponse(RequestWrapper requestWrapper) {
+    this.requestObserver.onNext(requestWrapper);
+    try {
+      // TODO(#3644): Add retry for client messages.
+      ResponseWrapper responseWrapper = this.responseObserver.poll(this.timeout);
+      if (responseWrapper == null) {
+        return Result.error("No response message received within the specified timeout.");
+      } else {
+        return Result.success(responseWrapper);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Result.error("Thread interrupted while waiting for a response");
+    }
   }
 }
