@@ -59,23 +59,23 @@ pub trait AttestationProvider {
 /// Client-side Attestation Provider that initiates remote attestation with the
 /// server.
 #[allow(dead_code)]
-pub struct ClientAttestationProvider<'a> {
-    config: AttestationProviderConfig<'a>,
+pub struct ClientAttestationProvider {
+    config: AttestationProviderConfig,
 }
 
-impl<'a> ClientAttestationProvider<'a> {
-    pub fn new(config: AttestationProviderConfig<'a>) -> Self {
+impl ClientAttestationProvider {
+    pub fn new(config: AttestationProviderConfig) -> Self {
         Self { config }
     }
 }
 
-impl<'a> AttestationProvider for ClientAttestationProvider<'a> {
+impl AttestationProvider for ClientAttestationProvider {
     fn get_attestation_results(self) -> Option<AttestationResults> {
         core::unimplemented!();
     }
 }
 
-impl<'a> ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider<'a> {
+impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
         core::unimplemented!();
     }
@@ -91,23 +91,23 @@ impl<'a> ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProv
 /// Server-side Attestation Provider that responds to the remote attestation
 /// request from the client.
 #[allow(dead_code)]
-pub struct ServerAttestationProvider<'a> {
-    config: AttestationProviderConfig<'a>,
+pub struct ServerAttestationProvider {
+    config: AttestationProviderConfig,
 }
 
-impl<'a> ServerAttestationProvider<'a> {
-    pub fn new(config: AttestationProviderConfig<'a>) -> Self {
+impl ServerAttestationProvider {
+    pub fn new(config: AttestationProviderConfig) -> Self {
         Self { config }
     }
 }
 
-impl<'a> AttestationProvider for ServerAttestationProvider<'a> {
+impl AttestationProvider for ServerAttestationProvider {
     fn get_attestation_results(self) -> Option<AttestationResults> {
         core::unimplemented!();
     }
 }
 
-impl<'a> ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider<'a> {
+impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
         core::unimplemented!();
     }

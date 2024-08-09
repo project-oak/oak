@@ -26,7 +26,7 @@ use oak_proto_rust::oak::session::v1::{
 };
 
 use crate::{
-    config::SessionConfig,
+    config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
     ProtocolEngine,
 };
@@ -62,21 +62,21 @@ pub trait Session {
 }
 
 // Client-side secure attested session entrypoint.
-pub struct ClientSession<'a> {
-    config: &'a SessionConfig<'a>,
+pub struct ClientSession {
     handshaker: ClientHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
+    encryptor_config: EncryptorConfig,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
 }
 
-impl<'a> ClientSession<'a> {
-    pub fn create(config: &'a SessionConfig<'a>) -> Result<Self, Error> {
+impl ClientSession {
+    pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
-            config,
-            handshaker: ClientHandshaker::create(&config.handshaker_config)
+            handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
+            encryptor_config: config.encryptor_config,
             encryptor: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -84,7 +84,7 @@ impl<'a> ClientSession<'a> {
     }
 }
 
-impl<'a> Session for ClientSession<'a> {
+impl Session for ClientSession {
     fn is_open(&self) -> bool {
         self.encryptor.is_some()
     }
@@ -128,7 +128,7 @@ impl<'a> Session for ClientSession<'a> {
     }
 }
 
-impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
+impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionRequest>> {
         if self.is_open() {
             return Ok(self.outgoing_requests.pop_front());
@@ -162,7 +162,7 @@ impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
                 ))?;
                 if let Some(session_keys) = self.handshaker.derive_session_keys() {
                     self.encryptor = Some(
-                        (self.config.encryptor_config.encryptor_provider)(session_keys)
+                        (self.encryptor_config.encryptor_provider)(session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
@@ -174,20 +174,20 @@ impl<'a> ProtocolEngine<SessionResponse, SessionRequest> for ClientSession<'a> {
 }
 
 // Server-side secure attested session entrypoint.
-pub struct ServerSession<'a> {
-    config: &'a SessionConfig<'a>,
-    handshaker: ServerHandshaker<'a>,
+pub struct ServerSession {
+    handshaker: ServerHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
+    encryptor_config: EncryptorConfig,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
 }
 
-impl<'a> ServerSession<'a> {
-    pub fn new(config: &'a SessionConfig<'a>) -> Self {
+impl ServerSession {
+    pub fn new(config: SessionConfig) -> Self {
         Self {
-            config,
-            handshaker: ServerHandshaker::new(&config.handshaker_config),
+            handshaker: ServerHandshaker::new(config.handshaker_config),
+            encryptor_config: config.encryptor_config,
             encryptor: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -195,7 +195,7 @@ impl<'a> ServerSession<'a> {
     }
 }
 
-impl<'a> Session for ServerSession<'a> {
+impl Session for ServerSession {
     fn is_open(&self) -> bool {
         self.encryptor.is_some()
     }
@@ -239,7 +239,7 @@ impl<'a> Session for ServerSession<'a> {
     }
 }
 
-impl<'a> ProtocolEngine<SessionRequest, SessionResponse> for ServerSession<'a> {
+impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionResponse>> {
         Ok(self.outgoing_responses.pop_front())
     }
@@ -272,7 +272,7 @@ impl<'a> ProtocolEngine<SessionRequest, SessionResponse> for ServerSession<'a> {
                 }
                 if let Some(session_keys) = self.handshaker.derive_session_keys() {
                     self.encryptor = Some(
-                        (self.config.encryptor_config.encryptor_provider)(session_keys)
+                        (self.encryptor_config.encryptor_provider)(session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }

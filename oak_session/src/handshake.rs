@@ -17,6 +17,7 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
+use alloc::boxed::Box;
 use core::convert::TryInto;
 
 use anyhow::{anyhow, Context};
@@ -58,7 +59,7 @@ pub struct ClientHandshaker {
 }
 
 impl ClientHandshaker {
-    pub fn create(handshaker_config: &HandshakerConfig) -> anyhow::Result<Self> {
+    pub fn create(handshaker_config: HandshakerConfig) -> anyhow::Result<Self> {
         let handshake_type = handshaker_config.handshake_type;
         let peer_static_public_key = handshaker_config.peer_static_public_key.clone();
         Ok(Self {
@@ -132,15 +133,15 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
 /// Server-side Handshaker that responds to the crypto handshake request from
 /// the client.
 #[allow(dead_code)]
-pub struct ServerHandshaker<'a> {
+pub struct ServerHandshaker {
     handshake_type: HandshakeType,
-    self_identity_key: Option<&'a dyn IdentityKeyHandle>,
+    self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
     handshake_response: Option<HandshakeResponse>,
     handshake_result: Option<SessionKeys>,
 }
 
-impl<'a> ServerHandshaker<'a> {
-    pub fn new(handshaker_config: &HandshakerConfig<'a>) -> Self {
+impl ServerHandshaker {
+    pub fn new(handshaker_config: HandshakerConfig) -> Self {
         Self {
             handshake_type: handshaker_config.handshake_type,
             self_identity_key: handshaker_config.self_static_private_key,
@@ -150,13 +151,13 @@ impl<'a> ServerHandshaker<'a> {
     }
 }
 
-impl<'a> Handshaker for ServerHandshaker<'a> {
+impl Handshaker for ServerHandshaker {
     fn derive_session_keys(&mut self) -> Option<SessionKeys> {
         self.handshake_result.take()
     }
 }
 
-impl<'a> ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker<'a> {
+impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeResponse>> {
         Ok(self.handshake_response.take())
     }
@@ -178,7 +179,9 @@ impl<'a> ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshake
                     HandshakeType::NoiseKN => core::unimplemented!(),
                     HandshakeType::NoiseNK => respond_nk(
                         self.self_identity_key
-                            .context("handshaker_config missing the self private key")?,
+                            .as_ref()
+                            .context("handshaker_config missing the self private key")?
+                            .as_ref(),
                         &in_data,
                     )
                     .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,

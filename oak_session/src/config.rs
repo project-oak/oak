@@ -27,26 +27,26 @@ use crate::{
 };
 
 #[allow(dead_code)]
-pub struct SessionConfig<'a> {
-    pub attestation_provider_config: AttestationProviderConfig<'a>,
-    pub handshaker_config: HandshakerConfig<'a>,
-    pub encryptor_config: EncryptorConfig<'a>,
+pub struct SessionConfig {
+    pub attestation_provider_config: AttestationProviderConfig,
+    pub handshaker_config: HandshakerConfig,
+    pub encryptor_config: EncryptorConfig,
 }
 
-impl<'a> SessionConfig<'a> {
+impl SessionConfig {
     pub fn builder(
         attestation_type: AttestationType,
         handshake_type: HandshakeType,
-    ) -> SessionConfigBuilder<'a> {
+    ) -> SessionConfigBuilder {
         SessionConfigBuilder::new(attestation_type, handshake_type)
     }
 }
 
-pub struct SessionConfigBuilder<'a> {
-    config: SessionConfig<'a>,
+pub struct SessionConfigBuilder {
+    config: SessionConfig,
 }
 
-impl<'a> SessionConfigBuilder<'a> {
+impl SessionConfigBuilder {
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_provider_config = AttestationProviderConfig {
             attestation_type,
@@ -62,10 +62,10 @@ impl<'a> SessionConfigBuilder<'a> {
         };
 
         let encryptor_config = EncryptorConfig {
-            encryptor_provider: &|sk| {
+            encryptor_provider: Box::new(|sk| {
                 <SessionKeys as TryInto<OrderedChannelEncryptor>>::try_into(sk)
                     .map(|v| Box::new(v) as Box<dyn Encryptor>)
-            },
+            }),
         };
 
         let config =
@@ -73,17 +73,17 @@ impl<'a> SessionConfigBuilder<'a> {
         Self { config }
     }
 
-    pub fn add_self_attester(mut self, attester: &'a dyn Attester) -> Self {
+    pub fn add_self_attester(mut self, attester: Box<dyn Attester>) -> Self {
         self.config.attestation_provider_config.self_attesters.push(attester);
         self
     }
 
-    pub fn add_peer_verifier(mut self, verifier: &'a dyn AttestationVerifier) -> Self {
+    pub fn add_peer_verifier(mut self, verifier: Box<dyn AttestationVerifier>) -> Self {
         self.config.attestation_provider_config.peer_verifiers.push(verifier);
         self
     }
 
-    pub fn set_self_private_key(mut self, private_key: &'a dyn IdentityKeyHandle) -> Self {
+    pub fn set_self_private_key(mut self, private_key: Box<dyn IdentityKeyHandle>) -> Self {
         if self.config.handshaker_config.self_static_private_key.is_none() {
             self.config.handshaker_config.self_static_private_key = Some(private_key);
         } else {
@@ -103,29 +103,29 @@ impl<'a> SessionConfigBuilder<'a> {
 
     pub fn set_encryption_provider(
         mut self,
-        encryptor_provider: &'a dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>,
+        encryptor_provider: Box<dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
     ) -> Self {
         self.config.encryptor_config.encryptor_provider = encryptor_provider;
         self
     }
 
-    pub fn build(self) -> SessionConfig<'a> {
+    pub fn build(self) -> SessionConfig {
         self.config
     }
 }
 
 #[allow(dead_code)]
-pub struct AttestationProviderConfig<'a> {
+pub struct AttestationProviderConfig {
     pub attestation_type: AttestationType,
-    pub self_attesters: Vec<&'a dyn Attester>,
-    pub peer_verifiers: Vec<&'a dyn AttestationVerifier>,
+    pub self_attesters: Vec<Box<dyn Attester>>,
+    pub peer_verifiers: Vec<Box<dyn AttestationVerifier>>,
 }
 
 #[allow(dead_code)]
-pub struct HandshakerConfig<'a> {
+pub struct HandshakerConfig {
     pub handshake_type: HandshakeType,
     // Used for authentication schemes where a static public key is pre-shared with the responder.
-    pub self_static_private_key: Option<&'a dyn IdentityKeyHandle>,
+    pub self_static_private_key: Option<Box<dyn IdentityKeyHandle>>,
     // Used for authentication schemes where a responder's static public key is pre-shared with
     // the initiator.
     pub peer_static_public_key: Option<Vec<u8>>,
@@ -133,6 +133,6 @@ pub struct HandshakerConfig<'a> {
     pub peer_attestation_binding_public_key: Option<Vec<u8>>,
 }
 
-pub struct EncryptorConfig<'a> {
-    pub encryptor_provider: &'a dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>,
+pub struct EncryptorConfig {
+    pub encryptor_provider: Box<dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
 }

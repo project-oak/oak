@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloc::boxed::Box;
+
 use oak_crypto::{
     encryptor::Encryptor,
     identity_key::{IdentityKey, IdentityKeyHandle},
@@ -30,17 +32,17 @@ const TEST_MESSAGES: &[&[u8]] = &[&[1u8, 2u8, 3u8, 4u8], &[4u8, 3u8, 2u8, 1u8], 
 
 #[test]
 fn process_nk_handshake() {
-    let identity_key = IdentityKey::generate();
-    let client_handshaker = ClientHandshaker::create(&HandshakerConfig {
+    let identity_key = Box::new(IdentityKey::generate());
+    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: None,
         peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
         peer_attestation_binding_public_key: None,
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(&HandshakerConfig {
+    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
         handshake_type: HandshakeType::NoiseNK,
-        self_static_private_key: Some(&identity_key),
+        self_static_private_key: Some(identity_key),
         peer_static_public_key: None,
         peer_attestation_binding_public_key: None,
     });
@@ -49,14 +51,14 @@ fn process_nk_handshake() {
 
 #[test]
 fn process_nn_handshake() {
-    let client_handshaker = ClientHandshaker::create(&HandshakerConfig {
+    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
         peer_attestation_binding_public_key: None,
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(&HandshakerConfig {
+    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
@@ -98,10 +100,12 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
 
 #[test]
 fn session_nn_succeeds() {
-    let config =
+    let client_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    let mut client_session = ClientSession::create(&config).unwrap();
-    let mut server_session = ServerSession::new(&config);
+    let mut client_session = ClientSession::create(client_config).unwrap();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let mut server_session = ServerSession::new(server_config);
     do_session_handshake(&mut client_session, &mut server_session);
 
     for &message in TEST_MESSAGES {
@@ -112,15 +116,15 @@ fn session_nn_succeeds() {
 
 #[test]
 fn session_nk_succeeds() {
-    let identity_key = IdentityKey::generate();
+    let identity_key = Box::new(IdentityKey::generate());
     let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_peer_static_public_key(identity_key.get_public_key().unwrap().as_slice())
         .build();
-    let mut client_session = ClientSession::create(&client_config).unwrap();
+    let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
-        .set_self_private_key(&identity_key)
+        .set_self_private_key(identity_key)
         .build();
-    let mut server_session = ServerSession::new(&server_config);
+    let mut server_session = ServerSession::new(server_config);
     do_session_handshake(&mut client_session, &mut server_session);
 
     for &message in TEST_MESSAGES {
@@ -131,16 +135,16 @@ fn session_nk_succeeds() {
 #[test]
 #[should_panic]
 fn session_nk_key_mismatch() {
-    let identity_key1 = IdentityKey::generate();
-    let identity_key2 = IdentityKey::generate();
+    let identity_key1 = Box::new(IdentityKey::generate());
+    let identity_key2 = Box::new(IdentityKey::generate());
     let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_peer_static_public_key(identity_key1.get_public_key().unwrap().as_slice())
         .build();
-    let mut client_session = ClientSession::create(&client_config).unwrap();
+    let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
-        .set_self_private_key(&identity_key2)
+        .set_self_private_key(identity_key2)
         .build();
-    let mut server_session = ServerSession::new(&server_config);
+    let mut server_session = ServerSession::new(server_config);
     do_session_handshake(&mut client_session, &mut server_session);
 }
 
@@ -156,8 +160,8 @@ fn do_session_handshake(client_session: &mut ClientSession, server_session: &mut
 
 trait ProtocolSession<I, O>: Session + ProtocolEngine<I, O> {}
 
-impl<'a> ProtocolSession<SessionResponse, SessionRequest> for ClientSession<'a> {}
-impl<'a> ProtocolSession<SessionRequest, SessionResponse> for ServerSession<'a> {}
+impl ProtocolSession<SessionResponse, SessionRequest> for ClientSession {}
+impl ProtocolSession<SessionRequest, SessionResponse> for ServerSession {}
 
 fn verify_session_message<I, O>(
     session1: &mut dyn ProtocolSession<I, O>,
