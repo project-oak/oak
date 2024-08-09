@@ -18,7 +18,7 @@ use bitflags::bitflags;
 use strum::FromRepr;
 use x86_64::PhysAddr;
 
-use crate::hal::Msr;
+use crate::{hal::Msr, Platform};
 
 bitflags! {
     /// Flags in the APIC Base Address Register (MSR 0x1B)
@@ -52,24 +52,24 @@ pub struct ApicBase;
 impl ApicBase {
     const MSR: Msr = Msr::new(0x0000_001B);
 
-    fn write_raw(value: u64) {
+    fn write_raw<P: Platform>(value: u64) {
         let mut msr = Self::MSR;
         // Safety: the APIC base register is supported in all modern CPUs.
-        unsafe { msr.write(value) }
+        unsafe { msr.write::<P>(value) }
     }
 
     /// Returns the APIC Base Address and flags.
-    pub fn read() -> (PhysAddr, ApicBaseFlags) {
+    pub fn read<P: Platform>() -> (PhysAddr, ApicBaseFlags) {
         // Safety: the APIC base register is supported in all modern CPUs.
-        let val = unsafe { Self::MSR.read() };
+        let val = unsafe { Self::MSR.read::<P>() };
         let aba = PhysAddr::new(val & 0x000F_FFFF_FFFF_F000u64);
         let flags = ApicBaseFlags::from_bits_truncate(val);
 
         (aba, flags)
     }
 
-    pub fn write(aba: PhysAddr, flags: ApicBaseFlags) {
-        Self::write_raw(flags.bits() | aba.as_u64());
+    pub fn write<P: Platform>(aba: PhysAddr, flags: ApicBaseFlags) {
+        Self::write_raw::<P>(flags.bits() | aba.as_u64());
     }
 }
 
@@ -113,12 +113,12 @@ impl MTRRDefType {
     // The underlying model specific register.
     const MSR: Msr = Msr::new(0x0000_02FF);
 
-    pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
+    pub fn read<P: Platform>() -> (MTRRDefTypeFlags, MemoryType) {
         // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the
         // GHCB protocol to read the MSR, otherwise we read the MSR directly.
         // Safety: This is safe because this MSR has been supported since the P6 family
         // of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
-        let msr_value = unsafe { Self::MSR.read() };
+        let msr_value = unsafe { Self::MSR.read::<P>() };
         let memory_type: MemoryType =
             (msr_value as u8).try_into().expect("invalid MemoryType value");
         (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
@@ -143,13 +143,13 @@ impl MTRRDefType {
     /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this
     /// operation is safe because this specific MSR and mode has been
     /// supported since the P6 family of Pentium processors (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
-    pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
+    pub unsafe fn write<P: Platform>(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
-        let (old_flags, _old_memory_type) = Self::read();
+        let (old_flags, _old_memory_type) = Self::read::<P>();
         let reserved = old_flags.bits() & !MTRRDefTypeFlags::all().bits();
         let new_value = reserved | flags.bits() | (default_type as u64);
         let mut msr = Self::MSR;
-        msr.write(new_value);
+        msr.write::<P>(new_value);
     }
 }
 
@@ -165,8 +165,8 @@ pub struct X2ApicIdRegister;
 impl X2ApicIdRegister {
     const MSR: Msr = Msr::new(0x0000_00802);
 
-    pub unsafe fn apic_id() -> u32 {
-        (Self::MSR.read() & 0xFFFF_FFFF) as u32
+    pub unsafe fn apic_id<P: Platform>() -> u32 {
+        (Self::MSR.read::<P>() & 0xFFFF_FFFF) as u32
     }
 }
 
@@ -178,8 +178,8 @@ impl X2ApicVersionRegister {
 }
 
 impl X2ApicVersionRegister {
-    pub unsafe fn read() -> (bool, u8, u8) {
-        let val = Self::MSR.read();
+    pub unsafe fn read<P: Platform>() -> (bool, u8, u8) {
+        let val = Self::MSR.read::<P>();
 
         (
             val & (1 << 31) > 0,            // EAS
@@ -211,17 +211,17 @@ impl X2ApicSpuriousInterruptRegister {
 }
 
 impl X2ApicSpuriousInterruptRegister {
-    pub unsafe fn read() -> (SpuriousInterruptFlags, u8) {
-        let val = Self::MSR.read();
+    pub unsafe fn read<P: Platform>() -> (SpuriousInterruptFlags, u8) {
+        let val = Self::MSR.read::<P>();
 
         (SpuriousInterruptFlags::from_bits_truncate((val & 0xFFFF_FF00) as u32), (val & 0xFF) as u8)
     }
 
-    pub unsafe fn write(flags: SpuriousInterruptFlags, vec: u8) {
+    pub unsafe fn write<P: Platform>(flags: SpuriousInterruptFlags, vec: u8) {
         // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
         let val = flags.bits() as u64 | vec as u64;
         let mut msr = Self::MSR;
-        unsafe { msr.write(val) };
+        unsafe { msr.write::<P>(val) };
     }
 }
 
@@ -267,18 +267,18 @@ impl X2ApicErrorStatusRegister {
 
 impl X2ApicErrorStatusRegister {
     #[allow(unused)]
-    pub unsafe fn read() -> ApicErrorFlags {
-        let val = Self::MSR.read();
+    pub unsafe fn read<P: Platform>() -> ApicErrorFlags {
+        let val = Self::MSR.read::<P>();
         ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
     }
 
-    pub unsafe fn write(val: ApicErrorFlags) {
+    pub unsafe fn write<P: Platform>(val: ApicErrorFlags) {
         let mut msr = Self::MSR;
-        msr.write(val.bits() as u64)
+        msr.write::<P>(val.bits() as u64)
     }
 
-    pub unsafe fn clear() {
-        Self::write(ApicErrorFlags::empty())
+    pub unsafe fn clear<P: Platform>() {
+        Self::write::<P>(ApicErrorFlags::empty())
     }
 }
 
@@ -382,7 +382,7 @@ pub struct X2ApicInterruptCommandRegister;
 impl X2ApicInterruptCommandRegister {
     const MSR: Msr = Msr::new(0x0000_00830);
 
-    pub unsafe fn send(
+    pub unsafe fn send<P: Platform>(
         vec: u8,
         mt: MessageType,
         dm: DestinationMode,
@@ -400,6 +400,6 @@ impl X2ApicInterruptCommandRegister {
         value |= vec as u64;
 
         let mut msr = Self::MSR;
-        unsafe { msr.write(value) }
+        unsafe { msr.write::<P>(value) }
     }
 }

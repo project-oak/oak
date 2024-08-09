@@ -26,6 +26,7 @@ use crate::{
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
     apic::Lapic,
     pic::disable_pic8259,
+    Platform,
 };
 
 extern "C" {
@@ -40,11 +41,11 @@ extern "C" {
 #[link_section = ".ap_bss"]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
-pub fn start_ap<M: crate::hal::Mmio<Size4KiB>>(
-    lapic: &mut Lapic<M>,
+pub fn start_ap<P: Platform>(
+    lapic: &mut Lapic<P::Mmio<Size4KiB>>,
     physical_apic_id: u32,
 ) -> Result<(), &'static str> {
-    lapic.send_init_ipi(physical_apic_id)?;
+    lapic.send_init_ipi::<P>(physical_apic_id)?;
     // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no
     // connection to actual seconds.
     for _ in 1..(1 << 15) {
@@ -58,7 +59,7 @@ pub fn start_ap<M: crate::hal::Mmio<Size4KiB>>(
     // Safety: we're not going to dereference the memory, we're just interested in
     // the pointer value.
     let vector = unsafe { &AP_START as *const _ as u64 };
-    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))?;
+    lapic.send_startup_ipi::<P>(physical_apic_id, PhysAddr::new(vector))?;
     // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send
     // SIPI again if the core hasn't started
     for _ in 1..(1 << 20) {
@@ -77,7 +78,7 @@ pub fn start_ap<M: crate::hal::Mmio<Size4KiB>>(
 }
 
 // TODO(#4235): Bootstrap the APs.
-pub fn bootstrap_aps<P: crate::hal::Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
+pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
@@ -132,7 +133,7 @@ pub fn bootstrap_aps<P: crate::hal::Platform>(rsdp: &Rsdp) -> Result<(), &'stati
         }
 
         expected_aps += 1;
-        start_ap(&mut lapic, remote_lapic_id)?;
+        start_ap::<P>(&mut lapic, remote_lapic_id)?;
     }
 
     // Wait until all APs have told they are online. Or we time out waiting for

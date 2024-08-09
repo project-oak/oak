@@ -16,10 +16,14 @@
 
 use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
-use crate::msr::{
-    ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
-    MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister, X2ApicIdRegister,
-    X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
+use crate::{
+    msr::{
+        ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
+        MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
+        X2ApicIdRegister, X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister,
+        X2ApicVersionRegister,
+    },
+    Platform,
 };
 
 /// Interrupt Command.
@@ -29,7 +33,7 @@ use crate::msr::{
 /// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC
 /// Interrupt Command Register Operations) in the AMD64 Architecture
 /// Programmer's Manual, Volume 2 for more details.
-trait InterprocessorInterrupt {
+trait InterprocessorInterrupt<P: Platform> {
     /// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
     #[allow(clippy::too_many_arguments)]
     fn send(
@@ -48,7 +52,7 @@ trait InterprocessorInterrupt {
 ///
 /// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture
 /// Programmer's Manual, Volume 2 for more details.
-trait ErrorStatus {
+trait ErrorStatus<P: Platform> {
     #[allow(unused)]
     fn read(&self) -> ApicErrorFlags;
     fn clear(&mut self);
@@ -58,14 +62,14 @@ trait ErrorStatus {
 ///
 /// For APIC, it's 4 bits; xAPIC, 8 bits; x2APIC, 32 bits.
 trait ApicId {
-    fn apic_id(&self) -> u32;
+    fn apic_id<P: Platform>(&self) -> u32;
 }
 
 /// APIC Version.
 ///
 /// See Section 16.3.4 (APIC Version Register) in the AMD64 Architecture
 /// Programmer's Manual, Volume 2 for more details.
-trait ApicVersion {
+trait ApicVersion<P> {
     fn read(&self) -> (bool, u8, u8);
 }
 
@@ -73,7 +77,7 @@ trait ApicVersion {
 ///
 /// See Section 16.4.7 (Spurious Interrupts) in the AMD64 Architecture
 /// Programmer's Manual, Volume 2 for more details.
-trait SpuriousInterrupts {
+trait SpuriousInterrupts<P> {
     fn read(&self) -> (SpuriousInterruptFlags, u8);
     fn write(&mut self, flags: SpuriousInterruptFlags, vec: u8);
 }
@@ -82,7 +86,7 @@ mod xapic {
     use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
-    use crate::hal;
+    use crate::{hal, Platform};
 
     // We divide the offset by 4 as we're indexing by u32's, not bytes.
     const APIC_ID_REGISTER_OFFSET: usize = 0x020 / core::mem::size_of::<u32>();
@@ -110,12 +114,12 @@ mod xapic {
         ///
         /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual,
         /// Volume 2 for the register format.
-        fn apic_id(&self) -> u32 {
+        fn apic_id<P: Platform>(&self) -> u32 {
             self.read(APIC_ID_REGISTER_OFFSET) >> 24
         }
     }
 
-    impl<M: hal::Mmio<Size4KiB>> super::InterprocessorInterrupt for Xapic<M> {
+    impl<P: Platform> super::InterprocessorInterrupt<P> for Xapic<P::Mmio<Size4KiB>> {
         fn send(
             &mut self,
             destination: u32,
@@ -145,7 +149,7 @@ mod xapic {
         }
     }
 
-    impl<M: hal::Mmio<Size4KiB>> super::ErrorStatus for Xapic<M> {
+    impl<P: Platform> super::ErrorStatus<P> for Xapic<P::Mmio<Size4KiB>> {
         fn read(&self) -> ApicErrorFlags {
             ApicErrorFlags::from_bits_truncate(self.read(ERROR_STATUS_REGISTER_OFFSET))
         }
@@ -156,7 +160,7 @@ mod xapic {
         }
     }
 
-    impl<M: hal::Mmio<Size4KiB>> super::ApicVersion for Xapic<M> {
+    impl<P: Platform> super::ApicVersion<P> for Xapic<P::Mmio<Size4KiB>> {
         fn read(&self) -> (bool, u8, u8) {
             let val = self.read(APIC_VERSION_REGISTER_OFFSET);
 
@@ -168,7 +172,7 @@ mod xapic {
         }
     }
 
-    impl<M: hal::Mmio<Size4KiB>> super::SpuriousInterrupts for Xapic<M> {
+    impl<P: Platform> super::SpuriousInterrupts<P> for Xapic<P::Mmio<Size4KiB>> {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
             let val = self.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
@@ -183,26 +187,29 @@ mod xapic {
 
     /// Safety: caller needs to guarantee that `apic_base` points to the APIC
     /// MMIO memory.
-    pub(crate) unsafe fn init<P: crate::Platform>(apic_base: PhysAddr) -> Xapic<P::Mmio<Size4KiB>> {
+    pub(crate) unsafe fn init<P: Platform>(apic_base: PhysAddr) -> Xapic<P::Mmio<Size4KiB>> {
         Xapic { mmio: P::mmio::<Size4KiB>(apic_base) }
     }
 }
 
 mod x2apic {
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
-    use crate::msr::{
-        X2ApicErrorStatusRegister, X2ApicIdRegister, X2ApicInterruptCommandRegister,
-        X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
+    use crate::{
+        msr::{
+            X2ApicErrorStatusRegister, X2ApicIdRegister, X2ApicInterruptCommandRegister,
+            X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
+        },
+        Platform,
     };
 
     impl super::ApicId for X2ApicIdRegister {
-        fn apic_id(&self) -> u32 {
+        fn apic_id<P: Platform>(&self) -> u32 {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::apic_id() }
+            unsafe { Self::apic_id::<P>() }
         }
     }
 
-    impl super::InterprocessorInterrupt for X2ApicInterruptCommandRegister {
+    impl<P: Platform> super::InterprocessorInterrupt<P> for X2ApicInterruptCommandRegister {
         fn send(
             &mut self,
             destination: u32,
@@ -215,7 +222,7 @@ mod x2apic {
         ) -> Result<(), &'static str> {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             unsafe {
-                Self::send(
+                Self::send::<P>(
                     vector,
                     message_type,
                     destination_mode,
@@ -229,33 +236,33 @@ mod x2apic {
         }
     }
 
-    impl super::ErrorStatus for X2ApicErrorStatusRegister {
+    impl<P: Platform> super::ErrorStatus<P> for X2ApicErrorStatusRegister {
         fn read(&self) -> ApicErrorFlags {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::read() }
+            unsafe { Self::read::<P>() }
         }
         fn clear(&mut self) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::clear() }
+            unsafe { Self::clear::<P>() }
         }
     }
 
-    impl super::ApicVersion for X2ApicVersionRegister {
+    impl<P: Platform> super::ApicVersion<P> for X2ApicVersionRegister {
         fn read(&self) -> (bool, u8, u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::read() }
+            unsafe { Self::read::<P>() }
         }
     }
 
-    impl super::SpuriousInterrupts for X2ApicSpuriousInterruptRegister {
+    impl<P: Platform> super::SpuriousInterrupts<P> for X2ApicSpuriousInterruptRegister {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::read() }
+            unsafe { Self::read::<P>() }
         }
 
         fn write(&mut self, flags: SpuriousInterruptFlags, vec: u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { Self::write(flags, vec) };
+            unsafe { Self::write::<P>(flags, vec) };
         }
     }
 }
@@ -279,25 +286,25 @@ pub struct Lapic<M: crate::hal::Mmio<Size4KiB>> {
 }
 
 impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
-    pub fn enable<P: crate::Platform<Mmio<Size4KiB> = M>>() -> Result<Self, &'static str> {
+    pub fn enable<P: Platform<Mmio<Size4KiB> = M>>() -> Result<Self, &'static str> {
         let x2apic = P::cpuid(0x0000_0001).ecx & (1 << 21) > 0;
         // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
         // explanation of the initialization procedure.
-        let (aba, mut flags) = ApicBase::read();
+        let (aba, mut flags) = ApicBase::read::<P>();
         if !flags.contains(ApicBaseFlags::AE) {
             flags |= ApicBaseFlags::AE;
-            ApicBase::write(aba, flags);
+            ApicBase::write::<P>(aba, flags);
         }
         if x2apic && !flags.contains(ApicBaseFlags::EXTD) {
             // Enable x2APIC, if available.
             flags |= ApicBaseFlags::EXTD;
-            ApicBase::write(aba, flags);
+            ApicBase::write::<P>(aba, flags);
         }
 
         let mut apic = if x2apic {
             log::info!("Using x2APIC for AP initialization.");
             Lapic {
-                apic_id: unsafe { X2ApicIdRegister::apic_id() },
+                apic_id: unsafe { X2ApicIdRegister::apic_id::<P>() },
                 interface: Apic::X2apic(
                     X2ApicInterruptCommandRegister,
                     X2ApicErrorStatusRegister,
@@ -309,43 +316,47 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
             log::info!("Using xAPIC for AP initialization.");
             // Safety: we trust the address provided by the ApicBase MSR.
             let apic = unsafe { xapic::init::<P>(aba) };
-            Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
+            Lapic { apic_id: apic.apic_id::<P>(), interface: Apic::Xapic(apic) }
         };
         // Version should be between [0x10...0x20).
-        let (_, _, version) = apic.apic_version().read();
+        let (_, _, version) = apic.apic_version::<P>().read();
         if !(0x10..0x20).contains(&version) {
             log::warn!("LAPIC version: {:x}", version);
             return Err("LAPIC version not in valid range");
         }
-        let (flags, vec) = apic.spurious_interrupt_register().read();
+        let (flags, vec) = apic.spurious_interrupt_register::<P>().read();
         if !flags.contains(SpuriousInterruptFlags::ASE) {
-            apic.spurious_interrupt_register().write(flags | SpuriousInterruptFlags::ASE, vec)
+            apic.spurious_interrupt_register::<P>().write(flags | SpuriousInterruptFlags::ASE, vec)
         }
         Ok(apic)
     }
 
-    fn error_status(&mut self) -> &mut dyn ErrorStatus {
+    fn error_status<P: Platform<Mmio<Size4KiB> = M>>(&mut self) -> &mut dyn ErrorStatus<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
             Apic::X2apic(_, ref mut err, _, _) => err,
         }
     }
 
-    fn interrupt_command(&mut self) -> &mut dyn InterprocessorInterrupt {
+    fn interrupt_command<P: Platform<Mmio<Size4KiB> = M>>(
+        &mut self,
+    ) -> &mut dyn InterprocessorInterrupt<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
             Apic::X2apic(ref mut icr, _, _, _) => icr,
         }
     }
 
-    fn apic_version(&mut self) -> &mut dyn ApicVersion {
+    fn apic_version<P: Platform<Mmio<Size4KiB> = M>>(&mut self) -> &mut dyn ApicVersion<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
             Apic::X2apic(_, _, ver, _) => ver,
         }
     }
 
-    fn spurious_interrupt_register(&mut self) -> &mut dyn SpuriousInterrupts {
+    fn spurious_interrupt_register<P: Platform<Mmio<Size4KiB> = M>>(
+        &mut self,
+    ) -> &mut dyn SpuriousInterrupts<P> {
         match &mut self.interface {
             Apic::Xapic(regs) => regs,
             Apic::X2apic(_, _, _, spi) => spi,
@@ -353,9 +364,12 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
     }
 
     /// Sends an INIT IPI to the local APIC specified by `destination`.
-    pub fn send_init_ipi(&mut self, destination: u32) -> Result<(), &'static str> {
-        self.error_status().clear();
-        self.interrupt_command().send(
+    pub fn send_init_ipi<P: Platform<Mmio<Size4KiB> = M>>(
+        &mut self,
+        destination: u32,
+    ) -> Result<(), &'static str> {
+        self.error_status::<P>().clear();
+        self.interrupt_command::<P>().send(
             destination,
             0,
             MessageType::Init,
@@ -364,7 +378,7 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
             TriggerMode::Level,
             DestinationShorthand::DestinationField,
         )?;
-        self.interrupt_command().send(
+        self.interrupt_command::<P>().send(
             destination,
             0,
             MessageType::Init,
@@ -376,7 +390,7 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
     }
 
     /// Sends a STARTUP IPI (SIPI) to the local APIC specified by `destination`.
-    pub fn send_startup_ipi(
+    pub fn send_startup_ipi<P: Platform<Mmio<Size4KiB> = M>>(
         &mut self,
         destination: u32,
         vector: PhysAddr,
@@ -388,8 +402,8 @@ impl<M: crate::hal::Mmio<Size4KiB>> Lapic<M> {
         if vector > 0x100000 {
             return Err("startup vector needs to be in the first megabyte of memory");
         }
-        self.error_status().clear();
-        self.interrupt_command().send(
+        self.error_status::<P>().clear();
+        self.interrupt_command::<P>().send(
             destination,
             (vector / 0x1000) as u8,
             MessageType::Startup,

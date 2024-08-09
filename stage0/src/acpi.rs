@@ -112,7 +112,11 @@ impl Allocate {
         Zone::from_repr(self.zone)
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
+    fn invoke<P: crate::Platform>(
+        &self,
+        fwcfg: &mut FwCfg<P>,
+        acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
         let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
@@ -465,7 +469,11 @@ enum Command<'a> {
 }
 
 impl Command<'_> {
-    pub fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
+    pub fn invoke<P: crate::Platform>(
+        &self,
+        fwcfg: &mut FwCfg<P>,
+        acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         match self {
             Command::Allocate(allocate) => allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) => add_pointer.invoke(),
@@ -500,7 +508,11 @@ impl RomfileCommand {
         }
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
+    fn invoke<P: crate::Platform>(
+        &self,
+        fwcfg: &mut FwCfg<P>,
+        acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
             log::warn!("ignoring proprietary ACPI linker command with tag {:#x}", self.tag);
             return Ok(());
@@ -520,8 +532,8 @@ impl RomfileCommand {
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables(
-    fwcfg: &mut FwCfg,
+pub fn build_acpi_tables<P: crate::Platform>(
+    fwcfg: &mut FwCfg<P>,
     acpi_digest: &mut Sha256,
 ) -> Result<&'static Rsdp, &'static str> {
     let file =

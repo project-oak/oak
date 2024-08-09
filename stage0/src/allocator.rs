@@ -17,6 +17,7 @@
 use alloc::boxed::Box;
 use core::{
     alloc::{AllocError, Allocator, Layout},
+    marker::PhantomData,
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
     ptr::NonNull,
@@ -30,7 +31,10 @@ use x86_64::{
     VirtAddr,
 };
 
-use crate::paging::{share_page, unshare_page};
+use crate::{
+    paging::{share_page, unshare_page},
+    Platform,
+};
 
 struct Inner<const N: usize> {
     index: AtomicUsize,
@@ -108,17 +112,18 @@ unsafe impl<const N: usize> Allocator for BumpAllocator<N> {
 /// they could well fit on one page, currently that'd use 8K of memory.
 /// That, however, is an implementation detail, and may change in the future.
 #[repr(transparent)]
-struct SharedAllocator<A: Allocator> {
+struct SharedAllocator<A: Allocator, P: Platform> {
     inner: A,
+    _phantom: PhantomData<P>,
 }
 
-impl<A: Allocator> SharedAllocator<A> {
+impl<A: Allocator, P: Platform> SharedAllocator<A, P> {
     fn new(allocator: A) -> Self {
-        Self { inner: allocator }
+        Self { inner: allocator, _phantom: PhantomData }
     }
 }
 
-unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
+unsafe impl<A: Allocator, P: Platform> Allocator for SharedAllocator<A, P> {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         let layout =
             layout.align_to(Size4KiB::SIZE as usize).map_err(|_| AllocError)?.pad_to_align();
@@ -126,7 +131,7 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
         for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
             // Safety: the allocation has succeeded and the offset won't exceed the size of
             // the allocation.
-            share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+            share_page::<P>(Page::containing_address(VirtAddr::from_ptr(unsafe {
                 allocation.as_non_null_ptr().as_ptr().add(offset)
             })))
         }
@@ -142,7 +147,7 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
         for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
             // Safety: the allocation has succeeded and the offset won't exceed the size of
             // the allocation.
-            unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+            unshare_page::<P>(Page::containing_address(VirtAddr::from_ptr(unsafe {
                 ptr.as_ptr().add(offset)
             })))
         }
@@ -151,11 +156,11 @@ unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
 }
 
 /// Stores a data structure on a shared page.
-pub struct Shared<T: 'static, A: Allocator> {
-    inner: Box<T, SharedAllocator<A>>,
+pub struct Shared<T: 'static, A: Allocator, P: Platform> {
+    inner: Box<T, SharedAllocator<A, P>>,
 }
 
-impl<T, A: Allocator> Shared<T, A> {
+impl<T, A: Allocator, P: Platform> Shared<T, A, P> {
     pub fn new_in(t: T, alloc: A) -> Self
     where
         A: 'static,
@@ -172,20 +177,21 @@ impl<T, A: Allocator> Shared<T, A> {
     /// was used for the original allocation of the `Shared`.
     ///
     /// Again, see `Box::from_raw_in` for more details.
-    pub unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Shared<T, A> {
+    pub unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Shared<T, A, P> {
         Self { inner: Box::from_raw_in(raw, SharedAllocator::new(alloc)) }
     }
 
     /// See `Box::leak` for documentation.
-    pub fn leak<'a>(s: Shared<T, A>) -> &'a mut T
+    pub fn leak<'a>(s: Shared<T, A, P>) -> &'a mut T
     where
         A: 'a,
+        P: 'a,
     {
         Box::leak(s.inner)
     }
 }
 
-impl<T, A: Allocator> Deref for Shared<T, A> {
+impl<T, A: Allocator, P: Platform> Deref for Shared<T, A, P> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -193,19 +199,19 @@ impl<T, A: Allocator> Deref for Shared<T, A> {
     }
 }
 
-impl<T, A: Allocator> DerefMut for Shared<T, A> {
+impl<T, A: Allocator, P: Platform> DerefMut for Shared<T, A, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
+impl<T, A: Allocator, P: Platform> AsRef<T> for Shared<T, A, P> {
     fn as_ref(&self) -> &T {
         &self.inner
     }
 }
 
-impl<T, A: Allocator> AsMut<T> for Shared<T, A> {
+impl<T, A: Allocator, P: Platform> AsMut<T> for Shared<T, A, P> {
     fn as_mut(&mut self) -> &mut T {
         &mut self.inner
     }

@@ -87,7 +87,7 @@ impl Default for KernelInfo {
 ///
 /// We first try to read it using the traditional selector. If it is not
 /// available there we try to read it using a custom file path.
-pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<String> {
+pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<String> {
     let (cmdline_file, buffer_size) = if let Some(cmdline_file) = fw_cfg.get_cmdline_file() {
         // The provided value is already null-terminated.
         let size = cmdline_file.size();
@@ -124,8 +124,8 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<String> {
 ///
 /// If it finds a kernel it returns the information about the kernel, otherwise
 /// `None`.
-pub fn try_load_kernel_image(
-    fw_cfg: &mut FwCfg,
+pub fn try_load_kernel_image<P: crate::Platform>(
+    fw_cfg: &mut FwCfg<P>,
     e820_table: &[BootE820Entry],
 ) -> Option<KernelInfo> {
     let (file, bzimage) = if let Some(file) = fw_cfg.get_kernel_file() {

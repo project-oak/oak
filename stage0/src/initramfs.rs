@@ -31,8 +31,8 @@ const INITIAL_RAM_DISK_FILE_PATH: &[u8] = b"opt/stage0/initramfs\0";
 ///
 /// If it finds a RAM disk it returns the byte slice where it is loaded. If not
 /// it returns `None`.
-pub fn try_load_initial_ram_disk(
-    fw_cfg: &mut FwCfg,
+pub fn try_load_initial_ram_disk<P: crate::Platform>(
+    fw_cfg: &mut FwCfg<P>,
     e820_table: &[BootE820Entry],
     kernel_info: &KernelInfo,
 ) -> Option<&'static [u8]> {

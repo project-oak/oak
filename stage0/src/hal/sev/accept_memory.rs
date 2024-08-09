@@ -32,7 +32,10 @@ use x86_64::{
 use zeroize::Zeroize;
 
 use super::{sev_status, GHCB_WRAPPER};
-use crate::paging::{PageEncryption, PageTable};
+use crate::{
+    paging::{PageEncryption, PageTable},
+    Sev,
+};
 
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
@@ -110,7 +113,7 @@ where
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_address(
+            entry.set_address::<Sev>(
                 frame.start_address(),
                 PageTableFlags::PRESENT | flags,
                 PageEncryption::Encrypted,
@@ -129,7 +132,7 @@ where
             .zip(pages)
             .filter(|(entry, _)| !entry.is_unused())
             .map(|(entry, page)| (entry, page.pvalidate(success_counter)))
-            .map(|(entry, result)| result.or_else(|err| f(entry.address(), err)))
+            .map(|(entry, result)| result.or_else(|err| f(entry.address::<Sev>(), err)))
             .find(|result| result.is_err())
         {
             return err;
@@ -268,7 +271,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PDPT[1] is in use");
     }
-    page_tables.pdpt[1].set_address(
+    page_tables.pdpt[1].set_address::<Sev>(
         PhysAddr::new(&validation_pd.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
         PageEncryption::Encrypted,
@@ -282,7 +285,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
-    page_tables.pd_0[1].set_address(
+    page_tables.pd_0[1].set_address::<Sev>(
         PhysAddr::new(&validation_pt.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
         PageEncryption::Encrypted,

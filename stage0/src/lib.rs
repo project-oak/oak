@@ -63,6 +63,7 @@ mod zero_page;
 pub use hal::Platform;
 #[cfg(feature = "sev")]
 pub use hal::Sev;
+pub use zero_page::ZeroPage;
 
 type Measurement = [u8; 32];
 
@@ -124,20 +125,19 @@ pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 pub fn rust64_start<P: hal::Platform>() -> ! {
-    paging::init_page_table_refs();
-    hal::early_initialize_platform();
+    paging::init_page_table_refs::<P>();
+    P::early_initialize_platform();
     logging::init_logging::<P>();
     log::info!("starting...");
     // Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
-    let mut fwcfg =
-        unsafe { fw_cfg::FwCfg::new::<P>(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
+    let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
 
     let mut zero_page = Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC);
 
     zero_page.fill_e820_table::<P>(&mut fwcfg);
 
-    hal::initialize_platform(zero_page.e820_table());
+    P::initialize_platform(zero_page.e820_table());
 
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
@@ -162,7 +162,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     create_idt(idt);
     idt.load();
 
-    paging::map_additional_memory();
+    paging::map_additional_memory::<P>();
 
     // Initialize the short-term heap. Any allocations that rely on a global
     // allocator before this point will fail.
@@ -171,7 +171,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let setup_data_sha2_256_digest =
         zero_page.try_fill_hdr_from_setup_data(&mut fwcfg).unwrap_or_default();
 
-    hal::populate_zero_page(&mut zero_page);
+    P::populate_zero_page(&mut zero_page);
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_sha2_256_digest = cmdline.measure();
@@ -262,13 +262,13 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         eventlog_sha2_256_digest,
     };
 
-    let tee_platform = hal::tee_platform();
+    let tee_platform = P::tee_platform();
 
     let dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             &measurements,
-            hal::get_attestation,
-            hal::get_derived_key,
+            P::get_attestation,
+            P::get_derived_key,
             tee_platform,
         ),
         &crate::BOOT_ALLOC,
@@ -321,8 +321,8 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // After the call to `deinit_platform`:
     //  - Do not log anything any more.
     //  - Do not allocate memory.
-    hal::deinit_platform();
-    paging::remap_first_huge_page();
+    P::deinit_platform();
+    paging::remap_first_huge_page::<P>();
 
     unsafe {
         jump_to_kernel(entry, zero_page);

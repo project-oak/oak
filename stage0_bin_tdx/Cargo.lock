@@ -612,6 +612,10 @@ dependencies = [
 name = "oak_stage0_bin_tdx"
 version = "0.1.0"
 dependencies = [
+ "oak_dice",
+ "oak_linux_boot_params",
+ "oak_sev_guest",
+ "oak_sev_snp_attestation_report",
  "oak_stage0",
  "oak_tdx_guest",
  "x86_64",

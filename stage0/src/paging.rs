@@ -32,7 +32,7 @@ use x86_64::{
     PhysAddr,
 };
 
-use crate::{BootAllocator, BOOT_ALLOC};
+use crate::{BootAllocator, Platform, BOOT_ALLOC};
 
 pub static mut PML4: PageTable = PageTable::new();
 pub static mut PDPT: PageTable = PageTable::new();
@@ -123,14 +123,19 @@ pub struct PageTableEntry(BasePageTableEntry);
 impl PageTableEntry {
     /// Map the entry to the specified address with the specified flags and
     /// encryption state.
-    pub fn set_address(&mut self, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
-        let addr = PhysAddr::new(addr.as_u64() | crate::hal::page_table_mask(state));
+    pub fn set_address<P: Platform>(
+        &mut self,
+        addr: PhysAddr,
+        flags: PageTableFlags,
+        state: PageEncryption,
+    ) {
+        let addr = PhysAddr::new(addr.as_u64() | P::page_table_mask(state));
         self.0.set_addr(addr, flags);
     }
 
     /// Returns the physical address mapped by this entry. May be zero.
-    pub fn address(&self) -> PhysAddr {
-        PhysAddr::new(self.0.addr().as_u64() & !crate::hal::encrypted())
+    pub fn address<P: Platform>(&self) -> PhysAddr {
+        PhysAddr::new(self.0.addr().as_u64() & !P::encrypted())
     }
 
     /// Returns whether the entry is zero.
@@ -172,7 +177,7 @@ pub enum PageEncryption {
 }
 
 /// Initialises the page table references.
-pub fn init_page_table_refs() {
+pub fn init_page_table_refs<P: Platform>() {
     // Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
@@ -186,13 +191,13 @@ pub fn init_page_table_refs() {
     // using an identity mapping between virtual and physical addresses.
     let mut pt_0 = Box::new_in(PageTable::new(), &BOOT_ALLOC);
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
-        entry.set_address(
+        entry.set_address::<P>(
             PhysAddr::new((i as u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Encrypted,
         );
     });
-    pd_0[0].set_address(
+    pd_0[0].set_address::<P>(
         PhysAddr::new(pt_0.as_ref() as *const _ as usize as u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         PageEncryption::Encrypted,
@@ -209,12 +214,12 @@ pub fn init_page_table_refs() {
 
 /// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
 /// 2MiB that was already mapped as 512 4KiB pages.
-pub fn map_additional_memory() {
+pub fn map_additional_memory<P: Platform>() {
     {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
         pd.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
-            entry.set_address(
+            entry.set_address::<P>(
                 PhysAddr::new((i as u64) * Size2MiB::SIZE),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
                 PageEncryption::Encrypted,
@@ -227,12 +232,12 @@ pub fn map_additional_memory() {
 
 // Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
 // pages, as a single 2MiB huge page again.
-pub fn remap_first_huge_page() {
+pub fn remap_first_huge_page<P: Platform>() {
     {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
         let pd = &mut page_tables.pd_0;
 
-        pd[0].set_address(
+        pd[0].set_address::<P>(
             PhysAddr::new(0x0),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
             PageEncryption::Encrypted,
@@ -243,7 +248,7 @@ pub fn remap_first_huge_page() {
 }
 
 /// Shares a single 4KiB page with the hypervisor.
-pub fn share_page(page: Page<Size4KiB>) {
+pub fn share_page<P: Platform>(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
@@ -252,7 +257,7 @@ pub fn share_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_address(
+        pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Unencrypted,
@@ -260,22 +265,22 @@ pub fn share_page(page: Page<Size4KiB>) {
     }
     flush_all();
 
-    crate::hal::change_page_state(page, PageAssignment::Shared);
+    P::change_page_state(page, PageAssignment::Shared);
 }
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD
 /// SEV-SNP enabled.
-pub fn unshare_page(page: Page<Size4KiB>) {
+pub fn unshare_page<P: Platform>(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
     assert!(page_start < Size2MiB::SIZE);
-    crate::hal::change_page_state(page, PageAssignment::Private);
+    P::change_page_state(page, PageAssignment::Private);
     // Mark the page as encrypted.
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        pt[page.p1_index()].set_address(
+        pt[page.p1_index()].set_address::<P>(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Encrypted,
@@ -284,5 +289,5 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     flush_all();
 
     // We have to revalidate the page again after un-sharing it.
-    crate::hal::revalidate_page(page);
+    P::revalidate_page(page);
 }

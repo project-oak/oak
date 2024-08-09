@@ -78,6 +78,100 @@ pub trait Platform {
     unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str>;
     unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str>;
     unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str>;
+
+    /// Platform-specific early initialization.
+    ///
+    /// This sets up the bare minimum to get things going; for example, under
+    /// SEV-ES and above, we set up the GHCB here, but nothing more.
+    ///
+    /// This gets executed very soon after stage0 starts and comes with many
+    /// restrictions:
+    ///   - You do not have access to logging.
+    ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
+    ///     work).
+    fn early_initialize_platform();
+
+    /// Platform-specific intialization.
+    ///
+    /// This gets executed after `early_initalize_platform()` and some other
+    /// auxiliary services, such as logging, have been set up; the main purpose
+    /// is to accept all guest memory so that we can set up a heap
+    /// allocator.
+    ///
+    /// This does mean you do not have access to the heap allocator
+    /// (BOOT_ALLOCATOR will still work).
+    fn initialize_platform(e820_table: &[BootE820Entry]);
+
+    /// Platform-specific cleanups just before stage0 jumps to the kernel.
+    ///
+    /// The assumption is that after this operation there will no longer be any
+    /// memory allocations or uses of the logging interface.
+    fn deinit_platform();
+
+    /// Populates platform-specific information in the zero page.
+    ///
+    /// Example: locations of the SEV Secrets and CPUID pages.
+    fn populate_zero_page(zero_page: &mut ZeroPage);
+
+    /// Returns an attestation report.
+    ///
+    /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+    /// report. In other cases it generates an empty attestation report for
+    /// testing. The additional data will be set in both cases to bind the
+    /// DICE chain to the attestation report.
+    ///
+    /// # Arguments
+    ///
+    /// * `report_data` - The custom data that must be included in the report.
+    ///   This is typically used to bind information (such as the hash of a
+    ///   public key) to the report.
+    fn get_attestation(
+        report_data: [u8; REPORT_DATA_SIZE],
+    ) -> Result<AttestationReport, &'static str>;
+
+    /// Requests a derived key.
+    ///
+    /// The key is derived from the VCEK. The key derivation mixes in the VM
+    /// launch measurement and guest policy and uses VMPL0.
+    ///
+    /// We use this key as the unique device secret for deriving compound
+    /// devices identifiers for each layer, and eventually a sealing key in
+    /// the last layer.
+    fn get_derived_key() -> Result<DerivedKey, &'static str>;
+
+    /// Ask for the page state to be changed by the hypervisor.
+    fn change_page_state(page: Page<Size4KiB>, state: PageAssignment);
+
+    /// Validate one page of memory.
+    ///
+    /// This operation is required for SEV after going from a SHARED state to a
+    /// PRIVATE state.
+    fn revalidate_page(page: Page<Size4KiB>);
+
+    /// Mask to use in the page tables for the given encrypion state.
+    ///
+    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
+    /// marked; for TDX, unencrypted pages are marked.
+    fn page_table_mask(encryption_state: PageEncryption) -> u64;
+
+    /// Encrypted/shared bit mask irrespective of its semantics.
+    fn encrypted() -> u64;
+
+    fn tee_platform() -> TeePlatform;
+
+    /// Read a MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    unsafe fn read_msr(msr: u32) -> u64;
+
+    /// Write to a MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    unsafe fn write_msr(msr: u32, value: u64);
 }
 pub use base::Base;
 #[cfg(feature = "sev")]
@@ -86,18 +180,12 @@ pub use sev::Sev;
 /// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.
 pub struct Msr {
-    #[cfg(feature = "sev")]
     msr_id: u32,
-    msr: base::Msr,
 }
 
 impl Msr {
     pub const fn new(reg: u32) -> Self {
-        Self {
-            #[cfg(feature = "sev")]
-            msr_id: reg,
-            msr: base::Msr::new(reg),
-        }
+        Self { msr_id: reg }
     }
 
     /// Read the MSR.
@@ -105,11 +193,8 @@ impl Msr {
     /// ## Safety
     ///
     /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn read(&self) -> u64 {
-        #[cfg(feature = "sev")]
-        return sev::read_msr(&self.msr, self.msr_id);
-        #[cfg(not(feature = "sev"))]
-        return self.msr.read();
+    pub unsafe fn read<P: Platform>(&self) -> u64 {
+        P::read_msr(self.msr_id)
     }
 
     /// Write the MSR.
@@ -117,11 +202,8 @@ impl Msr {
     /// ## Safety
     ///
     /// The caller must guarantee that the MSR is valid.
-    pub unsafe fn write(&mut self, val: u64) {
-        #[cfg(feature = "sev")]
-        return sev::write_msr(&mut self.msr, self.msr_id, val);
-        #[cfg(not(feature = "sev"))]
-        return self.msr.write(val);
+    pub unsafe fn write<P: Platform>(&mut self, val: u64) {
+        P::write_msr(self.msr_id, val);
     }
 }
 
@@ -204,122 +286,4 @@ impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
         (self.write)(self.port, value)
     }
-}
-
-/// Platform-specific early initialization.
-///
-/// This sets up the bare minimum to get things going; for example, under
-/// SEV-ES and above, we set up the GHCB here, but nothing more.
-///
-/// This gets executed very soon after stage0 starts and comes with many
-/// restrictions:
-///   - You do not have access to logging.
-///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
-///     work).
-pub fn early_initialize_platform() {
-    #[cfg(feature = "sev")]
-    sev::early_initialize_platform();
-}
-
-/// Platform-specific intialization.
-///
-/// This gets executed after `early_initalize_platform()` and some other
-/// auxiliary services, such as logging, have been set up; the main purpose is
-/// to accept all guest memory so that we can set up a heap allocator.
-///
-/// This does mean you do not have access to the heap allocator (BOOT_ALLOCATOR
-/// will still work).
-pub fn initialize_platform(e820_table: &[BootE820Entry]) {
-    #[cfg(feature = "sev")]
-    sev::initialize_platform(e820_table)
-}
-
-/// Platform-specific cleanups just before stage0 jumps to the kernel.
-///
-/// The assumption is that after this operation there will no longer be any
-/// memory allocations or uses of the logging interface.
-pub fn deinit_platform() {
-    #[cfg(feature = "sev")]
-    sev::deinit_platform();
-}
-
-pub fn populate_zero_page(zero_page: &mut ZeroPage) {
-    #[cfg(feature = "sev")]
-    sev::populate_zero_page(zero_page);
-}
-
-/// Returns an attestation report.
-///
-/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
-/// report. In other cases it generates an empty attestation report for testing.
-/// The additional data will be set in both cases to bind the DICE chain to the
-/// attestation report.
-///
-/// # Arguments
-///
-/// * `report_data` - The custom data that must be included in the report. This
-///   is typically used to bind information (such as the hash of a public key)
-///   to the report.
-pub fn get_attestation(
-    report_data: [u8; REPORT_DATA_SIZE],
-) -> Result<AttestationReport, &'static str> {
-    #[cfg(feature = "sev")]
-    return sev::get_attestation(report_data);
-    #[cfg(not(feature = "sev"))]
-    return base::get_attestation(report_data);
-}
-
-/// Requests a derived key.
-///
-/// The key is derived from the VCEK. The key derivation mixes in the VM launch
-/// measurement and guest policy and uses VMPL0.
-///
-/// We use this key as the unique device secret for deriving compound devices
-/// identifiers for each layer, and eventually a sealing key in the last layer.
-pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
-    #[cfg(feature = "sev")]
-    return sev::get_derived_key();
-    #[cfg(not(feature = "sev"))]
-    return base::get_derived_key();
-}
-
-/// Ask for the page state to be changed by the hypervisor.
-pub fn change_page_state(page: Page<Size4KiB>, state: PageAssignment) {
-    #[cfg(feature = "sev")]
-    sev::change_page_state(page, state).unwrap();
-}
-
-/// Validate one page of memory.
-///
-/// This operation is required for SEV after going from a SHARED state to a
-/// PRIVATE state.
-pub fn revalidate_page(page: Page<Size4KiB>) {
-    #[cfg(feature = "sev")]
-    sev::revalidate_page(page).unwrap();
-}
-
-/// Mask to use in the page tables for the given encrypion state.
-///
-/// SEV and TDX have opposite behaviours: for SEV, encrypted pages are marked;
-/// for TDX, unencrypted pages are marked.
-pub fn page_table_mask(encryption_state: PageEncryption) -> u64 {
-    #[cfg(feature = "sev")]
-    return sev::page_table_mask(encryption_state);
-    #[cfg(not(feature = "sev"))]
-    return 0;
-}
-
-/// Encrypted/shared bit mask irrespective of its semantics.
-pub fn encrypted() -> u64 {
-    #[cfg(feature = "sev")]
-    return sev::encrypted();
-    #[cfg(not(feature = "sev"))]
-    return 0;
-}
-
-pub fn tee_platform() -> TeePlatform {
-    #[cfg(feature = "sev")]
-    return sev::tee_platform();
-    #[cfg(not(feature = "sev"))]
-    return TeePlatform::None;
 }

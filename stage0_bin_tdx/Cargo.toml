@@ -10,6 +10,10 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
+oak_dice = { path = "../oak_dice" }
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
+oak_sev_guest = { path = "../oak_sev_guest" }
+oak_sev_snp_attestation_report = { path = "../oak_sev_snp_attestation_report" }
 oak_stage0 = { path = "../stage0" }
 oak_tdx_guest = { path = "../oak_tdx_guest" }
 x86_64 = "*"

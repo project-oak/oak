@@ -19,14 +19,18 @@ mod mmio;
 use core::arch::x86_64::{CpuidResult, __cpuid};
 
 pub use mmio::*;
-pub use oak_stage0_dice::{
-    mock_attestation_report as get_attestation, mock_derived_key as get_derived_key,
-};
+use oak_dice::evidence::TeePlatform;
+use oak_linux_boot_params::BootE820Entry;
+use oak_sev_guest::msr::PageAssignment;
+use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
+use oak_stage0_dice::DerivedKey;
 pub use x86_64::registers::model_specific::Msr;
 use x86_64::structures::{
-    paging::PageSize,
+    paging::{Page, PageSize, Size4KiB},
     port::{PortRead, PortWrite},
 };
+
+use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
 
@@ -67,5 +71,47 @@ impl crate::Platform for Base {
     unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str> {
         u32::write_to_port(port, value);
         Ok(())
+    }
+
+    fn early_initialize_platform() {}
+
+    fn initialize_platform(_e820_table: &[BootE820Entry]) {}
+
+    fn deinit_platform() {}
+
+    fn populate_zero_page(_zero_page: &mut ZeroPage) {}
+
+    fn get_attestation(
+        report_data: [u8; REPORT_DATA_SIZE],
+    ) -> Result<AttestationReport, &'static str> {
+        oak_stage0_dice::mock_attestation_report(report_data)
+    }
+
+    fn get_derived_key() -> Result<DerivedKey, &'static str> {
+        oak_stage0_dice::mock_derived_key()
+    }
+
+    fn change_page_state(_page: Page<Size4KiB>, _state: PageAssignment) {}
+
+    fn revalidate_page(_page: Page<Size4KiB>) {}
+
+    fn page_table_mask(_encryption_state: PageEncryption) -> u64 {
+        0
+    }
+
+    fn encrypted() -> u64 {
+        0
+    }
+
+    fn tee_platform() -> TeePlatform {
+        TeePlatform::None
+    }
+
+    unsafe fn read_msr(msr: u32) -> u64 {
+        Msr::new(msr).read()
+    }
+
+    unsafe fn write_msr(msr: u32, value: u64) {
+        Msr::new(msr).write(value)
     }
 }

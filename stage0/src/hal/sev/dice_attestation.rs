@@ -30,7 +30,7 @@ use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
 use super::{GHCB_WRAPPER, SEV_SECRETS};
-use crate::allocator::Shared;
+use crate::{allocator::Shared, Platform};
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -62,9 +62,9 @@ fn send_guest_message_request<
     let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     let encryptor = guard.as_mut().ok_or("guest message encryptor is not initialized")?;
     let alloc = &crate::SHORT_TERM_ALLOC;
-    let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
+    let mut request_message = Shared::<_, _, super::Sev>::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())?;
-    let response_message = Shared::new_in(GuestMessage::new(), alloc);
+    let response_message = Shared::<_, _, super::Sev>::new_in(GuestMessage::new(), alloc);
 
     let request_address = PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref()).as_u64());
     let response_address = PhysAddr::new(VirtAddr::from_ptr(response_message.as_ref()).as_u64());
@@ -90,7 +90,7 @@ pub fn get_attestation(
         }
         Ok(attestation_response.report)
     } else {
-        crate::hal::base::get_attestation(report_data)
+        crate::hal::Base::get_attestation(report_data)
     }
 }
 
@@ -102,6 +102,6 @@ pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
         let key_response: KeyResponse = send_guest_message_request(key_request)?;
         Ok(key_response.derived_key)
     } else {
-        crate::hal::base::get_derived_key()
+        crate::hal::Base::get_derived_key()
     }
 }

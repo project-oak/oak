@@ -144,17 +144,17 @@ impl core::fmt::Debug for DirEntry {
 /// Wrapper for the QEMU Firmware Configuration device.
 ///
 /// See <https://www.qemu.org/docs/master/specs/fw_cfg.html> for more details.
-pub struct FwCfg {
+pub struct FwCfg<P: crate::Platform> {
     selector: Port<u16>,
     data: Port<u8>,
     dma_high: Port<u32>,
     dma_low: Port<u32>,
-    dma_buf: Shared<DmaBuffer, &'static BootAllocator>,
-    dma_access: Shared<FwCfgDmaAccess, &'static BootAllocator>,
+    dma_buf: Shared<DmaBuffer, &'static BootAllocator, P>,
+    dma_access: Shared<FwCfgDmaAccess, &'static BootAllocator, P>,
     dma_enabled: bool,
 }
 
-impl FwCfg {
+impl<P: crate::Platform> FwCfg<P> {
     /// # Safety
     ///
     /// While we do probe for the existence of the QEMU fw_cfg device, reading
@@ -164,9 +164,7 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause
     /// any adverse effects.
-    pub unsafe fn new<P: crate::Platform>(
-        alloc: &'static BootAllocator,
-    ) -> Result<Self, &'static str> {
+    pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: PortFactory::new::<P>().new_writer(FWCFG_PORT_SELECTOR),
             data: PortFactory::new::<P>().new_reader(FWCFG_PORT_DATA),

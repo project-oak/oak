@@ -23,6 +23,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+use super::Base;
 use crate::paging::{PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
 
 pub struct Mmio<S: PageSize> {
@@ -49,7 +50,7 @@ impl<S: PageSize> Mmio<S> {
         }
         let mut tables = PAGE_TABLE_REFS.get().unwrap().lock();
         let old_pte = tables.pt_0[mmio_memory.p1_index()].clone();
-        tables.pt_0[mmio_memory.p1_index()].set_address(
+        tables.pt_0[mmio_memory.p1_index()].set_address::<Base>(
             base_address,
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE,
             PageEncryption::Unencrypted,

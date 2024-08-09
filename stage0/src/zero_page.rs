@@ -71,7 +71,10 @@ impl ZeroPage {
     ///
     /// Returns the measurement (SHA2-384 digest) of the setup data if it was
     /// found, otherwise the measurement is all zeros.
-    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> Option<[u8; 32]> {
+    pub fn try_fill_hdr_from_setup_data<P: crate::Platform>(
+        &mut self,
+        fw_cfg: &mut FwCfg<P>,
+    ) -> Option<[u8; 32]> {
         let file = fw_cfg.get_setup_file()?;
         let size = file.size();
         // We temporarily copy the setup data to the end of available mapped virtual
@@ -117,7 +120,7 @@ impl ZeroPage {
     ///
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
     /// that is not available, fall back to querying RTC NVRAM.
-    pub fn fill_e820_table<P: crate::Platform>(&mut self, fw_cfg: &mut FwCfg) {
+    pub fn fill_e820_table<P: crate::Platform>(&mut self, fw_cfg: &mut FwCfg<P>) {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're
         // limiting ourselves to up to 128 entries.

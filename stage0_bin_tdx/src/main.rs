@@ -146,6 +146,52 @@ impl oak_stage0::Platform for Tdx {
     unsafe fn write_u32_to_port(_: u16, _: u32) -> Result<(), &'static str> {
         todo!()
     }
+
+    fn early_initialize_platform() {
+        todo!()
+    }
+    fn initialize_platform(_: &[oak_linux_boot_params::BootE820Entry]) {
+        todo!()
+    }
+    fn deinit_platform() {
+        todo!()
+    }
+    fn populate_zero_page(_: &mut oak_stage0::ZeroPage) {
+        todo!()
+    }
+    fn get_attestation(
+        _: [u8; 64],
+    ) -> Result<oak_sev_snp_attestation_report::AttestationReport, &'static str> {
+        todo!()
+    }
+    fn get_derived_key() -> Result<[u8; 32], &'static str> {
+        todo!()
+    }
+    fn change_page_state(
+        _: x86_64::structures::paging::Page,
+        _: oak_sev_guest::msr::PageAssignment,
+    ) {
+        todo!()
+    }
+    fn revalidate_page(_: x86_64::structures::paging::Page) {
+        todo!()
+    }
+    fn page_table_mask(_: oak_stage0::paging::PageEncryption) -> u64 {
+        todo!()
+    }
+    fn encrypted() -> u64 {
+        todo!()
+    }
+    fn tee_platform() -> oak_dice::evidence::TeePlatform {
+        todo!()
+    }
+    unsafe fn read_msr(_: u32) -> u64 {
+        todo!()
+    }
+
+    unsafe fn write_msr(_: u32, _: u64) {
+        todo!()
+    }
 }
 
 /// Entry point for the Rust code in the stage0 BIOS.
