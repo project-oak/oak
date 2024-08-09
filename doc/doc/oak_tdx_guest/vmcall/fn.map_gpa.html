@@ -10,7 +10,7 @@ to the guest as pending pages, so the guest must also call
 <code>TDCALL[TDG.MEM.PAGE.ACCEPT]</code> before using them again.</p>
 <p>The function will return an error if the page was already mapped in the
 desired state (e.g. trying to share a page that was already shared).</p>
-<p>See section 3.2 of <a href="https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf">Guest-Host-Communication Interface (GHCI) for Intel®
+<p>See section 3.2 of <a href="https://cdrdv2.intel.com/v1/dl/getContent/726792">Guest-Host-Communication Interface (GHCI) for Intel®
 Trust Domain Extensions (Intel® TDX)</a>
 for more information.</p>
 <h2 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h2>

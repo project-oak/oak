@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MapGpaError"],"fn":["call_cpuid","io_read_u16","io_read_u32","io_read_u8","io_write_u16","io_write_u32","io_write_u8","map_gpa","msr_read","msr_write"]};
+window.SIDEBAR_ITEMS = {"enum":["MapGpaError"],"fn":["call_cpuid","io_read_u16","io_read_u32","io_read_u8","io_write_u16","io_write_u32","io_write_u8","map_gpa","mmio_read","mmio_write_u32","msr_read","msr_write"]};
