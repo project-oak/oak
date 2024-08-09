@@ -31,8 +31,18 @@ use x86_64::{
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;
 
+// TDCALL[TDG.VP.VMCALL] sub-function invocation must be retried
+const RETRY: u64 = 1;
+
 // The result from an instruction if the input was invalid.
 const INVALID_OPERAND: u64 = 1 << 63;
+
+// The result from an instruction if the input GPA is already in use.
+const GPA_INUSE: u64 = 1 << 63 | 1;
+
+// The result from an instruction if the input size or GPA is not properly
+// aligned.
+const ALIGN_ERROR: u64 = 1 << 63 | 1 << 1;
 
 /// The TDG.VP.VMCALL leaf number for TDCALL.
 const VM_CALL_LEAF: u64 = 0;
@@ -92,7 +102,11 @@ impl Default for Registers {
 /// Error when mapping a guest-physical address (GPA) as shared or private.
 #[derive(Debug)]
 pub enum MapGpaError {
-    MapFailure(PhysAddr),
+    InvalidOperand(PhysAddr),
+    GPAInUse(PhysAddr),
+    AlignError(PhysAddr),
+    RetriedTooManyTimes(PhysAddr),
+    UnknownError(PhysAddr),
 }
 
 /// Maps a range of guest-physical addresses (GPAs) as shared with the
@@ -108,7 +122,14 @@ pub enum MapGpaError {
 /// The function will return an error if the page was already mapped in the
 /// desired state (e.g. trying to share a page that was already shared).
 ///
-/// See section 3.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// On error `VMCALL_RETRY`, R11 contains a GPA where the guest needs to retry.
+/// On error `VMCALL_GPA_INUSE`, the hypervisor believes that the memory has
+/// been already in use by the TD, e.g. GPA used for hosting memory dedicated
+/// for IO. R11 specifies which GPA in the requested range was in use. on error
+/// `VMCALL_ALIGN_ERROR` it means the size or start GPA has alignment error.
+///
+///
+/// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 ///
@@ -120,52 +141,79 @@ pub enum MapGpaError {
 pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaError> {
     // The VMCALL sub-function for MAP_GPA.
     const SUB_FUNCTION: u64 = 0x10001;
+    // We use the same threshold as OVMF
+    // https://github.com/tianocore/edk2/blob/b0f43dd3fdec2363e3548ec31eb455dc1c4ac761/OvmfPkg/Library/BaseMemEncryptTdxLib/MemoryEncryption.c#L41
+    const MAX_RETRY_PER_PAGE: u32 = 3;
 
     let mut vm_call_result: u64;
     let mut sub_function_result: u64;
     let registers = Registers::default().union(Registers::R12).union(Registers::R13);
     let gpa_start = frames.start.start_address().as_u64();
     let gpa_size = frames.end.start_address().as_u64().checked_sub(gpa_start).unwrap();
-    let mut failing_gpa: u64;
+    let mut failing_gpa: u64 = u64::MAX;
+    let mut current_start = gpa_start;
+    let mut current_size = gpa_size;
+    let mut retry_times: u32 = 0;
 
-    // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
-    // success). The bitflags of registers to be passed through to the VMM goes
-    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
-    // spec) goes into R10, and the result of the subfunction is returned in
-    // R10. The sub-function to call goes into R11 and the failing address is
-    // returned in R11 in case of failure. The start GPA goes into R12 (must be
-    // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
-    // into R13.
-    //
-    // Safety: as long as the changed physical address of the page is handled
-    // correctly by the caller, calling TDCALL here is safe since it does not
-    // alter memory directly and all the affected registers are specified, so no
-    // unspecified registers will be clobbered.
-    unsafe {
-        asm!(
-            "tdcall",
-            inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits(),
-            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
-            inout("r11") SUB_FUNCTION => failing_gpa,
-            in("r12") gpa_start,
-            in("r13") gpa_size,
-            options(nomem, nostack),
-        );
-    }
+    while retry_times < MAX_RETRY_PER_PAGE {
+        retry_times += 1;
+        // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+        // success). The bitflags of registers to be passed through to the VMM goes
+        // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+        // spec) goes into R10, and the result of the subfunction is returned in
+        // R10. The sub-function to call goes into R11 and the failing address is
+        // returned in R11 in case of failure. The start GPA goes into R12 (must be
+        // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
+        // into R13.
+        //
+        // Safety: as long as the changed physical address of the page is handled
+        // correctly by the caller, calling TDCALL here is safe since it does not
+        // alter memory directly and all the affected registers are specified, so no
+        // unspecified registers will be clobbered.
+        unsafe {
+            asm!(
+                "tdcall",
+                inout("rax") VM_CALL_LEAF => vm_call_result,
+                in("rcx") registers.bits(),
+                inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+                inout("r11") SUB_FUNCTION => failing_gpa,
+                in("r12") current_start,
+                in("r13") current_size,
+                options(nomem, nostack),
+            );
+        }
 
-    // According to the spec the top-level result for this sub-function will aways
-    // be 0 as long as the specified sub-function leaf is correct.
-    assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+        assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
 
-    if sub_function_result == INVALID_OPERAND {
-        return Err(MapGpaError::MapFailure(PhysAddr::new(failing_gpa)));
-    }
-    // According to the spec this sub-function will always return either 0 or
-    // INVALID_OPERAND.
-    assert_eq!(sub_function_result, SUCCESS, "TDG.VP.VMCALL<MapGPA> returned an invalid result");
+        match sub_function_result {
+            SUCCESS => return Ok(()),
+            RETRY => {
+                if failing_gpa > current_start && failing_gpa < gpa_start + gpa_size {
+                    // Successfully mapped some memory but not enough. Restart counting.
+                    retry_times = 0;
+                    // TD must retry this operation for the pages in the region starting
+                    // at the GPA specified in R11.
+                    // [start_gpa, current_start) has been processed. Memory region to be retried
+                    // is [current_start, start_gpa + size)
+                    current_start = failing_gpa;
+                    current_size = (gpa_start + gpa_size).checked_sub(current_start).unwrap();
+                } else if failing_gpa == current_start {
+                    continue;
+                } else {
+                    return Err(MapGpaError::UnknownError(PhysAddr::new(failing_gpa)));
+                }
+            }
+            INVALID_OPERAND => {
+                return Err(MapGpaError::InvalidOperand(PhysAddr::new(failing_gpa)));
+            }
+            GPA_INUSE => return Err(MapGpaError::GPAInUse(PhysAddr::new(failing_gpa))),
+            ALIGN_ERROR => return Err(MapGpaError::AlignError(PhysAddr::new(failing_gpa))),
+            _ => return Err(MapGpaError::UnknownError(PhysAddr::new(failing_gpa))),
+        }
+    } // while retry_times < MAX_RETRY_PER_PAGE
 
-    Ok(())
+    // Retried MAX_RETRY_PER_PAGE times but the map_gpa request is still incomplete.
+    Err(MapGpaError::RetriedTooManyTimes(PhysAddr::new(failing_gpa)))
 }
 
 /// Executes CPUID for the specified leaf and sub-leaf.
@@ -647,7 +695,7 @@ pub fn mmio_read(address: *const u32) -> Result<u32, &'static str> {
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 fn instruction_wbinvd(invalidate: bool) -> Result<(), &'static str> {
-    // The VMCALL sub-function for #VE.RequestMMIO
+    // The VMCALL sub-function for Instruction.WBINVD
     const SUB_FUNCTION: u64 = 0x36;
 
     let mut vm_call_result: u64;
