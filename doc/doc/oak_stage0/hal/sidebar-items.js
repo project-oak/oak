@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["change_page_state","deinit_platform","early_initialize_platform","encrypted","get_attestation","get_derived_key","initialize_platform","page_table_mask","populate_zero_page","revalidate_page","tee_platform"],"struct":["Base","Msr","Port","PortFactory","Sev"],"trait":["Mmio","Platform"]};

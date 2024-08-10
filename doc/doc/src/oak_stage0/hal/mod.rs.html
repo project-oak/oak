@@ -314,6 +314,17 @@
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -334,7 +345,7 @@
 <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
 </span><span class="kw">mod </span>sev;
 
-<span class="kw">use </span>core::{arch::x86_64::CpuidResult, marker::PhantomData, mem::size_of};
+<span class="kw">use </span>core::arch::x86_64::CpuidResult;
 
 <span class="kw">use </span>oak_dice::evidence::TeePlatform;
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
@@ -345,40 +356,28 @@
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>oak_stage0_dice::DerivedKey;
 <span class="kw">use </span>x86_64::{
-    structures::paging::{Page, PageSize, Size4KiB},
+    structures::{
+        paging::{Page, PageSize, Size4KiB},
+        port::{PortRead, PortWrite},
+    },
     PhysAddr,
 };
+
+<span class="kw">use crate</span>::{paging::PageEncryption, zero_page::ZeroPage};
 
 <span class="doccomment">/// Abstraction around MMIO (memory-mapped I/O) read/write access.
 ///
 /// Normally you can just access the memory directly via
 /// `read_volatile`/`write_volatile`, but for SEV-ES and above we need to go via
 /// the GHCB to do MMIO.
-</span><span class="kw">pub struct </span>Mmio&lt;S: PageSize = Size4KiB&gt; {
-    mmio: base::Mmio&lt;S&gt;,
-}
-
-<span class="kw">impl</span>&lt;S: PageSize&gt; Mmio&lt;S&gt; {
-    <span class="kw">pub unsafe fn </span>new(base_address: PhysAddr) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ mmio: base::Mmio::new(base_address) }
-    }
-
+</span><span class="kw">pub trait </span>Mmio&lt;S: PageSize&gt; {
     <span class="doccomment">/// Reads an u32 from the MMIO memory region.
     ///
     /// The offset is the number of u32-s (not byte offsets); that is, to read
     /// bytes at [base_address+4, base_address+8) the offset needs to be 1.
     ///
     /// Panics if the read would go outside the memory range.
-    </span><span class="kw">pub fn </span>read_u32(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u32 {
-        <span class="kw">let </span>offset = offset * size_of::&lt;u32&gt;();
-        <span class="kw">if </span>offset &gt;= S::SIZE <span class="kw">as </span>usize {
-            <span class="macro">panic!</span>(<span class="string">"invalid MMIO access for read: offset would read beyond memory boundary"</span>);
-        }
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>sev::read_u32(<span class="kw-2">&amp;</span><span class="self">self</span>.mmio, offset);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span><span class="self">self</span>.mmio.read_u32(offset);
-    }
+    </span><span class="kw">fn </span>read_u32(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: usize) -&gt; u32;
 
     <span class="doccomment">/// Write an u32 from the MMIO memory region.
     ///
@@ -389,27 +388,28 @@
     ///
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
-    </span><span class="kw">pub unsafe fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u32) {
-        <span class="kw">let </span>offset = offset * size_of::&lt;u32&gt;();
-        <span class="kw">if </span>offset &gt;= S::SIZE <span class="kw">as </span>usize {
-            <span class="macro">panic!</span>(<span class="string">"invalid MMIO access for write: offset would write beyond memory boundary"</span>);
-        }
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>sev::write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>.mmio, offset, value);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span><span class="self">self</span>.mmio.write_u32(offset, value);
-    }
+    </span><span class="kw">unsafe fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, offset: usize, value: u32);
 }
 
-<span class="doccomment">/// Performs CPUID.
-///
-/// Under SEV-ES and above, you shouldn't call the CPUID instruction directly.
-</span><span class="kw">pub fn </span>cpuid(leaf: u32) -&gt; CpuidResult {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::cpuid(leaf);
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span>base::cpuid(leaf);
+<span class="kw">pub trait </span>Platform {
+    <span class="kw">type </span>Mmio&lt;S: PageSize&gt;: Mmio&lt;S&gt;;
+
+    <span class="doccomment">/// Performs the CPUID instruction.
+    </span><span class="kw">fn </span>cpuid(leaf: u32) -&gt; CpuidResult;
+
+    <span class="kw">unsafe fn </span>mmio&lt;S: PageSize&gt;(base_address: PhysAddr) -&gt; <span class="self">Self</span>::Mmio&lt;S&gt;;
+
+    <span class="kw">unsafe fn </span>read_u8_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+    <span class="kw">unsafe fn </span>write_u8_to_port(port: u16, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+    <span class="kw">unsafe fn </span>read_u16_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+    <span class="kw">unsafe fn </span>write_u16_to_port(port: u16, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+    <span class="kw">unsafe fn </span>read_u32_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+    <span class="kw">unsafe fn </span>write_u32_to_port(port: u16, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
 }
+<span class="kw">pub use </span>base::Base;
+<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+</span><span class="kw">pub use </span>sev::Sev;
+
 <span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.
 </span><span class="kw">pub struct </span>Msr {
@@ -452,62 +452,84 @@
     }
 }
 
-<span class="kw">pub struct </span>PortFactory;
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>PortFactory {
+    read_u8: <span class="kw">unsafe fn</span>(u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    read_u16: <span class="kw">unsafe fn</span>(u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    read_u32: <span class="kw">unsafe fn</span>(u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    write_u8: <span class="kw">unsafe fn</span>(u16, u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    write_u16: <span class="kw">unsafe fn</span>(u16, u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    write_u32: <span class="kw">unsafe fn</span>(u16, u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+}
 
-<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-</span><span class="kw">pub use </span>sev::GhcbPortRead <span class="kw">as </span>PortRead;
-<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-</span><span class="kw">pub use </span>sev::GhcbPortWrite <span class="kw">as </span>PortWrite;
-<span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-</span><span class="kw">pub use </span>x86_64::structures::port::PortRead;
-<span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-</span><span class="kw">pub use </span>x86_64::structures::port::PortWrite;
-
-<span class="kw">use crate</span>::{paging::PageEncryption, zero_page::ZeroPage};
-
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; IoPortFactory&lt;<span class="lifetime">'a</span>, T, Port&lt;T&gt;, Port&lt;T&gt;&gt; <span class="kw">for </span>PortFactory
-<span class="kw">where
-    </span>T: PortRead + PortWrite + <span class="lifetime">'a</span>,
-{
-    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;T&gt; {
-        Port::new(port)
-    }
-
-    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;T&gt; {
-        Port::new(port)
+<span class="kw">impl </span>PortFactory {
+    <span class="kw">pub fn </span>new&lt;P: Platform&gt;() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            read_u8: P::read_u8_from_port,
+            read_u16: P::read_u16_from_port,
+            read_u32: P::read_u32_from_port,
+            write_u8: P::write_u8_to_port,
+            write_u16: P::write_u16_to_port,
+            write_u32: P::write_u32_to_port,
+        }
     }
 }
 
-<span class="doccomment">/// Access to x86 IO ports.
-</span><span class="kw">pub struct </span>Port&lt;T&gt; {
+<span class="kw">impl </span>IoPortFactory&lt;<span class="lifetime">'_</span>, u8, Port&lt;u8&gt;, Port&lt;u8&gt;&gt; <span class="kw">for </span>PortFactory {
+    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u8&gt; {
+        Port::new(port, <span class="self">self</span>.read_u8, <span class="self">self</span>.write_u8)
+    }
+
+    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u8&gt; {
+        Port::new(port, <span class="self">self</span>.read_u8, <span class="self">self</span>.write_u8)
+    }
+}
+
+<span class="kw">impl </span>IoPortFactory&lt;<span class="lifetime">'_</span>, u16, Port&lt;u16&gt;, Port&lt;u16&gt;&gt; <span class="kw">for </span>PortFactory {
+    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u16&gt; {
+        Port::new(port, <span class="self">self</span>.read_u16, <span class="self">self</span>.write_u16)
+    }
+
+    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u16&gt; {
+        Port::new(port, <span class="self">self</span>.read_u16, <span class="self">self</span>.write_u16)
+    }
+}
+
+<span class="kw">impl </span>IoPortFactory&lt;<span class="lifetime">'_</span>, u32, Port&lt;u32&gt;, Port&lt;u32&gt;&gt; <span class="kw">for </span>PortFactory {
+    <span class="kw">fn </span>new_reader(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u32&gt; {
+        Port::new(port, <span class="self">self</span>.read_u32, <span class="self">self</span>.write_u32)
+    }
+
+    <span class="kw">fn </span>new_writer(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; Port&lt;u32&gt; {
+        Port::new(port, <span class="self">self</span>.read_u32, <span class="self">self</span>.write_u32)
+    }
+}
+
+<span class="kw">pub struct </span>Port&lt;T: PortRead + PortWrite&gt; {
     port: u16,
-    phantom: PhantomData&lt;T&gt;,
+    read: <span class="kw">unsafe fn</span>(u16) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    write: <span class="kw">unsafe fn</span>(u16, T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 }
 
-<span class="kw">impl</span>&lt;T&gt; Port&lt;T&gt; {
-    <span class="kw">pub fn </span>new(port: u16) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ port, phantom: PhantomData }
+<span class="kw">impl</span>&lt;T: PortRead + PortWrite&gt; Port&lt;T&gt; {
+    <span class="kw">fn </span>new(
+        port: u16,
+        read: <span class="kw">unsafe fn</span>(u16) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+        write: <span class="kw">unsafe fn</span>(u16, T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ port, read, write }
     }
 }
 
-<span class="kw">impl</span>&lt;T: PortRead&gt; PortReader&lt;T&gt; <span class="kw">for </span>Port&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: PortRead + PortWrite&gt; PortReader&lt;T&gt; <span class="kw">for </span>Port&lt;T&gt; {
     <span class="kw">unsafe fn </span>try_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;T, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>&lt;T <span class="kw">as </span>sev::GhcbPortRead&gt;::read_from_port(<span class="self">self</span>.port);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span><span class="prelude-val">Ok</span>(&lt;T <span class="kw">as </span>PortRead&gt;::read_from_port(<span class="self">self</span>.port));
+        (<span class="self">self</span>.read)(<span class="self">self</span>.port)
     }
 }
 
-<span class="kw">impl</span>&lt;T: PortWrite&gt; PortWriter&lt;T&gt; <span class="kw">for </span>Port&lt;T&gt; {
+<span class="kw">impl</span>&lt;T: PortRead + PortWrite&gt; PortWriter&lt;T&gt; <span class="kw">for </span>Port&lt;T&gt; {
     <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>&lt;T <span class="kw">as </span>sev::GhcbPortWrite&gt;::write_to_port(<span class="self">self</span>.port, value);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span>{
-            &lt;T <span class="kw">as </span>PortWrite&gt;::write_to_port(<span class="self">self</span>.port, value);
-            <span class="prelude-val">Ok</span>(())
-        };
+        (<span class="self">self</span>.write)(<span class="self">self</span>.port, value)
     }
 }
 

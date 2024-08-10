@@ -406,10 +406,6 @@
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -426,16 +422,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>x86_64::PhysAddr;
+</span><span class="kw">use </span>x86_64::{structures::paging::Size4KiB, PhysAddr};
 
-<span class="kw">use crate</span>::{
-    hal,
-    msr::{
-        ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
-        MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
-        X2ApicIdRegister, X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister,
-        X2ApicVersionRegister,
-    },
+<span class="kw">use </span><span class="kw">crate</span>::msr::{
+    ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
+    MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister, X2ApicIdRegister,
+    X2ApicInterruptCommandRegister, X2ApicSpuriousInterruptRegister, X2ApicVersionRegister,
 };
 
 <span class="doccomment">/// Interrupt Command.
@@ -495,7 +487,7 @@
 }
 
 <span class="kw">mod </span>xapic {
-    <span class="kw">use </span>x86_64::PhysAddr;
+    <span class="kw">use </span>x86_64::{structures::paging::Size4KiB, PhysAddr};
 
     <span class="kw">use super</span>::{ApicErrorFlags, SpuriousInterruptFlags};
     <span class="kw">use </span><span class="kw">crate</span>::hal;
@@ -508,11 +500,11 @@
     <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER_LOW_OFFSET: usize = <span class="number">0x300 </span>/ core::mem::size_of::&lt;u32&gt;();
     <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = <span class="number">0x310 </span>/ core::mem::size_of::&lt;u32&gt;();
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Xapic {
-        mmio: <span class="kw">crate</span>::hal::Mmio,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Xapic&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; {
+        mmio: M,
     }
 
-    <span class="kw">impl </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; Xapic&lt;M&gt; {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, register: usize) -&gt; u32 {
             <span class="self">self</span>.mmio.read_u32(register)
         }
@@ -521,7 +513,7 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; <span class="kw">super</span>::ApicId <span class="kw">for </span>Xapic&lt;M&gt; {
         <span class="doccomment">/// Read the Local APIC ID register.
         ///
         /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual,
@@ -531,7 +523,7 @@
         </span>}
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::InterprocessorInterrupt <span class="kw">for </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; <span class="kw">super</span>::InterprocessorInterrupt <span class="kw">for </span>Xapic&lt;M&gt; {
         <span class="kw">fn </span>send(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             destination: u32,
@@ -561,7 +553,7 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::ErrorStatus <span class="kw">for </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; <span class="kw">super</span>::ErrorStatus <span class="kw">for </span>Xapic&lt;M&gt; {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags {
             ApicErrorFlags::from_bits_truncate(<span class="self">self</span>.read(ERROR_STATUS_REGISTER_OFFSET))
         }
@@ -572,7 +564,7 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::ApicVersion <span class="kw">for </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; <span class="kw">super</span>::ApicVersion <span class="kw">for </span>Xapic&lt;M&gt; {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8) {
             <span class="kw">let </span>val = <span class="self">self</span>.read(APIC_VERSION_REGISTER_OFFSET);
 
@@ -584,7 +576,7 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>Xapic {
+    <span class="kw">impl</span>&lt;M: hal::Mmio&lt;Size4KiB&gt;&gt; <span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>Xapic&lt;M&gt; {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8) {
             <span class="kw">let </span>val = <span class="self">self</span>.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
@@ -599,8 +591,8 @@
 
     <span class="doccomment">/// Safety: caller needs to guarantee that `apic_base` points to the APIC
     /// MMIO memory.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>init(apic_base: PhysAddr) -&gt; Xapic {
-        Xapic { mmio: hal::Mmio::new(apic_base) }
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">unsafe fn </span>init&lt;P: <span class="kw">crate</span>::Platform&gt;(apic_base: PhysAddr) -&gt; Xapic&lt;P::Mmio&lt;Size4KiB&gt;&gt; {
+        Xapic { mmio: P::mmio::&lt;Size4KiB&gt;(apic_base) }
     }
 }
 
@@ -676,8 +668,8 @@
     }
 }
 
-<span class="kw">enum </span>Apic {
-    Xapic(xapic::Xapic),
+<span class="kw">enum </span>Apic&lt;M: <span class="kw">crate</span>::hal::Mmio&lt;Size4KiB&gt;&gt; {
+    Xapic(xapic::Xapic&lt;M&gt;),
     X2apic(
         X2ApicInterruptCommandRegister,
         X2ApicErrorStatusRegister,
@@ -689,14 +681,14 @@
 <span class="doccomment">/// Wrapper for the local APIC.
 ///
 /// Currenty only supports x2APIC mode.
-</span><span class="kw">pub struct </span>Lapic {
+</span><span class="kw">pub struct </span>Lapic&lt;M: <span class="kw">crate</span>::hal::Mmio&lt;Size4KiB&gt;&gt; {
     apic_id: u32,
-    interface: Apic,
+    interface: Apic&lt;M&gt;,
 }
 
-<span class="kw">impl </span>Lapic {
-    <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="kw">let </span>x2apic = hal::cpuid(<span class="number">0x0000_0001</span>).ecx &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>) &gt; <span class="number">0</span>;
+<span class="kw">impl</span>&lt;M: <span class="kw">crate</span>::hal::Mmio&lt;Size4KiB&gt;&gt; Lapic&lt;M&gt; {
+    <span class="kw">pub fn </span>enable&lt;P: <span class="kw">crate</span>::Platform&lt;Mmio&lt;Size4KiB&gt; = M&gt;&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="kw">let </span>x2apic = P::cpuid(<span class="number">0x0000_0001</span>).ecx &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>) &gt; <span class="number">0</span>;
         <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for
         // explanation of the initialization procedure.
         </span><span class="kw">let </span>(aba, <span class="kw-2">mut </span>flags) = ApicBase::read();
@@ -724,7 +716,7 @@
         } <span class="kw">else </span>{
             <span class="macro">log::info!</span>(<span class="string">"Using xAPIC for AP initialization."</span>);
             <span class="comment">// Safety: we trust the address provided by the ApicBase MSR.
-            </span><span class="kw">let </span>apic = <span class="kw">unsafe </span>{ xapic::init(aba) };
+            </span><span class="kw">let </span>apic = <span class="kw">unsafe </span>{ xapic::init::&lt;P&gt;(aba) };
             Lapic { apic_id: apic.apic_id(), interface: Apic::Xapic(apic) }
         };
         <span class="comment">// Version should be between [0x10...0x20).

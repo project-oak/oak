@@ -59,7 +59,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_sev_guest",["",[],["ap_jump_table.rs","cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]]],\
 ["oak_sev_snp_attestation_report",["",[],["lib.rs"]]],\
 ["oak_simple_io",["",[],["lib.rs"]]],\
-["oak_stage0",["",[["hal",[["base",[],["cpuid.rs","mmio.rs","mod.rs"]],["sev",[],["accept_memory.rs","cpuid.rs","dice_attestation.rs","mmio.rs","mod.rs","msr.rs","port.rs"]]],["mod.rs"]]],["acpi.rs","acpi_tables.rs","allocator.rs","apic.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","msr.rs","paging.rs","pic.rs","smp.rs","zero_page.rs"]]],\
+["oak_stage0",["",[["hal",[["base",[],["mmio.rs","mod.rs"]],["sev",[],["accept_memory.rs","dice_attestation.rs","mmio.rs","mod.rs","msr.rs"]]],["mod.rs"]]],["acpi.rs","acpi_tables.rs","allocator.rs","apic.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","msr.rs","paging.rs","pic.rs","smp.rs","zero_page.rs"]]],\
 ["oak_stage0_dice",["",[],["lib.rs"]]],\
 ["oak_tdx_guest",["",[],["lib.rs","tdcall.rs","vmcall.rs"]]],\
 ["oak_virtio",["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]]],\

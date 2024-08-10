@@ -584,6 +584,9 @@
 <a href="#582" id="582">582</a>
 <a href="#583" id="583">583</a>
 <a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -703,7 +706,7 @@
     ///
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
     /// that is not available, fall back to querying RTC NVRAM.
-    </span><span class="kw">pub fn </span>fill_e820_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) {
+    </span><span class="kw">pub fn </span>fill_e820_table&lt;P: <span class="kw">crate</span>::Platform&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) {
         <span class="comment">// Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're
         // limiting ourselves to up to 128 entries.
@@ -728,7 +731,8 @@
                     <span class="macro">panic!</span>(<span class="string">"QEMU_E820_RESERVATION_TABLE was not empty!"</span>);
                 }
 
-                build_e820_from_nvram(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table).expect(<span class="string">"failed to read from CMOS"</span>)
+                build_e820_from_nvram::&lt;P&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table)
+                    .expect(<span class="string">"failed to read from CMOS"</span>)
             }
         };
 
@@ -945,12 +949,14 @@
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and
 /// `qemu_cfg_e820()` in &lt;https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c&gt;),
 /// but &lt;https://wiki.osdev.org/Detecting_Memory_%28x86%29&gt; is also a good read on the topic.
-</span><span class="kw">fn </span>build_e820_from_nvram(e820_table: <span class="kw-2">&amp;mut </span>[BootE820Entry]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+</span><span class="kw">fn </span>build_e820_from_nvram&lt;P: <span class="kw">crate</span>::Platform&gt;(
+    e820_table: <span class="kw-2">&amp;mut </span>[BootE820Entry],
+) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b)
     // there was no pre-built E820 table in fw_cfg; thus, we can reasonably
     // expect CMOS to available, as that's what SeaBIOS would use in that
     // situation to build the E820 table.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>cmos = <span class="kw">unsafe </span>{ Cmos::new() };
+    </span><span class="kw">let </span><span class="kw-2">mut </span>cmos = <span class="kw">unsafe </span>{ Cmos::new::&lt;P&gt;() };
     <span class="kw">let </span><span class="kw-2">mut </span>rs = cmos.low_ram_size()<span class="question-mark">?</span>;
     <span class="kw">let </span>high = cmos.high_ram_size()<span class="question-mark">?</span>;
 

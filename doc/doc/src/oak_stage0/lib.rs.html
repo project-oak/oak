@@ -370,6 +370,11 @@
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -422,7 +427,7 @@
 <span class="kw">mod </span>apic;
 <span class="kw">mod </span>cmos;
 <span class="kw">mod </span>fw_cfg;
-<span class="kw">mod </span>hal;
+<span class="kw">pub mod </span>hal;
 <span class="kw">mod </span>initramfs;
 <span class="kw">mod </span>kernel;
 <span class="kw">mod </span>logging;
@@ -431,6 +436,10 @@
 <span class="kw">mod </span>pic;
 <span class="kw">mod </span>smp;
 <span class="kw">mod </span>zero_page;
+
+<span class="kw">pub use </span>hal::Platform;
+<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
+</span><span class="kw">pub use </span>hal::Sev;
 
 <span class="kw">type </span>Measurement = [u8; <span class="number">32</span>];
 
@@ -491,18 +500,19 @@
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
-</span><span class="kw">pub fn </span>rust64_start() -&gt; ! {
+</span><span class="kw">pub fn </span>rust64_start&lt;P: hal::Platform&gt;() -&gt; ! {
     paging::init_page_table_refs();
     hal::early_initialize_platform();
-    logging::init_logging();
+    logging::init_logging::&lt;P&gt;();
     <span class="macro">log::info!</span>(<span class="string">"starting..."</span>);
     <span class="comment">// Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg =
+        <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new::&lt;P&gt;(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>zero_page = Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
 
-    zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
+    zero_page.fill_e820_table::&lt;P&gt;(<span class="kw-2">&amp;mut </span>fwcfg);
 
     hal::initialize_platform(zero_page.e820_table());
 
@@ -572,7 +582,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps::&lt;P&gt;(rsdp) {
         <span class="macro">log::warn!</span>(<span class="string">"Failed to bootstrap APs: {}. APs may not be properly initialized."</span>, err);
     }
 

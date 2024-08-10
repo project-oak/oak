@@ -155,6 +155,9 @@
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -177,7 +180,7 @@
     sync::atomic::{AtomicU32, Ordering},
 };
 
-<span class="kw">use </span>x86_64::PhysAddr;
+<span class="kw">use </span>x86_64::{structures::paging::Size4KiB, PhysAddr};
 
 <span class="kw">use crate</span>::{
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
@@ -197,7 +200,10 @@
 #[link_section = <span class="string">".ap_bss"</span>]
 </span><span class="kw">static </span>LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(<span class="number">0</span>);
 
-<span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;mut </span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+<span class="kw">pub fn </span>start_ap&lt;M: <span class="kw">crate</span>::hal::Mmio&lt;Size4KiB&gt;&gt;(
+    lapic: <span class="kw-2">&amp;mut </span>Lapic&lt;M&gt;,
+    physical_apic_id: u32,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     lapic.send_init_ipi(physical_apic_id)<span class="question-mark">?</span>;
     <span class="comment">// TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no
     // connection to actual seconds.
@@ -231,7 +237,7 @@
 }
 
 <span class="comment">// TODO(#4235): Bootstrap the APs.
-</span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+</span><span class="kw">pub fn </span>bootstrap_aps&lt;P: <span class="kw">crate</span>::hal::Platform&gt;(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
@@ -246,8 +252,8 @@
     <span class="comment">// Disable the local PIC and set up our local APIC, as we need to send IPIs to
     // APs via the APIC. Safety: we can reasonably expect the PICs to be
     // available.
-    </span><span class="kw">unsafe </span>{ disable_pic8259()<span class="question-mark">? </span>};
-    <span class="kw">let </span><span class="kw-2">mut </span>lapic = Lapic::enable()<span class="question-mark">?</span>;
+    </span><span class="kw">unsafe </span>{ disable_pic8259::&lt;P&gt;()<span class="question-mark">? </span>};
+    <span class="kw">let </span><span class="kw-2">mut </span>lapic = Lapic::&lt;P::Mmio&lt;Size4KiB&gt;&gt;::enable::&lt;P&gt;()<span class="question-mark">?</span>;
 
     <span class="kw">let </span>local_apic_id = lapic.local_apic_id();
 
