@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Base","Msr","Port","PortFactory","Sev"],"trait":["Mmio","Platform"]};
+window.SIDEBAR_ITEMS = {"enum":["PageAssignment"],"struct":["Base","Msr","Port","PortFactory","Sev"],"trait":["Mmio","Platform"]};

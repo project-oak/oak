@@ -117,6 +117,8 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -140,15 +142,17 @@
 <span class="kw">pub use </span>mmio::<span class="kw-2">*</span>;
 <span class="kw">use </span>oak_dice::evidence::TeePlatform;
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
-<span class="kw">use </span>oak_sev_guest::msr::PageAssignment;
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>oak_stage0_dice::DerivedKey;
-<span class="kw">pub use </span>x86_64::registers::model_specific::Msr;
-<span class="kw">use </span>x86_64::structures::{
-    paging::{Page, PageSize, Size4KiB},
-    port::{PortRead, PortWrite},
+<span class="kw">use </span>x86_64::{
+    registers::model_specific::Msr,
+    structures::{
+        paging::{Page, PageSize, Size4KiB},
+        port::{PortRead, PortWrite},
+    },
 };
 
+<span class="kw">use </span><span class="kw">super</span>::PageAssignment;
 <span class="kw">use crate</span>::{paging::PageEncryption, zero_page::ZeroPage};
 
 <span class="kw">pub struct </span>Base {}

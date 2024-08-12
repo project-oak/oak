@@ -292,7 +292,6 @@
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -316,7 +315,6 @@
 };
 
 <span class="kw">use </span>oak_core::sync::OnceCell;
-<span class="kw">use </span>oak_sev_guest::msr::PageAssignment;
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     instructions::tlb::flush_all,
@@ -327,7 +325,7 @@
     PhysAddr,
 };
 
-<span class="kw">use crate</span>::{BootAllocator, Platform, BOOT_ALLOC};
+<span class="kw">use crate</span>::{hal::PageAssignment, BootAllocator, Platform, BOOT_ALLOC};
 
 <span class="kw">pub static </span><span class="kw-2">mut </span>PML4: PageTable = PageTable::new();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PDPT: PageTable = PageTable::new();
