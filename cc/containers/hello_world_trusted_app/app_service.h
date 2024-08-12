@@ -22,6 +22,7 @@
 #include "absl/log/log.h"
 #include "absl/strings/string_view.h"
 #include "cc/containers/sdk/encryption_key_handle.h"
+#include "cc/containers/sdk/oak_session.h"
 #include "cc/containers/sdk/orchestrator_client.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
@@ -34,11 +35,9 @@ class TrustedApplicationImpl
     : public containers::example::TrustedApplication::Service {
  public:
   TrustedApplicationImpl(
-      std::unique_ptr<::oak::crypto::EncryptionKeyHandle> encryption_key_handle,
-      oak::session::v1::EndorsedEvidence endorsed_evidence,
+      oak::containers::sdk::OakSessionContext oak_session_context,
       absl::string_view application_config)
-      : encryption_key_handle_(std::move(encryption_key_handle)),
-        endorsed_evidence_(endorsed_evidence),
+      : oak_session_context_(std::move(oak_session_context)),
         application_config_(application_config) {}
 
   grpc::Status Session(
@@ -48,12 +47,9 @@ class TrustedApplicationImpl
       override;
 
  private:
-  std::unique_ptr<::oak::crypto::EncryptionKeyHandle> encryption_key_handle_;
+  oak::containers::sdk::OakSessionContext oak_session_context_;
   const oak::session::v1::EndorsedEvidence endorsed_evidence_;
   const std::string application_config_;
-
-  absl::StatusOr<oak::crypto::v1::EncryptedResponse> HandleRequest(
-      const oak::crypto::v1::EncryptedRequest& encrypted_request) const;
 };
 
 }  // namespace oak::oak_containers_hello_world_trusted_app

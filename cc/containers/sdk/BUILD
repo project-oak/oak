@@ -80,3 +80,22 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "oak_session",
+    srcs = ["oak_session.cc"],
+    hdrs = ["oak_session.h"],
+    deps = [
+        "//cc/containers/sdk:encryption_key_handle",
+        "//cc/crypto:common",
+        "//cc/crypto:encryption_key",
+        "//cc/crypto:server_encryptor",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:service_streaming_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)

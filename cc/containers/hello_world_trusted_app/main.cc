@@ -27,6 +27,7 @@
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
 
+using ::oak::containers::sdk::OakSessionContext;
 using ::oak::containers::sdk::OrchestratorClient;
 using ::oak::oak_containers_hello_world_trusted_app::TrustedApplicationImpl;
 
@@ -43,8 +44,11 @@ int main(int argc, char* argv[]) {
   QCHECK_OK(endorsed_evidence);
 
   TrustedApplicationImpl service(
-      std::make_unique<::oak::containers::sdk::InstanceEncryptionKeyHandle>(),
-      *endorsed_evidence, *application_config);
+      OakSessionContext(
+          std::move(*endorsed_evidence),
+          std::make_unique<
+              ::oak::containers::sdk::InstanceEncryptionKeyHandle>()),
+      *application_config);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());

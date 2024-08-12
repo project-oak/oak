@@ -26,6 +26,7 @@ cc_library(
     hdrs = ["app_service.h"],
     deps = [
         "//cc/containers/sdk:encryption_key_handle",
+        "//cc/containers/sdk:oak_session",
         "//cc/containers/sdk:orchestrator_client",
         "//cc/crypto:common",
         "//cc/crypto:server_encryptor",
@@ -44,6 +45,7 @@ cc_binary(
     deps = [
         ":app_service",
         "//cc/containers/sdk:encryption_key_handle",
+        "//cc/containers/sdk:oak_session",
         "//cc/containers/sdk:orchestrator_client",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_grpc_grpc//:grpc++_reflection",
