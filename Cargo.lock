@@ -213,12 +213,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "atomic_refcell"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e67cd8309bbd06cd603a9e693a784ac2e5d1e955f11286e355089fcab3047c"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1655,9 +1649,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ab92f4f49ee4fb4f997c784b7a2e0fa70050211e0b6a287f898c3c9785ca956"
+checksum = "cde7055719c54e36e95e8719f95883f22072a48ede39db7fc17a4e1d5281e9b9"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1867,12 +1861,12 @@ checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "libloading"
-version = "0.8.1"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c571b676ddfc9a8c12f1f3d3085a7b163966a8fd8098a90640953ce5f6170161"
+checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-sys 0.48.0",
+ "windows-targets 0.52.0",
 ]
 
 [[package]]
@@ -2267,22 +2261,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_attestation_explain_cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "hex",
- "oak_attestation_explain",
- "oak_attestation_verification",
- "oak_attestation_verification_test_utils",
- "oak_proto_rust",
- "prost",
- "sha2",
- "zerocopy",
-]
-
-[[package]]
 name = "oak_attestation_explain_wasm"
 version = "0.1.0"
 dependencies = [
@@ -2292,16 +2270,6 @@ dependencies = [
  "oak_proto_rust",
  "prost",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "oak_attestation_integration_tests"
-version = "0.1.0"
-dependencies = [
- "oak_attestation",
- "oak_attestation_verification",
- "oak_proto_rust",
- "oak_restricted_kernel_sdk",
 ]
 
 [[package]]
@@ -2942,16 +2910,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_hello_world_linux_init"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "nix 0.28.0",
- "simple_logger",
-]
-
-[[package]]
 name = "oak_hello_world_proto"
 version = "0.1.0"
 dependencies = [
@@ -3201,19 +3159,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_virtio"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bitflags 2.4.1",
- "log",
- "rand",
- "rust-hypervisor-firmware-virtio",
- "strum",
- "x86_64",
-]
-
-[[package]]
 name = "object"
 version = "0.32.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3358,9 +3303,9 @@ dependencies = [
 
 [[package]]
 name = "ouroboros"
-version = "0.18.3"
+version = "0.18.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97b7be5a8a3462b752f4be3ff2b2bf2f7f1d00834902e46be2a4d68b87b0573c"
+checksum = "944fa20996a25aded6b4795c6d63f10014a7a83f8be9828a11860b08c5fc4a67"
 dependencies = [
  "aliasable",
  "ouroboros_macro",
@@ -3369,9 +3314,9 @@ dependencies = [
 
 [[package]]
 name = "ouroboros_macro"
-version = "0.18.3"
+version = "0.18.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b645dcde5f119c2c454a92d0dfa271a2a3b205da92e4292a68ead4bdbfde1f33"
+checksum = "39b0deead1528fd0e5947a8546a9642a9777c25f6e1e26f34c97b204bbb465bd"
 dependencies = [
  "heck 0.4.1",
  "itertools 0.12.1",
@@ -4011,16 +3956,6 @@ dependencies = [
  "nix 0.27.1",
  "thiserror",
  "tokio",
-]
-
-[[package]]
-name = "rust-hypervisor-firmware-virtio"
-version = "0.1.0"
-dependencies = [
- "atomic_refcell",
- "bitflags 2.4.1",
- "log",
- "x86_64",
 ]
 
 [[package]]
@@ -5708,9 +5643,9 @@ dependencies = [
 
 [[package]]
 name = "yansi"
-version = "1.0.0-rc.1"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1367295b8f788d371ce2dbc842c7b709c73ee1364d30351dd300ec2203b12377"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"
