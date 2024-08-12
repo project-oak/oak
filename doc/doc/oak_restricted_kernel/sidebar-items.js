@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["panic","start_kernel"],"mod":["shutdown"],"static":["BASE_L4_PAGE_TABLE","FRAME_ALLOCATOR","GUEST_HOST_HEAP","PAGE_TABLES","VMA_ALLOCATOR"]};
