@@ -29,13 +29,9 @@ use oak_sev_guest::{
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
-use x86_64::{
-    instructions::port::{PortRead, PortWrite},
-    structures::paging::PageSize,
-    PhysAddr, VirtAddr,
-};
+use x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
 
-use super::{Base, PageAssignment};
+use super::{Base, PageAssignment, PortFactory};
 use crate::{
     allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
 };
@@ -162,54 +158,18 @@ impl crate::Platform for Sev {
         mmio::Mmio::new(base_address)
     }
 
-    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_read_u8(port)
+    fn port_factory() -> PortFactory {
+        if GHCB_WRAPPER.get().is_some() {
+            PortFactory {
+                read_u8: |port| GHCB_WRAPPER.get().unwrap().io_read_u8(port),
+                read_u16: |port| GHCB_WRAPPER.get().unwrap().io_read_u16(port),
+                read_u32: |port| GHCB_WRAPPER.get().unwrap().io_read_u32(port),
+                write_u8: |port, value| GHCB_WRAPPER.get().unwrap().io_write_u8(port, value),
+                write_u16: |port, value| GHCB_WRAPPER.get().unwrap().io_write_u16(port, value),
+                write_u32: |port, value| GHCB_WRAPPER.get().unwrap().io_write_u32(port, value),
+            }
         } else {
-            Ok(u8::read_from_port(port))
-        }
-    }
-
-    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_write_u8(port, value)
-        } else {
-            u8::write_to_port(port, value);
-            Ok(())
-        }
-    }
-
-    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_read_u16(port)
-        } else {
-            Ok(u16::read_from_port(port))
-        }
-    }
-
-    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_write_u16(port, value)
-        } else {
-            u16::write_to_port(port, value);
-            Ok(())
-        }
-    }
-
-    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_read_u32(port)
-        } else {
-            Ok(u32::read_from_port(port))
-        }
-    }
-
-    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str> {
-        if let Some(mut ghcb) = GHCB_WRAPPER.get() {
-            ghcb.io_write_u32(port, value)
-        } else {
-            u32::write_to_port(port, value);
-            Ok(())
+            crate::hal::Base::port_factory()
         }
     }
 

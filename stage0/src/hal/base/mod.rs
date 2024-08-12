@@ -31,7 +31,7 @@ use x86_64::{
     },
 };
 
-use super::PageAssignment;
+use super::{PageAssignment, PortFactory};
 use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
@@ -48,31 +48,26 @@ impl crate::Platform for Base {
         mmio::Mmio::new(base_address)
     }
 
-    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str> {
-        Ok(u8::read_from_port(port))
-    }
-
-    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str> {
-        u8::write_to_port(port, value);
-        Ok(())
-    }
-
-    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str> {
-        Ok(u16::read_from_port(port))
-    }
-
-    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str> {
-        u16::write_to_port(port, value);
-        Ok(())
-    }
-
-    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str> {
-        Ok(u32::read_from_port(port))
-    }
-
-    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str> {
-        u32::write_to_port(port, value);
-        Ok(())
+    fn port_factory() -> PortFactory {
+        // Safety: all these function pointers are marked as unsafe, but you can't have
+        // a unsafe closure.
+        PortFactory {
+            read_u8: |port| unsafe { Ok(u8::read_from_port(port)) },
+            read_u16: |port| unsafe { Ok(u16::read_from_port(port)) },
+            read_u32: |port| unsafe { Ok(u32::read_from_port(port)) },
+            write_u8: |port, value| {
+                unsafe { u8::write_to_port(port, value) };
+                Ok(())
+            },
+            write_u16: |port, value| {
+                unsafe { u16::write_to_port(port, value) };
+                Ok(())
+            },
+            write_u32: |port, value| {
+                unsafe { u32::write_to_port(port, value) };
+                Ok(())
+            },
+        }
     }
 
     fn early_initialize_platform() {}

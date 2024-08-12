@@ -128,22 +128,8 @@ impl oak_stage0::Platform for Tdx {
     {
         todo!()
     }
-    unsafe fn read_u8_from_port(_: u16) -> Result<u8, &'static str> {
-        todo!()
-    }
-    unsafe fn write_u8_to_port(_: u16, _: u8) -> Result<(), &'static str> {
-        todo!()
-    }
-    unsafe fn read_u16_from_port(_: u16) -> Result<u16, &'static str> {
-        todo!()
-    }
-    unsafe fn write_u16_to_port(_: u16, _: u16) -> Result<(), &'static str> {
-        todo!()
-    }
-    unsafe fn read_u32_from_port(_: u16) -> Result<u32, &'static str> {
-        todo!()
-    }
-    unsafe fn write_u32_to_port(_: u16, _: u32) -> Result<(), &'static str> {
+
+    fn port_factory() -> oak_stage0::hal::PortFactory {
         todo!()
     }
 

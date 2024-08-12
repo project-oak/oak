@@ -53,7 +53,7 @@ static LOGGER: Logger = Logger {};
 pub fn init_logging<P: crate::Platform>() {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    let mut port = unsafe { SerialPort::new(SERIAL_BASE, PortFactory::new::<P>()) };
+    let mut port = unsafe { SerialPort::new(SERIAL_BASE, P::port_factory()) };
     port.init().expect("couldn't initialize logging serial port");
     {
         let mut lock = SERIAL_PORT.lock();

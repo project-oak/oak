@@ -29,11 +29,7 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::{
-    allocator::Shared,
-    hal::{Port, PortFactory},
-    BootAllocator,
-};
+use crate::{allocator::Shared, hal::Port, BootAllocator};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -165,13 +161,14 @@ impl<P: crate::Platform> FwCfg<P> {
     /// The caller has to guarantee that at least doing the probe will not cause
     /// any adverse effects.
     pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
+        let port_factory = P::port_factory();
         let mut fwcfg = Self {
-            selector: PortFactory::new::<P>().new_writer(FWCFG_PORT_SELECTOR),
-            data: PortFactory::new::<P>().new_reader(FWCFG_PORT_DATA),
-            dma_high: PortFactory::new::<P>().new_writer(FWCFG_PORT_DMA),
+            selector: port_factory.new_writer(FWCFG_PORT_SELECTOR),
+            data: port_factory.new_reader(FWCFG_PORT_DATA),
+            dma_high: port_factory.new_writer(FWCFG_PORT_DMA),
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
-            dma_low: PortFactory::new::<P>().new_writer(FWCFG_PORT_DMA + 4),
+            dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
             dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
             dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: false,

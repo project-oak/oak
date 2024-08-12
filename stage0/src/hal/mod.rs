@@ -76,12 +76,7 @@ pub trait Platform {
 
     unsafe fn mmio<S: PageSize>(base_address: PhysAddr) -> Self::Mmio<S>;
 
-    unsafe fn read_u8_from_port(port: u16) -> Result<u8, &'static str>;
-    unsafe fn write_u8_to_port(port: u16, value: u8) -> Result<(), &'static str>;
-    unsafe fn read_u16_from_port(port: u16) -> Result<u16, &'static str>;
-    unsafe fn write_u16_to_port(port: u16, value: u16) -> Result<(), &'static str>;
-    unsafe fn read_u32_from_port(port: u16) -> Result<u32, &'static str>;
-    unsafe fn write_u32_to_port(port: u16, value: u32) -> Result<(), &'static str>;
+    fn port_factory() -> PortFactory;
 
     /// Platform-specific early initialization.
     ///
@@ -211,27 +206,18 @@ impl Msr {
     }
 }
 
+/// Holder for port-based IO functions.
+///
+/// This is not a trait on purpose: `PortFactory` gets stored in a static, so it
+/// needs to be Sized.
 #[derive(Clone)]
 pub struct PortFactory {
-    read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
-    read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
-    read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
-    write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
-    write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
-    write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
-}
-
-impl PortFactory {
-    pub fn new<P: Platform>() -> Self {
-        Self {
-            read_u8: P::read_u8_from_port,
-            read_u16: P::read_u16_from_port,
-            read_u32: P::read_u32_from_port,
-            write_u8: P::write_u8_to_port,
-            write_u16: P::write_u16_to_port,
-            write_u32: P::write_u32_to_port,
-        }
-    }
+    pub read_u8: unsafe fn(u16) -> Result<u8, &'static str>,
+    pub read_u16: unsafe fn(u16) -> Result<u16, &'static str>,
+    pub read_u32: unsafe fn(u16) -> Result<u32, &'static str>,
+    pub write_u8: unsafe fn(u16, u8) -> Result<(), &'static str>,
+    pub write_u16: unsafe fn(u16, u16) -> Result<(), &'static str>,
+    pub write_u32: unsafe fn(u16, u32) -> Result<(), &'static str>,
 }
 
 impl IoPortFactory<'_, u8, Port<u8>, Port<u8>> for PortFactory {

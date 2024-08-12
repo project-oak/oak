@@ -16,7 +16,7 @@
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
-use crate::hal::{Port, PortFactory};
+use crate::hal::Port;
 const CMOS_INDEX_PORT: u16 = 0x0070;
 const CMOS_DATA_PORT: u16 = 0x0071;
 
@@ -46,7 +46,7 @@ impl Cmos {
     /// actually available on those ports, otherwise the behaviour is
     /// undefined.
     pub unsafe fn new<P: crate::Platform>() -> Self {
-        let factory = PortFactory::new::<P>();
+        let factory = P::port_factory();
         Self {
             index_port: factory.new_reader(CMOS_INDEX_PORT),
             data_port: factory.new_reader(CMOS_DATA_PORT),

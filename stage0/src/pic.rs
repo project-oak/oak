@@ -16,7 +16,7 @@
 
 use oak_sev_guest::io::{IoPortFactory, PortWriter};
 
-use crate::hal::{Port, PortFactory};
+use crate::hal::Port;
 
 const PIC0_BASE: u16 = 0x20;
 const PIC1_BASE: u16 = 0xA0;
@@ -28,7 +28,7 @@ pub struct Pic {
 
 impl Pic {
     pub fn new<P: crate::Platform>(base: u16) -> Self {
-        let factory = PortFactory::new::<P>();
+        let factory = P::port_factory();
         Self { command: factory.new_writer(base), data: factory.new_writer(base + 1) }
     }
 
