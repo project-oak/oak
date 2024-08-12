@@ -54,6 +54,9 @@ struct Args {
 
     #[arg(long = "oak-dice", value_parser = try_parse_phys_addr)]
     dice_addr: PhysAddr,
+
+    #[arg(long = "oak-dice-length")]
+    dice_data_length: Option<usize>,
 }
 
 #[tokio::main]
@@ -79,7 +82,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     mount(None::<&str>, "/sys", Some("sysfs"), MsFlags::empty(), None::<&str>)
         .context("error mounting /sys")?;
 
-    let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr)?;
+    let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr, args.dice_data_length)?;
 
     // Unmount /sys and /dev as they are no longer needed.
     umount("/sys").context("failed to unmount /sys")?;

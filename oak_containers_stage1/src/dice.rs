@@ -82,8 +82,11 @@ impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
 
 /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at
 /// the given physical address.
-pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> {
-    let stage0_dice_data = read_stage0_dice_data(start)?;
+pub fn extract_stage0_dice_data(
+    start: PhysAddr,
+    length: Option<usize>,
+) -> anyhow::Result<DiceBuilder> {
+    let stage0_dice_data = read_stage0_dice_data(start, length)?;
     let dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)?;
     dice_data.try_into()
 }
@@ -92,8 +95,18 @@ pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> 
 /// address.
 ///
 /// Zeroes out the source physical memory after copying it.
-fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
-    let length = std::mem::size_of::<Stage0DiceData>();
+fn read_stage0_dice_data(start: PhysAddr, length: Option<usize>) -> anyhow::Result<Stage0DiceData> {
+    // This indicates the length of the DICE data that needs to be zeroed to delete
+    // the layer1 certificate authority from memory. Older versions of stage0 do not
+    // send it, we default to the length of the relevant struct.
+    let length = length
+        .inspect(|&l| {
+            assert!(
+                l >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
+            );
+        })
+        .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
     // Linux presents an inclusive end address.
     let end = start + (length as u64 - 1);
     // Ensure that the memory range is in reserved memory.
@@ -130,8 +143,10 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
         // is reserved.
         let source = unsafe { std::slice::from_raw_parts_mut(start_ptr as *mut u8, length) };
 
-        let result = Stage0DiceData::read_from(source)
-            .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
+        let result = oak_dice::evidence::Stage0DiceData::read_from(
+            &source[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
+        )
+        .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
 
         // Zero out the source memory.
         source.zeroize();

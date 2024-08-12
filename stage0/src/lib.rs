@@ -25,7 +25,7 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
-use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
+use oak_dice::evidence::{DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 use prost::Message;
@@ -279,7 +279,10 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     ));
 
     // Append the DICE data address to the kernel command-line.
-    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
+    let sensitive_dice_data_length = core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
+    let extra = format!(
+        "--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}  --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
+    );
     let cmdline = if cmdline.is_empty() {
         extra
     } else if cmdline.contains("--") {

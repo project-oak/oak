@@ -297,6 +297,21 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     let stage0_dice_data = {
         let dice_memory_slice = {
+            let dice_data_size = kernel_args
+                .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_LENGTH_CMDLINE_PARAM))
+                .map(|arg| {
+                    arg.parse::<usize>()
+                        .expect("dice data length kernel arg could not be converted to usize")
+                })
+                .inspect(|&length| {
+                    assert!(
+                        length >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                        "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
+                    );
+                })
+                // Older versions of stage0 do not supply this argument. In this case we assume the
+                // lenght of the dice data is the length of the associated struct.
+                .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
             let dice_data_phys_addr = {
                 let arg = kernel_args
                     .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
@@ -316,11 +331,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                         ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
                     range.contains(&dice_data_phys_addr)
                         && range.contains(&PhysAddr::new(
-                            dice_data_phys_addr.as_u64()
-                                + u64::try_from(core::mem::size_of::<
-                                    oak_dice::evidence::Stage0DiceData,
-                                >())
-                                .unwrap(),
+                            dice_data_phys_addr.as_u64() + u64::try_from(dice_data_size).unwrap(),
                         ))
                 };
 
@@ -336,19 +347,21 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     .expect("failed to translate physical dice address")
             };
 
-            // Safety: the E820 table indicated that this is the corrct memory segment.
+            // Safety: the E820 table indicated that this is the correct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
                     dice_data_virt_addr.as_mut_ptr(),
-                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                    dice_data_size,
                 )
             }
         };
 
-        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-            .expect("failed to read dice data");
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(
+            &dice_memory_slice[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
+        )
+        .expect("failed to read dice data");
 
-        // Overwrite the dice data provided by stage0 after reading.
+        // Overwrite the entire dice data provided by stage0 after reading.
         dice_memory_slice.zeroize();
 
         if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
