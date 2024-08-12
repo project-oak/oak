@@ -757,3 +757,58 @@ pub fn tdvmcall_wbinvd() -> Result<(), &'static str> {
 pub fn tdvmcall_wbnoinvd() -> Result<(), &'static str> {
     instruction_wbinvd(false /* invalidate_cache */)
 }
+
+/// TDVMCall GetTdVmCallInfo
+///
+/// See section 3.1 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
+/// for more information.
+pub fn get_td_vm_call_info() -> Result<(), &'static str> {
+    // The VMCALL sub-function for GetTdVmCallInfo
+    const SUB_FUNCTION: u64 = 0x10000;
+
+    let mut vm_call_result: u64;
+    let mut sub_function_result: u64;
+    let registers = Registers::default().union(Registers::R12);
+
+    let mut r11_out: u64;
+    let mut r12_out: u64;
+    let mut r13_out: u64;
+    let mut r14_out: u64;
+
+    // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+    // success). The bitflags of registers to be passed through to the VMM goes
+    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+    // spec) goes into R10, and the result of the subfunction is returned in
+    // R10. The sub-function to call goes into R11. The return code of the sub
+    // function goes to R10. R11/R12/R13/R14 are Leaf-specific output. They will
+    // be returned as 0. If the return code is SUCCESS, the TD is free to use
+    // the GPA as a shared, memory page.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits(),
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            inout("r11") SUB_FUNCTION => r11_out,
+            inout("r12") 0u64 => r12_out, // Must be set to 0
+            out("r13") r13_out,
+            out("r14") r14_out,
+            options(nomem, nostack),
+        );
+    }
+
+    assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+
+    // According to the spec, on success, the status code should be 0, also R11
+    // to R14 have to be 0.
+    if (sub_function_result | r11_out | r12_out | r13_out | r14_out) != SUCCESS {
+        Err("This TD cannot use all features defined in spec")
+    } else {
+        Ok(())
+    }
+}
