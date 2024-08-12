@@ -22,10 +22,7 @@ use core::arch::x86_64::CpuidResult;
 
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
-use oak_sev_guest::{
-    io::{IoPortFactory, PortReader, PortWriter},
-    msr::PageAssignment,
-};
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
@@ -62,6 +59,13 @@ pub trait Mmio<S: PageSize> {
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
     unsafe fn write_u32(&mut self, offset: usize, value: u32);
+}
+
+/// Whether a memory page is private to the guest or shared with the hypervisor.
+#[derive(Copy, Clone, Debug)]
+pub enum PageAssignment {
+    Shared,
+    Private,
 }
 
 pub trait Platform {

@@ -167,10 +167,7 @@ impl oak_stage0::Platform for Tdx {
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
         todo!()
     }
-    fn change_page_state(
-        _: x86_64::structures::paging::Page,
-        _: oak_sev_guest::msr::PageAssignment,
-    ) {
+    fn change_page_state(_: x86_64::structures::paging::Page, _: oak_stage0::hal::PageAssignment) {
         todo!()
     }
     fn revalidate_page(_: x86_64::structures::paging::Page) {

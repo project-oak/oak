@@ -35,7 +35,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use super::Base;
+use super::{Base, PageAssignment};
 use crate::{
     allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
 };
@@ -132,6 +132,15 @@ pub(crate) fn encrypted() -> u64 {
     // Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     unsafe { ENCRYPTED }
+}
+
+impl Into<oak_sev_guest::msr::PageAssignment> for PageAssignment {
+    fn into(self) -> oak_sev_guest::msr::PageAssignment {
+        match self {
+            PageAssignment::Shared => oak_sev_guest::msr::PageAssignment::Shared,
+            PageAssignment::Private => oak_sev_guest::msr::PageAssignment::Private,
+        }
+    }
 }
 
 pub struct Sev {}
@@ -313,9 +322,9 @@ impl crate::Platform for Sev {
 
     fn change_page_state(
         page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-        state: oak_sev_guest::msr::PageAssignment,
+        state: super::PageAssignment,
     ) {
-        accept_memory::change_page_state(page, state).expect("failed to change page state");
+        accept_memory::change_page_state(page, state.into()).expect("failed to change page state");
     }
 
     fn revalidate_page(

@@ -21,15 +21,17 @@ use core::arch::x86_64::{CpuidResult, __cpuid};
 pub use mmio::*;
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
-use oak_sev_guest::msr::PageAssignment;
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use oak_stage0_dice::DerivedKey;
-pub use x86_64::registers::model_specific::Msr;
-use x86_64::structures::{
-    paging::{Page, PageSize, Size4KiB},
-    port::{PortRead, PortWrite},
+use x86_64::{
+    registers::model_specific::Msr,
+    structures::{
+        paging::{Page, PageSize, Size4KiB},
+        port::{PortRead, PortWrite},
+    },
 };
 
+use super::PageAssignment;
 use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}

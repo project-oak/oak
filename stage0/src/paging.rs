@@ -21,7 +21,6 @@ use core::{
 };
 
 use oak_core::sync::OnceCell;
-use oak_sev_guest::msr::PageAssignment;
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb::flush_all,
@@ -32,7 +31,7 @@ use x86_64::{
     PhysAddr,
 };
 
-use crate::{BootAllocator, Platform, BOOT_ALLOC};
+use crate::{hal::PageAssignment, BootAllocator, Platform, BOOT_ALLOC};
 
 pub static mut PML4: PageTable = PageTable::new();
 pub static mut PDPT: PageTable = PageTable::new();
