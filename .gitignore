@@ -127,3 +127,6 @@ toolchain/toolchain.tar.bz2
 # Nix outputs
 /result
 /dev-profile*
+
+# Developer-local justfile
+justfile.local

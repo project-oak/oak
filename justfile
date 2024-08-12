@@ -5,6 +5,11 @@
 # - https://github.com/casey/just
 # - https://just.systems/man/en/
 
+# Import justfile.local, if it exists, so that developers can create their own
+# justfile commands that might not be generally useful enough to commit to the
+# project.
+import? "justfile.local"
+
 export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { "--config=ci" }
 
 # Quick-and-dirty Cargo.toml workspace finder for cargo commands.
