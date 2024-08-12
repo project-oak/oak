@@ -31,7 +31,7 @@ use crate::{
 const DEFAULT_KERNEL_START: u64 = 0x200000;
 
 /// The default location for loading a compressed (bzImage format) kerne.
-const DEFAULT_BZIMAGE_SATRT: u64 = 0x2000000;
+const DEFAULT_BZIMAGE_START: u64 = 0x2000000; // See b/359144829 before changing.
 
 /// The default size for the kernel if a kernel wasn't supplied via the QEMU
 /// fw_cfg device.
@@ -138,7 +138,7 @@ pub fn try_load_kernel_image<P: crate::Platform>(
     let size = file.size();
 
     let dma_address = if bzimage {
-        PhysAddr::new(DEFAULT_BZIMAGE_SATRT)
+        PhysAddr::new(DEFAULT_BZIMAGE_START)
     } else {
         // For an Elf kernel we copy the kernel image to a temporary location at the end
         // of available mapped virtual memory where we can parse it.

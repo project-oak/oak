@@ -32,14 +32,14 @@ package(
 #
 # This is not yet supported in our Bazel setup, but we can get RK to
 # work with relocation-model=static as the addresses are known at
-# compile time.
+# compile time. See b/359144829.
 _RK_WRAPPER_RUSTC_FLAGS = [
     "-C",
     "lto=true",  # Enable https://llvm.org/docs/LinkTimeOptimization.html.
     "-C",
     "panic=abort",
     "-C",
-    "relocation-model=static",
+    "relocation-model=static",  # TODO: b/359144829 - set relocation-model=pie.
     "-C",
     "opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
 ]
