@@ -312,7 +312,7 @@
 };
 
 <span class="kw">use crate</span>::{
-    config::SessionConfig,
+    config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
     ProtocolEngine,
 };
@@ -348,21 +348,21 @@
 }
 
 <span class="comment">// Client-side secure attested session entrypoint.
-</span><span class="kw">pub struct </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
-    config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>ClientSession {
     handshaker: ClientHandshaker,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
-    </span>encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    </span>encryptor_config: EncryptorConfig,
+    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
     outgoing_requests: VecDeque&lt;SessionRequest&gt;,
     incoming_responses: VecDeque&lt;SessionResponse&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientSession&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>create(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+<span class="kw">impl </span>ClientSession {
+    <span class="kw">pub fn </span>create(config: SessionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            config,
-            handshaker: ClientHandshaker::create(<span class="kw-2">&amp;</span>config.handshaker_config)
+            handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
+            encryptor_config: config.encryptor_config,
             encryptor: <span class="prelude-val">None</span>,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -370,7 +370,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Session <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>Session <span class="kw">for </span>ClientSession {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.encryptor.is_some()
     }
@@ -414,7 +414,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionResponse, SessionRequest&gt; <span class="kw">for </span>ClientSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;SessionResponse, SessionRequest&gt; <span class="kw">for </span>ClientSession {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionRequest&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.is_open() {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop_front());
@@ -448,7 +448,7 @@
                 </span>))<span class="question-mark">?</span>;
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.config.encryptor_config.encryptor_provider)(session_keys)
+                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }
@@ -460,20 +460,20 @@
 }
 
 <span class="comment">// Server-side secure attested session entrypoint.
-</span><span class="kw">pub struct </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
-    config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
-    handshaker: ServerHandshaker&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>ServerSession {
+    handshaker: ServerHandshaker,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
-    </span>encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    </span>encryptor_config: EncryptorConfig,
+    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
     outgoing_responses: VecDeque&lt;SessionResponse&gt;,
     incoming_requests: VecDeque&lt;SessionRequest&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerSession&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>ServerSession {
+    <span class="kw">pub fn </span>new(config: SessionConfig) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            config,
-            handshaker: ServerHandshaker::new(<span class="kw-2">&amp;</span>config.handshaker_config),
+            handshaker: ServerHandshaker::new(config.handshaker_config),
+            encryptor_config: config.encryptor_config,
             encryptor: <span class="prelude-val">None</span>,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -481,7 +481,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Session <span class="kw">for </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>Session <span class="kw">for </span>ServerSession {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.encryptor.is_some()
     }
@@ -525,7 +525,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;SessionRequest, SessionResponse&gt; <span class="kw">for </span>ServerSession&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;SessionRequest, SessionResponse&gt; <span class="kw">for </span>ServerSession {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionResponse&gt;&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front())
     }
@@ -558,7 +558,7 @@
                 }
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.config.encryptor_config.encryptor_provider)(session_keys)
+                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }

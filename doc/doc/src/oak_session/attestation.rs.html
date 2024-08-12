@@ -182,23 +182,23 @@
 <span class="doccomment">/// Client-side Attestation Provider that initiates remote attestation with the
 /// server.
 </span><span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>ClientAttestationProvider {
+    config: AttestationProviderConfig,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>ClientAttestationProvider {
+    <span class="kw">pub fn </span>new(config: AttestationProviderConfig) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ config }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AttestationProvider <span class="kw">for </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>AttestationProvider <span class="kw">for </span>ClientAttestationProvider {
     <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;AttestResponse, AttestRequest&gt; <span class="kw">for </span>ClientAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;AttestResponse, AttestRequest&gt; <span class="kw">for </span>ClientAttestationProvider {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestRequest&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
@@ -214,23 +214,23 @@
 <span class="doccomment">/// Server-side Attestation Provider that responds to the remote attestation
 /// request from the client.
 </span><span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>ServerAttestationProvider {
+    config: AttestationProviderConfig,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>ServerAttestationProvider {
+    <span class="kw">pub fn </span>new(config: AttestationProviderConfig) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ config }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AttestationProvider <span class="kw">for </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>AttestationProvider <span class="kw">for </span>ServerAttestationProvider {
     <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
         <span class="macro">core::unimplemented!</span>();
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;AttestRequest, AttestResponse&gt; <span class="kw">for </span>ServerAttestationProvider&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;AttestRequest, AttestResponse&gt; <span class="kw">for </span>ServerAttestationProvider {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestResponse&gt;&gt; {
         <span class="macro">core::unimplemented!</span>();
     }

@@ -213,6 +213,9 @@
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -232,7 +235,8 @@
 </span><span class="doccomment">//! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-</span><span class="kw">use </span>core::convert::TryInto;
+</span><span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>core::convert::TryInto;
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::{
@@ -273,7 +277,7 @@
 }
 
 <span class="kw">impl </span>ClientHandshaker {
-    <span class="kw">pub fn </span>create(handshaker_config: <span class="kw-2">&amp;</span>HandshakerConfig) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+    <span class="kw">pub fn </span>create(handshaker_config: HandshakerConfig) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>handshake_type = handshaker_config.handshake_type;
         <span class="kw">let </span>peer_static_public_key = handshaker_config.peer_static_public_key.clone();
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
@@ -347,15 +351,15 @@
 <span class="doccomment">/// Server-side Handshaker that responds to the crypto handshake request from
 /// the client.
 </span><span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
+</span><span class="kw">pub struct </span>ServerHandshaker {
     handshake_type: HandshakeType,
-    self_identity_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>IdentityKeyHandle&gt;,
+    self_identity_key: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>IdentityKeyHandle&gt;&gt;,
     handshake_response: <span class="prelude-ty">Option</span>&lt;HandshakeResponse&gt;,
     handshake_result: <span class="prelude-ty">Option</span>&lt;SessionKeys&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>new(handshaker_config: <span class="kw-2">&amp;</span>HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>ServerHandshaker {
+    <span class="kw">pub fn </span>new(handshaker_config: HandshakerConfig) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             handshake_type: handshaker_config.handshake_type,
             self_identity_key: handshaker_config.self_static_private_key,
@@ -365,13 +369,13 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Handshaker <span class="kw">for </span>ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>Handshaker <span class="kw">for </span>ServerHandshaker {
     <span class="kw">fn </span>derive_session_keys(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SessionKeys&gt; {
         <span class="self">self</span>.handshake_result.take()
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ProtocolEngine&lt;HandshakeRequest, HandshakeResponse&gt; <span class="kw">for </span>ServerHandshaker&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>ProtocolEngine&lt;HandshakeRequest, HandshakeResponse&gt; <span class="kw">for </span>ServerHandshaker {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;HandshakeResponse&gt;&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">self</span>.handshake_response.take())
     }
@@ -393,7 +397,9 @@
                     HandshakeType::NoiseKN =&gt; <span class="macro">core::unimplemented!</span>(),
                     HandshakeType::NoiseNK =&gt; respond_nk(
                         <span class="self">self</span>.self_identity_key
-                            .context(<span class="string">"handshaker_config missing the self private key"</span>)<span class="question-mark">?</span>,
+                            .as_ref()
+                            .context(<span class="string">"handshaker_config missing the self private key"</span>)<span class="question-mark">?
+                            </span>.as_ref(),
                         <span class="kw-2">&amp;</span>in_data,
                     )
                     .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"handshake response failed: {e:?}"</span>))<span class="question-mark">?</span>,

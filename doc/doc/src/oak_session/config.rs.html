@@ -167,26 +167,26 @@
 };
 
 <span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>SessionConfig&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt;,
-    <span class="kw">pub </span>handshaker_config: HandshakerConfig&lt;<span class="lifetime">'a</span>&gt;,
-    <span class="kw">pub </span>encryptor_config: EncryptorConfig&lt;<span class="lifetime">'a</span>&gt;,
+</span><span class="kw">pub struct </span>SessionConfig {
+    <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig,
+    <span class="kw">pub </span>handshaker_config: HandshakerConfig,
+    <span class="kw">pub </span>encryptor_config: EncryptorConfig,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SessionConfig&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>SessionConfig {
     <span class="kw">pub fn </span>builder(
         attestation_type: AttestationType,
         handshake_type: HandshakeType,
-    ) -&gt; SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
+    ) -&gt; SessionConfigBuilder {
         SessionConfigBuilder::new(attestation_type, handshake_type)
     }
 }
 
-<span class="kw">pub struct </span>SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
-    config: SessionConfig&lt;<span class="lifetime">'a</span>&gt;,
+<span class="kw">pub struct </span>SessionConfigBuilder {
+    config: SessionConfig,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; SessionConfigBuilder&lt;<span class="lifetime">'a</span>&gt; {
+<span class="kw">impl </span>SessionConfigBuilder {
     <span class="kw">fn </span>new(attestation_type: AttestationType, handshake_type: HandshakeType) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>attestation_provider_config = AttestationProviderConfig {
             attestation_type,
@@ -202,10 +202,10 @@
         };
 
         <span class="kw">let </span>encryptor_config = EncryptorConfig {
-            encryptor_provider: <span class="kw-2">&amp;</span>|sk| {
+            encryptor_provider: Box::new(|sk| {
                 &lt;SessionKeys <span class="kw">as </span>TryInto&lt;OrderedChannelEncryptor&gt;&gt;::try_into(sk)
                     .map(|v| Box::new(v) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Encryptor&gt;)
-            },
+            }),
         };
 
         <span class="kw">let </span>config =
@@ -213,17 +213,17 @@
         <span class="self">Self </span>{ config }
     }
 
-    <span class="kw">pub fn </span>add_self_attester(<span class="kw-2">mut </span><span class="self">self</span>, attester: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>add_self_attester(<span class="kw-2">mut </span><span class="self">self</span>, attester: Box&lt;<span class="kw">dyn </span>Attester&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.attestation_provider_config.self_attesters.push(attester);
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>add_peer_verifier(<span class="kw-2">mut </span><span class="self">self</span>, verifier: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>add_peer_verifier(<span class="kw-2">mut </span><span class="self">self</span>, verifier: Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.attestation_provider_config.peer_verifiers.push(verifier);
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>set_self_private_key(<span class="kw-2">mut </span><span class="self">self</span>, private_key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>IdentityKeyHandle) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>set_self_private_key(<span class="kw-2">mut </span><span class="self">self</span>, private_key: Box&lt;<span class="kw">dyn </span>IdentityKeyHandle&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">if </span><span class="self">self</span>.config.handshaker_config.self_static_private_key.is_none() {
             <span class="self">self</span>.config.handshaker_config.self_static_private_key = <span class="prelude-val">Some</span>(private_key);
         } <span class="kw">else </span>{
@@ -243,29 +243,29 @@
 
     <span class="kw">pub fn </span>set_encryption_provider(
         <span class="kw-2">mut </span><span class="self">self</span>,
-        encryptor_provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;,
+        encryptor_provider: Box&lt;<span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.encryptor_config.encryptor_provider = encryptor_provider;
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; SessionConfig&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; SessionConfig {
         <span class="self">self</span>.config
     }
 }
 
 <span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>AttestationProviderConfig&lt;<span class="lifetime">'a</span>&gt; {
+</span><span class="kw">pub struct </span>AttestationProviderConfig {
     <span class="kw">pub </span>attestation_type: AttestationType,
-    <span class="kw">pub </span>self_attesters: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Attester&gt;,
-    <span class="kw">pub </span>peer_verifiers: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>AttestationVerifier&gt;,
+    <span class="kw">pub </span>self_attesters: Vec&lt;Box&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
+    <span class="kw">pub </span>peer_verifiers: Vec&lt;Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub struct </span>HandshakerConfig&lt;<span class="lifetime">'a</span>&gt; {
+</span><span class="kw">pub struct </span>HandshakerConfig {
     <span class="kw">pub </span>handshake_type: HandshakeType,
     <span class="comment">// Used for authentication schemes where a static public key is pre-shared with the responder.
-    </span><span class="kw">pub </span>self_static_private_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>IdentityKeyHandle&gt;,
+    </span><span class="kw">pub </span>self_static_private_key: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>IdentityKeyHandle&gt;&gt;,
     <span class="comment">// Used for authentication schemes where a responder's static public key is pre-shared with
     // the initiator.
     </span><span class="kw">pub </span>peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
@@ -273,7 +273,7 @@
     </span><span class="kw">pub </span>peer_attestation_binding_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 
-<span class="kw">pub struct </span>EncryptorConfig&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub </span>encryptor_provider: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;,
+<span class="kw">pub struct </span>EncryptorConfig {
+    <span class="kw">pub </span>encryptor_provider: Box&lt;<span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
 }
 </code></pre></div></section></main></body></html>
