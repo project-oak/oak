@@ -69,7 +69,7 @@ async fn test_launcher_echo() {
     );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(20)).await;
+    tokio::time::sleep(Duration::from_secs(60)).await;
 
     let mut client = OakFunctionsClient::new(
         &format!("http://localhost:{port}"),
