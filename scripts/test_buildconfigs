@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# Sanity check for buildconfigs: Runs the build command and checks if the
+# subjects are present afterwards.
+#
+# Usage:
+#     scripts/test_buildconfigs buildconfigs/*.sh
+set -e
+
+check_buildconfig () {
+  buildconfig="$1"
+
+  # shellcheck source=/dev/null
+  source "${buildconfig}"
+
+  # Build the binary target.
+  "${BUILD_COMMAND[@]}"
+
+  for f in "${SUBJECT_PATHS[@]}"; do
+    if [ ! -f "${f}" ]; then
+      >&2 echo "ERROR: Missing ${f} in ${buildconfig}"
+      exit 1 # Test failed
+    fi
+  done
+}
+
+for b in "$@"; do
+  >&2 echo "Checking ${b}"
+  check_buildconfig "${b}"
+done
