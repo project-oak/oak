@@ -95,8 +95,8 @@
 ///
 /// If it finds a RAM disk it returns the byte slice where it is loaded. If not
 /// it returns `None`.
-</span><span class="kw">pub fn </span>try_load_initial_ram_disk(
-    fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg,
+</span><span class="kw">pub fn </span>try_load_initial_ram_disk&lt;P: <span class="kw">crate</span>::Platform&gt;(
+    fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
     kernel_info: <span class="kw-2">&amp;</span>KernelInfo,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]&gt; {

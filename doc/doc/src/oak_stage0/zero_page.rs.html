@@ -587,6 +587,9 @@
 <a href="#585" id="585">585</a>
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -660,7 +663,10 @@
     ///
     /// Returns the measurement (SHA2-384 digest) of the setup data if it was
     /// found, otherwise the measurement is all zeros.
-    </span><span class="kw">pub fn </span>try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">32</span>]&gt; {
+    </span><span class="kw">pub fn </span>try_fill_hdr_from_setup_data&lt;P: <span class="kw">crate</span>::Platform&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">32</span>]&gt; {
         <span class="kw">let </span>file = fw_cfg.get_setup_file()<span class="question-mark">?</span>;
         <span class="kw">let </span>size = file.size();
         <span class="comment">// We temporarily copy the setup data to the end of available mapped virtual
@@ -706,7 +712,7 @@
     ///
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
     /// that is not available, fall back to querying RTC NVRAM.
-    </span><span class="kw">pub fn </span>fill_e820_table&lt;P: <span class="kw">crate</span>::Platform&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) {
+    </span><span class="kw">pub fn </span>fill_e820_table&lt;P: <span class="kw">crate</span>::Platform&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;) {
         <span class="comment">// Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're
         // limiting ourselves to up to 128 entries.

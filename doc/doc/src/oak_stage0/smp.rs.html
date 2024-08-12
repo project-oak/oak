@@ -158,6 +158,7 @@
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -186,6 +187,7 @@
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
     apic::Lapic,
     pic::disable_pic8259,
+    Platform,
 };
 
 <span class="kw">extern </span><span class="string">"C" </span>{
@@ -200,11 +202,11 @@
 #[link_section = <span class="string">".ap_bss"</span>]
 </span><span class="kw">static </span>LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(<span class="number">0</span>);
 
-<span class="kw">pub fn </span>start_ap&lt;M: <span class="kw">crate</span>::hal::Mmio&lt;Size4KiB&gt;&gt;(
-    lapic: <span class="kw-2">&amp;mut </span>Lapic&lt;M&gt;,
+<span class="kw">pub fn </span>start_ap&lt;P: Platform&gt;(
+    lapic: <span class="kw-2">&amp;mut </span>Lapic&lt;P::Mmio&lt;Size4KiB&gt;&gt;,
     physical_apic_id: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    lapic.send_init_ipi(physical_apic_id)<span class="question-mark">?</span>;
+    lapic.send_init_ipi::&lt;P&gt;(physical_apic_id)<span class="question-mark">?</span>;
     <span class="comment">// TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no
     // connection to actual seconds.
     </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">15</span>) {
@@ -218,7 +220,7 @@
     <span class="comment">// Safety: we're not going to dereference the memory, we're just interested in
     // the pointer value.
     </span><span class="kw">let </span>vector = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>AP_START <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 };
-    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))<span class="question-mark">?</span>;
+    lapic.send_startup_ipi::&lt;P&gt;(physical_apic_id, PhysAddr::new(vector))<span class="question-mark">?</span>;
     <span class="comment">// TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send
     // SIPI again if the core hasn't started
     </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">20</span>) {
@@ -237,7 +239,7 @@
 }
 
 <span class="comment">// TODO(#4235): Bootstrap the APs.
-</span><span class="kw">pub fn </span>bootstrap_aps&lt;P: <span class="kw">crate</span>::hal::Platform&gt;(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+</span><span class="kw">pub fn </span>bootstrap_aps&lt;P: Platform&gt;(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
@@ -292,7 +294,7 @@
         }
 
         expected_aps += <span class="number">1</span>;
-        start_ap(<span class="kw-2">&amp;mut </span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
+        start_ap::&lt;P&gt;(<span class="kw-2">&amp;mut </span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
     }
 
     <span class="comment">// Wait until all APs have told they are online. Or we time out waiting for

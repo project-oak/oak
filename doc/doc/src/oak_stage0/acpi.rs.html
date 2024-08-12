@@ -556,6 +556,18 @@
 <a href="#554" id="554">554</a>
 <a href="#555" id="555">555</a>
 <a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -670,7 +682,11 @@
         Zone::from_repr(<span class="self">self</span>.zone)
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="kw">fn </span>invoke&lt;P: <span class="kw">crate</span>::Platform&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        fwcfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
+        acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span>file = fwcfg.find(<span class="self">self</span>.file()).unwrap();
         <span class="kw">let </span>name = <span class="self">self</span>.file().to_str().map_err(|<span class="kw">_</span>| <span class="string">"invalid file name"</span>)<span class="question-mark">?</span>;
 
@@ -1023,7 +1039,11 @@
 }
 
 <span class="kw">impl </span>Command&lt;<span class="lifetime">'_</span>&gt; {
-    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="kw">pub fn </span>invoke&lt;P: <span class="kw">crate</span>::Platform&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        fwcfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
+        acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             Command::Allocate(allocate) =&gt; allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) =&gt; add_pointer.invoke(),
@@ -1058,7 +1078,11 @@
         }
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="kw">fn </span>invoke&lt;P: <span class="kw">crate</span>::Platform&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        fwcfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
+        acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.tag &gt; CommandTag::VMM_SPECIFIC &amp;&amp; <span class="self">self</span>.tag().is_none() {
             <span class="macro">log::warn!</span>(<span class="string">"ignoring proprietary ACPI linker command with tag {:#x}"</span>, <span class="self">self</span>.tag);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -1078,8 +1102,8 @@
 <span class="doccomment">/// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-</span><span class="kw">pub fn </span>build_acpi_tables(
-    fwcfg: <span class="kw-2">&amp;mut </span>FwCfg,
+</span><span class="kw">pub fn </span>build_acpi_tables&lt;P: <span class="kw">crate</span>::Platform&gt;(
+    fwcfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
     acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="kw">let </span>file =

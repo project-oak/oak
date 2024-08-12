@@ -302,6 +302,50 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -321,20 +365,17 @@
 </span><span class="kw">mod </span>accept_memory;
 <span class="kw">mod </span>dice_attestation;
 <span class="kw">mod </span>mmio;
-<span class="kw">mod </span>msr;
 
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 
-<span class="kw">pub use </span>accept_memory::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>dice_attestation::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>msr::<span class="kw-2">*</span>;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_dice::evidence::TeePlatform;
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 <span class="kw">use </span>oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
+<span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 <span class="kw">use </span>x86_64::{
     instructions::port::{PortRead, PortWrite},
@@ -342,6 +383,7 @@
     PhysAddr, VirtAddr,
 };
 
+<span class="kw">use </span><span class="kw">super</span>::Base;
 <span class="kw">use crate</span>::{
     allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
 };
@@ -368,7 +410,8 @@
     }
 
     <span class="kw">pub fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) {
-        <span class="kw">let </span>ghcb = Shared::leak(Shared::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
+        <span class="kw">let </span>ghcb =
+            Shared::leak(Shared::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Sev&gt;::new_in(oak_sev_guest::ghcb::Ghcb::default(), alloc));
         ghcb.reset();
 
         <span class="comment">// We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
@@ -400,7 +443,7 @@
     /// after the function returns.
     </span><span class="kw">pub unsafe fn </span>deinit(<span class="kw-2">&amp;</span><span class="self">self</span>, alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) {
         <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.deinit().unwrap().into_inner().into_inner();
-        <span class="kw">let _ </span>= Shared::from_raw_in(ghcb, alloc);
+        <span class="kw">let _ </span>= Shared::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Sev&gt;::from_raw_in(ghcb, alloc);
     }
 
     <span class="kw">pub fn </span>get(
@@ -427,6 +470,16 @@
     <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
     // assembly.
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
+}
+
+<span class="doccomment">/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>encrypted() -&gt; u64 {
+    <span class="attr">#[no_mangle]
+    </span><span class="kw">static </span><span class="kw-2">mut </span>ENCRYPTED: u64 = <span class="number">0</span>;
+
+    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
+    // assembly.
+    </span><span class="kw">unsafe </span>{ ENCRYPTED }
 }
 
 <span class="kw">pub struct </span>Sev {}
@@ -498,110 +551,145 @@
             <span class="prelude-val">Ok</span>(())
         }
     }
-}
 
-<span class="kw">pub fn </span>early_initialize_platform() {
-    <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
-    // implies SEV-ES).
-    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        GHCB_WRAPPER.init(<span class="kw-2">&amp;</span>BOOT_ALLOC);
-    }
-    <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-        <span class="comment">// Safety: This is safe for SEV-ES and SNP because we're using an originally
-        // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
-        // If we get CPUID reads working, we may want to check that MTRR is
-        // supported, but only if we want to support very old processors.
-        // However, note that, this branch is only executed if
-        // we have encryption, and this wouldn't be true for very old processors.
-        </span><span class="kw">unsafe </span>{
-            <span class="kw">crate</span>::msr::MTRRDefType::write(
-                <span class="kw">crate</span>::msr::MTRRDefTypeFlags::MTRR_ENABLE,
-                <span class="kw">crate</span>::msr::MemoryType::WP,
-            );
+    <span class="kw">fn </span>early_initialize_platform() {
+        <span class="comment">// If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP
+        // implies SEV-ES).
+        </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+            GHCB_WRAPPER.init(<span class="kw-2">&amp;</span>BOOT_ALLOC);
         }
-    }
-}
-
-<span class="kw">pub fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
-    <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        dice_attestation::init_guest_message_encryptor()
-            .expect(<span class="string">"couldn't initialize guest message encryptor"</span>);
-        accept_memory::validate_memory(e820_table)
-    }
-
-    <span class="comment">// Register the AP Jump Table, if required.
-    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        <span class="comment">// This assumes identity mapping. Which we have in stage0.
-        </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
-        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-            <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
-            // Safety: we don't care about the contents of the secrets page beyond writing
-            // our jump table address into it.
-            </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
-            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
-        } <span class="kw">else </span>{
-            <span class="comment">// Plain old SEV-ES, use the GHCB protocol.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
-                ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
-                    .expect(<span class="string">"failed to set AP Jump Table"</span>);
+        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
+            <span class="comment">// Safety: This is safe for SEV-ES and SNP because we're using an originally
+            // supported mode of the Pentium 6: Write-protect, with MTRR enabled.
+            // If we get CPUID reads working, we may want to check that MTRR is
+            // supported, but only if we want to support very old processors.
+            // However, note that, this branch is only executed if
+            // we have encryption, and this wouldn't be true for very old processors.
+            </span><span class="kw">unsafe </span>{
+                <span class="kw">crate</span>::msr::MTRRDefType::write::&lt;Sev&gt;(
+                    <span class="kw">crate</span>::msr::MTRRDefTypeFlags::MTRR_ENABLE,
+                    <span class="kw">crate</span>::msr::MemoryType::WP,
+                );
             }
         }
     }
-}
 
-<span class="kw">pub fn </span>populate_zero_page(zero_page: <span class="kw-2">&amp;mut </span>ZeroPage) {
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="comment">// Safety: we're only interested in the pointer value of SEV_SECRETS, not its
-        // contents.
-        </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
-            oak_linux_boot_params::CCBlobSevInfo::new(
-                <span class="kw">unsafe </span>{ SEV_SECRETS.as_ptr() },
-                SEV_CPUID.as_ptr(),
-            ),
-            <span class="kw-2">&amp;</span>BOOT_ALLOC,
-        ));
-        <span class="kw">let </span>setup_data =
-            Box::leak(Box::new_in(oak_linux_boot_params::CCSetupData::new(cc_blob), <span class="kw-2">&amp;</span>BOOT_ALLOC));
-
-        zero_page.add_setup_data(setup_data);
-    }
-}
-
-<span class="kw">pub fn </span>deinit_platform() {
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
-        <span class="comment">// Safety: we're in the last moments of stage0 and nobody should access the GHCB
-        // beyond this point.
-        </span><span class="kw">unsafe </span>{ GHCB_WRAPPER.deinit(<span class="kw-2">&amp;</span>BOOT_ALLOC) };
-    }
-}
-
-<span class="kw">pub fn </span>tee_platform() -&gt; TeePlatform {
-    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        TeePlatform::AmdSevSnp
-    } <span class="kw">else </span>{
-        TeePlatform::None
-    }
-}
-
-<span class="doccomment">/// Returns the location of the ENCRYPTED bit when running under AMD SEV.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>encrypted() -&gt; u64 {
-    <span class="attr">#[no_mangle]
-    </span><span class="kw">static </span><span class="kw-2">mut </span>ENCRYPTED: u64 = <span class="number">0</span>;
-
-    <span class="comment">// Safety: we don't allow mutation and this is initialized in the bootstrap
-    // assembly.
-    </span><span class="kw">unsafe </span>{ ENCRYPTED }
-}
-
-<span class="kw">pub fn </span>page_table_mask(encryption_state: PageEncryption) -&gt; u64 {
-    <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-        <span class="kw">match </span>encryption_state {
-            PageEncryption::Encrypted =&gt; encrypted(),
-            PageEncryption::Unencrypted =&gt; <span class="number">0</span>,
+    <span class="kw">fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
+        <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
+        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+            dice_attestation::init_guest_message_encryptor()
+                .expect(<span class="string">"couldn't initialize guest message encryptor"</span>);
+            accept_memory::validate_memory(e820_table)
         }
-    } <span class="kw">else </span>{
-        <span class="number">0
-    </span>}
+
+        <span class="comment">// Register the AP Jump Table, if required.
+        </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+            <span class="comment">// This assumes identity mapping. Which we have in stage0.
+            </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
+            <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+                <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
+                // Safety: we don't care about the contents of the secrets page beyond writing
+                // our jump table address into it.
+                </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
+                secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
+            } <span class="kw">else </span>{
+                <span class="comment">// Plain old SEV-ES, use the GHCB protocol.
+                </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+                    ghcb.set_ap_jump_table(PhysAddr::new(jump_table_pa))
+                        .expect(<span class="string">"failed to set AP Jump Table"</span>);
+                }
+            }
+        }
+    }
+
+    <span class="kw">fn </span>populate_zero_page(zero_page: <span class="kw-2">&amp;mut </span>ZeroPage) {
+        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+            <span class="comment">// Safety: we're only interested in the pointer value of SEV_SECRETS, not its
+            // contents.
+            </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
+                oak_linux_boot_params::CCBlobSevInfo::new(
+                    <span class="kw">unsafe </span>{ SEV_SECRETS.as_ptr() },
+                    SEV_CPUID.as_ptr(),
+                ),
+                <span class="kw-2">&amp;</span>BOOT_ALLOC,
+            ));
+            <span class="kw">let </span>setup_data = Box::leak(Box::new_in(
+                oak_linux_boot_params::CCSetupData::new(cc_blob),
+                <span class="kw-2">&amp;</span>BOOT_ALLOC,
+            ));
+
+            zero_page.add_setup_data(setup_data);
+        }
+    }
+
+    <span class="kw">fn </span>deinit_platform() {
+        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) &amp;&amp; GHCB_WRAPPER.get().is_some() {
+            <span class="comment">// Safety: we're in the last moments of stage0 and nobody should access the GHCB
+            // beyond this point.
+            </span><span class="kw">unsafe </span>{ GHCB_WRAPPER.deinit(<span class="kw-2">&amp;</span>BOOT_ALLOC) };
+        }
+    }
+
+    <span class="kw">fn </span>tee_platform() -&gt; TeePlatform {
+        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+            TeePlatform::AmdSevSnp
+        } <span class="kw">else </span>{
+            TeePlatform::None
+        }
+    }
+
+    <span class="kw">fn </span>page_table_mask(encryption_state: PageEncryption) -&gt; u64 {
+        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
+            <span class="kw">match </span>encryption_state {
+                PageEncryption::Encrypted =&gt; encrypted(),
+                PageEncryption::Unencrypted =&gt; <span class="number">0</span>,
+            }
+        } <span class="kw">else </span>{
+            <span class="number">0
+        </span>}
+    }
+
+    <span class="kw">fn </span>get_attestation(
+        report_data: [u8; oak_sev_snp_attestation_report::REPORT_DATA_SIZE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        dice_attestation::get_attestation(report_data)
+    }
+
+    <span class="kw">fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;oak_stage0_dice::DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        dice_attestation::get_derived_key()
+    }
+
+    <span class="kw">fn </span>change_page_state(
+        page: x86_64::structures::paging::Page&lt;x86_64::structures::paging::Size4KiB&gt;,
+        state: oak_sev_guest::msr::PageAssignment,
+    ) {
+        accept_memory::change_page_state(page, state).expect(<span class="string">"failed to change page state"</span>);
+    }
+
+    <span class="kw">fn </span>revalidate_page(
+        page: x86_64::structures::paging::Page&lt;x86_64::structures::paging::Size4KiB&gt;,
+    ) {
+        accept_memory::revalidate_page(page).expect(<span class="string">"failed to revalidate memory"</span>);
+    }
+
+    <span class="kw">fn </span>encrypted() -&gt; u64 {
+        encrypted()
+    }
+
+    <span class="kw">unsafe fn </span>read_msr(msr_id: u32) -&gt; u64 {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.msr_read(msr_id).expect(<span class="string">"couldn't read the MSR using the GHCB protocol"</span>)
+        } <span class="kw">else </span>{
+            Base::read_msr(msr_id)
+        }
+    }
+
+    <span class="kw">unsafe fn </span>write_msr(msr_id: u32, val: u64) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
+            ghcb.msr_write(msr_id, val).expect(<span class="string">"couldn't write the MSR using the GHCB protocol"</span>)
+        } <span class="kw">else </span>{
+            Base::write_msr(msr_id, val)
+        }
+    }
 }
 </code></pre></div></section></main></body></html>

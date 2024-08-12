@@ -551,8 +551,6 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -699,17 +697,17 @@
 <span class="doccomment">/// Wrapper for the QEMU Firmware Configuration device.
 ///
 /// See &lt;https://www.qemu.org/docs/master/specs/fw_cfg.html&gt; for more details.
-</span><span class="kw">pub struct </span>FwCfg {
+</span><span class="kw">pub struct </span>FwCfg&lt;P: <span class="kw">crate</span>::Platform&gt; {
     selector: Port&lt;u16&gt;,
     data: Port&lt;u8&gt;,
     dma_high: Port&lt;u32&gt;,
     dma_low: Port&lt;u32&gt;,
-    dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
-    dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator&gt;,
+    dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator, P&gt;,
+    dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator, P&gt;,
     dma_enabled: bool,
 }
 
-<span class="kw">impl </span>FwCfg {
+<span class="kw">impl</span>&lt;P: <span class="kw">crate</span>::Platform&gt; FwCfg&lt;P&gt; {
     <span class="doccomment">/// # Safety
     ///
     /// While we do probe for the existence of the QEMU fw_cfg device, reading
@@ -719,9 +717,7 @@
     ///
     /// The caller has to guarantee that at least doing the probe will not cause
     /// any adverse effects.
-    </span><span class="kw">pub unsafe fn </span>new&lt;P: <span class="kw">crate</span>::Platform&gt;(
-        alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="self">Self </span>{
             selector: PortFactory::new::&lt;P&gt;().new_writer(FWCFG_PORT_SELECTOR),
             data: PortFactory::new::&lt;P&gt;().new_reader(FWCFG_PORT_DATA),

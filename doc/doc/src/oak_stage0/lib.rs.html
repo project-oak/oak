@@ -440,6 +440,7 @@
 <span class="kw">pub use </span>hal::Platform;
 <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
 </span><span class="kw">pub use </span>hal::Sev;
+<span class="kw">pub use </span>zero_page::ZeroPage;
 
 <span class="kw">type </span>Measurement = [u8; <span class="number">32</span>];
 
@@ -501,20 +502,19 @@
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 </span><span class="kw">pub fn </span>rust64_start&lt;P: hal::Platform&gt;() -&gt; ! {
-    paging::init_page_table_refs();
-    hal::early_initialize_platform();
+    paging::init_page_table_refs::&lt;P&gt;();
+    P::early_initialize_platform();
     logging::init_logging::&lt;P&gt;();
     <span class="macro">log::info!</span>(<span class="string">"starting..."</span>);
     <span class="comment">// Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg =
-        <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new::&lt;P&gt;(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">"fw_cfg device not found!"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>zero_page = Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
 
     zero_page.fill_e820_table::&lt;P&gt;(<span class="kw-2">&amp;mut </span>fwcfg);
 
-    hal::initialize_platform(zero_page.e820_table());
+    P::initialize_platform(zero_page.e820_table());
 
     <span class="comment">/* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
@@ -539,7 +539,7 @@
     create_idt(idt);
     idt.load();
 
-    paging::map_additional_memory();
+    paging::map_additional_memory::&lt;P&gt;();
 
     <span class="comment">// Initialize the short-term heap. Any allocations that rely on a global
     // allocator before this point will fail.
@@ -548,7 +548,7 @@
     <span class="kw">let </span>setup_data_sha2_256_digest =
         zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
 
-    hal::populate_zero_page(<span class="kw-2">&amp;mut </span>zero_page);
+    P::populate_zero_page(<span class="kw-2">&amp;mut </span>zero_page);
 
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
     <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
@@ -639,13 +639,13 @@
         eventlog_sha2_256_digest,
     };
 
-    <span class="kw">let </span>tee_platform = hal::tee_platform();
+    <span class="kw">let </span>tee_platform = P::tee_platform();
 
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             <span class="kw-2">&amp;</span>measurements,
-            hal::get_attestation,
-            hal::get_derived_key,
+            P::get_attestation,
+            P::get_derived_key,
             tee_platform,
         ),
         <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
@@ -698,8 +698,8 @@
     <span class="comment">// After the call to `deinit_platform`:
     //  - Do not log anything any more.
     //  - Do not allocate memory.
-    </span>hal::deinit_platform();
-    paging::remap_first_huge_page();
+    </span>P::deinit_platform();
+    paging::remap_first_huge_page::&lt;P&gt;();
 
     <span class="kw">unsafe </span>{
         jump_to_kernel(entry, zero_page);

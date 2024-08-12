@@ -101,6 +101,7 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -126,6 +127,7 @@
     PhysAddr, VirtAddr,
 };
 
+<span class="kw">use </span><span class="kw">super</span>::Base;
 <span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
 
 <span class="kw">pub struct </span>Mmio&lt;S: PageSize&gt; {
@@ -152,7 +154,7 @@
         }
         <span class="kw">let </span><span class="kw-2">mut </span>tables = PAGE_TABLE_REFS.get().unwrap().lock();
         <span class="kw">let </span>old_pte = tables.pt_0[mmio_memory.p1_index()].clone();
-        tables.pt_0[mmio_memory.p1_index()].set_address(
+        tables.pt_0[mmio_memory.p1_index()].set_address::&lt;Base&gt;(
             base_address,
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE,
             PageEncryption::Unencrypted,

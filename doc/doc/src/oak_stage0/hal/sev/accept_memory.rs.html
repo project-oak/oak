@@ -432,6 +432,9 @@
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -466,7 +469,10 @@
 <span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">use super</span>::{sev_status, GHCB_WRAPPER};
-<span class="kw">use </span><span class="kw">crate</span>::paging::{PageEncryption, PageTable};
+<span class="kw">use crate</span>::{
+    paging::{PageEncryption, PageTable},
+    Sev,
+};
 
 <span class="comment">//
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
@@ -544,7 +550,7 @@
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
-            entry.set_address(
+            entry.set_address::&lt;Sev&gt;(
                 frame.start_address(),
                 PageTableFlags::PRESENT | flags,
                 PageEncryption::Encrypted,
@@ -563,7 +569,7 @@
             .zip(pages)
             .filter(|(entry, <span class="kw">_</span>)| !entry.is_unused())
             .map(|(entry, page)| (entry, page.pvalidate(success_counter)))
-            .map(|(entry, result)| result.or_else(|err| f(entry.address(), err)))
+            .map(|(entry, result)| result.or_else(|err| f(entry.address::&lt;Sev&gt;(), err)))
             .find(|result| result.is_err())
         {
             <span class="kw">return </span>err;
@@ -702,7 +708,7 @@
     </span><span class="kw">if </span>page_tables.pdpt[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">"PDPT[1] is in use"</span>);
     }
-    page_tables.pdpt[<span class="number">1</span>].set_address(
+    page_tables.pdpt[<span class="number">1</span>].set_address::&lt;Sev&gt;(
         PhysAddr::new(<span class="kw-2">&amp;</span>validation_pd.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64),
         PageTableFlags::PRESENT,
         PageEncryption::Encrypted,
@@ -716,7 +722,7 @@
     </span><span class="kw">if </span>page_tables.pd_0[<span class="number">1</span>].flags().contains(PageTableFlags::PRESENT) {
         <span class="macro">panic!</span>(<span class="string">"PD_0[1] is in use"</span>);
     }
-    page_tables.pd_0[<span class="number">1</span>].set_address(
+    page_tables.pd_0[<span class="number">1</span>].set_address::&lt;Sev&gt;(
         PhysAddr::new(<span class="kw-2">&amp;</span>validation_pt.page_table <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64),
         PageTableFlags::PRESENT,
         PageEncryption::Encrypted,

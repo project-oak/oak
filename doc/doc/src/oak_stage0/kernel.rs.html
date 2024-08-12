@@ -320,7 +320,7 @@
 ///
 /// We first try to read it using the traditional selector. If it is not
 /// available there we try to read it using a custom file path.
-</span><span class="kw">pub fn </span>try_load_cmdline(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+</span><span class="kw">pub fn </span>try_load_cmdline&lt;P: <span class="kw">crate</span>::Platform&gt;(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="kw">let </span>(cmdline_file, buffer_size) = <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline_file) = fw_cfg.get_cmdline_file() {
         <span class="comment">// The provided value is already null-terminated.
         </span><span class="kw">let </span>size = cmdline_file.size();
@@ -357,8 +357,8 @@
 ///
 /// If it finds a kernel it returns the information about the kernel, otherwise
 /// `None`.
-</span><span class="kw">pub fn </span>try_load_kernel_image(
-    fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg,
+</span><span class="kw">pub fn </span>try_load_kernel_image&lt;P: <span class="kw">crate</span>::Platform&gt;(
+    fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
 ) -&gt; <span class="prelude-ty">Option</span>&lt;KernelInfo&gt; {
     <span class="kw">let </span>(file, bzimage) = <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = fw_cfg.get_kernel_file() {

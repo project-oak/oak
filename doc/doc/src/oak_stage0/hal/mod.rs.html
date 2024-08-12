@@ -289,42 +289,6 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -405,6 +369,100 @@
     <span class="kw">unsafe fn </span>write_u16_to_port(port: u16, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
     <span class="kw">unsafe fn </span>read_u32_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
     <span class="kw">unsafe fn </span>write_u32_to_port(port: u16, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+
+    <span class="doccomment">/// Platform-specific early initialization.
+    ///
+    /// This sets up the bare minimum to get things going; for example, under
+    /// SEV-ES and above, we set up the GHCB here, but nothing more.
+    ///
+    /// This gets executed very soon after stage0 starts and comes with many
+    /// restrictions:
+    ///   - You do not have access to logging.
+    ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
+    ///     work).
+    </span><span class="kw">fn </span>early_initialize_platform();
+
+    <span class="doccomment">/// Platform-specific intialization.
+    ///
+    /// This gets executed after `early_initalize_platform()` and some other
+    /// auxiliary services, such as logging, have been set up; the main purpose
+    /// is to accept all guest memory so that we can set up a heap
+    /// allocator.
+    ///
+    /// This does mean you do not have access to the heap allocator
+    /// (BOOT_ALLOCATOR will still work).
+    </span><span class="kw">fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]);
+
+    <span class="doccomment">/// Platform-specific cleanups just before stage0 jumps to the kernel.
+    ///
+    /// The assumption is that after this operation there will no longer be any
+    /// memory allocations or uses of the logging interface.
+    </span><span class="kw">fn </span>deinit_platform();
+
+    <span class="doccomment">/// Populates platform-specific information in the zero page.
+    ///
+    /// Example: locations of the SEV Secrets and CPUID pages.
+    </span><span class="kw">fn </span>populate_zero_page(zero_page: <span class="kw-2">&amp;mut </span>ZeroPage);
+
+    <span class="doccomment">/// Returns an attestation report.
+    ///
+    /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
+    /// report. In other cases it generates an empty attestation report for
+    /// testing. The additional data will be set in both cases to bind the
+    /// DICE chain to the attestation report.
+    ///
+    /// # Arguments
+    ///
+    /// * `report_data` - The custom data that must be included in the report.
+    ///   This is typically used to bind information (such as the hash of a
+    ///   public key) to the report.
+    </span><span class="kw">fn </span>get_attestation(
+        report_data: [u8; REPORT_DATA_SIZE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+
+    <span class="doccomment">/// Requests a derived key.
+    ///
+    /// The key is derived from the VCEK. The key derivation mixes in the VM
+    /// launch measurement and guest policy and uses VMPL0.
+    ///
+    /// We use this key as the unique device secret for deriving compound
+    /// devices identifiers for each layer, and eventually a sealing key in
+    /// the last layer.
+    </span><span class="kw">fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;;
+
+    <span class="doccomment">/// Ask for the page state to be changed by the hypervisor.
+    </span><span class="kw">fn </span>change_page_state(page: Page&lt;Size4KiB&gt;, state: PageAssignment);
+
+    <span class="doccomment">/// Validate one page of memory.
+    ///
+    /// This operation is required for SEV after going from a SHARED state to a
+    /// PRIVATE state.
+    </span><span class="kw">fn </span>revalidate_page(page: Page&lt;Size4KiB&gt;);
+
+    <span class="doccomment">/// Mask to use in the page tables for the given encrypion state.
+    ///
+    /// SEV and TDX have opposite behaviours: for SEV, encrypted pages are
+    /// marked; for TDX, unencrypted pages are marked.
+    </span><span class="kw">fn </span>page_table_mask(encryption_state: PageEncryption) -&gt; u64;
+
+    <span class="doccomment">/// Encrypted/shared bit mask irrespective of its semantics.
+    </span><span class="kw">fn </span>encrypted() -&gt; u64;
+
+    <span class="kw">fn </span>tee_platform() -&gt; TeePlatform;
+
+    <span class="doccomment">/// Read a MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    </span><span class="kw">unsafe fn </span>read_msr(msr: u32) -&gt; u64;
+
+    <span class="doccomment">/// Write to a MSR.
+    ///
+    /// ## Safety
+    ///
+    /// The caller must guarantee that the MSR is valid.
+    </span><span class="kw">unsafe fn </span>write_msr(msr: u32, value: u64);
 }
 <span class="kw">pub use </span>base::Base;
 <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
@@ -413,18 +471,12 @@
 <span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.
 </span><span class="kw">pub struct </span>Msr {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>msr_id: u32,
-    msr: base::Msr,
+    msr_id: u32,
 }
 
 <span class="kw">impl </span>Msr {
     <span class="kw">pub const fn </span>new(reg: u32) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-            </span>msr_id: reg,
-            msr: base::Msr::new(reg),
-        }
+        <span class="self">Self </span>{ msr_id: reg }
     }
 
     <span class="doccomment">/// Read the MSR.
@@ -432,11 +484,8 @@
     /// ## Safety
     ///
     /// The caller must guarantee that the MSR is valid.
-    </span><span class="kw">pub unsafe fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>sev::read_msr(<span class="kw-2">&amp;</span><span class="self">self</span>.msr, <span class="self">self</span>.msr_id);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span><span class="self">self</span>.msr.read();
+    </span><span class="kw">pub unsafe fn </span>read&lt;P: Platform&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        P::read_msr(<span class="self">self</span>.msr_id)
     }
 
     <span class="doccomment">/// Write the MSR.
@@ -444,11 +493,8 @@
     /// ## Safety
     ///
     /// The caller must guarantee that the MSR is valid.
-    </span><span class="kw">pub unsafe fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, val: u64) {
-        <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-        </span><span class="kw">return </span>sev::write_msr(<span class="kw-2">&amp;mut </span><span class="self">self</span>.msr, <span class="self">self</span>.msr_id, val);
-        <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-        </span><span class="kw">return </span><span class="self">self</span>.msr.write(val);
+    </span><span class="kw">pub unsafe fn </span>write&lt;P: Platform&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, val: u64) {
+        P::write_msr(<span class="self">self</span>.msr_id, val);
     }
 }
 
@@ -531,123 +577,5 @@
     <span class="kw">unsafe fn </span>try_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
         (<span class="self">self</span>.write)(<span class="self">self</span>.port, value)
     }
-}
-
-<span class="doccomment">/// Platform-specific early initialization.
-///
-/// This sets up the bare minimum to get things going; for example, under
-/// SEV-ES and above, we set up the GHCB here, but nothing more.
-///
-/// This gets executed very soon after stage0 starts and comes with many
-/// restrictions:
-///   - You do not have access to logging.
-///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
-///     work).
-</span><span class="kw">pub fn </span>early_initialize_platform() {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::early_initialize_platform();
-}
-
-<span class="doccomment">/// Platform-specific intialization.
-///
-/// This gets executed after `early_initalize_platform()` and some other
-/// auxiliary services, such as logging, have been set up; the main purpose is
-/// to accept all guest memory so that we can set up a heap allocator.
-///
-/// This does mean you do not have access to the heap allocator (BOOT_ALLOCATOR
-/// will still work).
-</span><span class="kw">pub fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::initialize_platform(e820_table)
-}
-
-<span class="doccomment">/// Platform-specific cleanups just before stage0 jumps to the kernel.
-///
-/// The assumption is that after this operation there will no longer be any
-/// memory allocations or uses of the logging interface.
-</span><span class="kw">pub fn </span>deinit_platform() {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::deinit_platform();
-}
-
-<span class="kw">pub fn </span>populate_zero_page(zero_page: <span class="kw-2">&amp;mut </span>ZeroPage) {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::populate_zero_page(zero_page);
-}
-
-<span class="doccomment">/// Returns an attestation report.
-///
-/// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
-/// report. In other cases it generates an empty attestation report for testing.
-/// The additional data will be set in both cases to bind the DICE chain to the
-/// attestation report.
-///
-/// # Arguments
-///
-/// * `report_data` - The custom data that must be included in the report. This
-///   is typically used to bind information (such as the hash of a public key)
-///   to the report.
-</span><span class="kw">pub fn </span>get_attestation(
-    report_data: [u8; REPORT_DATA_SIZE],
-) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::get_attestation(report_data);
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span>base::get_attestation(report_data);
-}
-
-<span class="doccomment">/// Requests a derived key.
-///
-/// The key is derived from the VCEK. The key derivation mixes in the VM launch
-/// measurement and guest policy and uses VMPL0.
-///
-/// We use this key as the unique device secret for deriving compound devices
-/// identifiers for each layer, and eventually a sealing key in the last layer.
-</span><span class="kw">pub fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::get_derived_key();
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span>base::get_derived_key();
-}
-
-<span class="doccomment">/// Ask for the page state to be changed by the hypervisor.
-</span><span class="kw">pub fn </span>change_page_state(page: Page&lt;Size4KiB&gt;, state: PageAssignment) {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::change_page_state(page, state).unwrap();
-}
-
-<span class="doccomment">/// Validate one page of memory.
-///
-/// This operation is required for SEV after going from a SHARED state to a
-/// PRIVATE state.
-</span><span class="kw">pub fn </span>revalidate_page(page: Page&lt;Size4KiB&gt;) {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span>sev::revalidate_page(page).unwrap();
-}
-
-<span class="doccomment">/// Mask to use in the page tables for the given encrypion state.
-///
-/// SEV and TDX have opposite behaviours: for SEV, encrypted pages are marked;
-/// for TDX, unencrypted pages are marked.
-</span><span class="kw">pub fn </span>page_table_mask(encryption_state: PageEncryption) -&gt; u64 {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::page_table_mask(encryption_state);
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span><span class="number">0</span>;
-}
-
-<span class="doccomment">/// Encrypted/shared bit mask irrespective of its semantics.
-</span><span class="kw">pub fn </span>encrypted() -&gt; u64 {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::encrypted();
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span><span class="number">0</span>;
-}
-
-<span class="kw">pub fn </span>tee_platform() -&gt; TeePlatform {
-    <span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-    </span><span class="kw">return </span>sev::tee_platform();
-    <span class="attr">#[cfg(not(feature = <span class="string">"sev"</span>))]
-    </span><span class="kw">return </span>TeePlatform::None;
 }
 </code></pre></div></section></main></body></html>

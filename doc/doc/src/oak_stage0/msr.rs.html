@@ -425,7 +425,7 @@
 <span class="kw">use </span>strum::FromRepr;
 <span class="kw">use </span>x86_64::PhysAddr;
 
-<span class="kw">use </span><span class="kw">crate</span>::hal::Msr;
+<span class="kw">use crate</span>::{hal::Msr, Platform};
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags in the APIC Base Address Register (MSR 0x1B)
@@ -459,24 +459,24 @@
 <span class="kw">impl </span>ApicBase {
     <span class="kw">const </span>MSR: Msr = Msr::new(<span class="number">0x0000_001B</span>);
 
-    <span class="kw">fn </span>write_raw(value: u64) {
+    <span class="kw">fn </span>write_raw&lt;P: Platform&gt;(value: u64) {
         <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
         <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
-        </span><span class="kw">unsafe </span>{ msr.write(value) }
+        </span><span class="kw">unsafe </span>{ msr.write::&lt;P&gt;(value) }
     }
 
     <span class="doccomment">/// Returns the APIC Base Address and flags.
-    </span><span class="kw">pub fn </span>read() -&gt; (PhysAddr, ApicBaseFlags) {
+    </span><span class="kw">pub fn </span>read&lt;P: Platform&gt;() -&gt; (PhysAddr, ApicBaseFlags) {
         <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
-        </span><span class="kw">let </span>val = <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() };
+        </span><span class="kw">let </span>val = <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read::&lt;P&gt;() };
         <span class="kw">let </span>aba = PhysAddr::new(val &amp; <span class="number">0x000F_FFFF_FFFF_F000u64</span>);
         <span class="kw">let </span>flags = ApicBaseFlags::from_bits_truncate(val);
 
         (aba, flags)
     }
 
-    <span class="kw">pub fn </span>write(aba: PhysAddr, flags: ApicBaseFlags) {
-        <span class="self">Self</span>::write_raw(flags.bits() | aba.as_u64());
+    <span class="kw">pub fn </span>write&lt;P: Platform&gt;(aba: PhysAddr, flags: ApicBaseFlags) {
+        <span class="self">Self</span>::write_raw::&lt;P&gt;(flags.bits() | aba.as_u64());
     }
 }
 
@@ -520,12 +520,12 @@
     <span class="comment">// The underlying model specific register.
     </span><span class="kw">const </span>MSR: Msr = Msr::new(<span class="number">0x0000_02FF</span>);
 
-    <span class="kw">pub fn </span>read() -&gt; (MTRRDefTypeFlags, MemoryType) {
+    <span class="kw">pub fn </span>read&lt;P: Platform&gt;() -&gt; (MTRRDefTypeFlags, MemoryType) {
         <span class="comment">// If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the
         // GHCB protocol to read the MSR, otherwise we read the MSR directly.
         // Safety: This is safe because this MSR has been supported since the P6 family
         // of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
-        </span><span class="kw">let </span>msr_value = <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() };
+        </span><span class="kw">let </span>msr_value = <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read::&lt;P&gt;() };
         <span class="kw">let </span>memory_type: MemoryType =
             (msr_value <span class="kw">as </span>u8).try_into().expect(<span class="string">"invalid MemoryType value"</span>);
         (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
@@ -550,13 +550,13 @@
     /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this
     /// operation is safe because this specific MSR and mode has been
     /// supported since the P6 family of Pentium processors (see &lt;https://en.wikipedia.org/wiki/Memory_type_range_register&gt;).
-    </span><span class="kw">pub unsafe fn </span>write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
+    </span><span class="kw">pub unsafe fn </span>write&lt;P: Platform&gt;(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         <span class="comment">// Preserve values of reserved bits.
-        </span><span class="kw">let </span>(old_flags, _old_memory_type) = <span class="self">Self</span>::read();
+        </span><span class="kw">let </span>(old_flags, _old_memory_type) = <span class="self">Self</span>::read::&lt;P&gt;();
         <span class="kw">let </span>reserved = old_flags.bits() &amp; !MTRRDefTypeFlags::all().bits();
         <span class="kw">let </span>new_value = reserved | flags.bits() | (default_type <span class="kw">as </span>u64);
         <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        msr.write(new_value);
+        msr.write::&lt;P&gt;(new_value);
     }
 }
 
@@ -572,8 +572,8 @@
 <span class="kw">impl </span>X2ApicIdRegister {
     <span class="kw">const </span>MSR: Msr = Msr::new(<span class="number">0x0000_00802</span>);
 
-    <span class="kw">pub unsafe fn </span>apic_id() -&gt; u32 {
-        (<span class="self">Self</span>::MSR.read() &amp; <span class="number">0xFFFF_FFFF</span>) <span class="kw">as </span>u32
+    <span class="kw">pub unsafe fn </span>apic_id&lt;P: Platform&gt;() -&gt; u32 {
+        (<span class="self">Self</span>::MSR.read::&lt;P&gt;() &amp; <span class="number">0xFFFF_FFFF</span>) <span class="kw">as </span>u32
     }
 }
 
@@ -585,8 +585,8 @@
 }
 
 <span class="kw">impl </span>X2ApicVersionRegister {
-    <span class="kw">pub unsafe fn </span>read() -&gt; (bool, u8, u8) {
-        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read();
+    <span class="kw">pub unsafe fn </span>read&lt;P: Platform&gt;() -&gt; (bool, u8, u8) {
+        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read::&lt;P&gt;();
 
         (
             val &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">31</span>) &gt; <span class="number">0</span>,            <span class="comment">// EAS
@@ -618,17 +618,17 @@
 }
 
 <span class="kw">impl </span>X2ApicSpuriousInterruptRegister {
-    <span class="kw">pub unsafe fn </span>read() -&gt; (SpuriousInterruptFlags, u8) {
-        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read();
+    <span class="kw">pub unsafe fn </span>read&lt;P: Platform&gt;() -&gt; (SpuriousInterruptFlags, u8) {
+        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read::&lt;P&gt;();
 
         (SpuriousInterruptFlags::from_bits_truncate((val &amp; <span class="number">0xFFFF_FF00</span>) <span class="kw">as </span>u32), (val &amp; <span class="number">0xFF</span>) <span class="kw">as </span>u8)
     }
 
-    <span class="kw">pub unsafe fn </span>write(flags: SpuriousInterruptFlags, vec: u8) {
+    <span class="kw">pub unsafe fn </span>write&lt;P: Platform&gt;(flags: SpuriousInterruptFlags, vec: u8) {
         <span class="comment">// Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
         </span><span class="kw">let </span>val = flags.bits() <span class="kw">as </span>u64 | vec <span class="kw">as </span>u64;
         <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        <span class="kw">unsafe </span>{ msr.write(val) };
+        <span class="kw">unsafe </span>{ msr.write::&lt;P&gt;(val) };
     }
 }
 
@@ -674,18 +674,18 @@
 
 <span class="kw">impl </span>X2ApicErrorStatusRegister {
     <span class="attr">#[allow(unused)]
-    </span><span class="kw">pub unsafe fn </span>read() -&gt; ApicErrorFlags {
-        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read();
+    </span><span class="kw">pub unsafe fn </span>read&lt;P: Platform&gt;() -&gt; ApicErrorFlags {
+        <span class="kw">let </span>val = <span class="self">Self</span>::MSR.read::&lt;P&gt;();
         ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
     }
 
-    <span class="kw">pub unsafe fn </span>write(val: ApicErrorFlags) {
+    <span class="kw">pub unsafe fn </span>write&lt;P: Platform&gt;(val: ApicErrorFlags) {
         <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        msr.write(val.bits() <span class="kw">as </span>u64)
+        msr.write::&lt;P&gt;(val.bits() <span class="kw">as </span>u64)
     }
 
-    <span class="kw">pub unsafe fn </span>clear() {
-        <span class="self">Self</span>::write(ApicErrorFlags::empty())
+    <span class="kw">pub unsafe fn </span>clear&lt;P: Platform&gt;() {
+        <span class="self">Self</span>::write::&lt;P&gt;(ApicErrorFlags::empty())
     }
 }
 
@@ -789,7 +789,7 @@
 <span class="kw">impl </span>X2ApicInterruptCommandRegister {
     <span class="kw">const </span>MSR: Msr = Msr::new(<span class="number">0x0000_00830</span>);
 
-    <span class="kw">pub unsafe fn </span>send(
+    <span class="kw">pub unsafe fn </span>send&lt;P: Platform&gt;(
         vec: u8,
         mt: MessageType,
         dm: DestinationMode,
@@ -807,7 +807,7 @@
         value |= vec <span class="kw">as </span>u64;
 
         <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        <span class="kw">unsafe </span>{ msr.write(value) }
+        <span class="kw">unsafe </span>{ msr.write::&lt;P&gt;(value) }
     }
 }
 </code></pre></div></section></main></body></html>

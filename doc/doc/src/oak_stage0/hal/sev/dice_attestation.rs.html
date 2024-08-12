@@ -139,7 +139,7 @@
 <span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">use super</span>::{GHCB_WRAPPER, SEV_SECRETS};
-<span class="kw">use </span><span class="kw">crate</span>::allocator::Shared;
+<span class="kw">use crate</span>::{allocator::Shared, Platform};
 
 <span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -171,9 +171,9 @@
     <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     <span class="kw">let </span>encryptor = guard.as_mut().ok_or(<span class="string">"guest message encryptor is not initialized"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
-    <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
+    <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">super</span>::Sev&gt;::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;
-    <span class="kw">let </span>response_message = Shared::new_in(GuestMessage::new(), alloc);
+    <span class="kw">let </span>response_message = Shared::&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">super</span>::Sev&gt;::new_in(GuestMessage::new(), alloc);
 
     <span class="kw">let </span>request_address = PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref()).as_u64());
     <span class="kw">let </span>response_address = PhysAddr::new(VirtAddr::from_ptr(response_message.as_ref()).as_u64());
@@ -199,7 +199,7 @@
         }
         <span class="prelude-val">Ok</span>(attestation_response.report)
     } <span class="kw">else </span>{
-        <span class="kw">crate</span>::hal::base::get_attestation(report_data)
+        <span class="kw">crate</span>::hal::Base::get_attestation(report_data)
     }
 }
 
@@ -211,7 +211,7 @@
         <span class="kw">let </span>key_response: KeyResponse = send_guest_message_request(key_request)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(key_response.derived_key)
     } <span class="kw">else </span>{
-        <span class="kw">crate</span>::hal::base::get_derived_key()
+        <span class="kw">crate</span>::hal::Base::get_derived_key()
     }
 }
 </code></pre></div></section></main></body></html>

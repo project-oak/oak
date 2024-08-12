@@ -288,6 +288,11 @@
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -322,7 +327,7 @@
     PhysAddr,
 };
 
-<span class="kw">use crate</span>::{BootAllocator, BOOT_ALLOC};
+<span class="kw">use crate</span>::{BootAllocator, Platform, BOOT_ALLOC};
 
 <span class="kw">pub static </span><span class="kw-2">mut </span>PML4: PageTable = PageTable::new();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PDPT: PageTable = PageTable::new();
@@ -413,14 +418,19 @@
 <span class="kw">impl </span>PageTableEntry {
     <span class="doccomment">/// Map the entry to the specified address with the specified flags and
     /// encryption state.
-    </span><span class="kw">pub fn </span>set_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>, addr: PhysAddr, flags: PageTableFlags, state: PageEncryption) {
-        <span class="kw">let </span>addr = PhysAddr::new(addr.as_u64() | <span class="kw">crate</span>::hal::page_table_mask(state));
+    </span><span class="kw">pub fn </span>set_address&lt;P: Platform&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        addr: PhysAddr,
+        flags: PageTableFlags,
+        state: PageEncryption,
+    ) {
+        <span class="kw">let </span>addr = PhysAddr::new(addr.as_u64() | P::page_table_mask(state));
         <span class="self">self</span>.<span class="number">0</span>.set_addr(addr, flags);
     }
 
     <span class="doccomment">/// Returns the physical address mapped by this entry. May be zero.
-    </span><span class="kw">pub fn </span>address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PhysAddr {
-        PhysAddr::new(<span class="self">self</span>.<span class="number">0</span>.addr().as_u64() &amp; !<span class="kw">crate</span>::hal::encrypted())
+    </span><span class="kw">pub fn </span>address&lt;P: Platform&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PhysAddr {
+        PhysAddr::new(<span class="self">self</span>.<span class="number">0</span>.addr().as_u64() &amp; !P::encrypted())
     }
 
     <span class="doccomment">/// Returns whether the entry is zero.
@@ -462,7 +472,7 @@
 }
 
 <span class="doccomment">/// Initialises the page table references.
-</span><span class="kw">pub fn </span>init_page_table_refs() {
+</span><span class="kw">pub fn </span>init_page_table_refs&lt;P: Platform&gt;() {
     <span class="comment">// Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
@@ -476,13 +486,13 @@
     // using an identity mapping between virtual and physical addresses.
     </span><span class="kw">let </span><span class="kw-2">mut </span>pt_0 = Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
     pt_0.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
-        entry.set_address(
+        entry.set_address::&lt;P&gt;(
             PhysAddr::new((i <span class="kw">as </span>u64) * Size4KiB::SIZE),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Encrypted,
         );
     });
-    pd_0[<span class="number">0</span>].set_address(
+    pd_0[<span class="number">0</span>].set_address::&lt;P&gt;(
         PhysAddr::new(pt_0.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         PageEncryption::Encrypted,
@@ -499,12 +509,12 @@
 
 <span class="doccomment">/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
 /// 2MiB that was already mapped as 512 4KiB pages.
-</span><span class="kw">pub fn </span>map_additional_memory() {
+</span><span class="kw">pub fn </span>map_additional_memory&lt;P: Platform&gt;() {
     {
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
         pd.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
-            entry.set_address(
+            entry.set_address::&lt;P&gt;(
                 PhysAddr::new((i <span class="kw">as </span>u64) * Size2MiB::SIZE),
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
                 PageEncryption::Encrypted,
@@ -517,12 +527,12 @@
 
 <span class="comment">// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB
 // pages, as a single 2MiB huge page again.
-</span><span class="kw">pub fn </span>remap_first_huge_page() {
+</span><span class="kw">pub fn </span>remap_first_huge_page&lt;P: Platform&gt;() {
     {
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = PAGE_TABLE_REFS.get().expect(<span class="string">"page tables not initiallized"</span>).lock();
         <span class="kw">let </span>pd = <span class="kw-2">&amp;mut </span>page_tables.pd_0;
 
-        pd[<span class="number">0</span>].set_address(
+        pd[<span class="number">0</span>].set_address::&lt;P&gt;(
             PhysAddr::new(<span class="number">0x0</span>),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
             PageEncryption::Encrypted,
@@ -533,7 +543,7 @@
 }
 
 <span class="doccomment">/// Shares a single 4KiB page with the hypervisor.
-</span><span class="kw">pub fn </span>share_page(page: Page&lt;Size4KiB&gt;) {
+</span><span class="kw">pub fn </span>share_page&lt;P: Platform&gt;(page: Page&lt;Size4KiB&gt;) {
     <span class="kw">let </span>page_start = page.start_address().as_u64();
     <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
@@ -542,7 +552,7 @@
     </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         <span class="kw">let </span>pt = <span class="kw-2">&amp;mut </span>page_tables.pt_0;
-        pt[page.p1_index()].set_address(
+        pt[page.p1_index()].set_address::&lt;P&gt;(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Unencrypted,
@@ -550,22 +560,22 @@
     }
     flush_all();
 
-    <span class="kw">crate</span>::hal::change_page_state(page, PageAssignment::Shared);
+    P::change_page_state(page, PageAssignment::Shared);
 }
 
 <span class="doccomment">/// Stops sharing a single 4KiB page with the hypervisor when running with AMD
 /// SEV-SNP enabled.
-</span><span class="kw">pub fn </span>unshare_page(page: Page&lt;Size4KiB&gt;) {
+</span><span class="kw">pub fn </span>unshare_page&lt;P: Platform&gt;(page: Page&lt;Size4KiB&gt;) {
     <span class="kw">let </span>page_start = page.start_address().as_u64();
     <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that
     // range.
     </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
-    <span class="kw">crate</span>::hal::change_page_state(page, PageAssignment::Private);
+    P::change_page_state(page, PageAssignment::Private);
     <span class="comment">// Mark the page as encrypted.
     </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         <span class="kw">let </span>pt = <span class="kw-2">&amp;mut </span>page_tables.pt_0;
-        pt[page.p1_index()].set_address(
+        pt[page.p1_index()].set_address::&lt;P&gt;(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
             PageEncryption::Encrypted,
@@ -574,6 +584,6 @@
     flush_all();
 
     <span class="comment">// We have to revalidate the page again after un-sharing it.
-    </span><span class="kw">crate</span>::hal::revalidate_page(page);
+    </span>P::revalidate_page(page);
 }
 </code></pre></div></section></main></body></html>

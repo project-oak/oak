@@ -290,6 +290,12 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -309,6 +315,7 @@
 </span><span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{
     alloc::{AllocError, Allocator, Layout},
+    marker::PhantomData,
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
     ptr::NonNull,
@@ -322,7 +329,10 @@
     VirtAddr,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::paging::{share_page, unshare_page};
+<span class="kw">use crate</span>::{
+    paging::{share_page, unshare_page},
+    Platform,
+};
 
 <span class="kw">struct </span>Inner&lt;<span class="kw">const </span>N: usize&gt; {
     index: AtomicUsize,
@@ -400,17 +410,18 @@
 /// they could well fit on one page, currently that'd use 8K of memory.
 /// That, however, is an implementation detail, and may change in the future.
 </span><span class="attr">#[repr(transparent)]
-</span><span class="kw">struct </span>SharedAllocator&lt;A: Allocator&gt; {
+</span><span class="kw">struct </span>SharedAllocator&lt;A: Allocator, P: Platform&gt; {
     inner: A,
+    _phantom: PhantomData&lt;P&gt;,
 }
 
-<span class="kw">impl</span>&lt;A: Allocator&gt; SharedAllocator&lt;A&gt; {
+<span class="kw">impl</span>&lt;A: Allocator, P: Platform&gt; SharedAllocator&lt;A, P&gt; {
     <span class="kw">fn </span>new(allocator: A) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ inner: allocator }
+        <span class="self">Self </span>{ inner: allocator, _phantom: PhantomData }
     }
 }
 
-<span class="kw">unsafe impl</span>&lt;A: Allocator&gt; Allocator <span class="kw">for </span>SharedAllocator&lt;A&gt; {
+<span class="kw">unsafe impl</span>&lt;A: Allocator, P: Platform&gt; Allocator <span class="kw">for </span>SharedAllocator&lt;A, P&gt; {
     <span class="kw">fn </span>allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;[u8]&gt;, AllocError&gt; {
         <span class="kw">let </span>layout =
             layout.align_to(Size4KiB::SIZE <span class="kw">as </span>usize).map_err(|<span class="kw">_</span>| AllocError)<span class="question-mark">?</span>.pad_to_align();
@@ -418,7 +429,7 @@
         <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..allocation.len()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
             <span class="comment">// Safety: the allocation has succeeded and the offset won't exceed the size of
             // the allocation.
-            </span>share_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
+            </span>share_page::&lt;P&gt;(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                 allocation.as_non_null_ptr().as_ptr().add(offset)
             })))
         }
@@ -434,7 +445,7 @@
         <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..layout.size()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
             <span class="comment">// Safety: the allocation has succeeded and the offset won't exceed the size of
             // the allocation.
-            </span>unshare_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
+            </span>unshare_page::&lt;P&gt;(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
                 ptr.as_ptr().add(offset)
             })))
         }
@@ -443,11 +454,11 @@
 }
 
 <span class="doccomment">/// Stores a data structure on a shared page.
-</span><span class="kw">pub struct </span>Shared&lt;T: <span class="lifetime">'static</span>, A: Allocator&gt; {
-    inner: Box&lt;T, SharedAllocator&lt;A&gt;&gt;,
+</span><span class="kw">pub struct </span>Shared&lt;T: <span class="lifetime">'static</span>, A: Allocator, P: Platform&gt; {
+    inner: Box&lt;T, SharedAllocator&lt;A, P&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; Shared&lt;T, A&gt; {
+<span class="kw">impl</span>&lt;T, A: Allocator, P: Platform&gt; Shared&lt;T, A, P&gt; {
     <span class="kw">pub fn </span>new_in(t: T, alloc: A) -&gt; <span class="self">Self
     </span><span class="kw">where
         </span>A: <span class="lifetime">'static</span>,
@@ -464,20 +475,21 @@
     /// was used for the original allocation of the `Shared`.
     ///
     /// Again, see `Box::from_raw_in` for more details.
-    </span><span class="kw">pub unsafe fn </span>from_raw_in(raw: <span class="kw-2">*mut </span>T, alloc: A) -&gt; Shared&lt;T, A&gt; {
+    </span><span class="kw">pub unsafe fn </span>from_raw_in(raw: <span class="kw-2">*mut </span>T, alloc: A) -&gt; Shared&lt;T, A, P&gt; {
         <span class="self">Self </span>{ inner: Box::from_raw_in(raw, SharedAllocator::new(alloc)) }
     }
 
     <span class="doccomment">/// See `Box::leak` for documentation.
-    </span><span class="kw">pub fn </span>leak&lt;<span class="lifetime">'a</span>&gt;(s: Shared&lt;T, A&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T
+    </span><span class="kw">pub fn </span>leak&lt;<span class="lifetime">'a</span>&gt;(s: Shared&lt;T, A, P&gt;) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>T
     <span class="kw">where
         </span>A: <span class="lifetime">'a</span>,
+        P: <span class="lifetime">'a</span>,
     {
         Box::leak(s.inner)
     }
 }
 
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; Deref <span class="kw">for </span>Shared&lt;T, A&gt; {
+<span class="kw">impl</span>&lt;T, A: Allocator, P: Platform&gt; Deref <span class="kw">for </span>Shared&lt;T, A, P&gt; {
     <span class="kw">type </span>Target = T;
 
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
@@ -485,19 +497,19 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; DerefMut <span class="kw">for </span>Shared&lt;T, A&gt; {
+<span class="kw">impl</span>&lt;T, A: Allocator, P: Platform&gt; DerefMut <span class="kw">for </span>Shared&lt;T, A, P&gt; {
     <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
     }
 }
 
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; AsRef&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A&gt; {
+<span class="kw">impl</span>&lt;T, A: Allocator, P: Platform&gt; AsRef&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A, P&gt; {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
         <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 }
 
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; AsMut&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A&gt; {
+<span class="kw">impl</span>&lt;T, A: Allocator, P: Platform&gt; AsMut&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A, P&gt; {
     <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
         <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
     }
