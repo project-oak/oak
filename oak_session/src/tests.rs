@@ -31,6 +31,27 @@ use crate::{
 const TEST_MESSAGES: &[&[u8]] = &[&[1u8, 2u8, 3u8, 4u8], &[4u8, 3u8, 2u8, 1u8], &[]];
 
 #[test]
+fn process_kk_handshake() {
+    let initiator_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
+    let responder_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
+    let responder_public_key = responder_identity_key.get_public_key().unwrap();
+    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+        handshake_type: HandshakeType::NoiseKK,
+        self_static_private_key: Some(responder_identity_key),
+        peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
+        peer_attestation_binding_public_key: None,
+    })
+    .unwrap();
+    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
+        handshake_type: HandshakeType::NoiseKK,
+        self_static_private_key: Some(initiator_identity_key),
+        peer_static_public_key: Some(responder_public_key),
+        peer_attestation_binding_public_key: None,
+    });
+    do_handshake(client_handshaker, server_handshaker);
+}
+
+#[test]
 fn process_nk_handshake() {
     let identity_key = Box::new(IdentityKey::generate());
     let client_handshaker = ClientHandshaker::create(HandshakerConfig {

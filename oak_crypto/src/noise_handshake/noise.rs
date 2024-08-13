@@ -18,10 +18,11 @@ use crypto_wrapper::{NONCE_LEN, SYMMETRIC_KEY_LEN};
 
 use crate::noise_handshake::{crypto_wrapper, error::Error};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum HandshakeType {
     Nk, // https://noiseexplorer.com/patterns/NK/
     Nn, // https://noiseexplorer.com/patterns/NN/
+    Kk, // https://noiseexplorer.com/patterns/KK/
 }
 
 // Helper to generate 2 keys.
@@ -52,6 +53,7 @@ impl Noise {
         let protocol_name = match handshake_type {
             HandshakeType::Nk => b"Noise_NK_P256_AESGCM_SHA256",
             HandshakeType::Nn => b"Noise_NN_P256_AESGCM_SHA256",
+            HandshakeType::Kk => b"Noise_KK_P256_AESGCM_SHA256",
         };
         chaining_key_in[..protocol_name.len()].copy_from_slice(protocol_name);
         Noise {

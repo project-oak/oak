@@ -17,13 +17,14 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 use core::convert::TryInto;
 
+use aead::Error;
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
-    noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn, Crypter},
+    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Crypter},
 };
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
@@ -65,8 +66,17 @@ impl ClientHandshaker {
         Ok(Self {
             handshake_type,
             handshake_initiator: match handshake_type {
-                HandshakeType::NoiseKK => core::unimplemented!(),
                 HandshakeType::NoiseKN => core::unimplemented!(),
+                HandshakeType::NoiseKK => HandshakeInitiator::new_kk(
+                    peer_static_public_key
+                        .context("handshaker_config missing the peer public key")?
+                        .as_slice()
+                        .try_into()
+                        .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
+                    handshaker_config
+                        .self_static_private_key
+                        .context("handshaker_config missing the self static private key")?,
+                ),
                 HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
                     peer_static_public_key
                         .context("handshaker_config missing the peer public key")?
@@ -89,7 +99,10 @@ impl Handshaker for ClientHandshaker {
 
 impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
-        let mut initial_message = self.handshake_initiator.build_initial_message();
+        let mut initial_message = self
+            .handshake_initiator
+            .build_initial_message()
+            .map_err(|e| anyhow!("Error building initial message: {e:?}"))?;
         let (ciphertext, ephemeral_public_key) =
             (initial_message.split_off(P256_X962_KEY_BYTES_LEN), initial_message);
         Ok(Some(HandshakeRequest {
@@ -121,8 +134,11 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
                     noise_message.ciphertext.as_slice(),
                 ]
                 .concat();
-                self.handshake_result =
-                    Some(self.handshake_initiator.process_response(handshake_response.as_slice()));
+                self.handshake_result = Some(
+                    self.handshake_initiator
+                        .process_response(handshake_response.as_slice())
+                        .map_err(|e| anyhow!("Error processing response: {e:?}"))?,
+                );
                 Ok(Some(()))
             }
             None => Err(anyhow!("Missing handshake_type")),
@@ -136,6 +152,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
 pub struct ServerHandshaker {
     handshake_type: HandshakeType,
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
+    peer_public_key: Option<Vec<u8>>,
     handshake_response: Option<HandshakeResponse>,
     handshake_result: Option<SessionKeys>,
 }
@@ -145,6 +162,7 @@ impl ServerHandshaker {
         Self {
             handshake_type: handshaker_config.handshake_type,
             self_identity_key: handshaker_config.self_static_private_key,
+            peer_public_key: handshaker_config.peer_static_public_key,
             handshake_response: None,
             handshake_result: None,
         }
@@ -175,8 +193,20 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                 ]
                 .concat();
                 match self.handshake_type {
-                    HandshakeType::NoiseKK => core::unimplemented!(),
                     HandshakeType::NoiseKN => core::unimplemented!(),
+                    HandshakeType::NoiseKK => respond_kk(
+                        self.self_identity_key
+                            .as_ref()
+                            .context("handshaker_config missing the self private key")?
+                            .as_ref(),
+                        &self
+                            .peer_public_key
+                            .as_ref()
+                            .ok_or(|_: Error| "")
+                            .map_err(|_| anyhow!("Must provide public key for Kk"))?,
+                        &in_data,
+                    )
+                    .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
                     HandshakeType::NoiseNK => respond_nk(
                         self.self_identity_key
                             .as_ref()

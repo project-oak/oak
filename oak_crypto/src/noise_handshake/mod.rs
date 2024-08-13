@@ -233,3 +233,44 @@ fn finish_response(
         response: [ephemeral_pub_key_bytes.as_slice(), &response_ciphertext].concat(),
     })
 }
+
+pub fn respond_kk(
+    // responder e
+    identity_priv: &dyn IdentityKeyHandle,
+    // initiator s [not used for Nk]
+    initiator_static_pub: &[u8],
+    // e, es, (ss for Kk only)
+    in_data: &[u8],
+) -> Result<Response, Error> {
+    if in_data.len() < P256_X962_LEN {
+        return Err(Error::InvalidHandshake);
+    }
+
+    let mut noise = Noise::new(HandshakeType::Kk);
+    noise.mix_hash(&[0; 1]); // Prologue
+    noise.mix_hash_point(
+        identity_priv.get_public_key().map_err(|_| Error::InvalidPrivateKey)?.as_slice(),
+    );
+
+    let initiator_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
+    noise.mix_hash(initiator_pub.as_slice());
+    noise.mix_key(initiator_pub.as_slice());
+
+    let es_ecdh_bytes = identity_priv
+        .derive_dh_secret(initiator_pub.to_vec())
+        .map_err(|_| Error::InvalidHandshake)?;
+    noise.mix_key(es_ecdh_bytes.as_slice());
+
+    let initiator_static_pub_bytes: [u8; P256_X962_LEN] =
+        initiator_static_pub.try_into().map_err(|_| Error::InvalidPublicKey)?;
+
+    let ss_ecdh_bytes =
+        sha256_two_part(&initiator_static_pub_bytes, &identity_priv.get_public_key().unwrap());
+    noise.mix_key(&ss_ecdh_bytes);
+
+    let se_ecdh_bytes = identity_priv
+        .derive_dh_secret(initiator_static_pub_bytes.to_vec())
+        .map_err(|_| Error::InvalidHandshake)?;
+    noise.mix_key(&se_ecdh_bytes);
+    finish_response(&mut noise, in_data, &initiator_pub)
+}

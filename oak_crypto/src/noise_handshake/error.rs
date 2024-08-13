@@ -21,5 +21,7 @@ pub enum Error {
     EmptyPlaintext,
     InvalidHandshake,
     InvalidPrivateKey,
+    InvalidPublicKey,
+    MissingPeerPublicKey,
     Unknown(&'static str),
 }
