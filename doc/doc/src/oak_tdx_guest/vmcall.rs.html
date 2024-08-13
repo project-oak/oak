@@ -711,6 +711,54 @@
 <a href="#709" id="709">709</a>
 <a href="#710" id="710">710</a>
 <a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -744,8 +792,18 @@
 <span class="doccomment">/// The result from an instruction that indicates success.
 </span><span class="kw">const </span>SUCCESS: u64 = <span class="number">0</span>;
 
+<span class="comment">// TDCALL[TDG.VP.VMCALL] sub-function invocation must be retried
+</span><span class="kw">const </span>RETRY: u64 = <span class="number">1</span>;
+
 <span class="comment">// The result from an instruction if the input was invalid.
 </span><span class="kw">const </span>INVALID_OPERAND: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">63</span>;
+
+<span class="comment">// The result from an instruction if the input GPA is already in use.
+</span><span class="kw">const </span>GPA_INUSE: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">63 </span>| <span class="number">1</span>;
+
+<span class="comment">// The result from an instruction if the input size or GPA is not properly
+// aligned.
+</span><span class="kw">const </span>ALIGN_ERROR: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">63 </span>| <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
 
 <span class="doccomment">/// The TDG.VP.VMCALL leaf number for TDCALL.
 </span><span class="kw">const </span>VM_CALL_LEAF: u64 = <span class="number">0</span>;
@@ -805,7 +863,11 @@
 <span class="doccomment">/// Error when mapping a guest-physical address (GPA) as shared or private.
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>MapGpaError {
-    MapFailure(PhysAddr),
+    InvalidOperand(PhysAddr),
+    GPAInUse(PhysAddr),
+    AlignError(PhysAddr),
+    RetriedTooManyTimes(PhysAddr),
+    UnknownError(PhysAddr),
 }
 
 <span class="doccomment">/// Maps a range of guest-physical addresses (GPAs) as shared with the
@@ -821,7 +883,14 @@
 /// The function will return an error if the page was already mapped in the
 /// desired state (e.g. trying to share a page that was already shared).
 ///
-/// See section 3.2 of [Guest-Host-Communication Interface (GHCI) for Intel®
+/// On error `VMCALL_RETRY`, R11 contains a GPA where the guest needs to retry.
+/// On error `VMCALL_GPA_INUSE`, the hypervisor believes that the memory has
+/// been already in use by the TD, e.g. GPA used for hosting memory dedicated
+/// for IO. R11 specifies which GPA in the requested range was in use. on error
+/// `VMCALL_ALIGN_ERROR` it means the size or start GPA has alignment error.
+///
+///
+/// See section 3.6 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 ///
@@ -833,52 +902,79 @@
 </span><span class="kw">pub unsafe fn </span>map_gpa(frames: PhysFrameRange&lt;Size4KiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), MapGpaError&gt; {
     <span class="comment">// The VMCALL sub-function for MAP_GPA.
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">0x10001</span>;
+    <span class="comment">// We use the same threshold as OVMF
+    // https://github.com/tianocore/edk2/blob/b0f43dd3fdec2363e3548ec31eb455dc1c4ac761/OvmfPkg/Library/BaseMemEncryptTdxLib/MemoryEncryption.c#L41
+    </span><span class="kw">const </span>MAX_RETRY_PER_PAGE: u32 = <span class="number">3</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>vm_call_result: u64;
     <span class="kw">let </span><span class="kw-2">mut </span>sub_function_result: u64;
     <span class="kw">let </span>registers = Registers::default().union(Registers::R12).union(Registers::R13);
     <span class="kw">let </span>gpa_start = frames.start.start_address().as_u64();
     <span class="kw">let </span>gpa_size = frames.end.start_address().as_u64().checked_sub(gpa_start).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>failing_gpa: u64;
+    <span class="kw">let </span><span class="kw-2">mut </span>failing_gpa: u64 = u64::MAX;
+    <span class="kw">let </span><span class="kw-2">mut </span>current_start = gpa_start;
+    <span class="kw">let </span><span class="kw-2">mut </span>current_size = gpa_size;
+    <span class="kw">let </span><span class="kw-2">mut </span>retry_times: u32 = <span class="number">0</span>;
 
-    <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
-    // success). The bitflags of registers to be passed through to the VMM goes
-    // into RCX. The sub-function usage (always 0 when conforming to the GHCI
-    // spec) goes into R10, and the result of the subfunction is returned in
-    // R10. The sub-function to call goes into R11 and the failing address is
-    // returned in R11 in case of failure. The start GPA goes into R12 (must be
-    // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
-    // into R13.
-    //
-    // Safety: as long as the changed physical address of the page is handled
-    // correctly by the caller, calling TDCALL here is safe since it does not
-    // alter memory directly and all the affected registers are specified, so no
-    // unspecified registers will be clobbered.
-    </span><span class="kw">unsafe </span>{
-        <span class="macro">asm!</span>(
-            <span class="string">"tdcall"</span>,
-            inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
-            inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
-            inout(<span class="string">"r11"</span>) SUB_FUNCTION =&gt; failing_gpa,
-            <span class="kw">in</span>(<span class="string">"r12"</span>) gpa_start,
-            <span class="kw">in</span>(<span class="string">"r13"</span>) gpa_size,
-            options(nomem, nostack),
-        );
-    }
+    <span class="kw">while </span>retry_times &lt; MAX_RETRY_PER_PAGE {
+        retry_times += <span class="number">1</span>;
+        <span class="comment">// The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+        // success). The bitflags of registers to be passed through to the VMM goes
+        // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+        // spec) goes into R10, and the result of the subfunction is returned in
+        // R10. The sub-function to call goes into R11 and the failing address is
+        // returned in R11 in case of failure. The start GPA goes into R12 (must be
+        // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
+        // into R13.
+        //
+        // Safety: as long as the changed physical address of the page is handled
+        // correctly by the caller, calling TDCALL here is safe since it does not
+        // alter memory directly and all the affected registers are specified, so no
+        // unspecified registers will be clobbered.
+        </span><span class="kw">unsafe </span>{
+            <span class="macro">asm!</span>(
+                <span class="string">"tdcall"</span>,
+                inout(<span class="string">"rax"</span>) VM_CALL_LEAF =&gt; vm_call_result,
+                <span class="kw">in</span>(<span class="string">"rcx"</span>) registers.bits(),
+                inout(<span class="string">"r10"</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
+                inout(<span class="string">"r11"</span>) SUB_FUNCTION =&gt; failing_gpa,
+                <span class="kw">in</span>(<span class="string">"r12"</span>) current_start,
+                <span class="kw">in</span>(<span class="string">"r13"</span>) current_size,
+                options(nomem, nostack),
+            );
+        }
 
-    <span class="comment">// According to the spec the top-level result for this sub-function will aways
-    // be 0 as long as the specified sub-function leaf is correct.
-    </span><span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
+        <span class="macro">assert_eq!</span>(vm_call_result, SUCCESS, <span class="string">"TDG.VP.VMCALL returned an invalid result"</span>);
 
-    <span class="kw">if </span>sub_function_result == INVALID_OPERAND {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::MapFailure(PhysAddr::new(failing_gpa)));
-    }
-    <span class="comment">// According to the spec this sub-function will always return either 0 or
-    // INVALID_OPERAND.
-    </span><span class="macro">assert_eq!</span>(sub_function_result, SUCCESS, <span class="string">"TDG.VP.VMCALL&lt;MapGPA&gt; returned an invalid result"</span>);
+        <span class="kw">match </span>sub_function_result {
+            SUCCESS =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
+            RETRY =&gt; {
+                <span class="kw">if </span>failing_gpa &gt; current_start &amp;&amp; failing_gpa &lt; gpa_start + gpa_size {
+                    <span class="comment">// Successfully mapped some memory but not enough. Restart counting.
+                    </span>retry_times = <span class="number">0</span>;
+                    <span class="comment">// TD must retry this operation for the pages in the region starting
+                    // at the GPA specified in R11.
+                    // [start_gpa, current_start) has been processed. Memory region to be retried
+                    // is [current_start, start_gpa + size)
+                    </span>current_start = failing_gpa;
+                    current_size = (gpa_start + gpa_size).checked_sub(current_start).unwrap();
+                } <span class="kw">else if </span>failing_gpa == current_start {
+                    <span class="kw">continue</span>;
+                } <span class="kw">else </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::UnknownError(PhysAddr::new(failing_gpa)));
+                }
+            }
+            INVALID_OPERAND =&gt; {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::InvalidOperand(PhysAddr::new(failing_gpa)));
+            }
+            GPA_INUSE =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::GPAInUse(PhysAddr::new(failing_gpa))),
+            ALIGN_ERROR =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::AlignError(PhysAddr::new(failing_gpa))),
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(MapGpaError::UnknownError(PhysAddr::new(failing_gpa))),
+        }
+    } <span class="comment">// while retry_times &lt; MAX_RETRY_PER_PAGE
 
-    <span class="prelude-val">Ok</span>(())
+    // Retried MAX_RETRY_PER_PAGE times but the map_gpa request is still incomplete.
+    </span><span class="prelude-val">Err</span>(MapGpaError::RetriedTooManyTimes(PhysAddr::new(failing_gpa)))
 }
 
 <span class="doccomment">/// Executes CPUID for the specified leaf and sub-leaf.
@@ -1360,7 +1456,7 @@
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
 </span><span class="kw">fn </span>instruction_wbinvd(invalidate: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="comment">// The VMCALL sub-function for #VE.RequestMMIO
+    <span class="comment">// The VMCALL sub-function for Instruction.WBINVD
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">0x36</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>vm_call_result: u64;
