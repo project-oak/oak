@@ -12,7 +12,6 @@ sev = []
 [dependencies]
 bitflags = "*"
 coset = { version = "*", default-features = false }
-elf = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = { version = "*", default-features = false }
 log = "*"

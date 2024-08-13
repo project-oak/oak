@@ -42,7 +42,7 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
-use crate::{alloc::string::ToString, kernel::KernelType};
+use crate::alloc::string::ToString;
 
 mod acpi;
 mod acpi_tables;
@@ -176,27 +176,8 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_sha2_256_digest = cmdline.measure();
 
-    let kernel_info =
-        kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
-    let mut entry = kernel_info.entry;
-
-    // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If
-    // it works, extract the entry point address from there; if there is no
-    // valid ELF header at that address, assume it's code, and jump there
-    // directly. Safety: this assumes the kernel is loaded at the given address.
-    let header = unsafe { &*(entry.as_u64() as *const elf::file::Elf64_Ehdr) };
-    if header.e_ident[0] == elf::abi::ELFMAG0
-        && header.e_ident[1] == elf::abi::ELFMAG1
-        && header.e_ident[2] == elf::abi::ELFMAG2
-        && header.e_ident[3] == elf::abi::ELFMAG3
-        && header.e_ident[4] == elf::abi::ELFCLASS64
-        && header.e_ident[5] == elf::abi::ELFDATA2LSB
-        && header.e_ident[6] == elf::abi::EV_CURRENT
-        && header.e_ident[7] == elf::abi::ELFOSABI_SYSV
-    {
-        // Looks like we have a valid ELF header at 0x200000. Trust its entry point.
-        entry = VirtAddr::new(header.e_entry);
-    }
+    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg).unwrap_or_default();
+    let entry = kernel_info.entry;
 
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
@@ -299,11 +280,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     // Append the DICE data address to the kernel command-line.
     let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
-    let cmdline = if kernel_info.kernel_type == KernelType::Elf {
-        // Current systems that use the ELF kernel does not support DICE data, so don't
-        // append the extra parameter.
-        cmdline
-    } else if cmdline.is_empty() {
+    let cmdline = if cmdline.is_empty() {
         extra
     } else if cmdline.contains("--") {
         format!("{} {}", cmdline, extra)

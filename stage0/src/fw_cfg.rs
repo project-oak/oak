@@ -24,7 +24,7 @@ use bitflags::bitflags;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
@@ -474,30 +474,6 @@ pub fn find_suitable_dma_address(
         })
         .max_by(PhysAddr::cmp)
         .ok_or("no suitable memory available for dma buffer")
-}
-
-/// Makes sure that a chunk of memory is valid
-pub fn check_memory(
-    start: VirtAddr,
-    size: usize,
-    e820_table: &[BootE820Entry],
-) -> Result<(), &'static str> {
-    let end = start + (size as u64);
-    if start.as_u64() < Size2MiB::SIZE {
-        return Err("address falls in the first 2MiB");
-    }
-    if end.as_u64() > crate::TOP_OF_VIRTUAL_MEMORY {
-        return Err("region ends above the mapped virtual memory");
-    }
-    if !e820_table.iter().any(|entry| {
-        entry.entry_type() == Some(E820EntryType::RAM)
-            && entry.addr() as u64 <= start.as_u64()
-            && (entry.addr() + entry.size()) as u64 >= end.as_u64()
-    }) {
-        return Err("region is not backed by physical memory");
-    }
-
-    Ok(())
 }
 
 /// Ensures that two ranges don't overlap.

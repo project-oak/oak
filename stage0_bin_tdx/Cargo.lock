@@ -250,12 +250,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a47c1c47d2f5964e29c61246e81db715514cd532db6b5116a25ea3c03d6780a2"
 
 [[package]]
-name = "elf"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2b183d6ce6ca4cf30e3db37abf5b52568b5f9015c97d9fbdd7026aa5dcdd758"
-
-[[package]]
 name = "elliptic-curve"
 version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -582,7 +576,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
  "coset",
- "elf",
  "hex",
  "hkdf",
  "linked_list_allocator",
@@ -639,7 +632,7 @@ dependencies = [
 name = "oak_tdx_guest"
 version = "0.1.0"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.0",
  "strum",
  "x86_64",
 ]
