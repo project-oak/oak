@@ -44,6 +44,22 @@ const GPA_INUSE: u64 = 1 << 63 | 1;
 // aligned.
 const ALIGN_ERROR: u64 = 1 << 63 | 1 << 1;
 
+// GetQuote Status Code: GET_QUOTE_SUCCESS
+const GET_QUOTE_SUCCESS: u64 = 0;
+
+// GetQuote Status Code: GET_QUOTE_IN_FLIGHT
+// TDG.VP.VMCALL<GetQuote> is under processing. The shared GPA isn’t ready
+// for TD to consume.
+const GET_QUOTE_IN_FLIGHT: u64 = u64::MAX;
+
+// GetQuote Status Code: GET_QUOTE_ERROR
+// Error without specifying any reason.
+const GET_QUOTE_ERROR: u64 = 1 << 63;
+
+// GetQuote Status Code: GET_QUOTE_SERVICE_UNAVAILABLE
+// Quoting service isn’t available
+const GET_QUOTE_SERVICE_UNAVAILABLE: u64 = 1 << 63 | 1;
+
 /// The TDG.VP.VMCALL leaf number for TDCALL.
 const VM_CALL_LEAF: u64 = 0;
 
@@ -183,6 +199,8 @@ pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaErro
             );
         }
 
+        // According to the spec the top-level result for this sub-function will aways
+        // be 0 as long as the specified sub-function leaf is correct.
         assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
 
         match sub_function_result {
@@ -802,6 +820,8 @@ pub fn get_td_vm_call_info() -> Result<(), &'static str> {
         );
     }
 
+    // According to the spec the top-level result for this sub-function will aways
+    // be 0 as long as the specified sub-function leaf is correct.
     assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
 
     // According to the spec, on success, the status code should be 0, also R11
@@ -811,4 +831,106 @@ pub fn get_td_vm_call_info() -> Result<(), &'static str> {
     } else {
         Ok(())
     }
+}
+
+#[derive(Debug)]
+pub enum GetQuoteError {
+    InvalidOperand(PhysAddr),
+    TooManyRetry,
+    QuoteInFlight,
+    QuoteError,
+    ServiceUnavailable,
+    UnknownError,
+}
+
+/// TDVMCall GetQuote
+///
+/// GetQuote TDG.VP.VMCALL is a doorbell-like interface used to help send a
+/// message to the host VMM to queue operations that tend to be long-running
+/// operations. GetQuote is designed to invoke a request to generate a TD-Quote
+/// signing by a service hosting TD-Quoting Enclave operating in the host
+/// environment for a TD Report passed as a parameter by the TD. TDREPORT_STRUCT
+/// is a memory operand intended to be sent via the GetQuote TDG.VP.VMCALL to
+/// indicate the asynchronous service requested.
+///
+/// For the GetQuote operation, the goal is for the TDREPORT_STRUCT to be
+/// received by the TD via a prior TDCALL[TDG.MR.REPORT] in a buffer and placed
+/// in a shared-GPA space passed to the VMM as an operand in the GetQuote
+/// TDG.VP.VMCALL. In the case of this operation, the VMM can access the
+/// TDREPORT_STRUCT, queue the operation for a service hosting TD-Quoting
+/// enclave, and, when completed, return the Quote via the same, shared-memory
+/// area.
+///
+/// For the TD to invoke the TDG.VP.VMCALL<GetQuote>, the host VMM can
+/// signal the event completion to the TD OS via a notification interrupt the
+/// host VMM injects into the TD (using the Event-notification vector registered
+/// via the SetupEventNotifyInterrupt TDG.VP.VMCALL).
+///
+///
+/// See section 3.3 of
+/// [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
+/// for more information.
+pub fn get_quote(frames: PhysFrameRange<Size4KiB>) -> Result<(), GetQuoteError> {
+    // The VMCALL sub-function for GetQuote
+    // GetQuote sends TDREPORT_STRUCT to VMM to request a TD Quote
+    const SUB_FUNCTION: u64 = 0x10002;
+    const MAX_RETRY: u32 = 3;
+
+    let mut vm_call_result: u64;
+    let mut sub_function_result: u64;
+    let registers = Registers::default().union(Registers::R13);
+    let gpa_start = frames.start.start_address().as_u64();
+    let gpa_size = frames.end.start_address().as_u64().checked_sub(gpa_start).unwrap();
+
+    for _ in 0..MAX_RETRY {
+        // The TDCALL leaf 0 goes into RAX. RAX returns the top-level result (0 is
+        // success). The bitflags of registers to be passed through to the VMM goes
+        // into RCX. The sub-function usage (always 0 when conforming to the GHCI
+        // spec) goes into R10, and the result of the subfunction is returned in
+        // R10. The sub-function to call goes into R11 and the failing address is
+        // returned in R11 in case of failure. The start GPA goes into R12 (must be
+        // 4KiB-aligned) and the size of the range (must be a multiple of 4KiB) goes
+        // into R13.
+        //
+        // Safety: as long as the changed physical address of the page is handled
+        // correctly by the caller, calling TDCALL here is safe since it does not
+        // alter memory directly and all the affected registers are specified, so no
+        // unspecified registers will be clobbered.
+        unsafe {
+            asm!(
+                "tdcall",
+                inout("rax") VM_CALL_LEAF => vm_call_result,
+                in("rcx") registers.bits(),
+                inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+                in("r11") SUB_FUNCTION,
+                in("r12") gpa_start,
+                in("r13") gpa_size,
+                options(nomem, nostack),
+            );
+        }
+
+        // According to the spec the top-level result for this sub-function will aways
+        // be 0 as long as the specified sub-function leaf is correct.
+        assert_eq!(vm_call_result, SUCCESS, "TDG.VP.VMCALL returned an invalid result");
+
+        match sub_function_result {
+            GET_QUOTE_SUCCESS => return Ok(()),
+            RETRY => continue,
+            GET_QUOTE_IN_FLIGHT => {
+                return Err(GetQuoteError::QuoteInFlight);
+            }
+            GET_QUOTE_ERROR => {
+                return Err(GetQuoteError::QuoteError);
+            }
+            GET_QUOTE_SERVICE_UNAVAILABLE => {
+                return Err(GetQuoteError::ServiceUnavailable);
+            }
+            _ => {
+                return Err(GetQuoteError::UnknownError);
+            }
+        }
+    }
+
+    // At this point the status cannot be SUCCESS or INVALID_OPERAND
+    Err(GetQuoteError::TooManyRetry)
 }
