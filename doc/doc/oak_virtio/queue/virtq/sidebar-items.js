@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["AvailRing","Desc","DescFlags","RingFlags","UsedElem","UsedRing","VirtQueue"]};

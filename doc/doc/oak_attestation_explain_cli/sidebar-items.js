@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["main","path_exists","segment_title","title"],"struct":["Params"]};

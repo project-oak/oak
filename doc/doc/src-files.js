@@ -7,7 +7,6 @@ var srcIndex = new Map(JSON.parse('[\
 ["micro_rpc_build",["",[],["lib.rs","prost.rs"]]],\
 ["oak_attestation",["",[],["dice.rs","handler.rs","lib.rs"]]],\
 ["oak_attestation_explain",["",[],["json_serialization.rs","lib.rs"]]],\
-["oak_attestation_explain_cli",["",[],["main.rs"]]],\
 ["oak_attestation_explain_wasm",["",[],["lib.rs"]]],\
 ["oak_attestation_verification",["",[],["amd.rs","claims.rs","endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]]],\
 ["oak_attestation_verification_test_utils",["",[],["lib.rs"]]],\
@@ -42,7 +41,6 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_functions_test_utils",["",[],["lib.rs"]]],\
 ["oak_grpc",["",[],["lib.rs"]]],\
 ["oak_grpc_utils",["",[],["lib.rs"]]],\
-["oak_hello_world_linux_init",["",[],["init.rs","main.rs"]]],\
 ["oak_hello_world_proto",["",[],["lib.rs"]]],\
 ["oak_kernel_measurement",["",[],["main.rs"]]],\
 ["oak_launcher_utils",["",[],["channel.rs","launcher.rs","lib.rs"]]],\
@@ -61,7 +59,6 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_stage0",["",[["hal",[["base",[],["mmio.rs","mod.rs"]],["sev",[],["accept_memory.rs","dice_attestation.rs","mmio.rs","mod.rs"]]],["mod.rs"]]],["acpi.rs","acpi_tables.rs","allocator.rs","apic.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","msr.rs","paging.rs","pic.rs","smp.rs","zero_page.rs"]]],\
 ["oak_stage0_dice",["",[],["lib.rs"]]],\
 ["oak_tdx_guest",["",[],["lib.rs","tdcall.rs","vmcall.rs"]]],\
-["oak_virtio",["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]]],\
 ["sev_serial",["",[],["lib.rs"]]],\
 ["snp_measurement",["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]]]\
 ]'));
