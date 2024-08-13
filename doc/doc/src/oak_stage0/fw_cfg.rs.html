@@ -524,30 +524,6 @@
 <a href="#522" id="522">522</a>
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -574,7 +550,7 @@
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
@@ -1024,30 +1000,6 @@
         })
         .max_by(PhysAddr::cmp)
         .ok_or(<span class="string">"no suitable memory available for dma buffer"</span>)
-}
-
-<span class="doccomment">/// Makes sure that a chunk of memory is valid
-</span><span class="kw">pub fn </span>check_memory(
-    start: VirtAddr,
-    size: usize,
-    e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-    <span class="kw">let </span>end = start + (size <span class="kw">as </span>u64);
-    <span class="kw">if </span>start.as_u64() &lt; Size2MiB::SIZE {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"address falls in the first 2MiB"</span>);
-    }
-    <span class="kw">if </span>end.as_u64() &gt; <span class="kw">crate</span>::TOP_OF_VIRTUAL_MEMORY {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"region ends above the mapped virtual memory"</span>);
-    }
-    <span class="kw">if </span>!e820_table.iter().any(|entry| {
-        entry.entry_type() == <span class="prelude-val">Some</span>(E820EntryType::RAM)
-            &amp;&amp; entry.addr() <span class="kw">as </span>u64 &lt;= start.as_u64()
-            &amp;&amp; (entry.addr() + entry.size()) <span class="kw">as </span>u64 &gt;= end.as_u64()
-    }) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"region is not backed by physical memory"</span>);
-    }
-
-    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Ensures that two ranges don't overlap.

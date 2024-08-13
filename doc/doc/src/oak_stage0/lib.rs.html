@@ -352,29 +352,6 @@
 <a href="#350" id="350">350</a>
 <a href="#351" id="351">351</a>
 <a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -419,7 +396,7 @@
 };
 <span class="kw">use </span>zerocopy::AsBytes;
 
-<span class="kw">use crate</span>::{alloc::string::ToString, kernel::KernelType};
+<span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
 
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;
@@ -553,27 +530,8 @@
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
     <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
 
-    <span class="kw">let </span>kernel_info =
-        kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table()).unwrap_or_default();
-    <span class="kw">let </span><span class="kw-2">mut </span>entry = kernel_info.entry;
-
-    <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If
-    // it works, extract the entry point address from there; if there is no
-    // valid ELF header at that address, assume it's code, and jump there
-    // directly. Safety: this assumes the kernel is loaded at the given address.
-    </span><span class="kw">let </span>header = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(entry.as_u64() <span class="kw">as </span><span class="kw-2">*const </span>elf::file::Elf64_Ehdr) };
-    <span class="kw">if </span>header.e_ident[<span class="number">0</span>] == elf::abi::ELFMAG0
-        &amp;&amp; header.e_ident[<span class="number">1</span>] == elf::abi::ELFMAG1
-        &amp;&amp; header.e_ident[<span class="number">2</span>] == elf::abi::ELFMAG2
-        &amp;&amp; header.e_ident[<span class="number">3</span>] == elf::abi::ELFMAG3
-        &amp;&amp; header.e_ident[<span class="number">4</span>] == elf::abi::ELFCLASS64
-        &amp;&amp; header.e_ident[<span class="number">5</span>] == elf::abi::ELFDATA2LSB
-        &amp;&amp; header.e_ident[<span class="number">6</span>] == elf::abi::EV_CURRENT
-        &amp;&amp; header.e_ident[<span class="number">7</span>] == elf::abi::ELFOSABI_SYSV
-    {
-        <span class="comment">// Looks like we have a valid ELF header at 0x200000. Trust its entry point.
-        </span>entry = VirtAddr::new(header.e_entry);
-    }
+    <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
+    <span class="kw">let </span>entry = kernel_info.entry;
 
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_digest = Sha256::default();
     <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg, <span class="kw-2">&amp;mut </span>acpi_digest).unwrap();
@@ -676,11 +634,7 @@
 
     <span class="comment">// Append the DICE data address to the kernel command-line.
     </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}"</span>);
-    <span class="kw">let </span>cmdline = <span class="kw">if </span>kernel_info.kernel_type == KernelType::Elf {
-        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don't
-        // append the extra parameter.
-        </span>cmdline
-    } <span class="kw">else if </span>cmdline.is_empty() {
+    <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
         extra
     } <span class="kw">else if </span>cmdline.contains(<span class="string">"--"</span>) {
         <span class="macro">format!</span>(<span class="string">"{} {}"</span>, cmdline, extra)
