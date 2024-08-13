@@ -114,11 +114,6 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -152,7 +147,7 @@
     },
 };
 
-<span class="kw">use </span><span class="kw">super</span>::PageAssignment;
+<span class="kw">use super</span>::{PageAssignment, PortFactory};
 <span class="kw">use crate</span>::{paging::PageEncryption, zero_page::ZeroPage};
 
 <span class="kw">pub struct </span>Base {}
@@ -169,31 +164,26 @@
         mmio::Mmio::new(base_address)
     }
 
-    <span class="kw">unsafe fn </span>read_u8_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u8, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="prelude-val">Ok</span>(u8::read_from_port(port))
-    }
-
-    <span class="kw">unsafe fn </span>write_u8_to_port(port: u16, value: u8) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        u8::write_to_port(port, value);
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">unsafe fn </span>read_u16_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u16, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="prelude-val">Ok</span>(u16::read_from_port(port))
-    }
-
-    <span class="kw">unsafe fn </span>write_u16_to_port(port: u16, value: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        u16::write_to_port(port, value);
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">unsafe fn </span>read_u32_from_port(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        <span class="prelude-val">Ok</span>(u32::read_from_port(port))
-    }
-
-    <span class="kw">unsafe fn </span>write_u32_to_port(port: u16, value: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-        u32::write_to_port(port, value);
-        <span class="prelude-val">Ok</span>(())
+    <span class="kw">fn </span>port_factory() -&gt; PortFactory {
+        <span class="comment">// Safety: all these function pointers are marked as unsafe, but you can't have
+        // a unsafe closure.
+        </span>PortFactory {
+            read_u8: |port| <span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(u8::read_from_port(port)) },
+            read_u16: |port| <span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(u16::read_from_port(port)) },
+            read_u32: |port| <span class="kw">unsafe </span>{ <span class="prelude-val">Ok</span>(u32::read_from_port(port)) },
+            write_u8: |port, value| {
+                <span class="kw">unsafe </span>{ u8::write_to_port(port, value) };
+                <span class="prelude-val">Ok</span>(())
+            },
+            write_u16: |port, value| {
+                <span class="kw">unsafe </span>{ u16::write_to_port(port, value) };
+                <span class="prelude-val">Ok</span>(())
+            },
+            write_u32: |port, value| {
+                <span class="kw">unsafe </span>{ u32::write_to_port(port, value) };
+                <span class="prelude-val">Ok</span>(())
+            },
+        }
     }
 
     <span class="kw">fn </span>early_initialize_platform() {}

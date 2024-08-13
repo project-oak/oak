@@ -107,7 +107,7 @@
 
 </span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
-<span class="kw">use </span><span class="kw">crate</span>::hal::{Port, PortFactory};
+<span class="kw">use </span><span class="kw">crate</span>::hal::Port;
 <span class="kw">const </span>CMOS_INDEX_PORT: u16 = <span class="number">0x0070</span>;
 <span class="kw">const </span>CMOS_DATA_PORT: u16 = <span class="number">0x0071</span>;
 
@@ -137,7 +137,7 @@
     /// actually available on those ports, otherwise the behaviour is
     /// undefined.
     </span><span class="kw">pub unsafe fn </span>new&lt;P: <span class="kw">crate</span>::Platform&gt;() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>factory = PortFactory::new::&lt;P&gt;();
+        <span class="kw">let </span>factory = P::port_factory();
         <span class="self">Self </span>{
             index_port: factory.new_reader(CMOS_INDEX_PORT),
             data_port: factory.new_reader(CMOS_DATA_PORT),

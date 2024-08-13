@@ -119,7 +119,7 @@
 <span class="kw">pub fn </span>init_logging&lt;P: <span class="kw">crate</span>::Platform&gt;() {
     <span class="comment">// Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(SERIAL_BASE, PortFactory::new::&lt;P&gt;()) };
+    </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(SERIAL_BASE, P::port_factory()) };
     port.init().expect(<span class="string">"couldn't initialize logging serial port"</span>);
     {
         <span class="kw">let </span><span class="kw-2">mut </span>lock = SERIAL_PORT.lock();

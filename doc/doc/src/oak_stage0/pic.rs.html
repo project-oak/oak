@@ -97,7 +97,7 @@
 
 </span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortWriter};
 
-<span class="kw">use </span><span class="kw">crate</span>::hal::{Port, PortFactory};
+<span class="kw">use </span><span class="kw">crate</span>::hal::Port;
 
 <span class="kw">const </span>PIC0_BASE: u16 = <span class="number">0x20</span>;
 <span class="kw">const </span>PIC1_BASE: u16 = <span class="number">0xA0</span>;
@@ -109,7 +109,7 @@
 
 <span class="kw">impl </span>Pic {
     <span class="kw">pub fn </span>new&lt;P: <span class="kw">crate</span>::Platform&gt;(base: u16) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>factory = PortFactory::new::&lt;P&gt;();
+        <span class="kw">let </span>factory = P::port_factory();
         <span class="self">Self </span>{ command: factory.new_writer(base), data: factory.new_writer(base + <span class="number">1</span>) }
     }
 
