@@ -652,7 +652,7 @@ pub fn mmio_write_u32(address: *const u32, data: u32) -> Result<(), &'static str
 /// See section 3.7 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
-pub fn mmio_read(address: *const u32) -> Result<u32, &'static str> {
+pub fn mmio_read_u32(address: *const u32) -> Result<u32, &'static str> {
     // The VMCALL sub-function for #VE.RequestMMIO
     const SUB_FUNCTION: u64 = 0x30;
 

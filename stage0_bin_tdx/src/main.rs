@@ -17,12 +17,16 @@
 #![no_std]
 #![no_main]
 
-use core::{panic::PanicInfo, ptr::addr_of};
+use core::panic::PanicInfo;
 
+use log::info;
 use oak_stage0::paging;
 use oak_tdx_guest::{
     tdcall::get_td_info,
-    vmcall::{io_read_u8, io_write_u8},
+    vmcall::{
+        call_cpuid, io_read_u16, io_read_u32, io_read_u8, io_write_u16, io_write_u32, io_write_u8,
+        mmio_read_u32, mmio_write_u32, msr_read, msr_write,
+    },
 };
 
 mod asm;
@@ -105,21 +109,23 @@ fn init_tdx_serial_port() {
     io_write_u8(0x3f8 + 0x4, 0x3).unwrap(); // DATA_TERMINAL_READY_AND_REQUEST_TO_SEND
 }
 
+use oak_stage0::hal::PortFactory;
+
 struct Mmio {}
 impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for Mmio {
-    fn read_u32(&self, _: usize) -> u32 {
-        todo!()
+    fn read_u32(&self, offset: usize) -> u32 {
+        mmio_read_u32(offset as *const u32).unwrap()
     }
-    unsafe fn write_u32(&mut self, _: usize, _: u32) {
-        todo!()
+    unsafe fn write_u32(&mut self, offset: usize, val: u32) {
+        mmio_write_u32(offset as *mut u32, val).unwrap()
     }
 }
 
 struct Tdx {}
 impl oak_stage0::Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
-    fn cpuid(_leaf: u32) -> core::arch::x86_64::CpuidResult {
-        unimplemented!()
+    fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
+        call_cpuid(leaf, 0).unwrap()
     }
 
     unsafe fn mmio<S>(_: x86_64::addr::PhysAddr) -> <Self as oak_stage0::Platform>::Mmio<S>
@@ -129,15 +135,26 @@ impl oak_stage0::Platform for Tdx {
         todo!()
     }
 
-    fn port_factory() -> oak_stage0::hal::PortFactory {
-        todo!()
+    fn port_factory() -> PortFactory {
+        PortFactory {
+            read_u8: |port| io_read_u8(port as u32),
+            read_u16: |port| io_read_u16(port as u32),
+            read_u32: |port| io_read_u32(port as u32),
+            write_u8: |port, val| io_write_u8(port as u32, val),
+            write_u16: |port, val| io_write_u16(port as u32, val),
+            write_u32: |port, val| io_write_u32(port as u32, val),
+        }
     }
 
     fn early_initialize_platform() {
-        todo!()
+        write_str("early_initialize_platform");
+        // Set up IDT and exception handlers
+        write_str("early_initialize_platform completed");
     }
     fn initialize_platform(_: &[oak_linux_boot_params::BootE820Entry]) {
-        todo!()
+        // logger is initialized starting from here
+        info!("initialize platform");
+        info!("initialize platform completed");
     }
     fn deinit_platform() {
         todo!()
@@ -159,21 +176,28 @@ impl oak_stage0::Platform for Tdx {
     fn revalidate_page(_: x86_64::structures::paging::Page) {
         todo!()
     }
-    fn page_table_mask(_: oak_stage0::paging::PageEncryption) -> u64 {
-        todo!()
+    fn page_table_mask(enc: oak_stage0::paging::PageEncryption) -> u64 {
+        // a. When 4-level EPT is active, the SHARED bit position would
+        // always be bit 47.
+        // b. When 5-level EPT is active, the SHARED bit position would
+        // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
+        match enc {
+            oak_stage0::paging::PageEncryption::Encrypted => 0,
+            oak_stage0::paging::PageEncryption::Unencrypted => 1 << 47,
+        }
     }
     fn encrypted() -> u64 {
-        todo!()
+        // stage0_bin_tdx does not support regular VM
+        1 << 47
     }
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
         todo!()
     }
-    unsafe fn read_msr(_: u32) -> u64 {
-        todo!()
+    unsafe fn read_msr(msr: u32) -> u64 {
+        msr_read(msr).unwrap()
     }
-
-    unsafe fn write_msr(_: u32, _: u64) {
-        todo!()
+    unsafe fn write_msr(msr: u32, value: u64) {
+        msr_write(msr, value).unwrap()
     }
 }
 
@@ -190,14 +214,6 @@ pub extern "C" fn rust64_start() -> ! {
     debug_u32_variable(stringify!(td_info.max_vcpus), td_info.max_vcpus);
     debug_u32_variable(stringify!(td_info.num_vcpus), td_info.num_vcpus);
 
-    loop {
-        unsafe {
-            assert_eq!(TEST_DATA, 0xdeadbeaf);
-            assert!((addr_of!(TEST_DATA) as u64) < 0x200000);
-        }
-    }
-
-    #[allow(unreachable_code)]
     oak_stage0::rust64_start::<Tdx>()
 }
 

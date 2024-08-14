@@ -10,6 +10,7 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
+log = "*"
 oak_dice = { path = "../oak_dice" }
 oak_linux_boot_params = { path = "../oak_linux_boot_params" }
 oak_sev_snp_attestation_report = { path = "../oak_sev_snp_attestation_report" }
