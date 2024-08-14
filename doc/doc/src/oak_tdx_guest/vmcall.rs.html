@@ -1590,7 +1590,7 @@
 /// See section 3.7 of [Guest-Host-Communication Interface (GHCI) for Intel®
 /// Trust Domain Extensions (Intel® TDX)](https://cdrdv2.intel.com/v1/dl/getContent/726792)
 /// for more information.
-</span><span class="kw">pub fn </span>mmio_read(address: <span class="kw-2">*const </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+</span><span class="kw">pub fn </span>mmio_read_u32(address: <span class="kw-2">*const </span>u32) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// The VMCALL sub-function for #VE.RequestMMIO
     </span><span class="kw">const </span>SUB_FUNCTION: u64 = <span class="number">0x30</span>;
 
