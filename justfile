@@ -72,13 +72,11 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
 
     # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}} \
+    bazel build //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         --platforms=//:x86_64-unknown-none \
         --compilation_mode opt
 
-    rust-objcopy \
-        --output-target=binary \
-        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}} \
+    cp bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
 
     just bzimage_provenance_subjects \

@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//bazel:defs.bzl", "objcopy")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -42,4 +43,9 @@ rust_binary(
     deps = [
         "//stage0",
     ],
+)
+
+objcopy(
+    name = "stage0_bin_raw",
+    src = ":stage0_bin",
 )

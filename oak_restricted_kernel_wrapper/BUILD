@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//bazel:defs.bzl", "objcopy")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -66,6 +67,11 @@ rust_binary(
     ],
 )
 
+objcopy(
+    name = "oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+    src = ":oak_restricted_kernel_wrapper_virtio_console_channel",
+)
+
 rust_binary(
     name = "oak_restricted_kernel_wrapper_simple_io_channel",
     srcs = glob(["src/**/*.rs"]),
@@ -86,4 +92,9 @@ rust_binary(
         "@oak_no_std_crates_index//:elf",
         "@oak_no_std_crates_index//:x86_64",
     ],
+)
+
+objcopy(
+    name = "oak_restricted_kernel_wrapper_simple_io_channel_bin",
+    src = ":oak_restricted_kernel_wrapper_simple_io_channel",
 )

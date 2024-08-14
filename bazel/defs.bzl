@@ -61,3 +61,22 @@ def select_std_crates(names):
         "//:x86_64-none-no_avx-setting": ["@oak_no_std_no_avx_crates_index//:" + name for name in names],
         "//conditions:default": ["@oak_crates_index//:" + name for name in names],
     })
+
+def _objcopy_impl(ctx):
+    out = ctx.actions.declare_file(ctx.label.name)
+    cc = ctx.toolchains["@bazel_tools//tools/cpp:toolchain_type"].cc
+    ctx.actions.run(
+        inputs = depset(direct = [ctx.file.src], transitive = [cc.all_files]),
+        outputs = [out],
+        executable = cc.objcopy_executable,
+        arguments = ["--output-target=binary", ctx.executable.src.path, out.path],
+    )
+    return [DefaultInfo(files = depset([out]))]
+
+objcopy = rule(
+    implementation = _objcopy_impl,
+    attrs = {
+        "src": attr.label(executable = True, cfg = "target", mandatory = True, allow_single_file = True),
+    },
+    toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
+)
