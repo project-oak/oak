@@ -172,6 +172,9 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -228,6 +231,9 @@
 
     <span class="attr">#[arg(long = <span class="string">"oak-dice"</span>, value_parser = try_parse_phys_addr)]
     </span>dice_addr: PhysAddr,
+
+    <span class="attr">#[arg(long = <span class="string">"oak-dice-length"</span>)]
+    </span>dice_data_length: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="attr">#[tokio::main]
@@ -253,7 +259,7 @@
     mount(<span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="string">"/sys"</span>, <span class="prelude-val">Some</span>(<span class="string">"sysfs"</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
         .context(<span class="string">"error mounting /sys"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_dice_data(args.dice_addr)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_dice_data(args.dice_addr, args.dice_data_length)<span class="question-mark">?</span>;
 
     <span class="comment">// Unmount /sys and /dev as they are no longer needed.
     </span>umount(<span class="string">"/sys"</span>).context(<span class="string">"failed to unmount /sys"</span>)<span class="question-mark">?</span>;

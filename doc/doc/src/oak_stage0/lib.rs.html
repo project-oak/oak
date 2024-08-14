@@ -352,6 +352,9 @@
 <a href="#350" id="350">350</a>
 <a href="#351" id="351">351</a>
 <a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -379,7 +382,7 @@
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
-<span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
+<span class="kw">use </span>oak_dice::evidence::{DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 <span class="kw">use </span>prost::Message;
@@ -633,7 +636,10 @@
     ));
 
     <span class="comment">// Append the DICE data address to the kernel command-line.
-    </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}"</span>);
+    </span><span class="kw">let </span>sensitive_dice_data_length = core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;();
+    <span class="kw">let </span>extra = <span class="macro">format!</span>(
+        <span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}  --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
+    </span>);
     <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
         extra
     } <span class="kw">else if </span>cmdline.contains(<span class="string">"--"</span>) {
