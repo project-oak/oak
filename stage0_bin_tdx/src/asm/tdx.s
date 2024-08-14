@@ -6,18 +6,13 @@
 ap_start:
     hlt
 
-_park_ap:
-    jmp _park_ap
-
 .global _begin_of_tdx
 _begin_of_tdx:
+    # VCPU_INDEX is in esi
     cli
 
     andl $0x3f, %ebx # [6:0] GPAW
     movl %ebx, %ebp
-
-    test %esi, %esi
-    jnz _park_ap
 
     movl $gdt_desc_offset, %ebx
     lgdtl (%ebx)
@@ -48,6 +43,36 @@ _tdx_32bit_long_mode_start:
     bts $0x05, %eax # PAE
     movl %eax, %cr4
 
+    # page tables are set in the linker script
+    movl $bios_pml4, %ecx
+    movl %ecx, %cr3
+
+    # No need for rdmsr/wrmsr
+
+    # Protected mode + paging
+    mov %cr0, %eax
+    or $0x80000001, %eax # set PG
+    mov %eax, %cr0
+
+    # Reload CS, enter long mode, jump to 64-bit code.
+    ljmpl $cs, $_tdx_64bit_start
+
+.align 16
+.code64
+_tdx_64bit_start:
+    # Clean up data segments.
+    movw $ds, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+    movw %ax, %ss
+
+    # Park the APs
+    test %esi, %esi
+    jnz _park_ap_64bit
+
+    # BSP re-creates a set of page table in ram_low
     # Clear BSS: base address goes to EDI, value (0) goes to EAX,
     # count goes into ECX. Page tables will be located in BSS
     movl $bss_start, %edi
@@ -83,33 +108,8 @@ _tdx_32bit_long_mode_start:
     movl %esi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
 
     # Reload PML4 to use the writable PML4
-    movl ${pml4}, %eax
-    movl %eax, %cr3
-
-    # In a TDX VM, IA32_EFER msr is set by tdx module.
-    # No need for rdmsr/wrmsr
-
-    # Protected mode + paging
-    mov %cr0, %eax
-    or $0x80000001, %eax # set PG
-    mov %eax, %cr0
-
-    # Reload CS, enter long mode, jump to 64-bit code.
-    ljmpl $cs, $_tdx_64bit_start
-
-.align 16
-.code64
-_tdx_64bit_start:
-    # Clean up data segments.
-    movw $ds, %ax
-    movw %ax, %ds
-    movw %ax, %es
-    movw %ax, %fs
-    movw %ax, %gs
-    movw %ax, %ss
-
-    # We map the lower 640KiB using a TEMPMEM section. So no need to
-    # accept memory page here.
+    movq ${pml4}, %rax
+    movq %rax, %cr3
 
     # Copy DATA from the ROM image (stored just after TEXT) to
     # the expected location. Source address goes to ESI, destination
@@ -128,3 +128,34 @@ _tdx_64bit_start:
 
     # ...and jump to Rust code.
     jmp rust64_start
+
+_park_ap_64bit:
+    leaq (AP_IN_64BIT_COUNT), %rcx
+    lock incq (%rcx)
+
+    # %esi stores the VCPU_INDEX
+    movl %esi, %ebp # save the VCPU_INDEX
+
+    movq $1, %rax # TDCALL_TDINFO
+    tdcall
+
+    # R8  [31:0]  NUM_VCPUS
+    #     [63:32] MAX_VCPUS
+    # R9  [31:0]  VCPU_INDEX
+
+_inner_loop:
+    # On entering the inner loop, APs are using the hard-coded page
+    # tables from ROM. Before wake up the aps we need to reload cr3
+    # for APs.
+
+    # Finally we will need to call ap_wakeup_vector with
+    # VCPU_INDEX as the first argument like
+    # fn ap_wakeup_vector(vcpu_index: u64);
+
+    # movq $r9, $rdi
+    # call ap_wakeup_vector
+
+    pause
+
+    jmp _inner_loop
+

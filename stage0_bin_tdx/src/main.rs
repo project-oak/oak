@@ -44,6 +44,9 @@ mod asm;
 #[no_mangle]
 static mut GPAW: u32 = 0;
 
+#[no_mangle]
+static mut AP_IN_64BIT_COUNT: u32 = 0;
+
 static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
 
 fn get_tdx_shared_bit() -> usize {
@@ -276,6 +279,7 @@ pub extern "C" fn rust64_start() -> ! {
     debug_u64_variable(stringify!(td_info.attributes), td_info.attributes.bits() as u64);
     debug_u32_variable(stringify!(td_info.max_vcpus), td_info.max_vcpus);
     debug_u32_variable(stringify!(td_info.num_vcpus), td_info.num_vcpus);
+    debug_u32_variable(stringify!(AP_IN_64BIT_COUNT), unsafe { AP_IN_64BIT_COUNT });
 
     oak_stage0::rust64_start::<Tdx>()
 }
