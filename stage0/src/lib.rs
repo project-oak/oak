@@ -25,7 +25,9 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
-use oak_dice::evidence::{DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM};
+use oak_dice::evidence::{
+    DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
+};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 use prost::Message;
@@ -216,7 +218,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     };
 
     let event_log_proto = generate_event_log(stage0event);
-    let eventlog_sha2_256_digest = event_log_proto.encoded_events[0].measure();
+    let event_sha2_256_digest = event_log_proto.encoded_events[0].measure();
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
@@ -224,7 +226,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
-    log::debug!("Event Log digest: sha2-256:{}", hex::encode(eventlog_sha2_256_digest));
+    log::debug!("Event digest: sha2-256:{}", hex::encode(event_sha2_256_digest));
 
     // TODO: b/331252282 - Remove temporary workaround for cmd line length.
     let cmdline_max_len = 256;
@@ -240,7 +242,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
-        eventlog_sha2_256_digest,
+        event_sha2_256_digest,
     };
 
     let tee_platform = P::tee_platform();
@@ -281,7 +283,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // Append the DICE data address to the kernel command-line.
     let sensitive_dice_data_length = core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
     let extra = format!(
-        "--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}  --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
+        "--{DICE_DATA_CMDLINE_PARAM}={dice_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
     );
     let cmdline = if cmdline.is_empty() {
         extra
@@ -348,7 +350,6 @@ fn generate_event_log(measurements: Stage0Measurements) -> EventLog {
     let tag = String::from("Stage0");
     let any = prost_types::Any::from_msg(&measurements);
     let event = Event { tag, event: Some(any.unwrap()) };
-    log::info!("Any:{:?}", event.event.clone().unwrap());
     let mut eventlog = EventLog::default();
     eventlog.encoded_events.push(event.encode_to_vec());
     eventlog

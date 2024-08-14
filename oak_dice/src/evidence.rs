@@ -66,6 +66,9 @@ pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
 /// Stage 0 DICE data struct.
 pub const DICE_DATA_LENGTH_CMDLINE_PARAM: &str = "oak-dice-length";
 
+/// physical address of the Stage 0 event log.
+pub const EVENTLOG_CMDLINE_PARAM: &str = "oak-event-log";
+
 /// The magic number used to identify the Stage 0 DICE data in memory.
 pub const STAGE0_MAGIC: u64 = u64::from_le_bytes(*b"oak.dice");
 

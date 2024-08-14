@@ -57,6 +57,9 @@ struct Args {
 
     #[arg(long = "oak-dice-length")]
     dice_data_length: Option<usize>,
+
+    #[arg(long = "oak-event-log", value_parser = try_parse_phys_addr)]
+    event_log: PhysAddr,
 }
 
 #[tokio::main]

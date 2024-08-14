@@ -62,8 +62,8 @@ pub struct Measurements {
     /// The concatenated measurement of the command used for building the ACPI
     /// tables.
     pub acpi_sha2_256_digest: [u8; 32],
-    /// Eventlog measurement containing the hashes of other components
-    pub eventlog_sha2_256_digest: [u8; 32],
+    /// Event measurement containing the hashes of other components
+    pub event_sha2_256_digest: [u8; 32],
 }
 
 /// Generates an ECA certificate for use by the next boot stage (Stage 1).
@@ -130,7 +130,7 @@ fn generate_stage1_certificate(
             ClaimName::PrivateUse(EVENT_ID),
             Value::Map(alloc::vec![(
                 Value::Integer(SHA2_256_ID.into()),
-                Value::Bytes(measurements.eventlog_sha2_256_digest.into()),
+                Value::Bytes(measurements.event_sha2_256_digest.into()),
             )]),
         ),
     ];
