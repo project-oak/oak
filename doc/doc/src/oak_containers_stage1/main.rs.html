@@ -175,6 +175,9 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -234,6 +237,9 @@
 
     <span class="attr">#[arg(long = <span class="string">"oak-dice-length"</span>)]
     </span>dice_data_length: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+
+    <span class="attr">#[arg(long = <span class="string">"oak-event-log"</span>, value_parser = try_parse_phys_addr)]
+    </span>event_log: PhysAddr,
 }
 
 <span class="attr">#[tokio::main]

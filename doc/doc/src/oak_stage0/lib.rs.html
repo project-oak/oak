@@ -355,6 +355,7 @@
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -382,7 +383,9 @@
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
-<span class="kw">use </span>oak_dice::evidence::{DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM};
+<span class="kw">use </span>oak_dice::evidence::{
+    DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
+};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 <span class="kw">use </span>prost::Message;
@@ -573,7 +576,7 @@
     };
 
     <span class="kw">let </span>event_log_proto = generate_event_log(stage0event);
-    <span class="kw">let </span>eventlog_sha2_256_digest = event_log_proto.encoded_events[<span class="number">0</span>].measure();
+    <span class="kw">let </span>event_sha2_256_digest = event_log_proto.encoded_events[<span class="number">0</span>].measure();
 
     <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
@@ -581,7 +584,7 @@
     <span class="macro">log::debug!</span>(<span class="string">"Initial RAM disk digest: sha2-256:{}"</span>, hex::encode(ram_disk_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"ACPI table generation digest: sha2-256:{}"</span>, hex::encode(acpi_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"E820 table digest: sha2-256:{}"</span>, hex::encode(memory_map_sha2_256_digest));
-    <span class="macro">log::debug!</span>(<span class="string">"Event Log digest: sha2-256:{}"</span>, hex::encode(eventlog_sha2_256_digest));
+    <span class="macro">log::debug!</span>(<span class="string">"Event digest: sha2-256:{}"</span>, hex::encode(event_sha2_256_digest));
 
     <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line length.
     </span><span class="kw">let </span>cmdline_max_len = <span class="number">256</span>;
@@ -597,7 +600,7 @@
         ram_disk_sha2_256_digest,
         setup_data_sha2_256_digest,
         memory_map_sha2_256_digest,
-        eventlog_sha2_256_digest,
+        event_sha2_256_digest,
     };
 
     <span class="kw">let </span>tee_platform = P::tee_platform();
@@ -638,7 +641,7 @@
     <span class="comment">// Append the DICE data address to the kernel command-line.
     </span><span class="kw">let </span>sensitive_dice_data_length = core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;();
     <span class="kw">let </span>extra = <span class="macro">format!</span>(
-        <span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}  --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
+        <span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
     </span>);
     <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
         extra
@@ -705,7 +708,6 @@
     <span class="kw">let </span>tag = String::from(<span class="string">"Stage0"</span>);
     <span class="kw">let </span>any = prost_types::Any::from_msg(<span class="kw-2">&amp;</span>measurements);
     <span class="kw">let </span>event = Event { tag, event: <span class="prelude-val">Some</span>(any.unwrap()) };
-    <span class="macro">log::info!</span>(<span class="string">"Any:{:?}"</span>, event.event.clone().unwrap());
     <span class="kw">let </span><span class="kw-2">mut </span>eventlog = EventLog::default();
     eventlog.encoded_events.push(event.encode_to_vec());
     eventlog
