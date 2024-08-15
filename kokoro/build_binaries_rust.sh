@@ -29,7 +29,7 @@ readonly generated_binaries=(
     enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
     enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
     generated/oak_restricted_kernel_wrapper_simple_io_channel_bin
-    stage0_bin/target/x86_64-unknown-none/release/stage0_bin
+    generated/stage0_bin
 )
 readonly binary_names=(
     key_xor_test_app

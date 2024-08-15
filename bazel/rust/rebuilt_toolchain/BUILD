@@ -26,9 +26,9 @@ package(
     licenses = ["notice"],
 )
 
-# Rebuild stdlibs for a new toolchian. This uses a different toolchain to
-# rebuild the libraries from sources, since the curent toolchain is being
-# built not yet available.
+# Rebuild stdlibs for a new toolchain. This uses a different toolchain to
+# rebuild the libraries from sources, since the curent toolchain being built
+# is not yet available.
 with_stdlib_build(
     name = "stdlibs_build",
     srcs = ["@stdlibs//:stdlib_sources"],

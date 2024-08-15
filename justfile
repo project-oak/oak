@@ -35,7 +35,7 @@ oak_functions_insecure_enclave_app:
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
     target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
-        --stage0-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+        --stage0-binary=generated/stage0_bin \
         --kernel=oak_containers/kernel/target/bzImage \
         --initrd=target/stage1.cpio \
         --system-image=oak_containers/system_image/target/image.tar.xz \
@@ -50,7 +50,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
 
 run_oak_functions_launcher wasm_path port lookup_data_path:
     target/x86_64-unknown-linux-gnu/release/oak_functions_launcher \
-        --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+        --bios-binary=generated/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
         --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app \
@@ -138,9 +138,14 @@ wasm_release_crate name:
 all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
 
 stage0_bin:
-    env --chdir=stage0_bin \
-        cargo objcopy --release -- --output-target=binary \
-        target/x86_64-unknown-none/release/stage0_bin
+    bazel build //stage0_bin:stage0_bin \
+        --platforms=//:x86_64-firmware \
+        --compilation_mode opt
+
+    mkdir --parents generated
+    cp --preserve=timestamps --no-preserve=mode \
+        bazel-bin/stage0_bin/stage0_bin \
+        generated
 
 stage0_bin_tdx:
     env --chdir=stage0_bin_tdx \
@@ -152,7 +157,7 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
     mkdir --parents {{output_dir}}
     cargo run --package=snp_measurement --quiet -- \
         --vcpu-count=1,2,4,8,16,32,64 \
-        --stage0-rom=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+        --stage0-rom=generated/stage0_bin \
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:

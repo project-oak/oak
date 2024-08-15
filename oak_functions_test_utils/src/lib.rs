@@ -50,13 +50,11 @@ pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| {
     PathBuf::from(env::var("TEST_SRCDIR").unwrap())
         .join(env::var("TEST_WORKSPACE").unwrap())
         .join("stage0_bin")
-        .join("stage0_bin_raw")
+        .join("stage0_bin")
 });
 
 #[cfg(not(feature = "bazel"))]
-pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| {
-    workspace_path(&["stage0_bin", "target", "x86_64-unknown-none", "release", "stage0_bin"])
-});
+pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["generated", "stage0_bin"]));
 
 use std::{
     collections::HashMap, env, future::Future, io::Write, path::PathBuf, pin::Pin, process::Stdio,

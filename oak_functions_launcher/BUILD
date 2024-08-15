@@ -92,12 +92,11 @@ rust_test(
         "//oak_functions/examples/echo",
         "//oak_functions/examples/key_value_lookup",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
-        "//stage0_bin:stage0_bin_raw",
+        "//stage0_bin",
     ],
     env = {
         "RUST_LOG": "debug",
     },
-    tags = ["manual"],
     deps = [
         ":lib",
         "//micro_rpc",

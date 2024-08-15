@@ -23,7 +23,7 @@ package(
 )
 
 rust_binary(
-    name = "stage0_bin",
+    name = "stage0_bin_elf",
     srcs = glob(["src/**/*.rs"]),
     aliases = {"@//stage0": "oak_stage0"},
     compile_data = [
@@ -39,6 +39,8 @@ rust_binary(
         "--codegen=opt-level=z",
         "--codegen=lto=fat",
         "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=256K",
+        "--codegen=link-arg=-static",
+        "--codegen=link-arg=-Wl,-static",
     ],
     deps = [
         "//stage0",
@@ -46,6 +48,6 @@ rust_binary(
 )
 
 objcopy(
-    name = "stage0_bin_raw",
-    src = ":stage0_bin",
+    name = "stage0_bin",
+    src = ":stage0_bin_elf",
 )

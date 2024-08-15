@@ -40,7 +40,8 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":compiler_builtins",
@@ -56,11 +57,12 @@ rust_library(
     ]),
     compile_data = glob(["vendor/compiler_builtins/src/**/*.md"]),
     crate_features = [
-        "mem-unaligned",
         "compiler-builtins",
-        "unstable",
-        "no_std",
+        "force-soft-floats",
         "mem",
+        "mem-unaligned",
+        "no_std",
+        "unstable",
     ],
     crate_name = "compiler_builtins",
     edition = "2021",
@@ -71,6 +73,7 @@ rust_library(
         # TODO: b/359144829 - replace with select statement to support
         # panic_immeditate_abort.
         "--codegen=code-model=large",
+        "--codegen=relocation-model=static",
     ],
     deps = [":core"],
 )
@@ -98,7 +101,8 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=relocation-model=static",
+        "--codegen=code-model=large",
         #"-Cpanic=abort",
         "--cap-lints=allow",
         "-Zmacro-backtrace",
@@ -119,7 +123,8 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":compiler_builtins",
@@ -139,10 +144,11 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
-        "-Cpanic=abort",
+        "--codegen=code-model=large",
+        "--codegen=panic=abort",
         "--cap-lints=allow",
         "-Zforce-unstable-if-unmarked",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":alloc",
@@ -166,11 +172,12 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
         "--cfg=libc_align",
         "--cfg=libc_core_cvoid",
         "--cfg=libc_priv_mod_use",
         "--cfg=libc_const_extern_fn",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":cfg_if",
@@ -192,8 +199,9 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
         "-Zforce-unstable-if-unmarked",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":cfg_if",
@@ -218,7 +226,8 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":compiler_builtins",
@@ -238,8 +247,9 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        "-Ccode-model=large",
+        "--codegen=code-model=large",
         "-Zforce-unstable-if-unmarked",
+        "--codegen=relocation-model=static",
     ],
     deps = [
         ":alloc",
