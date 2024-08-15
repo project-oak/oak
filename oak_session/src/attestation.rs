@@ -17,6 +17,9 @@
 //! This module provides an implementation of the Attestation Provider, which
 //! handles remote attestation between two parties.
 
+use alloc::{collections::BTreeMap, string::String};
+
+use anyhow::Error;
 use oak_proto_rust::oak::{
     attestation::v1::{AttestationResults, Endorsements, Evidence},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
@@ -77,7 +80,14 @@ impl AttestationProvider for ClientAttestationProvider {
 
 impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
-        core::unimplemented!();
+        Ok(Some(AttestRequest {
+            endorsed_evidence: self
+                .config
+                .self_attesters
+                .iter()
+                .map(|(id, att)| Ok((id.clone(), att.get_endorsed_evidence()?)))
+                .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+        }))
     }
 
     fn put_incoming_message(
@@ -109,7 +119,14 @@ impl AttestationProvider for ServerAttestationProvider {
 
 impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
-        core::unimplemented!();
+        Ok(Some(AttestResponse {
+            endorsed_evidence: self
+                .config
+                .self_attesters
+                .iter()
+                .map(|(id, att)| Ok((id.clone(), att.get_endorsed_evidence()?)))
+                .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+        }))
     }
 
     fn put_incoming_message(

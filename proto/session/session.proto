@@ -25,12 +25,14 @@ option java_package = "com.google.oak.session.v1";
 
 // Request message for the remote attestation.
 message AttestRequest {
-  repeated oak.session.v1.EndorsedEvidence endorsed_evidence = 1;
+  // Maps unique IDs of attestation providers to the corresponding evidence.
+  map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 1;
 }
 
-// Request message for the remote attestation.
+// Response message for the remote attestation.
 message AttestResponse {
-  repeated oak.session.v1.EndorsedEvidence endorsed_evidence = 1;
+  // Maps unique IDs of attestation providers to the corresponding evidence.
+  map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 1;
 }
 
 // Noise handshake message containing fields for all handshake patterns.

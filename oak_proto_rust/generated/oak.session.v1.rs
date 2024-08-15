@@ -77,15 +77,23 @@ pub mod response_wrapper {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct AttestRequest {
-    #[prost(message, repeated, tag = "1")]
-    pub endorsed_evidence: ::prost::alloc::vec::Vec<EndorsedEvidence>,
+    /// Maps unique IDs of attestation providers to the corresponding evidence.
+    #[prost(btree_map = "string, message", tag = "1")]
+    pub endorsed_evidence: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        EndorsedEvidence,
+    >,
 }
-/// Request message for the remote attestation.
+/// Response message for the remote attestation.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct AttestResponse {
-    #[prost(message, repeated, tag = "1")]
-    pub endorsed_evidence: ::prost::alloc::vec::Vec<EndorsedEvidence>,
+    /// Maps unique IDs of attestation providers to the corresponding evidence.
+    #[prost(btree_map = "string, message", tag = "1")]
+    pub endorsed_evidence: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        EndorsedEvidence,
+    >,
 }
 /// Noise handshake message containing fields for all handshake patterns.
 /// <<http://www.noiseprotocol.org/noise.html#handshake-patterns>>

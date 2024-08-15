@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 use anyhow::Error;
 use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
@@ -50,8 +50,8 @@ impl SessionConfigBuilder {
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_provider_config = AttestationProviderConfig {
             attestation_type,
-            self_attesters: vec![],
-            peer_verifiers: vec![],
+            self_attesters: BTreeMap::new(),
+            peer_verifiers: BTreeMap::new(),
         };
 
         let handshaker_config = HandshakerConfig {
@@ -73,13 +73,17 @@ impl SessionConfigBuilder {
         Self { config }
     }
 
-    pub fn add_self_attester(mut self, attester: Box<dyn Attester>) -> Self {
-        self.config.attestation_provider_config.self_attesters.push(attester);
+    pub fn add_self_attester(mut self, attester_id: String, attester: Box<dyn Attester>) -> Self {
+        self.config.attestation_provider_config.self_attesters.insert(attester_id, attester);
         self
     }
 
-    pub fn add_peer_verifier(mut self, verifier: Box<dyn AttestationVerifier>) -> Self {
-        self.config.attestation_provider_config.peer_verifiers.push(verifier);
+    pub fn add_peer_verifier(
+        mut self,
+        attester_id: String,
+        verifier: Box<dyn AttestationVerifier>,
+    ) -> Self {
+        self.config.attestation_provider_config.peer_verifiers.insert(attester_id, verifier);
         self
     }
 
@@ -117,8 +121,8 @@ impl SessionConfigBuilder {
 #[allow(dead_code)]
 pub struct AttestationProviderConfig {
     pub attestation_type: AttestationType,
-    pub self_attesters: Vec<Box<dyn Attester>>,
-    pub peer_verifiers: Vec<Box<dyn AttestationVerifier>>,
+    pub self_attesters: BTreeMap<String, Box<dyn Attester>>,
+    pub peer_verifiers: BTreeMap<String, Box<dyn AttestationVerifier>>,
 }
 
 #[allow(dead_code)]
