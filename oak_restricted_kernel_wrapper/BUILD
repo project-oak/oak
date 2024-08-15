@@ -15,6 +15,7 @@
 #
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//bazel:defs.bzl", "objcopy")
+load("//oak_kernel_measurement:rules.bzl", "kernel_measurement")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -72,6 +73,19 @@ objcopy(
     src = ":oak_restricted_kernel_wrapper_virtio_console_channel",
 )
 
+kernel_measurement(
+    name = "oak_restricted_kernel_wrapper_virtio_console_channel_measurement",
+    src = ":oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+)
+
+filegroup(
+    name = "oak_restricted_kernel_wrapper_virtio_console_channel_files",
+    srcs = [
+        ":oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ":oak_restricted_kernel_wrapper_virtio_console_channel_measurement",
+    ],
+)
+
 rust_binary(
     name = "oak_restricted_kernel_wrapper_simple_io_channel",
     srcs = glob(["src/**/*.rs"]),
@@ -97,4 +111,17 @@ rust_binary(
 objcopy(
     name = "oak_restricted_kernel_wrapper_simple_io_channel_bin",
     src = ":oak_restricted_kernel_wrapper_simple_io_channel",
+)
+
+kernel_measurement(
+    name = "oak_restricted_kernel_wrapper_simple_io_channel_measurement",
+    src = ":oak_restricted_kernel_wrapper_simple_io_channel_bin",
+)
+
+filegroup(
+    name = "oak_restricted_kernel_wrapper_simple_io_channel_files",
+    srcs = [
+        ":oak_restricted_kernel_wrapper_simple_io_channel_bin",
+        ":oak_restricted_kernel_wrapper_simple_io_channel_measurement",
+    ],
 )
