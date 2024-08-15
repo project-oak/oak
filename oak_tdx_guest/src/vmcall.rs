@@ -800,8 +800,7 @@ pub fn get_td_vm_call_info() -> Result<(), &'static str> {
     // spec) goes into R10, and the result of the subfunction is returned in
     // R10. The sub-function to call goes into R11. The return code of the sub
     // function goes to R10. R11/R12/R13/R14 are Leaf-specific output. They will
-    // be returned as 0. If the return code is SUCCESS, the TD is free to use
-    // the GPA as a shared, memory page.
+    // be returned as 0.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
     // the affected registers are specified, so no unspecified registers will be

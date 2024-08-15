@@ -13,6 +13,9 @@ _park_ap:
 _begin_of_tdx:
     cli
 
+    andl $0x3f, %ebx # [6:0] GPAW
+    movl %ebx, %ebp
+
     test %esi, %esi
     jnz _park_ap
 
@@ -39,6 +42,8 @@ _tdx_32bit_long_mode_start:
     # Skip BFV check
     # Skip UEFI SEC setup
 
+    # Note that no matter what the GPAW is, we only use 4-level
+    # paging in stage0. Linux will set up its own PTs later.
     movl %cr4, %eax
     bts $0x05, %eax # PAE
     movl %eax, %cr4
@@ -78,7 +83,6 @@ _tdx_32bit_long_mode_start:
     movl %esi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
 
     # Reload PML4 to use the writable PML4
-    #xorl %eax, %eax
     movl ${pml4}, %eax
     movl %eax, %cr3
 
@@ -119,7 +123,8 @@ _tdx_64bit_start:
     movl $stack_start, %esp
     push $0
 
-    movl $0xdeadbeaf, (TEST_DATA)
+    # Set GPAW
+    movl %ebp, (GPAW)
 
     # ...and jump to Rust code.
     jmp rust64_start

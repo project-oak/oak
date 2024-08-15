@@ -17,7 +17,10 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+use core::{
+    ops::{Index, IndexMut},
+    panic::PanicInfo,
+};
 
 use log::info;
 use oak_stage0::paging;
@@ -28,13 +31,64 @@ use oak_tdx_guest::{
         mmio_read_u32, mmio_write_u32, msr_read, msr_write,
     },
 };
+use x86_64::{
+    registers::control::Cr3,
+    structures::paging::{
+        OffsetPageTable, Page, PageSize, PageTable, PageTableIndex, Size1GiB, Size2MiB, Size4KiB,
+    },
+    PhysAddr, VirtAddr,
+};
 
 mod asm;
 
 #[no_mangle]
-static mut TEST_DATA: u32 = 0;
+static mut GPAW: u32 = 0;
 
 static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
+
+fn get_tdx_shared_bit() -> usize {
+    unsafe { GPAW as usize - 1 }
+}
+
+// Inspired by TD-shim and credits to TD-shim
+fn offset_pt() -> OffsetPageTable<'static> {
+    let cr3 = Cr3::read().0.start_address().as_u64();
+    unsafe { OffsetPageTable::new(&mut *(cr3 as *mut _), VirtAddr::new(0)) }
+}
+
+fn pt_entry_set_shared_bit(page_table: &mut PageTable, index: PageTableIndex, shared: bool) {
+    let entry = page_table.index(index);
+    let shared_bit = 1 << get_tdx_shared_bit();
+
+    let addr = if shared {
+        entry.addr().as_u64() | shared_bit
+    } else {
+        entry.addr().as_u64() & !shared_bit
+    };
+    let flags = entry.flags();
+
+    page_table.index_mut(index).set_addr(PhysAddr::new(addr), flags);
+}
+
+// TODO: b/360129756 - simplify this function. consider merging it into stage0
+fn pt_set_shared_bit(pt: &mut OffsetPageTable, page: &Page, shared: bool) {
+    let p4 = pt.level_4_table();
+    let p3 = unsafe { &mut *(p4.index(page.p4_index()).addr().as_u64() as *mut PageTable) };
+
+    if page.size() == Size1GiB::SIZE {
+        pt_entry_set_shared_bit(p3, page.p3_index(), shared);
+    }
+
+    let p2 = unsafe { &mut *(p3.index(page.p3_index()).addr().as_u64() as *mut PageTable) };
+    if page.size() == Size2MiB::SIZE {
+        pt_entry_set_shared_bit(p2, page.p2_index(), shared);
+    }
+
+    let p1 = unsafe { &mut *(p2.index(page.p2_index()).addr().as_u64() as *mut PageTable) };
+    if page.size() == Size4KiB::SIZE {
+        pt_entry_set_shared_bit(p1, page.p1_index(), shared);
+    }
+}
 
 fn write_u8_to_serial(c: u8) {
     // wait_for_empty_output
@@ -148,12 +202,12 @@ impl oak_stage0::Platform for Tdx {
 
     fn early_initialize_platform() {
         write_str("early_initialize_platform");
-        // Set up IDT and exception handlers
         write_str("early_initialize_platform completed");
     }
-    fn initialize_platform(_: &[oak_linux_boot_params::BootE820Entry]) {
+    fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
         // logger is initialized starting from here
         info!("initialize platform");
+        info!("{:?}", e820_table);
         info!("initialize platform completed");
     }
     fn deinit_platform() {
@@ -170,8 +224,16 @@ impl oak_stage0::Platform for Tdx {
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
         todo!()
     }
-    fn change_page_state(_: x86_64::structures::paging::Page, _: oak_stage0::hal::PageAssignment) {
-        todo!()
+    fn change_page_state(
+        page: x86_64::structures::paging::Page,
+        attr: oak_stage0::hal::PageAssignment,
+    ) {
+        let shared: bool = match attr {
+            oak_stage0::hal::PageAssignment::Shared => true,
+            oak_stage0::hal::PageAssignment::Private => false,
+        };
+        let mut pt = offset_pt();
+        pt_set_shared_bit(&mut pt, &page, shared);
     }
     fn revalidate_page(_: x86_64::structures::paging::Page) {
         todo!()
@@ -183,12 +245,12 @@ impl oak_stage0::Platform for Tdx {
         // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
         match enc {
             oak_stage0::paging::PageEncryption::Encrypted => 0,
-            oak_stage0::paging::PageEncryption::Unencrypted => 1 << 47,
+            oak_stage0::paging::PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
         }
     }
     fn encrypted() -> u64 {
         // stage0_bin_tdx does not support regular VM
-        1 << 47
+        1 << get_tdx_shared_bit()
     }
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
         todo!()
@@ -206,7 +268,8 @@ impl oak_stage0::Platform for Tdx {
 pub extern "C" fn rust64_start() -> ! {
     init_tdx_serial_port();
     write_str(HELLO_OAK);
-    debug_u32_variable(stringify!(TEST_DATA), unsafe { TEST_DATA });
+    debug_u32_variable(stringify!(GPAW), unsafe { GPAW });
+    assert!(unsafe { GPAW == 48 || GPAW == 52 });
 
     let td_info = get_td_info();
     debug_u64_variable(stringify!(td_info.gpa_width), td_info.gpa_width as u64);
