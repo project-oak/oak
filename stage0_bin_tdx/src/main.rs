@@ -23,7 +23,8 @@ use core::{
 };
 
 use log::info;
-use oak_stage0::paging;
+use oak_linux_boot_params::E820EntryType;
+use oak_stage0::paging::{self, PageEncryption};
 use oak_tdx_guest::{
     tdcall::get_td_info,
     vmcall::{
@@ -34,7 +35,8 @@ use oak_tdx_guest::{
 use x86_64::{
     registers::control::Cr3,
     structures::paging::{
-        OffsetPageTable, Page, PageSize, PageTable, PageTableIndex, Size1GiB, Size2MiB, Size4KiB,
+        frame::PhysFrameRange, page::NotGiantPageSize, OffsetPageTable, Page, PageSize, PageTable,
+        PageTableFlags, PageTableIndex, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -90,6 +92,28 @@ fn pt_set_shared_bit(pt: &mut OffsetPageTable, page: &Page, shared: bool) {
     let p1 = unsafe { &mut *(p2.index(page.p2_index()).addr().as_u64() as *mut PageTable) };
     if page.size() == Size4KiB::SIZE {
         pt_entry_set_shared_bit(p1, page.p1_index(), shared);
+    }
+}
+
+trait TdAcceptPage {
+    fn accept_page(&self) -> Result<(), &'static str>;
+}
+
+impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for PhysFrameRange<S> {
+    fn accept_page(&self) -> Result<(), &'static str> {
+        info!("entering accept_page");
+        for frame in *self {
+            // Hardcode the location of TD-HoB at this moment
+            // TODO: b/360255120 - UEFI memory image parser
+            // TODO: b/360255152 - TD-HoB parser
+            if frame.start_address().as_u64() == 0x800000 {
+                info!("skipping td-hob at 0x800000");
+                continue;
+            }
+            oak_tdx_guest::tdcall::accept_memory(frame).unwrap();
+        }
+
+        Ok(())
     }
 }
 
@@ -211,13 +235,93 @@ impl oak_stage0::Platform for Tdx {
         // logger is initialized starting from here
         info!("initialize platform");
         info!("{:?}", e820_table);
+        info!("starting TDX memory acceptance");
+        let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        let accept_pd_pt = PageTable::new();
+        if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
+            panic!("PDPT[1] is in use");
+        }
+
+        page_tables.pdpt[1].set_address::<Tdx>(
+            PhysAddr::new(&accept_pd_pt as *const _ as u64),
+            PageTableFlags::PRESENT,
+            PageEncryption::Encrypted,
+        );
+        info!("added pdpt[1]");
+
+        info!("adding pd_0[1]");
+        let accept_pt_pt = PageTable::new();
+        if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
+            panic!("PD_0[1] is in use");
+        }
+        page_tables.pd_0[1].set_address::<Tdx>(
+            PhysAddr::new(&accept_pt_pt as *const _ as u64),
+            PageTableFlags::PRESENT,
+            PageEncryption::Encrypted,
+        );
+        info!("added pd_0[1]");
+
+        let min_addr = 0xA0000;
+
+        // TODO: b/360256588 - use TD-HoB to replace the e820_table here
+        for entry in e820_table {
+            if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
+                continue;
+            }
+
+            let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
+            let limit_address =
+                PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
+
+            if start_address > limit_address {
+                log::error!(
+                    "nonsensical entry in E820 table: [{}, {})",
+                    entry.addr(),
+                    entry.addr() + entry.size()
+                );
+                continue;
+            }
+
+            // Attempt to validate as many pages as possible using 2 MiB pages (aka
+            // hugepages).
+            let hugepage_start = start_address.align_up(Size2MiB::SIZE);
+            let hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
+
+            // If start_address == hugepage_start, we're aligned with 2M address boundary.
+            // Otherwise, we need to process any 4K pages before the alignment.
+            // Note that limit_address may be less than hugepage_start, which means that the
+            // E820 entry was less than 2M in size and didn't cross a 2M boundary.
+            if hugepage_start > start_address {
+                let limit = core::cmp::min(hugepage_start, limit_address);
+                // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+                let range = PhysFrame::<Size4KiB>::range(
+                    PhysFrame::from_start_address(start_address).unwrap(),
+                    PhysFrame::from_start_address(limit).unwrap(),
+                );
+                range.accept_page().unwrap();
+            }
+
+            // If hugepage_limit > hugepage_start, we've got some contiguous 2M chunks that
+            // we can process as hugepages.
+            if hugepage_limit > hugepage_start {
+                // These unwraps can't fail as we've made sure that the addresses are 2
+                // MiB-aligned.
+                let range = PhysFrame::<Size2MiB>::range(
+                    PhysFrame::from_start_address(hugepage_start).unwrap(),
+                    PhysFrame::from_start_address(hugepage_limit).unwrap(),
+                );
+                range.accept_page().unwrap();
+            }
+        }
+
         info!("initialize platform completed");
     }
     fn deinit_platform() {
         todo!()
     }
     fn populate_zero_page(_: &mut oak_stage0::ZeroPage) {
-        todo!()
+        info!("populate_zero_page start");
+        info!("populate_zero_page completed");
     }
     fn get_attestation(
         _: [u8; 64],
@@ -256,7 +360,7 @@ impl oak_stage0::Platform for Tdx {
         1 << get_tdx_shared_bit()
     }
     fn tee_platform() -> oak_dice::evidence::TeePlatform {
-        todo!()
+        oak_dice::evidence::TeePlatform::IntelTdx
     }
     unsafe fn read_msr(msr: u32) -> u64 {
         msr_read(msr).unwrap()

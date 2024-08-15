@@ -1,4 +1,3 @@
-//
 // Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +19,7 @@ use core::{arch::asm, mem::size_of};
 
 use bitflags::bitflags;
 use strum::{Display, FromRepr};
-use x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
+use x86_64::structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB};
 
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;
@@ -244,7 +243,6 @@ pub enum AcceptMemoryError {
 pub enum TdxPageSize {
     Size4KiB = 0,
     Size2MiB = 1,
-    Size1GiB = 2,
 }
 
 /// Trait for getting the associated `TdxPageSize` enum for a memory page of the
@@ -262,12 +260,6 @@ impl TdxSize for Size4KiB {
 impl TdxSize for Size2MiB {
     fn tdx_size() -> TdxPageSize {
         TdxPageSize::Size2MiB
-    }
-}
-
-impl TdxSize for Size1GiB {
-    fn tdx_size() -> TdxPageSize {
-        TdxPageSize::Size1GiB
     }
 }
 
