@@ -64,11 +64,11 @@ PHDRS
     ap_text PT_LOAD;
     ap_bss PT_LOAD;
     bss PT_LOAD;
+    data PT_LOAD;
     stack PT_LOAD;
     ebda PT_LOAD;
     rodata PT_LOAD;
     text PT_LOAD;
-    data PT_LOAD;
     descriptors PT_LOAD;
     text16 PT_LOAD;
     guid_tables PT_LOAD;
@@ -115,26 +115,6 @@ SECTIONS {
         bss_size = SIZEOF(.bss);
     } > ram_low : bss
 
-    /* Put the stack just below the EBDA, at the end of 512K. */
-    .stack (0x80000 - 32K) (NOLOAD) : {
-        . += 32K;
-        stack_start = .;
-    } > ram_low : stack
-
-    /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
-     * the first KiB of the EBDA.
-     */
-    .ebda 0x80000 (NOLOAD) : {
-        /* Ensure RSDP is always first in the EBDA. */
-        KEEP(*(.ebda.rsdp))
-        . = ALIGN(1K);
-        *(.ebda .ebda.*)
-    } > ram_low : ebda
-
-    ASSERT(. <= 0xA0000, "EBDA overflow")
-
-    . = ORIGIN(bios);
-
     .rodata : {
         /* Include large section (.lrodata) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.
@@ -159,6 +139,24 @@ SECTIONS {
         *(.data .data.* .ldata.*)
         data_size = SIZEOF(.data);
     } > ram_low : data
+
+    /* Put the stack just below the EBDA, at the end of 512K. */
+    .stack (0x80000 - 32K) (NOLOAD) : {
+        . += 32K;
+        stack_start = .;
+    } > ram_low : stack
+
+    /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
+     * the first KiB of the EBDA.
+     */
+    .ebda 0x80000 (NOLOAD) : {
+        /* Ensure RSDP is always first in the EBDA. */
+        KEEP(*(.ebda.rsdp))
+        . = ALIGN(1K);
+        *(.ebda .ebda.*)
+    } > ram_low : ebda
+
+    ASSERT(. <= 0xA0000, "EBDA overflow")
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
      * possible; max TOP - 32k. */
