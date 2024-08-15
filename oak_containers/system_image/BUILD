@@ -37,7 +37,7 @@ pkg_tar(
     name = "rust_bins_tar",
     srcs = [":rust_bins"],
     package_dir = "/usr/bin",
-    strip_prefix = "/oak_containers_system_image/target/image_binaries",
+    strip_prefix = "/oak_containers/system_image/target/image_binaries",
     # This rule will fail unless build-bazel.sh has been run.
     tags = ["noci"],
 )

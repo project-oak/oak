@@ -36,9 +36,9 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
     target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
         --stage0-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
-        --kernel=oak_containers_kernel/target/bzImage \
+        --kernel=oak_containers/kernel/target/bzImage \
         --initrd=target/stage1.cpio \
-        --system-image=oak_containers_system_image/target/image.tar.xz \
+        --system-image=oak_containers/system_image/target/image.tar.xz \
         --container-bundle=oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar \
         --ramdrive-size=1000000 \
         --memory-size=2G \
@@ -147,14 +147,14 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
-    env --chdir=oak_containers_stage1 make
+    env --chdir=oak_containers/stage1 make
 
 oak_containers_kernel:
-    env --chdir=oak_containers_kernel make
+    env --chdir=oak_containers/kernel make
     just bzimage_provenance_subjects \
         oak_containers_kernel \
-        oak_containers_kernel/target/bzImage \
-        oak_containers_kernel/bin/subjects
+        oak_containers/kernel/target/bzImage \
+        oak_containers/kernel/bin/subjects
 
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'
@@ -162,56 +162,56 @@ oak_containers_launcher:
 oak_containers_system_image: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
-    mkdir --parents oak_containers_system_image/target/image_binaries
+    mkdir --parents oak_containers/system_image/target/image_binaries
     cp --preserve=timestamps \
-        oak_containers_orchestrator/target/oak_containers_orchestrator \
-        oak_containers_system_image/target/image_binaries/oak_containers_orchestrator
+        oak_containers/orchestrator/target/oak_containers_orchestrator \
+        oak_containers/system_image/target/image_binaries/oak_containers_orchestrator
     cp --preserve=timestamps \
-        oak_containers_syslogd/target/oak_containers_syslogd_patched \
-        oak_containers_system_image/target/image_binaries/oak_containers_syslogd
+        oak_containers/syslogd/target/oak_containers_syslogd_patched \
+        oak_containers/system_image/target/image_binaries/oak_containers_syslogd
     cp --preserve=timestamps \
-        oak_containers_agent/target/oak_containers_agent_patched \
-        oak_containers_system_image/target/image_binaries/oak_containers_agent
+        oak_containers/agent/target/oak_containers_agent_patched \
+        oak_containers/system_image/target/image_binaries/oak_containers_agent
     # Build and compress.
-    bazel build $BAZEL_CONFIG_FLAG oak_containers_system_image --build_tag_filters=+noci
+    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_system_image --build_tag_filters=+noci
     cp --preserve=timestamps \
-        bazel-bin/oak_containers_system_image/oak_containers_system_image.tar \
-        oak_containers_system_image/target/image.tar
-    xz --force oak_containers_system_image/target/image.tar
+        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar \
+        oak_containers/system_image/target/image.tar
+    xz --force oak_containers/system_image/target/image.tar
 
 oak_containers_nvidia_system_image: oak_containers_system_image
-    bazel build $BAZEL_CONFIG_FLAG oak_containers_system_image:oak_containers_nvidia_system_image --build_tag_filters=+noci
+    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_nvidia_system_image --build_tag_filters=+noci
     cp --preserve=timestamps \
-        bazel-bin/oak_containers_system_image/oak_containers_nvidia_system_image.tar \
-        oak_containers_system_image/target/nvidia_image.tar
-    xz --force oak_containers_system_image/target/nvidia_image.tar
+        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar \
+        oak_containers/system_image/target/nvidia_image.tar
+    xz --force oak_containers/system_image/target/nvidia_image.tar
 
 oak_containers_orchestrator:
-    env --chdir=oak_containers_orchestrator \
+    env --chdir=oak_containers/orchestrator \
         cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
         -Z unstable-options --out-dir=target
 
 oak_containers_syslogd:
-    env --chdir=oak_containers_syslogd \
+    env --chdir=oak_containers/syslogd \
         cargo build --release -Z unstable-options --out-dir=target
     # We can't patch the binary in-place, as that would confuse cargo.
     # Therefore we copy it to a new location and patch there.
     cp \
-        oak_containers_syslogd/target/oak_containers_syslogd \
-        oak_containers_syslogd/target/oak_containers_syslogd_patched
+        oak_containers/syslogd/target/oak_containers_syslogd \
+        oak_containers/syslogd/target/oak_containers_syslogd_patched
     patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-        oak_containers_syslogd/target/oak_containers_syslogd_patched
+        oak_containers/syslogd/target/oak_containers_syslogd_patched
 
 oak_containers_agent:
-    env --chdir=oak_containers_agent \
+    env --chdir=oak_containers/agent \
         cargo build --release -Z unstable-options --out-dir=target
     # We can't patch the binary in-place, as that would confuse cargo.
     # Therefore we copy it to a new location and patch there.
     cp \
-        oak_containers_agent/target/oak_containers_agent \
-        oak_containers_agent/target/oak_containers_agent_patched
+        oak_containers/agent/target/oak_containers_agent \
+        oak_containers/agent/target/oak_containers_agent_patched
     patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-        oak_containers_agent/target/oak_containers_agent_patched
+        oak_containers/agent/target/oak_containers_agent_patched
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
@@ -227,9 +227,9 @@ bazel_wasm name:
 
 oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
-    env bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt //oak_containers_examples/hello_world/trusted_app:bundle.tar
+    env bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt //oak_containers/examples/hello_world/trusted_app:bundle.tar
     # bazel-bin symlink doesn't exist outside of the docker container, this makes the file available to the kokoro script.
-    cp bazel-bin/oak_containers_examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
+    cp bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"

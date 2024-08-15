@@ -14,7 +14,7 @@ async-trait = "*"
 js-sys = "*"
 getrandom = { version = "*", features = ["js"] }
 oak_attestation_verification = { workspace = true }
-oak_client = { default-features = false, path = "../../../oak_client" }
+oak_client = { default-features = false, path = "../../../../oak_client" }
 oak_proto_rust = { workspace = true }
 prost = "*"
 wasm-bindgen = "*"

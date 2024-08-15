@@ -37,8 +37,8 @@ rust_library(
     ],
     deps = [
         "//oak_client",
-        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
-        "//oak_containers_launcher:lib",
+        "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
+        "//oak_containers/launcher:lib",
         "//oak_crypto",
         "//oak_functions_test_utils",
         "//oak_proto_rust",
@@ -63,7 +63,7 @@ rust_binary(
     deps = [
         ":lib",
         "//oak_client",
-        "//oak_containers_launcher:lib",
+        "//oak_containers/launcher:lib",
         "//oak_crypto",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

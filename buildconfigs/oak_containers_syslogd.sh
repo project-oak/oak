@@ -14,5 +14,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  oak_containers_syslogd/target/oak_containers_syslogd_patched
+  oak_containers/syslogd/target/oak_containers_syslogd_patched
 )

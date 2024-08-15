@@ -34,7 +34,7 @@ rust_library(
     crate_name = "oak_containers_hello_world_trusted_app",
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
+        "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
@@ -54,7 +54,7 @@ rust_test(
     deps = [
         ":lib",
         "//oak_client",
-        "//oak_containers_examples/hello_world/proto:hello_world_rust_proto",
+        "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust/grpc",

@@ -22,7 +22,7 @@ To run the server:
 2. Start the server:
 
    ```sh
-   cargo run --manifest-path oak_containers_examples/hello_world/untrusted_app/Cargo.toml -- rest --container-bundle bazel-bin/oak_containers_examples/hello_world/trusted_app/bundle.tar
+   cargo run --manifest-path oak_containers/examples/hello_world/untrusted_app/Cargo.toml -- rest --container-bundle bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar
    ```
 
 To access the web client:

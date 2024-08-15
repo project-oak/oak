@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#stage1Provenance
   --command
   env
-  --chdir=oak_containers_stage1
+  --chdir=oak_containers/stage1
   make
 )
 

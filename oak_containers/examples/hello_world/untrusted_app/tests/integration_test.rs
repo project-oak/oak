@@ -111,7 +111,7 @@ impl TransportCreator<DemoTransport> for DemoTransportCreator {
 
 fn rust_hello_world_bundle() -> PathBuf {
     format!(
-        "{}bazel-bin/oak_containers_examples/hello_world/trusted_app/bundle.tar",
+        "{}bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar",
         env!("WORKSPACE_ROOT")
     )
     .into()

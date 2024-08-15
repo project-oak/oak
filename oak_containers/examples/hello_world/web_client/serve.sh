@@ -5,7 +5,7 @@ set -e
 
 # Define workspace root, crate directory, and output directory.
 readonly WORKSPACE_ROOT=$(bazel info workspace)
-readonly CRATE_DIR=oak_containers_examples/hello_world/web_client
+readonly CRATE_DIR=oak_containers/examples/hello_world/web_client
 readonly OUTPUT_DIR=${CRATE_DIR}/pkg
 
 # Navigate to the Bazel workspace root.

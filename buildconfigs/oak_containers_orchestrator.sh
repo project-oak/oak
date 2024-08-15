@@ -14,5 +14,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  oak_containers_orchestrator/target/oak_containers_orchestrator
+  oak_containers/orchestrator/target/oak_containers_orchestrator
 )

@@ -29,7 +29,7 @@
             url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
             sha256 = "01b414ba98fd189ecd544435caf3860ae2a790e3ec48f5aa70fdf42dc4c5c04a";
           };
-          linux_kernel_config = ./oak_containers_kernel/configs/${linux_kernel_version}/minimal.config;
+          linux_kernel_config = ./oak_containers/kernel/configs/${linux_kernel_version}/minimal.config;
           # Build the linux kernel for Oak Containers as a nix package, which simplifies
           # reproducibility.
           # Note that building a package via nix is not by itself a guarantee of
@@ -55,7 +55,7 @@
           linux_kernel = pkgs.linuxManualConfig (commonLinuxKernelConfig // {
             kernelPatches = [{
               name = "virtio-dma";
-              patch = ./oak_containers_kernel/patches/virtio-dma.patch;
+              patch = ./oak_containers/kernel/patches/virtio-dma.patch;
             }];
           });
           # Vanilla kernel
@@ -171,7 +171,7 @@
             containers = with pkgs; mkShell {
               # We need access to the kernel source and configuration, not just the binaries, to
               # build the system image with nvidia drivers in it.
-              # See oak_containers_system_image/build-base.sh (and nvidia_base_image.Dockerfile) for
+              # See oak_containers/system_image/build-base.sh (and nvidia_base_image.Dockerfile) for
               # more details.
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"

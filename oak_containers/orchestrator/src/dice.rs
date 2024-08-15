@@ -114,7 +114,7 @@ mod tests {
         const DICE_DATA_SIZE: usize = 2483;
 
         #[cfg(feature = "bazel")]
-        fs::copy("oak_containers_orchestrator/testdata/test_dice", DICE_DATA_PATH).unwrap();
+        fs::copy("oak_containers/orchestrator/testdata/test_dice", DICE_DATA_PATH).unwrap();
         #[cfg(not(feature = "bazel"))]
         fs::copy("testdata/test_dice", DICE_DATA_PATH).unwrap();
 

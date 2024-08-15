@@ -78,10 +78,10 @@ rust_test(
     crate = ":lib",
     crate_features = ["bazel"],
     data = [
-        "//oak_containers_orchestrator/testdata:cdi.json",
-        "//oak_containers_orchestrator/testdata:oci_spec_base.json",
-        "//oak_containers_orchestrator/testdata:oci_spec_target.json",
-        "//oak_containers_orchestrator/testdata:test_dice",
+        "//oak_containers/orchestrator/testdata:cdi.json",
+        "//oak_containers/orchestrator/testdata:oci_spec_base.json",
+        "//oak_containers/orchestrator/testdata:oci_spec_target.json",
+        "//oak_containers/orchestrator/testdata:test_dice",
     ],
     deps = [
         ":lib",
@@ -126,7 +126,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
-        "//oak_containers_agent:lib",
+        "//oak_containers/agent:lib",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",

@@ -15,7 +15,7 @@ export BUILD_COMMAND=(
 
 # The first element must be the Transparent Release binary (the main binary).
 export SUBJECT_PATHS=(
-  oak_containers_kernel/target/bzImage
-  oak_containers_kernel/bin/subjects/oak_containers_kernel_image
-  oak_containers_kernel/bin/subjects/oak_containers_kernel_setup_data
+  oak_containers/kernel/target/bzImage
+  oak_containers/kernel/bin/subjects/oak_containers_kernel_image
+  oak_containers/kernel/bin/subjects/oak_containers_kernel_setup_data
 )

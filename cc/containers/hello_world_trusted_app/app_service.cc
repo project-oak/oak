@@ -25,8 +25,9 @@
 #include "cc/crypto/server_encryptor.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
-#include "oak_containers_examples/hello_world/proto/hello_world.grpc.pb.h"
-#include "oak_containers_examples/hello_world/proto/hello_world.pb.h"
+#include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
+#include "oak_containers/examples/hello_world/proto/hello_world.pb.h"
+#include "proto/crypto/crypto.pb.h"
 #include "proto/session/service_streaming.pb.h"
 
 namespace oak::oak_containers_hello_world_trusted_app {

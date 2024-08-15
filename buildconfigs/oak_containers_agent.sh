@@ -14,5 +14,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  oak_containers_agent/target/oak_containers_agent_patched
+  oak_containers/agent/target/oak_containers_agent_patched
 )

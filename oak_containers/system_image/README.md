@@ -31,8 +31,8 @@ avoiding the need for Docker when rebuilding a system image container.
 
 To update the base image and push it:
 
-1. ./oak_containers_system_image/build-base.sh
-2. bazel run --stamp oak_containers_system_image:push_base
+1. ./oak_containers/system_image/build-base.sh
+2. bazel run --stamp oak_containers/system_image:push_base
 
 There is also a version of the base image that includes the nvidia drivers.
 

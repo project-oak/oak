@@ -27,12 +27,12 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # verification (i.e., do Kokoro and GitHub produce identical results).
 readonly generated_binaries=(
     ./target/stage1.cpio
-    ./oak_containers_kernel/target/bzImage
-    ./oak_containers_orchestrator/target/oak_containers_orchestrator
-    ./oak_containers_syslogd/target/oak_containers_syslogd_patched
-    ./oak_containers_agent/target/oak_containers_agent_patched
-    ./oak_containers_system_image/target/image.tar.xz
-    ./oak_containers_system_image/target/nvidia_image.tar.xz
+    ./oak_containers/kernel/target/bzImage
+    ./oak_containers/orchestrator/target/oak_containers_orchestrator
+    ./oak_containers/syslogd/target/oak_containers_syslogd_patched
+    ./oak_containers/agent/target/oak_containers_agent_patched
+    ./oak_containers/system_image/target/image.tar.xz
+    ./oak_containers/system_image/target/nvidia_image.tar.xz
     ./target/rust_hello_world_trusted_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_insecure_container_oci_filesystem_bundle.tar

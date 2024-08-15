@@ -24,11 +24,11 @@ Bring up the Oak Functions Launcher with the Trusted App:
 
 ```console
 root@hostname:~/project/oak_functions_containers_launcher$ cargo run -- \
- --system-image=../oak_containers_system_image/target/image.tar.xz \
+ --system-image=../oak_containers/system_image/target/image.tar.xz \
     --container-bundle=../oak_functions_containers_container/target/oak_container_example_oci_filesystem_bundle.tar \
     --vmm-binary=$(which qemu-system-x86_64) \
     --stage0-binary=../stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
-    --kernel=../oak_containers_kernel/target/bzImage \
+    --kernel=../oak_containers/kernel/target/bzImage \
     --initrd=../target/stage1.cpio \
     --ramdrive-size=5000000 \
     --memory-size=10G

@@ -86,7 +86,7 @@ pub struct Args {
 
 impl Args {
     pub fn default_for_root(root: &str) -> Self {
-        let system_image = format!("{root}oak_containers_system_image/target/image.tar.xz",).into();
+        let system_image = format!("{root}oak_containers/system_image/target/image.tar.xz",).into();
         Self {
             system_image,
             container_bundle: "".into(),

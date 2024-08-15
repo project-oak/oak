@@ -26,8 +26,8 @@
 #include "cc/containers/sdk/orchestrator_client.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
-#include "oak_containers_examples/hello_world/proto/hello_world.grpc.pb.h"
-#include "oak_containers_examples/hello_world/proto/hello_world.pb.h"
+#include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
+#include "oak_containers/examples/hello_world/proto/hello_world.pb.h"
 
 namespace oak::oak_containers_hello_world_trusted_app {
 

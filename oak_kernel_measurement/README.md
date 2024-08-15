@@ -14,7 +14,7 @@ The tool can be run using:
 
 ```bash
 cargo run --package=oak_kernel_measurement -- \
-    --kernel=oak_containers_kernel/target/bzImage
+    --kernel=oak_containers/kernel/target/bzImage
 just oak_restricted_kernel_wrapper_simple_io_channel
 cargo run --package=oak_kernel_measurement -- \
     --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_simple_io_channel

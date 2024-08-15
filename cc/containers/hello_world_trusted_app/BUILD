@@ -30,8 +30,8 @@ cc_library(
         "//cc/containers/sdk:orchestrator_client",
         "//cc/crypto:common",
         "//cc/crypto:server_encryptor",
-        "//oak_containers_examples/hello_world/proto:hello_world_cc_grpc",
-        "//oak_containers_examples/hello_world/proto:hello_world_cc_proto",
+        "//oak_containers/examples/hello_world/proto:hello_world_cc_grpc",
+        "//oak_containers/examples/hello_world/proto:hello_world_cc_proto",
         "//proto/crypto:crypto_cc_proto",
         "//proto/session:service_streaming_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
@@ -61,7 +61,7 @@ pkg_tar(
     srcs = [":main"],
     package_dir = "/usr/local/bin",
     visibility = [
-        "//oak_containers_hello_world_untrusted_app:__pkg__",
+        "//oak_containers/exmamples/hello_world/untrusted_app:__pkg__",
     ],
 )
 
