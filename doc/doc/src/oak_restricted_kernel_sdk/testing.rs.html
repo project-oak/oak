@@ -161,7 +161,7 @@
 }
 
 <span class="kw">fn </span>get_mock_dice_data() -&gt; RestrictedKernelDiceData {
-    <span class="kw">let </span>stage0_dice_data = oak_stage0_dice::generate_dice_data(
+    <span class="kw">let </span>(stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
         <span class="kw-2">&amp;</span>oak_stage0_dice::Measurements::default(),
         oak_stage0_dice::mock_attestation_report,
         oak_stage0_dice::mock_derived_key,

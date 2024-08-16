@@ -271,6 +271,9 @@
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -344,6 +347,9 @@
 
 <span class="doccomment">/// The magic number used to identify the Stage 0 DICE data in memory.
 </span><span class="kw">pub const </span>STAGE0_MAGIC: u64 = u64::from_le_bytes(<span class="kw-2">*</span><span class="string">b"oak.dice"</span>);
+
+<span class="doccomment">/// The magic number used to identify the Stage 0 DICE proto in memory.
+</span><span class="kw">pub const </span>STAGE0_DICE_PROTO_MAGIC: u64 = u64::from_le_bytes(<span class="kw-2">*</span><span class="string">b"OakProto"</span>);
 
 <span class="attr">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u64)]

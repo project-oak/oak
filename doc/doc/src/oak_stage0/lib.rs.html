@@ -356,6 +356,27 @@
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -385,6 +406,7 @@
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>oak_dice::evidence::{
     DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
+    STAGE0_DICE_PROTO_MAGIC,
 };
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
@@ -605,21 +627,21 @@
 
     <span class="kw">let </span>tee_platform = P::tee_platform();
 
-    <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
-        oak_stage0_dice::generate_dice_data(
-            <span class="kw-2">&amp;</span>measurements,
-            P::get_attestation,
-            P::get_derived_key,
-            tee_platform,
-        ),
-        <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
-    ));
+    <span class="kw">let </span>(dice_data_struct, dice_data_proto) = oak_stage0_dice::generate_dice_data(
+        <span class="kw-2">&amp;</span>measurements,
+        P::get_attestation,
+        P::get_derived_key,
+        tee_platform,
+    );
+    <span class="kw">let </span>dice_data = Box::leak(Box::new_in(dice_data_struct, <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC));
+
     <span class="comment">// Reserve the memory containing the DICE data.
     </span>zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() <span class="kw">as </span>usize,
         dice_data.as_bytes().len(),
         E820EntryType::RESERVED,
     ));
+    <span class="kw">let </span><span class="kw-2">mut </span>sensitive_dice_data_length = core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;();
 
     <span class="comment">// Write Eventlog data to memory.
     </span><span class="kw">let </span><span class="kw-2">mut </span>event_log = Vec::with_capacity_in(PAGE_SIZE, <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC);
@@ -637,10 +659,30 @@
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
+    sensitive_dice_data_length += PAGE_SIZE;
+
+    <span class="comment">// TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
+    // write all of it in memory.
+    // Write DiceData protobuf bytes to memory.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>encoded_dice_proto = Vec::with_capacity_in(PAGE_SIZE, <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC);
+    <span class="comment">// Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
+    // the size of the encoded DiceData proto.
+    </span><span class="macro">assert!</span>(dice_data_proto.encoded_len() &lt; PAGE_SIZE - <span class="number">8 </span>* <span class="number">2</span>);
+    <span class="comment">// Insert a magic number to ensure the correctness of the data being read.
+    </span>encoded_dice_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
+    encoded_dice_proto.extend_from_slice(dice_data_proto.encoded_len().to_le_bytes().as_slice());
+    encoded_dice_proto.extend_from_slice(dice_data_proto.encode_to_vec().as_bytes());
+
+    <span class="comment">// Reserve memory containing DICE proto Data.
+    </span>zero_page.insert_e820_entry(BootE820Entry::new(
+        encoded_dice_proto.as_bytes().as_ptr() <span class="kw">as </span>usize,
+        PAGE_SIZE,
+        E820EntryType::RESERVED,
+    ));
+    sensitive_dice_data_length += PAGE_SIZE;
 
     <span class="comment">// Append the DICE data address to the kernel command-line.
-    </span><span class="kw">let </span>sensitive_dice_data_length = core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;();
-    <span class="kw">let </span>extra = <span class="macro">format!</span>(
+    </span><span class="kw">let </span>extra = <span class="macro">format!</span>(
         <span class="string">"--{DICE_DATA_CMDLINE_PARAM}={dice_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
     </span>);
     <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
