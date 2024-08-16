@@ -82,16 +82,14 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
         --platforms=//:x86_64-unknown-none \
         --compilation_mode opt
 
+    mkdir --parents generated
+    cp --preserve=timestamps --no-preserve=mode \
+        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}* \
+        generated
+
     # Place things where they were built in the cargo world for compatiblity.
     cp bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
-
-    rm --recursive --force oak_restricted_kernel_wrapper/bin/wrapper{{kernel_suffix}}_subjects
-    mkdir --parents oak_restricted_kernel_wrapper/bin/wrapper{{kernel_suffix}}_subjects
-    cp bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement_setup_data \
-        oak_restricted_kernel_wrapper/bin/wrapper{{kernel_suffix}}_subjects
-    cp bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement_image \
-        oak_restricted_kernel_wrapper/bin/wrapper{{kernel_suffix}}_subjects
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
 # and image to the output directory.
