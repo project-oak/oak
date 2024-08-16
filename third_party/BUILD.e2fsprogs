@@ -1,0 +1,45 @@
+#
+# Copyright 2024 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "configure_make")
+
+filegroup(
+    name = "all_files",
+    srcs = glob(["**"]),
+)
+
+# This rule is currently broken.
+#
+# We need to build mke2fs statically, but setting the CFLAGS in
+# `configure_options` breaks the build (probably because the current toolchain
+# doesn't have `libc.a` and friends that are needed for static linking).
+#
+# If you remove the `CFLAGS="static"`, you do successfully get a binary, but
+# that'll be dynamically linked, which won't work for us. Hence, I've left the
+# CFLAGS in there so that people wouldn't accidentally think this works. Maybe
+# if we fiddle around with the toolchain a bit this rule will magically start
+# working and we can delete this comment.
+configure_make(
+    name = "mke2fs",
+    lib_source = ":all_files",
+    out_bin_dir = "sbin",
+    out_binaries = ["mke2fs"],
+    out_include_dir = None,
+    configure_options = ["CFLAGS=\"-static\"", "--with-crond-dir=no"],
+    targets = ["install-strip-progs-recursive"],
+    # Skip building e2scrub altogether, as that insists on touching /etc.
+    args = ["E2SCRUB_DIR=\"\""],
+)

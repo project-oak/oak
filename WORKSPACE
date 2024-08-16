@@ -353,3 +353,11 @@ create_oak_crate_repositories()
 load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
+
+http_archive(
+    name = "e2fsprogs",
+    build_file = "@//:third_party/BUILD.e2fsprogs",
+    sha256 = "144af53f2bbd921cef6f8bea88bb9faddca865da3fbc657cc9b4d2001097d5db",
+    strip_prefix = "e2fsprogs-1.47.0",
+    urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
+)
