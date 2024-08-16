@@ -320,16 +320,7 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-</pre></div><pre class="rust"><code><span class="comment">//
-// Copyright 2023 The Project Oak Authors
+</pre></div><pre class="rust"><code><span class="comment">// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -350,7 +341,7 @@
 
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::{Display, FromRepr};
-<span class="kw">use </span>x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
+<span class="kw">use </span>x86_64::structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB};
 
 <span class="doccomment">/// The result from an instruction that indicates success.
 </span><span class="kw">const </span>SUCCESS: u64 = <span class="number">0</span>;
@@ -574,7 +565,6 @@
 </span><span class="kw">pub enum </span>TdxPageSize {
     Size4KiB = <span class="number">0</span>,
     Size2MiB = <span class="number">1</span>,
-    Size1GiB = <span class="number">2</span>,
 }
 
 <span class="doccomment">/// Trait for getting the associated `TdxPageSize` enum for a memory page of the
@@ -592,12 +582,6 @@
 <span class="kw">impl </span>TdxSize <span class="kw">for </span>Size2MiB {
     <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize {
         TdxPageSize::Size2MiB
-    }
-}
-
-<span class="kw">impl </span>TdxSize <span class="kw">for </span>Size1GiB {
-    <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize {
-        TdxPageSize::Size1GiB
     }
 }
 
