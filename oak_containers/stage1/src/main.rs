@@ -87,8 +87,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut dice_builder = {
         // Safety: This will be the only instance of this struct.
-        unsafe { dice::SensitiveDiceDataMemory::new(args.dice_addr, args.dice_data_length) }?
-            .read_into_dice_builder()?
+        unsafe {
+            dice::SensitiveDiceDataMemory::new(
+                args.dice_addr,
+                args.event_log,
+                args.dice_data_length,
+            )
+        }?
+        .read_into_dice_builder()?
     };
 
     // Unmount /sys and /dev as they are no longer needed.

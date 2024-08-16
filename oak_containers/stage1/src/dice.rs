@@ -26,7 +26,8 @@ use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::STAGE0_MAGIC,
 };
-use oak_proto_rust::oak::attestation::v1::DiceData;
+use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog};
+use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;
@@ -85,16 +86,21 @@ impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
 /// Zeroes out the source physical memory on drop.
 pub struct SensitiveDiceDataMemory {
     start_ptr: *mut u8,
-    length: usize,
+    eventlog_ptr: *mut u8,
+    sensitive_memory_length: usize,
 }
 
 impl SensitiveDiceDataMemory {
     /// Safety: Caller must ensure that there is only instance of this struct.
-    pub unsafe fn new(start: PhysAddr, length: Option<usize>) -> anyhow::Result<Self> {
+    pub unsafe fn new(
+        start: PhysAddr,
+        eventlog_start: PhysAddr,
+        sensitive_memory_length: Option<usize>,
+    ) -> anyhow::Result<Self> {
         // Indicates the length of the DICE data that needs to be zeroed to delete
         // the layer1 certificate authority from memory. Older versions of stage0 do not
         // send it, then we default to the length of the relevant struct.
-        let length = length
+        let sensitive_memory_length = sensitive_memory_length
             .inspect(|&l| {
                 assert!(
                     l >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
@@ -104,12 +110,14 @@ impl SensitiveDiceDataMemory {
             .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
 
         // Linux presents an inclusive end address.
-        let end = start + (length as u64 - 1);
+        let end = start + (sensitive_memory_length as u64 - 1);
         // Ensure that the memory range is in reserved memory.
         anyhow::ensure!(
-            read_memory_ranges()?.iter().any(|range| range.type_description == RESERVED_E820_TYPE
-                && range.contains(&start)
-                && range.contains(&end)),
+            read_memory_ranges()?.iter().any(|range| {
+                range.type_description == RESERVED_E820_TYPE
+                    && range.contains(&start)
+                    && range.contains(&end)
+            }),
             "DICE data range is not in reserved memory"
         );
 
@@ -125,7 +133,7 @@ impl SensitiveDiceDataMemory {
         let start_ptr = unsafe {
             mmap(
                 None,
-                length.try_into()?,
+                sensitive_memory_length.try_into()?,
                 ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
                 MapFlags::MAP_SHARED,
                 // Pass the file descriptor as reference to avoid closing it.
@@ -134,7 +142,16 @@ impl SensitiveDiceDataMemory {
             )?
         };
 
-        Ok(Self { start_ptr: start_ptr as *mut u8, length })
+        // Calculate the eventlog start pointer using the offset between start and
+        // eventlog_start
+        let eventlog_offset = eventlog_start.as_u64() - start.as_u64();
+        let eventlog_ptr = unsafe { start_ptr.add(eventlog_offset as usize) };
+
+        Ok(Self {
+            start_ptr: start_ptr as *mut u8,
+            eventlog_ptr: eventlog_ptr as *mut u8,
+            sensitive_memory_length,
+        })
     }
 
     /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
@@ -160,6 +177,34 @@ impl SensitiveDiceDataMemory {
             })
     }
 
+    // TODO: b/356454287 - Use this function.
+    /// Reads the event log from the specified physical address.
+    #[allow(dead_code)]
+    fn read_eventlog(&self) -> anyhow::Result<EventLog> {
+        // Read the event log size (first 8 bytes)
+        // Safety: We have checked the length, know it is backed by physical memory.
+        let event_log_size = unsafe {
+            let size_bytes = std::slice::from_raw_parts(self.eventlog_ptr, 8);
+            u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize
+        };
+
+        // Check if the event log extends beyond the sensitive memory region
+        if (self.eventlog_ptr as usize) + 8 + event_log_size
+            > (self.start_ptr as usize) + self.sensitive_memory_length
+        {
+            return Err(anyhow::anyhow!("Event log extends beyond sensitive memory region"));
+        }
+
+        // Read the event log bytes
+        let event_log_bytes = {
+            // Safety: We have checked the length, know it is backed by physical memory.
+            unsafe { std::slice::from_raw_parts(self.eventlog_ptr.add(8), event_log_size) }
+        };
+
+        // Decode the EventLog proto
+        EventLog::decode(event_log_bytes).context("Failed to decode EventLog proto")
+    }
+
     /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
     /// located at the given physical address.
     pub fn read_into_dice_builder(self) -> anyhow::Result<DiceBuilder> {
@@ -174,11 +219,12 @@ impl Drop for SensitiveDiceDataMemory {
         // Zero out the sensitive_dice_data_memory.
         // Safety: This struct is only used once. We have checked the length,
         // know it is backed by physical memory and is reserved.
-        (unsafe { std::slice::from_raw_parts_mut(self.start_ptr, self.length) }).zeroize();
+        (unsafe { std::slice::from_raw_parts_mut(self.start_ptr, self.sensitive_memory_length) })
+            .zeroize();
         // Safety: We've mapped the memory, this struct is only used once, the only
         // reference to this memory is being dropped.
         unsafe {
-            munmap(self.start_ptr as *mut core::ffi::c_void, self.length)
+            munmap(self.start_ptr as *mut core::ffi::c_void, self.sensitive_memory_length)
                 .expect("Failed to unmap layer0 dice memory")
         };
     }
