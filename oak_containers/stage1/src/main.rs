@@ -85,7 +85,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     mount(None::<&str>, "/sys", Some("sysfs"), MsFlags::empty(), None::<&str>)
         .context("error mounting /sys")?;
 
-    let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr, args.dice_data_length)?;
+    let mut dice_builder = {
+        // Safety: This will be the only instance of this struct.
+        unsafe { dice::SensitiveDiceDataMemory::new(args.dice_addr, args.dice_data_length) }?
+            .read_into_dice_builder()?
+    };
 
     // Unmount /sys and /dev as they are no longer needed.
     umount("/sys").context("failed to unmount /sys")?;

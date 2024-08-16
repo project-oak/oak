@@ -24,7 +24,7 @@ use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
 use oak_attestation::dice::{stage0_dice_data_to_proto, DiceBuilder};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
-    evidence::{Stage0DiceData, STAGE0_MAGIC},
+    evidence::STAGE0_MAGIC,
 };
 use oak_proto_rust::oak::attestation::v1::DiceData;
 use sha2::{Digest, Sha256};
@@ -80,87 +80,108 @@ impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
     }
 }
 
-/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at
-/// the given physical address.
-pub fn extract_stage0_dice_data(
-    start: PhysAddr,
-    length: Option<usize>,
-) -> anyhow::Result<DiceBuilder> {
-    let stage0_dice_data = read_stage0_dice_data(start, length)?;
-    let dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)?;
-    dice_data.try_into()
+/// Holds a reference to the DICE data in physical memory.
+///
+/// Zeroes out the source physical memory on drop.
+pub struct SensitiveDiceDataMemory {
+    start_ptr: *mut u8,
+    length: usize,
 }
 
-/// Reads the DICE data from the physical memory range starting at the given
-/// address.
-///
-/// Zeroes out the source physical memory after copying it.
-fn read_stage0_dice_data(start: PhysAddr, length: Option<usize>) -> anyhow::Result<Stage0DiceData> {
-    // This indicates the length of the DICE data that needs to be zeroed to delete
-    // the layer1 certificate authority from memory. Older versions of stage0 do not
-    // send it, we default to the length of the relevant struct.
-    let length = length
-        .inspect(|&l| {
-            assert!(
-                l >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-                "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
-            );
-        })
-        .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
-    // Linux presents an inclusive end address.
-    let end = start + (length as u64 - 1);
-    // Ensure that the memory range is in reserved memory.
-    anyhow::ensure!(
-        read_memory_ranges()?.iter().any(|range| range.type_description == RESERVED_E820_TYPE
-            && range.contains(&start)
-            && range.contains(&end)),
-        "DICE data range is not in reserved memory"
-    );
+impl SensitiveDiceDataMemory {
+    /// Safety: Caller must ensure that there is only instance of this struct.
+    pub unsafe fn new(start: PhysAddr, length: Option<usize>) -> anyhow::Result<Self> {
+        // Indicates the length of the DICE data that needs to be zeroed to delete
+        // the layer1 certificate authority from memory. Older versions of stage0 do not
+        // send it, then we default to the length of the relevant struct.
+        let length = length
+            .inspect(|&l| {
+                assert!(
+                    l >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                    "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
+                );
+            })
+            .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
 
-    // Open a file representing the physical memory.
-    let dice_file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(PHYS_MEM_PATH)
-        .context("couldn't open DICE memory device for reading")?;
+        // Linux presents an inclusive end address.
+        let end = start + (length as u64 - 1);
+        // Ensure that the memory range is in reserved memory.
+        anyhow::ensure!(
+            read_memory_ranges()?.iter().any(|range| range.type_description == RESERVED_E820_TYPE
+                && range.contains(&start)
+                && range.contains(&end)),
+            "DICE data range is not in reserved memory"
+        );
 
-    // Safety: we have checked that the exact memory range is marked as reserved so
-    // the Linux kernel will not use it for anything else.
-    let start_ptr = unsafe {
-        mmap(
-            None,
-            length.try_into()?,
-            ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
-            MapFlags::MAP_SHARED,
-            // Pass the file descriptor as reference to avoid closing it.
-            Some(&dice_file),
-            start.as_u64().try_into()?,
-        )?
-    };
+        // Open a file representing the physical memory.
+        let dice_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(PHYS_MEM_PATH)
+            .context("couldn't open DICE memory device for reading")?;
 
-    let result = {
-        // Safety: we have checked the length, know it is backed by physical memory and
-        // is reserved.
-        let source = unsafe { std::slice::from_raw_parts_mut(start_ptr as *mut u8, length) };
+        // Safety: we have checked it is within a reserved region, so the Linux kernel
+        // will not use it for anything else.
+        let start_ptr = unsafe {
+            mmap(
+                None,
+                length.try_into()?,
+                ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
+                MapFlags::MAP_SHARED,
+                // Pass the file descriptor as reference to avoid closing it.
+                Some(&dice_file),
+                start.as_u64().try_into()?,
+            )?
+        };
 
-        let result = oak_dice::evidence::Stage0DiceData::read_from(
-            &source[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
-        )
-        .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
-
-        // Zero out the source memory.
-        source.zeroize();
-        result
-    };
-
-    if result.magic != STAGE0_MAGIC {
-        anyhow::bail!("invalid DICE data");
+        Ok(Self { start_ptr: start_ptr as *mut u8, length })
     }
 
-    // Safety: we have just mapped this memory, and the slice over it has been
-    // dropped.
-    unsafe { munmap(start_ptr, length)? };
-    Ok(result)
+    /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
+    /// located at the given physical address.
+    fn read_stage0_dice_data(&self) -> Result<oak_dice::evidence::Stage0DiceData, anyhow::Error> {
+        let struct_slice = {
+            // Safety: We have checked the length, know it is backed by physical memory.
+            unsafe {
+                std::slice::from_raw_parts(
+                    self.start_ptr,
+                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                )
+            }
+        };
+        oak_dice::evidence::Stage0DiceData::read_from(&struct_slice)
+            .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))
+            .and_then(|result| {
+                if result.magic != STAGE0_MAGIC {
+                    Err(anyhow::Error::msg("invalid DICE data"))
+                } else {
+                    Ok(result)
+                }
+            })
+    }
+
+    /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
+    /// located at the given physical address.
+    pub fn read_into_dice_builder(self) -> anyhow::Result<DiceBuilder> {
+        let stage0_dice_data = self.read_stage0_dice_data()?;
+        let dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)?;
+        dice_data.try_into()
+    }
+}
+
+impl Drop for SensitiveDiceDataMemory {
+    fn drop(&mut self) {
+        // Zero out the sensitive_dice_data_memory.
+        // Safety: This struct is only used once. We have checked the length,
+        // know it is backed by physical memory and is reserved.
+        (unsafe { std::slice::from_raw_parts_mut(self.start_ptr, self.length) }).zeroize();
+        // Safety: We've mapped the memory, this struct is only used once, the only
+        // reference to this memory is being dropped.
+        unsafe {
+            munmap(self.start_ptr as *mut core::ffi::c_void, self.length)
+                .expect("Failed to unmap layer0 dice memory")
+        };
+    }
 }
 
 /// Reads the memory ranges which supplied by the firmware to the Linux kernel.
