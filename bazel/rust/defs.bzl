@@ -44,7 +44,11 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
         edition = RUST_EDITION,
         exec_triple = "x86_64-unknown-linux-gnu",
         extra_rustc_flags = {
-            "x86_64-unknown-none": ["-C", "target-feature=+avx,+avx2,-soft-float"],
+            "x86_64-unknown-none": [
+                "-Crelocation-model=static",
+                "-Ctarget-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "-Ctarget-cpu=x86-64-v3",
+            ],
         },
         extra_target_triples = {
             "x86_64-unknown-none": [

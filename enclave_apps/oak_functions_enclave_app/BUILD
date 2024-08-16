@@ -25,6 +25,7 @@ rust_binary(
     name = "oak_functions_enclave_app",
     srcs = ["src/main.rs"],
     platform = "//:x86_64-unknown-none",
+    rustc_flags = ["-Clink-arg=-zmax-page-size=0x200000"],
     deps = [
         "//micro_rpc",
         "//oak_functions_enclave_service:lib",
