@@ -230,12 +230,18 @@ pub fn get_ve_info() -> Option<VeInfo> {
 #[derive(Debug, Display, FromRepr)]
 #[repr(u64)]
 pub enum AcceptMemoryError {
-    /// The supplied address is not valid.
-    InvalidOperand = 0x8000_0000_0000_0000,
+    /// The supplied operand in Rcx is invalid.
+    InvalidOperandInRcx = 0xC000010000000001,
+    /// Operation encountered a busy operand, indicated by the lower 32 bits of
+    /// the status. In many cases, this can be resolved by retrying the
+    /// operation. Specifically, it may indicate that a concurrent
+    /// TDG.MEM.PAGE.ACCEPT is using the same Secure EPT entry
+    OperandBusy = 0x8000020000000000,
     /// The page is not pending and has already been accepted.
-    AlreadyAccepted = 0x8000_0000_0000_0001,
-    /// The specified page size is invalid.
-    InvalidSize = 0x8000_0000_0000_0002,
+    AlreadyAccepted = 0x00000B0A00000000,
+    /// Requested page size is 2MB, but the page GPA is not mapped at 2MB size
+    /// Note it ends with 0x1 which means the operand is RCX
+    PageSizeMisMatch = 0xC0000B0B00000001, //rcx
 }
 
 #[derive(Debug)]
@@ -280,8 +286,8 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
     let page_size = S::tdx_size() as u64;
 
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The
-    // guest-physical address of the start of the memory page goes into RCX. The
-    // size of the page goes into RDX.
+    // guest-physical address of the start of the memory page goes into [51:12]
+    // of RCX. The page size goes to [2:0] of RCX. 0 for 4KiB, 1 for 2MiB.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
     // the affected registers are specified, so no unspecified registers will be
@@ -291,9 +297,7 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
         asm!(
             "tdcall",
             inout("rax") LEAF => result,
-            in("rcx") gpa,
-            in("rdx") page_size,
-
+            in("rcx") gpa | page_size,
             options(nomem, nostack),
         );
     }

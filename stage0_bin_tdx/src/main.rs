@@ -33,6 +33,7 @@ use oak_tdx_guest::{
     },
 };
 use x86_64::{
+    instructions::tlb,
     registers::control::Cr3,
     structures::paging::{
         frame::PhysFrameRange, page::NotGiantPageSize, OffsetPageTable, Page, PageSize, PageTable,
@@ -40,6 +41,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+use zeroize::Zeroize;
 
 mod asm;
 
@@ -101,7 +103,6 @@ trait TdAcceptPage {
 
 impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for PhysFrameRange<S> {
     fn accept_page(&self) -> Result<(), &'static str> {
-        info!("entering accept_page");
         for frame in *self {
             // Hardcode the location of TD-HoB at this moment
             // TODO: b/360255120 - UEFI memory image parser
@@ -110,7 +111,33 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
                 info!("skipping td-hob at 0x800000");
                 continue;
             }
-            oak_tdx_guest::tdcall::accept_memory(frame).unwrap();
+            if frame.size() == 4096 {
+                oak_tdx_guest::tdcall::accept_memory(frame).expect("map 4k cannot fail");
+            } else {
+                use oak_tdx_guest::tdcall::AcceptMemoryError;
+                match oak_tdx_guest::tdcall::accept_memory(frame) {
+                    Ok(()) => {
+                        info!("accept_page done {:?}", frame);
+                    }
+                    Err(AcceptMemoryError::AlreadyAccepted) => continue,
+                    Err(AcceptMemoryError::PageSizeMisMatch) => {
+                        // cannot accept as 2MiB. let's try 4KiB
+                        let start_addr_u64 = frame.start_address().as_u64();
+                        let limit_addr_u64 = start_addr_u64 + 2 * 1024 * 1024;
+                        let start_address = PhysAddr::new(start_addr_u64);
+                        let limit = PhysAddr::new(limit_addr_u64);
+                        let range = PhysFrame::<Size4KiB>::range(
+                            PhysFrame::from_start_address(start_address).unwrap(),
+                            PhysFrame::from_start_address(limit).unwrap(),
+                        );
+                        range.accept_page().unwrap();
+                    }
+                    _ => {
+                        // InvalidOperandInRcx or OperandBusy
+                        panic!("oops");
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -312,12 +339,61 @@ impl oak_stage0::Platform for Tdx {
                 );
                 range.accept_page().unwrap();
             }
+            // And finally, we may have some trailing 4K pages in [hugepage_limit,
+            // limit_address) that we need to process.
+            if limit_address > hugepage_limit {
+                let start = core::cmp::max(start_address, hugepage_limit);
+                // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+                let range = PhysFrame::<Size4KiB>::range(
+                    PhysFrame::from_start_address(start).unwrap(),
+                    PhysFrame::from_start_address(limit_address).unwrap(),
+                );
+                range.accept_page().unwrap();
+            }
+            // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
+            // Unwrap() will panic if entry not found with expected start, size, and type.
+            let legacy_smbios_range_entry = e820_table
+                .iter()
+                .find(|entry| {
+                    entry.addr() == 0xF_0000
+                        && entry.size() == 0x1_0000
+                        && entry.entry_type() == Some(E820EntryType::RESERVED)
+                })
+                .expect("couldn't find legacy SMBIOS memory range");
+
+            // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
+            // the SMBIOS entry point table, even if the range is marked as reserved.
+            let range = PhysFrame::<Size4KiB>::range(
+                PhysFrame::from_start_address(PhysAddr::new(
+                    legacy_smbios_range_entry.addr() as u64
+                ))
+                .unwrap(),
+                PhysFrame::from_start_address(PhysAddr::new(
+                    (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+                ))
+                .unwrap(),
+            );
+            range.accept_page().expect("failed to validate SMBIOS memory");
+
+            // Safety: the E820 table indicates that this is the correct memory segment.
+            let legacy_smbios_range_bytes = unsafe {
+                core::slice::from_raw_parts_mut::<u8>(
+                    legacy_smbios_range_entry.addr() as *mut u8,
+                    legacy_smbios_range_entry.size(),
+                )
+            };
+            // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+            legacy_smbios_range_bytes.zeroize();
+
+            page_tables.pd_0[1].set_unused();
+            page_tables.pdpt[1].set_unused();
+            tlb::flush_all();
         }
 
         info!("initialize platform completed");
     }
     fn deinit_platform() {
-        todo!()
+        //TODO: b/360488922 - impl deinit_platform
     }
     fn populate_zero_page(_: &mut oak_stage0::ZeroPage) {
         info!("populate_zero_page start");
@@ -326,10 +402,12 @@ impl oak_stage0::Platform for Tdx {
     fn get_attestation(
         _: [u8; 64],
     ) -> Result<oak_sev_snp_attestation_report::AttestationReport, &'static str> {
-        todo!()
+        //TODO: b/360488295 - impl get_attestation
+        Ok(oak_sev_snp_attestation_report::AttestationReport::from_report_data([0; 64]))
     }
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
-        todo!()
+        // TODO: b/360488668 - impl get_derived_key
+        Ok([0; 32])
     }
     fn change_page_state(
         page: x86_64::structures::paging::Page,
@@ -343,7 +421,7 @@ impl oak_stage0::Platform for Tdx {
         pt_set_shared_bit(&mut pt, &page, shared);
     }
     fn revalidate_page(_: x86_64::structures::paging::Page) {
-        todo!()
+        // TODO: b/360488924 - impl revalidate_page
     }
     fn page_table_mask(enc: oak_stage0::paging::PageEncryption) -> u64 {
         // a. When 4-level EPT is active, the SHARED bit position would

@@ -612,6 +612,7 @@ dependencies = [
  "oak_stage0",
  "oak_tdx_guest",
  "x86_64",
+ "zeroize",
 ]
 
 [[package]]
