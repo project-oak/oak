@@ -180,6 +180,27 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -206,7 +227,7 @@
 <span class="kw">use </span>oak_attestation::dice::{stage0_dice_data_to_proto, DiceBuilder};
 <span class="kw">use </span>oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
-    evidence::{Stage0DiceData, STAGE0_MAGIC},
+    evidence::STAGE0_MAGIC,
 };
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::DiceData;
 <span class="kw">use </span>sha2::{Digest, Sha256};
@@ -262,87 +283,108 @@
     }
 }
 
-<span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at
-/// the given physical address.
-</span><span class="kw">pub fn </span>extract_stage0_dice_data(
-    start: PhysAddr,
-    length: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
-    <span class="kw">let </span>stage0_dice_data = read_stage0_dice_data(start, length)<span class="question-mark">?</span>;
-    <span class="kw">let </span>dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)<span class="question-mark">?</span>;
-    dice_data.try_into()
+<span class="doccomment">/// Holds a reference to the DICE data in physical memory.
+///
+/// Zeroes out the source physical memory on drop.
+</span><span class="kw">pub struct </span>SensitiveDiceDataMemory {
+    start_ptr: <span class="kw-2">*mut </span>u8,
+    length: usize,
 }
 
-<span class="doccomment">/// Reads the DICE data from the physical memory range starting at the given
-/// address.
-///
-/// Zeroes out the source physical memory after copying it.
-</span><span class="kw">fn </span>read_stage0_dice_data(start: PhysAddr, length: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; anyhow::Result&lt;Stage0DiceData&gt; {
-    <span class="comment">// This indicates the length of the DICE data that needs to be zeroed to delete
-    // the layer1 certificate authority from memory. Older versions of stage0 do not
-    // send it, we default to the length of the relevant struct.
-    </span><span class="kw">let </span>length = length
-        .inspect(|<span class="kw-2">&amp;</span>l| {
-            <span class="macro">assert!</span>(
-                l &gt;= core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;(),
-                <span class="string">"the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
-            </span>);
-        })
-        .unwrap_or_else(|| core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;());
-    <span class="comment">// Linux presents an inclusive end address.
-    </span><span class="kw">let </span>end = start + (length <span class="kw">as </span>u64 - <span class="number">1</span>);
-    <span class="comment">// Ensure that the memory range is in reserved memory.
-    </span><span class="macro">anyhow::ensure!</span>(
-        read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| range.type_description == RESERVED_E820_TYPE
-            &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
-            &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
-        <span class="string">"DICE data range is not in reserved memory"
-    </span>);
+<span class="kw">impl </span>SensitiveDiceDataMemory {
+    <span class="doccomment">/// Safety: Caller must ensure that there is only instance of this struct.
+    </span><span class="kw">pub unsafe fn </span>new(start: PhysAddr, length: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// Indicates the length of the DICE data that needs to be zeroed to delete
+        // the layer1 certificate authority from memory. Older versions of stage0 do not
+        // send it, then we default to the length of the relevant struct.
+        </span><span class="kw">let </span>length = length
+            .inspect(|<span class="kw-2">&amp;</span>l| {
+                <span class="macro">assert!</span>(
+                    l &gt;= core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;(),
+                    <span class="string">"the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
+                </span>);
+            })
+            .unwrap_or_else(|| core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;());
 
-    <span class="comment">// Open a file representing the physical memory.
-    </span><span class="kw">let </span>dice_file = OpenOptions::new()
-        .read(<span class="bool-val">true</span>)
-        .write(<span class="bool-val">true</span>)
-        .open(PHYS_MEM_PATH)
-        .context(<span class="string">"couldn't open DICE memory device for reading"</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Linux presents an inclusive end address.
+        </span><span class="kw">let </span>end = start + (length <span class="kw">as </span>u64 - <span class="number">1</span>);
+        <span class="comment">// Ensure that the memory range is in reserved memory.
+        </span><span class="macro">anyhow::ensure!</span>(
+            read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| range.type_description == RESERVED_E820_TYPE
+                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
+                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
+            <span class="string">"DICE data range is not in reserved memory"
+        </span>);
 
-    <span class="comment">// Safety: we have checked that the exact memory range is marked as reserved so
-    // the Linux kernel will not use it for anything else.
-    </span><span class="kw">let </span>start_ptr = <span class="kw">unsafe </span>{
-        mmap(
-            <span class="prelude-val">None</span>,
-            length.try_into()<span class="question-mark">?</span>,
-            ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
-            MapFlags::MAP_SHARED,
-            <span class="comment">// Pass the file descriptor as reference to avoid closing it.
-            </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>dice_file),
-            start.as_u64().try_into()<span class="question-mark">?</span>,
-        )<span class="question-mark">?
-    </span>};
+        <span class="comment">// Open a file representing the physical memory.
+        </span><span class="kw">let </span>dice_file = OpenOptions::new()
+            .read(<span class="bool-val">true</span>)
+            .write(<span class="bool-val">true</span>)
+            .open(PHYS_MEM_PATH)
+            .context(<span class="string">"couldn't open DICE memory device for reading"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>result = {
-        <span class="comment">// Safety: we have checked the length, know it is backed by physical memory and
-        // is reserved.
-        </span><span class="kw">let </span>source = <span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8, length) };
+        <span class="comment">// Safety: we have checked it is within a reserved region, so the Linux kernel
+        // will not use it for anything else.
+        </span><span class="kw">let </span>start_ptr = <span class="kw">unsafe </span>{
+            mmap(
+                <span class="prelude-val">None</span>,
+                length.try_into()<span class="question-mark">?</span>,
+                ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
+                MapFlags::MAP_SHARED,
+                <span class="comment">// Pass the file descriptor as reference to avoid closing it.
+                </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>dice_file),
+                start.as_u64().try_into()<span class="question-mark">?</span>,
+            )<span class="question-mark">?
+        </span>};
 
-        <span class="kw">let </span>result = oak_dice::evidence::Stage0DiceData::read_from(
-            <span class="kw-2">&amp;</span>source[..core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;()],
-        )
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"size mismatch while reading DICE data"</span>))<span class="question-mark">?</span>;
-
-        <span class="comment">// Zero out the source memory.
-        </span>source.zeroize();
-        result
-    };
-
-    <span class="kw">if </span>result.magic != STAGE0_MAGIC {
-        <span class="macro">anyhow::bail!</span>(<span class="string">"invalid DICE data"</span>);
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ start_ptr: start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8, length })
     }
 
-    <span class="comment">// Safety: we have just mapped this memory, and the slice over it has been
-    // dropped.
-    </span><span class="kw">unsafe </span>{ munmap(start_ptr, length)<span class="question-mark">? </span>};
-    <span class="prelude-val">Ok</span>(result)
+    <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
+    /// located at the given physical address.
+    </span><span class="kw">fn </span>read_stage0_dice_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;oak_dice::evidence::Stage0DiceData, anyhow::Error&gt; {
+        <span class="kw">let </span>struct_slice = {
+            <span class="comment">// Safety: We have checked the length, know it is backed by physical memory.
+            </span><span class="kw">unsafe </span>{
+                std::slice::from_raw_parts(
+                    <span class="self">self</span>.start_ptr,
+                    core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;(),
+                )
+            }
+        };
+        oak_dice::evidence::Stage0DiceData::read_from(<span class="kw-2">&amp;</span>struct_slice)
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"size mismatch while reading DICE data"</span>))
+            .and_then(|result| {
+                <span class="kw">if </span>result.magic != STAGE0_MAGIC {
+                    <span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">"invalid DICE data"</span>))
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Ok</span>(result)
+                }
+            })
+    }
+
+    <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
+    /// located at the given physical address.
+    </span><span class="kw">pub fn </span>read_into_dice_builder(<span class="self">self</span>) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
+        <span class="kw">let </span>stage0_dice_data = <span class="self">self</span>.read_stage0_dice_data()<span class="question-mark">?</span>;
+        <span class="kw">let </span>dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)<span class="question-mark">?</span>;
+        dice_data.try_into()
+    }
+}
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>SensitiveDiceDataMemory {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Zero out the sensitive_dice_data_memory.
+        // Safety: This struct is only used once. We have checked the length,
+        // know it is backed by physical memory and is reserved.
+        </span>(<span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(<span class="self">self</span>.start_ptr, <span class="self">self</span>.length) }).zeroize();
+        <span class="comment">// Safety: We've mapped the memory, this struct is only used once, the only
+        // reference to this memory is being dropped.
+        </span><span class="kw">unsafe </span>{
+            munmap(<span class="self">self</span>.start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>core::ffi::c_void, <span class="self">self</span>.length)
+                .expect(<span class="string">"Failed to unmap layer0 dice memory"</span>)
+        };
+    }
 }
 
 <span class="doccomment">/// Reads the memory ranges which supplied by the firmware to the Linux kernel.

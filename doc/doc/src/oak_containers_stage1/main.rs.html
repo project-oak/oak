@@ -178,6 +178,10 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -265,7 +269,11 @@
     mount(<span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="string">"/sys"</span>, <span class="prelude-val">Some</span>(<span class="string">"sysfs"</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
         .context(<span class="string">"error mounting /sys"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_dice_data(args.dice_addr, args.dice_data_length)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = {
+        <span class="comment">// Safety: This will be the only instance of this struct.
+        </span><span class="kw">unsafe </span>{ dice::SensitiveDiceDataMemory::new(args.dice_addr, args.dice_data_length) }<span class="question-mark">?
+            </span>.read_into_dice_builder()<span class="question-mark">?
+    </span>};
 
     <span class="comment">// Unmount /sys and /dev as they are no longer needed.
     </span>umount(<span class="string">"/sys"</span>).context(<span class="string">"failed to unmount /sys"</span>)<span class="question-mark">?</span>;
