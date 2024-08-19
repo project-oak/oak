@@ -320,6 +320,10 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -552,13 +556,19 @@
 </span><span class="attr">#[derive(Debug, Display, FromRepr)]
 #[repr(u64)]
 </span><span class="kw">pub enum </span>AcceptMemoryError {
-    <span class="doccomment">/// The supplied address is not valid.
-    </span>InvalidOperand = <span class="number">0x8000_0000_0000_0000</span>,
+    <span class="doccomment">/// The supplied operand in Rcx is invalid.
+    </span>InvalidOperandInRcx = <span class="number">0xC000010000000001</span>,
+    <span class="doccomment">/// Operation encountered a busy operand, indicated by the lower 32 bits of
+    /// the status. In many cases, this can be resolved by retrying the
+    /// operation. Specifically, it may indicate that a concurrent
+    /// TDG.MEM.PAGE.ACCEPT is using the same Secure EPT entry
+    </span>OperandBusy = <span class="number">0x8000020000000000</span>,
     <span class="doccomment">/// The page is not pending and has already been accepted.
-    </span>AlreadyAccepted = <span class="number">0x8000_0000_0000_0001</span>,
-    <span class="doccomment">/// The specified page size is invalid.
-    </span>InvalidSize = <span class="number">0x8000_0000_0000_0002</span>,
-}
+    </span>AlreadyAccepted = <span class="number">0x00000B0A00000000</span>,
+    <span class="doccomment">/// Requested page size is 2MB, but the page GPA is not mapped at 2MB size
+    /// Note it ends with 0x1 which means the operand is RCX
+    </span>PageSizeMisMatch = <span class="number">0xC0000B0B00000001</span>, <span class="comment">//rcx
+</span>}
 
 <span class="attr">#[derive(Debug)]
 #[repr(u64)]
@@ -602,8 +612,8 @@
     <span class="kw">let </span>page_size = S::tdx_size() <span class="kw">as </span>u64;
 
     <span class="comment">// The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The
-    // guest-physical address of the start of the memory page goes into RCX. The
-    // size of the page goes into RDX.
+    // guest-physical address of the start of the memory page goes into [51:12]
+    // of RCX. The page size goes to [2:0] of RCX. 0 for 4KiB, 1 for 2MiB.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all
     // the affected registers are specified, so no unspecified registers will be
@@ -613,9 +623,7 @@
         <span class="macro">asm!</span>(
             <span class="string">"tdcall"</span>,
             inout(<span class="string">"rax"</span>) LEAF =&gt; result,
-            <span class="kw">in</span>(<span class="string">"rcx"</span>) gpa,
-            <span class="kw">in</span>(<span class="string">"rdx"</span>) page_size,
-
+            <span class="kw">in</span>(<span class="string">"rcx"</span>) gpa | page_size,
             options(nomem, nostack),
         );
     }
