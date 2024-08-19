@@ -197,6 +197,18 @@ impl crate::Platform for Sev {
 
     fn initialize_platform(e820_table: &[BootE820Entry]) {
         log::info!("Enabled SEV features: {:?}", sev_status());
+
+        if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+            let sev_info = oak_sev_guest::msr::get_sev_info().expect("couldn't get SEV info");
+            if sev_info.min_protocol_version > 2 || sev_info.max_protocol_version < 2 {
+                log::warn!(
+                    "stage0 currently only supports GHCB protocol version 2, some features (like \
+                    AP bootstrap) may not work. Platform reports min version {}, max version {}",
+                    sev_info.min_protocol_version,
+                    sev_info.max_protocol_version
+                );
+            }
+        }
         if sev_status().contains(SevStatus::SNP_ACTIVE) {
             dice_attestation::init_guest_message_encryptor()
                 .expect("couldn't initialize guest message encryptor");
