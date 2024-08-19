@@ -48,6 +48,7 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
                 "-Crelocation-model=static",
                 "-Ctarget-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
                 "-Ctarget-cpu=x86-64-v3",
+                "-Clink-arg=-zmax-page-size=0x200000",
             ],
         },
         extra_target_triples = {
