@@ -25,12 +25,39 @@ use oak_dice::{
     },
     evidence::Stage0DiceData,
 };
-use oak_proto_rust::oak::attestation::v1::{
-    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
-    TeePlatform,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
+        RootLayerEvidence, TeePlatform,
+    },
+    RawDigest,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
+use sha2::Digest;
 use zeroize::Zeroize;
+
+pub trait MeasureDigest {
+    fn measure_digest(&self) -> RawDigest;
+}
+
+impl MeasureDigest for &[u8] {
+    fn measure_digest(&self) -> RawDigest {
+        let mut digest = sha2::Sha256::default();
+        digest.update(self);
+        let digest_bytes: [u8; 32] = digest.finalize().into();
+        let mut raw_digest = RawDigest::default();
+        raw_digest.sha2_256 = digest_bytes.to_vec();
+        raw_digest
+    }
+}
+
+/// Holds additional claims and the encoded event for a DICE layer.
+pub struct LayerData {
+    /// Additional claims to include in the CWT certificate for the layer.
+    pub additional_claims: Vec<(ClaimName, ciborium::Value)>,
+    /// Encoded event associated with the layer.
+    pub encoded_event: Vec<u8>,
+}
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
 pub struct DiceBuilder {
@@ -46,10 +73,7 @@ impl DiceBuilder {
     /// private key for the layer and uses it to replace the existing
     /// signing key. The CWT certificate contains the public key for this new
     /// signing key.
-    pub fn add_layer(
-        &mut self,
-        additional_claims: Vec<(ClaimName, ciborium::Value)>,
-    ) -> anyhow::Result<()> {
+    pub fn add_layer(&mut self, layer_data: LayerData) -> anyhow::Result<()> {
         // The last evidence layer contains the certificate for the current signing key.
         // Since the builder contains an existing signing key there must be at
         // least one layer of evidence that contains the certificate.
@@ -72,7 +96,7 @@ impl DiceBuilder {
             &self.signing_key,
             issuer_id,
             &verifying_key,
-            additional_claims,
+            layer_data.additional_claims,
         )
         .map_err(anyhow::Error::msg)
         .context("couldn't generate ECA certificate for the next layer")?;
@@ -82,6 +106,11 @@ impl DiceBuilder {
         // Replacing the signing key will cause the previous signing key to be dropped,
         // which will zero out its memory.
         self.signing_key = signing_key;
+        self.evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(layer_data.encoded_event);
         Ok(())
     }
 
@@ -92,7 +121,7 @@ impl DiceBuilder {
     /// the finalized evidence.
     pub fn add_application_keys(
         self,
-        additional_claims: Vec<(ClaimName, ciborium::Value)>,
+        layer_data: LayerData,
         kem_public_key: &[u8],
         verifying_key: &VerifyingKey,
         group_kem_public_key: Option<&[u8]>,
@@ -119,7 +148,7 @@ impl DiceBuilder {
             &self.signing_key,
             issuer_id.clone(),
             kem_public_key,
-            additional_claims.clone(),
+            layer_data.additional_claims.clone(),
         )
         .map_err(anyhow::Error::msg)
         .context("couldn't generate encryption public key certificate")?
@@ -130,7 +159,7 @@ impl DiceBuilder {
             &self.signing_key,
             issuer_id.clone(),
             verifying_key,
-            additional_claims,
+            layer_data.additional_claims,
         )
         .map_err(anyhow::Error::msg)
         .context("couldn't generate signing public key certificate")?
@@ -177,6 +206,11 @@ impl DiceBuilder {
             group_signing_public_key_certificate,
         });
 
+        evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(layer_data.encoded_event);
         Ok(evidence)
     }
 
@@ -210,7 +244,10 @@ impl TryFrom<DiceData> for DiceBuilder {
     }
 }
 
-pub fn stage0_dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceData> {
+pub fn stage0_dice_data_and_event_log_to_proto(
+    value: Stage0DiceData,
+    event_log: EventLog,
+) -> anyhow::Result<DiceData> {
     let mut layers = Vec::new();
     let eca_certificate =
         oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
@@ -219,7 +256,8 @@ pub fn stage0_dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceDa
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.layer_1_evidence)?];
     let application_keys = None;
-    let evidence = Some(Evidence { root_layer, layers, application_keys });
+    let evidence =
+        Some(Evidence { root_layer, layers, application_keys, event_log: Some(event_log) });
     let certificate_authority = Some(CertificateAuthority {
         eca_private_key: value.layer_1_certificate_authority.eca_private_key
             [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
@@ -242,7 +280,7 @@ pub fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
     let application_keys = Some(application_keys_to_proto(value.application_keys)?);
-    Ok(Evidence { root_layer, layers, application_keys })
+    Ok(Evidence { root_layer, layers, application_keys, event_log: Some(EventLog::default()) })
 }
 
 fn root_layer_evidence_to_proto(

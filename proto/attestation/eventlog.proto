@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "google/protobuf/any.proto";
+import "proto/digest.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -38,6 +39,18 @@ message Stage0Measurements {
   bytes acpi_digest = 5;
   // Kernel Command line.
   string kernel_cmdline = 6;
+}
+
+// All the related measurements for Oak Container's Stage 1.
+message Stage1Measurements {
+  // System image digest.
+  oak.RawDigest system_image = 1;
+}
+
+// All the related measurements for Oak Container's Stage 1.
+message OakContainersOrchestratorMeasurements {
+  oak.RawDigest container_image = 1;
+  oak.RawDigest config = 2;
 }
 
 // Represents an event intended for inclusion in attestation.

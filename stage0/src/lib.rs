@@ -253,6 +253,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         P::get_attestation,
         P::get_derived_key,
         tee_platform,
+        event_log_proto.clone(),
     );
     let dice_data = Box::leak(Box::new_in(dice_data_struct, &crate::BOOT_ALLOC));
 

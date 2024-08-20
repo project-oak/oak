@@ -95,12 +95,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Generate attestation evidence and send it to the Hostlib.
     let dice_builder = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
-    let additional_claims = oak_containers_orchestrator::dice::measure_container_and_config(
+    let layer_data = oak_containers_orchestrator::dice::measure_container_and_config(
         &container_bundle,
         &application_config,
     );
     let evidence = dice_builder.add_application_keys(
-        additional_claims,
+        layer_data,
         &instance_public_keys.encryption_public_key,
         &instance_public_keys.signing_public_key,
         if let Some(ref group_public_keys) = group_public_keys {

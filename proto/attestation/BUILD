@@ -71,6 +71,7 @@ java_proto_library(
 proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
+    deps = [":eventlog_proto"],
 )
 
 cc_proto_library(
@@ -149,7 +150,10 @@ java_proto_library(
 proto_library(
     name = "eventlog_proto",
     srcs = ["eventlog.proto"],
-    deps = ["@com_google_protobuf//:any_proto"],
+    deps = [
+        "//proto:digest_proto",
+        "@com_google_protobuf//:any_proto",
+    ],
 )
 
 cc_proto_library(

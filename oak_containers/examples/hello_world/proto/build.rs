@@ -16,9 +16,13 @@
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(not(feature = "bazel"))]
+    let included_protos = vec![std::path::PathBuf::from("../../../..")];
+    #[cfg(feature = "bazel")]
+    let included_protos = oak_proto_build_utils::get_common_proto_path("../../../..");
     generate_grpc_code(
         &["../../../../oak_containers/examples/hello_world/proto/hello_world.proto"],
-        &["../../../.."],
+        &included_protos,
         CodegenOptions {
             build_server: true,
             build_client: true,

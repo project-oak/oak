@@ -38,7 +38,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_proto_rust::oak::attestation::v1::DiceData;
+use oak_proto_rust::oak::attestation::v1::{DiceData, Event, Stage1Measurements};
 use prost::Message;
 use tokio::process::Command;
 use tonic::transport::Uri;
@@ -119,12 +119,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
         buf
     };
 
-    let system_image_claims = dice::measure_system_image(&buf);
+    let system_image_digest = oak_attestation::dice::MeasureDigest::measure_digest(&buf.as_slice());
+    let event = Event {
+        tag: "stage1".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.Stage1Measurements".to_string(),
+            value: Stage1Measurements { system_image: Some(system_image_digest.clone()) }
+                .encode_to_vec(),
+        }),
+    };
+    let layer_data = dice::get_system_image_measurement_claims(&system_image_digest, event);
 
     // For safety we generate the DICE data for the next layer before processing the
     // compressed system image. This consumes the `DiceBuilder` which also
     // clears the ECA private key provided by Stage 0.
-    dice_builder.add_layer(system_image_claims)?;
+    dice_builder.add_layer(layer_data)?;
     let dice_data: DiceData = dice_builder.serialize();
 
     image::extract(&buf, Path::new("/")).await.context("error loading the system image")?;

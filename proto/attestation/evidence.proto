@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "proto/attestation/eventlog.proto";
+
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
@@ -120,4 +122,6 @@ message Evidence {
   // - Derive session keys from the encryption key
   // - Sign arbitrary data with the signing key
   ApplicationKeys application_keys = 3;
+
+  EventLog event_log = 4;
 }

@@ -58,6 +58,7 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
                 signing_public_key_certificate: vec![],
                 group_signing_public_key_certificate: vec![],
             }),
+            event_log: None,
         }),
         endorsements: Some(Endorsements {
             r#type: Some(endorsements::Type::Standalone(OakStandaloneEndorsements {})),

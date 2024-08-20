@@ -52,16 +52,21 @@ cargo_build_script(
     ],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
+    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         ":hello_world_proto",
         "//proto/crypto:crypto_proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
     tools = [
         "@com_google_protobuf//:protoc",
     ],
     deps = [
         "//oak_grpc_utils",
+        "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
     ],
 )

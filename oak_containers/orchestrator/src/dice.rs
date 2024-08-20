@@ -28,7 +28,6 @@ use oak_dice::cert::{
 };
 use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
-use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.
@@ -74,32 +73,54 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceBuilder> {
 pub fn measure_container_and_config(
     container_bytes: &[u8],
     config_bytes: &[u8],
-) -> Vec<(ClaimName, Value)> {
-    let mut container_digest = Sha256::default();
-    container_digest.update(container_bytes);
-    let container_digest = container_digest.finalize();
-    let mut config_digest = Sha256::default();
-    config_digest.update(config_bytes);
-    let config_digest = config_digest.finalize();
-    vec![(
-        ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
-        Value::Map(vec![
+) -> oak_attestation::dice::LayerData {
+    let container_digest = oak_attestation::dice::MeasureDigest::measure_digest(&container_bytes);
+    let config_digest = oak_attestation::dice::MeasureDigest::measure_digest(&config_bytes);
+    let encoded_event = oak_proto_rust::oak::attestation::v1::Event {
+        tag: "ORCHESTRATOR".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.OrchestratorMeasurements".to_string(),
+            value: oak_proto_rust::oak::attestation::v1::OakContainersOrchestratorMeasurements {
+                container_image: Some(container_digest.clone()),
+                config: Some(config_digest.clone()),
+            }
+            .encode_to_vec(),
+        }),
+    }
+    .encode_to_vec();
+    let event_digest =
+        oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
+    oak_attestation::dice::LayerData {
+        additional_claims: vec![
             (
-                Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
-                Value::Map(vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(container_digest[..].to_vec()),
-                )]),
+                ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
+                Value::Map(vec![
+                    (
+                        Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
+                        Value::Map(vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(container_digest.sha2_256),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                        Value::Map(vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(config_digest.sha2_256),
+                        )]),
+                    ),
+                ]),
             ),
             (
-                Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
                 Value::Map(vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(config_digest[..].to_vec()),
+                    Value::Bytes(event_digest.sha2_256),
                 )]),
             ),
-        ]),
-    )]
+        ],
+        encoded_event,
+    }
 }
 
 #[cfg(test)]

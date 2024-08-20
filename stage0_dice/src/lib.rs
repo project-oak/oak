@@ -38,7 +38,7 @@ use oak_dice::{
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence, RootLayerEvidence,
 };
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
@@ -161,6 +161,7 @@ pub fn generate_dice_data<
     get_attestation: F,
     get_derived_key: G,
     tee_platform: TeePlatform,
+    event_log: EventLog,
 ) -> (Stage0DiceData, DiceData) {
     let mut result = Stage0DiceData::new_zeroed();
     // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
@@ -215,6 +216,7 @@ pub fn generate_dice_data<
         }),
         layers: vec![LayerEvidence { eca_certificate: stage1_eca_cert.clone() }],
         application_keys: None,
+        event_log: Some(event_log),
     };
 
     let result_ca =

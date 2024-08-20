@@ -22,7 +22,7 @@ use oak_crypto::{
     hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
-use oak_proto_rust::oak::crypto::v1::Signature;
+use oak_proto_rust::oak::{attestation::v1::EventLog, crypto::v1::Signature};
 use p256::ecdsa::SigningKey;
 
 use crate::{
@@ -44,6 +44,7 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
         oak_stage0_dice::mock_attestation_report,
         oak_stage0_dice::mock_derived_key,
         TeePlatform::None,
+        EventLog::default(),
     );
 
     oak_restricted_kernel_dice::generate_dice_data(
