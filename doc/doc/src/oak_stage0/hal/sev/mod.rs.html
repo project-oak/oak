@@ -315,6 +315,18 @@
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -514,6 +526,18 @@
 
     <span class="kw">fn </span>initialize_platform(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
         <span class="macro">log::info!</span>(<span class="string">"Enabled SEV features: {:?}"</span>, sev_status());
+
+        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
+            <span class="kw">let </span>sev_info = oak_sev_guest::msr::get_sev_info().expect(<span class="string">"couldn't get SEV info"</span>);
+            <span class="kw">if </span>sev_info.min_protocol_version &gt; <span class="number">2 </span>|| sev_info.max_protocol_version &lt; <span class="number">2 </span>{
+                <span class="macro">log::warn!</span>(
+                    <span class="string">"stage0 currently only supports GHCB protocol version 2, some features (like \
+                    AP bootstrap) may not work. Platform reports min version {}, max version {}"</span>,
+                    sev_info.min_protocol_version,
+                    sev_info.max_protocol_version
+                );
+            }
+        }
         <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
             dice_attestation::init_guest_message_encryptor()
                 .expect(<span class="string">"couldn't initialize guest message encryptor"</span>);
