@@ -201,6 +201,52 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -229,7 +275,8 @@
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::STAGE0_MAGIC,
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::DiceData;
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, EventLog};
+<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::PhysAddr;
 <span class="kw">use </span>zerocopy::FromBytes;
@@ -288,16 +335,21 @@
 /// Zeroes out the source physical memory on drop.
 </span><span class="kw">pub struct </span>SensitiveDiceDataMemory {
     start_ptr: <span class="kw-2">*mut </span>u8,
-    length: usize,
+    eventlog_ptr: <span class="kw-2">*mut </span>u8,
+    sensitive_memory_length: usize,
 }
 
 <span class="kw">impl </span>SensitiveDiceDataMemory {
     <span class="doccomment">/// Safety: Caller must ensure that there is only instance of this struct.
-    </span><span class="kw">pub unsafe fn </span>new(start: PhysAddr, length: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub unsafe fn </span>new(
+        start: PhysAddr,
+        eventlog_start: PhysAddr,
+        sensitive_memory_length: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// Indicates the length of the DICE data that needs to be zeroed to delete
         // the layer1 certificate authority from memory. Older versions of stage0 do not
         // send it, then we default to the length of the relevant struct.
-        </span><span class="kw">let </span>length = length
+        </span><span class="kw">let </span>sensitive_memory_length = sensitive_memory_length
             .inspect(|<span class="kw-2">&amp;</span>l| {
                 <span class="macro">assert!</span>(
                     l &gt;= core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;(),
@@ -307,12 +359,14 @@
             .unwrap_or_else(|| core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;());
 
         <span class="comment">// Linux presents an inclusive end address.
-        </span><span class="kw">let </span>end = start + (length <span class="kw">as </span>u64 - <span class="number">1</span>);
+        </span><span class="kw">let </span>end = start + (sensitive_memory_length <span class="kw">as </span>u64 - <span class="number">1</span>);
         <span class="comment">// Ensure that the memory range is in reserved memory.
         </span><span class="macro">anyhow::ensure!</span>(
-            read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| range.type_description == RESERVED_E820_TYPE
-                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
-                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
+            read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| {
+                range.type_description == RESERVED_E820_TYPE
+                    &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
+                    &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)
+            }),
             <span class="string">"DICE data range is not in reserved memory"
         </span>);
 
@@ -328,7 +382,7 @@
         </span><span class="kw">let </span>start_ptr = <span class="kw">unsafe </span>{
             mmap(
                 <span class="prelude-val">None</span>,
-                length.try_into()<span class="question-mark">?</span>,
+                sensitive_memory_length.try_into()<span class="question-mark">?</span>,
                 ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
                 MapFlags::MAP_SHARED,
                 <span class="comment">// Pass the file descriptor as reference to avoid closing it.
@@ -337,7 +391,16 @@
             )<span class="question-mark">?
         </span>};
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ start_ptr: start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8, length })
+        <span class="comment">// Calculate the eventlog start pointer using the offset between start and
+        // eventlog_start
+        </span><span class="kw">let </span>eventlog_offset = eventlog_start.as_u64() - start.as_u64();
+        <span class="kw">let </span>eventlog_ptr = <span class="kw">unsafe </span>{ start_ptr.add(eventlog_offset <span class="kw">as </span>usize) };
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            start_ptr: start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+            eventlog_ptr: eventlog_ptr <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+            sensitive_memory_length,
+        })
     }
 
     <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
@@ -363,6 +426,34 @@
             })
     }
 
+    <span class="comment">// TODO: b/356454287 - Use this function.
+    </span><span class="doccomment">/// Reads the event log from the specified physical address.
+    </span><span class="attr">#[allow(dead_code)]
+    </span><span class="kw">fn </span>read_eventlog(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EventLog&gt; {
+        <span class="comment">// Read the event log size (first 8 bytes)
+        // Safety: We have checked the length, know it is backed by physical memory.
+        </span><span class="kw">let </span>event_log_size = <span class="kw">unsafe </span>{
+            <span class="kw">let </span>size_bytes = std::slice::from_raw_parts(<span class="self">self</span>.eventlog_ptr, <span class="number">8</span>);
+            u64::from_le_bytes(size_bytes.try_into().unwrap()) <span class="kw">as </span>usize
+        };
+
+        <span class="comment">// Check if the event log extends beyond the sensitive memory region
+        </span><span class="kw">if </span>(<span class="self">self</span>.eventlog_ptr <span class="kw">as </span>usize) + <span class="number">8 </span>+ event_log_size
+            &gt; (<span class="self">self</span>.start_ptr <span class="kw">as </span>usize) + <span class="self">self</span>.sensitive_memory_length
+        {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"Event log extends beyond sensitive memory region"</span>));
+        }
+
+        <span class="comment">// Read the event log bytes
+        </span><span class="kw">let </span>event_log_bytes = {
+            <span class="comment">// Safety: We have checked the length, know it is backed by physical memory.
+            </span><span class="kw">unsafe </span>{ std::slice::from_raw_parts(<span class="self">self</span>.eventlog_ptr.add(<span class="number">8</span>), event_log_size) }
+        };
+
+        <span class="comment">// Decode the EventLog proto
+        </span>EventLog::decode(event_log_bytes).context(<span class="string">"Failed to decode EventLog proto"</span>)
+    }
+
     <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
     /// located at the given physical address.
     </span><span class="kw">pub fn </span>read_into_dice_builder(<span class="self">self</span>) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
@@ -377,11 +468,12 @@
         <span class="comment">// Zero out the sensitive_dice_data_memory.
         // Safety: This struct is only used once. We have checked the length,
         // know it is backed by physical memory and is reserved.
-        </span>(<span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(<span class="self">self</span>.start_ptr, <span class="self">self</span>.length) }).zeroize();
+        </span>(<span class="kw">unsafe </span>{ std::slice::from_raw_parts_mut(<span class="self">self</span>.start_ptr, <span class="self">self</span>.sensitive_memory_length) })
+            .zeroize();
         <span class="comment">// Safety: We've mapped the memory, this struct is only used once, the only
         // reference to this memory is being dropped.
         </span><span class="kw">unsafe </span>{
-            munmap(<span class="self">self</span>.start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>core::ffi::c_void, <span class="self">self</span>.length)
+            munmap(<span class="self">self</span>.start_ptr <span class="kw">as </span><span class="kw-2">*mut </span>core::ffi::c_void, <span class="self">self</span>.sensitive_memory_length)
                 .expect(<span class="string">"Failed to unmap layer0 dice memory"</span>)
         };
     }
