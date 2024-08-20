@@ -15,7 +15,6 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -35,30 +34,29 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "//oak_sev_guest",
     "//sev_serial",
     "//third_party/rust-hypervisor-firmware-virtio",
+    "@oak_crates_index//:acpi",
+    "@oak_crates_index//:aml",
+    "@oak_crates_index//:anyhow",
     "@oak_crates_index//:arrayvec",
     "@oak_crates_index//:atomic_refcell",
+    "@oak_crates_index//:bitflags",
     "@oak_crates_index//:bitvec",
+    "@oak_crates_index//:coset",
+    "@oak_crates_index//:goblin",
+    "@oak_crates_index//:hex",
+    "@oak_crates_index//:hpke",
     "@oak_crates_index//:libm",
     "@oak_crates_index//:linked_list_allocator",
+    "@oak_crates_index//:log",
+    "@oak_crates_index//:p256",
     "@oak_crates_index//:self_cell",
     "@oak_crates_index//:static_assertions",
     "@oak_crates_index//:spinning_top",
     "@oak_crates_index//:strum",
+    "@oak_crates_index//:x86_64",
     "@oak_crates_index//:zerocopy",
     "@oak_crates_index//:zeroize",
-    "@oak_no_std_crates_index//:log",
-    "@oak_no_std_crates_index//:bitflags",
-] + select_std_crates([
-    "acpi",
-    "aml",
-    "anyhow",
-    "coset",
-    "goblin",
-    "hex",
-    "hpke",
-    "p256",
-    "x86_64",
-])
+]
 
 rust_library(
     name = "oak_restricted_kernel_virtio_console_channel",
@@ -72,7 +70,7 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
-        "@oak_no_std_crates_index//:virtio-drivers",
+        "@oak_crates_index//:virtio-drivers",
     ],
 )
 

@@ -16,7 +16,7 @@
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -38,7 +38,8 @@ rust_library(
     ]),
     deps = [
         ":build",
-    ] + select_std_crates(["prost"]),
+        "@oak_crates_index//:prost",
+    ],
 )
 
 cargo_build_script(

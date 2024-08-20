@@ -33,7 +33,7 @@ rust_library(
         "//oak_channel",
         "//oak_dice",
         "//oak_restricted_kernel_dice",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:prost",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
     ],
 )

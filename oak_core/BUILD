@@ -31,9 +31,9 @@ rust_library(
         "//:x86_64-none-no_avx-setting",
     ]),
     deps = [
+        "@oak_crates_index//:getrandom",
         "@oak_crates_index//:lock_api",
         "@oak_crates_index//:spinning_top",
-        "@oak_no_std_crates_index//:getrandom",
     ],
 )
 

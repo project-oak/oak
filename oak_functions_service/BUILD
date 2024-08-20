@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -27,14 +27,13 @@ DEPS = [
     "//oak_functions_abi",
     "//oak_proto_rust",
     "//oak_proto_rust/micro_rpc",
+    "@oak_crates_index//:anyhow",
+    "@oak_crates_index//:log",
+    "@oak_crates_index//:prost",
+    "@oak_crates_index//:rand_core",
     "@oak_crates_index//:spinning_top",
-] + select_std_crates([
-    "anyhow",
-    "log",
-    "prost",
-    "rand_core",
-    "wasmi",
-])
+    "@oak_crates_index//:wasmi",
+]
 
 UNRESTRICTED_DEPS = DEPS + [
     "@oak_crates_index//:parking_lot",

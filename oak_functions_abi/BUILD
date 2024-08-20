@@ -15,7 +15,6 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -26,9 +25,8 @@ rust_library(
     name = "oak_functions_abi",
     srcs = glob(["src/**"]),
     deps = [
-    ] + select_std_crates([
-        "anyhow",
-        "static_assertions",
-        "strum",
-    ]),
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:strum",
+    ],
 )

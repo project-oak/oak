@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,15 +32,12 @@ rust_library(
     ]),
     deps = [
         "//third_party/rust-hypervisor-firmware-virtio",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:strum",
-    ] +
-    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-    select_std_crates([
-        "anyhow",
-        "bitflags",
-        "log",
-        "x86_64",
-    ]),
+        "@oak_crates_index//:x86_64",
+    ],
 )
 
 rust_test(

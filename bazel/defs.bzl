@@ -52,16 +52,6 @@ def either_platform(platform_list):
     select_dict["//conditions:default"] = ["@platforms//:incompatible"]
     return select(select_dict)
 
-def select_std_crates(names):
-    """Selects the std or no_std version of a list of crates according to the currently selected platform.
-    """
-    return select({
-        "//:x86_64-none-setting": ["@oak_no_std_crates_index//:" + name for name in names],
-        "//:wasm32-none-setting": ["@oak_no_std_crates_index//:" + name for name in names],
-        "//:x86_64-none-no_avx-setting": ["@oak_no_std_no_avx_crates_index//:" + name for name in names],
-        "//conditions:default": ["@oak_crates_index//:" + name for name in names],
-    })
-
 def _objcopy_impl(ctx):
     out = ctx.actions.declare_file(ctx.label.name)
     cc = ctx.toolchains["@bazel_tools//tools/cpp:toolchain_type"].cc

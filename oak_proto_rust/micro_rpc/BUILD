@@ -33,17 +33,9 @@ rust_library(
         ":build",
         "//micro_rpc",
         "//oak_proto_rust",
-    ] + select({
-        "@platforms//os:none": [
-            "//third_party/prost-types",
-            "@oak_no_std_crates_index//:prost",
-        ],
-        "//conditions:default": [
-            # See comment on micro_rpc/BUILD.
-            "@oak_crates_index//:prost",
-            "@oak_crates_index//:prost-types",
-        ],
-    }),
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+    ],
 )
 
 cargo_build_script(

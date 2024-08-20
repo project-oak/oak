@@ -16,7 +16,7 @@
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -39,20 +39,11 @@ rust_library(
         "//oak_attestation",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
-        "@oak_no_std_crates_index//:hashbrown",
-        "@oak_no_std_crates_index//:log",
-    ] + select_std_crates([
-        "prost",
-    ]) +
-    # See comment on micro_rpc/BUILD.
-    select({
-        "@platforms//os:none": [
-            "//third_party/prost-types",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:prost-types",
-        ],
-    }),
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+    ],
 )
 
 rust_test(

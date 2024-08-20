@@ -29,6 +29,6 @@ rust_binary(
         "//micro_rpc",
         "//oak_restricted_kernel_interface",
         "//oak_restricted_kernel_sdk",
-        "@oak_no_std_crates_index//:log",
+        "@oak_crates_index//:log",
     ],
 )

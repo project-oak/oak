@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,11 +32,8 @@ rust_library(
     ]),
     deps = [
         "//oak_sev_guest",
-    ] +
-    # TODO: b/334871992 - This select is probably not required after b/334871992.
-    select_std_crates([
-        "x86_64",
-    ]),
+        "@oak_crates_index//:x86_64",
+    ],
 )
 
 rust_library(
@@ -50,9 +47,6 @@ rust_library(
     ]),
     deps = [
         "//oak_sev_guest:oak_sev_guest_no_rust_crypto",
-    ] +
-    # TODO: b/334871992 - This select is probably not required after b/334871992.
-    select_std_crates([
-        "x86_64",
-    ]),
+        "@oak_crates_index//:x86_64",
+    ],
 )

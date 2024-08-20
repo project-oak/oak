@@ -31,7 +31,7 @@ rust_library(
     ],
     deps = [
         "//oak_core",
-        "@oak_no_std_crates_index//:log",
+        "@oak_crates_index//:log",
     ],
 )
 
@@ -56,7 +56,7 @@ rust_library(
     deps = [
         ":opentelemetry_rk",
         "//oak_core",
-        "@oak_no_std_crates_index//:log",
+        "@oak_crates_index//:log",
     ],
 )
 

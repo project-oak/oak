@@ -31,9 +31,9 @@ rust_library(
     deps = [
         "//oak_restricted_kernel_interface",
         "@oak_crates_index//:libm",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:rlsf",
         "@oak_crates_index//:spinning_top",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:prost",
     ],
 )

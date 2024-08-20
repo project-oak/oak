@@ -30,7 +30,7 @@ rust_shared_library(
     deps = [
         "//oak_functions_abi",
         "//oak_functions_sdk",
-        "@oak_no_std_crates_index//:anyhow",
-        "@oak_no_std_crates_index//:maplit",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:maplit",
     ],
 )

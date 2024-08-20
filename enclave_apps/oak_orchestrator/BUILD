@@ -30,8 +30,8 @@ rust_binary(
         "//oak_restricted_kernel_interface",
         "//oak_restricted_kernel_orchestrator",
         "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:log",
-        "@oak_no_std_crates_index//:zeroize",
+        "@oak_crates_index//:zeroize",
     ],
 )

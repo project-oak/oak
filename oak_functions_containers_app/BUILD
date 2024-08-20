@@ -15,7 +15,6 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "select_std_crates")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -35,10 +34,12 @@ LIB_DEPS = [
     "//oak_functions_abi",
     "//oak_proto_rust",
     "//oak_proto_rust/grpc",
+    "@oak_crates_index//:anyhow",
     "@oak_crates_index//:http",
     "@oak_crates_index//:libloading",
     "@oak_crates_index//:opentelemetry",
     "@oak_crates_index//:ouroboros",
+    "@oak_crates_index//:prost",
     "@oak_crates_index//:tempfile",
     "@oak_crates_index//:tikv-jemallocator",
     "@oak_crates_index//:tokio",
@@ -47,10 +48,7 @@ LIB_DEPS = [
     "@oak_crates_index//:tower",
     "@oak_crates_index//:tower-http",
     "@oak_crates_index//:tracing",
-] + select_std_crates([
-    "anyhow",
-    "prost",
-])
+]
 
 LIB_SRCS = [
     "src/lib.rs",
@@ -89,21 +87,20 @@ APP_DEPS = [
     "//oak_containers_sdk",
     "//oak_crypto",
     "//oak_proto_rust",
+    "@oak_crates_index//:anyhow",
     "@oak_crates_index//:clap",
+    "@oak_crates_index//:log",
     "@oak_crates_index//:opentelemetry",
     "@oak_crates_index//:opentelemetry-otlp",
     "@oak_crates_index//:opentelemetry_sdk",
+    "@oak_crates_index//:prost",
     "@oak_crates_index//:stderrlog",
     "@oak_crates_index//:tikv-jemallocator",
     "@oak_crates_index//:tonic",
     "@oak_crates_index//:tokio",
     "@oak_crates_index//:tokio-stream",
     "@oak_crates_index//:tokio-vsock",
-] + select_std_crates([
-    "anyhow",
-    "log",
-    "prost",
-])
+]
 
 rust_binary(
     name = "oak_functions_containers_app",

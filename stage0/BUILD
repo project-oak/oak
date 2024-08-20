@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -40,36 +40,25 @@ rust_library(
         "//oak_sev_snp_attestation_report",
         "//sev_serial",
         "//stage0_dice",
+        "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:elf",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:hkdf",
         "@oak_crates_index//:linked_list_allocator",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:spinning_top",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
+        "@oak_crates_index//:x86_64",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_no_avx_crates_index//:bitflags",
-        "@oak_no_std_no_avx_crates_index//:elf",
-        "@oak_no_std_no_avx_crates_index//:hex",
-        "@oak_no_std_no_avx_crates_index//:hkdf",
-        "@oak_no_std_no_avx_crates_index//:log",
-        "@oak_no_std_no_avx_crates_index//:rand_core",
-        "@oak_no_std_no_avx_crates_index//:sha2",
-        "@oak_no_std_no_avx_crates_index//:zeroize",
-    ] +
-    # TODO: b/347706173 - Try to reduce / remove items in this select by moving all to no_std.
-    select_std_crates([
-        "coset",
-        "p256",
-        "prost",
-        "x86_64",
-    ]) +
-    # See comment on micro_rpc/BUILD.
-    select({
-        "@platforms//os:none": [
-            "//third_party/prost-types",
-        ],
-        "//conditions:default": [
-            "@oak_crates_index//:prost-types",
-        ],
-    }),
+        "@oak_crates_index//:zeroize",
+    ],
 )
 
 rust_test(

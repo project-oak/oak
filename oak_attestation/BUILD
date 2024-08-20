@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -34,14 +34,13 @@ rust_library(
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
-    ] + select_std_crates([
-        "anyhow",
-        "ciborium",
-        "coset",
-        "p256",
-        "prost",
-        "rand_core",
-        "sha2",
-        "zeroize",
-    ]),
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:ciborium",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:zeroize",
+    ],
 )

@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform", "select_std_crates")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -39,22 +39,21 @@ rust_library(
     ]),
     deps = [
         "//oak_proto_rust",
+        "@oak_crates_index//:aead",
+        "@oak_crates_index//:aes-gcm",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:ecdsa",
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:hpke",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:pkcs8",
+        "@oak_crates_index//:primeorder",
+        "@oak_crates_index//:rand_chacha",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:static_assertions",
-    ] + select_std_crates([
-        "aead",
-        "aes-gcm",
-        "anyhow",  # oak_client requires stdful version.
-        "ecdsa",
-        "hkdf",
-        "hpke",
-        "p256",  # oak_containers_orchestrator requires stdful version.
-        "pkcs8",
-        "primeorder",
-        "rand_chacha",
-        "rand_core",
-        "sha2",
-        "zeroize",
-    ]),
+        "@oak_crates_index//:zeroize",
+    ],
 )
 
 rust_test(

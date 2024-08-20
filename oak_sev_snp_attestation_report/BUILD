@@ -31,9 +31,9 @@ rust_library(
         "//:x86_64-none-no_avx-setting",
     ]),
     deps = [
+        "@oak_crates_index//:bitflags",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
         "@oak_crates_index//:zerocopy",
-        "@oak_no_std_crates_index//:bitflags",
     ],
 )
