@@ -20,6 +20,7 @@
 use core::{
     ops::{Index, IndexMut},
     panic::PanicInfo,
+    sync::atomic::Ordering,
 };
 
 use log::info;
@@ -44,6 +45,20 @@ use x86_64::{
 use zeroize::Zeroize;
 
 mod asm;
+
+mod counters {
+    use core::sync::atomic::AtomicUsize;
+
+    /// Number of FAIL_SIZEMISMATCH errors when invoking TDG.MEM.PAGE.ACCEPT on
+    /// 2 MiB pages.
+    pub static ERROR_FAIL_SIZE_MISMATCH: AtomicUsize = AtomicUsize::new(0);
+
+    /// Number of successful TDG.MEM.PAGE.ACCEPT invocations on 2 MiB pages.
+    pub static ACCEPTED_2M: AtomicUsize = AtomicUsize::new(0);
+
+    /// Number of successful TDG.MEM.PAGE.ACCEPT invocations on 4 KiB pages.
+    pub static ACCEPTED_4K: AtomicUsize = AtomicUsize::new(0);
+}
 
 #[no_mangle]
 static mut GPAW: u32 = 0;
@@ -113,15 +128,18 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
             }
             if frame.size() == 4096 {
                 oak_tdx_guest::tdcall::accept_memory(frame).expect("map 4k cannot fail");
+                counters::ACCEPTED_4K.fetch_add(1, Ordering::SeqCst);
             } else {
                 use oak_tdx_guest::tdcall::AcceptMemoryError;
                 match oak_tdx_guest::tdcall::accept_memory(frame) {
                     Ok(()) => {
+                        counters::ACCEPTED_2M.fetch_add(1, Ordering::SeqCst);
                         info!("accept_page done {:?}", frame);
                     }
                     Err(AcceptMemoryError::AlreadyAccepted) => continue,
                     Err(AcceptMemoryError::PageSizeMisMatch) => {
                         // cannot accept as 2MiB. let's try 4KiB
+                        counters::ERROR_FAIL_SIZE_MISMATCH.fetch_add(1, Ordering::SeqCst);
                         let start_addr_u64 = frame.start_address().as_u64();
                         let limit_addr_u64 = start_addr_u64 + 2 * 1024 * 1024;
                         let start_address = PhysAddr::new(start_addr_u64);
@@ -350,48 +368,60 @@ impl oak_stage0::Platform for Tdx {
                 );
                 range.accept_page().unwrap();
             }
-            // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
-            // Unwrap() will panic if entry not found with expected start, size, and type.
-            let legacy_smbios_range_entry = e820_table
-                .iter()
-                .find(|entry| {
-                    entry.addr() == 0xF_0000
-                        && entry.size() == 0x1_0000
-                        && entry.entry_type() == Some(E820EntryType::RESERVED)
-                })
-                .expect("couldn't find legacy SMBIOS memory range");
-
-            // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
-            // the SMBIOS entry point table, even if the range is marked as reserved.
-            let range = PhysFrame::<Size4KiB>::range(
-                PhysFrame::from_start_address(PhysAddr::new(
-                    legacy_smbios_range_entry.addr() as u64
-                ))
-                .unwrap(),
-                PhysFrame::from_start_address(PhysAddr::new(
-                    (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
-                ))
-                .unwrap(),
-            );
-            range.accept_page().expect("failed to validate SMBIOS memory");
-
-            // Safety: the E820 table indicates that this is the correct memory segment.
-            let legacy_smbios_range_bytes = unsafe {
-                core::slice::from_raw_parts_mut::<u8>(
-                    legacy_smbios_range_entry.addr() as *mut u8,
-                    legacy_smbios_range_entry.size(),
-                )
-            };
-            // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
-            legacy_smbios_range_bytes.zeroize();
-
-            page_tables.pd_0[1].set_unused();
-            page_tables.pdpt[1].set_unused();
-            tlb::flush_all();
         }
+        // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
+        // Unwrap() will panic if entry not found with expected start, size, and type.
+        let legacy_smbios_range_entry = e820_table
+            .iter()
+            .find(|entry| {
+                entry.addr() == 0xF_0000
+                    && entry.size() == 0x1_0000
+                    && entry.entry_type() == Some(E820EntryType::RESERVED)
+            })
+            .expect("couldn't find legacy SMBIOS memory range");
+
+        // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
+        // the SMBIOS entry point table, even if the range is marked as reserved.
+        let range = PhysFrame::<Size4KiB>::range(
+            PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
+                .unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(
+                (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+            ))
+            .unwrap(),
+        );
+        range.accept_page().expect("failed to validate SMBIOS memory");
+
+        // Safety: the E820 table indicates that this is the correct memory segment.
+        let legacy_smbios_range_bytes = unsafe {
+            core::slice::from_raw_parts_mut::<u8>(
+                legacy_smbios_range_entry.addr() as *mut u8,
+                legacy_smbios_range_entry.size(),
+            )
+        };
+        // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+        legacy_smbios_range_bytes.zeroize();
+        page_tables.pd_0[1].set_unused();
+        page_tables.pdpt[1].set_unused();
+        tlb::flush_all();
+
+        log::info!("TDX memory acceptance complete.");
+        log::info!(
+            "  Accepted using 2 MiB pages: {}",
+            counters::ACCEPTED_2M.load(Ordering::SeqCst)
+        );
+        log::info!(
+            "  Accepted using 4 KiB pages: {}",
+            counters::ACCEPTED_4K.load(Ordering::SeqCst)
+        );
+        log::info!(
+            "  TDX page size mismatch errors (fallback to 4K): {}",
+            counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
+        );
 
         info!("initialize platform completed");
     }
+
     fn deinit_platform() {
         //TODO: b/360488922 - impl deinit_platform
     }
