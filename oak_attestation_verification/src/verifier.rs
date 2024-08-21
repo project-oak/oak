@@ -40,13 +40,13 @@ use oak_proto_rust::oak::{
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues,
+        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues, EventLog,
         EventReferenceValues, Evidence, ExpectedDigests, ExpectedRegex, ExpectedStringLiterals,
         ExpectedValues, ExtractedEvidence, FakeAttestationReport, FirmwareAttachment,
         InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
         KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData,
         KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
+        LayerEvidence, OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
         OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
         ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
@@ -295,7 +295,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
                 let sig = Signature::from_slice(signature)?;
                 last_layer_verifying_key.verify(contents, &sig)
             })
-            .map_err(|error| anyhow::anyhow!(error))?;
+            .map_err(|error| anyhow::anyhow!(error))
+            .context("failed to verify CWT signature")?;
 
         // Verify signing certificate.
         let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
@@ -308,7 +309,39 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
             .map_err(|error| anyhow::anyhow!(error))?;
     }
 
+    // Verify the event log claim for this layer if it exists. This is done for all
+    // layers here, since the event log is tied uniquely closely to the DICE chain.
+    if let Some(event_log) = &evidence.event_log {
+        validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
+            .context("events in log do not match the digests in the dice chain")?
+    }
     extract_evidence(evidence)
+}
+
+/// Validates that the digest of the events captured in the event log are
+/// correctly described in the claims of the associated dice layers.
+fn validate_that_event_log_is_captured_in_dice_layers(
+    event_log: &EventLog,
+    dice_layers: &Vec<LayerEvidence>,
+) -> anyhow::Result<()> {
+    dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
+        |(current_layer, encoded_event)| {
+            let event_digest = {
+                let claims = claims_set_from_serialized_cert(&current_layer.eca_certificate)
+                    .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
+                extract_event_data(&claims)
+                    .context("couldn't extract event claim")?
+                    .event
+                    .context("Missing event")?
+            };
+            let actual_event_hash = &<sha2::Sha256 as sha2::Digest>::digest(encoded_event).to_vec();
+            return if actual_event_hash != &event_digest.sha2_256 {
+                Err(anyhow::anyhow!("event log hash mismatch"))
+            } else {
+                Ok(())
+            };
+        },
+    )
 }
 
 fn get_oak_restricted_kernel_expected_values(

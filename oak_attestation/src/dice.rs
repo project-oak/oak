@@ -280,7 +280,7 @@ pub fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
     let application_keys = Some(application_keys_to_proto(value.application_keys)?);
-    Ok(Evidence { root_layer, layers, application_keys, event_log: Some(EventLog::default()) })
+    Ok(Evidence { root_layer, layers, application_keys, event_log: None })
 }
 
 fn root_layer_evidence_to_proto(
