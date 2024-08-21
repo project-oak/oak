@@ -138,6 +138,10 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -154,7 +158,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, vec, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 <span class="kw">use </span>anyhow::Error;
 <span class="kw">use </span>oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
@@ -190,8 +194,8 @@
     <span class="kw">fn </span>new(attestation_type: AttestationType, handshake_type: HandshakeType) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>attestation_provider_config = AttestationProviderConfig {
             attestation_type,
-            self_attesters: <span class="macro">vec!</span>[],
-            peer_verifiers: <span class="macro">vec!</span>[],
+            self_attesters: BTreeMap::new(),
+            peer_verifiers: BTreeMap::new(),
         };
 
         <span class="kw">let </span>handshaker_config = HandshakerConfig {
@@ -213,13 +217,17 @@
         <span class="self">Self </span>{ config }
     }
 
-    <span class="kw">pub fn </span>add_self_attester(<span class="kw-2">mut </span><span class="self">self</span>, attester: Box&lt;<span class="kw">dyn </span>Attester&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.attestation_provider_config.self_attesters.push(attester);
+    <span class="kw">pub fn </span>add_self_attester(<span class="kw-2">mut </span><span class="self">self</span>, attester_id: String, attester: Box&lt;<span class="kw">dyn </span>Attester&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config.attestation_provider_config.self_attesters.insert(attester_id, attester);
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>add_peer_verifier(<span class="kw-2">mut </span><span class="self">self</span>, verifier: Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.attestation_provider_config.peer_verifiers.push(verifier);
+    <span class="kw">pub fn </span>add_peer_verifier(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        verifier: Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config.attestation_provider_config.peer_verifiers.insert(attester_id, verifier);
         <span class="self">self
     </span>}
 
@@ -257,8 +265,8 @@
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>AttestationProviderConfig {
     <span class="kw">pub </span>attestation_type: AttestationType,
-    <span class="kw">pub </span>self_attesters: Vec&lt;Box&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
-    <span class="kw">pub </span>peer_verifiers: Vec&lt;Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
+    <span class="kw">pub </span>self_attesters: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
+    <span class="kw">pub </span>peer_verifiers: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]

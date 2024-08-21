@@ -212,6 +212,14 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -291,15 +299,23 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AttestRequest {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>endorsed_evidence: ::prost::alloc::vec::Vec&lt;EndorsedEvidence&gt;,
+    <span class="doccomment">/// Maps unique IDs of attestation providers to the corresponding evidence.
+    </span><span class="attr">#[prost(btree_map = <span class="string">"string, message"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>endorsed_evidence: ::prost::alloc::collections::BTreeMap&lt;
+        ::prost::alloc::string::String,
+        EndorsedEvidence,
+    &gt;,
 }
-<span class="doccomment">/// Request message for the remote attestation.
+<span class="doccomment">/// Response message for the remote attestation.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AttestResponse {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>endorsed_evidence: ::prost::alloc::vec::Vec&lt;EndorsedEvidence&gt;,
+    <span class="doccomment">/// Maps unique IDs of attestation providers to the corresponding evidence.
+    </span><span class="attr">#[prost(btree_map = <span class="string">"string, message"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>endorsed_evidence: ::prost::alloc::collections::BTreeMap&lt;
+        ::prost::alloc::string::String,
+        EndorsedEvidence,
+    &gt;,
 }
 <span class="doccomment">/// Noise handshake message containing fields for all handshake patterns.
 /// &lt;&lt;http://www.noiseprotocol.org/noise.html#handshake-patterns&gt;&gt;
