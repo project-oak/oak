@@ -265,6 +265,8 @@
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -305,7 +307,7 @@
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence, RootLayerEvidence,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
@@ -428,6 +430,7 @@
     get_attestation: F,
     get_derived_key: G,
     tee_platform: TeePlatform,
+    event_log: EventLog,
 ) -&gt; (Stage0DiceData, DiceData) {
     <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
     <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
@@ -482,6 +485,7 @@
         }),
         layers: <span class="macro">vec!</span>[LayerEvidence { eca_certificate: stage1_eca_cert.clone() }],
         application_keys: <span class="prelude-val">None</span>,
+        event_log: <span class="prelude-val">Some</span>(event_log),
     };
 
     <span class="kw">let </span>result_ca =

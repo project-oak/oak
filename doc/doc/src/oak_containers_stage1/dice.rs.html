@@ -247,6 +247,25 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -270,14 +289,16 @@
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-<span class="kw">use </span>oak_attestation::dice::{stage0_dice_data_to_proto, DiceBuilder};
+<span class="kw">use </span>oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceBuilder};
 <span class="kw">use </span>oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::STAGE0_MAGIC,
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, EventLog};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{DiceData, EventLog},
+    RawDigest,
+};
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::PhysAddr;
 <span class="kw">use </span>zerocopy::FromBytes;
 <span class="kw">use </span>zeroize::Zeroize;
@@ -296,22 +317,37 @@
 <span class="doccomment">/// The path for reading the physical memory from the mem device.
 </span><span class="kw">const </span>PHYS_MEM_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"/dev/mem"</span>;
 
-<span class="doccomment">/// Measures the downloaded system image bytes and returns it as a vector of
-/// additional CWT claims.
-</span><span class="kw">pub fn </span>measure_system_image(system_image_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;(ClaimName, Value)&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
-    digest.update(system_image_bytes);
-    <span class="kw">let </span>digest = digest.finalize();
-    <span class="macro">vec!</span>[(
-        ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
-        Value::Map(<span class="macro">vec!</span>[(
-            Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-            Value::Map(<span class="macro">vec!</span>[(
-                Value::Integer(SHA2_256_ID.into()),
-                Value::Bytes(digest[..].to_vec()),
-            )]),
-        )]),
-    )]
+<span class="doccomment">/// Returns the SHA2-256 digest of the system image bytes and the event
+/// digest as vectors of additional CWT claims.
+</span><span class="kw">pub fn </span>get_system_image_measurement_claims(
+    digest: <span class="kw-2">&amp;</span>RawDigest,
+    event: oak_proto_rust::oak::attestation::v1::Event,
+) -&gt; oak_attestation::dice::LayerData {
+    <span class="kw">let </span>encoded_event = event.encode_to_vec();
+    <span class="kw">let </span>event_digest =
+        oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event.as_slice());
+    oak_attestation::dice::LayerData {
+        additional_claims: <span class="macro">vec!</span>[
+            (
+                ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                    Value::Map(<span class="macro">vec!</span>[(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(digest.sha2_256.clone()),
+                    )]),
+                )]),
+            ),
+            (
+                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(event_digest.sha2_256),
+                )]),
+            ),
+        ],
+        encoded_event,
+    }
 }
 
 <span class="attr">#[derive(Debug)]
@@ -458,7 +494,9 @@
     /// located at the given physical address.
     </span><span class="kw">pub fn </span>read_into_dice_builder(<span class="self">self</span>) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
         <span class="kw">let </span>stage0_dice_data = <span class="self">self</span>.read_stage0_dice_data()<span class="question-mark">?</span>;
-        <span class="kw">let </span>dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)<span class="question-mark">?</span>;
+        <span class="kw">let </span>eventlog = <span class="self">self</span>.read_eventlog()<span class="question-mark">?</span>;
+        <span class="kw">let </span>dice_data: DiceData =
+            stage0_dice_data_and_event_log_to_proto(stage0_dice_data, eventlog)<span class="question-mark">?</span>;
         dice_data.try_into()
     }
 }

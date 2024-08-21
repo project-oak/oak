@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["evidence_to_proto","stage0_dice_data_to_proto"],"struct":["DiceBuilder"]};
+window.SIDEBAR_ITEMS = {"fn":["evidence_to_proto","stage0_dice_data_and_event_log_to_proto"],"struct":["DiceBuilder","LayerData"],"trait":["MeasureDigest"]};

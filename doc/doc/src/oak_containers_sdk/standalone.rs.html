@@ -107,6 +107,7 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -167,6 +168,7 @@
                 signing_public_key_certificate: <span class="macro">vec!</span>[],
                 group_signing_public_key_certificate: <span class="macro">vec!</span>[],
             }),
+            event_log: <span class="prelude-val">None</span>,
         }),
         endorsements: <span class="prelude-val">Some</span>(Endorsements {
             r#type: <span class="prelude-val">Some</span>(endorsements::Type::Standalone(OakStandaloneEndorsements {})),

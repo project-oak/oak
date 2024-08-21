@@ -282,6 +282,44 @@
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -309,12 +347,39 @@
     },
     evidence::Stage0DiceData,
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
-    TeePlatform,
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{
+        ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
+        RootLayerEvidence, TeePlatform,
+    },
+    RawDigest,
 };
 <span class="kw">use </span>p256::ecdsa::{SigningKey, VerifyingKey};
+<span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">pub trait </span>MeasureDigest {
+    <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest;
+}
+
+<span class="kw">impl </span>MeasureDigest <span class="kw">for </span><span class="kw-2">&amp;</span>[u8] {
+    <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest {
+        <span class="kw">let </span><span class="kw-2">mut </span>digest = sha2::Sha256::default();
+        digest.update(<span class="self">self</span>);
+        <span class="kw">let </span>digest_bytes: [u8; <span class="number">32</span>] = digest.finalize().into();
+        <span class="kw">let </span><span class="kw-2">mut </span>raw_digest = RawDigest::default();
+        raw_digest.sha2_256 = digest_bytes.to_vec();
+        raw_digest
+    }
+}
+
+<span class="doccomment">/// Holds additional claims and the encoded event for a DICE layer.
+</span><span class="kw">pub struct </span>LayerData {
+    <span class="doccomment">/// Additional claims to include in the CWT certificate for the layer.
+    </span><span class="kw">pub </span>additional_claims: Vec&lt;(ClaimName, ciborium::Value)&gt;,
+    <span class="doccomment">/// Encoded event associated with the layer.
+    </span><span class="kw">pub </span>encoded_event: Vec&lt;u8&gt;,
+}
 
 <span class="doccomment">/// Builds the DICE evidence and certificate authority for the next DICE layer.
 </span><span class="kw">pub struct </span>DiceBuilder {
@@ -330,10 +395,7 @@
     /// private key for the layer and uses it to replace the existing
     /// signing key. The CWT certificate contains the public key for this new
     /// signing key.
-    </span><span class="kw">pub fn </span>add_layer(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        additional_claims: Vec&lt;(ClaimName, ciborium::Value)&gt;,
-    ) -&gt; anyhow::Result&lt;()&gt; {
+    </span><span class="kw">pub fn </span>add_layer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layer_data: LayerData) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// The last evidence layer contains the certificate for the current signing key.
         // Since the builder contains an existing signing key there must be at
         // least one layer of evidence that contains the certificate.
@@ -356,7 +418,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
             issuer_id,
             <span class="kw-2">&amp;</span>verifying_key,
-            additional_claims,
+            layer_data.additional_claims,
         )
         .map_err(anyhow::Error::msg)
         .context(<span class="string">"couldn't generate ECA certificate for the next layer"</span>)<span class="question-mark">?</span>;
@@ -366,6 +428,11 @@
         <span class="comment">// Replacing the signing key will cause the previous signing key to be dropped,
         // which will zero out its memory.
         </span><span class="self">self</span>.signing_key = signing_key;
+        <span class="self">self</span>.evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(layer_data.encoded_event);
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -376,7 +443,7 @@
     /// the finalized evidence.
     </span><span class="kw">pub fn </span>add_application_keys(
         <span class="self">self</span>,
-        additional_claims: Vec&lt;(ClaimName, ciborium::Value)&gt;,
+        layer_data: LayerData,
         kem_public_key: <span class="kw-2">&amp;</span>[u8],
         verifying_key: <span class="kw-2">&amp;</span>VerifyingKey,
         group_kem_public_key: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
@@ -403,7 +470,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
             issuer_id.clone(),
             kem_public_key,
-            additional_claims.clone(),
+            layer_data.additional_claims.clone(),
         )
         .map_err(anyhow::Error::msg)
         .context(<span class="string">"couldn't generate encryption public key certificate"</span>)<span class="question-mark">?
@@ -414,7 +481,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
             issuer_id.clone(),
             verifying_key,
-            additional_claims,
+            layer_data.additional_claims,
         )
         .map_err(anyhow::Error::msg)
         .context(<span class="string">"couldn't generate signing public key certificate"</span>)<span class="question-mark">?
@@ -461,6 +528,11 @@
             group_signing_public_key_certificate,
         });
 
+        evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(layer_data.encoded_event);
         <span class="prelude-val">Ok</span>(evidence)
     }
 
@@ -494,7 +566,10 @@
     }
 }
 
-<span class="kw">pub fn </span>stage0_dice_data_to_proto(value: Stage0DiceData) -&gt; anyhow::Result&lt;DiceData&gt; {
+<span class="kw">pub fn </span>stage0_dice_data_and_event_log_to_proto(
+    value: Stage0DiceData,
+    event_log: EventLog,
+) -&gt; anyhow::Result&lt;DiceData&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>layers = Vec::new();
     <span class="kw">let </span>eca_certificate =
         oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.layer_1_evidence.eca_certificate[..])
@@ -503,7 +578,8 @@
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.layer_1_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">None</span>;
-    <span class="kw">let </span>evidence = <span class="prelude-val">Some</span>(Evidence { root_layer, layers, application_keys });
+    <span class="kw">let </span>evidence =
+        <span class="prelude-val">Some</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">Some</span>(event_log) });
     <span class="kw">let </span>certificate_authority = <span class="prelude-val">Some</span>(CertificateAuthority {
         eca_private_key: value.layer_1_certificate_authority.eca_private_key
             [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
@@ -526,7 +602,7 @@
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys })
+    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">Some</span>(EventLog::default()) })
 }
 
 <span class="kw">fn </span>root_layer_evidence_to_proto(
