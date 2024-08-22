@@ -16,6 +16,7 @@
 
 mod channel;
 pub mod dice_data;
+pub mod event_log;
 mod fd;
 mod key;
 pub mod mmap;
@@ -28,7 +29,7 @@ mod switch_process;
 #[cfg(test)]
 mod tests;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 use core::{arch::asm, ffi::c_void, mem::offset_of, ptr::addr_of_mut};
 
 use oak_channel::Channel;
@@ -51,11 +52,16 @@ use self::{
 };
 use crate::mm;
 
-pub fn enable_syscalls(channel: Box<dyn Channel>, dice_data: dice_data::DiceData) {
+pub fn enable_syscalls(
+    channel: Box<dyn Channel>,
+    dice_data: dice_data::DiceData,
+    encoded_event_log: Vec<u8>,
+) {
     channel::register(channel);
     stdio::register();
     key::register();
     dice_data::register(dice_data);
+    event_log::register(encoded_event_log);
 
     GsData::setup();
 

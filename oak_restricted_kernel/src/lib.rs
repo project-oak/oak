@@ -425,7 +425,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     }
 
-    let (stage0_dice_data, _encoded_event_log) = {
+    let (stage0_dice_data, encoded_event_log) = {
         let sensitive_dice_data =
         // Safety: This will be the only instance of this struct.
         unsafe {SensitiveDiceDataMemory::new(&kernel_args, info)};
@@ -501,6 +501,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     syscall::enable_syscalls(
         channel,
         syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
+        encoded_event_log,
     );
 
     // Ensure new process is not dropped.

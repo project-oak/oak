@@ -33,3 +33,6 @@ pub const DERIVED_KEY_FD: i32 = 0x21;
 
 /// Predefined file descriptor for reading the dice attestation data.
 pub const DICE_DATA_FD: i32 = 0x42;
+
+/// Predefined file descriptor for reading the eventlog attestation data.
+pub const EVENT_LOG_FD: i32 = 0x43;
