@@ -295,8 +295,15 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
 
-    let stage0_dice_data = {
-        let dice_memory_slice = {
+    struct SensitiveDiceDataMemory {
+        start_ptr: *mut u8,
+        length: usize,
+    }
+
+    impl SensitiveDiceDataMemory {
+        /// Safety: Caller must ensure that there is only instance of this
+        /// struct.
+        unsafe fn new(kernel_args: &args::Args, info: &oak_linux_boot_params::BootParams) -> Self {
             let dice_data_size = kernel_args
                 .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_LENGTH_CMDLINE_PARAM))
                 .map(|arg| {
@@ -347,27 +354,41 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     .expect("failed to translate physical dice address")
             };
 
-            // Safety: the E820 table indicated that this is the correct memory segment.
-            unsafe {
-                core::slice::from_raw_parts_mut::<u8>(
-                    dice_data_virt_addr.as_mut_ptr(),
-                    dice_data_size,
-                )
-            }
-        };
-
-        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(
-            &dice_memory_slice[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
-        )
-        .expect("failed to read dice data");
-
-        // Overwrite the entire dice data provided by stage0 after reading.
-        dice_memory_slice.zeroize();
-
-        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-            panic!("dice data loaded from stage0 failed validation");
+            Self { start_ptr: dice_data_virt_addr.as_mut_ptr(), length: dice_data_size }
         }
-        dice_data
+
+        fn read_stage0_dice_data(&self) -> oak_dice::evidence::Stage0DiceData {
+            let dice_memory_slice =
+                unsafe { core::slice::from_raw_parts_mut::<u8>(self.start_ptr, self.length) };
+
+            let dice_data = oak_dice::evidence::Stage0DiceData::read_from(
+                &dice_memory_slice[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
+            )
+            .expect("failed to read dice data");
+
+            // Overwrite the entire dice data provided by stage0 after reading.
+            dice_memory_slice.zeroize();
+
+            if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+                panic!("dice data loaded from stage0 failed validation");
+            }
+            dice_data
+        }
+    }
+
+    impl Drop for SensitiveDiceDataMemory {
+        fn drop(&mut self) {
+            // Zero out the sensitive_dice_data_memory.
+            // Safety: This struct is only used once. We have checked the length,
+            // know it is backed by physical memory and is reserved.
+            (unsafe { core::slice::from_raw_parts_mut(self.start_ptr, self.length) }).zeroize();
+        }
+    }
+
+    let stage0_dice_data = {
+        // Safety: This will be the only instance of this struct.
+        let sensitive_dice_data = unsafe { SensitiveDiceDataMemory::new(&kernel_args, info) };
+        sensitive_dice_data.read_stage0_dice_data()
     };
 
     // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with
