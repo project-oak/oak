@@ -107,15 +107,14 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
 
     for &message in TEST_MESSAGES {
         let ciphertext = encryptor_client.encrypt(message.into()).unwrap();
-        let plaintext = encryptor_server.decrypt(ciphertext.as_slice().into()).unwrap();
-        assert_eq!(message, &plaintext);
-        assert_eq!(message, &plaintext);
+        let plaintext = encryptor_server.decrypt(ciphertext).unwrap();
+        assert_eq!(message, &plaintext.message);
     }
 
     for &message in TEST_MESSAGES {
         let ciphertext = encryptor_server.encrypt(message.into()).unwrap();
-        let plaintext = encryptor_client.decrypt(ciphertext.as_slice().into()).unwrap();
-        assert_eq!(message, &plaintext);
+        let plaintext = encryptor_client.decrypt(ciphertext).unwrap();
+        assert_eq!(message, &plaintext.message);
     }
 }
 

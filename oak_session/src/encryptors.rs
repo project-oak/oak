@@ -17,8 +17,6 @@
 //! This module provides an interface and an implementation of the Encryptor,
 //! which handles encrypted communication over a channel.
 
-use alloc::vec::Vec;
-
 use anyhow::{anyhow, Context, Error};
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
@@ -33,15 +31,17 @@ pub struct OrderedChannelEncryptor {
 }
 
 impl Encryptor for OrderedChannelEncryptor {
-    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Vec<u8>> {
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Payload> {
         self.crypter
             .encrypt(plaintext.message.as_slice())
+            .map(From::from)
             .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 
-    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Vec<u8>> {
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Payload> {
         self.crypter
             .decrypt(ciphertext.message.as_slice())
+            .map(From::from)
             .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 }

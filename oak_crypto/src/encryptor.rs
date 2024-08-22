@@ -34,17 +34,30 @@ use crate::{
 pub struct Payload {
     pub message: Vec<u8>,
     pub aad: Option<Vec<u8>>,
+    pub nonce: Option<Vec<u8>>,
 }
 
 impl From<&[u8]> for Payload {
     fn from(value: &[u8]) -> Self {
-        Payload { message: value.to_vec(), aad: None }
+        Payload { message: value.to_vec(), aad: None, nonce: None }
+    }
+}
+
+impl From<Vec<u8>> for Payload {
+    fn from(message: Vec<u8>) -> Self {
+        Payload { message, aad: None, nonce: None }
+    }
+}
+
+impl From<Payload> for Vec<u8> {
+    fn from(value: Payload) -> Self {
+        value.message
     }
 }
 
 pub trait Encryptor {
-    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Vec<u8>>;
-    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Vec<u8>>;
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Payload>;
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Payload>;
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the

@@ -93,6 +93,7 @@ impl Session for ClientSession {
         if let Some(encryptor) = self.encryptor.as_mut() {
             let ciphertext = encryptor
                 .encrypt(plaintext.into())
+                .map(From::from)
                 .context("couldn't encrypt the supplied plaintext")?;
             self.outgoing_requests
                 .push_back(SessionRequest { request: Some(Request::Ciphertext(ciphertext)) });
@@ -117,6 +118,7 @@ impl Session for ClientSession {
                     Ok(Some(
                         encryptor
                             .decrypt(ciphertext.as_slice().into())
+                            .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
                 }
@@ -204,6 +206,7 @@ impl Session for ServerSession {
         if let Some(encryptor) = self.encryptor.as_mut() {
             let ciphertext = encryptor
                 .encrypt(plaintext.into())
+                .map(From::from)
                 .context("couldn't encrypt the supplied plaintext")?;
             self.outgoing_responses
                 .push_back(SessionResponse { response: Some(Response::Ciphertext(ciphertext)) });
@@ -228,6 +231,7 @@ impl Session for ServerSession {
                     Ok(Some(
                         encryptor
                             .decrypt(ciphertext.as_slice().into())
+                            .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
                 }
