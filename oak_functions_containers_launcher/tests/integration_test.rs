@@ -31,7 +31,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
         );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    tokio::time::sleep(Duration::from_secs(120)).await;
 
     let mut client = OakFunctionsClient::new(
         &format!("http://localhost:{port}"),
@@ -83,7 +83,7 @@ async fn test_launcher_echo() {
         );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(120)).await;
+    tokio::time::sleep(Duration::from_secs(210)).await;
 
     let mut client = OakFunctionsClient::new(
         &format!("http://localhost:{port}"),

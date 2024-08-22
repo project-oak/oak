@@ -70,7 +70,7 @@ extern crate std;
 
 extern crate alloc;
 
-use alloc::{alloc::Allocator, boxed::Box};
+use alloc::{alloc::Allocator, boxed::Box, vec::Vec};
 use core::{panic::PanicInfo, pin::Pin, str::FromStr};
 
 use linked_list_allocator::LockedHeap;
@@ -297,14 +297,15 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     struct SensitiveDiceDataMemory {
         start_ptr: *mut u8,
-        length: usize,
+        eventlog_ptr: *mut u8,
+        sensitive_memory_length: usize,
     }
 
     impl SensitiveDiceDataMemory {
         /// Safety: Caller must ensure that there is only instance of this
         /// struct.
         unsafe fn new(kernel_args: &args::Args, info: &oak_linux_boot_params::BootParams) -> Self {
-            let dice_data_size = kernel_args
+            let sensitive_memory_length = kernel_args
                 .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_LENGTH_CMDLINE_PARAM))
                 .map(|arg| {
                     arg.parse::<usize>()
@@ -331,15 +332,27 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 PhysAddr::new(parsed_arg)
             };
 
+            let eventlog_phys_addr = {
+                let arg = kernel_args
+                    .get(&alloc::format!("--{}", oak_dice::evidence::EVENTLOG_CMDLINE_PARAM))
+                    .expect("no eventlog address supplied in the kernel args");
+                let parsed_arg = u64::from_str_radix(
+                    arg.strip_prefix("0x").expect("failed stripping the hex prefix"),
+                    16,
+                )
+                .expect("couldn't parse address as a hex number");
+                PhysAddr::new(parsed_arg)
+            };
+
             // Ensure that the dice data is stored within reserved memory.
+            let end = dice_data_phys_addr + (sensitive_memory_length as u64 - 1);
             assert!(info.e820_table().iter().any(|entry| {
                 let dice_data_fully_contained_in_segment = {
                     let range = PhysAddr::new(entry.addr().try_into().unwrap())
                         ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
                     range.contains(&dice_data_phys_addr)
-                        && range.contains(&PhysAddr::new(
-                            dice_data_phys_addr.as_u64() + u64::try_from(dice_data_size).unwrap(),
-                        ))
+                        && range.contains(&end)
+                        && range.contains(&eventlog_phys_addr)
                 };
 
                 entry.entry_type().expect("failed to get type")
@@ -354,25 +367,49 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     .expect("failed to translate physical dice address")
             };
 
-            Self { start_ptr: dice_data_virt_addr.as_mut_ptr(), length: dice_data_size }
+            let eventlog_virt_addr = {
+                let pt_guard = PAGE_TABLES.lock();
+                let pt = pt_guard.get().expect("failed to get page tables");
+                pt.translate_physical(eventlog_phys_addr)
+                    .expect("failed to translate physical eventlog address")
+            };
+
+            Self {
+                start_ptr: dice_data_virt_addr.as_mut_ptr(),
+                eventlog_ptr: eventlog_virt_addr.as_mut_ptr(),
+                sensitive_memory_length,
+            }
         }
 
         fn read_stage0_dice_data(&self) -> oak_dice::evidence::Stage0DiceData {
-            let dice_memory_slice =
-                unsafe { core::slice::from_raw_parts_mut::<u8>(self.start_ptr, self.length) };
+            let dice_memory_slice = unsafe {
+                core::slice::from_raw_parts(
+                    self.start_ptr,
+                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
+                )
+            };
 
-            let dice_data = oak_dice::evidence::Stage0DiceData::read_from(
-                &dice_memory_slice[..core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()],
-            )
-            .expect("failed to read dice data");
-
-            // Overwrite the entire dice data provided by stage0 after reading.
-            dice_memory_slice.zeroize();
+            let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+                .expect("failed to read dice data");
 
             if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
                 panic!("dice data loaded from stage0 failed validation");
             }
             dice_data
+        }
+
+        fn read_encoded_eventlog(&self) -> Vec<u8> {
+            // Read the event log size (first 8 bytes)
+            let event_log_size = unsafe {
+                let size_bytes = core::slice::from_raw_parts(self.eventlog_ptr, 8);
+                u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize
+            };
+
+            // Read the event log bytes
+            let event_log_bytes =
+                unsafe { core::slice::from_raw_parts(self.eventlog_ptr.add(8), event_log_size) };
+
+            event_log_bytes.to_vec()
         }
     }
 
@@ -381,14 +418,18 @@ pub fn start_kernel(info: &BootParams) -> ! {
             // Zero out the sensitive_dice_data_memory.
             // Safety: This struct is only used once. We have checked the length,
             // know it is backed by physical memory and is reserved.
-            (unsafe { core::slice::from_raw_parts_mut(self.start_ptr, self.length) }).zeroize();
+            (unsafe {
+                core::slice::from_raw_parts_mut(self.start_ptr, self.sensitive_memory_length)
+            })
+            .zeroize();
         }
     }
 
-    let stage0_dice_data = {
+    let (stage0_dice_data, _encoded_event_log) = {
+        let sensitive_dice_data =
         // Safety: This will be the only instance of this struct.
-        let sensitive_dice_data = unsafe { SensitiveDiceDataMemory::new(&kernel_args, info) };
-        sensitive_dice_data.read_stage0_dice_data()
+        unsafe {SensitiveDiceDataMemory::new(&kernel_args, info)};
+        (sensitive_dice_data.read_stage0_dice_data(), sensitive_dice_data.read_encoded_eventlog())
     };
 
     // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with
@@ -403,7 +444,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         interrupts::init_idt(double_fault_stack_index);
     }
 
-    // Init ACPI, if available.
+    // Init ACPI, if the tables are available.
     let mut acpi = match acpi::Acpi::new(info) {
         Err(ref err) => {
             log::warn!("Failed to load ACPI tables: {}", err);
