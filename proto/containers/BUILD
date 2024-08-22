@@ -52,6 +52,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "interfaces_cc_grpc",
     srcs = [":interfaces_proto"],
+    generate_mocks = True,
     grpc_only = True,
     deps = [":interfaces_cc_proto"],
 )
@@ -74,6 +75,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "orchestrator_crypto_cc_grpc",
     srcs = [":orchestrator_crypto_proto"],
+    generate_mocks = True,
     grpc_only = True,
     deps = [":orchestrator_crypto_cc_proto"],
 )
