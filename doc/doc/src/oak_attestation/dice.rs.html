@@ -602,7 +602,7 @@
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">Some</span>(EventLog::default()) })
+    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">None </span>})
 }
 
 <span class="kw">fn </span>root_layer_evidence_to_proto(

@@ -1641,6 +1641,39 @@
 <a href="#1639" id="1639">1639</a>
 <a href="#1640" id="1640">1640</a>
 <a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
+<a href="#1659" id="1659">1659</a>
+<a href="#1660" id="1660">1660</a>
+<a href="#1661" id="1661">1661</a>
+<a href="#1662" id="1662">1662</a>
+<a href="#1663" id="1663">1663</a>
+<a href="#1664" id="1664">1664</a>
+<a href="#1665" id="1665">1665</a>
+<a href="#1666" id="1666">1666</a>
+<a href="#1667" id="1667">1667</a>
+<a href="#1668" id="1668">1668</a>
+<a href="#1669" id="1669">1669</a>
+<a href="#1670" id="1670">1670</a>
+<a href="#1671" id="1671">1671</a>
+<a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
+<a href="#1674" id="1674">1674</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1683,13 +1716,13 @@
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues,
+        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues, EventLog,
         EventReferenceValues, Evidence, ExpectedDigests, ExpectedRegex, ExpectedStringLiterals,
         ExpectedValues, ExtractedEvidence, FakeAttestationReport, FirmwareAttachment,
         InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
         KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerData,
         KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
+        LayerEvidence, OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
         OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
         OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
         ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
@@ -1938,7 +1971,8 @@
                 <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
                 last_layer_verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
             })
-            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
+            .context(<span class="string">"failed to verify CWT signature"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify signing certificate.
         </span><span class="kw">let </span>signing_cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.signing_public_key_certificate)
@@ -1951,7 +1985,39 @@
             .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
     }
 
+    <span class="comment">// Verify the event log claim for this layer if it exists. This is done for all
+    // layers here, since the event log is tied uniquely closely to the DICE chain.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(event_log) = <span class="kw-2">&amp;</span>evidence.event_log {
+        validate_that_event_log_is_captured_in_dice_layers(event_log, <span class="kw-2">&amp;</span>evidence.layers)
+            .context(<span class="string">"events in log do not match the digests in the dice chain"</span>)<span class="question-mark">?
+    </span>}
     extract_evidence(evidence)
+}
+
+<span class="doccomment">/// Validates that the digest of the events captured in the event log are
+/// correctly described in the claims of the associated dice layers.
+</span><span class="kw">fn </span>validate_that_event_log_is_captured_in_dice_layers(
+    event_log: <span class="kw-2">&amp;</span>EventLog,
+    dice_layers: <span class="kw-2">&amp;</span>Vec&lt;LayerEvidence&gt;,
+) -&gt; anyhow::Result&lt;()&gt; {
+    dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
+        |(current_layer, encoded_event)| {
+            <span class="kw">let </span>event_digest = {
+                <span class="kw">let </span>claims = claims_set_from_serialized_cert(<span class="kw-2">&amp;</span>current_layer.eca_certificate)
+                    .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not parse claims set"</span>))<span class="question-mark">?</span>;
+                extract_event_data(<span class="kw-2">&amp;</span>claims)
+                    .context(<span class="string">"couldn't extract event claim"</span>)<span class="question-mark">?
+                    </span>.event
+                    .context(<span class="string">"Missing event"</span>)<span class="question-mark">?
+            </span>};
+            <span class="kw">let </span>actual_event_hash = <span class="kw-2">&amp;</span>&lt;sha2::Sha256 <span class="kw">as </span>sha2::Digest&gt;::digest(encoded_event).to_vec();
+            <span class="kw">return if </span>actual_event_hash != <span class="kw-2">&amp;</span>event_digest.sha2_256 {
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"event log hash mismatch"</span>))
+            } <span class="kw">else </span>{
+                <span class="prelude-val">Ok</span>(())
+            };
+        },
+    )
 }
 
 <span class="kw">fn </span>get_oak_restricted_kernel_expected_values(
