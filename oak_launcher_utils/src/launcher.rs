@@ -24,6 +24,7 @@ use std::{
     },
     path::PathBuf,
     process::Stdio,
+    time::Duration,
 };
 
 use anyhow::{Context, Result};
@@ -173,11 +174,17 @@ impl Instance {
         let instance = cmd.spawn()?;
 
         if let Some(app_bytes) = app_bytes {
+            // The code below is all sync, but we need some reasonable deadlines otherwise
+            // we might just get stuck if the qemu process exits.
+            host_socket.set_read_timeout(Some(Duration::from_secs(30)))?;
+
             oak_channel::basic_framed::send_raw(&mut host_socket, &app_bytes)
                 .context("failed to send application")?;
             #[cfg(feature = "exchange_evidence")]
             let _evidence = oak_channel::basic_framed::receive_raw(&mut host_socket)
                 .context("failed to receive attestion evidence")?;
+
+            host_socket.set_read_timeout(None)?;
         }
 
         Ok(Self { guest_console: guest_console_clone, host_socket, instance })

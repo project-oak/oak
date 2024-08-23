@@ -2881,6 +2881,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "ubyte",
+ "which 4.4.2",
 ]
 
 [[package]]

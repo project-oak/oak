@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_functions_test_utils",
     srcs = glob(["src/*.rs"]),
+    crate_features = ["bazel"],
     rustc_env = {
         # TODO: b/351201245 - Remove when we stop using cargo to build protos.
         "WORKSPACE_ROOT": ".",
@@ -43,5 +44,6 @@ rust_library(
         "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:ubyte",
+        "@oak_crates_index//:which",
     ],
 )

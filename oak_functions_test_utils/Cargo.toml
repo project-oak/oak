@@ -23,3 +23,4 @@ portpicker = "*"
 tempfile = "*"
 tokio = { workspace = true, features = ["sync"] }
 ubyte = "*"
+which = "*"

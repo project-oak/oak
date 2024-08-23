@@ -110,9 +110,7 @@ async fn test_load_large_lookup_data() {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: ["..", "stage0_bin", "target", "x86_64-unknown-none", "release", "stage0_bin"]
-            .iter()
-            .collect(),
+        bios_binary: oak_functions_test_utils::STAGE0.clone(),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
@@ -133,11 +131,11 @@ async fn test_load_large_lookup_data() {
         max_chunk_size,
     };
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
-    let status_one_chunk =
-        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
-    assert!(status_one_chunk.is_ok());
+    let (launched_instance, connector_handle, _) =
+        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024)
+            .await
+            .unwrap();
 
-    let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
 
     let lookup_data_config = LookupDataConfig {
@@ -184,9 +182,7 @@ async fn test_load_two_gib_lookup_data() {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: ["..", "stage0_bin", "target", "x86_64-unknown-none", "release", "stage0_bin"]
-            .iter()
-            .collect(),
+        bios_binary: oak_functions_test_utils::STAGE0.clone(),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),

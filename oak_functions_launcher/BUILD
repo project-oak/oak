@@ -76,3 +76,39 @@ rust_binary(
         "@oak_crates_index//:ubyte",
     ],
 )
+
+# This test is currently broken and disabled because the Bazel-built stage0 is broken.
+rust_test(
+    name = "oak_functions_launcher_integration_test",
+    size = "large",
+    srcs = ["tests/integration_test.rs"],
+    data = [
+        "mock_lookup_data",
+        ":oak_functions_launcher",
+        "//cc/client:cli",
+        "//enclave_apps/oak_functions_enclave_app",
+        "//enclave_apps/oak_orchestrator",
+        "//java/src/main/java/com/google/oak/client/oak_functions_client",
+        "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin:stage0_bin_raw",
+    ],
+    env = {
+        "RUST_LOG": "debug",
+    },
+    tags = ["manual"],
+    deps = [
+        ":lib",
+        "//micro_rpc",
+        "//oak_client",
+        "//oak_functions_client:lib",
+        "//oak_functions_test_utils",
+        "//oak_launcher_utils",
+        "//oak_proto_rust/micro_rpc",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:ubyte",
+        "@oak_crates_index//:which",
+    ],
+)
