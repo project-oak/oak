@@ -1,5 +1,5 @@
 {
-  "checksum": "f6fac55e089de4d24951f88c67b17eb4a991c87d9f85a242a8cdb1f8cac069fa",
+  "checksum": "7a002c6ee2b2b0c55693b97329832328d60602addcdf3476afac6f453fa2a0b8",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -3715,6 +3715,13 @@
           "selects": {}
         },
         "edition": "2015",
+        "rustc_flags": {
+          "common": [
+            "-C",
+            "overflow-checks=false"
+          ],
+          "selects": {}
+        },
         "version": "0.10.5"
       },
       "license": "Apache-2.0/MIT",

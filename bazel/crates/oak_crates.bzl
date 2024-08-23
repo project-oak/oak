@@ -203,7 +203,13 @@ def _common_crates(std):
     }
 
 # Annotations for the no_std crates index.
-OAK_NO_STD_ANNOTATIONS = {}
+OAK_NO_STD_ANNOTATIONS = {
+    "linked_list_allocator": [crate.annotation(
+        # overflow-checks are disabled for release builds, and for some reason Restricted Kernel
+        # hits them in dev builds.  Let's disable them everywhere.
+        rustc_flags = ["-C", "overflow-checks=false"],
+    )],
+}
 
 # Crates for the no_std crates index. Crates that are used in all crate indexes
 # should instead be added to _common_crates.
