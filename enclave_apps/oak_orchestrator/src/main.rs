@@ -20,10 +20,11 @@
 
 extern crate alloc;
 
+use alloc::vec::Vec;
 use core::fmt::Write;
 
 use oak_dice::evidence::Stage0DiceData;
-use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD};
+use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD, EVENT_LOG_FD};
 use oak_restricted_kernel_orchestrator::AttestedApp;
 use oak_restricted_kernel_sdk::channel::FileDescriptorChannel;
 use zerocopy::{AsBytes, FromZeroes};
@@ -88,11 +89,27 @@ fn read_stage0_dice_data() -> Stage0DiceData {
     result
 }
 
+fn read_encoded_event_log() -> Vec<u8> {
+    let mut event_log = Vec::new();
+    let mut buffer = [0u8; 1024]; // Read in 1KB chunks
+
+    loop {
+        match syscall::read(EVENT_LOG_FD, &mut buffer) {
+            Ok(0) => break, // End of file
+            Ok(n) => event_log.extend_from_slice(&buffer[..n]),
+            Err(e) => panic!("Failed to read event log: {:?}", e),
+        }
+    }
+
+    event_log
+}
+
 fn entrypoint() {
     let mut attested_app = {
         let stage0_dice_data = read_stage0_dice_data();
+        let encoded_event_log = read_encoded_event_log();
         let channel = FileDescriptorChannel::default();
-        AttestedApp::load_and_attest(channel, stage0_dice_data)
+        AttestedApp::load_and_attest(channel, stage0_dice_data, encoded_event_log)
     };
 
     syscall::write(DERIVED_KEY_FD, attested_app.derived_key.as_bytes())
@@ -101,6 +118,8 @@ fn entrypoint() {
     syscall::write(DICE_DATA_FD, attested_app.dice_data.as_bytes())
         .expect("failed to write dice data");
     attested_app.dice_data.as_bytes_mut().zeroize();
+    syscall::write(EVENT_LOG_FD, attested_app.get_encoded_event_log().as_slice())
+        .expect("failed to write event log");
 
     log::info!("Finished setup, handing off executing to the app and going to sleep.");
     let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())

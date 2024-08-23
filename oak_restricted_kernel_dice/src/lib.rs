@@ -38,15 +38,15 @@ use sha2::{Digest, Sha256};
 pub type DerivedKey = [u8; 32];
 
 // Digest of an application.
-pub type AppDigestSha2_256 = [u8; 32];
+pub type DigestSha2_256 = [u8; 32];
 
-pub fn measure_app_digest_sha2_256(app_bytes: &[u8]) -> AppDigestSha2_256 {
+pub fn measure_digest_sha2_256(app_bytes: &[u8]) -> DigestSha2_256 {
     Sha256::digest(app_bytes).into()
 }
 
 pub fn generate_derived_key(
     stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
-    app_digest: &AppDigestSha2_256,
+    app_digest: &DigestSha2_256,
 ) -> DerivedKey {
     // Mix in the application digest when deriving CDI for Layer 2.
     let hkdf = Hkdf::<Sha256>::new(Some(app_digest), &stage0_dice_data.layer_1_cdi.cdi[..]);
@@ -65,7 +65,8 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: &AppDigestSha2_256,
+    app_digest: &DigestSha2_256,
+    event_digest: &DigestSha2_256,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
@@ -88,28 +89,37 @@ pub fn generate_dice_data(
         let (application_private_signing_key, application_public_verifying_key) =
             oak_dice::cert::generate_ecdsa_key_pair();
 
-        let additional_claims = vec![(
-            ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
-            Value::Map(vec![
-                (
-                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-                    Value::Map(vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(app_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
-                    Value::Map(vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        // There currently exists no application config for enclave
-                        // applications. Hence this field should
-                        // always be empty.
-                        Value::Bytes([0; 0].into()),
-                    )]),
-                ),
-            ]),
-        )];
+        let additional_claims = vec![
+            (
+                ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
+                Value::Map(vec![
+                    (
+                        Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                        Value::Map(vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(app_digest.into()),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                        Value::Map(vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            // There currently exists no application config for enclave
+                            // applications. Hence this field should
+                            // always be empty.
+                            Value::Bytes([0; 0].into()),
+                        )]),
+                    ),
+                ]),
+            ),
+            (
+                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+                Value::Map(vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(event_digest.to_vec()),
+                )]),
+            ),
+        ];
 
         let application_signing_public_key_certificate =
             oak_dice::cert::generate_signing_certificate(

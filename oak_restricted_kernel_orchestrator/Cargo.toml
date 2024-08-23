@@ -7,12 +7,14 @@ license = "Apache-2.0"
 
 [features]
 default = ["exchange_evidence"]
-exchange_evidence = ["oak_attestation", "prost"]
+exchange_evidence = ["oak_attestation"]
 
 [dependencies]
 oak_channel = { workspace = true }
 oak_dice = { workspace = true }
 oak_attestation = { workspace = true, optional = true }
 oak_restricted_kernel_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
 log = "*"
-prost = { workspace = true, optional = true }
+prost = { workspace = true, default-features = false }
+prost-types = { version = "*", default-features = false }

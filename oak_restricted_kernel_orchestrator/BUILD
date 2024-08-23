@@ -32,8 +32,10 @@ rust_library(
         "//oak_attestation",
         "//oak_channel",
         "//oak_dice",
+        "//oak_proto_rust",
         "//oak_restricted_kernel_dice",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
     ],
 )

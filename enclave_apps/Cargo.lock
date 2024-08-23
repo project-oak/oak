@@ -893,8 +893,10 @@ dependencies = [
  "oak_attestation",
  "oak_channel",
  "oak_dice",
+ "oak_proto_rust",
  "oak_restricted_kernel_dice",
  "prost",
+ "prost-types",
 ]
 
 [[package]]
