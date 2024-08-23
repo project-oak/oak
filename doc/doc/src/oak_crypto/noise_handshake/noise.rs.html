@@ -306,6 +306,8 @@
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -326,10 +328,11 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{crypto_wrapper, error::Error};
 
-<span class="attr">#[derive(Debug, PartialEq)]
+<span class="attr">#[derive(Debug, PartialEq, Copy, Clone)]
 </span><span class="kw">pub enum </span>HandshakeType {
     Nk, <span class="comment">// https://noiseexplorer.com/patterns/NK/
     </span>Nn, <span class="comment">// https://noiseexplorer.com/patterns/NN/
+    </span>Kk, <span class="comment">// https://noiseexplorer.com/patterns/KK/
 </span>}
 
 <span class="comment">// Helper to generate 2 keys.
@@ -360,6 +363,7 @@
         <span class="kw">let </span>protocol_name = <span class="kw">match </span>handshake_type {
             HandshakeType::Nk =&gt; <span class="string">b"Noise_NK_P256_AESGCM_SHA256"</span>,
             HandshakeType::Nn =&gt; <span class="string">b"Noise_NN_P256_AESGCM_SHA256"</span>,
+            HandshakeType::Kk =&gt; <span class="string">b"Noise_KK_P256_AESGCM_SHA256"</span>,
         };
         chaining_key_in[..protocol_name.len()].copy_from_slice(protocol_name);
         Noise {

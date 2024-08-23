@@ -216,6 +216,36 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -235,13 +265,14 @@
 </span><span class="doccomment">//! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-</span><span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::{boxed::Box, vec::Vec};
 <span class="kw">use </span>core::convert::TryInto;
 
+<span class="kw">use </span>aead::Error;
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::{
     identity_key::IdentityKeyHandle,
-    noise_handshake::{client::HandshakeInitiator, respond_nk, respond_nn, Crypter},
+    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Crypter},
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
@@ -283,8 +314,17 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             handshake_type,
             handshake_initiator: <span class="kw">match </span>handshake_type {
-                HandshakeType::NoiseKK =&gt; <span class="macro">core::unimplemented!</span>(),
                 HandshakeType::NoiseKN =&gt; <span class="macro">core::unimplemented!</span>(),
+                HandshakeType::NoiseKK =&gt; HandshakeInitiator::new_kk(
+                    peer_static_public_key
+                        .context(<span class="string">"handshaker_config missing the peer public key"</span>)<span class="question-mark">?
+                        </span>.as_slice()
+                        .try_into()
+                        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"invalid peer public key: {:?}"</span>, error))<span class="question-mark">?</span>,
+                    handshaker_config
+                        .self_static_private_key
+                        .context(<span class="string">"handshaker_config missing the self static private key"</span>)<span class="question-mark">?</span>,
+                ),
                 HandshakeType::NoiseNK =&gt; HandshakeInitiator::new_nk(
                     peer_static_public_key
                         .context(<span class="string">"handshaker_config missing the peer public key"</span>)<span class="question-mark">?
@@ -307,7 +347,10 @@
 
 <span class="kw">impl </span>ProtocolEngine&lt;HandshakeResponse, HandshakeRequest&gt; <span class="kw">for </span>ClientHandshaker {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;HandshakeRequest&gt;&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>initial_message = <span class="self">self</span>.handshake_initiator.build_initial_message();
+        <span class="kw">let </span><span class="kw-2">mut </span>initial_message = <span class="self">self
+            </span>.handshake_initiator
+            .build_initial_message()
+            .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Error building initial message: {e:?}"</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>(ciphertext, ephemeral_public_key) =
             (initial_message.split_off(P256_X962_KEY_BYTES_LEN), initial_message);
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(HandshakeRequest {
@@ -339,8 +382,11 @@
                     noise_message.ciphertext.as_slice(),
                 ]
                 .concat();
-                <span class="self">self</span>.handshake_result =
-                    <span class="prelude-val">Some</span>(<span class="self">self</span>.handshake_initiator.process_response(handshake_response.as_slice()));
+                <span class="self">self</span>.handshake_result = <span class="prelude-val">Some</span>(
+                    <span class="self">self</span>.handshake_initiator
+                        .process_response(handshake_response.as_slice())
+                        .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Error processing response: {e:?}"</span>))<span class="question-mark">?</span>,
+                );
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"Missing handshake_type"</span>)),
@@ -354,6 +400,7 @@
 </span><span class="kw">pub struct </span>ServerHandshaker {
     handshake_type: HandshakeType,
     self_identity_key: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>IdentityKeyHandle&gt;&gt;,
+    peer_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
     handshake_response: <span class="prelude-ty">Option</span>&lt;HandshakeResponse&gt;,
     handshake_result: <span class="prelude-ty">Option</span>&lt;SessionKeys&gt;,
 }
@@ -363,6 +410,7 @@
         <span class="self">Self </span>{
             handshake_type: handshaker_config.handshake_type,
             self_identity_key: handshaker_config.self_static_private_key,
+            peer_public_key: handshaker_config.peer_static_public_key,
             handshake_response: <span class="prelude-val">None</span>,
             handshake_result: <span class="prelude-val">None</span>,
         }
@@ -393,8 +441,20 @@
                 ]
                 .concat();
                 <span class="kw">match </span><span class="self">self</span>.handshake_type {
-                    HandshakeType::NoiseKK =&gt; <span class="macro">core::unimplemented!</span>(),
                     HandshakeType::NoiseKN =&gt; <span class="macro">core::unimplemented!</span>(),
+                    HandshakeType::NoiseKK =&gt; respond_kk(
+                        <span class="self">self</span>.self_identity_key
+                            .as_ref()
+                            .context(<span class="string">"handshaker_config missing the self private key"</span>)<span class="question-mark">?
+                            </span>.as_ref(),
+                        <span class="kw-2">&amp;</span><span class="self">self
+                            </span>.peer_public_key
+                            .as_ref()
+                            .ok_or(|<span class="kw">_</span>: Error| <span class="string">""</span>)
+                            .map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"Must provide public key for Kk"</span>))<span class="question-mark">?</span>,
+                        <span class="kw-2">&amp;</span>in_data,
+                    )
+                    .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"handshake response failed: {e:?}"</span>))<span class="question-mark">?</span>,
                     HandshakeType::NoiseNK =&gt; respond_nk(
                         <span class="self">self</span>.self_identity_key
                             .as_ref()
