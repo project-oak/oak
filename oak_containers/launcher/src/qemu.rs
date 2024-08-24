@@ -166,10 +166,18 @@ impl Qemu {
         // Definition of the private memory.
         let sev_common_object = format!(
             "memory-backend-memfd,id=ram1,size={},share=true,reserve=false",
-            params.memory_size.unwrap_or("8G".to_string())
+            params.memory_size.clone().unwrap_or("8G".to_string())
         );
         // SEV's feature configuration.
         let sev_config_object = "id=sev0,cbitpos=51,reduced-phys-bits=1";
+        // TDX machine suffix
+        let tdx_machine_suffix = ",kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1";
+        let tdx_common_object = format!(
+            // Note: private=on is only needed in Ubuntu's QEMU and kernel.
+            // Intel's reference implementation does not need `private=on`.
+            "memory-backend-ram,id=ram1,size={},private=on", // only works on Ubuntu's QEMU
+            params.memory_size.unwrap_or("8G".to_string())
+        );
         // Generate the parameters and add them to cmd.args.
         let (machine_arg, object_args) = match params.vm_type {
             VmType::Default => (microvm_common, vec![]),
@@ -200,7 +208,10 @@ impl Qemu {
                     "sev-snp-guest,".to_string() + sev_config_object + ",id-auth=",
                 ],
             ),
-            VmType::Tdx => unimplemented!("TDX is not supported"),
+            VmType::Tdx => (
+                microvm_common + tdx_machine_suffix,
+                vec!["tdx-guest,sept-ve-disable=on,id=tdx".to_string(), tdx_common_object],
+            ),
         };
         cmd.args(["-machine", &machine_arg]);
         for obj_arg in object_args {
@@ -267,7 +278,7 @@ impl Qemu {
             format!("brd.rd_size={ramdrive_size}"),
             "brd.max_part=1".to_string(),
             format!("ip={vm_address}:::255.255.255.0::eth0:off"),
-            "quiet".to_string(),
+            "loglevel=7".to_string(),
             "--".to_string(),
             format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
         ];
