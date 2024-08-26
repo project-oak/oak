@@ -16,6 +16,8 @@
 
 //! Structs for providing attestation related logic such as getting an evidence.
 
+use alloc::vec::Vec;
+
 use oak_crypto::encryption_key::EncryptionKey;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
@@ -45,6 +47,7 @@ pub(crate) struct DiceWrapper {
     pub evidence: Evidence,
     pub encryption_key: EncryptionKey,
     pub signing_key: p256::ecdsa::SigningKey,
+    pub encoded_event_log: Option<Vec<u8>>,
 }
 
 impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
@@ -59,7 +62,7 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
         )
         .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
         let evidence = dice_data.evidence;
-        Ok(DiceWrapper { evidence, encryption_key, signing_key })
+        Ok(DiceWrapper { evidence, encryption_key, signing_key, encoded_event_log: None })
     }
 }
 
@@ -69,6 +72,7 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
 /// for enclave applications to operate directly with evidences.
 pub trait EvidenceProvider {
     fn get_evidence(&self) -> &Evidence;
+    fn get_encoded_event_log(&self) -> Option<&[u8]>;
 }
 
 /// [`EvidenceProvider`] implementation that exposes the instance's evidence.
@@ -88,5 +92,9 @@ impl InstanceEvidenceProvider {
 impl EvidenceProvider for InstanceEvidenceProvider {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
+    }
+
+    fn get_encoded_event_log(&self) -> Option<&[u8]> {
+        None
     }
 }

@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, format, string::String, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 use core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
@@ -30,7 +30,6 @@ use oak_dice::evidence::{
     STAGE0_DICE_PROTO_MAGIC,
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -209,17 +208,14 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     // Generate Stage0 Event Log data.
-    let stage0event = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-        kernel_measurement: kernel_info.measurement.as_bytes().to_vec(),
-        acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
-        memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
-        ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
-        setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
-        kernel_cmdline: cmdline.clone(),
-    };
-
-    let event_log_proto = generate_event_log(stage0event);
-    let event_sha2_256_digest = event_log_proto.encoded_events[0].measure();
+    let (event_log_proto, event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
+        kernel_info.measurement.as_bytes().to_vec(),
+        acpi_sha2_256_digest.as_bytes().to_vec(),
+        memory_map_sha2_256_digest.as_bytes().to_vec(),
+        ram_disk_sha2_256_digest.as_bytes().to_vec(),
+        setup_data_sha2_256_digest.as_bytes().to_vec(),
+        cmdline.clone(),
+    );
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
@@ -366,13 +362,4 @@ impl<T: zerocopy::AsBytes + ?Sized> Measured for T {
         measurement[..].copy_from_slice(&digest[..]);
         measurement
     }
-}
-
-fn generate_event_log(measurements: Stage0Measurements) -> EventLog {
-    let tag = String::from("Stage0");
-    let any = prost_types::Any::from_msg(&measurements);
-    let event = Event { tag, event: Some(any.unwrap()) };
-    let mut eventlog = EventLog::default();
-    eventlog.encoded_events.push(event.encode_to_vec());
-    eventlog
 }

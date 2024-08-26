@@ -29,5 +29,6 @@ rust_test_suite(
         "//oak_attestation_verification",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:prost",
     ],
 )

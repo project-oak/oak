@@ -3042,6 +3042,7 @@ dependencies = [
  "oak_restricted_kernel_sdk_proc_macro",
  "oak_stage0_dice",
  "p256",
+ "prost",
  "strum",
  "zerocopy",
 ]
@@ -3140,6 +3141,8 @@ dependencies = [
  "oak_proto_rust",
  "oak_sev_snp_attestation_report",
  "p256",
+ "prost",
+ "prost-types",
  "rand_core",
  "sha2",
  "zerocopy",

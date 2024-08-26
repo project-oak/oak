@@ -19,12 +19,14 @@ use oak_attestation_verification::verifier::{to_attestation_results, verify, ver
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, endorsements,
     kernel_binary_reference_value, reference_values, text_reference_value,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, InsecureReferenceValues,
-    KernelBinaryReferenceValue, KernelLayerReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-    RootLayerReferenceValues, SkipVerification, TextReferenceValue,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, Event, EventLog,
+    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerReferenceValues,
+    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, Stage0Measurements,
+    TextReferenceValue,
 };
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
+use prost::Message;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -43,6 +45,63 @@ fn verify_mock_dice_chain() {
     let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
         result.unwrap().evidence_values.unwrap();
     assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
+}
+
+fn get_evidence_proto_with_eventlog() -> oak_proto_rust::oak::attestation::v1::Evidence {
+    let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        .expect("failed to create mock provider");
+
+    let mock_evidence = mock_evidence_provider.get_evidence();
+    let mock_encoded_eventlog =
+        mock_evidence_provider.get_encoded_event_log().expect("failed to get eventlog");
+    let mock_eventlog =
+        EventLog::decode(mock_encoded_eventlog).expect("Failed to decode EventLog proto");
+    let mut mock_evidence_proto =
+        evidence_to_proto(mock_evidence.clone()).expect("could not convert evidence to proto");
+    let _ = mock_evidence_proto.event_log.insert(mock_eventlog);
+    mock_evidence_proto
+}
+
+#[test]
+fn verify_mock_dice_chain_with_valid_event_log() {
+    let result = verify_dice_chain(&get_evidence_proto_with_eventlog());
+
+    assert!(result.is_ok());
+    let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
+        result.unwrap().evidence_values.unwrap();
+    assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
+}
+
+#[test]
+fn verify_mock_dice_chain_with_invalid_event_log() {
+    let mut evidence = get_evidence_proto_with_eventlog();
+    let encoded_stage0_event: &mut Vec<u8> = evidence
+        .event_log
+        .as_mut()
+        .expect("there to be an eventlog")
+        .encoded_events
+        .iter_mut()
+        .find(|encoded_event| {
+            if let Ok(event) = Event::decode(encoded_event.as_slice()) {
+                if let Some(event_any) = event.event {
+                    event_any.type_url
+                        == "type.googleapis.com/oak.attestation.v1.Stage0Measurements"
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+        .expect("there to be a stage0 event");
+
+    let mut stage0 = Stage0Measurements::decode(encoded_stage0_event.as_slice()).ok().unwrap();
+    stage0.kernel_cmdline = format!("evil modification {}", stage0.kernel_cmdline);
+    *encoded_stage0_event = stage0.encode_to_vec();
+
+    let result = verify_dice_chain(&evidence);
+
+    assert!(result.is_err());
 }
 
 #[test]

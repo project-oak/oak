@@ -916,6 +916,7 @@ dependencies = [
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk_proc_macro",
  "p256",
+ "prost",
  "strum",
  "zerocopy",
 ]

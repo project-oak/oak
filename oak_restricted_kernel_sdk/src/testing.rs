@@ -17,41 +17,78 @@
 //! Mock attestation evidence and crypto logic. Useful for testing where an
 //! attestation rooted in a real TEE may not be available.
 
+use alloc::vec::Vec;
+
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
-use oak_proto_rust::oak::{attestation::v1::EventLog, crypto::v1::Signature};
+use oak_proto_rust::oak::{
+    attestation::v1::{ApplicationLayerData, EventLog},
+    crypto::v1::Signature,
+    RawDigest,
+};
 use p256::ecdsa::SigningKey;
+use prost::Message;
 
 use crate::{
+    alloc::string::ToString,
     attestation::{DiceWrapper, EvidenceProvider},
     crypto::Signer,
 };
 
 lazy_static::lazy_static! {
   static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
-      let dice_data = get_mock_dice_data();
-      let dice_wrapper = dice_data.try_into()?;
+      let (dice_data, encoded_event_log) = get_mock_dice_data_and_event_log();
+      let mut dice_wrapper: DiceWrapper = dice_data.try_into()?;
+      dice_wrapper.encoded_event_log = Some(encoded_event_log);
       Ok(dice_wrapper)
   };
 }
 
-fn get_mock_dice_data() -> RestrictedKernelDiceData {
+fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
+    let mut mock_stage0_measurements = oak_stage0_dice::Measurements::default();
+    let (mut mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
+        mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
+        mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
+        mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
+        mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
+        mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
+        mock_stage0_measurements.cmdline.clone(),
+    );
+    mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
     let (stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
-        &oak_stage0_dice::Measurements::default(),
+        &mock_stage0_measurements,
         oak_stage0_dice::mock_attestation_report,
         oak_stage0_dice::mock_derived_key,
         TeePlatform::None,
         EventLog::default(),
     );
 
-    oak_restricted_kernel_dice::generate_dice_data(
+    let application_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
+    let application_event = oak_proto_rust::oak::attestation::v1::Event {
+        tag: "application_layer".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.ApplicationLayerData".to_string(),
+            value: ApplicationLayerData {
+                binary: Some(RawDigest {
+                    sha2_256: application_digest.to_vec(),
+                    ..RawDigest::default()
+                }),
+                config: None,
+            }
+            .encode_to_vec(),
+        }),
+    };
+    let encoded_application_event = application_event.encode_to_vec();
+    mock_event_log.encoded_events.push(encoded_application_event.clone());
+    let dice_data = oak_restricted_kernel_dice::generate_dice_data(
         stage0_dice_data,
         &oak_restricted_kernel_dice::DigestSha2_256::default(),
-        &oak_restricted_kernel_dice::DigestSha2_256::default(),
-    )
+        &oak_restricted_kernel_dice::measure_digest_sha2_256(&encoded_application_event),
+    );
+    (dice_data, mock_event_log.encode_to_vec())
 }
 
 /// [`Signer`] implementation that using mock evidence and corresponding mock
@@ -104,19 +141,26 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
 /// [`EvidenceProvider`] implementation that exposes mock evidence.
 pub struct MockEvidenceProvider {
     evidence: &'static Evidence,
+    encoded_event_log: &'static [u8],
 }
 
 impl MockEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
-        MOCK_DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .map(|d| MockEvidenceProvider { evidence: &d.evidence })
+        MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
+            evidence: &d.evidence,
+            encoded_event_log: &d
+                .encoded_event_log
+                .as_ref()
+                .expect("mock dice wrapper contains event log"),
+        })
     }
 }
 
 impl EvidenceProvider for MockEvidenceProvider {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
+    }
+    fn get_encoded_event_log(&self) -> Option<&[u8]> {
+        Some(self.encoded_event_log)
     }
 }

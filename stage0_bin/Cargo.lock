@@ -619,6 +619,8 @@ dependencies = [
  "oak_proto_rust",
  "oak_sev_snp_attestation_report",
  "p256",
+ "prost",
+ "prost-types",
  "rand_core",
  "sha2",
  "zerocopy",

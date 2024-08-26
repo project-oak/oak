@@ -40,6 +40,7 @@ rust_library(
         "@oak_crates_index//:hkdf",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:zerocopy",

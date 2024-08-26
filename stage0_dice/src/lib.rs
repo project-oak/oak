@@ -42,6 +42,7 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
+use prost::Message;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
@@ -264,4 +265,36 @@ pub fn mock_attestation_report(
 /// Returns a fixed key filled with zeros.
 pub fn mock_derived_key() -> Result<DerivedKey, &'static str> {
     Ok(DerivedKey::default())
+}
+
+pub fn generate_event_log(
+    kernel_measurement: Vec<u8>,
+    acpi_digest: Vec<u8>,
+    memory_map_digest: Vec<u8>,
+    ram_disk_digest: Vec<u8>,
+    setup_data_digest: Vec<u8>,
+    kernel_cmdline: String,
+) -> (oak_proto_rust::oak::attestation::v1::EventLog, [u8; 32]) {
+    let measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+        kernel_measurement,
+        acpi_digest,
+        memory_map_digest,
+        ram_disk_digest,
+        setup_data_digest,
+        kernel_cmdline,
+    };
+
+    let tag = String::from("Stage0");
+    let any = prost_types::Any::from_msg(&measurements);
+    let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
+    let encoded_event = event.encode_to_vec();
+
+    let mut eventlog = EventLog::default();
+    eventlog.encoded_events.push(encoded_event.clone());
+
+    let event_digest = Sha256::digest(&encoded_event);
+    let mut event_sha2_256_digest = [0u8; 32];
+    event_sha2_256_digest.copy_from_slice(&event_digest);
+
+    (eventlog, event_sha2_256_digest)
 }
