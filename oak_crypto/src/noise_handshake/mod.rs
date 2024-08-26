@@ -47,11 +47,11 @@ pub use crate::{
 const MAX_SEQUENCE: u32 = 1u32 << 24;
 
 pub struct Nonce {
-    nonce: u32,
+    pub nonce: u32,
 }
 
 impl Nonce {
-    fn next(&mut self) -> Result<[u8; NONCE_LEN], Error> {
+    pub fn next(&mut self) -> Result<[u8; NONCE_LEN], Error> {
         if self.nonce > MAX_SEQUENCE {
             return Err(Error::DecryptFailed);
         }
