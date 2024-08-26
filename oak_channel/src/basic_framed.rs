@@ -58,7 +58,10 @@ pub fn receive_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<vec::Vec<u8>>
     for chunk in chunks_mut.by_ref() {
         read_chunk(channel, chunk)?;
     }
-    read_chunk(channel, chunks_mut.into_remainder())?;
+    let remainder = chunks_mut.into_remainder();
+    if !remainder.is_empty() {
+        read_chunk(channel, remainder)?;
+    }
 
     Ok(payload)
 }

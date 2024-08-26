@@ -131,3 +131,48 @@ fn test_invocation_channel_expected_start_frame() {
 
     invocation_channel.read_message::<message::RequestMessage>().unwrap_err();
 }
+
+#[test]
+fn test_receive_raw_with_remainder() -> anyhow::Result<()> {
+    let payload = mock_payload();
+
+    let mut message_store = MessageStore::default();
+    message_store.write_all(&(payload.len() as u32).to_le_bytes())?;
+    message_store.write_all(&payload)?;
+    assert_eq!(basic_framed::receive_raw(&mut message_store)?, payload);
+
+    let mut acks = Vec::new();
+    while message_store.inner.len() >= 4 {
+        let mut ack: [u8; 4] = Default::default();
+        message_store.read_exact(&mut ack)?;
+        acks.push(u32::from_le_bytes(ack));
+    }
+    assert_eq!(message_store.inner.len(), 0);
+    let mut expected_acks = vec![4096u32; payload.len() / 4096];
+    expected_acks.push((payload.len() as u32) % 4096);
+    assert_eq!(acks, expected_acks);
+
+    Ok(())
+}
+
+#[test]
+fn test_receive_raw_without_remainder() -> anyhow::Result<()> {
+    let mut payload = mock_payload();
+    payload.truncate((payload.len() / 4096) * 4096);
+
+    let mut message_store = MessageStore::default();
+    message_store.write_all(&(payload.len() as u32).to_le_bytes())?;
+    message_store.write_all(&payload)?;
+    assert_eq!(basic_framed::receive_raw(&mut message_store)?, payload);
+
+    let mut acks = Vec::new();
+    while message_store.inner.len() >= 4 {
+        let mut ack: [u8; 4] = Default::default();
+        message_store.read_exact(&mut ack)?;
+        acks.push(u32::from_le_bytes(ack));
+    }
+    assert_eq!(message_store.inner.len(), 0);
+    assert_eq!(acks, vec![4096u32; payload.len() / 4096]);
+
+    Ok(())
+}
