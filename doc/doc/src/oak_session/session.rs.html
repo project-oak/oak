@@ -284,6 +284,10 @@
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -379,6 +383,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
             <span class="kw">let </span>ciphertext = encryptor
                 .encrypt(plaintext.into())
+                .map(From::from)
                 .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.outgoing_requests
                 .push_back(SessionRequest { request: <span class="prelude-val">Some</span>(Request::Ciphertext(ciphertext)) });
@@ -403,6 +408,7 @@
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
                         encryptor
                             .decrypt(ciphertext.as_slice().into())
+                            .map(From::from)
                             .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
                     ))
                 }
@@ -490,6 +496,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
             <span class="kw">let </span>ciphertext = encryptor
                 .encrypt(plaintext.into())
+                .map(From::from)
                 .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.outgoing_responses
                 .push_back(SessionResponse { response: <span class="prelude-val">Some</span>(Response::Ciphertext(ciphertext)) });
@@ -514,6 +521,7 @@
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
                         encryptor
                             .decrypt(ciphertext.as_slice().into())
+                            .map(From::from)
                             .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
                     ))
                 }
