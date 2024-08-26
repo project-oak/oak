@@ -114,6 +114,10 @@ def _common_crates(std):
             ],
             version = "0.11.0",
         ),
+        "itertools": crate.spec(
+            default_features = False,
+            version = "0.13.0",
+        ),
         "lazy_static": crate.spec(
             features = [] if std else ["spin_no_std"],
             version = "1.4.0",
@@ -133,6 +137,9 @@ def _common_crates(std):
         ),
         "maplit": crate.spec(
             version = "1.0.2",
+        ),
+        "mockall": crate.spec(
+            version = "0.13.0",
         ),
         "p256": crate.spec(
             default_features = False,

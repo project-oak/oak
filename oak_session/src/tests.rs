@@ -12,23 +12,192 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, collections::BTreeMap, string::String};
 
 use oak_crypto::{
     encryptor::Encryptor,
     identity_key::{IdentityKey, IdentityKeyHandle},
 };
-use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+use oak_proto_rust::oak::{
+    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    session::v1::{EndorsedEvidence, SessionRequest, SessionResponse},
+};
 
 use crate::{
-    attestation::AttestationType,
-    config::{HandshakerConfig, SessionConfig},
+    alloc::string::ToString,
+    attestation::{
+        AttestationProvider, AttestationType, AttestationVerifier, Attester,
+        ClientAttestationProvider, DefaultAttestationAggregator, MockAttestationVerifier,
+        MockAttester, ServerAttestationProvider,
+    },
+    config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::OrderedChannelEncryptor,
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
 const TEST_MESSAGES: &[&[u8]] = &[&[1u8, 2u8, 3u8, 4u8], &[4u8, 3u8, 2u8, 1u8], &[]];
+
+const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
+const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
+const UNMATCHED_ATTESTER_ID: &str = "UNMATCHED_ATTESTER_ID";
+const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
+
+#[test]
+fn attestation_verification_succeeds() {
+    let client_config = AttestationProviderConfig {
+        attestation_type: AttestationType::Bidirectional,
+        self_attesters: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        peer_verifiers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
+        ]),
+        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+    };
+    let server_config = AttestationProviderConfig {
+        attestation_type: AttestationType::Bidirectional,
+        self_attesters: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        peer_verifiers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
+        ]),
+        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+    };
+    let mut client_attestation_provider = ClientAttestationProvider::new(client_config);
+    let mut server_attestation_provider = ServerAttestationProvider::new(server_config);
+
+    let attest_request = client_attestation_provider.get_outgoing_message();
+    assert!(attest_request.is_ok());
+    assert!(
+        server_attestation_provider.put_incoming_message(&attest_request.unwrap().unwrap()).is_ok()
+    );
+
+    let attest_response = server_attestation_provider.get_outgoing_message();
+    assert!(attest_response.is_ok());
+    assert!(
+        client_attestation_provider
+            .put_incoming_message(&attest_response.unwrap().unwrap(),)
+            .is_ok()
+    );
+
+    let client_attestation_result = client_attestation_provider.get_attestation_results().unwrap();
+    assert_eq!(
+        client_attestation_result.status,
+        attestation_results::Status::Success.into(),
+        "Client attestation verification failed: {}",
+        client_attestation_result.reason
+    );
+    let server_attestation_result = server_attestation_provider.get_attestation_results().unwrap();
+    assert_eq!(
+        server_attestation_result.status,
+        attestation_results::Status::Success.into(),
+        "Server attestation verification failed: {}",
+        server_attestation_result.reason
+    );
+}
+
+#[test]
+fn attestation_verification_fails() {
+    let client_config = AttestationProviderConfig {
+        attestation_type: AttestationType::Bidirectional,
+        self_attesters: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        peer_verifiers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
+            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
+        ]),
+        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+    };
+    let server_config = AttestationProviderConfig {
+        attestation_type: AttestationType::Bidirectional,
+        self_attesters: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        peer_verifiers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
+            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
+        ]),
+        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+    };
+    let mut client_attestation_provider = ClientAttestationProvider::new(client_config);
+    let mut server_attestation_provider = ServerAttestationProvider::new(server_config);
+
+    let attest_request = client_attestation_provider.get_outgoing_message();
+    assert!(attest_request.is_ok());
+    assert!(
+        server_attestation_provider.put_incoming_message(&attest_request.unwrap().unwrap()).is_ok()
+    );
+
+    let attest_response = server_attestation_provider.get_outgoing_message();
+    assert!(attest_response.is_ok());
+    assert!(
+        client_attestation_provider
+            .put_incoming_message(&attest_response.unwrap().unwrap(),)
+            .is_ok()
+    );
+
+    let client_attestation_result = client_attestation_provider.get_attestation_results().unwrap();
+    assert_eq!(
+        client_attestation_result.status,
+        attestation_results::Status::GenericFailure.into()
+    );
+    let server_attestation_result = server_attestation_provider.get_attestation_results().unwrap();
+    assert_eq!(
+        server_attestation_result.status,
+        attestation_results::Status::GenericFailure.into()
+    );
+}
+
+fn create_mock_attester() -> Box<dyn Attester> {
+    let mut attester = MockAttester::new();
+    attester.expect_get_endorsed_evidence().returning(|| {
+        Ok(EndorsedEvidence {
+            evidence: Some(Evidence { ..Default::default() }),
+            endorsements: Some(Endorsements { ..Default::default() }),
+        })
+    });
+    Box::new(attester)
+}
+
+fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
+    let mut verifier = MockAttestationVerifier::new();
+    verifier.expect_verify().returning(|_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            ..Default::default()
+        })
+    });
+    Box::new(verifier)
+}
+
+fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
+    let mut verifier = MockAttestationVerifier::new();
+    verifier.expect_verify().returning(|_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::GenericFailure.into(),
+            reason: String::from("Mock failure"),
+            ..Default::default()
+        })
+    });
+    Box::new(verifier)
+}
 
 #[test]
 fn process_kk_handshake() {

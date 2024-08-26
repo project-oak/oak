@@ -8,5 +8,9 @@ license = "Apache-2.0"
 [dependencies]
 aead = { version = "*", default-features = false }
 anyhow = { version = "*", default-features = false }
+itertools = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }
+
+[dev-dependencies]
+mockall = { version = "*", default-features = false }

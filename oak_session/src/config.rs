@@ -21,7 +21,10 @@ use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 use crate::{
-    attestation::{AttestationType, AttestationVerifier, Attester},
+    attestation::{
+        AttestationAggregator, AttestationType, AttestationVerifier, Attester,
+        DefaultAttestationAggregator,
+    },
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
 };
@@ -52,6 +55,7 @@ impl SessionConfigBuilder {
             attestation_type,
             self_attesters: BTreeMap::new(),
             peer_verifiers: BTreeMap::new(),
+            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
         let handshaker_config = HandshakerConfig {
@@ -123,6 +127,7 @@ pub struct AttestationProviderConfig {
     pub attestation_type: AttestationType,
     pub self_attesters: BTreeMap<String, Box<dyn Attester>>,
     pub peer_verifiers: BTreeMap<String, Box<dyn AttestationVerifier>>,
+    pub attestation_aggregator: Box<dyn AttestationAggregator>,
 }
 
 #[allow(dead_code)]
