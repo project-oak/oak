@@ -325,11 +325,11 @@
 </span><span class="kw">const </span>MAX_SEQUENCE: u32 = <span class="number">1u32 </span>&lt;&lt; <span class="number">24</span>;
 
 <span class="kw">pub struct </span>Nonce {
-    nonce: u32,
+    <span class="kw">pub </span>nonce: u32,
 }
 
 <span class="kw">impl </span>Nonce {
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
+    <span class="kw">pub fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.nonce &gt; MAX_SEQUENCE {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptFailed);
         }
