@@ -309,6 +309,17 @@
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -477,10 +488,18 @@
         <span class="comment">// Definition of the private memory.
         </span><span class="kw">let </span>sev_common_object = <span class="macro">format!</span>(
             <span class="string">"memory-backend-memfd,id=ram1,size={},share=true,reserve=false"</span>,
-            params.memory_size.unwrap_or(<span class="string">"8G"</span>.to_string())
+            params.memory_size.clone().unwrap_or(<span class="string">"8G"</span>.to_string())
         );
         <span class="comment">// SEV's feature configuration.
         </span><span class="kw">let </span>sev_config_object = <span class="string">"id=sev0,cbitpos=51,reduced-phys-bits=1"</span>;
+        <span class="comment">// TDX machine suffix
+        </span><span class="kw">let </span>tdx_machine_suffix = <span class="string">",kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1"</span>;
+        <span class="kw">let </span>tdx_common_object = <span class="macro">format!</span>(
+            <span class="comment">// Note: private=on is only needed in Ubuntu's QEMU and kernel.
+            // Intel's reference implementation does not need `private=on`.
+            </span><span class="string">"memory-backend-ram,id=ram1,size={},private=on"</span>, <span class="comment">// only works on Ubuntu's QEMU
+            </span>params.memory_size.unwrap_or(<span class="string">"8G"</span>.to_string())
+        );
         <span class="comment">// Generate the parameters and add them to cmd.args.
         </span><span class="kw">let </span>(machine_arg, object_args) = <span class="kw">match </span>params.vm_type {
             VmType::Default =&gt; (microvm_common, <span class="macro">vec!</span>[]),
@@ -511,7 +530,10 @@
                     </span><span class="string">"sev-snp-guest,"</span>.to_string() + sev_config_object + <span class="string">",id-auth="</span>,
                 ],
             ),
-            VmType::Tdx =&gt; <span class="macro">unimplemented!</span>(<span class="string">"TDX is not supported"</span>),
+            VmType::Tdx =&gt; (
+                microvm_common + tdx_machine_suffix,
+                <span class="macro">vec!</span>[<span class="string">"tdx-guest,sept-ve-disable=on,id=tdx"</span>.to_string(), tdx_common_object],
+            ),
         };
         cmd.args([<span class="string">"-machine"</span>, <span class="kw-2">&amp;</span>machine_arg]);
         <span class="kw">for </span>obj_arg <span class="kw">in </span>object_args {
@@ -578,7 +600,7 @@
             <span class="macro">format!</span>(<span class="string">"brd.rd_size={ramdrive_size}"</span>),
             <span class="string">"brd.max_part=1"</span>.to_string(),
             <span class="macro">format!</span>(<span class="string">"ip={vm_address}:::255.255.255.0::eth0:off"</span>),
-            <span class="string">"quiet"</span>.to_string(),
+            <span class="string">"loglevel=7"</span>.to_string(),
             <span class="string">"--"</span>.to_string(),
             <span class="macro">format!</span>(<span class="string">"--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"</span>),
         ];
