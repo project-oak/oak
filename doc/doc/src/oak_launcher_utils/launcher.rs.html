@@ -256,6 +256,13 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -282,6 +289,7 @@
     },
     path::PathBuf,
     process::Stdio,
+    time::Duration,
 };
 
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
@@ -431,11 +439,17 @@
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(app_bytes) = app_bytes {
+            <span class="comment">// The code below is all sync, but we need some reasonable deadlines otherwise
+            // we might just get stuck if the qemu process exits.
+            </span>host_socket.set_read_timeout(<span class="prelude-val">Some</span>(Duration::from_secs(<span class="number">30</span>)))<span class="question-mark">?</span>;
+
             oak_channel::basic_framed::send_raw(<span class="kw-2">&amp;mut </span>host_socket, <span class="kw-2">&amp;</span>app_bytes)
                 .context(<span class="string">"failed to send application"</span>)<span class="question-mark">?</span>;
             <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
             </span><span class="kw">let </span>_evidence = oak_channel::basic_framed::receive_raw(<span class="kw-2">&amp;mut </span>host_socket)
                 .context(<span class="string">"failed to receive attestion evidence"</span>)<span class="question-mark">?</span>;
+
+            host_socket.set_read_timeout(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ guest_console: guest_console_clone, host_socket, instance })
