@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DERIVED_KEY_FD","DICE_DATA_FD","OAK_CHANNEL_FD"],"macro":["syscall"],"mod":["errno","syscall","syscalls"]};
+window.SIDEBAR_ITEMS = {"constant":["DERIVED_KEY_FD","DICE_DATA_FD","EVENT_LOG_FD","OAK_CHANNEL_FD"],"macro":["syscall"],"mod":["errno","syscall","syscalls"]};

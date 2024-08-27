@@ -92,6 +92,14 @@
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -110,7 +118,9 @@
 
 </span><span class="doccomment">//! Structs for providing attestation related logic such as getting an evidence.
 
-</span><span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
+</span><span class="kw">use </span>alloc::vec::Vec;
+
+<span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 <span class="kw">use </span>oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
@@ -139,6 +149,7 @@
     <span class="kw">pub </span>evidence: Evidence,
     <span class="kw">pub </span>encryption_key: EncryptionKey,
     <span class="kw">pub </span>signing_key: p256::ecdsa::SigningKey,
+    <span class="kw">pub </span>encoded_event_log: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 
 <span class="kw">impl </span>TryFrom&lt;RestrictedKernelDiceData&gt; <span class="kw">for </span>DiceWrapper {
@@ -153,7 +164,7 @@
         )
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't deserialize signing key: {}"</span>, error))<span class="question-mark">?</span>;
         <span class="kw">let </span>evidence = dice_data.evidence;
-        <span class="prelude-val">Ok</span>(DiceWrapper { evidence, encryption_key, signing_key })
+        <span class="prelude-val">Ok</span>(DiceWrapper { evidence, encryption_key, signing_key, encoded_event_log: <span class="prelude-val">None </span>})
     }
 }
 
@@ -163,6 +174,7 @@
 /// for enclave applications to operate directly with evidences.
 </span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence;
+    <span class="kw">fn </span>get_encoded_event_log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;;
 }
 
 <span class="doccomment">/// [`EvidenceProvider`] implementation that exposes the instance's evidence.
@@ -183,5 +195,9 @@
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence {
         <span class="self">self</span>.evidence
     }
+
+    <span class="kw">fn </span>get_encoded_event_log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
+        <span class="prelude-val">None
+    </span>}
 }
 </code></pre></div></section></main></body></html>

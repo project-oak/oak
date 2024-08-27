@@ -365,19 +365,6 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -401,7 +388,7 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span>alloc::{boxed::Box, format, string::String, vec::Vec};
+<span class="kw">use </span>alloc::{boxed::Box, format, vec::Vec};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, panic::PanicInfo};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
@@ -410,7 +397,6 @@
     STAGE0_DICE_PROTO_MAGIC,
 };
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, EventLog, Stage0Measurements};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
@@ -589,17 +575,14 @@
     <span class="kw">let </span>memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     <span class="comment">// Generate Stage0 Event Log data.
-    </span><span class="kw">let </span>stage0event = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-        kernel_measurement: kernel_info.measurement.as_bytes().to_vec(),
-        acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
-        memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
-        ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
-        setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
-        kernel_cmdline: cmdline.clone(),
-    };
-
-    <span class="kw">let </span>event_log_proto = generate_event_log(stage0event);
-    <span class="kw">let </span>event_sha2_256_digest = event_log_proto.encoded_events[<span class="number">0</span>].measure();
+    </span><span class="kw">let </span>(event_log_proto, event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
+        kernel_info.measurement.as_bytes().to_vec(),
+        acpi_sha2_256_digest.as_bytes().to_vec(),
+        memory_map_sha2_256_digest.as_bytes().to_vec(),
+        ram_disk_sha2_256_digest.as_bytes().to_vec(),
+        setup_data_sha2_256_digest.as_bytes().to_vec(),
+        cmdline.clone(),
+    );
 
     <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
@@ -746,14 +729,5 @@
         measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
         measurement
     }
-}
-
-<span class="kw">fn </span>generate_event_log(measurements: Stage0Measurements) -&gt; EventLog {
-    <span class="kw">let </span>tag = String::from(<span class="string">"Stage0"</span>);
-    <span class="kw">let </span>any = prost_types::Any::from_msg(<span class="kw-2">&amp;</span>measurements);
-    <span class="kw">let </span>event = Event { tag, event: <span class="prelude-val">Some</span>(any.unwrap()) };
-    <span class="kw">let </span><span class="kw-2">mut </span>eventlog = EventLog::default();
-    eventlog.encoded_events.push(event.encode_to_vec());
-    eventlog
 }
 </code></pre></div></section></main></body></html>

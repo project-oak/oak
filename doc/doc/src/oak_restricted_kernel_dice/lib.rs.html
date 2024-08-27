@@ -177,6 +177,16 @@
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -217,15 +227,15 @@
 </span><span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
 
 <span class="comment">// Digest of an application.
-</span><span class="kw">pub type </span>AppDigestSha2_256 = [u8; <span class="number">32</span>];
+</span><span class="kw">pub type </span>DigestSha2_256 = [u8; <span class="number">32</span>];
 
-<span class="kw">pub fn </span>measure_app_digest_sha2_256(app_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; AppDigestSha2_256 {
+<span class="kw">pub fn </span>measure_digest_sha2_256(app_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; DigestSha2_256 {
     Sha256::digest(app_bytes).into()
 }
 
 <span class="kw">pub fn </span>generate_derived_key(
     stage0_dice_data: <span class="kw-2">&amp;</span>oak_dice::evidence::Stage0DiceData,
-    app_digest: <span class="kw-2">&amp;</span>AppDigestSha2_256,
+    app_digest: <span class="kw-2">&amp;</span>DigestSha2_256,
 ) -&gt; DerivedKey {
     <span class="comment">// Mix in the application digest when deriving CDI for Layer 2.
     </span><span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(app_digest), <span class="kw-2">&amp;</span>stage0_dice_data.layer_1_cdi.cdi[..]);
@@ -244,7 +254,8 @@
 <span class="doccomment">/// Generates attestation evidence for the 'measurement' of the application.
 </span><span class="kw">pub fn </span>generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: <span class="kw-2">&amp;</span>AppDigestSha2_256,
+    app_digest: <span class="kw-2">&amp;</span>DigestSha2_256,
+    event_digest: <span class="kw-2">&amp;</span>DigestSha2_256,
 ) -&gt; oak_dice::evidence::RestrictedKernelDiceData {
     <span class="kw">let </span>(application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
@@ -267,28 +278,37 @@
         <span class="kw">let </span>(application_private_signing_key, application_public_verifying_key) =
             oak_dice::cert::generate_ecdsa_key_pair();
 
-        <span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[(
-            ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
-            Value::Map(<span class="macro">vec!</span>[
-                (
-                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(app_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        <span class="comment">// There currently exists no application config for enclave
-                        // applications. Hence this field should
-                        // always be empty.
-                        </span>Value::Bytes([<span class="number">0</span>; <span class="number">0</span>].into()),
-                    )]),
-                ),
-            ]),
-        )];
+        <span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[
+            (
+                ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
+                Value::Map(<span class="macro">vec!</span>[
+                    (
+                        Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(app_digest.into()),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            <span class="comment">// There currently exists no application config for enclave
+                            // applications. Hence this field should
+                            // always be empty.
+                            </span>Value::Bytes([<span class="number">0</span>; <span class="number">0</span>].into()),
+                        )]),
+                    ),
+                ]),
+            ),
+            (
+                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(event_digest.to_vec()),
+                )]),
+            ),
+        ];
 
         <span class="kw">let </span>application_signing_public_key_certificate =
             oak_dice::cert::generate_signing_certificate(
