@@ -3107,6 +3107,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_session_wasm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "getrandom",
+ "js-sys",
+ "oak_proto_rust",
+ "oak_session",
+ "prost",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [
