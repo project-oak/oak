@@ -112,7 +112,9 @@ oak_restricted_kernel_wrapper_virtio_console_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
 
 oak_restricted_kernel_bin_simple_io_channel:
-    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel --platforms=//:x86_64-unknown-none
+    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
+        --platforms=//:x86_64-unknown-none \
+        --compilation_mode=opt
 
 oak_restricted_kernel_wrapper_simple_io_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
