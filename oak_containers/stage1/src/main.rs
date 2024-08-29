@@ -38,7 +38,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, Event, Stage1Measurements};
+use oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
 use prost::Message;
 use tokio::process::Command;
 use tonic::transport::Uri;
@@ -123,8 +123,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let event = Event {
         tag: "stage1".to_string(),
         event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.Stage1Measurements".to_string(),
-            value: Stage1Measurements { system_image: Some(system_image_digest.clone()) }
+            type_url: "type.googleapis.com/oak.attestation.v1.SystemLayerData".to_string(),
+            value: SystemLayerData { system_image: Some(system_image_digest.clone()) }
                 .encode_to_vec(),
         }),
     };

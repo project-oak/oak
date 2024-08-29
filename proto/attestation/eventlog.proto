@@ -43,12 +43,16 @@ message Stage0Measurements {
 
 // All the related measurements for Oak Container's Stage 1.
 message Stage1Measurements {
+  // replaced by SystemLayerData, which holds the same data. Will be removed.
+  option deprecated = true;
   // System image digest.
   oak.RawDigest system_image = 1;
 }
 
 // All the related measurements for Oak Container's Stage 1.
-message OakContainersOrchestratorMeasurements {
+message OrchestratorMeasurements {
+  // replaced by ContainerLayerData, which holds the same data. Will be removed.
+  option deprecated = true;
   oak.RawDigest container_image = 1;
   oak.RawDigest config = 2;
 }

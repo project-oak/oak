@@ -55,7 +55,7 @@ pub struct Stage1Measurements {
 /// All the related measurements for Oak Container's Stage 1.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakContainersOrchestratorMeasurements {
+pub struct OrchestratorMeasurements {
     #[prost(message, optional, tag = "1")]
     pub container_image: ::core::option::Option<super::super::RawDigest>,
     #[prost(message, optional, tag = "2")]

@@ -40,7 +40,7 @@ use oak_proto_rust::oak::{
         ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbData,
         CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerExpectedValues, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, EventData, EventExpectedValues, EventLog,
+        EndorsementReferenceValue, Endorsements, Event, EventData, EventExpectedValues, EventLog,
         EventReferenceValues, Evidence, ExpectedDigests, ExpectedRegex, ExpectedStringLiterals,
         ExpectedValues, ExtractedEvidence, FakeAttestationReport, FirmwareAttachment,
         InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
@@ -48,9 +48,10 @@ use oak_proto_rust::oak::{
         KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
         LayerEvidence, OakContainersData, OakContainersEndorsements, OakContainersExpectedValues,
         OakContainersReferenceValues, OakRestrictedKernelData, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerData, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerData,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues,
+        OrchestratorMeasurements, RawDigests, ReferenceValues, RootLayerData,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerExpectedValues,
+        RootLayerReferenceValues, Stage0Measurements, Stage1Measurements, SystemLayerData,
         SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersion,
         TeePlatform, TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement,
         VerificationSkipped,
@@ -61,6 +62,7 @@ use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
 #[cfg(feature = "regex")]
 use regex_lite::Regex;
+use sha2::Digest;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -1292,6 +1294,60 @@ struct ApplicationKeyValues {
     signing_public_key: Vec<u8>,
 }
 
+/// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same
+/// data, just in slightly different proto messages.
+fn stage0_measurements_to_kernel_layer_data(measurements: Stage0Measurements) -> KernelLayerData {
+    // We need to set fields of [`KernelLayerData`] to create it, some are
+    // deprecated.
+    #[allow(deprecated)]
+    KernelLayerData {
+        kernel_image: Some(RawDigest {
+            sha2_256: measurements.kernel_measurement,
+            ..Default::default()
+        }),
+        kernel_setup_data: Some(RawDigest {
+            sha2_256: measurements.setup_data_digest,
+            ..Default::default()
+        }),
+        kernel_cmd_line: None,
+        kernel_raw_cmd_line: Some(measurements.kernel_cmdline),
+        init_ram_fs: Some(RawDigest {
+            sha2_256: measurements.ram_disk_digest,
+            ..Default::default()
+        }),
+        memory_map: Some(RawDigest {
+            sha2_256: measurements.memory_map_digest,
+            ..Default::default()
+        }),
+        acpi: Some(RawDigest { sha2_256: measurements.acpi_digest, ..Default::default() }),
+    }
+}
+
+/// Translates [`Stage1Measurements`] to [`SystemLayerData`]. Both hold the same
+/// data, just in slightly different proto messages.
+///
+/// [`Stage1Measurements`] is deprecated and only present for compatibility
+/// with older binaries that have been previously imported into Google3 and may
+/// still use them.
+#[allow(deprecated)]
+fn stage1_measurements_to_system_layer_data(measurements: Stage1Measurements) -> SystemLayerData {
+    SystemLayerData { system_image: measurements.system_image }
+}
+
+/// Translates [`OrchestratorMeasurements`] to
+/// [`ContainerLayerData`]. Both hold the same data, just in slightly
+/// different proto messages.
+///
+/// [`OrchestratorMeasurements`] is deprecated and only present for
+/// compatibility  with older binaries that have been previously imported into
+/// Google3 and may still use them.
+#[allow(deprecated)]
+fn oak_containers_orchestrator_measurements_to_container_layer_data(
+    measurements: OrchestratorMeasurements,
+) -> ContainerLayerData {
+    ContainerLayerData { bundle: measurements.container_image, config: measurements.config }
+}
+
 /// Extracts measurements, public keys and other attestation-related values from
 /// the evidence without verifying it. For most usecases, this function should
 /// not be used. Instead use the [`verify`] function, which verifies the
@@ -1315,98 +1371,273 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
     let root_layer =
         Some(extract_root_values(evidence.root_layer.as_ref().context("no root layer evidence")?)?);
 
-    let final_layer_claims = &claims_set_from_serialized_cert(
-        &evidence
-            .application_keys
-            .as_ref()
-            .context("no application keys")?
-            .encryption_public_key_certificate,
-    )
-    .context("couldn't parse final DICE layer certificate")?;
-
-    // Determine the type of evidence from the claims in the certificate for the
-    // final.
-    if let Ok(container_layer_data) = extract_container_layer_data(final_layer_claims) {
-        match &evidence.layers[..] {
-            [kernel_layer, system_layer] => {
-                let kernel_layer = Some(
-                    extract_kernel_values(
-                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                            .context("couldn't parse kernel DICE layer certificate")?,
-                    )
-                    .context("couldn't extract kernel values")?,
-                );
-                let system_layer = Some(
-                    extract_system_layer_data(
-                        &claims_set_from_serialized_cert(&system_layer.eca_certificate)
-                            .context("couldn't parse system DICE layer certificate")?,
-                    )
-                    .context("couldn't extract system layer values")?,
-                );
-
-                let container_layer = Some(container_layer_data);
-                Ok(EvidenceValues::OakContainers(OakContainersData {
-                    root_layer,
-                    kernel_layer,
-                    system_layer,
-                    container_layer,
-                }))
-            }
-            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
+    if let Some(event_log) = &evidence.event_log
+        && !event_log.encoded_events.is_empty()
+    {
+        let decoded_events: Vec<Event> = event_log
+            .encoded_events
+            .iter()
+            .enumerate()
+            .map(|(index, encoded_event)| {
+                Event::decode(encoded_event.as_slice()).map_err(|e| {
+                    anyhow::anyhow!("Failed to decode event with index {}: {}", index, e)
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        #[derive(Debug, PartialEq)]
+        enum EvidenceType {
+            OakContainers,
+            // Evidence from an older build of Oak Containers that uses deprecated event protos
+            // in stage1 and the orchestrator.
+            LegacyOakContainers,
+            OakRestrictedKernel,
+            CB,
         }
-    } else if let Ok(application_layer_data) = extract_application_layer_data(final_layer_claims) {
-        match &evidence.layers[..] {
-            [kernel_layer] => {
-                let kernel_layer = Some(
-                    extract_kernel_values(
-                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                            .context("couldn't parse kernel DICE layer certificate")?,
-                    )
-                    .context("couldn't extract kernel values")?,
-                );
 
-                let application_layer = Some(application_layer_data);
-                Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
-                    root_layer,
-                    kernel_layer,
-                    application_layer,
-                }))
+        let evidence_type = {
+            if decoded_events.len() == 3
+                && decoded_events[0].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.Stage0Measurements")
+                && decoded_events[1].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.SystemLayerData")
+                && decoded_events[2].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.ContainerLayerData")
+            {
+                EvidenceType::OakContainers
+            } else if decoded_events.len() == 3
+                && decoded_events[0].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.Stage0Measurements")
+                && decoded_events[1].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.Stage1Measurements")
+                && decoded_events[2].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.OrchestratorMeasurements")
+            {
+                EvidenceType::LegacyOakContainers
+            } else if decoded_events.len() == 2
+                && decoded_events[0].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.Stage0Measurements")
+                && decoded_events[1].event.as_ref().map(|e| e.type_url.as_str())
+                    == Some("type.googleapis.com/oak.attestation.v1.ApplicationLayerData")
+            {
+                EvidenceType::OakRestrictedKernel
+            // CB evidence has three layers; if it does not extracting the
+            // evidence will fail.
+            } else if decoded_events.len() == 3 {
+                EvidenceType::CB
+            } else {
+                anyhow::bail!("events indicate an unexpected evidence type");
             }
-            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
+        };
+
+        match evidence_type {
+            EvidenceType::OakContainers => {
+                let kernel_layer = decoded_events[0]
+                    .event
+                    .as_ref()
+                    .and_then(|e| Stage0Measurements::decode(e.value.as_slice()).ok())
+                    .map(stage0_measurements_to_kernel_layer_data)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak containers kernel layer data")
+                    })?;
+                let system_layer = decoded_events[1]
+                    .event
+                    .as_ref()
+                    .and_then(|e| SystemLayerData::decode(e.value.as_slice()).ok())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak containers system layer data")
+                    })?;
+                let container_layer = decoded_events[2]
+                    .event
+                    .as_ref()
+                    .and_then(|e| ContainerLayerData::decode(e.value.as_slice()).ok())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak containers container layer data")
+                    })?;
+
+                return Ok(EvidenceValues::OakContainers(OakContainersData {
+                    root_layer,
+                    kernel_layer: Some(kernel_layer),
+                    system_layer: Some(system_layer),
+                    container_layer: Some(container_layer),
+                }));
+            }
+            EvidenceType::LegacyOakContainers => {
+                let kernel_layer = decoded_events[0]
+                    .event
+                    .as_ref()
+                    .and_then(|e| Stage0Measurements::decode(e.value.as_slice()).ok())
+                    .map(stage0_measurements_to_kernel_layer_data)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak containers kernel layer data")
+                    })?;
+                let system_layer = decoded_events[1]
+                    .event
+                    .as_ref()
+                    .and_then(|e| Stage1Measurements::decode(e.value.as_slice()).ok())
+                    .map(stage1_measurements_to_system_layer_data)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode legacy oak containers system layer data")
+                    })?;
+                let container_layer = decoded_events[2]
+                    .event
+                    .as_ref()
+                    .and_then(|e| OrchestratorMeasurements::decode(e.value.as_slice()).ok())
+                    .map(oak_containers_orchestrator_measurements_to_container_layer_data)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Failed to decode legacy oak containers container layer data"
+                        )
+                    })?;
+                return Ok(EvidenceValues::OakContainers(OakContainersData {
+                    root_layer,
+                    kernel_layer: Some(kernel_layer),
+                    system_layer: Some(system_layer),
+                    container_layer: Some(container_layer),
+                }));
+            }
+            EvidenceType::OakRestrictedKernel => {
+                let kernel_layer = decoded_events[0]
+                    .event
+                    .as_ref()
+                    .and_then(|e| Stage0Measurements::decode(e.value.as_slice()).ok())
+                    .map(stage0_measurements_to_kernel_layer_data)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak restricted kernel layer data")
+                    })?;
+                let application_layer = decoded_events[1]
+                    .event
+                    .as_ref()
+                    .and_then(|e| ApplicationLayerData::decode(e.value.as_slice()).ok())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Failed to decode oak restricted application layer data")
+                    })?;
+
+                return Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
+                    root_layer,
+                    kernel_layer: Some(kernel_layer),
+                    application_layer: Some(application_layer),
+                }));
+            }
+            EvidenceType::CB => Ok(EvidenceValues::Cb(CbData {
+                root_layer,
+                kernel_layer: Some(EventData {
+                    event: Some(RawDigest {
+                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[0]).to_vec(),
+                        ..Default::default()
+                    }),
+                }),
+                system_layer: Some(EventData {
+                    event: Some(RawDigest {
+                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[1]).to_vec(),
+                        ..Default::default()
+                    }),
+                }),
+                application_layer: Some(EventData {
+                    event: Some(RawDigest {
+                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[2]).to_vec(),
+                        ..Default::default()
+                    }),
+                }),
+            })),
         }
-    } else {
-        match &evidence.layers[..] {
-            [kernel_layer, system_layer, application_layer] => {
-                let kernel_layer = Some(
-                    extract_event_data(
-                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                            .context("couldn't parse CB kernel DICE layer certificate")?,
-                    )
-                    .context("couldn't extract kernel values")?,
-                );
-                let system_layer = Some(
-                    extract_event_data(
-                        &claims_set_from_serialized_cert(&system_layer.eca_certificate)
-                            .context("couldn't parse CB system DICE layer certificate")?,
-                    )
-                    .context("couldn't extract system values")?,
-                );
-                let application_layer = Some(
-                    extract_event_data(
-                        &claims_set_from_serialized_cert(&application_layer.eca_certificate)
-                            .context("couldn't parse CB application DICE layer certificate")?,
-                    )
-                    .context("couldn't extract application values")?,
-                );
+    }
+    // There's no eventlog, proceed to extract evidence using the existing logic.
+    else {
+        let final_layer_claims = &claims_set_from_serialized_cert(
+            &evidence
+                .application_keys
+                .as_ref()
+                .context("no application keys")?
+                .encryption_public_key_certificate,
+        )
+        .context("couldn't parse final DICE layer certificate")?;
 
-                Ok(EvidenceValues::Cb(CbData {
-                    root_layer,
-                    kernel_layer,
-                    system_layer,
-                    application_layer,
-                }))
+        // Determine the type of evidence from the claims in the certificate for the
+        // final.
+        if let Ok(container_layer_data) = extract_container_layer_data(final_layer_claims) {
+            match &evidence.layers[..] {
+                [kernel_layer, system_layer] => {
+                    let kernel_layer = Some(
+                        extract_kernel_values(
+                            &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                                .context("couldn't parse kernel DICE layer certificate")?,
+                        )
+                        .context("couldn't extract kernel values")?,
+                    );
+                    let system_layer = Some(
+                        extract_system_layer_data(
+                            &claims_set_from_serialized_cert(&system_layer.eca_certificate)
+                                .context("couldn't parse system DICE layer certificate")?,
+                        )
+                        .context("couldn't extract system layer values")?,
+                    );
+
+                    let container_layer = Some(container_layer_data);
+                    Ok(EvidenceValues::OakContainers(OakContainersData {
+                        root_layer,
+                        kernel_layer,
+                        system_layer,
+                        container_layer,
+                    }))
+                }
+                _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
             }
-            _ => Err(anyhow::anyhow!("incorrect number of DICE layers for CB")),
+        } else if let Ok(application_layer_data) =
+            extract_application_layer_data(final_layer_claims)
+        {
+            match &evidence.layers[..] {
+                [kernel_layer] => {
+                    let kernel_layer = Some(
+                        extract_kernel_values(
+                            &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                                .context("couldn't parse kernel DICE layer certificate")?,
+                        )
+                        .context("couldn't extract kernel values")?,
+                    );
+
+                    let application_layer = Some(application_layer_data);
+                    Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
+                        root_layer,
+                        kernel_layer,
+                        application_layer,
+                    }))
+                }
+                _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
+            }
+        } else {
+            match &evidence.layers[..] {
+                [kernel_layer, system_layer, application_layer] => {
+                    let kernel_layer = Some(
+                        extract_event_data(
+                            &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                                .context("couldn't parse CB kernel DICE layer certificate")?,
+                        )
+                        .context("couldn't extract kernel values")?,
+                    );
+                    let system_layer = Some(
+                        extract_event_data(
+                            &claims_set_from_serialized_cert(&system_layer.eca_certificate)
+                                .context("couldn't parse CB system DICE layer certificate")?,
+                        )
+                        .context("couldn't extract system values")?,
+                    );
+                    let application_layer = Some(
+                        extract_event_data(
+                            &claims_set_from_serialized_cert(&application_layer.eca_certificate)
+                                .context("couldn't parse CB application DICE layer certificate")?,
+                        )
+                        .context("couldn't extract application values")?,
+                    );
+
+                    Ok(EvidenceValues::Cb(CbData {
+                        root_layer,
+                        kernel_layer,
+                        system_layer,
+                        application_layer,
+                    }))
+                }
+                _ => Err(anyhow::anyhow!("incorrect number of DICE layers for CB")),
+            }
         }
     }
 }

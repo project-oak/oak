@@ -80,8 +80,8 @@ pub fn measure_container_and_config(
         tag: "ORCHESTRATOR".to_string(),
         event: Some(prost_types::Any {
             type_url: "type.googleapis.com/oak.attestation.v1.OrchestratorMeasurements".to_string(),
-            value: oak_proto_rust::oak::attestation::v1::OakContainersOrchestratorMeasurements {
-                container_image: Some(container_digest.clone()),
+            value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
+                bundle: Some(container_digest.clone()),
                 config: Some(config_digest.clone()),
             }
             .encode_to_vec(),
