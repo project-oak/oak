@@ -20,9 +20,10 @@
 use alloc::{boxed::Box, collections::VecDeque, vec::Vec};
 
 use anyhow::{anyhow, Context, Error};
-use oak_crypto::encryptor::Encryptor;
+use oak_crypto::encryptor::{Encryptor, Payload};
 use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, SessionRequest, SessionResponse,
+    session_request::Request, session_response::Response, EncryptedMessage, SessionRequest,
+    SessionResponse,
 };
 
 use crate::{
@@ -84,6 +85,28 @@ impl ClientSession {
     }
 }
 
+fn to_encrypted_message(value: Payload) -> EncryptedMessage {
+    let mut message = EncryptedMessage { ciphertext: value.message, ..Default::default() };
+    if value.aad.is_some() {
+        message.associated_data = value.aad.unwrap();
+    }
+    if value.nonce.is_some() {
+        message.nonce = value.nonce.unwrap();
+    }
+    message
+}
+
+fn to_payload(value: EncryptedMessage) -> Payload {
+    let mut payload = Payload { message: value.ciphertext, aad: None, nonce: None };
+    if !value.associated_data.is_empty() {
+        payload.aad = Some(value.associated_data)
+    }
+    if !value.nonce.is_empty() {
+        payload.nonce = Some(value.nonce)
+    }
+    payload
+}
+
 impl Session for ClientSession {
     fn is_open(&self) -> bool {
         self.encryptor.is_some()
@@ -91,12 +114,13 @@ impl Session for ClientSession {
 
     fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
         if let Some(encryptor) = self.encryptor.as_mut() {
-            let ciphertext = encryptor
+            let encrypted_message = encryptor
                 .encrypt(plaintext.into())
-                .map(From::from)
+                .map(|payload| to_encrypted_message(payload))
                 .context("couldn't encrypt the supplied plaintext")?;
-            self.outgoing_requests
-                .push_back(SessionRequest { request: Some(Request::Ciphertext(ciphertext)) });
+            self.outgoing_requests.push_back(SessionRequest {
+                request: Some(Request::EncryptedMessage(encrypted_message)),
+            });
             Ok(())
         } else {
             Err(anyhow!("the session is not open"))
@@ -107,8 +131,8 @@ impl Session for ClientSession {
         if let Some(encryptor) = self.encryptor.as_mut() {
             match self.incoming_responses.pop_front() {
                 Some(response) => {
-                    let ciphertext = match response.response {
-                        Some(Response::Ciphertext(ciphertext)) => ciphertext,
+                    let encrypted_message = match response.response {
+                        Some(Response::EncryptedMessage(encrypted_message)) => encrypted_message,
                         _ => {
                             return Err(anyhow!(
                                 "unexpected content of SessionResponse: no ciphertext set"
@@ -117,7 +141,7 @@ impl Session for ClientSession {
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(ciphertext.as_slice().into())
+                            .decrypt(to_payload(encrypted_message))
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
@@ -147,7 +171,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     ) -> anyhow::Result<Option<()>> {
         if self.is_open() {
             return match incoming_message.response {
-                Some(Response::Ciphertext(_)) => {
+                Some(Response::EncryptedMessage(_)) => {
                     self.incoming_responses.push_back(incoming_message.clone());
                     Ok(Some(()))
                 }
@@ -204,12 +228,13 @@ impl Session for ServerSession {
 
     fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
         if let Some(encryptor) = self.encryptor.as_mut() {
-            let ciphertext = encryptor
+            let encrypted_message = encryptor
                 .encrypt(plaintext.into())
-                .map(From::from)
+                .map(|payload| to_encrypted_message(payload))
                 .context("couldn't encrypt the supplied plaintext")?;
-            self.outgoing_responses
-                .push_back(SessionResponse { response: Some(Response::Ciphertext(ciphertext)) });
+            self.outgoing_responses.push_back(SessionResponse {
+                response: Some(Response::EncryptedMessage(encrypted_message)),
+            });
             Ok(())
         } else {
             Err(anyhow!("the session is not open"))
@@ -220,8 +245,8 @@ impl Session for ServerSession {
         if let Some(encryptor) = self.encryptor.as_mut() {
             match self.incoming_requests.pop_front() {
                 Some(request) => {
-                    let ciphertext = match request.request {
-                        Some(Request::Ciphertext(ciphertext)) => ciphertext,
+                    let encrypted_message = match request.request {
+                        Some(Request::EncryptedMessage(encrypted_message)) => encrypted_message,
                         _ => {
                             return Err(anyhow!(
                                 "unexpected content of SessionRequest: no ciphertext set"
@@ -230,7 +255,7 @@ impl Session for ServerSession {
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(ciphertext.as_slice().into())
+                            .decrypt(to_payload(encrypted_message))
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
@@ -254,7 +279,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     ) -> anyhow::Result<Option<()>> {
         if self.is_open() {
             return match incoming_message.request {
-                Some(Request::Ciphertext(_)) => {
+                Some(Request::EncryptedMessage(_)) => {
                     self.incoming_requests.push_back(incoming_message.clone());
                     Ok(Some(()))
                 }

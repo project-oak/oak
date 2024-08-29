@@ -84,6 +84,13 @@ message HandshakeResponse {
   AttestationBinding attestation_binding = 2;
 }
 
+// Message for encrypted data exchange after a secure session is established.
+message EncryptedMessage {
+  bytes ciphertext = 1;
+  bytes associated_data = 2;
+  bytes nonce = 3;
+}
+
 // Request message for the Oak protocol attested secure session.
 // This message is a wrapper containing different message types including:
 // attestation, handshake and encrypted data exchange.
@@ -91,7 +98,7 @@ message SessionRequest {
   oneof request {
     AttestRequest attest_request = 1;
     HandshakeRequest handshake_request = 2;
-    bytes ciphertext = 3;
+    EncryptedMessage encrypted_message = 3;
   }
 }
 
@@ -102,6 +109,6 @@ message SessionResponse {
   oneof response {
     AttestResponse attest_response = 1;
     HandshakeResponse handshake_response = 2;
-    bytes ciphertext = 3;
+    EncryptedMessage encrypted_message = 3;
   }
 }

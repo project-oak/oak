@@ -174,6 +174,17 @@ pub mod handshake_response {
         NoiseHandshakeMessage(super::NoiseHandshakeMessage),
     }
 }
+/// Message for encrypted data exchange after a secure session is established.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct EncryptedMessage {
+    #[prost(bytes = "vec", tag = "1")]
+    pub ciphertext: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub associated_data: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub nonce: ::prost::alloc::vec::Vec<u8>,
+}
 /// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
 /// attestation, handshake and encrypted data exchange.
@@ -192,8 +203,8 @@ pub mod session_request {
         AttestRequest(super::AttestRequest),
         #[prost(message, tag = "2")]
         HandshakeRequest(super::HandshakeRequest),
-        #[prost(bytes, tag = "3")]
-        Ciphertext(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "3")]
+        EncryptedMessage(super::EncryptedMessage),
     }
 }
 /// Response message for the Oak protocol attested secure session.
@@ -214,7 +225,7 @@ pub mod session_response {
         AttestResponse(super::AttestResponse),
         #[prost(message, tag = "2")]
         HandshakeResponse(super::HandshakeResponse),
-        #[prost(bytes, tag = "3")]
-        Ciphertext(::prost::alloc::vec::Vec<u8>),
+        #[prost(message, tag = "3")]
+        EncryptedMessage(super::EncryptedMessage),
     }
 }
