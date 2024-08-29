@@ -142,6 +142,11 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -165,7 +170,10 @@
 <span class="kw">use </span>oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 <span class="kw">use crate</span>::{
-    attestation::{AttestationType, AttestationVerifier, Attester},
+    attestation::{
+        AttestationAggregator, AttestationType, AttestationVerifier, Attester,
+        DefaultAttestationAggregator,
+    },
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
 };
@@ -196,6 +204,7 @@
             attestation_type,
             self_attesters: BTreeMap::new(),
             peer_verifiers: BTreeMap::new(),
+            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
         <span class="kw">let </span>handshaker_config = HandshakerConfig {
@@ -267,6 +276,7 @@
     <span class="kw">pub </span>attestation_type: AttestationType,
     <span class="kw">pub </span>self_attesters: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
     <span class="kw">pub </span>peer_verifiers: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
+    <span class="kw">pub </span>attestation_aggregator: Box&lt;<span class="kw">dyn </span>AttestationAggregator&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
