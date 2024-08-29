@@ -32,10 +32,18 @@ def _aliasing_crates_repository_impl(repository_ctx):
                      "    name = \"{}\",\n".format(package) +
                      "    actual = select({\n")
         for repo in repositories:
-            # We include an entry even if the crates index doesn't contain the
-            # package because because the resulting error is clearer than what
-            # might happen if a //conditions:default package is used instead.
-            target = repo["overrides"].get(package, "@{}//:{}".format(repo["name"], package))
+            if package in repo["overrides"]:
+                target = repo["overrides"][package]
+            elif package in repo["packages"]:
+                target = "@{}//:{}".format(repo["name"], package)
+            else:
+                # Construct a target name explaining that the repository is
+                # missing the specified package. This is better than using
+                # "@repo//:target", which causes errors during `bazel fetch`.
+                # It's also better than omitting an entry since that could
+                # cause the wrong package to be used if any of the other
+                # repositories contain a "//conditions:default" condition.
+                target = ":{}__missing__{}".format(repo["name"], package)
             for condition in repo["conditions"]:
                 contents += "        \"{}\": \"{}\",\n".format(condition, target)
         contents += ("    }),\n" +
