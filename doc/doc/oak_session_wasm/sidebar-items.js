@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["PutIncomingMessageResult"],"struct":["WasmClientSession"]};
+window.SIDEBAR_ITEMS = {"enum":["PutIncomingMessageResult"],"struct":["FakeWasmClientSession","WasmClientSession"]};
