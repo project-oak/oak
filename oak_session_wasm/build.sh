@@ -12,4 +12,7 @@ cd "$WORKSPACE_ROOT"
 
 # Build the project using wasm-pack.
 echo "INFO: Building the project using wasm-pack"
-(cd "${CRATE_DIR}" && wasm-pack build --target web)
+
+# Build for environments without module support. In the browser, the WASM
+# exports will be available on the global `wasm_bindgen` variable.
+(cd "${CRATE_DIR}" && wasm-pack build --target no-modules)
