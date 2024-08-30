@@ -220,6 +220,17 @@
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -396,6 +407,17 @@
         </span>NoiseHandshakeMessage(<span class="kw">super</span>::NoiseHandshakeMessage),
     }
 }
+<span class="doccomment">/// Message for encrypted data exchange after a secure session is established.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EncryptedMessage {
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>associated_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
 <span class="doccomment">/// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
 /// attestation, handshake and encrypted data exchange.
@@ -414,8 +436,8 @@
         </span>AttestRequest(<span class="kw">super</span>::AttestRequest),
         <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
         </span>HandshakeRequest(<span class="kw">super</span>::HandshakeRequest),
-        <span class="attr">#[prost(bytes, tag = <span class="string">"3"</span>)]
-        </span>Ciphertext(::prost::alloc::vec::Vec&lt;u8&gt;),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>EncryptedMessage(<span class="kw">super</span>::EncryptedMessage),
     }
 }
 <span class="doccomment">/// Response message for the Oak protocol attested secure session.
@@ -436,8 +458,8 @@
         </span>AttestResponse(<span class="kw">super</span>::AttestResponse),
         <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
         </span>HandshakeResponse(<span class="kw">super</span>::HandshakeResponse),
-        <span class="attr">#[prost(bytes, tag = <span class="string">"3"</span>)]
-        </span>Ciphertext(::prost::alloc::vec::Vec&lt;u8&gt;),
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
+        </span>EncryptedMessage(<span class="kw">super</span>::EncryptedMessage),
     }
 }
 </code></pre></div></section></main></body></html>
