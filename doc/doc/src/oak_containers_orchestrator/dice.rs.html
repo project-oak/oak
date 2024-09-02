@@ -231,8 +231,8 @@
         tag: <span class="string">"ORCHESTRATOR"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
             type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.OrchestratorMeasurements"</span>.to_string(),
-            value: oak_proto_rust::oak::attestation::v1::OakContainersOrchestratorMeasurements {
-                container_image: <span class="prelude-val">Some</span>(container_digest.clone()),
+            value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
+                bundle: <span class="prelude-val">Some</span>(container_digest.clone()),
                 config: <span class="prelude-val">Some</span>(config_digest.clone()),
             }
             .encode_to_vec(),

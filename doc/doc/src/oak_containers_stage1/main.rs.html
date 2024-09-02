@@ -237,7 +237,7 @@
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, Event, Stage1Measurements};
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tokio::process::Command;
 <span class="kw">use </span>tonic::transport::Uri;
@@ -322,8 +322,8 @@
     <span class="kw">let </span>event = Event {
         tag: <span class="string">"stage1"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
-            type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.Stage1Measurements"</span>.to_string(),
-            value: Stage1Measurements { system_image: <span class="prelude-val">Some</span>(system_image_digest.clone()) }
+            type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.SystemLayerData"</span>.to_string(),
+            value: SystemLayerData { system_image: <span class="prelude-val">Some</span>(system_image_digest.clone()) }
                 .encode_to_vec(),
         }),
     };
