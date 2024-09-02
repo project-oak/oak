@@ -319,7 +319,6 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -419,8 +418,7 @@
 <span class="kw">impl </span>Params {
     <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>vmm_binary = which::which(<span class="string">"qemu-system-x86_64"</span>).expect(<span class="string">"could not find qemu path"</span>);
-        <span class="kw">let </span>stage0_binary =
-            <span class="macro">format!</span>(<span class="string">"{root}stage0_bin/target/x86_64-unknown-none/release/stage0_bin"</span>,).into();
+        <span class="kw">let </span>stage0_binary = <span class="macro">format!</span>(<span class="string">"{root}generated/stage0_bin"</span>,).into();
         <span class="kw">let </span>kernel = <span class="macro">format!</span>(<span class="string">"{root}oak_containers/kernel/target/bzImage"</span>,).into();
         <span class="kw">let </span>initrd = <span class="macro">format!</span>(<span class="string">"{root}/target/stage1.cpio"</span>).into();
         <span class="self">Self </span>{
