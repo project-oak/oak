@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 use oak_crypto::{
     encryptor::Encryptor,
@@ -20,7 +20,7 @@ use oak_crypto::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
-    session::v1::{EndorsedEvidence, SessionRequest, SessionResponse},
+    session::v1::{EndorsedEvidence, PlaintextMessage, SessionRequest, SessionResponse},
 };
 
 use crate::{
@@ -36,7 +36,13 @@ use crate::{
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
-const TEST_MESSAGES: &[&[u8]] = &[&[1u8, 2u8, 3u8, 4u8], &[4u8, 3u8, 2u8, 1u8], &[]];
+fn test_messages() -> Vec<PlaintextMessage> {
+    vec![
+        PlaintextMessage { plaintext: vec![1u8, 2u8, 3u8, 4u8] },
+        PlaintextMessage { plaintext: vec![4u8, 3u8, 2u8, 1u8] },
+        PlaintextMessage { plaintext: vec![] },
+    ]
+}
 
 const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
 const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
@@ -274,16 +280,16 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     let mut encryptor_client: OrderedChannelEncryptor = session_keys_client.try_into().unwrap();
     let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
 
-    for &message in TEST_MESSAGES {
-        let ciphertext = encryptor_client.encrypt(message.into()).unwrap();
-        let plaintext = encryptor_server.decrypt(ciphertext).unwrap();
-        assert_eq!(message, &plaintext.message);
+    for message in test_messages() {
+        let ciphertext = encryptor_client.encrypt(&message.clone().into()).unwrap();
+        let plaintext = encryptor_server.decrypt(&ciphertext).unwrap();
+        assert_eq!(message, plaintext.into());
     }
 
-    for &message in TEST_MESSAGES {
-        let ciphertext = encryptor_server.encrypt(message.into()).unwrap();
-        let plaintext = encryptor_client.decrypt(ciphertext).unwrap();
-        assert_eq!(message, &plaintext.message);
+    for message in test_messages() {
+        let ciphertext = encryptor_server.encrypt(&message.clone().into()).unwrap();
+        let plaintext = encryptor_client.decrypt(&ciphertext).unwrap();
+        assert_eq!(message, plaintext.into());
     }
 }
 
@@ -297,9 +303,9 @@ fn session_nn_succeeds() {
     let mut server_session = ServerSession::new(server_config);
     do_session_handshake(&mut client_session, &mut server_session);
 
-    for &message in TEST_MESSAGES {
-        verify_session_message(&mut client_session, &mut server_session, message);
-        verify_session_message(&mut server_session, &mut client_session, message);
+    for message in test_messages() {
+        verify_session_message(&mut client_session, &mut server_session, &message);
+        verify_session_message(&mut server_session, &mut client_session, &message);
     }
 }
 
@@ -316,9 +322,9 @@ fn session_nk_succeeds() {
     let mut server_session = ServerSession::new(server_config);
     do_session_handshake(&mut client_session, &mut server_session);
 
-    for &message in TEST_MESSAGES {
-        verify_session_message(&mut client_session, &mut server_session, message);
-        verify_session_message(&mut server_session, &mut client_session, message);
+    for message in test_messages() {
+        verify_session_message(&mut client_session, &mut server_session, &message);
+        verify_session_message(&mut server_session, &mut client_session, &message);
     }
 }
 #[test]
@@ -355,10 +361,10 @@ impl ProtocolSession<SessionRequest, SessionResponse> for ServerSession {}
 fn verify_session_message<I, O>(
     session1: &mut dyn ProtocolSession<I, O>,
     session2: &mut dyn ProtocolSession<O, I>,
-    message: &[u8],
+    message: &PlaintextMessage,
 ) {
     assert!(session1.write(message).is_ok());
     let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
     assert!(session2.put_incoming_message(&outgoing_message).is_ok());
-    assert_eq!(message, session2.read().unwrap().unwrap());
+    assert_eq!(message, &session2.read().unwrap().unwrap());
 }

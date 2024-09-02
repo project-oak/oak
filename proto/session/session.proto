@@ -87,8 +87,13 @@ message HandshakeResponse {
 // Message for encrypted data exchange after a secure session is established.
 message EncryptedMessage {
   bytes ciphertext = 1;
-  bytes associated_data = 2;
-  bytes nonce = 3;
+  optional bytes associated_data = 2;
+  optional bytes nonce = 3;
+}
+
+// Message with decrypted content (not to be transmitted over the wire).
+message PlaintextMessage {
+  bytes plaintext = 1;
 }
 
 // Request message for the Oak protocol attested secure session.

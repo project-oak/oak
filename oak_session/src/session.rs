@@ -17,13 +17,13 @@
 //! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-use alloc::{boxed::Box, collections::VecDeque, vec::Vec};
+use alloc::{boxed::Box, collections::VecDeque};
 
 use anyhow::{anyhow, Context, Error};
-use oak_crypto::encryptor::{Encryptor, Payload};
+use oak_crypto::encryptor::Encryptor;
 use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, SessionRequest,
-    SessionResponse,
+    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+    SessionRequest, SessionResponse,
 };
 
 use crate::{
@@ -48,7 +48,7 @@ pub trait Session {
     ///
     /// This function can be called multiple times in a row, which will result
     /// in multiple outgoing protocol messages being created.
-    fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()>;
+    fn write(&mut self, plaintext: &PlaintextMessage) -> anyhow::Result<()>;
 
     /// Reads an encrypted message from the peer and decrypt it.
     ///
@@ -59,7 +59,7 @@ pub trait Session {
     /// - `Ok(None)`: Nothing to read
     /// - `Ok(Some(Vec<u8>))`: Successfully read plaintext bytes
     /// - `Err`: Protocol error
-    fn read(&mut self) -> anyhow::Result<Option<Vec<u8>>>;
+    fn read(&mut self) -> anyhow::Result<Option<PlaintextMessage>>;
 }
 
 // Client-side secure attested session entrypoint.
@@ -85,41 +85,19 @@ impl ClientSession {
     }
 }
 
-fn to_encrypted_message(value: Payload) -> EncryptedMessage {
-    let mut message = EncryptedMessage { ciphertext: value.message, ..Default::default() };
-    if value.aad.is_some() {
-        message.associated_data = value.aad.unwrap();
-    }
-    if value.nonce.is_some() {
-        message.nonce = value.nonce.unwrap();
-    }
-    message
-}
-
-fn to_payload(value: EncryptedMessage) -> Payload {
-    let mut payload = Payload { message: value.ciphertext, aad: None, nonce: None };
-    if !value.associated_data.is_empty() {
-        payload.aad = Some(value.associated_data)
-    }
-    if !value.nonce.is_empty() {
-        payload.nonce = Some(value.nonce)
-    }
-    payload
-}
-
 impl Session for ClientSession {
     fn is_open(&self) -> bool {
         self.encryptor.is_some()
     }
 
-    fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
+    fn write(&mut self, plaintext: &PlaintextMessage) -> anyhow::Result<()> {
         if let Some(encryptor) = self.encryptor.as_mut() {
-            let encrypted_message = encryptor
-                .encrypt(plaintext.into())
-                .map(|payload| to_encrypted_message(payload))
+            let encrypted_message: EncryptedMessage = encryptor
+                .encrypt(&plaintext.clone().into())
+                .map(From::from)
                 .context("couldn't encrypt the supplied plaintext")?;
             self.outgoing_requests.push_back(SessionRequest {
-                request: Some(Request::EncryptedMessage(encrypted_message)),
+                request: Some(Request::EncryptedMessage(encrypted_message.into())),
             });
             Ok(())
         } else {
@@ -127,7 +105,7 @@ impl Session for ClientSession {
         }
     }
 
-    fn read(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+    fn read(&mut self) -> anyhow::Result<Option<PlaintextMessage>> {
         if let Some(encryptor) = self.encryptor.as_mut() {
             match self.incoming_responses.pop_front() {
                 Some(response) => {
@@ -135,13 +113,13 @@ impl Session for ClientSession {
                         Some(Response::EncryptedMessage(encrypted_message)) => encrypted_message,
                         _ => {
                             return Err(anyhow!(
-                                "unexpected content of SessionResponse: no ciphertext set"
+                                "unexpected content of SessionResponse: no encrypted message set"
                             ));
                         }
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(to_payload(encrypted_message))
+                            .decrypt(&encrypted_message.into())
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
@@ -226,11 +204,11 @@ impl Session for ServerSession {
         self.encryptor.is_some()
     }
 
-    fn write(&mut self, plaintext: &[u8]) -> anyhow::Result<()> {
+    fn write(&mut self, plaintext: &PlaintextMessage) -> anyhow::Result<()> {
         if let Some(encryptor) = self.encryptor.as_mut() {
             let encrypted_message = encryptor
-                .encrypt(plaintext.into())
-                .map(|payload| to_encrypted_message(payload))
+                .encrypt(&plaintext.clone().into())
+                .map(From::from)
                 .context("couldn't encrypt the supplied plaintext")?;
             self.outgoing_responses.push_back(SessionResponse {
                 response: Some(Response::EncryptedMessage(encrypted_message)),
@@ -241,7 +219,7 @@ impl Session for ServerSession {
         }
     }
 
-    fn read(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+    fn read(&mut self) -> anyhow::Result<Option<PlaintextMessage>> {
         if let Some(encryptor) = self.encryptor.as_mut() {
             match self.incoming_requests.pop_front() {
                 Some(request) => {
@@ -255,7 +233,7 @@ impl Session for ServerSession {
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(to_payload(encrypted_message))
+                            .decrypt(&encrypted_message.into())
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
@@ -284,7 +262,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                     Ok(Some(()))
                 }
                 _ => Err(anyhow!(
-                    "unexpected content of SessionRequest: session open but no ciphertext set"
+                    "unexpected content of SessionRequest: session open but no encrypted message set"
                 )),
             };
         }

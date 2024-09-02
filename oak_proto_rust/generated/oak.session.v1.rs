@@ -180,10 +180,17 @@ pub mod handshake_response {
 pub struct EncryptedMessage {
     #[prost(bytes = "vec", tag = "1")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "2")]
-    pub associated_data: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
-    pub nonce: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", optional, tag = "2")]
+    pub associated_data: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(bytes = "vec", optional, tag = "3")]
+    pub nonce: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+}
+/// Message with decrypted content (not to be transmitted over the wire).
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct PlaintextMessage {
+    #[prost(bytes = "vec", tag = "1")]
+    pub plaintext: ::prost::alloc::vec::Vec<u8>,
 }
 /// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:

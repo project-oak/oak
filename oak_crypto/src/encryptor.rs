@@ -21,7 +21,10 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use oak_proto_rust::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse};
+use oak_proto_rust::oak::{
+    crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
+    session::v1::{EncryptedMessage, PlaintextMessage},
+};
 
 use crate::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
@@ -37,27 +40,43 @@ pub struct Payload {
     pub nonce: Option<Vec<u8>>,
 }
 
-impl From<&[u8]> for Payload {
-    fn from(value: &[u8]) -> Self {
-        Payload { message: value.to_vec(), aad: None, nonce: None }
-    }
-}
-
 impl From<Vec<u8>> for Payload {
     fn from(message: Vec<u8>) -> Self {
         Payload { message, aad: None, nonce: None }
     }
 }
 
-impl From<Payload> for Vec<u8> {
+impl From<PlaintextMessage> for Payload {
+    fn from(value: PlaintextMessage) -> Self {
+        Payload { message: value.plaintext, nonce: None, aad: None }
+    }
+}
+
+impl From<Payload> for PlaintextMessage {
     fn from(value: Payload) -> Self {
-        value.message
+        PlaintextMessage { plaintext: value.message }
+    }
+}
+
+impl From<EncryptedMessage> for Payload {
+    fn from(value: EncryptedMessage) -> Self {
+        Payload { message: value.ciphertext, nonce: value.nonce, aad: value.associated_data }
+    }
+}
+
+impl From<Payload> for EncryptedMessage {
+    fn from(value: Payload) -> Self {
+        EncryptedMessage {
+            ciphertext: value.message,
+            nonce: value.nonce,
+            associated_data: value.aad,
+        }
     }
 }
 
 pub trait Encryptor {
-    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Payload>;
-    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Payload>;
+    fn encrypt(&mut self, plaintext: &Payload) -> anyhow::Result<Payload>;
+    fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload>;
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the
