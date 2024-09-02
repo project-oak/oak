@@ -40,80 +40,28 @@ kernel, after which stage0 is no longer needed.
 
 ## Compiling and running
 
-To create the BIOS blob, you need to turn it into a headerless file with
-`objcopy` after the stage0 binary was built:
+The easiest way to create the BIOS blob is to use the `just` command:
 
 ```shell
-cargo build --release
-objcopy --output-target binary target/x86_64-unknown-none/release/oak_stage0_bin \
-    target/x86_64-unknown-none/release/oak_stage0.bin
+just stage0_bin
 ```
 
-This can also be done in one step using cargo-binutils:
-
-```shell
-cargo objcopy --release -- --output-target binary \
-    target/x86_64-unknown-none/release/oak_stage0.bin
-```
-
-The resulting `oak_stage0.bin` should be exactly `BIOS_SIZE` (defined in
-`layout.ld`) in size. The size of the BIOS image should not exceed 1 MB.
+The resulting file (`generated/stage0_bin`) should be exactly `BIOS_SIZE`
+(defined in `layout.ld`) in size. The size of the BIOS image should not exceed 2
+MiB.
 
 To use the binary, pass it to `qemu -bios`; for example:
 
 ```shell
-qemu-system-x86_64 -nodefaults -nographic -no-reboot -machine microvm \
-    -bios target/x86_64-unknown-none/release/oak_stage0.bin
+qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm,acpi=on" -m 1G \
+  -nographic -nodefaults -no-reboot -serial stdio \
+  -bios "generated/stage0_bin"
 ```
 
 ## Loading a kernel
 
-There are two options for loading the kernel: either get the VMM to load it into
-guest memory before the VM even starts, or let stage0 load the kernel from
-`fw_cfg`. Both approaches have their benefits and drawbacks.
-
-**Note**: the kernel has to be an ELF file! If you want to use Linux, use the
-`extract-vmlinux` script to create the uncompressed `vmlinux` image from the
-`bzImage` file.
-
-### Option 1: pre-loading the kernel
-
-You can use the QEMU `loader` device to load a kernel into memory:
-
-```shell
-qemu-system-x86_64 [...] -device loader,file=/path/to/kernel
-```
-
-As long as the file is in ELF format, QEMU will lay out the binary in guest
-memory based on the instructions in the ELF file.
-
-Notes:
-
-- The `loader` device does not ask the PSP to encrypt the memory under SEV, so
-  this will only work with no memory encryption enabled.
-- stage0 will assume that there is an ELF header at address `0x20_0000` (2 MiB).
-  If no ELF header is found at that address, stage0 will just blindly jump to
-  that address, expecting it to be executable.
-
-### Option 2: loading the kernel via `fw_cfg`
-
-We also support loading the kernel (and an initial ramdisk) via two custom
-`fw_cfg` entries:
-
-```shell
-qemu-system-x86_64 [...] -fw_cfg name=opt/stage0/elf_kernel,file=/path/to/kernel \
-                         -fw_cfg name=opt/stage0/initramfs,file=/path/to/initramfs \
-                         -fw_cfg name=opt/stage0/cmdline,string=console=ttyS0
-```
-
-Unfortunately we had to implement custom `fw_cfg` entries; the standard
-`-kernel` flag won't work as QEMU may load files into guest memory, but it will
-not ask the PSP to encrypt the memory. If we don't provide a `-kernel` flag,
-QEMU will reject `-initrd` and `-append` flags; thus, we had to reimplement
-those as well.
-
-This approach is supported under SEV and SEV-ES. (Probably also SEV-SNP, but the
-public releases of QEMU do not support SEV-SNP yet.)
+Stage 0 loads the kernel over the `fw_cfg` device. It expects that the kernel is
+compatible with the Linux `bzImage` format.
 
 ## Internals
 
@@ -187,10 +135,6 @@ launching the guest VM.
                |      PVALIDATEd by bootstrap assembly code     |
            0x0 +------------------------------------------------+
 ```
-
-## Future work
-
-- Support for Intel TDX
 
 ## Related projects
 

@@ -206,23 +206,10 @@ Each test:
 - builds a particular Oak Functions Application, i.e. Rust code that is compiled
   to a WebAssembly module binary
 - starts the Oak Functions Launcher as a background process, passing it the
-  compiled WebAssembly for the Oak Functins Application (which it then runs in a
-  WebAssembly engine)
+  compiled WebAssembly for the Oak Functions Application (which it then runs in
+  a WebAssembly engine)
 - invokes the Rust gRPC client for the Application
 - closes everything down.
-
-## Extracting vmlinux from your Linux installation
-
-On Linux installations, you can extract the uncompressed Linux kernel ELF binary
-from the compressed kernel at `/boot/vmlinuz-$(uname -r)`. You will need the
-[extract-vmlinux](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/scripts/extract-vmlinux)
-script from the kernel source code.
-
-Assuming you have extract-vmlinux on your path, you can get vmlinux as follows:
-
-```bash
-extract-vmlinux /boot/vmlinuz-$(uname -r) > vmlinux
-```
 
 ## Build and Release
 

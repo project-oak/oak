@@ -25,7 +25,6 @@ members = [
   "oak_crypto",
   "oak_debug_service",
   "oak_dice",
-  "oak_echo_linux_init",
   "oak_enclave_runtime_support",
   "oak_functions/examples/echo/module",
   "oak_functions/examples/invalid_module/module",
