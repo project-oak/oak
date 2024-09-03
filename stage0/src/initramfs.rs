@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, slice};
+use core::slice;
 
 use oak_linux_boot_params::BootE820Entry;
 
@@ -22,10 +22,6 @@ use crate::{
     fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
     kernel::KernelInfo,
 };
-
-/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg
-/// device.
-const INITIAL_RAM_DISK_FILE_PATH: &[u8] = b"opt/stage0/initramfs\0";
 
 /// Tries to load an initial RAM disk from the QEMU FW_CFG device.
 ///
@@ -36,10 +32,7 @@ pub fn try_load_initial_ram_disk<P: crate::Platform>(
     e820_table: &[BootE820Entry],
     kernel_info: &KernelInfo,
 ) -> Option<&'static [u8]> {
-    let file = fw_cfg.get_initrd_file().or_else(|| {
-        let path = CStr::from_bytes_with_nul(INITIAL_RAM_DISK_FILE_PATH).expect("invalid c-string");
-        fw_cfg.find(path)
-    })?;
+    let file = fw_cfg.get_initrd_file()?;
     let size = file.size();
     let initrd_address =
         find_suitable_dma_address(size, e820_table).expect("no suitable DMA address available");

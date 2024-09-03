@@ -15,7 +15,7 @@
 //
 
 use alloc::{ffi::CString, string::String, vec};
-use core::{ffi::CStr, slice};
+use core::slice;
 
 use x86_64::{PhysAddr, VirtAddr};
 
@@ -34,19 +34,6 @@ const DEFAULT_BZIMAGE_START: u64 = 0x2000000; // See b/359144829 before changing
 /// This is an arbitrary value, just to ensure it is non-zero.
 const DEFAULT_KERNEL_SIZE: usize = 0x100000;
 
-/// The file path used by Stage0 to read the kernel command-line from the fw_cfg
-/// device.
-const CMDLINE_FILE_PATH: &[u8] = b"opt/stage0/cmdline\0";
-
-/// The type of kernel that was loaded.
-#[derive(PartialEq)]
-pub enum KernelType {
-    // The kernel was preloaded into memory by the VMM.
-    Preloaded,
-    // The kernel was supplied in the Linux bzImage format.
-    BzImage,
-}
-
 /// Information about the kernel image.
 pub struct KernelInfo {
     /// The start address where the kernel is loaded.
@@ -57,8 +44,6 @@ pub struct KernelInfo {
     pub entry: VirtAddr,
     /// The SHA2-256 digest of the raw kernel image.
     pub measurement: crate::Measurement,
-    /// The type of kernel that we are booting.
-    pub kernel_type: KernelType,
 }
 
 impl Default for KernelInfo {
@@ -68,7 +53,6 @@ impl Default for KernelInfo {
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
             measurement: crate::Measurement::default(),
-            kernel_type: KernelType::Preloaded,
         }
     }
 }
@@ -78,22 +62,11 @@ impl Default for KernelInfo {
 /// We first try to read it using the traditional selector. If it is not
 /// available there we try to read it using a custom file path.
 pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<String> {
-    let (cmdline_file, buffer_size) = if let Some(cmdline_file) = fw_cfg.get_cmdline_file() {
-        // The provided value is already null-terminated.
-        let size = cmdline_file.size();
-        (cmdline_file, size)
-    } else {
-        let cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect("invalid c-string");
-        let cmdline_file = fw_cfg.find(cmdline_path)?;
-        // Make the buffer one byte longer so that the kernel command-line is
-        // null-terminated.
-        let size = cmdline_file.size() + 1;
-        (cmdline_file, size)
-    };
+    let cmdline_file = fw_cfg.get_cmdline_file()?;
     // Safety: len will always be at least 1 byte, and we don't care about
     // alignment. If the allocation fails, we won't try coercing it into a
     // slice.
-    let mut buf = vec![0u8; buffer_size];
+    let mut buf = vec![0u8; cmdline_file.size()];
     let actual_size = fw_cfg.read_file(&cmdline_file, &mut buf).expect("could not read cmdline");
     assert_eq!(actual_size, cmdline_file.size(), "cmdline size did not match expected size");
 
@@ -134,6 +107,5 @@ pub fn try_load_kernel_image<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Optio
     // 64-bit kernel. See <https://www.kernel.org/doc/html/v6.3/x86/boot.html>.
     let entry = start_address + 0x200usize;
     log::debug!("Kernel entry point {:#018x}", entry.as_u64());
-    let kernel_type = KernelType::BzImage;
-    Some(KernelInfo { start_address, size, entry, measurement, kernel_type })
+    Some(KernelInfo { start_address, size, entry, measurement })
 }
