@@ -21,18 +21,8 @@ use x86_64::{PhysAddr, VirtAddr};
 
 use crate::{fw_cfg::FwCfg, Measured};
 
-/// The default start location and entry point for the kernel if a kernel wasn't
-/// supplied via the QEMU fw_cfg device.
-const DEFAULT_KERNEL_START: u64 = 0x200000;
-
 /// The default location for loading a compressed (bzImage format) kerne.
 const DEFAULT_BZIMAGE_START: u64 = 0x2000000; // See b/359144829 before changing.
-
-/// The default size for the kernel if a kernel wasn't supplied via the QEMU
-/// fw_cfg device.
-///
-/// This is an arbitrary value, just to ensure it is non-zero.
-const DEFAULT_KERNEL_SIZE: usize = 0x100000;
 
 /// Information about the kernel image.
 pub struct KernelInfo {
@@ -44,17 +34,6 @@ pub struct KernelInfo {
     pub entry: VirtAddr,
     /// The SHA2-256 digest of the raw kernel image.
     pub measurement: crate::Measurement,
-}
-
-impl Default for KernelInfo {
-    fn default() -> Self {
-        Self {
-            start_address: VirtAddr::new(DEFAULT_KERNEL_START),
-            size: DEFAULT_KERNEL_SIZE,
-            entry: VirtAddr::new(DEFAULT_KERNEL_START),
-            measurement: crate::Measurement::default(),
-        }
-    }
 }
 
 /// Tries to load the kernel command-line from the fw_cfg device.

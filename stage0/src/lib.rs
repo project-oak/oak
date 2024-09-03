@@ -178,7 +178,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_sha2_256_digest = cmdline.measure();
 
-    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg).unwrap_or_default();
+    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg).unwrap();
     let entry = kernel_info.entry;
 
     let mut acpi_digest = Sha256::default();
