@@ -111,34 +111,6 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -156,7 +128,7 @@
 //
 
 </span><span class="kw">use </span>alloc::{ffi::CString, string::String, vec};
-<span class="kw">use </span>core::{ffi::CStr, slice};
+<span class="kw">use </span>core::slice;
 
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
@@ -175,19 +147,6 @@
 /// This is an arbitrary value, just to ensure it is non-zero.
 </span><span class="kw">const </span>DEFAULT_KERNEL_SIZE: usize = <span class="number">0x100000</span>;
 
-<span class="doccomment">/// The file path used by Stage0 to read the kernel command-line from the fw_cfg
-/// device.
-</span><span class="kw">const </span>CMDLINE_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"opt/stage0/cmdline\0"</span>;
-
-<span class="doccomment">/// The type of kernel that was loaded.
-</span><span class="attr">#[derive(PartialEq)]
-</span><span class="kw">pub enum </span>KernelType {
-    <span class="comment">// The kernel was preloaded into memory by the VMM.
-    </span>Preloaded,
-    <span class="comment">// The kernel was supplied in the Linux bzImage format.
-    </span>BzImage,
-}
-
 <span class="doccomment">/// Information about the kernel image.
 </span><span class="kw">pub struct </span>KernelInfo {
     <span class="doccomment">/// The start address where the kernel is loaded.
@@ -198,8 +157,6 @@
     </span><span class="kw">pub </span>entry: VirtAddr,
     <span class="doccomment">/// The SHA2-256 digest of the raw kernel image.
     </span><span class="kw">pub </span>measurement: <span class="kw">crate</span>::Measurement,
-    <span class="doccomment">/// The type of kernel that we are booting.
-    </span><span class="kw">pub </span>kernel_type: KernelType,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>KernelInfo {
@@ -209,7 +166,6 @@
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
             measurement: <span class="kw">crate</span>::Measurement::default(),
-            kernel_type: KernelType::Preloaded,
         }
     }
 }
@@ -219,22 +175,11 @@
 /// We first try to read it using the traditional selector. If it is not
 /// available there we try to read it using a custom file path.
 </span><span class="kw">pub fn </span>try_load_cmdline&lt;P: <span class="kw">crate</span>::Platform&gt;(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-    <span class="kw">let </span>(cmdline_file, buffer_size) = <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline_file) = fw_cfg.get_cmdline_file() {
-        <span class="comment">// The provided value is already null-terminated.
-        </span><span class="kw">let </span>size = cmdline_file.size();
-        (cmdline_file, size)
-    } <span class="kw">else </span>{
-        <span class="kw">let </span>cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect(<span class="string">"invalid c-string"</span>);
-        <span class="kw">let </span>cmdline_file = fw_cfg.find(cmdline_path)<span class="question-mark">?</span>;
-        <span class="comment">// Make the buffer one byte longer so that the kernel command-line is
-        // null-terminated.
-        </span><span class="kw">let </span>size = cmdline_file.size() + <span class="number">1</span>;
-        (cmdline_file, size)
-    };
+    <span class="kw">let </span>cmdline_file = fw_cfg.get_cmdline_file()<span class="question-mark">?</span>;
     <span class="comment">// Safety: len will always be at least 1 byte, and we don't care about
     // alignment. If the allocation fails, we won't try coercing it into a
     // slice.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_size];
+    </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; cmdline_file.size()];
     <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf).expect(<span class="string">"could not read cmdline"</span>);
     <span class="macro">assert_eq!</span>(actual_size, cmdline_file.size(), <span class="string">"cmdline size did not match expected size"</span>);
 
@@ -275,7 +220,6 @@
     // 64-bit kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
     </span><span class="kw">let </span>entry = start_address + <span class="number">0x200usize</span>;
     <span class="macro">log::debug!</span>(<span class="string">"Kernel entry point {:#018x}"</span>, entry.as_u64());
-    <span class="kw">let </span>kernel_type = KernelType::BzImage;
-    <span class="prelude-val">Some</span>(KernelInfo { start_address, size, entry, measurement, kernel_type })
+    <span class="prelude-val">Some</span>(KernelInfo { start_address, size, entry, measurement })
 }
 </code></pre></div></section></main></body></html>
