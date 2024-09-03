@@ -334,7 +334,7 @@ impl ZeroPage {
     /// `setup_data` needs to be mutable because underneath the covers it's a
     /// C-style linked list, and we need to assign the pointer to the next
     /// value in the list to the `next` field in its header.
-    pub fn add_setup_data(&mut self, setup_data: &mut oak_linux_boot_params::CCSetupData) {
+    pub fn add_setup_data(&mut self, setup_data: &'static mut oak_linux_boot_params::CCSetupData) {
         // Put our header as the first element in the linked list.
         setup_data.header.next = self.inner.hdr.setup_data();
         self.inner.hdr.setup_data =
@@ -342,7 +342,7 @@ impl ZeroPage {
     }
 
     /// Sets the address and size of the initial RAM disk.
-    pub fn set_initial_ram_disk(&mut self, ram_disk: &[u8]) {
+    pub fn set_initial_ram_disk(&mut self, ram_disk: &'static [u8]) {
         // The address of the RAM disk will always be in the lower 32-bit range of
         // virtual memory since we only identity-map the first 1GiB of RAM and
         // QEMU only provides 32-bit addresses via the fw_cfg device.
