@@ -22,7 +22,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, format, vec::Vec};
-use core::{arch::asm, ffi::c_void, panic::PanicInfo};
+use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
 use oak_dice::evidence::{
@@ -83,11 +83,6 @@ const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
 const PAGE_SIZE: usize = 4096;
 
-extern "C" {
-    #[link_name = "stack_start"]
-    static BOOT_STACK_POINTER: c_void;
-}
-
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
     let cs = gdt.add_entry(Descriptor::kernel_code_segment());
     let ds = gdt.add_entry(Descriptor::kernel_data_segment());
@@ -95,30 +90,6 @@ pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentS
 }
 
 pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
-
-/// Passes control to the operating system kernel. No more code from the BIOS
-/// will run.
-///
-/// # Safety
-///
-/// This assumes that the kernel entry point is valid.
-pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
-    entry_point: VirtAddr,
-    zero_page: Box<zero_page::ZeroPage, &A>,
-) -> ! {
-    asm!(
-        // Boot stack pointer
-        "mov {1}, %rsp",
-        // Zero page address
-        "mov {2}, %rsi",
-        // ...and away we go!
-        "jmp *{0}",
-        in(reg) entry_point.as_u64(),
-        in(reg) &BOOT_STACK_POINTER as *const _ as u64,
-        in(reg) Box::leak(zero_page),
-        options(noreturn, att_syntax)
-    );
-}
 
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
@@ -178,8 +149,10 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_sha2_256_digest = cmdline.measure();
 
-    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg).unwrap();
-    let entry = kernel_info.entry;
+    // Safety: this is the only place where we try to load a kernel, so the backing
+    // memory is unused.
+    let kernel = unsafe { kernel::Kernel::try_load_kernel_image(&mut fwcfg) }.unwrap();
+    let kernel_sha2_256_digest = kernel.measure();
 
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
@@ -193,7 +166,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     }
 
     let ram_disk_sha2_256_digest =
-        initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
+        initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
                 ram_disk.measure()
@@ -209,7 +182,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     // Generate Stage0 Event Log data.
     let (event_log_proto, event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-        kernel_info.measurement.as_bytes().to_vec(),
+        kernel_sha2_256_digest.as_bytes().to_vec(),
         acpi_sha2_256_digest.as_bytes().to_vec(),
         memory_map_sha2_256_digest.as_bytes().to_vec(),
         ram_disk_sha2_256_digest.as_bytes().to_vec(),
@@ -217,7 +190,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         cmdline.clone(),
     );
 
-    log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_info.measurement));
+    log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_sha2_256_digest));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
     log::debug!("Kernel command-line: {}", cmdline);
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
@@ -229,7 +202,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let cmdline_max_len = 256;
     let measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
-        kernel_sha2_256_digest: kernel_info.measurement,
+        kernel_sha2_256_digest,
         cmdline_sha2_256_digest,
         cmdline: if cmdline.len() > cmdline_max_len {
             cmdline[..cmdline_max_len].to_string()
@@ -312,7 +285,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     };
     zero_page.set_cmdline(cmdline);
 
-    log::info!("jumping to kernel at {:#018x}", entry.as_u64());
+    log::info!("jumping to kernel at {:#018x}", kernel.entry().as_u64());
 
     // Clean-ups we need to do just before we jump to the kernel proper: clean up
     // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
@@ -325,7 +298,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     paging::remap_first_huge_page::<P>();
 
     unsafe {
-        jump_to_kernel(entry, zero_page);
+        kernel.jump_to_kernel(zero_page);
     }
 }
 

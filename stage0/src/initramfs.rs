@@ -20,7 +20,7 @@ use oak_linux_boot_params::BootE820Entry;
 
 use crate::{
     fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
-    kernel::KernelInfo,
+    kernel::Kernel,
 };
 
 /// Tries to load an initial RAM disk from the QEMU FW_CFG device.
@@ -30,7 +30,7 @@ use crate::{
 pub fn try_load_initial_ram_disk<P: crate::Platform>(
     fw_cfg: &mut FwCfg<P>,
     e820_table: &[BootE820Entry],
-    kernel_info: &KernelInfo,
+    kernel_info: &Kernel,
 ) -> Option<&'static [u8]> {
     let file = fw_cfg.get_initrd_file()?;
     let size = file.size();
@@ -42,7 +42,7 @@ pub fn try_load_initial_ram_disk<P: crate::Platform>(
 
     let address = crate::phys_to_virt(initrd_address);
 
-    check_non_overlapping(address, size, kernel_info.start_address, kernel_info.size)
+    check_non_overlapping(address, size, kernel_info.start(), kernel_info.len())
         .expect("initial RAM disk location overlaps with the kernel");
 
     // Safety: We already checked that the slice falls in a suitable memory range
