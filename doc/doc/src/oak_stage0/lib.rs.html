@@ -545,7 +545,7 @@
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
     <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
 
-    <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
+    <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg).unwrap();
     <span class="kw">let </span>entry = kernel_info.entry;
 
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_digest = Sha256::default();
