@@ -926,7 +926,7 @@
     /// `setup_data` needs to be mutable because underneath the covers it's a
     /// C-style linked list, and we need to assign the pointer to the next
     /// value in the list to the `next` field in its header.
-    </span><span class="kw">pub fn </span>add_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, setup_data: <span class="kw-2">&amp;mut </span>oak_linux_boot_params::CCSetupData) {
+    </span><span class="kw">pub fn </span>add_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, setup_data: <span class="kw-2">&amp;</span><span class="lifetime">'static </span><span class="kw-2">mut </span>oak_linux_boot_params::CCSetupData) {
         <span class="comment">// Put our header as the first element in the linked list.
         </span>setup_data.header.next = <span class="self">self</span>.inner.hdr.setup_data();
         <span class="self">self</span>.inner.hdr.setup_data =
@@ -934,7 +934,7 @@
     }
 
     <span class="doccomment">/// Sets the address and size of the initial RAM disk.
-    </span><span class="kw">pub fn </span>set_initial_ram_disk(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ram_disk: <span class="kw-2">&amp;</span>[u8]) {
+    </span><span class="kw">pub fn </span>set_initial_ram_disk(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ram_disk: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]) {
         <span class="comment">// The address of the RAM disk will always be in the lower 32-bit range of
         // virtual memory since we only identity-map the first 1GiB of RAM and
         // QEMU only provides 32-bit addresses via the fw_cfg device.
