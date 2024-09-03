@@ -81,7 +81,6 @@ toolchain(
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
         "//bazel/rust:avx_OFF",
-        "//bazel/rust:soft_float_ON",
         "//bazel/rust:code_model_LARGE",
     ],
     toolchain = ":toolchain_rebuilt_x86_64-unknown-none_impl",

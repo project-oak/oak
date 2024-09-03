@@ -6,7 +6,7 @@ def _stdlib_bulid_transition_impl(_, __):
     return {
         "//command_line_option:extra_toolchains": [],
         "//command_line_option:compilation_mode": "opt",
-        "//command_line_option:platforms": "//:x86_64-unknown-none-noavx-softfloat",
+        "//command_line_option:platforms": "//:x86_64-unknown-none-noavx",
     }
 
 _stdlib_build_transition = transition(

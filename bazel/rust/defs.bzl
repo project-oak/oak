@@ -56,7 +56,6 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
                 "@platforms//cpu:x86_64",
                 "@platforms//os:none",
                 "@%s//bazel/rust:avx_ON" % oak_repo_name,
-                "@%s//bazel/rust:soft_float_OFF" % oak_repo_name,
                 "@%s//bazel/rust:code_model_NORMAL" % oak_repo_name,
             ],
         },
@@ -65,10 +64,11 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
     )
 
     rust_repository_set(
-        name = "rust_noavx_softfloat_toolchain_repo",
+        name = "rust_noavx_toolchain_repo",
         edition = RUST_EDITION,
         exec_triple = "x86_64-unknown-linux-gnu",
         extra_rustc_flags = {
+            # Disabling AVX implies soft-float is needed.
             "x86_64-unknown-none": ["-C", "target-feature=+soft-float"],
         },
         extra_target_triples = {
@@ -76,7 +76,6 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
                 "@platforms//cpu:x86_64",
                 "@platforms//os:none",
                 "@%s//bazel/rust:avx_OFF" % oak_repo_name,
-                "@%s//bazel/rust:soft_float_ON" % oak_repo_name,
                 "@%s//bazel/rust:code_model_NORMAL" % oak_repo_name,
             ],
         },

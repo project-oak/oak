@@ -50,18 +50,16 @@ platform(
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
         "//bazel/rust:avx_ON",
-        "//bazel/rust:soft_float_OFF",
         "//bazel/rust:code_model_NORMAL",
     ],
 )
 
 platform(
-    name = "x86_64-unknown-none-noavx-softfloat",
+    name = "x86_64-unknown-none-noavx",
     constraint_values = [
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
         "//bazel/rust:avx_OFF",
-        "//bazel/rust:soft_float_ON",
         "//bazel/rust:code_model_NORMAL",
     ],
 )
@@ -72,7 +70,6 @@ platform(
         "@platforms//cpu:x86_64",
         "@platforms//os:none",
         "//bazel/rust:avx_OFF",
-        "//bazel/rust:soft_float_ON",
         # We need a large code model for the firmware, since the relative
         # offsets between the firmware execution memory (below 1MiB) and the
         # firmware ROM (just below 4GiB) exceeds 2GiB.

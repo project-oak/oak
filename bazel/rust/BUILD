@@ -20,6 +20,9 @@ package(
 )
 
 # Controls the use of the +avx and +avx2 C compiler features.
+#
+# If AVX is not enabled it implies that the softfloat compiler feature is
+# needed.
 constraint_setting(name = "avx")
 
 constraint_value(
@@ -30,19 +33,6 @@ constraint_value(
 constraint_value(
     name = "avx_OFF",
     constraint_setting = "avx",
-)
-
-# Controls the use of the soft-float C compiler feature.
-constraint_setting(name = "soft_float")
-
-constraint_value(
-    name = "soft_float_ON",
-    constraint_setting = "soft_float",
-)
-
-constraint_value(
-    name = "soft_float_OFF",
-    constraint_setting = "soft_float",
 )
 
 constraint_setting(name = "code_model")
