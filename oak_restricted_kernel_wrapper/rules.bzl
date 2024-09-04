@@ -19,26 +19,13 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//bazel:defs.bzl", "objcopy")
 load("//oak_kernel_measurement:rules.bzl", "kernel_measurement")
 
-# Relocation model should be pie, but that's not yet supported because
-# panic unwrap logic creates relocations in the resulting binary.
-# In Cargo, that was avoided via the following in .cargo/config.toml:
-#
-# ```
-# [unstable]
-# build-std = ["core", "panic_abort"]
-# build-std-features = ["panic_immediate_abort"]
-# ```
-#
-# This is not yet supported in our Bazel setup, but we can get RK to
-# work with relocation-model=static as the addresses are known at
-# compile time. See b/359144829.
 _RK_WRAPPER_RUSTC_FLAGS = [
     "-C",
     "lto=true",  # Enable https://llvm.org/docs/LinkTimeOptimization.html.
     "-C",
     "panic=abort",
     "-C",
-    "relocation-model=static",  # TODO: b/359144829 - set relocation-model=pie.
+    "relocation-model=pie",
     "-C",
     "opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
 ]
@@ -61,8 +48,8 @@ def kernel_bzimage_and_measurements(name, payload, visibility = None):
         rustc_flags = _RK_WRAPPER_RUSTC_FLAGS,
         deps = [
             "@//oak_linux_boot_params",
-            "@oak_no_std_crates_index//:elf",
-            "@oak_no_std_crates_index//:x86_64",
+            "@oak_crates_index//:elf",
+            "@oak_crates_index//:x86_64",
         ],
         visibility = ["//visibility:private"],
     )

@@ -42,7 +42,6 @@ SECTIONS {
      * as it looks similar enough to a Linux bzImage so that the VMM will
      * recognize it.
      */
-    . = 32M - 4K;
     .setupdata ALIGN(4K) : {
         FILL(0x00)
         /* Padding until the setup struct starts. */
@@ -80,14 +79,10 @@ SECTIONS {
          * populated by Stage 0.
          */
     } : setupdata
-    /* The Restricted Kernel is Loaded between 2MiB and 17MiB, so we
-     * load this wrapper at 32Mib for now. This will go away once the
-     * wrapper and the Restricted Kernel supports relocation.
-     */
-    . = 32M;
 
     /* Start of the kernel proper. */
     .boot ALIGN(4K) : {
+        boot_start = .;
         FILL(0x00)
         /* The 64-bit entry point must be at offset 0x200 from the start of
          * kernel.
@@ -104,8 +99,16 @@ SECTIONS {
         *(.rodata .rodata.*)
     } : rodata
 
+    .rela.dyn : {
+        rela_start = .;
+        *(.rela*)
+        rela_end = .;
+    } : rodata
+
     .data ALIGN(4K) : {
+        data_start = .;
         *(.data .data.*)
+        data_end = .;
     } : data
 
     .bss : ALIGN(4K) {
