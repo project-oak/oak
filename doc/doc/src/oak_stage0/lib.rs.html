@@ -338,33 +338,6 @@
 <a href="#336" id="336">336</a>
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -389,7 +362,7 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, vec::Vec};
-<span class="kw">use </span>core::{arch::asm, ffi::c_void, panic::PanicInfo};
+<span class="kw">use </span>core::panic::PanicInfo;
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>oak_dice::evidence::{
@@ -450,11 +423,6 @@
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
-<span class="kw">extern </span><span class="string">"C" </span>{
-    <span class="attr">#[link_name = <span class="string">"stack_start"</span>]
-    </span><span class="kw">static </span>BOOT_STACK_POINTER: c_void;
-}
-
 <span class="kw">pub fn </span>create_gdt(gdt: <span class="kw-2">&amp;mut </span>GlobalDescriptorTable) -&gt; (SegmentSelector, SegmentSelector) {
     <span class="kw">let </span>cs = gdt.add_entry(Descriptor::kernel_code_segment());
     <span class="kw">let </span>ds = gdt.add_entry(Descriptor::kernel_data_segment());
@@ -462,30 +430,6 @@
 }
 
 <span class="kw">pub fn </span>create_idt(_idt: <span class="kw-2">&amp;mut </span>InterruptDescriptorTable) {}
-
-<span class="doccomment">/// Passes control to the operating system kernel. No more code from the BIOS
-/// will run.
-///
-/// # Safety
-///
-/// This assumes that the kernel entry point is valid.
-</span><span class="kw">pub unsafe fn </span>jump_to_kernel&lt;A: core::alloc::Allocator&gt;(
-    entry_point: VirtAddr,
-    zero_page: Box&lt;zero_page::ZeroPage, <span class="kw-2">&amp;</span>A&gt;,
-) -&gt; ! {
-    <span class="macro">asm!</span>(
-        <span class="comment">// Boot stack pointer
-        </span><span class="string">"mov {1}, %rsp"</span>,
-        <span class="comment">// Zero page address
-        </span><span class="string">"mov {2}, %rsi"</span>,
-        <span class="comment">// ...and away we go!
-        </span><span class="string">"jmp *{0}"</span>,
-        <span class="kw">in</span>(reg) entry_point.as_u64(),
-        <span class="kw">in</span>(reg) <span class="kw-2">&amp;</span>BOOT_STACK_POINTER <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64,
-        <span class="kw">in</span>(reg) Box::leak(zero_page),
-        options(noreturn, att_syntax)
-    );
-}
 
 <span class="doccomment">/// Entry point for the Rust code in the stage0 BIOS.
 ///
@@ -545,8 +489,10 @@
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
     <span class="kw">let </span>cmdline_sha2_256_digest = cmdline.measure();
 
-    <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg).unwrap();
-    <span class="kw">let </span>entry = kernel_info.entry;
+    <span class="comment">// Safety: this is the only place where we try to load a kernel, so the backing
+    // memory is unused.
+    </span><span class="kw">let </span>kernel = <span class="kw">unsafe </span>{ kernel::Kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg) }.unwrap();
+    <span class="kw">let </span>kernel_sha2_256_digest = kernel.measure();
 
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_digest = Sha256::default();
     <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg, <span class="kw-2">&amp;mut </span>acpi_digest).unwrap();
@@ -560,7 +506,7 @@
     }
 
     <span class="kw">let </span>ram_disk_sha2_256_digest =
-        initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
+        initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
                 ram_disk.measure()
@@ -576,7 +522,7 @@
 
     <span class="comment">// Generate Stage0 Event Log data.
     </span><span class="kw">let </span>(event_log_proto, event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-        kernel_info.measurement.as_bytes().to_vec(),
+        kernel_sha2_256_digest.as_bytes().to_vec(),
         acpi_sha2_256_digest.as_bytes().to_vec(),
         memory_map_sha2_256_digest.as_bytes().to_vec(),
         ram_disk_sha2_256_digest.as_bytes().to_vec(),
@@ -584,7 +530,7 @@
         cmdline.clone(),
     );
 
-    <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_info.measurement));
+    <span class="macro">log::debug!</span>(<span class="string">"Kernel image digest: sha2-256:{}"</span>, hex::encode(kernel_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel setup data digest: sha2-256:{}"</span>, hex::encode(setup_data_sha2_256_digest));
     <span class="macro">log::debug!</span>(<span class="string">"Kernel command-line: {}"</span>, cmdline);
     <span class="macro">log::debug!</span>(<span class="string">"Initial RAM disk digest: sha2-256:{}"</span>, hex::encode(ram_disk_sha2_256_digest));
@@ -596,7 +542,7 @@
     </span><span class="kw">let </span>cmdline_max_len = <span class="number">256</span>;
     <span class="kw">let </span>measurements = oak_stage0_dice::Measurements {
         acpi_sha2_256_digest,
-        kernel_sha2_256_digest: kernel_info.measurement,
+        kernel_sha2_256_digest,
         cmdline_sha2_256_digest,
         cmdline: <span class="kw">if </span>cmdline.len() &gt; cmdline_max_len {
             cmdline[..cmdline_max_len].to_string()
@@ -679,7 +625,7 @@
     };
     zero_page.set_cmdline(cmdline);
 
-    <span class="macro">log::info!</span>(<span class="string">"jumping to kernel at {:#018x}"</span>, entry.as_u64());
+    <span class="macro">log::info!</span>(<span class="string">"jumping to kernel at {:#018x}"</span>, kernel.entry().as_u64());
 
     <span class="comment">// Clean-ups we need to do just before we jump to the kernel proper: clean up
     // the early GHCB and FW_CFG DMA buffers we used, and switch back to a
@@ -692,7 +638,7 @@
     paging::remap_first_huge_page::&lt;P&gt;();
 
     <span class="kw">unsafe </span>{
-        jump_to_kernel(entry, zero_page);
+        kernel.jump_to_kernel(zero_page);
     }
 }
 

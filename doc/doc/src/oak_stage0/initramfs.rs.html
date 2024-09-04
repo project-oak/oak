@@ -77,7 +77,7 @@
 
 <span class="kw">use crate</span>::{
     fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
-    kernel::KernelInfo,
+    kernel::Kernel,
 };
 
 <span class="doccomment">/// Tries to load an initial RAM disk from the QEMU FW_CFG device.
@@ -87,7 +87,7 @@
 </span><span class="kw">pub fn </span>try_load_initial_ram_disk&lt;P: <span class="kw">crate</span>::Platform&gt;(
     fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;,
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
-    kernel_info: <span class="kw-2">&amp;</span>KernelInfo,
+    kernel_info: <span class="kw-2">&amp;</span>Kernel,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]&gt; {
     <span class="kw">let </span>file = fw_cfg.get_initrd_file()<span class="question-mark">?</span>;
     <span class="kw">let </span>size = file.size();
@@ -99,7 +99,7 @@
 
     <span class="kw">let </span>address = <span class="kw">crate</span>::phys_to_virt(initrd_address);
 
-    check_non_overlapping(address, size, kernel_info.start_address, kernel_info.size)
+    check_non_overlapping(address, size, kernel_info.start(), kernel_info.len())
         .expect(<span class="string">"initial RAM disk location overlaps with the kernel"</span>);
 
     <span class="comment">// Safety: We already checked that the slice falls in a suitable memory range

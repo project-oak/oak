@@ -90,6 +90,52 @@
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -106,26 +152,104 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{ffi::CString, string::String, vec};
-<span class="kw">use </span>core::slice;
+</span><span class="kw">use </span>alloc::{boxed::Box, ffi::CString, string::String, vec};
+<span class="kw">use </span>core::{ffi::c_void, slice};
 
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
 <span class="kw">use crate</span>::{fw_cfg::FwCfg, Measured};
 
+<span class="kw">extern </span><span class="string">"C" </span>{
+    <span class="attr">#[link_name = <span class="string">"stack_start"</span>]
+    </span><span class="kw">static </span>BOOT_STACK_POINTER: c_void;
+}
+
 <span class="doccomment">/// The default location for loading a compressed (bzImage format) kerne.
 </span><span class="kw">const </span>DEFAULT_BZIMAGE_START: u64 = <span class="number">0x2000000</span>; <span class="comment">// See b/359144829 before changing.
 
-</span><span class="doccomment">/// Information about the kernel image.
-</span><span class="kw">pub struct </span>KernelInfo {
-    <span class="doccomment">/// The start address where the kernel is loaded.
-    </span><span class="kw">pub </span>start_address: VirtAddr,
-    <span class="doccomment">/// The size of the kernel image.
-    </span><span class="kw">pub </span>size: usize,
-    <span class="doccomment">/// The entry point for the kernel.
-    </span><span class="kw">pub </span>entry: VirtAddr,
-    <span class="doccomment">/// The SHA2-256 digest of the raw kernel image.
-    </span><span class="kw">pub </span>measurement: <span class="kw">crate</span>::Measurement,
+</span><span class="doccomment">/// A bzImage-compatible kernel loaded into memory.
+</span><span class="attr">#[repr(transparent)]
+</span><span class="kw">pub struct </span>Kernel(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]);
+
+<span class="kw">impl </span>Kernel {
+    <span class="doccomment">/// Tries to load a kernel image from the QEMU fw_cfg device.
+    ///
+    /// We assume that a kernel file provided via the traditional selector is a
+    /// compressed kernel using the bzImage format. We assume that a kernel file
+    /// provided via the custom filename of "opt/stage0/elf_kernel" is an
+    /// uncompressed ELF file.
+    ///
+    /// If it finds a kernel it returns the information about the kernel,
+    /// otherwise `None`.
+    ///
+    /// # Safety
+    ///
+    /// We load the kernel directly into memory, bypassing the usual allocation
+    /// mechanisms. The caller must guarantee that only one instance of `Kernel`
+    /// is alive at any given time.
+    /// The caller also needs to guarantee that there is enough physical memory
+    /// available to load the kernel starting at `DEFAULT_BZIMAGE_START`.
+    </span><span class="kw">pub unsafe fn </span>try_load_kernel_image&lt;P: <span class="kw">crate</span>::Platform&gt;(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>file = fw_cfg.get_kernel_file().expect(<span class="string">"did not find kernel file"</span>);
+        <span class="kw">let </span>size = file.size();
+
+        <span class="kw">let </span>dma_address = PhysAddr::new(DEFAULT_BZIMAGE_START);
+        <span class="kw">let </span>start_address = <span class="kw">crate</span>::phys_to_virt(dma_address);
+        <span class="macro">log::debug!</span>(<span class="string">"Kernel image size {}"</span>, size);
+        <span class="macro">log::debug!</span>(<span class="string">"Kernel image start address {:#018x}"</span>, start_address.as_u64());
+        <span class="comment">// Safety: the caller needs to guarantee there is enough memory available.
+        </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(start_address.as_mut_ptr(), size) };
+        <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">"could not read kernel file"</span>);
+        <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">"kernel size did not match expected size"</span>);
+
+        <span class="kw">let </span>kernel = <span class="self">Self</span>(buf);
+        <span class="macro">log::debug!</span>(<span class="string">"Kernel entry point {:#018x}"</span>, kernel.entry());
+        <span class="prelude-val">Some</span>(kernel)
+    }
+
+    <span class="kw">pub fn </span>start(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        VirtAddr::from_ptr(<span class="self">self</span>.<span class="number">0</span>.as_ptr())
+    }
+
+    <span class="kw">pub fn </span>entry(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        <span class="comment">// Safety: For a bzImage the 64-bit entry point is at offset 0x200 from the
+        // start of the 64-bit kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
+        </span>VirtAddr::from_ptr(<span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.as_ptr().add(<span class="number">0x200</span>) })
+    }
+
+    <span class="kw">pub const fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0</span>.len()
+    }
+
+    <span class="doccomment">/// Passes control to the operating system kernel. No more code from the
+    /// BIOS will run.
+    ///
+    /// # Safety
+    ///
+    /// This assumes that the kernel entry point is valid.
+    </span><span class="kw">pub unsafe fn </span>jump_to_kernel&lt;A: core::alloc::Allocator&gt;(
+        <span class="self">self</span>,
+        zero_page: Box&lt;<span class="kw">crate</span>::zero_page::ZeroPage, <span class="kw-2">&amp;</span>A&gt;,
+    ) -&gt; ! {
+        <span class="macro">core::arch::asm!</span>(
+            <span class="comment">// Boot stack pointer
+            </span><span class="string">"mov {1}, %rsp"</span>,
+            <span class="comment">// Zero page address
+            </span><span class="string">"mov {2}, %rsi"</span>,
+            <span class="comment">// ...and away we go!
+            </span><span class="string">"jmp *{0}"</span>,
+            <span class="kw">in</span>(reg) <span class="self">self</span>.entry().as_u64(),
+            <span class="kw">in</span>(reg) <span class="kw-2">&amp;</span>BOOT_STACK_POINTER <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64,
+            <span class="kw">in</span>(reg) Box::leak(zero_page),
+            options(noreturn, att_syntax)
+        );
+    }
+}
+
+<span class="kw">impl </span>Measured <span class="kw">for </span>Kernel {
+    <span class="kw">fn </span>measure(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Measurement {
+        <span class="self">self</span>.<span class="number">0</span>.measure()
+    }
 }
 
 <span class="doccomment">/// Tries to load the kernel command-line from the fw_cfg device.
@@ -147,37 +271,5 @@
         .expect(<span class="string">"invalid kernel command-line"</span>);
     <span class="macro">log::debug!</span>(<span class="string">"Kernel cmdline: {}"</span>, cmdline);
     <span class="prelude-val">Some</span>(cmdline)
-}
-
-<span class="doccomment">/// Tries to load a kernel image from the QEMU fw_cfg device.
-///
-/// We assume that a kernel file provided via the traditional selector is a
-/// compressed kernel using the bzImage format. We assume that a kernel file
-/// provided via the custom filename of "opt/stage0/elf_kernel" is an
-/// uncompressed ELF file.
-///
-/// If it finds a kernel it returns the information about the kernel, otherwise
-/// `None`.
-</span><span class="kw">pub fn </span>try_load_kernel_image&lt;P: <span class="kw">crate</span>::Platform&gt;(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg&lt;P&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;KernelInfo&gt; {
-    <span class="kw">let </span>file = fw_cfg.get_kernel_file().expect(<span class="string">"did not find kernel file"</span>);
-    <span class="kw">let </span>size = file.size();
-
-    <span class="kw">let </span>dma_address = PhysAddr::new(DEFAULT_BZIMAGE_START);
-    <span class="kw">let </span>start_address = <span class="kw">crate</span>::phys_to_virt(dma_address);
-    <span class="macro">log::debug!</span>(<span class="string">"Kernel image size {}"</span>, size);
-    <span class="macro">log::debug!</span>(<span class="string">"Kernel image start address {:#018x}"</span>, start_address.as_u64());
-    <span class="comment">// Safety: We checked that the DMA address is suitable and big enough.
-    </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(start_address.as_mut_ptr(), size) };
-
-    <span class="kw">let </span>actual_size = fw_cfg.read_file(<span class="kw-2">&amp;</span>file, buf).expect(<span class="string">"could not read kernel file"</span>);
-    <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">"kernel size did not match expected size"</span>);
-
-    <span class="kw">let </span>measurement = buf.measure();
-
-    <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the
-    // 64-bit kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
-    </span><span class="kw">let </span>entry = start_address + <span class="number">0x200usize</span>;
-    <span class="macro">log::debug!</span>(<span class="string">"Kernel entry point {:#018x}"</span>, entry.as_u64());
-    <span class="prelude-val">Some</span>(KernelInfo { start_address, size, entry, measurement })
 }
 </code></pre></div></section></main></body></html>
