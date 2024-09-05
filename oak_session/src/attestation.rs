@@ -19,7 +19,7 @@
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String};
 
-use anyhow::{Context, Error, Ok};
+use anyhow::{anyhow, Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
 #[cfg(test)]
 use mockall::automock;
@@ -61,7 +61,7 @@ pub enum AttestationType {
 }
 
 pub trait AttestationProvider {
-    fn get_attestation_results(self) -> Option<AttestationResults>;
+    fn take_attestation_report(&mut self) -> Option<AttestationResults>;
 }
 
 pub trait AttestationAggregator {
@@ -120,8 +120,8 @@ impl ClientAttestationProvider {
 }
 
 impl AttestationProvider for ClientAttestationProvider {
-    fn get_attestation_results(self) -> Option<AttestationResults> {
-        self.attestation_results
+    fn take_attestation_report(&mut self) -> Option<AttestationResults> {
+        self.attestation_results.take()
     }
 }
 
@@ -138,9 +138,10 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                         .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                 }))
             }
-            AttestationType::PeerUnidirectional | AttestationType::Unattested => {
+            AttestationType::PeerUnidirectional => {
                 Ok(Some(AttestRequest { endorsed_evidence: BTreeMap::new() }))
             }
+            AttestationType::Unattested => Ok(None),
         }
     }
 
@@ -151,13 +152,14 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
         self.attestation_results = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
-                    get_attestation_results(
+                    combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
                     )?,
                 )?)
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => None,
+            AttestationType::SelfUnidirectional => None,
+            AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
         };
         Ok(Some(()))
     }
@@ -178,8 +180,8 @@ impl ServerAttestationProvider {
 }
 
 impl AttestationProvider for ServerAttestationProvider {
-    fn get_attestation_results(self) -> Option<AttestationResults> {
-        self.attestation_results
+    fn take_attestation_report(&mut self) -> Option<AttestationResults> {
+        self.attestation_results.take()
     }
 }
 
@@ -196,9 +198,10 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                         .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                 }))
             }
-            AttestationType::PeerUnidirectional | AttestationType::Unattested => {
+            AttestationType::PeerUnidirectional => {
                 Ok(Some(AttestResponse { endorsed_evidence: BTreeMap::new() }))
             }
+            AttestationType::Unattested => Ok(None),
         }
     }
 
@@ -209,19 +212,20 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
         self.attestation_results = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
-                    get_attestation_results(
+                    combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
                     )?,
                 )?)
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => None,
+            AttestationType::SelfUnidirectional => None,
+            AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
         };
         Ok(Some(()))
     }
 }
 
-fn get_attestation_results(
+fn combine_attestation_results(
     verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
     attested_evidence: &BTreeMap<String, EndorsedEvidence>,
 ) -> Result<BTreeMap<String, AttestationResults>, Error> {

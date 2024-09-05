@@ -21,12 +21,16 @@ use alloc::{boxed::Box, collections::VecDeque};
 
 use anyhow::{anyhow, Context, Error};
 use oak_crypto::encryptor::Encryptor;
-use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-    SessionRequest, SessionResponse,
+use oak_proto_rust::oak::{
+    attestation::v1::{attestation_results, AttestationResults},
+    session::v1::{
+        session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+        SessionRequest, SessionResponse,
+    },
 };
 
 use crate::{
+    attestation::{AttestationProvider, ClientAttestationProvider, ServerAttestationProvider},
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
     ProtocolEngine,
@@ -64,9 +68,11 @@ pub trait Session {
 
 // Client-side secure attested session entrypoint.
 pub struct ClientSession {
+    attester: ClientAttestationProvider,
     handshaker: ClientHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
+    attestation_results: Option<AttestationResults>,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
@@ -75,9 +81,11 @@ pub struct ClientSession {
 impl ClientSession {
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
+            attester: ClientAttestationProvider::new(config.attestation_provider_config),
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
             encryptor_config: config.encryptor_config,
+            attestation_results: None,
             encryptor: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -134,35 +142,47 @@ impl Session for ClientSession {
 
 impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionRequest>> {
+        if let Some(attest_message) = self.attester.get_outgoing_message()? {
+            return Ok(Some(SessionRequest {
+                request: Some(Request::AttestRequest(attest_message)),
+            }));
+        }
+        if let Some(handshake_message) = self.handshaker.get_outgoing_message()? {
+            return Ok(Some(SessionRequest {
+                request: Some(Request::HandshakeRequest(handshake_message)),
+            }));
+        }
         if self.is_open() {
             return Ok(self.outgoing_requests.pop_front());
         };
-        Ok(self
-            .handshaker
-            .get_outgoing_message()?
-            .map(|h| SessionRequest { request: Some(Request::HandshakeRequest(h)) }))
+        Err(anyhow!("session in unexpected state"))
     }
 
     fn put_incoming_message(
         &mut self,
         incoming_message: &SessionResponse,
     ) -> anyhow::Result<Option<()>> {
-        if self.is_open() {
-            return match incoming_message.response {
-                Some(Response::EncryptedMessage(_)) => {
-                    self.incoming_responses.push_back(incoming_message.clone());
-                    Ok(Some(()))
-                }
-                _ => Err(anyhow!(
-                    "unexpected content of SessionResponse: session open but no ciphertext set"
-                )),
-            };
-        }
         match incoming_message.response.as_ref() {
+            Some(Response::AttestResponse(attest_message)) => {
+                self.attester.put_incoming_message(&attest_message)?.ok_or(anyhow!(
+                    "invalid session state: attest message received but attester doesn't expect
+                     any"
+                ))?;
+                if let Some(attestation_results) = self.attester.take_attestation_report() {
+                    self.attestation_results = Some(attestation_results.clone());
+                    if attestation_results.status != attestation_results::Status::Success.into() {
+                        return Err(anyhow!(
+                            "Attestation verification failed: {}",
+                            attestation_results.reason
+                        ));
+                    }
+                }
+                Ok(Some(()))
+            }
             Some(Response::HandshakeResponse(handshake_message)) => {
-                self.handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
+                self.handshaker.put_incoming_message(&handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
-                    expect any"
+                     expect any"
                 ))?;
                 if let Some(session_keys) = self.handshaker.derive_session_keys() {
                     self.encryptor = Some(
@@ -172,6 +192,16 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 }
                 Ok(Some(()))
             }
+            Some(Response::EncryptedMessage(_)) => {
+                if self.is_open() {
+                    self.incoming_responses.push_back(incoming_message.clone());
+                    return Ok(Some(()));
+                } else {
+                    return Err(anyhow!(
+                        "invalid session state: incoming encrypted message received but session is not open"
+                    ));
+                }
+            }
             _ => Err(anyhow!("unexpected content of session response")),
         }
     }
@@ -179,9 +209,11 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 
 // Server-side secure attested session entrypoint.
 pub struct ServerSession {
+    attester: ServerAttestationProvider,
     handshaker: ServerHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
+    attestation_results: Option<AttestationResults>,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
@@ -190,8 +222,10 @@ pub struct ServerSession {
 impl ServerSession {
     pub fn new(config: SessionConfig) -> Self {
         Self {
+            attester: ServerAttestationProvider::new(config.attestation_provider_config),
             handshaker: ServerHandshaker::new(config.handshaker_config),
             encryptor_config: config.encryptor_config,
+            attestation_results: None,
             encryptor: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -248,35 +282,48 @@ impl Session for ServerSession {
 
 impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<SessionResponse>> {
-        Ok(self.outgoing_responses.pop_front())
+        if let Some(attest_message) = self.attester.get_outgoing_message()? {
+            return Ok(Some(SessionResponse {
+                response: Some(Response::AttestResponse(attest_message)),
+            }));
+        }
+        if let Some(handshake_message) = self.handshaker.get_outgoing_message()? {
+            return Ok(Some(SessionResponse {
+                response: Some(Response::HandshakeResponse(handshake_message)),
+            }));
+        }
+        if self.is_open() {
+            return Ok(self.outgoing_responses.pop_front());
+        };
+        Err(anyhow!("session in unexpected state"))
     }
 
     fn put_incoming_message(
         &mut self,
         incoming_message: &SessionRequest,
     ) -> anyhow::Result<Option<()>> {
-        if self.is_open() {
-            return match incoming_message.request {
-                Some(Request::EncryptedMessage(_)) => {
-                    self.incoming_requests.push_back(incoming_message.clone());
-                    Ok(Some(()))
-                }
-                _ => Err(anyhow!(
-                    "unexpected content of SessionRequest: session open but no encrypted message set"
-                )),
-            };
-        }
         match incoming_message.request.as_ref() {
-            Some(Request::HandshakeRequest(handshake_message)) => {
-                self.handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
-                    "invalid session state: handshake message received but handshaker doesn't
-                     expect any"
+            Some(Request::AttestRequest(attest_message)) => {
+                self.attester.put_incoming_message(&attest_message)?.ok_or(anyhow!(
+                    "invalid session state: attest message received but attester doesn't expect
+                 any"
                 ))?;
-                if let Some(outgoing_message) = self.handshaker.get_outgoing_message()? {
-                    self.outgoing_responses.push_back(SessionResponse {
-                        response: Some(Response::HandshakeResponse(outgoing_message)),
-                    });
+                if let Some(attestation_results) = self.attester.take_attestation_report() {
+                    self.attestation_results = Some(attestation_results.clone());
+                    if attestation_results.status != attestation_results::Status::Success.into() {
+                        return Err(anyhow!(
+                            "Attestation verification failed: {}",
+                            attestation_results.reason
+                        ));
+                    }
                 }
+                Ok(Some(()))
+            }
+            Some(Request::HandshakeRequest(handshake_message)) => {
+                self.handshaker.put_incoming_message(&handshake_message)?.ok_or(anyhow!(
+                    "invalid session state: handshake message received but handshaker doesn't
+                 expect any"
+                ))?;
                 if let Some(session_keys) = self.handshaker.derive_session_keys() {
                     self.encryptor = Some(
                         (self.encryptor_config.encryptor_provider)(session_keys)
@@ -285,7 +332,17 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 }
                 Ok(Some(()))
             }
-            _ => Err(anyhow!("unexpected content of session request")),
+            Some(Request::EncryptedMessage(_)) => {
+                if self.is_open() {
+                    self.incoming_requests.push_back(incoming_message.clone());
+                    return Ok(Some(()));
+                } else {
+                    return Err(anyhow!(
+                        "invalid session state: incoming encrypted message received but session is not open"
+                    ));
+                }
+            }
+            _ => Err(anyhow!("unexpected content of session response")),
         }
     }
 }

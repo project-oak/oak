@@ -56,6 +56,7 @@ pub trait Handshaker {
 pub struct ClientHandshaker {
     handshake_type: HandshakeType,
     handshake_initiator: HandshakeInitiator,
+    initial_message: Option<Vec<u8>>,
     handshake_result: Option<([u8; HANDSHAKE_HASH_LEN], Crypter)>,
 }
 
@@ -63,29 +64,34 @@ impl ClientHandshaker {
     pub fn create(handshaker_config: HandshakerConfig) -> anyhow::Result<Self> {
         let handshake_type = handshaker_config.handshake_type;
         let peer_static_public_key = handshaker_config.peer_static_public_key.clone();
+        let mut handshake_initiator = match handshake_type {
+            HandshakeType::NoiseKN => core::unimplemented!(),
+            HandshakeType::NoiseKK => HandshakeInitiator::new_kk(
+                peer_static_public_key
+                    .context("handshaker_config missing the peer public key")?
+                    .as_slice()
+                    .try_into()
+                    .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
+                handshaker_config
+                    .self_static_private_key
+                    .context("handshaker_config missing the self static private key")?,
+            ),
+            HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
+                peer_static_public_key
+                    .context("handshaker_config missing the peer public key")?
+                    .as_slice()
+                    .try_into()
+                    .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
+            ),
+            HandshakeType::NoiseNN => HandshakeInitiator::new_nn(),
+        };
+        let initial_message = handshake_initiator
+            .build_initial_message()
+            .map_err(|e| anyhow!("Error building initial message: {e:?}"))?;
         Ok(Self {
             handshake_type,
-            handshake_initiator: match handshake_type {
-                HandshakeType::NoiseKN => core::unimplemented!(),
-                HandshakeType::NoiseKK => HandshakeInitiator::new_kk(
-                    peer_static_public_key
-                        .context("handshaker_config missing the peer public key")?
-                        .as_slice()
-                        .try_into()
-                        .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
-                    handshaker_config
-                        .self_static_private_key
-                        .context("handshaker_config missing the self static private key")?,
-                ),
-                HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
-                    peer_static_public_key
-                        .context("handshaker_config missing the peer public key")?
-                        .as_slice()
-                        .try_into()
-                        .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
-                ),
-                HandshakeType::NoiseNN => HandshakeInitiator::new_nn(),
-            },
+            handshake_initiator,
+            initial_message: Some(initial_message),
             handshake_result: None,
         })
     }
@@ -99,26 +105,24 @@ impl Handshaker for ClientHandshaker {
 
 impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
-        let mut initial_message = self
-            .handshake_initiator
-            .build_initial_message()
-            .map_err(|e| anyhow!("Error building initial message: {e:?}"))?;
-        let (ciphertext, ephemeral_public_key) =
-            (initial_message.split_off(P256_X962_KEY_BYTES_LEN), initial_message);
-        Ok(Some(HandshakeRequest {
-            r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
-                NoiseHandshakeMessage {
-                    ephemeral_public_key,
-                    static_public_key: match self.handshake_type {
-                        HandshakeType::NoiseKK
-                        | HandshakeType::NoiseKN
-                        | HandshakeType::NoiseNK
-                        | HandshakeType::NoiseNN => vec![],
+        Ok(self.initial_message.take().map(|mut initial_message| {
+            let (ciphertext, ephemeral_public_key) =
+                (initial_message.split_off(P256_X962_KEY_BYTES_LEN), initial_message);
+            HandshakeRequest {
+                r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
+                    NoiseHandshakeMessage {
+                        ephemeral_public_key,
+                        static_public_key: match self.handshake_type {
+                            HandshakeType::NoiseKK
+                            | HandshakeType::NoiseKN
+                            | HandshakeType::NoiseNK
+                            | HandshakeType::NoiseNN => vec![],
+                        },
+                        ciphertext,
                     },
-                    ciphertext,
-                },
-            )),
-            attestation_binding: None,
+                )),
+                attestation_binding: None,
+            }
         }))
     }
 

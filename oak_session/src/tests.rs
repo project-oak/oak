@@ -96,14 +96,14 @@ fn attestation_verification_succeeds() {
             .is_ok()
     );
 
-    let client_attestation_result = client_attestation_provider.get_attestation_results().unwrap();
+    let client_attestation_result = client_attestation_provider.take_attestation_report().unwrap();
     assert_eq!(
         client_attestation_result.status,
         attestation_results::Status::Success.into(),
         "Client attestation verification failed: {}",
         client_attestation_result.reason
     );
-    let server_attestation_result = server_attestation_provider.get_attestation_results().unwrap();
+    let server_attestation_result = server_attestation_provider.take_attestation_report().unwrap();
     assert_eq!(
         server_attestation_result.status,
         attestation_results::Status::Success.into(),
@@ -159,12 +159,12 @@ fn attestation_verification_fails() {
             .is_ok()
     );
 
-    let client_attestation_result = client_attestation_provider.get_attestation_results().unwrap();
+    let client_attestation_result = client_attestation_provider.take_attestation_report().unwrap();
     assert_eq!(
         client_attestation_result.status,
         attestation_results::Status::GenericFailure.into()
     );
-    let server_attestation_result = server_attestation_provider.get_attestation_results().unwrap();
+    let server_attestation_result = server_attestation_provider.take_attestation_report().unwrap();
     assert_eq!(
         server_attestation_result.status,
         attestation_results::Status::GenericFailure.into()
@@ -346,9 +346,9 @@ fn session_nk_key_mismatch() {
 fn do_session_handshake(client_session: &mut ClientSession, server_session: &mut ServerSession) {
     while !client_session.is_open() {
         let request = client_session.get_outgoing_message().unwrap().unwrap();
-        assert!(server_session.put_incoming_message(&request).is_ok());
+        server_session.put_incoming_message(&request).unwrap();
         let response = server_session.get_outgoing_message().unwrap().unwrap();
-        assert!(client_session.put_incoming_message(&response).is_ok());
+        client_session.put_incoming_message(&response).unwrap();
     }
     assert!(server_session.is_open());
 }
@@ -363,8 +363,8 @@ fn verify_session_message<I, O>(
     session2: &mut dyn ProtocolSession<O, I>,
     message: &PlaintextMessage,
 ) {
-    assert!(session1.write(message).is_ok());
+    session1.write(message).unwrap();
     let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
-    assert!(session2.put_incoming_message(&outgoing_message).is_ok());
+    session2.put_incoming_message(&outgoing_message).unwrap();
     assert_eq!(message, &session2.read().unwrap().unwrap());
 }
