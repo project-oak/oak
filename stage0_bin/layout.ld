@@ -95,14 +95,14 @@ SECTIONS {
     .ap_text : AT(TOP - 4K) {
         ap_text_start = .;
         *(.ap_text .ap_text.*)
-        ap_text_size = SIZEOF(.ap_text);
     } > ram_low : ap_text
+    ap_text_size = SIZEOF(.ap_text);
 
     .ap_bss (NOLOAD) : AT (ADDR(.ap_text) + SIZEOF(.ap_text)) {
         ap_bss_start = .;
         *(.ap_bss .ap_bss.*)
-        ap_bss_size = SIZEOF(.ap_bss);
     } > ram_low : ap_bss
+    ap_bss_size = SIZEOF(.ap_bss);
 
     ASSERT(. <= 0x10000, "AP bootstrap code needs to be in the first 64K")
 
@@ -112,8 +112,8 @@ SECTIONS {
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         *(.bss .bss.* .lbss.*)
-        bss_size = SIZEOF(.bss);
     } > ram_low : bss
+    bss_size = SIZEOF(.bss);
 
     .rodata : {
         /* Include large section (.lrodata) to support large code model.
@@ -137,8 +137,8 @@ SECTIONS {
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         *(.data .data.* .ldata.*)
-        data_size = SIZEOF(.data);
     } > ram_low : data
+    data_size = SIZEOF(.data);
 
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
