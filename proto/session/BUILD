@@ -17,6 +17,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -41,6 +42,25 @@ cc_proto_library(
 java_proto_library(
     name = "messages_java_proto",
     deps = [":messages_proto"],
+)
+
+proto_library(
+    name = "protocol_proto",
+    srcs = ["protocol.proto"],
+    deps = [
+        ":messages_proto",
+        ":session_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "protocol_cc_proto",
+    deps = [":protocol_proto"],
+)
+
+java_proto_library(
+    name = "protocol_java_proto",
+    deps = [":protocol_proto"],
 )
 
 proto_library(

@@ -25,6 +25,15 @@ option java_package = "com.google.oak.session.v1";
 
 // Service definition for unary communication with Oak server.
 service UnarySession {
+  // Generally speaking, Oak doesn't provide out-of-the-box service definitions,
+  // as this is almost never something that someone needs, and it restricts the
+  // server capability.
+  //
+  // Instead, you should define Oak-enabled methods using the provided transport
+  // message types, along with the application SDK methods that make it easy to
+  // implement the Oak functionality for these methods.
+  option deprecated = true;
+
   // Gets a attestation evidence and endorsements.
   rpc GetEndorsedEvidence(GetEndorsedEvidenceRequest)
       returns (GetEndorsedEvidenceResponse);

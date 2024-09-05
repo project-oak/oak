@@ -42,6 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/oak_functions/service/oak_functions.proto",
         "../proto/oak_functions/testing.proto",
         "../proto/session/messages.proto",
+        "../proto/session/protocol.proto",
         "../proto/session/service_streaming.proto",
         "../proto/session/session.proto",
         "../third_party/google/profile.proto",

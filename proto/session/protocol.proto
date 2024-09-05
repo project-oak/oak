@@ -1,0 +1,59 @@
+//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.session.v1;
+
+import "proto/session/session.proto";
+import "proto/session/messages.proto";
+
+option java_multiple_files = true;
+option java_package = "com.google.oak.session.v1";
+
+// A wrapper message type that is used by the Oak transport protocol. It can be
+// used to support the older HPKE-based protocol, the newer noise protocol, or a
+// no-op encryption scheme.
+//
+// This type is meant to replace the now-deprecated RequestWrapper type.
+message OakRequest {
+  oneof request {
+    // Noise handshake & data channel implementation.
+    // See the SessionRequest proto messages for more detail.
+    SessionRequest session_request = 1;
+    // Zero-RTT request for HPKE-based Enclave Application.
+    InvokeRequest invoke_request = 2;
+    // Request attestation measurements and HPKE server public key.
+    GetEndorsedEvidenceRequest get_endorsed_evidence_request = 3;
+  }
+}
+
+// A wrapper message type that is used by the Oak transport protocol. It can be
+// used to support the older HPKE-based protocol, the newer noise protocol, or a
+// no-op encryption scheme.
+//
+// This type is meant to replace the now-deprecated ResponseWrapper type.
+message OakResponse {
+  oneof request {
+    // Noise handshake & data channel implementation.
+    // See the SessionRequest proto messages for more detail.
+    SessionResponse session_response = 1;
+    // Zero-RTT request for HPKE-based Enclave Application.
+    InvokeResponse invoke_response = 2;
+    // Evidence response for attestation and providing HPKE server key.
+    GetEndorsedEvidenceResponse get_endorsed_evidence_response = 3;
+  }
+}

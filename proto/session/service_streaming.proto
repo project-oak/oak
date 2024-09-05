@@ -24,6 +24,9 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
 message RequestWrapper {
+  // Instead, use the newer OakRequest wrapper type.
+  option deprecated = true;
+
   oneof request {
     InvokeRequest invoke_request = 2;
     GetEndorsedEvidenceRequest get_endorsed_evidence_request = 3;
@@ -31,6 +34,9 @@ message RequestWrapper {
 }
 
 message ResponseWrapper {
+  // Instead, use the newer OakResposne wrapper type.
+  option deprecated = true;
+
   oneof response {
     InvokeResponse invoke_response = 2;
     GetEndorsedEvidenceResponse get_endorsed_evidence_response = 3;
@@ -39,6 +45,15 @@ message ResponseWrapper {
 
 // Service definition for streaming communication with an Oak server.
 service StreamingSession {
+  // Generally speaking, Oak doesn't provide out-of-the-box service definitions,
+  // as this is almost never something that someone needs, and it restricts the
+  // server capability.
+  //
+  // Instead, you should define Oak-enabled methods using the provided transport
+  // message types, along with the application SDK methods that make it easy to
+  // implement the Oak functionality for these methods.
+  option deprecated = true;
+
   // Used to send a sequence of messages ensuring that they are all handled by
   // the same server instance, by virtue of being multiplexed over a single gRPC
   // stream.
