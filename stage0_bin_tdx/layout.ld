@@ -73,8 +73,8 @@ SECTIONS {
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         *(.bss .bss.* .lbss.*)
-        bss_size = . - bss_start;
     } > ram_low
+    bss_size = SIZEOF(.bss);
 
     .data :
     AT ( ADDR (.text) + SIZEOF (.text) ) {
@@ -83,8 +83,8 @@ SECTIONS {
          * See <https://lld.llvm.org/ELF/large_sections.html>.
          */
         *(.data .data.* .ldata.*)
-        data_size = . - data_start;
     } > ram_low
+    data_size = SIZEOF(.data);
 
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
