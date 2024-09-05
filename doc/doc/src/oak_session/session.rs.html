@@ -291,28 +291,6 @@
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
 <a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -332,13 +310,13 @@
 </span><span class="doccomment">//! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-</span><span class="kw">use </span>alloc::{boxed::Box, collections::VecDeque, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, collections::VecDeque};
 
 <span class="kw">use </span>anyhow::{anyhow, Context, Error};
-<span class="kw">use </span>oak_crypto::encryptor::{Encryptor, Payload};
+<span class="kw">use </span>oak_crypto::encryptor::Encryptor;
 <span class="kw">use </span>oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, SessionRequest,
-    SessionResponse,
+    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+    SessionRequest, SessionResponse,
 };
 
 <span class="kw">use crate</span>::{
@@ -363,7 +341,7 @@
     ///
     /// This function can be called multiple times in a row, which will result
     /// in multiple outgoing protocol messages being created.
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt;;
 
     <span class="doccomment">/// Reads an encrypted message from the peer and decrypt it.
     ///
@@ -374,7 +352,7 @@
     /// - `Ok(None)`: Nothing to read
     /// - `Ok(Some(Vec&lt;u8&gt;))`: Successfully read plaintext bytes
     /// - `Err`: Protocol error
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt;;
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt;;
 }
 
 <span class="comment">// Client-side secure attested session entrypoint.
@@ -400,41 +378,19 @@
     }
 }
 
-<span class="kw">fn </span>to_encrypted_message(value: Payload) -&gt; EncryptedMessage {
-    <span class="kw">let </span><span class="kw-2">mut </span>message = EncryptedMessage { ciphertext: value.message, ..Default::default() };
-    <span class="kw">if </span>value.aad.is_some() {
-        message.associated_data = value.aad.unwrap();
-    }
-    <span class="kw">if </span>value.nonce.is_some() {
-        message.nonce = value.nonce.unwrap();
-    }
-    message
-}
-
-<span class="kw">fn </span>to_payload(value: EncryptedMessage) -&gt; Payload {
-    <span class="kw">let </span><span class="kw-2">mut </span>payload = Payload { message: value.ciphertext, aad: <span class="prelude-val">None</span>, nonce: <span class="prelude-val">None </span>};
-    <span class="kw">if </span>!value.associated_data.is_empty() {
-        payload.aad = <span class="prelude-val">Some</span>(value.associated_data)
-    }
-    <span class="kw">if </span>!value.nonce.is_empty() {
-        payload.nonce = <span class="prelude-val">Some</span>(value.nonce)
-    }
-    payload
-}
-
 <span class="kw">impl </span>Session <span class="kw">for </span>ClientSession {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.encryptor.is_some()
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
-            <span class="kw">let </span>encrypted_message = encryptor
-                .encrypt(plaintext.into())
-                .map(|payload| to_encrypted_message(payload))
+            <span class="kw">let </span>encrypted_message: EncryptedMessage = encryptor
+                .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
+                .map(From::from)
                 .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.outgoing_requests.push_back(SessionRequest {
-                request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message)),
+                request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message.into())),
             });
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
@@ -442,7 +398,7 @@
         }
     }
 
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
             <span class="kw">match </span><span class="self">self</span>.incoming_responses.pop_front() {
                 <span class="prelude-val">Some</span>(response) =&gt; {
@@ -450,13 +406,13 @@
                         <span class="prelude-val">Some</span>(Response::EncryptedMessage(encrypted_message)) =&gt; encrypted_message,
                         <span class="kw">_ </span>=&gt; {
                             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                                <span class="string">"unexpected content of SessionResponse: no ciphertext set"
+                                <span class="string">"unexpected content of SessionResponse: no encrypted message set"
                             </span>));
                         }
                     };
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
                         encryptor
-                            .decrypt(to_payload(encrypted_message))
+                            .decrypt(<span class="kw-2">&amp;</span>encrypted_message.into())
                             .map(From::from)
                             .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
                     ))
@@ -541,11 +497,11 @@
         <span class="self">self</span>.encryptor.is_some()
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
             <span class="kw">let </span>encrypted_message = encryptor
-                .encrypt(plaintext.into())
-                .map(|payload| to_encrypted_message(payload))
+                .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
+                .map(From::from)
                 .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.outgoing_responses.push_back(SessionResponse {
                 response: <span class="prelude-val">Some</span>(Response::EncryptedMessage(encrypted_message)),
@@ -556,7 +512,7 @@
         }
     }
 
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
             <span class="kw">match </span><span class="self">self</span>.incoming_requests.pop_front() {
                 <span class="prelude-val">Some</span>(request) =&gt; {
@@ -570,7 +526,7 @@
                     };
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(
                         encryptor
-                            .decrypt(to_payload(encrypted_message))
+                            .decrypt(<span class="kw-2">&amp;</span>encrypted_message.into())
                             .map(From::from)
                             .context(<span class="string">"couldn't decrypt the supplied plaintext"</span>)<span class="question-mark">?</span>,
                     ))
@@ -599,7 +555,7 @@
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                    <span class="string">"unexpected content of SessionRequest: session open but no ciphertext set"
+                    <span class="string">"unexpected content of SessionRequest: session open but no encrypted message set"
                 </span>)),
             };
         }

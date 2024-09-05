@@ -231,6 +231,13 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -413,10 +420,17 @@
 </span><span class="kw">pub struct </span>EncryptedMessage {
     <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>associated_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>associated_data: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>nonce: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
+}
+<span class="doccomment">/// Message with decrypted content (not to be transmitted over the wire).
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>PlaintextMessage {
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>plaintext: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="doccomment">/// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:

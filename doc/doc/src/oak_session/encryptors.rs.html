@@ -92,14 +92,14 @@
 }
 
 <span class="kw">impl </span>Encryptor <span class="kw">for </span>OrderedChannelEncryptor {
-    <span class="kw">fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: Payload) -&gt; anyhow::Result&lt;Payload&gt; {
+    <span class="kw">fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>Payload) -&gt; anyhow::Result&lt;Payload&gt; {
         <span class="self">self</span>.crypter
             .encrypt(plaintext.message.as_slice())
             .map(From::from)
             .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"Encryption error: {e:#?}"</span>))
     }
 
-    <span class="kw">fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ciphertext: Payload) -&gt; anyhow::Result&lt;Payload&gt; {
+    <span class="kw">fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ciphertext: <span class="kw-2">&amp;</span>Payload) -&gt; anyhow::Result&lt;Payload&gt; {
         <span class="self">self</span>.crypter
             .decrypt(ciphertext.message.as_slice())
             .map(From::from)
