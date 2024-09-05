@@ -79,7 +79,7 @@ pub fn measure_container_and_config(
     let encoded_event = oak_proto_rust::oak::attestation::v1::Event {
         tag: "ORCHESTRATOR".to_string(),
         event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.OrchestratorMeasurements".to_string(),
+            type_url: "type.googleapis.com/oak.attestation.v1.ContainerLayerData".to_string(),
             value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
                 bundle: Some(container_digest.clone()),
                 config: Some(config_digest.clone()),
