@@ -31,11 +31,21 @@
 
 namespace oak::containers::sdk {
 
+/// A convenience class for interacting with the Oak Orchestrator from within an
+/// enclave application.
 class OrchestratorClient {
  public:
+  /// Create a new client, using the default channel, an insecure channel to the
+  /// pre-defined UDS.
   OrchestratorClient()
       : OrchestratorClient(grpc::CreateChannel(
             kOrchestratorSocket, grpc::InsecureChannelCredentials())) {}
+
+  /// Create a new client using the provided channel. This is useful for
+  /// testing, or environments that provide orchestrator-like functionality via
+  /// other means.
+  explicit OrchestratorClient(const std::shared_ptr<grpc::Channel>& channel)
+      : stub_(::oak::containers::Orchestrator::NewStub(channel)) {}
 
   absl::StatusOr<std::string> GetApplicationConfig() const;
   absl::Status NotifyAppReady() const;
@@ -43,9 +53,6 @@ class OrchestratorClient {
       const;
 
  private:
-  explicit OrchestratorClient(const std::shared_ptr<grpc::Channel>& channel)
-      : stub_(::oak::containers::Orchestrator::NewStub(channel)) {}
-
   std::unique_ptr<::oak::containers::Orchestrator::Stub> stub_;
 };
 
