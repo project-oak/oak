@@ -1,4 +1,4 @@
-ARG debian_snapshot=sha256:f0b8edb2e4436c556493dce86b941231eead97baebb484d0d5f6ecfe4f7ed193
+ARG debian_snapshot=sha256:cd26d37c976bf0c33078c77a3e7e3456287ad80c274da5d45a9e712f4fe3cd47
 FROM debian@${debian_snapshot}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
