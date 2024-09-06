@@ -3062,6 +3062,7 @@ dependencies = [
  "oak_stage0_dice",
  "p256",
  "prost",
+ "prost-types",
  "strum",
  "zerocopy",
 ]
