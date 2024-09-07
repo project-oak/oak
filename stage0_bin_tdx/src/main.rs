@@ -134,7 +134,6 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
                 match oak_tdx_guest::tdcall::accept_memory(frame) {
                     Ok(()) => {
                         counters::ACCEPTED_2M.fetch_add(1, Ordering::SeqCst);
-                        info!("accept_page done {:?}", frame);
                     }
                     Err(AcceptMemoryError::AlreadyAccepted) => continue,
                     Err(AcceptMemoryError::PageSizeMisMatch) => {
