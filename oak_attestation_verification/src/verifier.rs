@@ -71,8 +71,7 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{product_name, verify_attestation_report_signature, verify_cert_signature},
-    claims::{get_digest, parse_endorsement_statement},
-    endorsement::verify_binary_endorsement,
+    endorsement::{get_digest, parse_statement, verify_binary_endorsement},
     util::{
         hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
         raw_digest_from_contents, raw_to_hex_digest,
@@ -1013,9 +1012,9 @@ fn get_expected_measurement_digest(
                 &public_keys.rekor_public_key,
             )
             .context("verifying binary endorsement")?;
-            Ok(into_expected_digests(&[hex_to_raw_digest(&get_digest(
-                &parse_endorsement_statement(&endorsement.endorsement)?,
-            )?)?]))
+            Ok(into_expected_digests(&[hex_to_raw_digest(&get_digest(&parse_statement(
+                &endorsement.endorsement,
+            )?)?)?]))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(into_expected_digests(&expected_digests.digests))
@@ -1067,8 +1066,8 @@ fn get_verified_stage0_attachment(
     )
     .context("verifying binary endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)
-        .context("parsing endorsement statement")?;
+    let parsed_statement =
+        parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
     if parsed_statement.predicate.usage != "firmware" {
         anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
     }
@@ -1136,8 +1135,8 @@ fn get_verified_kernel_attachment(
     )
     .context("verifying binary endorsement")?;
     // Parse endorsement statement and verify attachment digest.
-    let parsed_statement = parse_endorsement_statement(&endorsement.endorsement)
-        .context("parsing endorsement statement")?;
+    let parsed_statement =
+        parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
     if parsed_statement.predicate.usage != "kernel" {
         anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
     }

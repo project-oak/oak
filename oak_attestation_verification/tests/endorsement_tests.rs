@@ -17,9 +17,9 @@
 use std::fs;
 
 use oak_attestation_verification::{
-    claims::parse_endorsement_statement,
     endorsement::{
-        verify_binary_endorsement, verify_endorsement_statement, verify_endorser_public_key,
+        get_digest, parse_statement, validate_statement, verify_binary_endorsement,
+        verify_endorser_public_key,
     },
     rekor::{verify_rekor_log_entry, verify_rekor_signature},
     util::convert_pem_to_raw,
@@ -34,13 +34,11 @@ const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.
 
 #[cfg(feature = "bazel")]
 const ENDORSER_PUBLIC_KEY_PATH: &str =
-    "oak_attestation_verification/testdata/oak_containers_stage1.pem";
+    "oak_attestation_verification/testdata/endorser_public_key.pem";
 
 #[cfg(feature = "bazel")]
 const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
 
-// Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
-// from https://rekor.sigstore.dev/api/v1/log/publicKey.
 #[cfg(feature = "bazel")]
 const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 
@@ -51,7 +49,7 @@ const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
 #[cfg(not(feature = "bazel"))]
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
+const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/endorser_public_key.pem";
 
 #[cfg(not(feature = "bazel"))]
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
@@ -115,29 +113,29 @@ fn test_verify_rekor_log_entry_success() {
 }
 
 #[test]
-fn test_verify_endorsement_statement_success() {
+fn test_validate_endorsement_statement_success() {
     let testdata = load_testdata();
-    let statement = parse_endorsement_statement(&testdata.endorsement)
-        .expect("could not parse endorsement statement");
-    let result = verify_endorsement_statement(NOW_UTC_MILLIS, &statement);
+    let statement =
+        parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
+    let result = validate_statement(NOW_UTC_MILLIS, &statement);
     assert!(result.is_ok(), "{:?}", result);
 }
 
 #[test]
-fn test_verify_endorsement_statement_fails_too_early() {
+fn test_validate_endorsement_statement_fails_too_early() {
     let testdata = load_testdata();
-    let statement = parse_endorsement_statement(&testdata.endorsement)
-        .expect("could not parse endorsement statement");
-    let result = verify_endorsement_statement(TOO_EARLY_UTC_MILLIS, &statement);
+    let statement =
+        parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
+    let result = validate_statement(TOO_EARLY_UTC_MILLIS, &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 
 #[test]
-fn test_verify_endorsement_statement_fails_too_late() {
+fn test_validate_statement_fails_too_late() {
     let testdata = load_testdata();
-    let statement = parse_endorsement_statement(&testdata.endorsement)
-        .expect("could not parse endorsement statement");
-    let result = verify_endorsement_statement(TOO_LATE_UTC_MILLIS, &statement);
+    let statement =
+        parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
+    let result = validate_statement(TOO_LATE_UTC_MILLIS, &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 
@@ -311,4 +309,14 @@ fn test_verify_binary_endorsement_succeeds_with_no_rekor_key() {
         &Vec::new(),
     );
     assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_get_digest() {
+    let testdata = load_testdata();
+
+    let statement = parse_statement(&testdata.endorsement).expect("couldn't parse statement");
+    let digest = get_digest(&statement).expect("failed to get digest from claim");
+
+    assert_eq!(digest.sha2_256, "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc");
 }

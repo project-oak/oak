@@ -18,11 +18,8 @@
 #![feature(let_chains)]
 
 extern crate alloc;
-#[cfg(test)]
-extern crate std;
 
 pub mod amd;
-pub mod claims;
 pub mod endorsement;
 pub mod rekor;
 pub mod util;

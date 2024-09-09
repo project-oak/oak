@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,10 +24,7 @@ package(
 rust_library(
     name = "oak_attestation_verification",
     srcs = glob(["src/**"]),
-    compile_data = [
-        "//oak_attestation_verification/data:ask_milan.pem",
-        "//oak_attestation_verification/data:ask_genoa.pem",
-    ],
+    compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
     deps = [
         "//oak_dice",
         "//oak_proto_rust",
@@ -51,50 +48,16 @@ rust_library(
     ],
 )
 
-rust_test(
-    name = "oak_attestation_verification_test",
-    crate = ":oak_attestation_verification",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
-    data = [
-        "//oak_attestation_verification/testdata:endorsement.json",
-    ],
-)
-
-filegroup(
-    name = "test_data",
-    srcs = [
-        "//oak_attestation_verification/data:ark_genoa.pem",
-        "//oak_attestation_verification/data:ark_milan.pem",
-        "//oak_attestation_verification/data:ask_genoa.pem",
-        "//oak_attestation_verification/data:ask_milan.pem",
-        "//oak_attestation_verification/testdata:cb_endorsement.binarypb",
-        "//oak_attestation_verification/testdata:cb_evidence.binarypb",
-        "//oak_attestation_verification/testdata:cb_reference_values.binarypb",
-        "//oak_attestation_verification/testdata:endorsement.json",
-        "//oak_attestation_verification/testdata:endorsement.json.sig",
-        "//oak_attestation_verification/testdata:fake_evidence.binarypb",
-        "//oak_attestation_verification/testdata:fake_expected_values.binarypb",
-        "//oak_attestation_verification/testdata:genoa_oc_evidence.binarypb",
-        "//oak_attestation_verification/testdata:genoa_oc_reference_values.binarypb",
-        "//oak_attestation_verification/testdata:logentry.json",
-        "//oak_attestation_verification/testdata:oak-development.pem",
-        "//oak_attestation_verification/testdata:oak_containers_stage1.pem",
-        "//oak_attestation_verification/testdata:oc_evidence.binarypb",
-        "//oak_attestation_verification/testdata:oc_vcek_milan.der",
-        "//oak_attestation_verification/testdata:oc_vcek_milan.pem",
-        "//oak_attestation_verification/testdata:rekor_public_key.pem",
-        "//oak_attestation_verification/testdata:rk_evidence.binarypb",
-        "//oak_attestation_verification/testdata:rk_evidence_20240312.binarypb",
-        "//oak_attestation_verification/testdata:rk_vcek_milan.der",
-        "//oak_attestation_verification/testdata:vcek_genoa.der",
-    ],
-)
-
 rust_test_suite(
     name = "integration_tests",
     srcs = glob(["tests/**"]),
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
-    data = [":test_data"],
+    data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:evidence",
+    ],
     deps = [
         ":oak_attestation_verification",
         "//oak_attestation_verification_test_utils",
@@ -109,10 +72,7 @@ rust_test_suite(
 rust_library(
     name = "oak_attestation_verification_with_regex",
     srcs = glob(["src/**"]),
-    compile_data = [
-        "//oak_attestation_verification/data:ask_milan.pem",
-        "//oak_attestation_verification/data:ask_genoa.pem",
-    ],
+    compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
     crate_features = ["regex"],
     crate_name = "oak_attestation_verification",
     deps = [
@@ -139,15 +99,6 @@ rust_library(
     ],
 )
 
-rust_test(
-    name = "oak_attestation_verification_with_regex_test",
-    crate = ":oak_attestation_verification_with_regex",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
-    data = [
-        "//oak_attestation_verification/testdata:endorsement.json",
-    ],
-)
-
 rust_test_suite(
     name = "integration_tests_with_regex",
     srcs = glob(["tests/**"]),
@@ -155,7 +106,12 @@ rust_test_suite(
         "regex",
         "bazel",
     ],  # TODO: b/333064338 remove bazel feature.
-    data = [":test_data"],
+    data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:evidence",
+    ],
     deps = [
         ":oak_attestation_verification_with_regex",
         "//oak_attestation_verification_test_utils",

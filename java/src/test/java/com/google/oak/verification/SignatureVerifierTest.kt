@@ -55,7 +55,7 @@ class SignatureVerifierTest {
   companion object {
     private const val SIGNATURE_PATH = "oak_attestation_verification/testdata/endorsement.json.sig"
     private const val PUBLIC_KEY_PATH =
-      "oak_attestation_verification/testdata/oak_containers_stage1.pem"
+      "oak_attestation_verification/testdata/endorser_public_key.pem"
     private const val CONTENT_PATH = "oak_attestation_verification/testdata/endorsement.json"
   }
 }

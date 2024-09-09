@@ -16,12 +16,9 @@
 
 use std::fs;
 
-use oak_attestation_verification::{
-    util::convert_pem_to_raw,
-    verifier::{
-        get_expected_values, to_attestation_results, verify, verify_dice_chain,
-        verify_with_expected_values,
-    },
+use oak_attestation_verification::verifier::{
+    get_expected_values, to_attestation_results, verify, verify_dice_chain,
+    verify_with_expected_values,
 };
 use oak_attestation_verification_test_utils::{
     create_containers_reference_values, create_rk_reference_values, reference_values_from_evidence,
@@ -31,11 +28,11 @@ use oak_proto_rust::oak::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
         text_reference_value, ApplicationLayerEndorsements, BinaryReferenceValue,
-        ContainerLayerEndorsements, Digests, EndorsementReferenceValue, Endorsements, Evidence,
-        ExpectedValues, InsecureReferenceValues, KernelLayerEndorsements,
-        OakContainersEndorsements, OakRestrictedKernelEndorsements, ReferenceValues, Regex,
-        RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
-        TcbVersion, TextReferenceValue, TransparentReleaseEndorsement,
+        ContainerLayerEndorsements, Digests, Endorsements, Evidence, ExpectedValues,
+        InsecureReferenceValues, KernelLayerEndorsements, OakContainersEndorsements,
+        OakRestrictedKernelEndorsements, ReferenceValues, Regex, RootLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements, TcbVersion,
+        TextReferenceValue, TransparentReleaseEndorsement,
     },
     RawDigest,
 };
@@ -47,15 +44,12 @@ const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsemen
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
 #[cfg(feature = "bazel")]
 const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
+
 #[cfg(feature = "bazel")]
 const CONTAINERS_VCEK_MILAN_CERT_DER: &str =
     "oak_attestation_verification/testdata/oc_vcek_milan.der";
 #[cfg(feature = "bazel")]
 const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
-#[cfg(feature = "bazel")]
-const ENDORSER_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/oak-development.pem";
-#[cfg(feature = "bazel")]
-const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 #[cfg(feature = "bazel")]
 const CONTAINERS_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
 #[cfg(feature = "bazel")]
@@ -92,14 +86,11 @@ const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 #[cfg(not(feature = "bazel"))]
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
+
 #[cfg(not(feature = "bazel"))]
 const CONTAINERS_VCEK_MILAN_CERT_DER: &str = "testdata/oc_vcek_milan.der";
 #[cfg(not(feature = "bazel"))]
 const RK_VCEK_MILAN_CERT_DER: &str = "testdata/rk_vcek_milan.der";
-#[cfg(not(feature = "bazel"))]
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
-#[cfg(not(feature = "bazel"))]
-const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 #[cfg(not(feature = "bazel"))]
 const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
 #[cfg(not(feature = "bazel"))]
@@ -448,47 +439,6 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     let expected_expected_values = create_fake_expected_values();
 
     assert!(computed_expected_values == expected_expected_values)
-}
-
-// See b/327069120: This test can go once we properly endorse stage0.
-#[test]
-fn verify_fails_with_stage0_reference_value_set() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
-
-    // Set the stage0 field to something.
-    let mut reference_values = create_containers_reference_values();
-    let endorser_public_key_pem =
-        fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
-    let rekor_public_key_pem =
-        fs::read_to_string(REKOR_PUBLIC_KEY_PATH).expect("couldn't read rekor public key");
-
-    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
-        .expect("failed to convert endorser key");
-    let rekor_public_key =
-        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-    let erv = EndorsementReferenceValue { endorser_public_key, rekor_public_key };
-    let brv = BinaryReferenceValue {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
-        ),
-    };
-    match reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().stage0 = Some(brv);
-        }
-        Some(_) => {}
-        None => {}
-    };
-
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
 }
 
 #[test]

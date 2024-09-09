@@ -32,7 +32,7 @@ const ENDORSEMENT_SIGNATURE_PATH: &str =
 
 #[cfg(feature = "bazel")]
 const ENDORSER_PUBLIC_KEY_PATH: &str =
-    "oak_attestation_verification/testdata/oak_containers_stage1.pem";
+    "oak_attestation_verification/testdata/endorser_public_key.pem";
 
 #[cfg(feature = "bazel")]
 const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
@@ -44,7 +44,7 @@ const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const ENDORSEMENT_SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
 #[cfg(not(feature = "bazel"))]
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak_containers_stage1.pem";
+const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/endorser_public_key.pem";
 
 #[cfg(not(feature = "bazel"))]
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";

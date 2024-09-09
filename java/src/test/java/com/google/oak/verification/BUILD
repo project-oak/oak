@@ -23,11 +23,7 @@ package(
 kt_jvm_test(
     name = "log_entry_verifier_test",
     srcs = ["LogEntryVerifierTest.kt"],
-    data = [
-        "//oak_attestation_verification/testdata:endorsement.json",
-        "//oak_attestation_verification/testdata:logentry.json",
-        "//oak_attestation_verification/testdata:rekor_public_key.pem",
-    ],
+    data = ["//oak_attestation_verification/testdata:endorsement"],
     test_class = "com.google.oak.verification.LogEntryVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
@@ -39,7 +35,7 @@ kt_jvm_test(
 kt_jvm_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.kt"],
-    data = ["//oak_attestation_verification/testdata:logentry.json"],
+    data = ["//oak_attestation_verification/testdata:endorsement"],
     test_class = "com.google.oak.verification.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
@@ -51,11 +47,7 @@ kt_jvm_test(
 kt_jvm_test(
     name = "signature_verifier_test",
     srcs = ["SignatureVerifierTest.kt"],
-    data = [
-        "//oak_attestation_verification/testdata:endorsement.json",
-        "//oak_attestation_verification/testdata:endorsement.json.sig",
-        "//oak_attestation_verification/testdata:oak_containers_stage1.pem",
-    ],
+    data = ["//oak_attestation_verification/testdata:endorsement"],
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",

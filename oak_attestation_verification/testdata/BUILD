@@ -19,19 +19,50 @@ package(
     licenses = ["notice"],
 )
 
+# A valid Transparent Release endorsement bundle with `normal` usage.
+filegroup(
+    name = "endorsement",
+    srcs = [
+        "endorsement.json",
+        "endorsement.json.sig",
+        "logentry.json",
+        "endorser_public_key.pem",
+        # Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
+        # from https://rekor.sigstore.dev/api/v1/log/publicKey.
+        "rekor_public_key.pem",
+    ],
+)
+
+filegroup(
+    name = "evidence",
+    srcs = [
+        "cb_endorsement.binarypb",
+        "cb_evidence.binarypb",
+        "cb_reference_values.binarypb",
+        "fake_evidence.binarypb",
+        "fake_expected_values.binarypb",
+        "genoa_oc_evidence.binarypb",
+        "genoa_oc_reference_values.binarypb",
+        "oc_evidence.binarypb",
+        "oc_vcek_milan.der",
+        "oc_vcek_milan.pem",
+        "rk_evidence.binarypb",
+        "rk_evidence_20240312.binarypb",
+        "rk_vcek_milan.der",
+        "vcek_genoa.der",
+    ],
+)
+
+# DEPRECATED: Don't access files directly and from everywhere.
+# We should restrict access to all testdata to oak_attestation_verification.
 exports_files([
     "cb_evidence.binarypb",
     "cb_endorsement.binarypb",
     "cb_reference_values.binarypb",
-    "endorsement.json",
-    "endorsement.json.sig",
     "fake_evidence.binarypb",
     "fake_expected_values.binarypb",
     "genoa_oc_evidence.binarypb",
     "genoa_oc_reference_values.binarypb",
-    "logentry.json",
-    "oak_containers_stage1.pem",
-    "oak-development.pem",
     "oc_evidence.binarypb",
     # TBD: Remove - we should only export binary protos, not the textproto version.
     "oc_evidence.textproto",

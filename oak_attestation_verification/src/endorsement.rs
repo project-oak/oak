@@ -14,19 +14,93 @@
 // limitations under the License.
 //
 
-//! Verifies binary endorsements as coming from Transparent Release.
+//! Verifies endorsements as coming from Transparent Release.
+//! Contains support for generating and parsing in-toto statements.
+
+extern crate alloc;
+
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use oak_proto_rust::oak::HexDigest;
+use serde::Deserialize;
+#[cfg(feature = "std")]
+use serde::Serialize;
+use time::OffsetDateTime;
 
 use crate::{
-    claims::{
-        parse_endorsement_statement, validate_endorsement, verify_validity_duration,
-        EndorsementStatement,
-    },
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys, verify_signature_raw},
 };
+
+/// URI representing in-toto statements. We only use V1.
+const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
+
+/// Admissible predicate type of in-toto endorsement statements.
+const PREDICATE_TYPE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
+const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
+
+// A map from algorithm name to lowercase hex-encoded value.
+type DigestSet = BTreeMap<String, String>;
+
+/// An artifact identified by its name and digest.
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
+pub struct Subject {
+    pub name: String,
+    pub digest: DigestSet,
+}
+
+/// Validity time range of an endorsement statement.
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
+pub struct Validity {
+    /// The timestamp (encoded as an Epoch time) from which the claim is
+    /// effective.
+    #[serde(with = "time::serde::rfc3339")]
+    #[serde(rename = "notBefore")]
+    pub not_before: OffsetDateTime,
+
+    /// The timestamp (encoded as an Epoch time) from which the claim no longer
+    /// applies to the artifact.
+    #[serde(with = "time::serde::rfc3339")]
+    #[serde(rename = "notAfter")]
+    pub not_after: OffsetDateTime,
+}
+
+/// The predicate part of an endorsement subject.
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
+pub struct DefaultPredicate {
+    // Specifies how to interpret the endorsement subject.
+    // The `default` option should be removed once this is in operation.
+    #[serde(default, rename = "usage")]
+    pub usage: String,
+
+    /// The timestamp (encoded as an Epoch time) when the statement was created.
+    #[serde(with = "time::serde::rfc3339")]
+    #[serde(rename = "issuedOn")]
+    pub issued_on: OffsetDateTime,
+
+    /// Validity duration of this statement.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "validity")]
+    pub validity: Option<Validity>,
+}
+
+/// Represents a generic statement that binds a predicate to a subject.
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
+pub struct Statement<P> {
+    pub _type: String,
+    #[serde(rename = "predicateType")]
+    pub predicate_type: String,
+    pub subject: Vec<Subject>,
+    pub predicate: P,
+}
+
+pub type DefaultStatement = Statement<DefaultPredicate>;
 
 /// Verifies the binary endorsement against log entry and public keys.
 ///
@@ -57,10 +131,8 @@ pub fn verify_binary_endorsement(
     verify_signature_raw(signature, endorsement, endorser_public_key)
         .context("verifying signature")?;
 
-    let statement =
-        parse_endorsement_statement(endorsement).context("parsing endorsement statement")?;
-    verify_endorsement_statement(now_utc_millis, &statement)
-        .context("verifying endorsement statement")?;
+    let statement = parse_statement(endorsement).context("parsing endorsement statement")?;
+    validate_statement(now_utc_millis, &statement).context("verifying endorsement statement")?;
 
     if !rekor_public_key.is_empty() {
         if log_entry.is_empty() {
@@ -71,20 +143,6 @@ pub fn verify_binary_endorsement(
         verify_endorser_public_key(log_entry, endorser_public_key)
             .context("verifying endorser public key")?;
     }
-
-    Ok(())
-}
-
-/// Verifies endorsement against the given reference values.
-pub fn verify_endorsement_statement(
-    now_utc_millis: i64,
-    statement: &EndorsementStatement,
-) -> anyhow::Result<()> {
-    if let Err(err) = validate_endorsement(statement) {
-        anyhow::bail!("validating endorsement: {err:?}");
-    }
-    verify_validity_duration(now_utc_millis, statement)
-        .context("verifying endorsement validity")?;
 
     Ok(())
 }
@@ -119,4 +177,115 @@ pub fn verify_endorser_public_key(
     }
 
     Ok(())
+}
+
+/// Converts the given byte array into an endorsement statement.
+pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {
+    serde_json::from_slice(bytes).map_err(|error| anyhow::anyhow!("failed to parse: {}", error))
+}
+
+/// Checks that the given endorsement statement is valid.
+pub fn validate_statement(now_utc_millis: i64, statement: &DefaultStatement) -> anyhow::Result<()> {
+    if statement._type != STATEMENT_TYPE {
+        anyhow::bail!("unsupported statement type");
+    }
+    if statement.predicate_type != PREDICATE_TYPE_V1
+        && statement.predicate_type != PREDICATE_TYPE_V2
+    {
+        anyhow::bail!("unsupported predicate type");
+    }
+
+    match &statement.predicate.validity {
+        Some(validity) => {
+            if validity.not_before.unix_timestamp_nanos() / 1000000 > now_utc_millis.into() {
+                anyhow::bail!("the claim is not yet applicable")
+            }
+            if validity.not_after.unix_timestamp_nanos() / 1000000 < now_utc_millis.into() {
+                anyhow::bail!("the claim is no longer applicable")
+            }
+            Ok(())
+        }
+        None => anyhow::bail!("the validity field is not set"),
+    }
+}
+
+fn set_digest_field_from_map_entry(
+    digest: &mut HexDigest,
+    key: &str,
+    value: &str,
+) -> anyhow::Result<()> {
+    match key {
+        "psha2" => {
+            if !digest.psha2.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.psha2.push_str(value);
+        }
+        "sha1" => {
+            if !digest.sha1.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha1.push_str(value);
+        }
+        "sha256" | "sha2_256" => {
+            if !digest.sha2_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_256.push_str(value);
+        }
+        "sha512" | "sha2_512" => {
+            if !digest.sha2_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_512.push_str(value);
+        }
+        "sha3_512" => {
+            if !digest.sha3_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_512.push_str(value);
+        }
+        "sha3_384" => {
+            if !digest.sha3_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_384.push_str(value);
+        }
+        "sha3_256" => {
+            if !digest.sha3_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_256.push_str(value);
+        }
+        "sha3_224" => {
+            if !digest.sha3_224.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_224.push_str(value);
+        }
+        "sha384" | "sha2_384" => {
+            if !digest.sha2_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_384.push_str(value);
+        }
+        _ => anyhow::bail!("unknown digest key"),
+    }
+
+    Ok(())
+}
+
+/// Returns the digest of the statement's subject.
+pub fn get_digest<T>(statement: &Statement<T>) -> anyhow::Result<HexDigest> {
+    if statement.subject.len() != 1 {
+        anyhow::bail!("expected a single subject, found {}", statement.subject.len());
+    }
+
+    let mut digest = HexDigest::default();
+    statement.subject[0].digest.iter().try_fold(&mut digest, |acc, (key, value)| {
+        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+        Ok::<&mut HexDigest, anyhow::Error>(acc)
+    })?;
+
+    Ok(digest)
 }
