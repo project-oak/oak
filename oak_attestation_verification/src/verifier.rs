@@ -1373,6 +1373,8 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
 
     if let Some(event_log) = &evidence.event_log
         && !event_log.encoded_events.is_empty()
+        // TODO: b/365601149 - Remove this when bug is fixed.
+        && event_log.encoded_events.len() > 1
     {
         let decoded_events: Vec<Event> = event_log
             .encoded_events
