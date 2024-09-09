@@ -56,6 +56,10 @@
             kernelPatches = [{
               name = "virtio-dma";
               patch = ./oak_containers/kernel/patches/virtio-dma.patch;
+            }
+            {
+              name = "tdx-skip-probe-roms";
+              patch = ./oak_containers/kernel/patches/tdx-probe-roms.patch;
             }];
           });
           # Vanilla kernel

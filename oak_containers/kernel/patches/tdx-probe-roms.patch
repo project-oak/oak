@@ -1,0 +1,16 @@
+diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c linux-6.9.1/arch/x86/coco/tdx/tdx.c
+--- linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1/arch/x86/coco/tdx/tdx.c	2024-09-08 16:54:24.337335699 -0700
+@@ -892,5 +892,12 @@
+ 	 */
+ 	x86_cpuinit.parallel_bringup = false;
+
++	/*
++	 * Override init functions that scan the ROM region in TDX guests, as this
++	 * memory is not accepted and would thus cause a crash.
++	 */
++	pr_info("Skip probe_roms for TDX guest");
++	x86_init.resources.probe_roms = x86_init_noop;
++
+ 	pr_info("Guest detected\n");
+ }
