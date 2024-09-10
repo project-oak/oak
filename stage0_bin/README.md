@@ -5,7 +5,7 @@
 <!-- Oak Logo End -->
 
 Oak stage0 is a purposefully minimal (trusted) firmware for virtual machines
-that can boot 64-bit Linux(-compatible) ELF kernels.
+that can boot 64-bit Linux(-compatible) kernels (bzImage).
 
 The motivating example for having a minimal firmware is secure virtual machines,
 such as virtual machines running under AMD SEV-SNP or Intel TDX, where it is
@@ -27,7 +27,7 @@ We target the QEMU `microvm` machine (and compatible VMMs), and support:
 - serial port (for logging)
 - AMD SEV, SEV-ES and SEV-SNP (setting encrypted bit in the page tables and
   validating guest physical memory)
-- loading and parsing ELF kernels
+- loading and parsing bzImage kernels
 - [the 64-bit Linux boot protocol](https://www.kernel.org/doc/html/v5.6/x86/boot.html#id1)
   (boot parameters structure)
 
