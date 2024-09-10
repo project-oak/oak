@@ -153,3 +153,6 @@ interest:
 - [EDK2 / OVMF](https://github.com/tianocore/edk2) is a fully-featured UEFI
   firmware that can be used with QEMU. Written in C; supports everything,
   including SEV, SEV-ES, SEV-SNP, and the kitchen sink.
+- [Alioth](https://github.com/google/alioth) is an experimental lightweight VMM.
+  Written in Rust; supports SEV, SEV-ES, and SEV-SNP with stage0 firmware
+  ([doc](https://github.com/google/alioth/blob/main/docs/coco.md)).
