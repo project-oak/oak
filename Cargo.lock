@@ -1882,15 +1882,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linked_list_allocator"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9afa463f5405ee81cdb9cc2baf37e08ec7e4c8209442b5d72c04cfb2cd6e6286"
-dependencies = [
- "spinning_top 0.2.5",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2566,7 +2557,7 @@ version = "0.1.0"
 dependencies = [
  "getrandom",
  "lock_api",
- "spinning_top 0.3.0",
+ "spinning_top",
 ]
 
 [[package]]
@@ -2650,7 +2641,7 @@ dependencies = [
  "log",
  "oak_restricted_kernel_interface",
  "rlsf",
- "spinning_top 0.3.0",
+ "spinning_top",
 ]
 
 [[package]]
@@ -2860,7 +2851,7 @@ dependencies = [
  "prost",
  "rand",
  "rand_core",
- "spinning_top 0.3.0",
+ "spinning_top",
  "tokio",
  "wasmi",
  "wasmtime",
@@ -3110,7 +3101,7 @@ dependencies = [
  "lock_api",
  "oak_sev_snp_attestation_report",
  "snafu",
- "spinning_top 0.3.0",
+ "spinning_top",
  "static_assertions",
  "strum",
  "x86_64",
@@ -3133,37 +3124,6 @@ version = "0.1.0"
 dependencies = [
  "oak_sev_guest",
  "x86_64",
-]
-
-[[package]]
-name = "oak_stage0"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.4.1",
- "coset",
- "hex",
- "hkdf",
- "linked_list_allocator",
- "log",
- "oak_core",
- "oak_dice",
- "oak_linux_boot_params",
- "oak_proto_rust",
- "oak_sev_guest",
- "oak_sev_snp_attestation_report",
- "oak_stage0_dice",
- "p256",
- "prost",
- "prost-types",
- "rand_core",
- "sev_serial",
- "sha2",
- "spinning_top 0.3.0",
- "static_assertions",
- "strum",
- "x86_64",
- "zerocopy",
- "zeroize",
 ]
 
 [[package]]
@@ -4370,15 +4330,6 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
-
-[[package]]
-name = "spinning_top"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b9eb1a2f4c41445a3a0ff9abc5221c5fcd28e1f13cd7c0397706f9ac938ddb0"
-dependencies = [
- "lock_api",
-]
 
 [[package]]
 name = "spinning_top"

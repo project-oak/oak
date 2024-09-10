@@ -60,7 +60,6 @@ members = [
   "oak_tdx_guest",
   "sev_serial",
   "snp_measurement",
-  "stage0",
   "stage0_dice",
   "testing/oak_echo_service",
   "oak_restricted_kernel_sdk_proc_macro",
