@@ -259,15 +259,17 @@ oci_pull(
     platforms = ["linux/amd64"],
 )
 
+# This image is based on debian:stable-20240612
 oci_pull(
     name = "oak_containers_sysimage_base",
-    digest = "sha256:9c88d3bed17cb49e4754de5b0ac7ed5cae3a7d033268278510c08c46b366f5d7",
+    digest = "sha256:4844b899dcb44420d368bfe24dca856d01a8483d6976fbee292227f601d69940",
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
 )
 
+# This image is based on debian:stable-20240612
 oci_pull(
     name = "oak_containers_nvidia_sysimage_base",
-    digest = "sha256:96c88f713b07fcfe1f049f42042bd7b39298dd8533e646f554c8a56064619851",
+    digest = "sha256:9e69576783ad3c0a420bcb978dec53da5de6fd1a304b9b0f9d6c6bc6f188e894",
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
 )
 
