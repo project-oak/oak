@@ -1905,6 +1905,8 @@
 <a href="#1903" id="1903">1903</a>
 <a href="#1904" id="1904">1904</a>
 <a href="#1905" id="1905">1905</a>
+<a href="#1906" id="1906">1906</a>
+<a href="#1907" id="1907">1907</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -3280,7 +3282,9 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(event_log) = <span class="kw-2">&amp;</span>evidence.event_log
         &amp;&amp; !event_log.encoded_events.is_empty()
-    {
+        <span class="comment">// TODO: b/365601149 - Remove this when bug is fixed.
+        </span>&amp;&amp; event_log.encoded_events.len() &gt; <span class="number">1
+    </span>{
         <span class="kw">let </span>decoded_events: Vec&lt;Event&gt; = event_log
             .encoded_events
             .iter()
