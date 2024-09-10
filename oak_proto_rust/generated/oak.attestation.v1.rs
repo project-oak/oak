@@ -971,6 +971,9 @@ pub struct AttestationResults {
     /// Contains the evidence values whenever the status indicates success.
     #[prost(message, optional, tag = "5")]
     pub extracted_evidence: ::core::option::Option<ExtractedEvidence>,
+    /// Detailed attestation verification results each event.
+    #[prost(message, repeated, tag = "6")]
+    pub event_attestation_results: ::prost::alloc::vec::Vec<EventAttestationResults>,
 }
 /// Nested message and enum types in `AttestationResults`.
 pub mod attestation_results {
@@ -1014,6 +1017,11 @@ pub mod attestation_results {
         }
     }
 }
+/// Attestation verification results for an individual event.
+/// TODO: b/366419879 - Implement descriptive per-event attestation results.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct EventAttestationResults {}
 /// Evidence values extracted from attestation evidence during verification.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

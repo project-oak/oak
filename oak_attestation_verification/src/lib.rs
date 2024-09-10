@@ -21,6 +21,7 @@ extern crate alloc;
 
 pub mod amd;
 pub mod endorsement;
+pub mod policy;
 pub mod rekor;
 pub mod util;
 pub mod verifier;

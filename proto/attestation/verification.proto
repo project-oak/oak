@@ -59,7 +59,14 @@ message AttestationResults {
 
   // Contains the evidence values whenever the status indicates success.
   ExtractedEvidence extracted_evidence = 5;
+
+  // Detailed attestation verification results each event.
+  repeated EventAttestationResults event_attestation_results = 6;
 }
+
+// Attestation verification results for an individual event.
+// TODO: b/366419879 - Implement descriptive per-event attestation results.
+message EventAttestationResults {}
 
 // Evidence values extracted from attestation evidence during verification.
 message ExtractedEvidence {
