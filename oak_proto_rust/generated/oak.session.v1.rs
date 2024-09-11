@@ -230,6 +230,18 @@ pub mod oak_request {
         GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
     }
 }
+/// Wrapper around OakRequest that is used in cases where it is necessary to
+/// identify a contigious session across several invocations/streams.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct OakRequestWithSessionIdentifier {
+    /// Unique string to identify the session. This should be at least 128 bits of
+    /// unique information.
+    #[prost(bytes = "vec", tag = "1")]
+    pub session_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "2")]
+    pub request: ::core::option::Option<OakRequest>,
+}
 /// A wrapper message type that is used by the Oak transport protocol. It can be
 /// used to support the older HPKE-based protocol, the newer noise protocol, or a
 /// no-op encryption scheme.
