@@ -74,7 +74,6 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
     crate_features = ["regex"],
-    crate_name = "oak_attestation_verification",
     deps = [
         "//oak_dice",
         "//oak_proto_rust",
@@ -102,6 +101,7 @@ rust_library(
 rust_test_suite(
     name = "integration_tests_with_regex",
     srcs = glob(["tests/**"]),
+    aliases = {":oak_attestation_verification_with_regex": "oak_attestation_verification"},
     crate_features = [
         "regex",
         "bazel",
