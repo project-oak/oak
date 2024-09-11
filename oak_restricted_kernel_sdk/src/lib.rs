@@ -24,6 +24,7 @@ extern crate alloc;
 pub mod attestation;
 pub mod channel;
 pub mod crypto;
+pub mod handler;
 #[cfg(any(feature = "testing", doc))]
 #[doc(cfg(feature = "testing"))]
 pub mod testing;

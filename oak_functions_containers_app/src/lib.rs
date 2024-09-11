@@ -22,8 +22,8 @@ use std::{
 };
 
 use anyhow::Context;
-use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_containers_agent::metrics::OakObserver;
+use oak_containers_sdk::handler::AsyncEncryptionHandler;
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
 use oak_proto_rust::oak::functions::{

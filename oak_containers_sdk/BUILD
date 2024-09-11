@@ -25,6 +25,7 @@ rust_library(
     name = "oak_containers_sdk",
     srcs = [
         "src/crypto.rs",
+        "src/handler.rs",
         "src/lib.rs",
         "src/oak_session_context.rs",
         "src/orchestrator_client.rs",

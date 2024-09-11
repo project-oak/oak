@@ -31,7 +31,6 @@ rust_library(
     ]),
     deps = [
         "//micro_rpc",
-        "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",

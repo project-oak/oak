@@ -20,4 +20,3 @@ extern crate alloc;
 
 pub mod attester;
 pub mod dice;
-pub mod handler;

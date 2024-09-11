@@ -8,7 +8,6 @@ license = "Apache-2.0"
 anyhow = { version = "*", default-features = false }
 ciborium = { version = "*", default-features = false }
 coset = { version = "*", default-features = false }
-oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }

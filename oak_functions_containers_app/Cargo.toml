@@ -20,7 +20,6 @@ anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 libloading = { version = "*", optional = true }
 http = "0.2.11"
-oak_attestation = { workspace = true }
 oak_containers_agent = { workspace = true }
 oak_containers_sdk = { workspace = true }
 oak_debug_service = { workspace = true }

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 pub mod crypto;
+pub mod handler;
 pub mod oak_session_context;
 pub mod orchestrator_client;
 pub mod standalone;

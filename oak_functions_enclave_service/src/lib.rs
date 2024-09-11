@@ -20,7 +20,7 @@ extern crate alloc;
 
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-use oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
+use oak_attestation::dice::evidence_to_proto;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -31,6 +31,7 @@ use oak_proto_rust::oak::functions::{
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
     InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
 };
+use oak_restricted_kernel_sdk::handler::EncryptionHandler;
 use prost::Message;
 
 pub struct OakFunctionsService<EKH, EP, H>
