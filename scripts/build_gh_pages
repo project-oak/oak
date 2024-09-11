@@ -4,9 +4,11 @@
 #
 # Usage:
 #
-# ./scipts/build_gh_pages <target_dir>
+# ./scripts/build_gh_pages <target_dir>
 #
 # Where <target_dir> must be an empty directory.
+#
+# shellcheck disable=SC2115
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
@@ -15,50 +17,49 @@ source "$SCRIPTS_DIR/common"
 readonly TARGET_DIR="${1:-}"
 readonly DEFAULT_TARGET=x86_64-unknown-linux-gnu
 
-if [[ -z "${TARGET_DIR:?}" ]]; then
+if [[ -z "${TARGET_DIR}" ]]; then
   echo 'target dir not specified'
   exit 1
 fi
 
-if [[ ! -d "${TARGET_DIR:?}" ]]; then
+if [[ ! -d "${TARGET_DIR}" ]]; then
   echo 'target not a directory'
   exit 1
 fi
 
-if [[ -n "$(ls "${TARGET_DIR:?}"/*)" ]]; then
+if [[ -n "$(ls "${TARGET_DIR}"/*)" ]]; then
   echo 'target dir not empty'
   exit 1
 fi
 
-cargo doc --no-deps --target-dir="${TARGET_DIR:?}"
+RUSTDOCFLAGS="--enable-index-page -Zunstable-options" \
+    cargo doc --no-deps --target-dir="${TARGET_DIR}"
 
 # Remove non-doc artifacts from the target dir.
 rm --recursive --force "${TARGET_DIR}/debug"
 rm --recursive --force "${TARGET_DIR}/${DEFAULT_TARGET}/debug"
 
 # Remove non-deterministic files.
-rm "${TARGET_DIR:?}/.rustc_info.json"
+rm --force "${TARGET_DIR}/.rustc_info.json"
 
 # Remove unnecessary lock file, which is also owned by root and therefore problematic.
-rm "${TARGET_DIR:?}/${DEFAULT_TARGET}/doc/.lock"
+rm --force "${TARGET_DIR}/${DEFAULT_TARGET}/doc/.lock"
 
 # Strip the target triple from the path.
-mv "${TARGET_DIR:?}/${DEFAULT_TARGET}/doc" "${TARGET_DIR:?}/doc"
+mv "${TARGET_DIR}/${DEFAULT_TARGET}/doc" "${TARGET_DIR}/doc"
 
 # Remove the target triple directory.
-rm --recursive --force "${TARGET_DIR:?}/${DEFAULT_TARGET}"
+rm --recursive --force "${TARGET_DIR}/${DEFAULT_TARGET}"
 
-# The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
-# one here and redirect to the appropriate documentation.
-readonly REDIRECT_CRATE_NAME=oak_functions_sdk
-cat <<-END > "${TARGET_DIR:?}/index.html"
+# Create a top-level index.html which redirects to the rustdoc index.
+cat <<-END > "${TARGET_DIR}/index.html"
   <!DOCTYPE html>
   <html>
     <head>
-      <meta http-equiv="Refresh" content="0; url=./${DEFAULT_TARGET}/doc/${REDIRECT_CRATE_NAME}/index.html" />
+      <meta http-equiv="Refresh" content="0; url=doc/doc/index.html"/>
     </head>
     <body>
-      <p><a href="./${DEFAULT_TARGET}/doc/${REDIRECT_CRATE_NAME}/index.html">${REDIRECT_CRATE_NAME}</a></p>
+      <p><a href="doc/doc/index.html">doc/doc/index.html</a></p>
     </body>
   </html>
 END
