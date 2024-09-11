@@ -62,14 +62,11 @@ cc_test(
     name = "cwt_test",
     size = "small",
     srcs = ["cwt_test.cc"],
-    data = [
-        "//oak_attestation_verification/testdata:oc_evidence.textproto",
-    ],
+    data = ["//oak_attestation_verification/testdata:evidence"],
     deps = [
         ":cwt",
         "//proto/attestation:evidence_cc_proto",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
-        "@com_google_protobuf//:protobuf",
     ],
 )

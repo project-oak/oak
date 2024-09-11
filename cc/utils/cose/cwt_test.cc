@@ -24,8 +24,6 @@
 
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/text_format.h"
 #include "gtest/gtest.h"
 #include "proto/attestation/evidence.pb.h"
 
@@ -36,7 +34,8 @@ using ::oak::attestation::v1::Evidence;
 using ::testing::ElementsAreArray;
 
 constexpr absl::string_view kTestEvidencePath =
-    "oak_attestation_verification/testdata/oc_evidence.textproto";
+    "oak_attestation_verification/testdata/oc_evidence.binarypb";
+
 // Public key extracted from the `kTestEvidencePath`
 // `encryption_public_key_certificate`.
 constexpr uint8_t kTestPublicKey[] = {169, 153, 134, 149, 237, 126, 255, 33,
@@ -47,18 +46,12 @@ constexpr uint8_t kTestPublicKey[] = {169, 153, 134, 149, 237, 126, 255, 33,
 class CertificateTest : public testing::Test {
  protected:
   void SetUp() override {
-    std::ifstream test_evidence_file(kTestEvidencePath.data());
-    ASSERT_TRUE(test_evidence_file);
-    google::protobuf::io::IstreamInputStream test_evidence_protobuf_stream(
-        &test_evidence_file);
-
-    auto test_evidence = std::make_unique<Evidence>();
-    bool parse_success = google::protobuf::TextFormat::Parse(
-        &test_evidence_protobuf_stream, test_evidence.get());
-    ASSERT_TRUE(parse_success);
-
+    std::ifstream stream(kTestEvidencePath.data());
+    ASSERT_TRUE(stream);
+    auto evidence = std::make_unique<Evidence>();
+    ASSERT_TRUE(evidence->ParseFromIstream(&stream));
     public_key_certificate_ =
-        test_evidence->application_keys().encryption_public_key_certificate();
+        evidence->application_keys().encryption_public_key_certificate();
   }
 
   std::string public_key_certificate_;
