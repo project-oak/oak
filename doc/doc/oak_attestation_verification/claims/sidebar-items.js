@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["PREDICATE_V2","STATEMENT_V1"],"enum":["InvalidClaimData"],"fn":["get_digest","parse_endorsement_statement","validate_claim","validate_endorsement","verify_validity_duration"],"struct":["ClaimEvidence","ClaimPredicate","ClaimValidity","Claimless","Statement","Subject"],"type":["DigestSet","EndorsementStatement"]};

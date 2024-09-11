@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["verify_binary_endorsement","verify_endorsement_statement","verify_endorser_public_key"]};
+window.SIDEBAR_ITEMS = {"fn":["get_digest","parse_statement","validate_statement","verify_binary_endorsement","verify_endorser_public_key"],"struct":["DefaultPredicate","Statement","Subject","Validity"],"type":["DefaultStatement"]};
