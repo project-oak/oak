@@ -202,6 +202,7 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -224,7 +225,7 @@
 
 <span class="kw">use </span>alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-<span class="kw">use </span>oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
+<span class="kw">use </span>oak_attestation::dice::evidence_to_proto;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKeyHandle;
 <span class="kw">use </span>oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -235,6 +236,7 @@
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
     InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
 };
+<span class="kw">use </span>oak_restricted_kernel_sdk::handler::EncryptionHandler;
 <span class="kw">use </span>prost::Message;
 
 <span class="kw">pub struct </span>OakFunctionsService&lt;EKH, EP, H&gt;

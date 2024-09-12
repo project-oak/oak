@@ -5,7 +5,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["lookup_data_generator",["",[],["data.rs","lib.rs"]]],\
 ["micro_rpc",["",[],["lib.rs","status.rs"]]],\
 ["micro_rpc_build",["",[],["lib.rs","prost.rs"]]],\
-["oak_attestation",["",[],["attester.rs","dice.rs","handler.rs","lib.rs"]]],\
+["oak_attestation",["",[],["attester.rs","dice.rs","lib.rs"]]],\
 ["oak_attestation_explain",["",[],["json_serialization.rs","lib.rs"]]],\
 ["oak_attestation_explain_wasm",["",[],["lib.rs"]]],\
 ["oak_attestation_verification",["",[],["amd.rs","endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]]],\
@@ -17,7 +17,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_containers_hello_world_web_client",["",[],["lib.rs"]]],\
 ["oak_containers_launcher",["",[],["lib.rs","qemu.rs","server.rs"]]],\
 ["oak_containers_orchestrator",["",[],["cdi.rs","container_runtime.rs","crypto.rs","dice.rs","ipc_server.rs","key_provisioning.rs","launcher_client.rs","lib.rs","logging.rs"]]],\
-["oak_containers_sdk",["",[],["crypto.rs","lib.rs","oak_session_context.rs","orchestrator_client.rs","standalone.rs","tonic.rs"]]],\
+["oak_containers_sdk",["",[],["crypto.rs","handler.rs","lib.rs","oak_session_context.rs","orchestrator_client.rs","standalone.rs","tonic.rs"]]],\
 ["oak_containers_stage1",["",[],["client.rs","dice.rs","image.rs","main.rs"]]],\
 ["oak_containers_syslogd",["",[],["log_relay.rs","main.rs","systemd_journal.rs"]]],\
 ["oak_core",["",[],["lib.rs","samplestore.rs","sync.rs","timer.rs"]]],\
@@ -50,7 +50,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_restricted_kernel_interface",["",[],["errno.rs","lib.rs","raw_syscall.rs","syscall.rs","syscalls.rs"]]],\
 ["oak_restricted_kernel_launcher",["",[],["lib.rs"]]],\
 ["oak_restricted_kernel_orchestrator",["",[],["lib.rs"]]],\
-["oak_restricted_kernel_sdk",["",[],["attestation.rs","channel.rs","crypto.rs","lib.rs","testing.rs","utils.rs"]]],\
+["oak_restricted_kernel_sdk",["",[],["attestation.rs","channel.rs","crypto.rs","handler.rs","lib.rs","testing.rs","utils.rs"]]],\
 ["oak_session",["",[],["attestation.rs","config.rs","encryptors.rs","handshake.rs","lib.rs","session.rs"]]],\
 ["oak_session_wasm",["",[],["lib.rs"]]],\
 ["oak_sev_guest",["",[],["ap_jump_table.rs","cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]]],\
