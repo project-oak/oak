@@ -231,7 +231,7 @@ pub mod oak_request {
     }
 }
 /// Wrapper around OakRequest that is used in cases where it is necessary to
-/// identify a contigious session across several invocations/streams.
+/// identify a contiguous session across multiple invocations/streams.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct OakRequestWithSessionIdentifier {

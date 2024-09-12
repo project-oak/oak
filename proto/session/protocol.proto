@@ -42,7 +42,7 @@ message OakRequest {
 }
 
 // Wrapper around OakRequest that is used in cases where it is necessary to
-// identify a contigious session across several invocations/streams.
+// identify a contiguous session across multiple invocations/streams.
 message OakRequestWithSessionIdentifier {
   // Unique string to identify the session. This should be at least 128 bits of
   // unique information.
