@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oak_stage0":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/convert/trait.Into.html\" title=\"trait core::convert::Into\">Into</a>&lt;PageAssignment&gt; for <a class=\"enum\" href=\"oak_stage0/hal/enum.PageAssignment.html\" title=\"enum oak_stage0::hal::PageAssignment\">PageAssignment</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
