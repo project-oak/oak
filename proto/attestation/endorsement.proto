@@ -22,6 +22,57 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
+message Endorsement {
+  enum Format {
+    // Undefined and hence invalid format of the endorsement.
+    ENDORSEMENT_FORMAT_UNDEFINED = 0;
+
+    // Endorsement is a JSON in-toto statement (all variants and versions).
+    ENDORSEMENT_FORMAT_JSON_INTOTO = 1;
+  }
+
+  // The format of the serialized endorsement.
+  Format format = 1;
+
+  // The serialized endorsement, e.g. serialized JSON for an in-toto
+  // statement.
+  bytes serialized = 2;
+
+  // Can pass the endorsed subject when needed and when it is sufficiently
+  // small. In most use cases this field will remain empty.
+  bytes subject = 3;
+}
+
+message Signature {
+  // The ID of the key in a key set that was used to generate the
+  // signature.
+  uint32 key_id = 1;
+
+  // The raw signature. The type and format of the key used to generate it
+  // can be inferred from `key_id`.
+  bytes raw = 2;
+}
+
+// --------------------------------------------------------------------
+// Second generation message; supersedes TransparentReleaseEndorsement.
+//
+// A signed endorsement which is optionally published.
+message SignedEndorsement {
+  // The underlying unsigned endorsement.
+  Endorsement endorsement = 1;
+
+  // The signature over `endorsement.serialized`. Unsigned endorsements are
+  // not supported.
+  Signature signature = 2;
+
+  // The Rekor log entry about the endorsement or empty if there is no log
+  // entry.
+  bytes rekor_log_entry = 3;
+}
+
+// --------------------------------------------------------------------
+// First generation message.
+//
 // Endorsement for binaries from the Transparent Release process.
 // <https://github.com/project-oak/oak/blob/main/docs/release.md>
 message TransparentReleaseEndorsement {

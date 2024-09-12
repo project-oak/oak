@@ -28,8 +28,64 @@ option java_package = "com.google.oak.attestation.v1";
 
 message SkipVerification {}
 
+enum KeyType {
+  // A verifying key without a defined type is invalid.
+  KEY_TYPE_UNDEFINED = 0;
+
+  // An ECDSA key with curve P-256 and SHA2_256 hashing.
+  // An overview of key formats can be found at
+  // https://www.iana.org/assignments/cose/cose.xhtml#algorithms.
+  KEY_TYPE_ECDSA_P256_SHA256 = 1;
+}
+
+message VerifyingKey {
+  // The type of the verifying key.
+  KeyType type = 1;
+
+  // To distinguish between keys in a key set. The ID is unique within a
+  // key set.
+  uint32 key_id = 2;
+
+  // The key serialized in raw format. The key type is needed to interpret
+  // the contents.
+  bytes raw = 3;
+}
+
+// Set of keys currently needed for verification. Will contain one element
+// most of the time, but there may be more during key rotation/revocation.
+// To revoke a key, simply add a new one, allow a grace period, and then
+// don’t pass the old key here.
+message VerifyingKeySet {
+  repeated VerifyingKey keys = 1;
+}
+
+// Reference values that control how the endorsement is verified.
+message VerifyingKeyReferenceValue {
+  // Nothing set is an error, need to have something set. An empty key set
+  // inside reference values is invalid.
+  oneof type {
+    // Deliberately disables verification: it will pass this check rather
+    // than error out.
+    SkipVerification skip = 1;
+
+    // Default case: verify with this key set. This also requires that the
+    // instance in question is present and signed.
+    VerifyingKeySet verify = 2;
+  }
+}
+
+// Specifies a list of claim types. Claims are assertions about artifacts
+// made by the endorsing entity. An overview of the claims maintained by
+// Oak can be found at https://project-oak.github.io/oak/tr/claims.
+message ClaimReferenceValue {
+  repeated string claim_types = 1;
+}
+
 // Verifies the transparency log entry, including signatures and the digest.
 message EndorsementReferenceValue {
+  // ------------------------------------------------------------------------
+  // First generation fields starting here.
+
   // The endorser's public verifying key for signature verification. The
   // attestation verification requires that all endorsements need to be
   // signed, therefore this cannot be empty.
@@ -39,6 +95,21 @@ message EndorsementReferenceValue {
   // set when a log entry is present that should be verified. If it is not set,
   // then log entry verification is skipped.
   bytes rekor_public_key = 2;
+
+  // ------------------------------------------------------------------------
+  // Second generation fields starting here. Do not mix with first Gen.
+
+  // Verifies the endorsement. Since the signed endorsement is required to
+  // be present, this cannot be skipped as part of this message. (It may
+  // still be possible to skip the endorsement verification entirely, but
+  // elsewhere.
+  VerifyingKeySet endorser = 3;
+
+  // Claims that are required to be present in the endorsement.
+  ClaimReferenceValue required_claims = 4;
+
+  // Verifies the Rekor log entry, if present and requested.
+  VerifyingKeyReferenceValue rekor = 5;
 }
 
 message BinaryReferenceValue {

@@ -270,7 +270,70 @@ pub struct TcbVersion {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SkipVerification {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct VerifyingKey {
+    /// The type of the verifying key.
+    #[prost(enumeration = "KeyType", tag = "1")]
+    pub r#type: i32,
+    /// To distinguish between keys in a key set. The ID is unique within a
+    /// key set.
+    #[prost(uint32, tag = "2")]
+    pub key_id: u32,
+    /// The key serialized in raw format. The key type is needed to interpret
+    /// the contents.
+    #[prost(bytes = "vec", tag = "3")]
+    pub raw: ::prost::alloc::vec::Vec<u8>,
+}
+/// Set of keys currently needed for verification. Will contain one element
+/// most of the time, but there may be more during key rotation/revocation.
+/// To revoke a key, simply add a new one, allow a grace period, and then
+/// don’t pass the old key here.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct VerifyingKeySet {
+    #[prost(message, repeated, tag = "1")]
+    pub keys: ::prost::alloc::vec::Vec<VerifyingKey>,
+}
+/// Reference values that control how the endorsement is verified.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct VerifyingKeyReferenceValue {
+    /// Nothing set is an error, need to have something set. An empty key set
+    /// inside reference values is invalid.
+    #[prost(oneof = "verifying_key_reference_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<verifying_key_reference_value::Type>,
+}
+/// Nested message and enum types in `VerifyingKeyReferenceValue`.
+pub mod verifying_key_reference_value {
+    /// Nothing set is an error, need to have something set. An empty key set
+    /// inside reference values is invalid.
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Type {
+        /// Deliberately disables verification: it will pass this check rather
+        /// than error out.
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        /// Default case: verify with this key set. This also requires that the
+        /// instance in question is present and signed.
+        #[prost(message, tag = "2")]
+        Verify(super::VerifyingKeySet),
+    }
+}
+/// Specifies a list of claim types. Claims are assertions about artifacts
+/// made by the endorsing entity. An overview of the claims maintained by
+/// Oak can be found at <https://project-oak.github.io/oak/tr/claims.>
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ClaimReferenceValue {
+    #[prost(string, repeated, tag = "1")]
+    pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 /// Verifies the transparency log entry, including signatures and the digest.
+///
+/// ------------------------------------------------------------------------
+/// First generation fields starting here.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EndorsementReferenceValue {
@@ -284,6 +347,18 @@ pub struct EndorsementReferenceValue {
     /// then log entry verification is skipped.
     #[prost(bytes = "vec", tag = "2")]
     pub rekor_public_key: ::prost::alloc::vec::Vec<u8>,
+    /// Verifies the endorsement. Since the signed endorsement is required to
+    /// be present, this cannot be skipped as part of this message. (It may
+    /// still be possible to skip the endorsement verification entirely, but
+    /// elsewhere.
+    #[prost(message, optional, tag = "3")]
+    pub endorser: ::core::option::Option<VerifyingKeySet>,
+    /// Claims that are required to be present in the endorsement.
+    #[prost(message, optional, tag = "4")]
+    pub required_claims: ::core::option::Option<ClaimReferenceValue>,
+    /// Verifies the Rekor log entry, if present and requested.
+    #[prost(message, optional, tag = "5")]
+    pub rekor: ::core::option::Option<VerifyingKeyReferenceValue>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
@@ -582,6 +657,128 @@ pub mod reference_values {
         Cb(super::CbReferenceValues),
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost_derive::Enumeration)]
+#[repr(i32)]
+pub enum KeyType {
+    /// A verifying key without a defined type is invalid.
+    Undefined = 0,
+    /// An ECDSA key with curve P-256 and SHA2_256 hashing.
+    /// An overview of key formats can be found at
+    /// <https://www.iana.org/assignments/cose/cose.xhtml#algorithms.>
+    EcdsaP256Sha256 = 1,
+}
+impl KeyType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            KeyType::Undefined => "KEY_TYPE_UNDEFINED",
+            KeyType::EcdsaP256Sha256 => "KEY_TYPE_ECDSA_P256_SHA256",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "KEY_TYPE_UNDEFINED" => Some(Self::Undefined),
+            "KEY_TYPE_ECDSA_P256_SHA256" => Some(Self::EcdsaP256Sha256),
+            _ => None,
+        }
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct Endorsement {
+    /// The format of the serialized endorsement.
+    #[prost(enumeration = "endorsement::Format", tag = "1")]
+    pub format: i32,
+    /// The serialized endorsement, e.g. serialized JSON for an in-toto
+    /// statement.
+    #[prost(bytes = "vec", tag = "2")]
+    pub serialized: ::prost::alloc::vec::Vec<u8>,
+    /// Can pass the endorsed subject when needed and when it is sufficiently
+    /// small. In most use cases this field will remain empty.
+    #[prost(bytes = "vec", tag = "3")]
+    pub subject: ::prost::alloc::vec::Vec<u8>,
+}
+/// Nested message and enum types in `Endorsement`.
+pub mod endorsement {
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost_derive::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Format {
+        /// Undefined and hence invalid format of the endorsement.
+        EndorsementFormatUndefined = 0,
+        /// Endorsement is a JSON in-toto statement (all variants and versions).
+        EndorsementFormatJsonIntoto = 1,
+    }
+    impl Format {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Format::EndorsementFormatUndefined => "ENDORSEMENT_FORMAT_UNDEFINED",
+                Format::EndorsementFormatJsonIntoto => "ENDORSEMENT_FORMAT_JSON_INTOTO",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "ENDORSEMENT_FORMAT_UNDEFINED" => Some(Self::EndorsementFormatUndefined),
+                "ENDORSEMENT_FORMAT_JSON_INTOTO" => {
+                    Some(Self::EndorsementFormatJsonIntoto)
+                }
+                _ => None,
+            }
+        }
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct Signature {
+    /// The ID of the key in a key set that was used to generate the
+    /// signature.
+    #[prost(uint32, tag = "1")]
+    pub key_id: u32,
+    /// The raw signature. The type and format of the key used to generate it
+    /// can be inferred from `key_id`.
+    #[prost(bytes = "vec", tag = "2")]
+    pub raw: ::prost::alloc::vec::Vec<u8>,
+}
+/// --------------------------------------------------------------------
+/// Second generation message; supersedes TransparentReleaseEndorsement.
+///
+/// A signed endorsement which is optionally published.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct SignedEndorsement {
+    /// The underlying unsigned endorsement.
+    #[prost(message, optional, tag = "1")]
+    pub endorsement: ::core::option::Option<Endorsement>,
+    /// The signature over `endorsement.serialized`. Unsigned endorsements are
+    /// not supported.
+    #[prost(message, optional, tag = "2")]
+    pub signature: ::core::option::Option<Signature>,
+    /// The Rekor log entry about the endorsement or empty if there is no log
+    /// entry.
+    #[prost(bytes = "vec", tag = "3")]
+    pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
+}
+/// --------------------------------------------------------------------
+/// First generation message.
+///
 /// Endorsement for binaries from the Transparent Release process.
 /// <<https://github.com/project-oak/oak/blob/main/docs/release.md>>
 #[allow(clippy::derive_partial_eq_without_eq)]

@@ -370,6 +370,57 @@ pub fn serialize_skip_verification(instance: &SkipVerification) -> serde_json::V
     json!({})
 }
 
+fn serialize_verifying_key(instance: &VerifyingKey) -> serde_json::Value {
+    let VerifyingKey { r#type, key_id, raw } = instance;
+    json!({
+        "type": r#type,
+        "key_id": key_id,
+        "raw": hex::encode(raw),
+    })
+}
+
+fn serialize_verifying_key_set(instance: &VerifyingKeySet) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let VerifyingKeySet { keys } = instance;
+    json!(keys.iter().map(serialize_verifying_key).collect::<Vec<serde_json::Value>>())
+}
+
+fn serialize_verifying_key_reference_value(
+    instance: &VerifyingKeyReferenceValue,
+) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let VerifyingKeyReferenceValue { r#type } = instance;
+    match r#type {
+        Some(verifying_key_reference_value::Type::Skip(instance)) => {
+            json!({
+                "skip": serialize_skip_verification(instance)
+            })
+        }
+        Some(verifying_key_reference_value::Type::Verify(instance)) => {
+            json!({
+                "verify": serialize_verifying_key_set(instance)
+            })
+        }
+        None => json!(null),
+    }
+}
+
+fn serialize_claim_reference_value(instance: &ClaimReferenceValue) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    json!({
+       "claim_types": instance.claim_types
+    })
+}
+
 pub fn serialize_endorsement_reference_value(
     instance: &EndorsementReferenceValue,
 ) -> serde_json::Value {
@@ -377,10 +428,19 @@ pub fn serialize_endorsement_reference_value(
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let EndorsementReferenceValue { endorser_public_key, rekor_public_key } = instance;
+    let EndorsementReferenceValue {
+        endorser_public_key,
+        rekor_public_key,
+        endorser,
+        required_claims,
+        rekor,
+    } = instance;
     json!({
         "endorser_public_key": hex::encode(endorser_public_key),
         "rekor_public_key": hex::encode(rekor_public_key),
+        "endorser": endorser.as_ref().map(serialize_verifying_key_set),
+        "required_claims": required_claims.as_ref().map(serialize_claim_reference_value),
+        "rekor": rekor.as_ref().map(serialize_verifying_key_reference_value),
     })
 }
 
@@ -570,6 +630,7 @@ pub fn serialize_digests(instance: &Digests) -> serde_json::Value {
     let Digests { digests } = instance;
     json!(digests.iter().map(serialize_raw_digest).collect::<Vec<serde_json::Value>>())
 }
+
 pub fn serialize_kernel_layer_reference_values(
     instance: &KernelLayerReferenceValues,
 ) -> serde_json::Value {
