@@ -251,6 +251,10 @@
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -272,7 +276,7 @@
 
 </span><span class="kw">use </span>alloc::{boxed::Box, collections::BTreeMap, string::String};
 
-<span class="kw">use </span>anyhow::{Context, Error, <span class="prelude-val">Ok</span>};
+<span class="kw">use </span>anyhow::{anyhow, Context, Error, <span class="prelude-val">Ok</span>};
 <span class="kw">use </span>itertools::{EitherOrBoth, Itertools};
 <span class="attr">#[cfg(test)]
 </span><span class="kw">use </span>mockall::automock;
@@ -314,7 +318,7 @@
 }
 
 <span class="kw">pub trait </span>AttestationProvider {
-    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;;
+    <span class="kw">fn </span>take_attestation_report(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;;
 }
 
 <span class="kw">pub trait </span>AttestationAggregator {
@@ -373,8 +377,8 @@
 }
 
 <span class="kw">impl </span>AttestationProvider <span class="kw">for </span>ClientAttestationProvider {
-    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
-        <span class="self">self</span>.attestation_results
+    <span class="kw">fn </span>take_attestation_report(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+        <span class="self">self</span>.attestation_results.take()
     }
 }
 
@@ -391,9 +395,10 @@
                         .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
                 }))
             }
-            AttestationType::PeerUnidirectional | AttestationType::Unattested =&gt; {
+            AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestRequest { endorsed_evidence: BTreeMap::new() }))
             }
+            AttestationType::Unattested =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         }
     }
 
@@ -404,13 +409,14 @@
         <span class="self">self</span>.attestation_results = <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Some</span>(<span class="self">self</span>.config.attestation_aggregator.aggregate_attestation_results(
-                    get_attestation_results(
+                    combine_attestation_results(
                         <span class="kw-2">&amp;</span><span class="self">self</span>.config.peer_verifiers,
                         <span class="kw-2">&amp;</span>incoming_message.endorsed_evidence,
                     )<span class="question-mark">?</span>,
                 )<span class="question-mark">?</span>)
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested =&gt; <span class="prelude-val">None</span>,
+            AttestationType::SelfUnidirectional =&gt; <span class="prelude-val">None</span>,
+            AttestationType::Unattested =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"no attestation message expected'"</span>)),
         };
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
     }
@@ -431,8 +437,8 @@
 }
 
 <span class="kw">impl </span>AttestationProvider <span class="kw">for </span>ServerAttestationProvider {
-    <span class="kw">fn </span>get_attestation_results(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
-        <span class="self">self</span>.attestation_results
+    <span class="kw">fn </span>take_attestation_report(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt; {
+        <span class="self">self</span>.attestation_results.take()
     }
 }
 
@@ -449,9 +455,10 @@
                         .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
                 }))
             }
-            AttestationType::PeerUnidirectional | AttestationType::Unattested =&gt; {
+            AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestResponse { endorsed_evidence: BTreeMap::new() }))
             }
+            AttestationType::Unattested =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         }
     }
 
@@ -462,19 +469,20 @@
         <span class="self">self</span>.attestation_results = <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Some</span>(<span class="self">self</span>.config.attestation_aggregator.aggregate_attestation_results(
-                    get_attestation_results(
+                    combine_attestation_results(
                         <span class="kw-2">&amp;</span><span class="self">self</span>.config.peer_verifiers,
                         <span class="kw-2">&amp;</span>incoming_message.endorsed_evidence,
                     )<span class="question-mark">?</span>,
                 )<span class="question-mark">?</span>)
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested =&gt; <span class="prelude-val">None</span>,
+            AttestationType::SelfUnidirectional =&gt; <span class="prelude-val">None</span>,
+            AttestationType::Unattested =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"no attestation message expected'"</span>)),
         };
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
     }
 }
 
-<span class="kw">fn </span>get_attestation_results(
+<span class="kw">fn </span>combine_attestation_results(
     verifiers: <span class="kw-2">&amp;</span>BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
     attested_evidence: <span class="kw-2">&amp;</span>BTreeMap&lt;String, EndorsedEvidence&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, AttestationResults&gt;, Error&gt; {
