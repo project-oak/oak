@@ -69,11 +69,8 @@ impl AttestedApp {
         );
         let derived_key =
             oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
-        let dice_data = oak_restricted_kernel_dice::generate_dice_data(
-            stage0_dice_data,
-            &app_digest,
-            &event_digest,
-        );
+        let dice_data =
+            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &event_digest);
 
         let mut event_log =
             EventLog::decode(encoded_event_log.as_slice()).expect("failed to decode event log");
