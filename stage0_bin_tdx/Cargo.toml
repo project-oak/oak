@@ -1,0 +1,35 @@
+[package]
+name = "oak_stage0_bin_tdx"
+version = "0.1.0"
+authors = ["Yu Ding <dingelish@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = ["."]
+
+[dependencies]
+log = "*"
+oak_dice = { path = "../oak_dice" }
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
+oak_sev_snp_attestation_report = { path = "../oak_sev_snp_attestation_report" }
+oak_stage0 = { path = "../stage0" }
+oak_tdx_guest = { path = "../oak_tdx_guest" }
+x86_64 = "*"
+zeroize = "*"
+
+[profile.dev]
+opt-level = "z"
+panic = "abort"
+
+[profile.release]
+opt-level = "z"
+debug = true
+lto = true
+panic = "abort"
+
+[[bin]]
+name = "oak_stage0_bin_tdx"
+test = false
+bench = false

@@ -148,14 +148,9 @@ stage0_bin:
         generated
 
 stage0_bin_tdx:
-    bazel build //stage0_bin_tdx:stage0_bin_tdx \
-        --platforms=//:x86_64-firmware \
-        --compilation_mode opt
-
-    mkdir --parents generated
-    cp --preserve=timestamps --no-preserve=mode \
-        bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
-        generated
+    env --chdir=stage0_bin_tdx \
+        cargo objcopy --release -- --output-target=binary \
+        target/x86_64-unknown-none/release/stage0_bin_tdx
 
 stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
     rm --recursive --force {{output_dir}}
