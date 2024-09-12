@@ -294,6 +294,18 @@
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -525,6 +537,18 @@
         </span><span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>GetEndorsedEvidenceRequest(<span class="kw">super</span>::GetEndorsedEvidenceRequest),
     }
+}
+<span class="doccomment">/// Wrapper around OakRequest that is used in cases where it is necessary to
+/// identify a contigious session across several invocations/streams.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>OakRequestWithSessionIdentifier {
+    <span class="doccomment">/// Unique string to identify the session. This should be at least 128 bits of
+    /// unique information.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>session_id: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>request: ::core::option::Option&lt;OakRequest&gt;,
 }
 <span class="doccomment">/// A wrapper message type that is used by the Oak transport protocol. It can be
 /// used to support the older HPKE-based protocol, the newer noise protocol, or a
