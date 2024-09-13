@@ -23,6 +23,7 @@ use oak_sev_guest::{
     msr::SevStatus,
 };
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
+use oak_stage0::{allocator::Shared, hal::Platform};
 use oak_stage0_dice::DerivedKey;
 use spinning_top::Spinlock;
 use x86_64::{PhysAddr, VirtAddr};
@@ -30,7 +31,6 @@ use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
 use super::{GHCB_WRAPPER, SEV_SECRETS};
-use crate::{allocator::Shared, Platform};
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest
 /// message protocol.
@@ -61,7 +61,7 @@ fn send_guest_message_request<
 ) -> Result<Response, &'static str> {
     let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
     let encryptor = guard.as_mut().ok_or("guest message encryptor is not initialized")?;
-    let alloc = &crate::SHORT_TERM_ALLOC;
+    let alloc = &oak_stage0::SHORT_TERM_ALLOC;
     let mut request_message = Shared::<_, _, super::Sev>::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())?;
     let response_message = Shared::<_, _, super::Sev>::new_in(GuestMessage::new(), alloc);
@@ -90,7 +90,7 @@ pub fn get_attestation(
         }
         Ok(attestation_response.report)
     } else {
-        crate::hal::Base::get_attestation(report_data)
+        oak_stage0::hal::Base::get_attestation(report_data)
     }
 }
 
@@ -102,6 +102,6 @@ pub fn get_derived_key() -> Result<DerivedKey, &'static str> {
         let key_response: KeyResponse = send_guest_message_request(key_request)?;
         Ok(key_response.derived_key)
     } else {
-        crate::hal::Base::get_derived_key()
+        oak_stage0::hal::Base::get_derived_key()
     }
 }

@@ -14,9 +14,7 @@
 // limitations under the License.
 //
 
-mod base;
-#[cfg(feature = "sev")]
-mod sev;
+pub mod base;
 
 use core::arch::x86_64::CpuidResult;
 
@@ -173,8 +171,6 @@ pub trait Platform {
     unsafe fn write_msr(msr: u32, value: u64);
 }
 pub use base::Base;
-#[cfg(feature = "sev")]
-pub use sev::Sev;
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.

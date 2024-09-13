@@ -25,7 +25,10 @@ package(
 rust_binary(
     name = "stage0_bin_elf",
     srcs = glob(["src/**/*.rs"]),
-    aliases = {"@//stage0": "oak_stage0"},
+    aliases = {
+        "@//stage0": "oak_stage0",
+        "@//stage0_sev": "oak_stage0_sev",
+    },
     compile_data = [
         "src/asm/boot.s",
         "src/asm/ap_boot.s",
@@ -44,6 +47,7 @@ rust_binary(
     ],
     deps = [
         "//stage0",
+        "//stage0_sev",
     ],
 )
 

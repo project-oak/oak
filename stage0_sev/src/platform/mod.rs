@@ -28,13 +28,14 @@ use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_stage0::{
+    allocator::Shared,
+    hal::{Base, PageAssignment, Platform, PortFactory},
+    paging::PageEncryption,
+    BootAllocator, ZeroPage, BOOT_ALLOC,
+};
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
-
-use super::{Base, PageAssignment, PortFactory};
-use crate::{
-    allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
-};
 
 #[link_section = ".boot"]
 #[no_mangle]
@@ -130,8 +131,12 @@ pub(crate) fn encrypted() -> u64 {
     unsafe { ENCRYPTED }
 }
 
-impl Into<oak_sev_guest::msr::PageAssignment> for PageAssignment {
-    fn into(self) -> oak_sev_guest::msr::PageAssignment {
+trait IntoMsrPageAssigment {
+    fn into_msr(&self) -> oak_sev_guest::msr::PageAssignment;
+}
+
+impl IntoMsrPageAssigment for PageAssignment {
+    fn into_msr(&self) -> oak_sev_guest::msr::PageAssignment {
         match self {
             PageAssignment::Shared => oak_sev_guest::msr::PageAssignment::Shared,
             PageAssignment::Private => oak_sev_guest::msr::PageAssignment::Private,
@@ -141,14 +146,14 @@ impl Into<oak_sev_guest::msr::PageAssignment> for PageAssignment {
 
 pub struct Sev {}
 
-impl crate::Platform for Sev {
+impl Platform for Sev {
     type Mmio<S: PageSize> = mmio::Mmio<S>;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             ghcb.get_cpuid(CpuidInput { eax: leaf, ecx: 0, xcr0: 0, xss: 0 }).unwrap().into()
         } else {
-            crate::hal::Base::cpuid(leaf)
+            oak_stage0::hal::Base::cpuid(leaf)
         }
     }
 
@@ -169,7 +174,7 @@ impl crate::Platform for Sev {
                 write_u32: |port, value| GHCB_WRAPPER.get().unwrap().io_write_u32(port, value),
             }
         } else {
-            crate::hal::Base::port_factory()
+            oak_stage0::hal::Base::port_factory()
         }
     }
 
@@ -187,9 +192,9 @@ impl crate::Platform for Sev {
             // However, note that, this branch is only executed if
             // we have encryption, and this wouldn't be true for very old processors.
             unsafe {
-                crate::msr::MTRRDefType::write::<Sev>(
-                    crate::msr::MTRRDefTypeFlags::MTRR_ENABLE,
-                    crate::msr::MemoryType::WP,
+                oak_stage0::msr::MTRRDefType::write::<Sev>(
+                    oak_stage0::msr::MTRRDefTypeFlags::MTRR_ENABLE,
+                    oak_stage0::msr::MemoryType::WP,
                 );
             }
         }
@@ -294,9 +299,10 @@ impl crate::Platform for Sev {
 
     fn change_page_state(
         page: x86_64::structures::paging::Page<x86_64::structures::paging::Size4KiB>,
-        state: super::PageAssignment,
+        state: PageAssignment,
     ) {
-        accept_memory::change_page_state(page, state.into()).expect("failed to change page state");
+        accept_memory::change_page_state(page, state.into_msr())
+            .expect("failed to change page state");
     }
 
     fn revalidate_page(

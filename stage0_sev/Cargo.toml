@@ -1,0 +1,20 @@
+[package]
+name = "oak_stage0_sev"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+log = "*"
+oak_linux_boot_params = { path = "../oak_linux_boot_params" }
+oak_core = { path = "../oak_core" }
+oak_dice = { path = "../oak_dice" }
+oak_stage0 = { path = "../stage0" }
+oak_stage0_dice = { path = "../stage0_dice" }
+oak_sev_guest = { path = "../oak_sev_guest" }
+oak_sev_snp_attestation_report = { path = "../oak_sev_snp_attestation_report" }
+spinning_top = "*"
+x86_64 = "*"
+zeroize = "*"
+zerocopy = "*"

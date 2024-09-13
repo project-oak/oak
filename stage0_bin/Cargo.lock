@@ -504,6 +504,7 @@ name = "oak_core"
 version = "0.1.0"
 dependencies = [
  "getrandom",
+ "lock_api",
  "spinning_top",
 ]
 
@@ -606,6 +607,7 @@ name = "oak_stage0_bin"
 version = "0.1.0"
 dependencies = [
  "oak_stage0",
+ "oak_stage0_sev",
 ]
 
 [[package]]
@@ -624,6 +626,24 @@ dependencies = [
  "rand_core",
  "sha2",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_stage0_sev"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_core",
+ "oak_dice",
+ "oak_linux_boot_params",
+ "oak_sev_guest",
+ "oak_sev_snp_attestation_report",
+ "oak_stage0",
+ "oak_stage0_dice",
+ "spinning_top",
+ "x86_64",
+ "zerocopy",
+ "zeroize",
 ]
 
 [[package]]

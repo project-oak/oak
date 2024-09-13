@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-mod mmio;
+pub mod mmio;
 
 use core::arch::x86_64::{CpuidResult, __cpuid};
 

@@ -20,6 +20,7 @@ use oak_sev_guest::{
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
+use oak_stage0::paging::{PageEncryption, PageTable};
 use x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -31,11 +32,7 @@ use x86_64::{
 };
 use zeroize::Zeroize;
 
-use super::{sev_status, GHCB_WRAPPER};
-use crate::{
-    paging::{PageEncryption, PageTable},
-    Sev,
-};
+use crate::platform::{sev_status, Sev, GHCB_WRAPPER};
 
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,
@@ -262,7 +259,7 @@ impl<S: NotGiantPageSize> PageStateChange for PhysFrameRange<S> {
 pub fn validate_memory(e820_table: &[BootE820Entry]) {
     log::info!("starting SEV-SNP memory validation");
 
-    let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+    let mut page_tables = oak_stage0::paging::PAGE_TABLE_REFS.get().unwrap().lock();
 
     // Page directory, for validation with 2 MiB pages.
     let mut validation_pd = MappedPage::new(VirtAddr::new(Size1GiB::SIZE)).unwrap();

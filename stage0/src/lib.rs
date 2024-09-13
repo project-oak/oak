@@ -48,7 +48,7 @@ use crate::alloc::string::ToString;
 
 mod acpi;
 mod acpi_tables;
-mod allocator;
+pub mod allocator;
 mod apic;
 mod cmos;
 mod fw_cfg;
@@ -56,27 +56,25 @@ pub mod hal;
 mod initramfs;
 mod kernel;
 mod logging;
-mod msr;
+pub mod msr;
 pub mod paging;
 mod pic;
 mod smp;
 mod zero_page;
 
 pub use hal::Platform;
-#[cfg(feature = "sev")]
-pub use hal::Sev;
 pub use zero_page::ZeroPage;
 
 type Measurement = [u8; 32];
 
 // Reserve 128K for boot data structures that will outlive Stage 0.
-type BootAllocator = allocator::BumpAllocator<0x20000>;
-static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
+pub type BootAllocator = allocator::BumpAllocator<0x20000>;
+pub static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
 // Heap for short-term allocations. These allocations are not expected to
 // outlive Stage 0.
 #[cfg_attr(not(test), global_allocator)]
-static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
+pub static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;

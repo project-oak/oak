@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,26 +15,7 @@
 //
 
 #![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-
-pub use oak_stage0::paging;
-
-mod asm;
-
-/// Entry point for the Rust code in the stage0 BIOS.
-///
-/// # Arguments
-///
-/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
-///   tables.
-#[no_mangle]
-pub extern "C" fn rust64_start() -> ! {
-    oak_stage0::rust64_start::<oak_stage0_sev::Sev>()
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_stage0::panic(info)
-}
+#![feature(allocator_api)]
+extern crate alloc;
+pub mod platform;
+pub use crate::platform::Sev;

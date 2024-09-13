@@ -62,6 +62,7 @@ members = [
   "snp_measurement",
   "stage0",
   "stage0_dice",
+  "stage0_sev",
   "testing/oak_echo_service",
   "oak_restricted_kernel_sdk_proc_macro",
 ]

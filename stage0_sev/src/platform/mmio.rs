@@ -16,10 +16,10 @@
 
 use core::mem::size_of;
 
+use oak_stage0::hal::base::Mmio as BaseMmio;
 use x86_64::{structures::paging::PageSize, PhysAddr};
 
 use super::GHCB_WRAPPER;
-use crate::hal::base::Mmio as BaseMmio;
 
 pub struct Mmio<S: PageSize> {
     mmio: BaseMmio<S>,
@@ -31,7 +31,7 @@ impl<S: PageSize> Mmio<S> {
     }
 }
 
-impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
+impl<S: PageSize> oak_stage0::hal::Mmio<S> for Mmio<S> {
     fn read_u32(&self, offset: usize) -> u32 {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             let offset = offset * size_of::<u32>();

@@ -11,6 +11,7 @@ members = ["."]
 
 [dependencies]
 oak_stage0 = { path = "../stage0" }
+oak_stage0_sev = { path = "../stage0_sev" }
 
 [profile.dev]
 opt-level = "z"
