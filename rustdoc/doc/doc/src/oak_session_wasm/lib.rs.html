@@ -258,6 +258,32 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -273,10 +299,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 </span><span class="kw">use </span>std::collections::VecDeque;
 
-<span class="kw">use </span>oak_proto_rust::oak::session::v1::SessionResponse;
+<span class="kw">use </span>js_sys::Math;
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::{
+    oak_request, oak_response, OakRequest, OakRequestWithSessionIdentifier, OakResponse,
+    PlaintextMessage,
+};
 <span class="kw">use </span>oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ClientSession,
     ProtocolEngine, Session,
@@ -287,6 +316,8 @@
 <span class="attr">#[wasm_bindgen]
 </span><span class="kw">pub struct </span>WasmClientSession {
     inner: ClientSession,
+    <span class="comment">// Used by the server to identify the client session
+    </span>session_id: Vec&lt;u8&gt;,
 }
 
 <span class="attr">#[wasm_bindgen]
@@ -302,7 +333,11 @@
         <span class="kw">let </span>config =
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
         <span class="kw">let </span>inner = ClientSession::create(config).map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(WasmClientSession { inner })
+
+        <span class="comment">// Generate a random 16-byte session ID
+        </span><span class="kw">let </span>session_id: Vec&lt;u8&gt; = (<span class="number">0</span>..<span class="number">16</span>).map(|<span class="kw">_</span>| (Math::random() * <span class="number">256.0</span>) <span class="kw">as </span>u8).collect();
+
+        <span class="prelude-val">Ok</span>(WasmClientSession { inner, session_id })
     }
 
     <span class="doccomment">/// Checks whether session is ready to send and receive encrypted messages.
@@ -320,7 +355,8 @@
     /// in multiple outgoing protocol messages being created.
     </span><span class="attr">#[wasm_bindgen]
     </span><span class="kw">pub fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), JsValue&gt; {
-        <span class="self">self</span>.inner.write(plaintext).map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
+        <span class="kw">let </span>plaintext_message = PlaintextMessage { plaintext: plaintext.to_vec() };
+        <span class="self">self</span>.inner.write(<span class="kw-2">&amp;</span>plaintext_message).map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
     }
 
     <span class="doccomment">/// Attempts to find a message containing ciphertext in the queue of
@@ -330,43 +366,59 @@
     /// This function can be called multiple times in a row.
     </span><span class="attr">#[wasm_bindgen]
     </span><span class="kw">pub fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, JsValue&gt; {
-        <span class="self">self</span>.inner.read().map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
+        <span class="self">self</span>.inner
+            .read()
+            .map(|opt_msg: <span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;| opt_msg.map(|msg| msg.plaintext))
+            .map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
     }
 
     <span class="doccomment">/// Puts a message received from the peer into the state-machine.
     ///
     /// The message is a byte-encoded protobuf message of the type
-    /// `type.googleapis.com/oak.session.v1`. It may contain ciphertext,
-    /// attestation evidence, or a handshake step.
+    /// `type.googleapis.com/oak.session.v1.OakResponse`.
     </span><span class="attr">#[wasm_bindgen]
     </span><span class="kw">pub fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         incoming_message: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;PutIncomingMessageResult, JsValue&gt; {
-        <span class="self">self</span>.inner
-            .put_incoming_message(
-                <span class="kw-2">&amp;</span>SessionResponse::decode(incoming_message)
-                    .map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))<span class="question-mark">?</span>,
-            )
-            .map(|opt_result| {
-                opt_result
-                    .map(|<span class="kw">_</span>| PutIncomingMessageResult::Success)
-                    .unwrap_or(PutIncomingMessageResult::NoIncomingMessageExpected)
-            })
-            .map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
+        <span class="kw">let </span>oak_response =
+            OakResponse::decode(incoming_message).map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))<span class="question-mark">?</span>;
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(oak_response::Request::SessionResponse(session_response)) = oak_response.request
+        {
+            <span class="self">self</span>.inner
+                .put_incoming_message(<span class="kw-2">&amp;</span>session_response)
+                .map(|opt_result| {
+                    opt_result
+                        .map(|<span class="kw">_</span>| PutIncomingMessageResult::Success)
+                        .unwrap_or(PutIncomingMessageResult::NoIncomingMessageExpected)
+                })
+                .map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(JsValue::from_str(<span class="string">"Unexpected OakResponse type"</span>))
+        }
     }
 
     <span class="doccomment">/// Gets the next message that needs to be sent to the peer
     /// from the state-machine.
     ///
     /// The message is a byte-encoded protobuf message of the type
-    /// `type.googleapis.com/oak.session.v1`. It may contain ciphertext,
-    /// attestation evidence, or a handshake step.
+    /// `type.googleapis.com/oak.session.v1.OakRequestWithSessionIdentifier`.
     </span><span class="attr">#[wasm_bindgen]
     </span><span class="kw">pub fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, JsValue&gt; {
         <span class="self">self</span>.inner
             .get_outgoing_message()
-            .map(|opt_msg| opt_msg.map(|msg| msg.encode_to_vec()))
+            .map(|opt_msg| {
+                opt_msg.map(|session_request| {
+                    <span class="kw">let </span>oak_request_with_id = OakRequestWithSessionIdentifier {
+                        session_id: <span class="self">self</span>.session_id.clone(),
+                        request: <span class="prelude-val">Some</span>(OakRequest {
+                            request: <span class="prelude-val">Some</span>(oak_request::Request::SessionRequest(session_request)),
+                        }),
+                    };
+                    oak_request_with_id.encode_to_vec()
+                })
+            })
             .map_err(|e| JsValue::from_str(<span class="kw-2">&amp;</span>e.to_string()))
     }
 }
