@@ -60,9 +60,7 @@ members = [
   "oak_tdx_guest",
   "sev_serial",
   "snp_measurement",
-  "stage0",
   "stage0_dice",
-  "stage0_sev",
   "testing/oak_echo_service",
   "oak_restricted_kernel_sdk_proc_macro",
 ]
@@ -70,6 +68,8 @@ exclude = [
   "enclave_applications",
   "micro_rpc_workspace_test",
   "stage0_bin",
+  "stage0_bin_tdx",
+  "stage0_sev",
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
