@@ -67,27 +67,35 @@ function build_nvidia_base {
   build_base "oak-containers-sysimage-nvidia-base" "nvidia_base_image.Dockerfile" "nvidia-base-image.tar"
 }
 
+function build_sysroot {
+  build_base "oak-sysroot" "sysroot.Dockerfile" "sysroot.tar"
+}
+
 if [ -z "${1:-}" ]
 then
   set +o xtrace
   echo ""
-  echo "Building both vanilla and nvidia base images."
+  echo "Building both vanilla and nvidia base images and the sysroot."
   echo ""
-  echo "If you want to build just one of the base image types, use:"
+  echo "If you want to build just one of the base image types, use one of the following:"
   echo "./scripts/build-bash.sh vanilla"
-  echo "or"
   echo "./scripts/build-bash.sh nvidia"
+  echo "./scripts/build-bash.sh sysroot"
   echo ""
   sleep 1
   set -o xtrace
   build_vanilla_base
   build_nvidia_base
+  build_sysroot
 elif [ "$1" == "vanilla" ]
 then
   build_vanilla_base
 elif [ "$1" == "nvidia" ]
 then
   build_nvidia_base
+elif [ "$1" == "sysroot" ]
+then
+  build_sysroot
 fi
 
 set +o xtrace
