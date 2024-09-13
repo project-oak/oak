@@ -21,7 +21,7 @@ use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-use oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceBuilder};
+use oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceAttester};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::STAGE0_MAGIC,
@@ -224,7 +224,7 @@ impl SensitiveDiceDataMemory {
 
     /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
     /// located at the given physical address.
-    pub fn read_into_dice_builder(self) -> anyhow::Result<DiceBuilder> {
+    pub fn read_into_attester(self) -> anyhow::Result<DiceAttester> {
         let stage0_dice_data = self.read_stage0_dice_data()?;
         let eventlog = self.read_eventlog()?;
         let dice_data: DiceData =

@@ -38,7 +38,8 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
+use oak_attestation::attester::Serializable;
+use oak_proto_rust::oak::attestation::v1::{Event, SystemLayerData};
 use prost::Message;
 use tokio::process::Command;
 use tonic::transport::Uri;
@@ -85,7 +86,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     mount(None::<&str>, "/sys", Some("sysfs"), MsFlags::empty(), None::<&str>)
         .context("error mounting /sys")?;
 
-    let mut dice_builder = {
+    let mut attester = {
         // Safety: This will be the only instance of this struct.
         unsafe {
             dice::SensitiveDiceDataMemory::new(
@@ -94,7 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 args.dice_data_length,
             )
         }?
-        .read_into_dice_builder()?
+        .read_into_attester()?
     };
 
     // Unmount /sys and /dev as they are no longer needed.
@@ -131,10 +132,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let layer_data = dice::get_system_image_measurement_claims(&system_image_digest, event);
 
     // For safety we generate the DICE data for the next layer before processing the
-    // compressed system image. This consumes the `DiceBuilder` which also
-    // clears the ECA private key provided by Stage 0.
-    dice_builder.add_layer(layer_data)?;
-    let dice_data: DiceData = dice_builder.serialize();
+    // compressed system image. This consumes the `Attester` which also clears
+    // the ECA private key provided by Stage 0.
+    attester.add_layer(layer_data)?;
+    let dice_data = attester.serialize();
 
     image::extract(&buf, Path::new("/")).await.context("error loading the system image")?;
 
@@ -148,8 +149,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Write the DICE data to a well-known location as a length-delimited protobuf
     // file.
     create_dir("/oak").context("error creating `oak` directory")?;
-    fs::write("/oak/dice", dice_data.encode_length_delimited_to_vec())
-        .context("error writing DICE data")?;
+    fs::write("/oak/dice", dice_data).context("error writing DICE data")?;
 
     // Configure eth0 down, as systemd will want to manage it itself and gets
     // confused if it already has an IP address.

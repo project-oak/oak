@@ -1,0 +1,69 @@
+//
+// Copyright 2024 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+use oak_attestation::{
+    attester::{Attester, Serializable},
+    dice::DiceAttester,
+};
+use oak_attestation_verification::verifier::verify_dice_chain;
+use oak_dice::evidence::TeePlatform;
+use oak_proto_rust::oak::{
+    attestation::v1::{ApplicationLayerData, EventLog},
+    RawDigest,
+};
+use prost::Message;
+
+const TEST_APPLICATION_DIGEST: [u8; 4] = [0, 1, 2, 3];
+
+#[test]
+fn dice_attester_generates_correct_dice_chain() {
+    let test_stage0_measurements = oak_stage0_dice::Measurements::default();
+    let (_, stage0_dice_data_proto) = oak_stage0_dice::generate_dice_data(
+        &test_stage0_measurements,
+        oak_stage0_dice::mock_attestation_report,
+        oak_stage0_dice::mock_derived_key,
+        TeePlatform::None,
+        EventLog::default(),
+    );
+    let serialized_stage0_dice_data = stage0_dice_data_proto.encode_length_delimited_to_vec();
+
+    let mut dice_attester = DiceAttester::deserialize(&serialized_stage0_dice_data)
+        .expect("couldn't deserialize attester");
+
+    let application_event = oak_proto_rust::oak::attestation::v1::Event {
+        tag: "application_layer".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.ApplicationLayerData".to_string(),
+            value: ApplicationLayerData {
+                binary: Some(RawDigest {
+                    sha2_256: TEST_APPLICATION_DIGEST.to_vec(),
+                    ..RawDigest::default()
+                }),
+                config: None,
+            }
+            .encode_to_vec(),
+        }),
+    };
+    let encoded_application_event = application_event.encode_to_vec();
+    dice_attester.extend(&encoded_application_event).expect("couldn't extend the evidence");
+
+    let test_evidence = dice_attester.quote().expect("couldn't generate the evidence");
+    let result = verify_dice_chain(&test_evidence);
+    // TODO: b/368030563 - Make the test check for `Ok` once keys are being stored
+    // in the Event. Since currently `verify_dice_chain` returns `Err("no
+    // application keys in evidence")`.
+    assert!(result.is_err());
+}

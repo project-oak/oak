@@ -20,11 +20,11 @@ use oak_proto_rust::oak::attestation::v1::Evidence;
 
 pub trait Attester {
     // Add a new layer to the evidence containing the event.
-    fn extend(&mut self, serialized_event: &[u8]) -> anyhow::Result<()>;
+    fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;
 
     // Generates a signed Evidence containing all events previously provided with
     // `extend`.
-    fn quote(self) -> anyhow::Result<Evidence>;
+    fn quote(&self) -> anyhow::Result<Evidence>;
 }
 
 /// Trait for passing incomplete evidence between layers of software components.

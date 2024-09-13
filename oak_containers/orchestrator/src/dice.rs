@@ -21,7 +21,7 @@ use std::{
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
-use oak_attestation::dice::DiceBuilder;
+use oak_attestation::dice::DiceAttester;
 use oak_dice::cert::{
     CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
     SHA2_256_ID,
@@ -37,11 +37,11 @@ const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
 ///
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
-pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
+pub fn load_stage1_dice_data() -> anyhow::Result<DiceAttester> {
     load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
 }
 
-fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceBuilder> {
+fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)

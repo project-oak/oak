@@ -17,11 +17,12 @@
 use alloc::{vec, vec::Vec};
 
 use anyhow::{anyhow, Context};
+use ciborium::Value;
 use coset::{cwt::ClaimName, CborSerializable};
 use oak_dice::{
     cert::{
         generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
-        get_claims_set_from_certificate_bytes,
+        get_claims_set_from_certificate_bytes, SHA2_256_ID,
     },
     evidence::Stage0DiceData,
 };
@@ -33,8 +34,11 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
+use prost::Message;
 use sha2::Digest;
 use zeroize::Zeroize;
+
+use crate::attester::{Attester, Serializable};
 
 pub trait MeasureDigest {
     fn measure_digest(&self) -> RawDigest;
@@ -60,12 +64,14 @@ pub struct LayerData {
 }
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
-pub struct DiceBuilder {
+pub struct DiceAttester {
     evidence: Evidence,
     signing_key: SigningKey,
 }
 
-impl DiceBuilder {
+// TODO: b/366141836 - Remove this implementation once all Oak clients have been
+// updated to the EventLog attestation.
+impl DiceAttester {
     /// Adds an additional layer of evidence to the DICE data.
     ///
     /// The evidence is in the form of a CWT certificate that contains the
@@ -77,7 +83,6 @@ impl DiceBuilder {
         // The last evidence layer contains the certificate for the current signing key.
         // Since the builder contains an existing signing key there must be at
         // least one layer of evidence that contains the certificate.
-
         let layer_evidence = self
             .evidence
             .layers
@@ -213,18 +218,87 @@ impl DiceBuilder {
             .push(layer_data.encoded_event);
         Ok(evidence)
     }
+}
 
-    pub fn serialize(self) -> DiceData {
-        DiceData {
+impl Attester for DiceAttester {
+    fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()> {
+        // The last evidence layer contains the certificate for the current signing key.
+        // Since the builder contains an existing signing key there must be at
+        // least one layer of evidence that contains the certificate.
+        let layer_evidence = self
+            .evidence
+            .layers
+            .last()
+            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?;
+        let claims_set = get_claims_set_from_certificate_bytes(&layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)?;
+
+        // The issuer for the next layer is the subject of the current last layer.
+        let issuer_id = claims_set.subject.ok_or_else(|| anyhow!("no subject in certificate"))?;
+
+        // Generate a signing key for the next layer.
+        let (signing_key, verifying_key) = generate_ecdsa_key_pair();
+
+        // Generate a claim for CWT which contains the event digest.
+        let event_digest = MeasureDigest::measure_digest(&encoded_event);
+        let event_claim = (
+            ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+            Value::Map(vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(event_digest.sha2_256),
+            )]),
+        );
+
+        // Generate new CWT.
+        let eca_certificate = generate_signing_certificate(
+            &self.signing_key,
+            issuer_id,
+            &verifying_key,
+            vec![event_claim],
+        )
+        .map_err(anyhow::Error::msg)
+        .context("couldn't generate ECA certificate for the next layer")?;
+
+        // Add new layer to the evidence.
+        self.evidence.layers.push(LayerEvidence {
+            eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)?,
+        });
+        self.evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(encoded_event.to_vec());
+
+        // Replacing the signing key will cause the previous signing key to be dropped,
+        // which will zero out its memory.
+        self.signing_key = signing_key;
+        Ok(())
+    }
+
+    fn quote(&self) -> anyhow::Result<Evidence> {
+        Ok(self.evidence.clone())
+    }
+}
+
+impl Serializable for DiceAttester {
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
+        let dice_data = DiceData::decode_length_delimited(bytes)
+            .map_err(|error| anyhow!("couldn't parse DICE data: {:?}", error))?;
+        dice_data.try_into()
+    }
+
+    fn serialize(self) -> Vec<u8> {
+        let dice_data = DiceData {
             evidence: Some(self.evidence),
             certificate_authority: Some(CertificateAuthority {
                 eca_private_key: self.signing_key.to_bytes().as_slice().into(),
             }),
-        }
+        };
+        dice_data.encode_length_delimited_to_vec()
     }
 }
 
-impl TryFrom<DiceData> for DiceBuilder {
+impl TryFrom<DiceData> for DiceAttester {
     type Error = anyhow::Error;
     fn try_from(mut value: DiceData) -> anyhow::Result<Self> {
         let evidence = value.evidence.as_ref().ok_or_else(|| anyhow::anyhow!("no evidence"))?;
@@ -240,7 +314,7 @@ impl TryFrom<DiceData> for DiceBuilder {
             certificate_authority.eca_private_key.zeroize();
         }
 
-        Ok(DiceBuilder { evidence: evidence.clone(), signing_key: signing_key.clone() })
+        Ok(DiceAttester { evidence: evidence.clone(), signing_key: signing_key.clone() })
     }
 }
 
