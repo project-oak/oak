@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -27,44 +27,37 @@ rust_library(
         ["src/**"],
         exclude = ["src/main.rs"],
     ),
-    crate_name = "oak_functions_launcher",
+    crate_name = "oak_functions_containers_launcher",
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        "//micro_rpc",
-        "//oak_client",
-        "//oak_launcher_utils",
+        "//oak_containers/launcher:lib",
+        "//oak_crypto",
+        "//oak_functions_launcher:lib",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
-        "//oak_proto_rust/micro_rpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:futures",
-        "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-vsock",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tower",
         "@oak_crates_index//:ubyte",
     ],
 )
 
-rust_test(
-    name = "oak_functions_launcher_test",
-    size = "small",
-    crate = ":lib",
-)
-
 rust_binary(
-    name = "oak_functions_launcher",
+    name = "oak_functions_containers_launcher",
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
-        "//oak_client",
-        "//oak_functions_abi",
-        "//oak_launcher_utils",
+        "//oak_containers/launcher:lib",
+        "//oak_functions_launcher:lib",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
@@ -73,39 +66,5 @@ rust_binary(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:ubyte",
-    ],
-)
-
-rust_test(
-    name = "oak_functions_launcher_integration_test",
-    size = "large",
-    srcs = ["tests/integration_test.rs"],
-    data = [
-        "mock_lookup_data",
-        ":oak_functions_launcher",
-        "//cc/client:cli",
-        "//enclave_apps/oak_functions_enclave_app",
-        "//enclave_apps/oak_orchestrator",
-        "//java/src/main/java/com/google/oak/client/oak_functions_client",
-        "//oak_functions/examples/echo",
-        "//oak_functions/examples/key_value_lookup",
-        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
-        "//stage0_bin",
-    ],
-    env = {
-        "RUST_LOG": "debug",
-    },
-    deps = [
-        ":lib",
-        "//micro_rpc",
-        "//oak_client",
-        "//oak_functions_client:lib",
-        "//oak_functions_test_utils",
-        "//oak_launcher_utils",
-        "//oak_proto_rust/micro_rpc",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:ubyte",
-        "@oak_crates_index//:which",
     ],
 )
