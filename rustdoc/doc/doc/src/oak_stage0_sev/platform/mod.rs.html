@@ -1,6 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0/src/hal/sev/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oak_stage0" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `stage0_sev/src/platform/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_stage0_sev" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oak_stage0/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_stage0_sev/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -327,6 +327,12 @@
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
 <a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -357,13 +363,14 @@
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
+<span class="kw">use </span>oak_stage0::{
+    allocator::Shared,
+    hal::{Base, PageAssignment, Platform, PortFactory},
+    paging::PageEncryption,
+    BootAllocator, ZeroPage, BOOT_ALLOC,
+};
 <span class="kw">use </span>spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 <span class="kw">use </span>x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
-
-<span class="kw">use super</span>::{Base, PageAssignment, PortFactory};
-<span class="kw">use crate</span>::{
-    allocator::Shared, paging::PageEncryption, zero_page::ZeroPage, BootAllocator, BOOT_ALLOC,
-};
 
 <span class="attr">#[link_section = <span class="string">".boot"</span>]
 #[no_mangle]
@@ -459,8 +466,12 @@
     </span><span class="kw">unsafe </span>{ ENCRYPTED }
 }
 
-<span class="kw">impl </span>Into&lt;oak_sev_guest::msr::PageAssignment&gt; <span class="kw">for </span>PageAssignment {
-    <span class="kw">fn </span>into(<span class="self">self</span>) -&gt; oak_sev_guest::msr::PageAssignment {
+<span class="kw">trait </span>IntoMsrPageAssigment {
+    <span class="kw">fn </span>into_msr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; oak_sev_guest::msr::PageAssignment;
+}
+
+<span class="kw">impl </span>IntoMsrPageAssigment <span class="kw">for </span>PageAssignment {
+    <span class="kw">fn </span>into_msr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; oak_sev_guest::msr::PageAssignment {
         <span class="kw">match </span><span class="self">self </span>{
             PageAssignment::Shared =&gt; oak_sev_guest::msr::PageAssignment::Shared,
             PageAssignment::Private =&gt; oak_sev_guest::msr::PageAssignment::Private,
@@ -470,14 +481,14 @@
 
 <span class="kw">pub struct </span>Sev {}
 
-<span class="kw">impl </span><span class="kw">crate</span>::Platform <span class="kw">for </span>Sev {
+<span class="kw">impl </span>Platform <span class="kw">for </span>Sev {
     <span class="kw">type </span>Mmio&lt;S: PageSize&gt; = mmio::Mmio&lt;S&gt;;
 
     <span class="kw">fn </span>cpuid(leaf: u32) -&gt; CpuidResult {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ghcb) = GHCB_WRAPPER.get() {
             ghcb.get_cpuid(CpuidInput { eax: leaf, ecx: <span class="number">0</span>, xcr0: <span class="number">0</span>, xss: <span class="number">0 </span>}).unwrap().into()
         } <span class="kw">else </span>{
-            <span class="kw">crate</span>::hal::Base::cpuid(leaf)
+            oak_stage0::hal::Base::cpuid(leaf)
         }
     }
 
@@ -498,7 +509,7 @@
                 write_u32: |port, value| GHCB_WRAPPER.get().unwrap().io_write_u32(port, value),
             }
         } <span class="kw">else </span>{
-            <span class="kw">crate</span>::hal::Base::port_factory()
+            oak_stage0::hal::Base::port_factory()
         }
     }
 
@@ -516,9 +527,9 @@
             // However, note that, this branch is only executed if
             // we have encryption, and this wouldn't be true for very old processors.
             </span><span class="kw">unsafe </span>{
-                <span class="kw">crate</span>::msr::MTRRDefType::write::&lt;Sev&gt;(
-                    <span class="kw">crate</span>::msr::MTRRDefTypeFlags::MTRR_ENABLE,
-                    <span class="kw">crate</span>::msr::MemoryType::WP,
+                oak_stage0::msr::MTRRDefType::write::&lt;Sev&gt;(
+                    oak_stage0::msr::MTRRDefTypeFlags::MTRR_ENABLE,
+                    oak_stage0::msr::MemoryType::WP,
                 );
             }
         }
@@ -623,9 +634,10 @@
 
     <span class="kw">fn </span>change_page_state(
         page: x86_64::structures::paging::Page&lt;x86_64::structures::paging::Size4KiB&gt;,
-        state: <span class="kw">super</span>::PageAssignment,
+        state: PageAssignment,
     ) {
-        accept_memory::change_page_state(page, state.into()).expect(<span class="string">"failed to change page state"</span>);
+        accept_memory::change_page_state(page, state.into_msr())
+            .expect(<span class="string">"failed to change page state"</span>);
     }
 
     <span class="kw">fn </span>revalidate_page(

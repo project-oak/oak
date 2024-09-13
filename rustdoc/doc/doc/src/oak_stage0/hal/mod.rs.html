@@ -275,10 +275,6 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -295,9 +291,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">mod </span>base;
-<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-</span><span class="kw">mod </span>sev;
+</span><span class="kw">pub mod </span>base;
 
 <span class="kw">use </span>core::arch::x86_64::CpuidResult;
 
@@ -454,8 +448,6 @@
     </span><span class="kw">unsafe fn </span>write_msr(msr: u32, value: u64);
 }
 <span class="kw">pub use </span>base::Base;
-<span class="attr">#[cfg(feature = <span class="string">"sev"</span>)]
-</span><span class="kw">pub use </span>sev::Sev;
 
 <span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.

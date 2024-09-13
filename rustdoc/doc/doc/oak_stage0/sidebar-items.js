@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["create_gdt","create_idt","panic","rust64_start"],"mod":["hal","paging"],"struct":["ZeroPage"]};
+window.SIDEBAR_ITEMS = {"fn":["create_gdt","create_idt","panic","rust64_start"],"mod":["allocator","hal","msr","paging"],"static":["BOOT_ALLOC","SHORT_TERM_ALLOC"],"struct":["ZeroPage"],"type":["BootAllocator"]};

@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oak_stage0":[["impl&lt;T, A: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/alloc/trait.Allocator.html\" title=\"trait core::alloc::Allocator\">Allocator</a>, P: <a class=\"trait\" href=\"oak_stage0/hal/trait.Platform.html\" title=\"trait oak_stage0::hal::Platform\">Platform</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/deref/trait.DerefMut.html\" title=\"trait core::ops::deref::DerefMut\">DerefMut</a> for <a class=\"struct\" href=\"oak_stage0/allocator/struct.Shared.html\" title=\"struct oak_stage0::allocator::Shared\">Shared</a>&lt;T, A, P&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

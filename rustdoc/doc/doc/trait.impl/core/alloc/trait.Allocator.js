@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oak_stage0":[["impl&lt;const N: <a class=\"primitive\" href=\"https://doc.rust-lang.org/nightly/std/primitive.usize.html\">usize</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/alloc/trait.Allocator.html\" title=\"trait core::alloc::Allocator\">Allocator</a> for <a class=\"struct\" href=\"oak_stage0/allocator/struct.BumpAllocator.html\" title=\"struct oak_stage0::allocator::BumpAllocator\">BumpAllocator</a>&lt;N&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
