@@ -17,32 +17,24 @@
 use std::sync::Arc;
 
 use oak_functions_service::{logger::StandaloneLogger, lookup::LookupDataManager};
-use tokio::{fs, process::Command};
+use tokio::fs;
 
 #[tokio::test]
 async fn test_native_handler() {
-    let status = Command::new("bazel")
-        .arg("build")
-        .arg("//cc/oak_functions/native_sdk:key_value_lookup")
-        .current_dir("..")
-        .spawn()
-        .expect("failed to spawn bazel")
-        .wait()
-        .await
-        .expect("failed to wait for bazel");
-    eprintln!("bazel status: {:?}", status);
-    assert!(status.success());
-
-    let _library = fs::read("../bazel-bin/cc/oak_functions/native_sdk/libkey_value_lookup.so")
-        .await
-        .expect("failed to read test library");
-
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::<1>::new_empty(logger));
     lookup_data_manager
         .extend_next_lookup_data([("key_0".as_bytes(), "value_0".as_bytes())].into_iter());
 
     lookup_data_manager.finish_next_lookup_data();
+
+    let _library = fs::read(format!(
+        "{}/{}/cc/oak_functions/native_sdk/libkey_value_lookup.so",
+        std::env::var("TEST_SRCDIR").unwrap(),
+        std::env::var("TEST_WORKSPACE").unwrap(),
+    ))
+    .await
+    .expect("failed to read test library");
 
     // This test fails right now because the library links in too many other
     // libraries.

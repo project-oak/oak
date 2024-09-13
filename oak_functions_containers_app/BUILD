@@ -132,3 +132,44 @@ rust_test(
     name = "lib_test",
     crate = ":lib",
 )
+
+rust_test(
+    name = "oak_functions_containers_app_integration_test",
+    size = "large",
+    srcs = ["tests/integration_test.rs"],
+    crate_features = ["bazel"],
+    data = [
+        "//oak_functions/examples/key_value_lookup",
+    ],
+    deps = [
+        ":lib",
+        "//micro_rpc",
+        "//oak_client",
+        "//oak_containers/agent:lib",
+        "//oak_crypto",
+        "//oak_functions_client:lib",
+        "//oak_functions_service:lib_unrestricted",
+        "//oak_functions_test_utils",
+        "//oak_launcher_utils",
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_test(
+    name = "oak_functions_containers_app_native_test",
+    size = "large",
+    srcs = ["tests/native_test.rs"],
+    data = [
+        "//cc/oak_functions/native_sdk:key_value_lookup",
+        "//oak_functions/examples/key_value_lookup",
+    ],
+    deps = [
+        "//oak_functions_service:lib",
+        "@oak_crates_index//:tokio",
+    ],
+)
