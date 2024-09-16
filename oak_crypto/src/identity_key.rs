@@ -25,7 +25,7 @@ use crate::noise_handshake::{p256_scalar_mult, P256Scalar};
 
 pub trait IdentityKeyHandle {
     fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;
-    fn derive_dh_secret(&self, peer_public_key: Vec<u8>) -> anyhow::Result<Vec<u8>>;
+    fn derive_dh_secret(&self, peer_public_key: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
 // Implementation of the identity keyset where the private key is encapsulated
@@ -45,11 +45,10 @@ impl IdentityKeyHandle for IdentityKey {
         Ok(self.private_key.compute_public_key().to_vec())
     }
 
-    fn derive_dh_secret(&self, peer_public_key: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    fn derive_dh_secret(&self, peer_public_key: &[u8]) -> anyhow::Result<Vec<u8>> {
         p256_scalar_mult(
             &self.private_key,
             peer_public_key
-                .as_slice()
                 .try_into()
                 .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
         )

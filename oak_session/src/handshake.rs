@@ -24,7 +24,9 @@ use aead::Error;
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
-    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Crypter},
+    noise_handshake::{
+        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Crypter, NoiseMessage,
+    },
 };
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
@@ -36,7 +38,6 @@ use oak_proto_rust::oak::{
 
 use crate::{config::HandshakerConfig, ProtocolEngine};
 
-const P256_X962_KEY_BYTES_LEN: usize = 65;
 const HANDSHAKE_HASH_LEN: usize = 32;
 
 #[derive(Copy, Clone)]
@@ -56,7 +57,7 @@ pub trait Handshaker {
 pub struct ClientHandshaker {
     handshake_type: HandshakeType,
     handshake_initiator: HandshakeInitiator,
-    initial_message: Option<Vec<u8>>,
+    initial_message: Option<NoiseMessage>,
     handshake_result: Option<([u8; HANDSHAKE_HASH_LEN], Crypter)>,
 }
 
@@ -105,24 +106,20 @@ impl Handshaker for ClientHandshaker {
 
 impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
-        Ok(self.initial_message.take().map(|mut initial_message| {
-            let (ciphertext, ephemeral_public_key) =
-                (initial_message.split_off(P256_X962_KEY_BYTES_LEN), initial_message);
-            HandshakeRequest {
-                r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
-                    NoiseHandshakeMessage {
-                        ephemeral_public_key,
-                        static_public_key: match self.handshake_type {
-                            HandshakeType::NoiseKK
-                            | HandshakeType::NoiseKN
-                            | HandshakeType::NoiseNK
-                            | HandshakeType::NoiseNN => vec![],
-                        },
-                        ciphertext,
+        Ok(self.initial_message.take().map(|initial_message| HandshakeRequest {
+            r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
+                NoiseHandshakeMessage {
+                    ephemeral_public_key: initial_message.ephemeral_public_key,
+                    static_public_key: match self.handshake_type {
+                        HandshakeType::NoiseKK
+                        | HandshakeType::NoiseKN
+                        | HandshakeType::NoiseNK
+                        | HandshakeType::NoiseNN => vec![],
                     },
-                )),
-                attestation_binding: None,
-            }
+                    ciphertext: initial_message.ciphertext,
+                },
+            )),
+            attestation_binding: None,
         }))
     }
 
@@ -132,15 +129,9 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     ) -> anyhow::Result<Option<()>> {
         match incoming_message.r#handshake_type.as_ref() {
             Some(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
-                let handshake_response = [
-                    noise_message.ephemeral_public_key.as_slice(),
-                    noise_message.static_public_key.as_slice(),
-                    noise_message.ciphertext.as_slice(),
-                ]
-                .concat();
                 self.handshake_result = Some(
                     self.handshake_initiator
-                        .process_response(handshake_response.as_slice())
+                        .process_response(&noise_message.into())
                         .map_err(|e| anyhow!("Error processing response: {e:?}"))?,
                 );
                 Ok(Some(()))
@@ -190,12 +181,6 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
     ) -> anyhow::Result<Option<()>> {
         let noise_response = match incoming_message.r#handshake_type.as_ref() {
             Some(handshake_request::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
-                let in_data = [
-                    noise_message.ephemeral_public_key.as_slice(),
-                    noise_message.static_public_key.as_slice(),
-                    noise_message.ciphertext.as_slice(),
-                ]
-                .concat();
                 match self.handshake_type {
                     HandshakeType::NoiseKN => core::unimplemented!(),
                     HandshakeType::NoiseKK => respond_kk(
@@ -208,7 +193,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                             .as_ref()
                             .ok_or(|_: Error| "")
                             .map_err(|_| anyhow!("Must provide public key for Kk"))?,
-                        &in_data,
+                        &noise_message.into(),
                     )
                     .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
                     HandshakeType::NoiseNK => respond_nk(
@@ -216,31 +201,27 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                             .as_ref()
                             .context("handshaker_config missing the self private key")?
                             .as_ref(),
-                        &in_data,
+                        &noise_message.into(),
                     )
                     .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
-
-                    HandshakeType::NoiseNN => respond_nn(&in_data)
+                    HandshakeType::NoiseNN => respond_nn(&noise_message.into())
                         .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
                 }
             }
             None => return Err(anyhow!("Missing handshake_type")),
         };
         self.handshake_result = Some(noise_response.crypter.into());
-        let mut response_message = noise_response.response.clone();
-        let (ciphertext, ephemeral_public_key) =
-            (response_message.split_off(P256_X962_KEY_BYTES_LEN), response_message);
         self.handshake_response = Some(HandshakeResponse {
             r#handshake_type: Some(handshake_response::HandshakeType::NoiseHandshakeMessage(
                 NoiseHandshakeMessage {
-                    ephemeral_public_key,
+                    ephemeral_public_key: noise_response.response.ephemeral_public_key,
                     static_public_key: match self.handshake_type {
                         HandshakeType::NoiseKK
                         | HandshakeType::NoiseKN
                         | HandshakeType::NoiseNK
                         | HandshakeType::NoiseNN => vec![],
                     },
-                    ciphertext,
+                    ciphertext: noise_response.response.ciphertext,
                 },
             )),
             attestation_binding: None,

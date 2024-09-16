@@ -22,7 +22,7 @@ pub use crate::noise_handshake::crypto_wrapper::{
 use crate::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
-    Crypter, IdentityKeyHandle,
+    Crypter, IdentityKeyHandle, NoiseMessage,
 };
 
 pub struct HandshakeInitiator {
@@ -62,7 +62,7 @@ impl HandshakeInitiator {
         }
     }
 
-    pub fn build_initial_message(&mut self) -> Result<Vec<u8>, Error> {
+    pub fn build_initial_message(&mut self) -> Result<NoiseMessage, Error> {
         self.noise.mix_hash(&[0; 1]);
         if let Some(peer_identity_pub_key) = self.peer_identity_pub_key {
             self.noise.mix_hash_point(peer_identity_pub_key.as_slice());
@@ -90,7 +90,7 @@ impl HandshakeInitiator {
         if let Some(self_priv_key) = self.self_identity_priv_key.as_ref() {
             if let Some(peer_identity_pub_key) = self.peer_identity_pub_key {
                 let se_ecdh_bytes = self_priv_key
-                    .derive_dh_secret(peer_identity_pub_key.to_vec())
+                    .derive_dh_secret(peer_identity_pub_key.as_slice())
                     .map_err(|_| Error::InvalidHandshake)?;
                 self.noise.mix_key(&se_ecdh_bytes);
             } else {
@@ -98,26 +98,29 @@ impl HandshakeInitiator {
             }
         }
         let ciphertext = self.noise.encrypt_and_hash(&[]);
-        Ok([ephemeral_pub_key_bytes, &ciphertext].concat())
+        Ok(NoiseMessage { ciphertext, ephemeral_public_key: ephemeral_pub_key.to_vec() })
     }
 
     pub fn process_response(
         &mut self,
-        handshake_response: &[u8],
+        handshake_response: &NoiseMessage,
     ) -> Result<([u8; SHA256_OUTPUT_LEN], Crypter), Error> {
-        let peer_public_key_bytes = &handshake_response[..P256_X962_LEN];
-        let ciphertext = &handshake_response[P256_X962_LEN..];
-
         let ee_ecdh_bytes = p256_scalar_mult(
             &self.ephemeral_priv_key,
-            peer_public_key_bytes.try_into().map_err(|_| Error::DecryptFailed)?,
+            handshake_response
+                .ephemeral_public_key
+                .as_slice()
+                .try_into()
+                .map_err(|_| Error::DecryptFailed)?,
         )
         .map_err(|_| Error::InvalidHandshake)?;
-        self.noise.mix_hash(peer_public_key_bytes);
-        self.noise.mix_key(peer_public_key_bytes);
+        self.noise.mix_hash(&handshake_response.ephemeral_public_key);
+        self.noise.mix_key(&handshake_response.ephemeral_public_key);
         self.noise.mix_key(&ee_ecdh_bytes);
-        let plaintext =
-            self.noise.decrypt_and_hash(ciphertext).map_err(|_| Error::DecryptFailed)?;
+        let plaintext = self
+            .noise
+            .decrypt_and_hash(&handshake_response.ciphertext)
+            .map_err(|_| Error::DecryptFailed)?;
         assert_eq!(plaintext.len(), 0);
         let (write_key, read_key) = self.noise.traffic_keys();
         Ok((self.noise.handshake_hash(), Crypter::new(&read_key, &write_key)))

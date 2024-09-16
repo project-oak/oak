@@ -24,11 +24,10 @@ mod error;
 mod noise;
 #[cfg(test)]
 mod tests;
-
 use alloc::vec::Vec;
 
 use anyhow::anyhow;
-use oak_proto_rust::oak::crypto::v1::SessionKeys;
+use oak_proto_rust::oak::{crypto::v1::SessionKeys, session::v1::NoiseHandshakeMessage};
 
 use crate::noise_handshake::{
     error::Error,
@@ -59,6 +58,20 @@ impl Nonce {
         ret[NONCE_LEN - 4..].copy_from_slice(self.nonce.to_be_bytes().as_slice());
         self.nonce += 1;
         Ok(ret)
+    }
+}
+
+pub struct NoiseMessage {
+    pub ephemeral_public_key: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+}
+
+impl From<&NoiseHandshakeMessage> for NoiseMessage {
+    fn from(value: &NoiseHandshakeMessage) -> Self {
+        NoiseMessage {
+            ephemeral_public_key: value.ephemeral_public_key.clone(),
+            ciphertext: value.ciphertext.clone(),
+        }
     }
 }
 
@@ -165,14 +178,13 @@ impl TryFrom<SessionKeys> for Crypter {
 pub struct Response {
     pub crypter: Crypter,
     pub handshake_hash: [u8; SHA256_OUTPUT_LEN],
-    pub response: Vec<u8>,
+    pub response: NoiseMessage,
 }
 
-pub fn respond_nk(identity_key: &dyn IdentityKeyHandle, in_data: &[u8]) -> Result<Response, Error> {
-    if in_data.len() < P256_X962_LEN {
-        return Err(Error::InvalidHandshake);
-    }
-
+pub fn respond_nk(
+    identity_key: &dyn IdentityKeyHandle,
+    in_message: &NoiseMessage,
+) -> Result<Response, Error> {
     let mut noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(&[0; 1]); // Prologue
     noise.mix_hash_point(
@@ -180,58 +192,23 @@ pub fn respond_nk(identity_key: &dyn IdentityKeyHandle, in_data: &[u8]) -> Resul
     );
 
     // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    let peer_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(peer_pub.as_slice());
-    noise.mix_key(peer_pub.as_slice());
+    noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
 
-    let es_ecdh_bytes =
-        identity_key.derive_dh_secret(peer_pub.to_vec()).map_err(|_| Error::InvalidHandshake)?;
+    let es_ecdh_bytes = identity_key
+        .derive_dh_secret(in_message.ephemeral_public_key.as_slice())
+        .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(es_ecdh_bytes.as_slice());
-    finish_response(&mut noise, in_data, &peer_pub)
+    finish_response(&mut noise, in_message)
 }
 
-pub fn respond_nn(in_data: &[u8]) -> Result<Response, Error> {
-    if in_data.len() < P256_X962_LEN {
-        return Err(Error::InvalidHandshake);
-    }
-
+pub fn respond_nn(in_message: &NoiseMessage) -> Result<Response, Error> {
     let mut noise = Noise::new(HandshakeType::Nn);
     noise.mix_hash(&[0; 1]); // Prologue
 
-    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    let peer_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(peer_pub.as_slice());
-    noise.mix_key(peer_pub.as_slice());
-    finish_response(&mut noise, in_data, &peer_pub)
-}
-
-fn finish_response(
-    noise: &mut Noise,
-    in_data: &[u8],
-    peer_pub: &[u8; P256_X962_LEN],
-) -> Result<Response, Error> {
-    let plaintext = noise.decrypt_and_hash(&in_data[P256_X962_LEN..])?;
-    if !plaintext.is_empty() {
-        return Err(Error::InvalidHandshake);
-    }
-
-    // Generate ephemeral key pair
-    let ephemeral_priv = P256Scalar::generate();
-    let ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
-    noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
-    noise.mix_key(ephemeral_pub_key_bytes.as_slice());
-    let ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(&ephemeral_priv, peer_pub)
-        .map_err(|_| Error::InvalidHandshake)?;
-    noise.mix_key(ee_ecdh_bytes.as_slice());
-
-    let response_ciphertext = noise.encrypt_and_hash(&[]);
-
-    let keys = noise.traffic_keys();
-    Ok(Response {
-        crypter: Crypter::new(&keys.0, &keys.1),
-        handshake_hash: noise.handshake_hash(),
-        response: [ephemeral_pub_key_bytes.as_slice(), &response_ciphertext].concat(),
-    })
+    noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(&in_message.ephemeral_public_key.as_slice());
+    finish_response(&mut noise, in_message)
 }
 
 pub fn respond_kk(
@@ -240,24 +217,19 @@ pub fn respond_kk(
     // initiator s [not used for Nk]
     initiator_static_pub: &[u8],
     // e, es, (ss for Kk only)
-    in_data: &[u8],
+    in_message: &NoiseMessage,
 ) -> Result<Response, Error> {
-    if in_data.len() < P256_X962_LEN {
-        return Err(Error::InvalidHandshake);
-    }
-
     let mut noise = Noise::new(HandshakeType::Kk);
     noise.mix_hash(&[0; 1]); // Prologue
     noise.mix_hash_point(
         identity_priv.get_public_key().map_err(|_| Error::InvalidPrivateKey)?.as_slice(),
     );
 
-    let initiator_pub: [u8; P256_X962_LEN] = (&in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(initiator_pub.as_slice());
-    noise.mix_key(initiator_pub.as_slice());
+    noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
 
     let es_ecdh_bytes = identity_priv
-        .derive_dh_secret(initiator_pub.to_vec())
+        .derive_dh_secret(in_message.ephemeral_public_key.as_slice())
         .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(es_ecdh_bytes.as_slice());
 
@@ -269,8 +241,43 @@ pub fn respond_kk(
     noise.mix_key(&ss_ecdh_bytes);
 
     let se_ecdh_bytes = identity_priv
-        .derive_dh_secret(initiator_static_pub_bytes.to_vec())
+        .derive_dh_secret(initiator_static_pub_bytes.as_slice())
         .map_err(|_| Error::InvalidHandshake)?;
     noise.mix_key(&se_ecdh_bytes);
-    finish_response(&mut noise, in_data, &initiator_pub)
+    finish_response(&mut noise, in_message)
+}
+
+fn finish_response(noise: &mut Noise, in_message: &NoiseMessage) -> Result<Response, Error> {
+    let plaintext = noise.decrypt_and_hash(&in_message.ciphertext)?;
+    if !plaintext.is_empty() {
+        return Err(Error::InvalidHandshake);
+    }
+
+    // Generate ephemeral key pair
+    let ephemeral_priv = P256Scalar::generate();
+    let ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
+    noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
+    noise.mix_key(ephemeral_pub_key_bytes.as_slice());
+    let ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(
+        &ephemeral_priv,
+        in_message
+            .ephemeral_public_key
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::InvalidPublicKey)?,
+    )
+    .map_err(|_| Error::InvalidHandshake)?;
+    noise.mix_key(ee_ecdh_bytes.as_slice());
+
+    let response_ciphertext = noise.encrypt_and_hash(&[]);
+
+    let keys = noise.traffic_keys();
+    Ok(Response {
+        crypter: Crypter::new(&keys.0, &keys.1),
+        handshake_hash: noise.handshake_hash(),
+        response: NoiseMessage {
+            ciphertext: response_ciphertext,
+            ephemeral_public_key: ephemeral_pub_key_bytes.to_vec(),
+        },
+    })
 }
