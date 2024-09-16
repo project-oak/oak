@@ -21,8 +21,22 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
+)
+
+package_group(
+    name = "internal",
+    packages = [
+        "//...",
+    ],
+)
+
+package_group(
+    name = "default_visibility",
+    includes = [
+        ":internal",
+    ],
 )
 
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
@@ -139,5 +153,5 @@ filegroup(
     name = "clang_tidy_config",
     srcs = [".clang-tidy"],
     visibility =
-        ["//visibility:public"],
+        ["//:internal"],
 )

@@ -15,7 +15,7 @@
 #
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//oak_attestation_verification:__subpackages__"],
     licenses = ["notice"],
 )
 

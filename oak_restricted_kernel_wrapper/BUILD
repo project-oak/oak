@@ -16,7 +16,7 @@
 load(":rules.bzl", "kernel_bzimage_and_measurements")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 

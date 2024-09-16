@@ -19,7 +19,7 @@ load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 

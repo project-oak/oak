@@ -18,7 +18,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("//bazel:defs.bzl", "objcopy")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 

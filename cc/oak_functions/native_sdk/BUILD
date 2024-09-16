@@ -17,7 +17,7 @@
 load("//cc/oak_functions/native_sdk:native_rules.bzl", "oak_functions_native_module")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
