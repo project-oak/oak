@@ -57,7 +57,6 @@ HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
  */
 PHDRS
 {
-    boot PT_LOAD;
     ap_bss PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
@@ -84,12 +83,7 @@ SECTIONS {
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
 
-    .boot 0x1000 (NOLOAD) : {
-        KEEP(*(.boot))
-        . = ALIGN(4K);
-    } > ram_low : boot
-
-    .ap_bss (NOLOAD) : AT (ADDR(.boot) + SIZEOF(.boot)) {
+    .ap_bss 0x1000 (NOLOAD) : {
         ap_bss_start = .;
         *(.ap_bss .ap_bss.*)
     } > ram_low : ap_bss
