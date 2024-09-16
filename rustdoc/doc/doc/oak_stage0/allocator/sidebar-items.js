@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["init_global_allocator"],"struct":["BumpAllocator","Shared"]};

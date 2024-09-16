@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["PageAssignment"],"mod":["base"],"struct":["Msr","Port","PortFactory"],"trait":["Mmio","Platform"]};

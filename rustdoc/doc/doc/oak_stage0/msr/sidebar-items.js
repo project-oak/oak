@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["DestinationMode","DestinationShorthand","Level","MemoryType","MessageType","TriggerMode"],"struct":["ApicBase","ApicBaseFlags","ApicErrorFlags","MTRRDefType","MTRRDefTypeFlags","SpuriousInterruptFlags","X2ApicErrorStatusRegister","X2ApicIdRegister","X2ApicInterruptCommandRegister","X2ApicSpuriousInterruptRegister","X2ApicVersionRegister"]};
