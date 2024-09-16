@@ -125,6 +125,9 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,7 +152,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
-    Crypter, IdentityKeyHandle,
+    Crypter, IdentityKeyHandle, NoiseMessage,
 };
 
 <span class="kw">pub struct </span>HandshakeInitiator {
@@ -189,7 +192,7 @@
         }
     }
 
-    <span class="kw">pub fn </span>build_initial_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
+    <span class="kw">pub fn </span>build_initial_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;NoiseMessage, Error&gt; {
         <span class="self">self</span>.noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(peer_identity_pub_key) = <span class="self">self</span>.peer_identity_pub_key {
             <span class="self">self</span>.noise.mix_hash_point(peer_identity_pub_key.as_slice());
@@ -217,7 +220,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(self_priv_key) = <span class="self">self</span>.self_identity_priv_key.as_ref() {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(peer_identity_pub_key) = <span class="self">self</span>.peer_identity_pub_key {
                 <span class="kw">let </span>se_ecdh_bytes = self_priv_key
-                    .derive_dh_secret(peer_identity_pub_key.to_vec())
+                    .derive_dh_secret(peer_identity_pub_key.as_slice())
                     .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
                 <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>se_ecdh_bytes);
             } <span class="kw">else </span>{
@@ -225,26 +228,29 @@
             }
         }
         <span class="kw">let </span>ciphertext = <span class="self">self</span>.noise.encrypt_and_hash(<span class="kw-2">&amp;</span>[]);
-        <span class="prelude-val">Ok</span>([ephemeral_pub_key_bytes, <span class="kw-2">&amp;</span>ciphertext].concat())
+        <span class="prelude-val">Ok</span>(NoiseMessage { ciphertext, ephemeral_public_key: ephemeral_pub_key.to_vec() })
     }
 
     <span class="kw">pub fn </span>process_response(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        handshake_response: <span class="kw-2">&amp;</span>[u8],
+        handshake_response: <span class="kw-2">&amp;</span>NoiseMessage,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;([u8; SHA256_OUTPUT_LEN], Crypter), Error&gt; {
-        <span class="kw">let </span>peer_public_key_bytes = <span class="kw-2">&amp;</span>handshake_response[..P256_X962_LEN];
-        <span class="kw">let </span>ciphertext = <span class="kw-2">&amp;</span>handshake_response[P256_X962_LEN..];
-
         <span class="kw">let </span>ee_ecdh_bytes = p256_scalar_mult(
             <span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key,
-            peer_public_key_bytes.try_into().map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>,
+            handshake_response
+                .ephemeral_public_key
+                .as_slice()
+                .try_into()
+                .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>,
         )
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
-        <span class="self">self</span>.noise.mix_hash(peer_public_key_bytes);
-        <span class="self">self</span>.noise.mix_key(peer_public_key_bytes);
+        <span class="self">self</span>.noise.mix_hash(<span class="kw-2">&amp;</span>handshake_response.ephemeral_public_key);
+        <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>handshake_response.ephemeral_public_key);
         <span class="self">self</span>.noise.mix_key(<span class="kw-2">&amp;</span>ee_ecdh_bytes);
-        <span class="kw">let </span>plaintext =
-            <span class="self">self</span>.noise.decrypt_and_hash(ciphertext).map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
+        <span class="kw">let </span>plaintext = <span class="self">self
+            </span>.noise
+            .decrypt_and_hash(<span class="kw-2">&amp;</span>handshake_response.ciphertext)
+            .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
         <span class="macro">assert_eq!</span>(plaintext.len(), <span class="number">0</span>);
         <span class="kw">let </span>(write_key, read_key) = <span class="self">self</span>.noise.traffic_keys();
         <span class="prelude-val">Ok</span>((<span class="self">self</span>.noise.handshake_hash(), Crypter::new(<span class="kw-2">&amp;</span>read_key, <span class="kw-2">&amp;</span>write_key)))

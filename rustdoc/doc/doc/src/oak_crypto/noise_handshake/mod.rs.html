@@ -276,6 +276,13 @@
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -302,11 +309,10 @@
 <span class="kw">mod </span>noise;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
-
 <span class="kw">use </span>alloc::vec::Vec;
 
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::SessionKeys;
+<span class="kw">use </span>oak_proto_rust::oak::{crypto::v1::SessionKeys, session::v1::NoiseHandshakeMessage};
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
     error::Error,
@@ -337,6 +343,20 @@
         ret[NONCE_LEN - <span class="number">4</span>..].copy_from_slice(<span class="self">self</span>.nonce.to_be_bytes().as_slice());
         <span class="self">self</span>.nonce += <span class="number">1</span>;
         <span class="prelude-val">Ok</span>(ret)
+    }
+}
+
+<span class="kw">pub struct </span>NoiseMessage {
+    <span class="kw">pub </span>ephemeral_public_key: Vec&lt;u8&gt;,
+    <span class="kw">pub </span>ciphertext: Vec&lt;u8&gt;,
+}
+
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>NoiseHandshakeMessage&gt; <span class="kw">for </span>NoiseMessage {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>NoiseHandshakeMessage) -&gt; <span class="self">Self </span>{
+        NoiseMessage {
+            ephemeral_public_key: value.ephemeral_public_key.clone(),
+            ciphertext: value.ciphertext.clone(),
+        }
     }
 }
 
@@ -443,14 +463,13 @@
 <span class="kw">pub struct </span>Response {
     <span class="kw">pub </span>crypter: Crypter,
     <span class="kw">pub </span>handshake_hash: [u8; SHA256_OUTPUT_LEN],
-    <span class="kw">pub </span>response: Vec&lt;u8&gt;,
+    <span class="kw">pub </span>response: NoiseMessage,
 }
 
-<span class="kw">pub fn </span>respond_nk(identity_key: <span class="kw-2">&amp;</span><span class="kw">dyn </span>IdentityKeyHandle, in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
-    <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
-    }
-
+<span class="kw">pub fn </span>respond_nk(
+    identity_key: <span class="kw-2">&amp;</span><span class="kw">dyn </span>IdentityKeyHandle,
+    in_message: <span class="kw-2">&amp;</span>NoiseMessage,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nk);
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
     </span>noise.mix_hash_point(
@@ -458,58 +477,23 @@
     );
 
     <span class="comment">// unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(peer_pub.as_slice());
-    noise.mix_key(peer_pub.as_slice());
+    </span>noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
 
-    <span class="kw">let </span>es_ecdh_bytes =
-        identity_key.derive_dh_secret(peer_pub.to_vec()).map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
+    <span class="kw">let </span>es_ecdh_bytes = identity_key
+        .derive_dh_secret(in_message.ephemeral_public_key.as_slice())
+        .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(es_ecdh_bytes.as_slice());
-    finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>peer_pub)
+    finish_response(<span class="kw-2">&amp;mut </span>noise, in_message)
 }
 
-<span class="kw">pub fn </span>respond_nn(in_data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
-    <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
-    }
-
+<span class="kw">pub fn </span>respond_nn(in_message: <span class="kw-2">&amp;</span>NoiseMessage) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Nn);
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
 
-    // unwrap: we know that `in_data` is `P256_X962_LENGTH` bytes long.
-    </span><span class="kw">let </span>peer_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(peer_pub.as_slice());
-    noise.mix_key(peer_pub.as_slice());
-    finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>peer_pub)
-}
-
-<span class="kw">fn </span>finish_response(
-    noise: <span class="kw-2">&amp;mut </span>Noise,
-    in_data: <span class="kw-2">&amp;</span>[u8],
-    peer_pub: <span class="kw-2">&amp;</span>[u8; P256_X962_LEN],
-) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
-    <span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>in_data[P256_X962_LEN..])<span class="question-mark">?</span>;
-    <span class="kw">if </span>!plaintext.is_empty() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
-    }
-
-    <span class="comment">// Generate ephemeral key pair
-    </span><span class="kw">let </span>ephemeral_priv = P256Scalar::generate();
-    <span class="kw">let </span>ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
-    noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
-    noise.mix_key(ephemeral_pub_key_bytes.as_slice());
-    <span class="kw">let </span>ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(<span class="kw-2">&amp;</span>ephemeral_priv, peer_pub)
-        .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
-    noise.mix_key(ee_ecdh_bytes.as_slice());
-
-    <span class="kw">let </span>response_ciphertext = noise.encrypt_and_hash(<span class="kw-2">&amp;</span>[]);
-
-    <span class="kw">let </span>keys = noise.traffic_keys();
-    <span class="prelude-val">Ok</span>(Response {
-        crypter: Crypter::new(<span class="kw-2">&amp;</span>keys.<span class="number">0</span>, <span class="kw-2">&amp;</span>keys.<span class="number">1</span>),
-        handshake_hash: noise.handshake_hash(),
-        response: [ephemeral_pub_key_bytes.as_slice(), <span class="kw-2">&amp;</span>response_ciphertext].concat(),
-    })
+    </span>noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(<span class="kw-2">&amp;</span>in_message.ephemeral_public_key.as_slice());
+    finish_response(<span class="kw-2">&amp;mut </span>noise, in_message)
 }
 
 <span class="kw">pub fn </span>respond_kk(
@@ -518,24 +502,19 @@
     <span class="comment">// initiator s [not used for Nk]
     </span>initiator_static_pub: <span class="kw-2">&amp;</span>[u8],
     <span class="comment">// e, es, (ss for Kk only)
-    </span>in_data: <span class="kw-2">&amp;</span>[u8],
+    </span>in_message: <span class="kw-2">&amp;</span>NoiseMessage,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
-    <span class="kw">if </span>in_data.len() &lt; P256_X962_LEN {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
-    }
-
     <span class="kw">let </span><span class="kw-2">mut </span>noise = Noise::new(HandshakeType::Kk);
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
     </span>noise.mix_hash_point(
         identity_priv.get_public_key().map_err(|<span class="kw">_</span>| Error::InvalidPrivateKey)<span class="question-mark">?</span>.as_slice(),
     );
 
-    <span class="kw">let </span>initiator_pub: [u8; P256_X962_LEN] = (<span class="kw-2">&amp;</span>in_data[..P256_X962_LEN]).try_into().unwrap();
-    noise.mix_hash(initiator_pub.as_slice());
-    noise.mix_key(initiator_pub.as_slice());
+    noise.mix_hash(in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
 
     <span class="kw">let </span>es_ecdh_bytes = identity_priv
-        .derive_dh_secret(initiator_pub.to_vec())
+        .derive_dh_secret(in_message.ephemeral_public_key.as_slice())
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(es_ecdh_bytes.as_slice());
 
@@ -547,9 +526,44 @@
     noise.mix_key(<span class="kw-2">&amp;</span>ss_ecdh_bytes);
 
     <span class="kw">let </span>se_ecdh_bytes = identity_priv
-        .derive_dh_secret(initiator_static_pub_bytes.to_vec())
+        .derive_dh_secret(initiator_static_pub_bytes.as_slice())
         .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
     noise.mix_key(<span class="kw-2">&amp;</span>se_ecdh_bytes);
-    finish_response(<span class="kw-2">&amp;mut </span>noise, in_data, <span class="kw-2">&amp;</span>initiator_pub)
+    finish_response(<span class="kw-2">&amp;mut </span>noise, in_message)
+}
+
+<span class="kw">fn </span>finish_response(noise: <span class="kw-2">&amp;mut </span>Noise, in_message: <span class="kw-2">&amp;</span>NoiseMessage) -&gt; <span class="prelude-ty">Result</span>&lt;Response, Error&gt; {
+    <span class="kw">let </span>plaintext = noise.decrypt_and_hash(<span class="kw-2">&amp;</span>in_message.ciphertext)<span class="question-mark">?</span>;
+    <span class="kw">if </span>!plaintext.is_empty() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidHandshake);
+    }
+
+    <span class="comment">// Generate ephemeral key pair
+    </span><span class="kw">let </span>ephemeral_priv = P256Scalar::generate();
+    <span class="kw">let </span>ephemeral_pub_key_bytes = ephemeral_priv.compute_public_key();
+    noise.mix_hash(ephemeral_pub_key_bytes.as_slice());
+    noise.mix_key(ephemeral_pub_key_bytes.as_slice());
+    <span class="kw">let </span>ee_ecdh_bytes = crypto_wrapper::p256_scalar_mult(
+        <span class="kw-2">&amp;</span>ephemeral_priv,
+        in_message
+            .ephemeral_public_key
+            .as_slice()
+            .try_into()
+            .map_err(|<span class="kw">_</span>| Error::InvalidPublicKey)<span class="question-mark">?</span>,
+    )
+    .map_err(|<span class="kw">_</span>| Error::InvalidHandshake)<span class="question-mark">?</span>;
+    noise.mix_key(ee_ecdh_bytes.as_slice());
+
+    <span class="kw">let </span>response_ciphertext = noise.encrypt_and_hash(<span class="kw-2">&amp;</span>[]);
+
+    <span class="kw">let </span>keys = noise.traffic_keys();
+    <span class="prelude-val">Ok</span>(Response {
+        crypter: Crypter::new(<span class="kw-2">&amp;</span>keys.<span class="number">0</span>, <span class="kw-2">&amp;</span>keys.<span class="number">1</span>),
+        handshake_hash: noise.handshake_hash(),
+        response: NoiseMessage {
+            ciphertext: response_ciphertext,
+            ephemeral_public_key: ephemeral_pub_key_bytes.to_vec(),
+        },
+    })
 }
 </code></pre></div></section></main></body></html>
