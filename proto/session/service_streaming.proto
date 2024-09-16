@@ -24,9 +24,6 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
 message RequestWrapper {
-  // Instead, use the newer OakRequest wrapper type.
-  option deprecated = true;
-
   oneof request {
     InvokeRequest invoke_request = 2;
     GetEndorsedEvidenceRequest get_endorsed_evidence_request = 3;
@@ -34,9 +31,6 @@ message RequestWrapper {
 }
 
 message ResponseWrapper {
-  // Instead, use the newer OakResposne wrapper type.
-  option deprecated = true;
-
   oneof response {
     InvokeResponse invoke_response = 2;
     GetEndorsedEvidenceResponse get_endorsed_evidence_response = 3;
