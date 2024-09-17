@@ -49,6 +49,19 @@ pub struct SessionConfigBuilder {
     config: SessionConfig,
 }
 
+pub trait EncryptorProvider: Send {
+    fn provide_encryptor(&self, session_keys: SessionKeys) -> Result<Box<dyn Encryptor>, Error>;
+}
+
+pub struct OrderedChannelEncryptorProvider;
+
+impl EncryptorProvider for OrderedChannelEncryptorProvider {
+    fn provide_encryptor(&self, session_keys: SessionKeys) -> Result<Box<dyn Encryptor>, Error> {
+        TryInto::<OrderedChannelEncryptor>::try_into(session_keys)
+            .map(|v| Box::new(v) as Box<dyn Encryptor>)
+    }
+}
+
 impl SessionConfigBuilder {
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_provider_config = AttestationProviderConfig {
@@ -65,12 +78,8 @@ impl SessionConfigBuilder {
             peer_attestation_binding_public_key: None,
         };
 
-        let encryptor_config = EncryptorConfig {
-            encryptor_provider: Box::new(|sk| {
-                <SessionKeys as TryInto<OrderedChannelEncryptor>>::try_into(sk)
-                    .map(|v| Box::new(v) as Box<dyn Encryptor>)
-            }),
-        };
+        let encryptor_config =
+            EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
         let config =
             SessionConfig { attestation_provider_config, handshaker_config, encryptor_config };
@@ -111,7 +120,7 @@ impl SessionConfigBuilder {
 
     pub fn set_encryption_provider(
         mut self,
-        encryptor_provider: Box<dyn Send + Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
+        encryptor_provider: Box<dyn EncryptorProvider>,
     ) -> Self {
         self.config.encryptor_config.encryptor_provider = encryptor_provider;
         self
@@ -143,5 +152,5 @@ pub struct HandshakerConfig {
 }
 
 pub struct EncryptorConfig {
-    pub encryptor_provider: Box<dyn Send + Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
+    pub encryptor_provider: Box<dyn EncryptorProvider>,
 }

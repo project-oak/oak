@@ -192,7 +192,9 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                         )?;
                     }
                     self.encryptor = Some(
-                        (self.encryptor_config.encryptor_provider)(handshake_result.session_keys)
+                        self.encryptor_config
+                            .encryptor_provider
+                            .provide_encryptor(handshake_result.session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
@@ -333,7 +335,9 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                         )?;
                     }
                     self.encryptor = Some(
-                        (self.encryptor_config.encryptor_provider)(handshake_result.session_keys)
+                        self.encryptor_config
+                            .encryptor_provider
+                            .provide_encryptor(handshake_result.session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
