@@ -42,7 +42,7 @@ use crate::{
 /// If one of the methods returns an error, it means that there was a protocol
 /// error and the session needs to be restarted (because the state-machine is in
 /// an incorrect state).
-pub trait Session {
+pub trait Session: Send {
     /// Checks whether session is ready to send and receive encrypted messages.
     /// Session becomes ready once remote attestation and crypto handshake have
     /// been successfully finished.

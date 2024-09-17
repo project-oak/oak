@@ -74,7 +74,7 @@ impl From<Payload> for EncryptedMessage {
     }
 }
 
-pub trait Encryptor {
+pub trait Encryptor: Send {
     fn encrypt(&mut self, plaintext: &Payload) -> anyhow::Result<Payload>;
     fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload>;
 }

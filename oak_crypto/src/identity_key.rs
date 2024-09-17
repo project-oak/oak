@@ -23,7 +23,7 @@ use anyhow::anyhow;
 
 use crate::noise_handshake::{p256_scalar_mult, P256Scalar};
 
-pub trait IdentityKeyHandle {
+pub trait IdentityKeyHandle: Send {
     fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;
     fn derive_dh_secret(&self, peer_public_key: &[u8]) -> anyhow::Result<Vec<u8>>;
 }

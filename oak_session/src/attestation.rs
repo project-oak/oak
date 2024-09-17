@@ -31,12 +31,12 @@ use oak_proto_rust::oak::{
 use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
 #[cfg_attr(test, automock)]
-pub trait Attester {
+pub trait Attester: Send {
     fn get_endorsed_evidence(&self) -> anyhow::Result<EndorsedEvidence>;
 }
 
 #[cfg_attr(test, automock)]
-pub trait AttestationVerifier {
+pub trait AttestationVerifier: Send {
     fn verify(
         &self,
         evidence: &Evidence,
@@ -60,11 +60,11 @@ pub enum AttestationType {
     Unattested,
 }
 
-pub trait AttestationProvider {
+pub trait AttestationProvider: Send {
     fn take_attestation_report(&mut self) -> Option<AttestationResults>;
 }
 
-pub trait AttestationAggregator {
+pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, AttestationResults>,

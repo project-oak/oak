@@ -111,7 +111,7 @@ impl SessionConfigBuilder {
 
     pub fn set_encryption_provider(
         mut self,
-        encryptor_provider: Box<dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
+        encryptor_provider: Box<dyn Send + Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
     ) -> Self {
         self.config.encryptor_config.encryptor_provider = encryptor_provider;
         self
@@ -143,5 +143,5 @@ pub struct HandshakerConfig {
 }
 
 pub struct EncryptorConfig {
-    pub encryptor_provider: Box<dyn Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
+    pub encryptor_provider: Box<dyn Send + Fn(SessionKeys) -> Result<Box<dyn Encryptor>, Error>>,
 }

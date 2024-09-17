@@ -368,3 +368,19 @@ fn verify_session_message<I, O>(
     session2.put_incoming_message(&outgoing_message).unwrap();
     assert_eq!(message, &session2.read().unwrap().unwrap());
 }
+
+#[test]
+fn test_session_sendable() {
+    fn foo<T: Send>(_: T) {}
+
+    fn test(s: ServerSession) {
+        foo(s)
+    }
+
+    let identity_key = Box::new(IdentityKey::generate());
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_private_key(identity_key)
+        .build();
+    let server_session = ServerSession::new(server_config);
+    test(server_session);
+}

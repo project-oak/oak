@@ -48,7 +48,7 @@ pub enum HandshakeType {
     NoiseNN,
 }
 
-pub trait Handshaker {
+pub trait Handshaker: Send {
     fn derive_session_keys(&mut self) -> Option<SessionKeys>;
 }
 
