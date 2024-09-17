@@ -30,7 +30,7 @@ use tower::service_fn;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
-    addr: tonic::transport::Uri,
+    channel: tonic::transport::Channel,
     inner: GrpcLauncherClient<Channel>,
     hostlib_key_provisioning_client: HostlibKeyProvisioningClient<Channel>,
 }
@@ -57,8 +57,8 @@ impl LauncherClient {
             Channel::builder(addr.clone()).connect().await?
         };
         let inner = GrpcLauncherClient::new(channel.clone());
-        let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
-        Ok(Self { addr, inner, hostlib_key_provisioning_client })
+        let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel.clone());
+        Ok(Self { channel, inner, hostlib_key_provisioning_client })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -149,6 +149,6 @@ impl LauncherClient {
     }
 
     pub fn openmetrics_builder(&self) -> TonicExporterBuilder {
-        opentelemetry_otlp::new_exporter().tonic().with_endpoint(self.addr.clone().to_string())
+        opentelemetry_otlp::new_exporter().tonic().with_channel(self.channel.clone())
     }
 }
