@@ -248,7 +248,7 @@ oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     env bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt //oak_containers/examples/hello_world/trusted_app:bundle.tar
     # bazel-bin symlink doesn't exist outside of the docker container, this makes the file available to the kokoro script.
-    cp bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
+    cp -f bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"

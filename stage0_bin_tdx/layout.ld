@@ -17,6 +17,8 @@
 HIDDEN(TOP = 4096M);
 HIDDEN(TD_HOB_SIZE = 8K);
 HIDDEN(TD_HOB_START = 0x800000);
+HIDDEN(TD_MAILBOX_START = TD_HOB_START + TD_HOB_SIZE);
+HIDDEN(TD_MAILBOX_SIZE = 4K);
 HIDDEN(BFV_SIZE = BIOS_SIZE);
 /* We assume BIOS_SIZE will be provided externally. */
 
@@ -24,6 +26,7 @@ MEMORY {
     ram_low : ORIGIN = 0, LENGTH = 1M
 
     td_hob : ORIGIN = TD_HOB_START, LENGTH = TD_HOB_SIZE
+    td_mailbox : ORIGIN = TD_MAILBOX_START, LENGTH = TD_MAILBOX_SIZE
     bios : ORIGIN = TOP - BIOS_SIZE, LENGTH = BIOS_SIZE
 }
 
@@ -102,6 +105,17 @@ SECTIONS {
     .tdx.td_hob ALIGN(TD_HOB_START, 4K) (NOLOAD): {
         . += TD_HOB_SIZE; /* 8KB */
     } > td_hob : td_hob
+
+    /* TD MailBox .
+     * After boot, APs loop poll the mailbox. The OS will send the them
+     * wakeup commands using the Mailbox and instruct them where to jump next.
+     * See TDX Firmware Development Guide section 4.3 for AP wakeup protocol.
+     * Mailbox structure defined here:
+     * https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#multiprocessor-wakeup-mailbox-structure
+     */
+     .tdx.td_mailbox ALIGN(TD_MAILBOX_START, 4K) (NOLOAD) : {
+        . += TD_MAILBOX_SIZE;
+     } > td_mailbox
 
     /* Create a BFV header + Ffs File header + File section header
      * All area starting here will be measured by TDX module because
@@ -388,7 +402,7 @@ SECTIONS {
      */
     .guid_tables TOP - 0x20 - (16             /* Intel TDX metadata GUID             */
                                   + 16        /* TDVF decriptor       <-----------|  */
-                                  + 3*32      /* TDVF sections                    |  */
+                                  + 4*32      /* TDVF sections                    |  */
                                   + 22        /* Intel TDX metadata offset block  |  */
                                   + 18        /* footer */) : {
 
@@ -405,13 +419,15 @@ SECTIONS {
         SHORT(0x44d5)
         SHORT(0xeba8)
         BYTE(0x7f) BYTE(0x4d) BYTE(0x87) BYTE(0x38) BYTE(0xf6) BYTE(0xae)
+
         /* Descriptor: See Table 11-1: TDVF_DESCRIPTOR definition
          * uint32 signature ("TDVF"), uint32 length, uint32 version, uint32 number of sections */
         HIDDEN(tdx_metadata_structure_start = .);
-        BYTE(0x54) BYTE(0x44) BYTE(0x56) BYTE(0x46)
-        LONG(tdx_metadata_structure_end - tdx_metadata_structure_start)
-        LONG(1) /* version, must be 1 */
-        LONG((tdx_metadata_structure_end - tdx_metadata_structure_start - 16) / 32)
+        BYTE(0x54) BYTE(0x44) BYTE(0x56) BYTE(0x46)                                     /* Table signature: "TDVF" */
+        LONG(tdx_metadata_structure_end - tdx_metadata_structure_start)                 /* Length */
+        LONG(1)                                                                         /* Version, must be 1 */
+        LONG((tdx_metadata_structure_end - tdx_metadata_structure_start - 16) / 32)     /* Number of Section entries */
+
         /* 32-byte sections to be added: "BFV", "CFV", ...
          * See Table 11-2: TDVF_SECTION definition
          * uint32 offset, uint32 raw data size, uint64 memory base, uint64 memory size, uint32 type, uint32 attributes
@@ -423,14 +439,29 @@ SECTIONS {
          * LONG(tdx_metadata_section_type_bfv)
          * LONG(tdx_metadata_attributes_extendmr)
          */
-        /* TD HoB */
-        LONG(0)
-        LONG(0)
-        QUAD(TD_HOB_START)
-        QUAD(TD_HOB_SIZE)
-        LONG(2)                      /* TDX_METADATA_SECTION_TYPE_TD_HOB */
-        LONG(0)
-        /* TD Boot Firmware Volume (BFV)
+
+        /* TDVF_SECTION: TD_HOB */
+        LONG(0)                      /* DataOffset */
+        LONG(0)                      /* RawDataSize */
+        QUAD(TD_HOB_START)           /* MemoryAddress */
+        QUAD(TD_HOB_SIZE)            /* MemoryDataSize */
+        LONG(2)                      /* Type = TDX_METADATA_SECTION_TYPE_TD_HOB */
+        LONG(0)                      /* Attributes */
+
+        /* TDVF_SECTION: Mailbox.
+         * See TDX Firmware Development Guide section 4.3 for AP wakeup protocol.
+         * Read also MailBox definition in this file. From here:
+         * https://github.com/confidential-containers/td-shim/blob/66f0aaf96582905a705f212f0cc2db63f4679082/td-shim-tools/src/metadata.rs#L173
+         * the mailbox is declared as a Temp Mem TDVF section.
+         */
+        LONG(0)                      /* DataOffset */
+        LONG(0)                      /* RawDataSize */
+        QUAD(TD_MAILBOX_START)       /* MemoryAddress */
+        QUAD(TD_MAILBOX_SIZE)        /* MemoryDataSize */
+        LONG(3)                      /* Type = TDX_METADATA_SECTION_TYPE_TEMP_MEM */
+        LONG(0)                      /* Attributes */
+
+        /* TDVF_SECTION: BFV - TD Boot Firmware Volume (BFV)
          * This area will be marked with EXTENDMR which means the tdx module
          * extend measurement of TD (MR_TD, not RTMRs) with the content of
          * this area. BFV is a UEFI Firmware Volume and has a Firmware Volume
@@ -439,20 +470,21 @@ SECTIONS {
          * header to describe a chunk. Since it is smaller than 16MB we can
          * just use EFI_FFS_FILE_HEADER.
         */
-        LONG(0x0)                          /* TDX_BFV_RAW_DATA_OFFSET */
-        LONG(BFV_SIZE)                     /* TDX_BFV_RAW_DATA_SIZE */
-        QUAD(TOP - BFV_SIZE)               /* TDX_BFV_MEMORY_BASE */
-        QUAD(BFV_SIZE)                     /* TDX_BFV_MEMORY_SIZE */
-        LONG(0)                      /* TDX_METADATA_SECTION_TYPE_BFV */
-        LONG(0x00000001)             /* TDX_METADATA_ATTRIBUTES_EXTENDMR */
+        LONG(0x0)                          /* DataOffset - TDX_BFV_RAW_DATA_OFFSET */
+        LONG(BFV_SIZE)                     /* RawDataSize - TDX_BFV_RAW_DATA_SIZE */
+        QUAD(TOP - BFV_SIZE)               /* MemoryAddress- TDX_BFV_MEMORY_BASE */
+        QUAD(BFV_SIZE)                     /* MemoryDataSize - TDX_BFV_MEMORY_SIZE */
+        LONG(0)                            /* Type = TDX_METADATA_SECTION_TYPE_BFV */
+        LONG(0x00000001)                   /* Attributes = TDX_METADATA_ATTRIBUTES_EXTENDMR */
 
-        /* The ram_low (TEMP_MEM). UEFI Section type 3 */
-        LONG(0)                      /* RAM_LOW firmware offset */
-        LONG(0)                      /* RAM_LOW binary size */
-        QUAD(0x0)                    /* RAM_LOW BASE */
-        QUAD(0xA0000)                /* RAM_LOW SIZE 640KiB */
-        LONG(3)                      /* TDX_METADATA_SECTION_TYPE_TEMP_MEM */
-        LONG(0)
+        /* TDVF_SECTION: TEMP_MEM. The ram_low. UEFI Section type 3 */
+        LONG(0)                            /* DataOffset - RAM_LOW firmware offset */
+        LONG(0)                            /* RawDataSize - RAM_LOW binary size */
+        QUAD(0x0)                          /* MemoryAddress - RAM_LOW BASE */
+        QUAD(0xA0000)                      /* MemoryDataSize - RAM_LOW SIZE 640KiB */
+        LONG(3)                            /* Type = TDX_METADATA_SECTION_TYPE_TEMP_MEM */
+        LONG(0)                            /* Attributes */
+
         HIDDEN(tdx_metadata_structure_end = .);
 
         /*
