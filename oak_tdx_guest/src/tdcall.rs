@@ -312,6 +312,84 @@ pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), A
     Ok(())
 }
 
+/// The index of a run-time measurement register (RTMR).
+#[derive(Debug)]
+#[repr(u64)]
+pub enum RtmrIndex {
+    Rtmr0 = 0,
+    Rtmr1 = 1,
+    Rtmr2 = 2,
+    Rtmr3 = 3,
+}
+
+/// A buffer that can be used for extending an RTMR.
+///
+/// It must be 64-byte aligned and have a length of 48 bytes.
+#[repr(C, align(64))]
+pub struct ExtensionBuffer {
+    data: [u8; 48],
+}
+
+/// Error when extending an RTMR.
+///
+/// These values are derived from the TDX Function Completion status structure.
+/// See section 3.1.1 of the [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
+/// for more information.
+#[derive(Debug, Display, FromRepr)]
+#[repr(u64)]
+pub enum ExtendRtmrError {
+    /// The supplied operand is invalid.
+    InvalidOperand = 0xC000010000000000,
+    /// Operation encountered a busy operand, indicated by the lower 32 bits of
+    /// the status. In many cases, this can be resolved by retrying the
+    /// operation.
+    OperandBusy = 0x8000020000000000,
+}
+
+/// Extends the specified run-time measurement register (RTMR) with the given
+/// data.
+///
+/// See section 5.4.6 of the [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
+/// for more information.
+pub fn extend_rtmr<T: Into<ExtensionBuffer>>(
+    rtmr_index: RtmrIndex,
+    buf: T,
+) -> Result<(), ExtendRtmrError> {
+    // The TDCALL leaf for TDG.MR.RTMR.EXTEND.
+    const LEAF: u64 = 2;
+
+    let mut result: u64;
+    let buf_gpa = (&buf.into().data).as_ptr() as usize as u64;
+    let rtmr_index = rtmr_index as u64;
+
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The
+    // guest-physical address of the start of the extension buffer goes into RCX.
+    // The RTMR index goes into RDX.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all
+    // the affected registers are specified, so no unspecified registers will be
+    // clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") LEAF => result,
+            in("rcx") buf_gpa,
+            in("rdx") rtmr_index,
+            options(nomem, nostack),
+        );
+    }
+
+    if result > 0 {
+        // According to the spec the result will either be 0 (Success) or one of the
+        // defined error values. The lower 32 bits can contain additional information
+        // that we ignore for now.
+        return Err(ExtendRtmrError::from_repr(result & 0xFFFFFFFF00000000)
+            .expect("TDCALL[TDG.MR.RTMR.EXTEND] returned an invalid result"));
+    }
+
+    Ok(())
+}
+
 /// Splits a 64-bit little-endian unsigned integer into two 32-bit little-endian
 /// unsigned integers.
 ///
