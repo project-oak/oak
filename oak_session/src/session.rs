@@ -17,20 +17,25 @@
 //! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-use alloc::{boxed::Box, collections::VecDeque};
-
-use anyhow::{anyhow, Context, Error};
-use oak_crypto::encryptor::Encryptor;
-use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults},
-    session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-        SessionRequest, SessionResponse,
-    },
+use alloc::{
+    boxed::Box,
+    collections::{BTreeMap, VecDeque},
+    string::String,
 };
 
+use anyhow::{anyhow, Context, Error, Ok};
+use oak_crypto::encryptor::Encryptor;
+use oak_proto_rust::oak::session::v1::{
+    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+    SessionBinding, SessionRequest, SessionResponse,
+};
+use prost::Message;
+
 use crate::{
-    attestation::{AttestationProvider, ClientAttestationProvider, ServerAttestationProvider},
+    attestation::{
+        AttestationFailure, AttestationProvider, AttestationSuccess, ClientAttestationProvider,
+        ServerAttestationProvider,
+    },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
     ProtocolEngine,
@@ -72,7 +77,7 @@ pub struct ClientSession {
     handshaker: ClientHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
-    attestation_results: Option<AttestationResults>,
+    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
@@ -85,7 +90,7 @@ impl ClientSession {
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
             encryptor_config: config.encryptor_config,
-            attestation_results: None,
+            attestation_result: None,
             encryptor: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -168,14 +173,8 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: attest message received but attester doesn't expect
                      any"
                 ))?;
-                if let Some(attestation_results) = self.attester.take_attestation_report() {
-                    self.attestation_results = Some(attestation_results.clone());
-                    if attestation_results.status != attestation_results::Status::Success.into() {
-                        return Err(anyhow!(
-                            "Attestation verification failed: {}",
-                            attestation_results.reason
-                        ));
-                    }
+                if let Some(attestation_result) = self.attester.take_attestation_result() {
+                    self.attestation_result = Some(attestation_result);
                 }
                 Ok(Some(()))
             }
@@ -184,9 +183,16 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 ))?;
-                if let Some(session_keys) = self.handshaker.derive_session_keys() {
+                if let Some(handshake_result) = self.handshaker.take_handshake_result() {
+                    if let Some(attestation_result) = &self.attestation_result {
+                        verify_session_binding(
+                            &attestation_result,
+                            &handshake_message.attestation_bindings,
+                            handshake_result.handshake_hash.as_slice(),
+                        )?;
+                    }
                     self.encryptor = Some(
-                        (self.encryptor_config.encryptor_provider)(session_keys)
+                        (self.encryptor_config.encryptor_provider)(handshake_result.session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
@@ -213,7 +219,7 @@ pub struct ServerSession {
     handshaker: ServerHandshaker,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
-    attestation_results: Option<AttestationResults>,
+    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
     encryptor: Option<Box<dyn Encryptor>>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
@@ -225,7 +231,7 @@ impl ServerSession {
             attester: ServerAttestationProvider::new(config.attestation_provider_config),
             handshaker: ServerHandshaker::new(config.handshaker_config),
             encryptor_config: config.encryptor_config,
-            attestation_results: None,
+            attestation_result: None,
             encryptor: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -308,14 +314,8 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                     "invalid session state: attest message received but attester doesn't expect
                  any"
                 ))?;
-                if let Some(attestation_results) = self.attester.take_attestation_report() {
-                    self.attestation_results = Some(attestation_results.clone());
-                    if attestation_results.status != attestation_results::Status::Success.into() {
-                        return Err(anyhow!(
-                            "Attestation verification failed: {}",
-                            attestation_results.reason
-                        ));
-                    }
+                if let Some(attestation_result) = self.attester.take_attestation_result() {
+                    self.attestation_result = Some(attestation_result);
                 }
                 Ok(Some(()))
             }
@@ -324,9 +324,16 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                     "invalid session state: handshake message received but handshaker doesn't
                  expect any"
                 ))?;
-                if let Some(session_keys) = self.handshaker.derive_session_keys() {
+                if let Some(handshake_result) = self.handshaker.take_handshake_result() {
+                    if let Some(attestation_result) = &self.attestation_result {
+                        verify_session_binding(
+                            &attestation_result,
+                            &handshake_message.attestation_bindings,
+                            handshake_result.handshake_hash.as_slice(),
+                        )?;
+                    }
                     self.encryptor = Some(
-                        (self.encryptor_config.encryptor_provider)(session_keys)
+                        (self.encryptor_config.encryptor_provider)(handshake_result.session_keys)
                             .context("couldn't create an encryptor from the session key")?,
                     )
                 }
@@ -345,4 +352,26 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
             _ => Err(anyhow!("unexpected content of session response")),
         }
     }
+}
+
+fn verify_session_binding(
+    attestation_result: &Result<AttestationSuccess, AttestationFailure>,
+    bindings: &BTreeMap<String, SessionBinding>,
+    handshake_hash: &[u8],
+) -> Result<(), Error> {
+    let attestation = attestation_result
+        .as_ref()
+        .map_err(|_| anyhow!("attempt to verify attestation binding to a failed attestation"))?;
+
+    for (verifier_id, binding_verifier) in &attestation.session_binding_verifiers {
+        binding_verifier.verify_binding(
+            handshake_hash,
+            bindings
+                .get(verifier_id)
+                .ok_or(anyhow!("handshake message doesn't have a binding for ID {}", verifier_id))?
+                .encode_to_vec()
+                .as_slice(),
+        )?;
+    }
+    Ok(())
 }

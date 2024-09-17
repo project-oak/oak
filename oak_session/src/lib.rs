@@ -27,6 +27,7 @@ pub mod config;
 pub mod encryptors;
 pub mod handshake;
 pub mod session;
+pub mod session_binding;
 
 #[cfg(test)]
 mod tests;

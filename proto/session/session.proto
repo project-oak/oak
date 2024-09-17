@@ -52,18 +52,12 @@ message NoiseHandshakeMessage {
   bytes ciphertext = 3;
 }
 
-// Message to be signed as part of the attestation binding.
-message AttestationBindingMessage {
-  bytes handshake_hash = 1;
-  bytes endorsements_hash = 2;
-  bytes peer_reference_values_hash = 3;
-}
-
-// Message that binds the Noise session (and optionally Attestation Endorsement
-// and peer Reference Values) to the Attestation Evidence.
-message AttestationBinding {
-  // Signature of the serialized `AttestationBindingMessage` Protobuf message.
-  bytes signature = 1;
+// Message that binds the Noise session (and optionally other data) to the
+// Attestation Evidence.
+message SessionBinding {
+  // Representation the serialized message cryptographically bound to the
+  // handshake and the associated data (e.g., a signature).
+  bytes binding = 1;
 }
 
 // Request message for the crypto handshake request needed to establish a set of
@@ -72,7 +66,9 @@ message HandshakeRequest {
   oneof handshake_type {
     NoiseHandshakeMessage noise_handshake_message = 1;
   }
-  AttestationBinding attestation_binding = 2;
+  reserved 2;
+  // Bindings to the attestation evidence, per binding type.
+  map<string, SessionBinding> attestation_bindings = 3;
 }
 
 // Response message for the crypto handshake request needed to establish a set
@@ -81,7 +77,9 @@ message HandshakeResponse {
   oneof handshake_type {
     NoiseHandshakeMessage noise_handshake_message = 1;
   }
-  AttestationBinding attestation_binding = 2;
+  reserved 2;
+  // Bindings to the attestation evidence, per binding type.
+  map<string, SessionBinding> attestation_bindings = 3;
 }
 
 // Message for encrypted data exchange after a secure session is established.

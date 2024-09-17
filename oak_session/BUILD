@@ -33,6 +33,7 @@ rust_library(
         "@oak_crates_index//:aead",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:itertools",
+        "@oak_crates_index//:prost",
     ],
 )
 

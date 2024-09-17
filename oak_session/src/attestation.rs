@@ -17,7 +17,13 @@
 //! This module provides an implementation of the Attestation Provider, which
 //! handles remote attestation between two parties.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String};
+use alloc::{
+    boxed::Box,
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::fmt::Display;
 
 use anyhow::{anyhow, Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
@@ -28,7 +34,42 @@ use oak_proto_rust::oak::{
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
-use crate::{config::AttestationProviderConfig, ProtocolEngine};
+use crate::{
+    config::AttestationProviderConfig, session_binding::SessionBindingVerifier, ProtocolEngine,
+};
+
+pub struct AttestationSuccess {
+    // Binders allowing to bind different types of attestation to the session (keyed by the
+    // attestation type ID).
+    pub session_binding_verifiers: BTreeMap<String, Box<dyn SessionBindingVerifier>>,
+}
+#[derive(Debug)]
+pub struct AttestationFailure {
+    pub reason: String,
+    // Per verifier error messages (keyed by the attestation type ID).
+    pub error_messages: BTreeMap<String, String>,
+}
+
+impl Display for AttestationFailure {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Attestation failure: {}. Errors from individual verifiers: {}",
+            self.reason,
+            self.error_messages
+                .iter()
+                .map(|(id, error)| format!("Verifier ID: {}, error: {}", id, error))
+                .collect::<Vec<String>>()
+                .join(";")
+        )
+    }
+}
+
+impl From<Error> for AttestationFailure {
+    fn from(value: Error) -> Self {
+        AttestationFailure { reason: value.to_string(), error_messages: BTreeMap::new() }
+    }
+}
 
 #[cfg_attr(test, automock)]
 pub trait Attester: Send {
@@ -36,12 +77,18 @@ pub trait Attester: Send {
 }
 
 #[cfg_attr(test, automock)]
+// Verifier for the particular type of the attestation.
 pub trait AttestationVerifier: Send {
     fn verify(
         &self,
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults>;
+
+    fn create_session_binding_verifier(
+        &self,
+        results: &AttestationResults,
+    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
 }
 
 /// Configuration of the attestation behavior that the AttestationProvider will
@@ -60,15 +107,23 @@ pub enum AttestationType {
     Unattested,
 }
 
+// Provider for the particular type of the attestation.
 pub trait AttestationProvider: Send {
-    fn take_attestation_report(&mut self) -> Option<AttestationResults>;
+    // Consume the attestation results when they're ready. Returns None if the
+    // attestation still is still pending the incoming peer's data.
+    fn take_attestation_result(&mut self)
+    -> Option<Result<AttestationSuccess, AttestationFailure>>;
 }
 
+// Aggregates the attestation result from multiple verifiers. Implementations of
+// this trait define the logic of when the overall attestation step succeeds or
+// fails.
 pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
+        verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
         results: BTreeMap<String, AttestationResults>,
-    ) -> Result<AttestationResults, Error>;
+    ) -> Result<AttestationSuccess, AttestationFailure>;
 }
 
 pub struct DefaultAttestationAggregator {}
@@ -76,13 +131,13 @@ pub struct DefaultAttestationAggregator {}
 impl AttestationAggregator for DefaultAttestationAggregator {
     fn aggregate_attestation_results(
         &self,
+        verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
         results: BTreeMap<String, AttestationResults>,
-    ) -> Result<AttestationResults, Error> {
+    ) -> Result<AttestationSuccess, AttestationFailure> {
         if results.is_empty() {
-            return Ok(AttestationResults {
-                status: attestation_results::Status::GenericFailure.into(),
-                reason: String::from("No matching attestation results"),
-                ..Default::default()
+            return Err(AttestationFailure {
+                reason: "No matching attestation results".to_string(),
+                error_messages: BTreeMap::new(),
             });
         };
         let failures: BTreeMap<&String, &AttestationResults> = results
@@ -90,18 +145,32 @@ impl AttestationAggregator for DefaultAttestationAggregator {
             .filter(|(_, v)| v.status == attestation_results::Status::GenericFailure.into())
             .collect();
         if !failures.is_empty() {
-            return Ok(AttestationResults {
-                status: attestation_results::Status::GenericFailure.into(),
-                reason: failures
+            return Err(AttestationFailure {
+                reason: "Verification failed".to_string(),
+                error_messages: failures
                     .iter()
-                    .map(|(id, v)| format!("Id: {}, error: {}; ", id, v.reason))
+                    .map(|(id, v)| ((*id).clone(), v.reason.clone()))
                     .collect(),
-                ..Default::default()
             });
         };
-        // In case of multiple success matches we just return the first one.
-        // Using unwrap(), as we have already checked that results are not empty.
-        Ok(results.first_key_value().unwrap().1.clone())
+        Ok(AttestationSuccess {
+            session_binding_verifiers: results
+                .iter()
+                .map(|(id, results)| {
+                    Ok((
+                        id.clone(),
+                        verifiers
+                            .get(id)
+                            .ok_or(anyhow!(
+                                "Missing verifier for attestation result with ID {}",
+                                id
+                            ))?
+                            .create_session_binding_verifier(results)?,
+                    ))
+                })
+                .collect::<Result<BTreeMap<String, Box<dyn SessionBindingVerifier>>, Error>>()?,
+        })
+        .map_err(AttestationFailure::from)
     }
 }
 
@@ -110,18 +179,20 @@ impl AttestationAggregator for DefaultAttestationAggregator {
 #[allow(dead_code)]
 pub struct ClientAttestationProvider {
     config: AttestationProviderConfig,
-    attestation_results: Option<AttestationResults>,
+    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
 }
 
 impl ClientAttestationProvider {
     pub fn new(config: AttestationProviderConfig) -> Self {
-        Self { config, attestation_results: None }
+        Self { config, attestation_result: None }
     }
 }
 
 impl AttestationProvider for ClientAttestationProvider {
-    fn take_attestation_report(&mut self) -> Option<AttestationResults> {
-        self.attestation_results.take()
+    fn take_attestation_result(
+        &mut self,
+    ) -> Option<Result<AttestationSuccess, AttestationFailure>> {
+        self.attestation_result.take()
     }
 }
 
@@ -149,14 +220,15 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
         &mut self,
         incoming_message: &AttestResponse,
     ) -> anyhow::Result<Option<()>> {
-        self.attestation_results = match self.config.attestation_type {
+        self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
+                    &self.config.peer_verifiers,
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
                     )?,
-                )?)
+                ))
             }
             AttestationType::SelfUnidirectional => None,
             AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
@@ -170,18 +242,20 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
 #[allow(dead_code)]
 pub struct ServerAttestationProvider {
     config: AttestationProviderConfig,
-    attestation_results: Option<AttestationResults>,
+    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
 }
 
 impl ServerAttestationProvider {
     pub fn new(config: AttestationProviderConfig) -> Self {
-        Self { config, attestation_results: None }
+        Self { config, attestation_result: None }
     }
 }
 
 impl AttestationProvider for ServerAttestationProvider {
-    fn take_attestation_report(&mut self) -> Option<AttestationResults> {
-        self.attestation_results.take()
+    fn take_attestation_result(
+        &mut self,
+    ) -> Option<Result<AttestationSuccess, AttestationFailure>> {
+        self.attestation_result.take()
     }
 }
 
@@ -209,14 +283,15 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
         &mut self,
         incoming_message: &AttestRequest,
     ) -> anyhow::Result<Option<()>> {
-        self.attestation_results = match self.config.attestation_type {
+        self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
+                    &self.config.peer_verifiers,
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
                     )?,
-                )?)
+                ))
             }
             AttestationType::SelfUnidirectional => None,
             AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),

@@ -17,7 +17,7 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 use core::convert::TryInto;
 
 use aead::Error;
@@ -25,7 +25,7 @@ use anyhow::{anyhow, Context};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
     noise_handshake::{
-        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Crypter, NoiseMessage,
+        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, NoiseMessage,
     },
 };
 use oak_proto_rust::oak::{
@@ -38,8 +38,6 @@ use oak_proto_rust::oak::{
 
 use crate::{config::HandshakerConfig, ProtocolEngine};
 
-const HANDSHAKE_HASH_LEN: usize = 32;
-
 #[derive(Copy, Clone)]
 pub enum HandshakeType {
     NoiseKK,
@@ -48,17 +46,23 @@ pub enum HandshakeType {
     NoiseNN,
 }
 
+pub struct HandshakeResult {
+    pub session_keys: SessionKeys,
+    pub handshake_hash: Vec<u8>,
+}
+
 pub trait Handshaker: Send {
-    fn derive_session_keys(&mut self) -> Option<SessionKeys>;
+    // Consume the handshake result when it's ready. Returns None if the handshake
+    // is still in progress or its results have already been consumed.
+    fn take_handshake_result(&mut self) -> Option<HandshakeResult>;
 }
 
 /// Client-side Handshaker that initiates the crypto handshake with the server.
-#[allow(dead_code)]
 pub struct ClientHandshaker {
     handshake_type: HandshakeType,
     handshake_initiator: HandshakeInitiator,
     initial_message: Option<NoiseMessage>,
-    handshake_result: Option<([u8; HANDSHAKE_HASH_LEN], Crypter)>,
+    handshake_result: Option<HandshakeResult>,
 }
 
 impl ClientHandshaker {
@@ -99,8 +103,8 @@ impl ClientHandshaker {
 }
 
 impl Handshaker for ClientHandshaker {
-    fn derive_session_keys(&mut self) -> Option<SessionKeys> {
-        self.handshake_result.take().map(|(_handshake_hash, crypter)| crypter.into())
+    fn take_handshake_result(&mut self) -> Option<HandshakeResult> {
+        self.handshake_result.take()
     }
 }
 
@@ -119,7 +123,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
                     ciphertext: initial_message.ciphertext,
                 },
             )),
-            attestation_binding: None,
+            attestation_bindings: BTreeMap::new(),
         }))
     }
 
@@ -132,7 +136,11 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
                 self.handshake_result = Some(
                     self.handshake_initiator
                         .process_response(&noise_message.into())
-                        .map_err(|e| anyhow!("Error processing response: {e:?}"))?,
+                        .map_err(|e| anyhow!("Error processing response: {e:?}"))
+                        .map(|(handshake_hash, crypter)| HandshakeResult {
+                            session_keys: crypter.into(),
+                            handshake_hash: handshake_hash.to_vec(),
+                        })?,
                 );
                 Ok(Some(()))
             }
@@ -149,7 +157,7 @@ pub struct ServerHandshaker {
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
     peer_public_key: Option<Vec<u8>>,
     handshake_response: Option<HandshakeResponse>,
-    handshake_result: Option<SessionKeys>,
+    handshake_result: Option<HandshakeResult>,
 }
 
 impl ServerHandshaker {
@@ -165,7 +173,7 @@ impl ServerHandshaker {
 }
 
 impl Handshaker for ServerHandshaker {
-    fn derive_session_keys(&mut self) -> Option<SessionKeys> {
+    fn take_handshake_result(&mut self) -> Option<HandshakeResult> {
         self.handshake_result.take()
     }
 }
@@ -210,7 +218,10 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
             }
             None => return Err(anyhow!("Missing handshake_type")),
         };
-        self.handshake_result = Some(noise_response.crypter.into());
+        self.handshake_result = Some(HandshakeResult {
+            session_keys: noise_response.crypter.into(),
+            handshake_hash: noise_response.handshake_hash.to_vec(),
+        });
         self.handshake_response = Some(HandshakeResponse {
             r#handshake_type: Some(handshake_response::HandshakeType::NoiseHandshakeMessage(
                 NoiseHandshakeMessage {
@@ -224,7 +235,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                     ciphertext: noise_response.response.ciphertext,
                 },
             )),
-            attestation_binding: None,
+            attestation_bindings: BTreeMap::new(),
         });
         Ok(Some(()))
     }

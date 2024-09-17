@@ -33,6 +33,7 @@ use crate::{
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::OrderedChannelEncryptor,
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
+    session_binding::MockSessionBindingVerifier,
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
@@ -96,20 +97,8 @@ fn attestation_verification_succeeds() {
             .is_ok()
     );
 
-    let client_attestation_result = client_attestation_provider.take_attestation_report().unwrap();
-    assert_eq!(
-        client_attestation_result.status,
-        attestation_results::Status::Success.into(),
-        "Client attestation verification failed: {}",
-        client_attestation_result.reason
-    );
-    let server_attestation_result = server_attestation_provider.take_attestation_report().unwrap();
-    assert_eq!(
-        server_attestation_result.status,
-        attestation_results::Status::Success.into(),
-        "Server attestation verification failed: {}",
-        server_attestation_result.reason
-    );
+    client_attestation_provider.take_attestation_result().unwrap().unwrap();
+    server_attestation_provider.take_attestation_result().unwrap().unwrap();
 }
 
 #[test]
@@ -159,16 +148,10 @@ fn attestation_verification_fails() {
             .is_ok()
     );
 
-    let client_attestation_result = client_attestation_provider.take_attestation_report().unwrap();
-    assert_eq!(
-        client_attestation_result.status,
-        attestation_results::Status::GenericFailure.into()
-    );
-    let server_attestation_result = server_attestation_provider.take_attestation_report().unwrap();
-    assert_eq!(
-        server_attestation_result.status,
-        attestation_results::Status::GenericFailure.into()
-    );
+    let client_attestation_result = client_attestation_provider.take_attestation_result().unwrap();
+    assert!(client_attestation_result.is_err());
+    let server_attestation_result = server_attestation_provider.take_attestation_result().unwrap();
+    assert!(server_attestation_result.is_err());
 }
 
 fn create_mock_attester() -> Box<dyn Attester> {
@@ -190,6 +173,9 @@ fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
             ..Default::default()
         })
     });
+    verifier
+        .expect_create_session_binding_verifier()
+        .returning(|_| Ok(Box::new(MockSessionBindingVerifier::new())));
     Box::new(verifier)
 }
 
@@ -272,8 +258,8 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     client_handshaker
         .put_incoming_message(&response)
         .expect("Failed to process the client incoming message");
-    let session_keys_client = client_handshaker.derive_session_keys().unwrap();
-    let session_keys_server = server_handshaker.derive_session_keys().unwrap();
+    let session_keys_client = client_handshaker.take_handshake_result().unwrap().session_keys;
+    let session_keys_server = server_handshaker.take_handshake_result().unwrap().session_keys;
     assert_eq!(session_keys_client.request_key, session_keys_server.response_key);
     assert_eq!(session_keys_server.request_key, session_keys_client.response_key);
 

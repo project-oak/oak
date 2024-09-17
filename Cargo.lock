@@ -3094,6 +3094,7 @@ dependencies = [
  "mockall",
  "oak_crypto",
  "oak_proto_rust",
+ "prost",
 ]
 
 [[package]]

@@ -82,33 +82,27 @@ pub struct NoiseHandshakeMessage {
     #[prost(bytes = "vec", tag = "3")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
 }
-/// Message to be signed as part of the attestation binding.
+/// Message that binds the Noise session (and optionally other data) to the
+/// Attestation Evidence.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct AttestationBindingMessage {
+pub struct SessionBinding {
+    /// Representation the serialized message cryptographically bound to the
+    /// handshake and the associated data (e.g., a signature).
     #[prost(bytes = "vec", tag = "1")]
-    pub handshake_hash: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "2")]
-    pub endorsements_hash: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "3")]
-    pub peer_reference_values_hash: ::prost::alloc::vec::Vec<u8>,
-}
-/// Message that binds the Noise session (and optionally Attestation Endorsement
-/// and peer Reference Values) to the Attestation Evidence.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct AttestationBinding {
-    /// Signature of the serialized `AttestationBindingMessage` Protobuf message.
-    #[prost(bytes = "vec", tag = "1")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
+    pub binding: ::prost::alloc::vec::Vec<u8>,
 }
 /// Request message for the crypto handshake request needed to establish a set of
 /// session keys.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct HandshakeRequest {
-    #[prost(message, optional, tag = "2")]
-    pub attestation_binding: ::core::option::Option<AttestationBinding>,
+    /// Bindings to the attestation evidence, per binding type.
+    #[prost(btree_map = "string, message", tag = "3")]
+    pub attestation_bindings: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        SessionBinding,
+    >,
     #[prost(oneof = "handshake_request::HandshakeType", tags = "1")]
     pub handshake_type: ::core::option::Option<handshake_request::HandshakeType>,
 }
@@ -126,8 +120,12 @@ pub mod handshake_request {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct HandshakeResponse {
-    #[prost(message, optional, tag = "2")]
-    pub attestation_binding: ::core::option::Option<AttestationBinding>,
+    /// Bindings to the attestation evidence, per binding type.
+    #[prost(btree_map = "string, message", tag = "3")]
+    pub attestation_bindings: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        SessionBinding,
+    >,
     #[prost(oneof = "handshake_response::HandshakeType", tags = "1")]
     pub handshake_type: ::core::option::Option<handshake_response::HandshakeType>,
 }
