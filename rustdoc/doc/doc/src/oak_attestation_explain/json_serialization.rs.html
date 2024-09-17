@@ -720,6 +720,67 @@
 <a href="#718" id="718">718</a>
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -1092,6 +1153,57 @@
     <span class="macro">json!</span>({})
 }
 
+<span class="kw">fn </span>serialize_verifying_key(instance: <span class="kw-2">&amp;</span>VerifyingKey) -&gt; serde_json::Value {
+    <span class="kw">let </span>VerifyingKey { r#type, key_id, raw } = instance;
+    <span class="macro">json!</span>({
+        <span class="string">"type"</span>: r#type,
+        <span class="string">"key_id"</span>: key_id,
+        <span class="string">"raw"</span>: hex::encode(raw),
+    })
+}
+
+<span class="kw">fn </span>serialize_verifying_key_set(instance: <span class="kw-2">&amp;</span>VerifyingKeySet) -&gt; serde_json::Value {
+    <span class="comment">// Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    </span><span class="kw">let </span>VerifyingKeySet { keys } = instance;
+    <span class="macro">json!</span>(keys.iter().map(serialize_verifying_key).collect::&lt;Vec&lt;serde_json::Value&gt;&gt;())
+}
+
+<span class="kw">fn </span>serialize_verifying_key_reference_value(
+    instance: <span class="kw-2">&amp;</span>VerifyingKeyReferenceValue,
+) -&gt; serde_json::Value {
+    <span class="comment">// Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    </span><span class="kw">let </span>VerifyingKeyReferenceValue { r#type } = instance;
+    <span class="kw">match </span>r#type {
+        <span class="prelude-val">Some</span>(verifying_key_reference_value::Type::Skip(instance)) =&gt; {
+            <span class="macro">json!</span>({
+                <span class="string">"skip"</span>: serialize_skip_verification(instance)
+            })
+        }
+        <span class="prelude-val">Some</span>(verifying_key_reference_value::Type::Verify(instance)) =&gt; {
+            <span class="macro">json!</span>({
+                <span class="string">"verify"</span>: serialize_verifying_key_set(instance)
+            })
+        }
+        <span class="prelude-val">None </span>=&gt; <span class="macro">json!</span>(null),
+    }
+}
+
+<span class="kw">fn </span>serialize_claim_reference_value(instance: <span class="kw-2">&amp;</span>ClaimReferenceValue) -&gt; serde_json::Value {
+    <span class="comment">// Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    </span><span class="macro">json!</span>({
+       <span class="string">"claim_types"</span>: instance.claim_types
+    })
+}
+
 <span class="kw">pub fn </span>serialize_endorsement_reference_value(
     instance: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
 ) -&gt; serde_json::Value {
@@ -1099,10 +1211,19 @@
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    </span><span class="kw">let </span>EndorsementReferenceValue { endorser_public_key, rekor_public_key } = instance;
+    </span><span class="kw">let </span>EndorsementReferenceValue {
+        endorser_public_key,
+        rekor_public_key,
+        endorser,
+        required_claims,
+        rekor,
+    } = instance;
     <span class="macro">json!</span>({
         <span class="string">"endorser_public_key"</span>: hex::encode(endorser_public_key),
         <span class="string">"rekor_public_key"</span>: hex::encode(rekor_public_key),
+        <span class="string">"endorser"</span>: endorser.as_ref().map(serialize_verifying_key_set),
+        <span class="string">"required_claims"</span>: required_claims.as_ref().map(serialize_claim_reference_value),
+        <span class="string">"rekor"</span>: rekor.as_ref().map(serialize_verifying_key_reference_value),
     })
 }
 
@@ -1292,6 +1413,7 @@
     </span><span class="kw">let </span>Digests { digests } = instance;
     <span class="macro">json!</span>(digests.iter().map(serialize_raw_digest).collect::&lt;Vec&lt;serde_json::Value&gt;&gt;())
 }
+
 <span class="kw">pub fn </span>serialize_kernel_layer_reference_values(
     instance: <span class="kw-2">&amp;</span>KernelLayerReferenceValues,
 ) -&gt; serde_json::Value {

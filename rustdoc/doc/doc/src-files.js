@@ -26,6 +26,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_dice",["",[],["cert.rs","evidence.rs","lib.rs","utils.rs"]]],\
 ["oak_echo_service",["",[],["lib.rs"]]],\
 ["oak_enclave_runtime_support",["",[],["heap.rs","lib.rs","libm.rs"]]],\
+["oak_file_utils",["",[],["lib.rs"]]],\
 ["oak_functions_abi",["",[],["lib.rs"]]],\
 ["oak_functions_client",["",[],["lib.rs"]]],\
 ["oak_functions_containers_app",["",[],["lib.rs","native_handler.rs"]]],\
