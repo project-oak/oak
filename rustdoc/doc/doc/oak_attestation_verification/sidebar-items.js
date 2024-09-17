@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["amd","endorsement","rekor","util","verifier"]};
+window.SIDEBAR_ITEMS = {"mod":["amd","endorsement","policy","rekor","util","verifier"]};
