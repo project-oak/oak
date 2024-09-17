@@ -26,6 +26,7 @@ members = [
   "oak_debug_service",
   "oak_dice",
   "oak_enclave_runtime_support",
+  "oak_file_utils",
   "oak_functions/examples/echo/module",
   "oak_functions/examples/invalid_module/module",
   "oak_functions/examples/key_value_lookup/module",
@@ -111,6 +112,7 @@ oak_crypto = { path = "./oak_crypto" }
 oak_debug_service = { path = "./oak_debug_service" }
 oak_dice = { path = "./oak_dice" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support", default-features = false }
+oak_file_utils = { path = "./oak_file_utils" }
 oak_functions_abi = { path = "./oak_functions_abi" }
 oak_functions_client = { path = "./oak_functions_client" }
 oak_functions_launcher = { path = "./oak_functions_launcher" }

@@ -23,6 +23,7 @@ use oak_attestation_verification::verifier::{
 use oak_attestation_verification_test_utils::{
     create_containers_reference_values, create_rk_reference_values, reference_values_from_evidence,
 };
+use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
@@ -38,83 +39,31 @@ use oak_proto_rust::oak::{
 };
 use prost::Message;
 
-#[cfg(feature = "bazel")]
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
-#[cfg(feature = "bazel")]
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
-#[cfg(feature = "bazel")]
 const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
-
-#[cfg(feature = "bazel")]
 const CONTAINERS_VCEK_MILAN_CERT_DER: &str =
     "oak_attestation_verification/testdata/oc_vcek_milan.der";
-#[cfg(feature = "bazel")]
 const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
-#[cfg(feature = "bazel")]
 const CONTAINERS_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
-#[cfg(feature = "bazel")]
 const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
-#[cfg(feature = "bazel")]
 const CB_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/cb_endorsement.binarypb";
-#[cfg(feature = "bazel")]
 const CB_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/cb_reference_values.binarypb";
-#[cfg(feature = "bazel")]
 const RK_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/rk_evidence.binarypb";
-#[cfg(feature = "bazel")]
 const RK_OBSOLETE_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/rk_evidence_20240312.binarypb";
-#[cfg(feature = "bazel")]
 const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
-#[cfg(feature = "bazel")]
 const GENOA_OC_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/genoa_oc_evidence.binarypb";
-#[cfg(feature = "bazel")]
 const GENOA_VCEK_CERT_DER: &str = "oak_attestation_verification/testdata/vcek_genoa.der";
-#[cfg(feature = "bazel")]
 const GENOA_OC_REFERENCE_PATH: &str =
     "oak_attestation_verification/testdata/genoa_oc_reference_values.binarypb";
-#[cfg(feature = "bazel")]
+
 // These expected values were generaeted by running verification on the fake
 // evidence.
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
-
-#[cfg(not(feature = "bazel"))]
-const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
-#[cfg(not(feature = "bazel"))]
-const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
-#[cfg(not(feature = "bazel"))]
-const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
-
-#[cfg(not(feature = "bazel"))]
-const CONTAINERS_VCEK_MILAN_CERT_DER: &str = "testdata/oc_vcek_milan.der";
-#[cfg(not(feature = "bazel"))]
-const RK_VCEK_MILAN_CERT_DER: &str = "testdata/rk_vcek_milan.der";
-#[cfg(not(feature = "bazel"))]
-const CONTAINERS_EVIDENCE_PATH: &str = "testdata/oc_evidence.binarypb";
-#[cfg(not(feature = "bazel"))]
-const CB_EVIDENCE_PATH: &str = "testdata/cb_evidence.binarypb";
-#[cfg(not(feature = "bazel"))]
-const CB_ENDORSEMENT_PATH: &str = "testdata/cb_endorsement.binarypb";
-#[cfg(not(feature = "bazel"))]
-const CB_REFERENCE_VALUES_PATH: &str = "testdata/cb_reference_values.binarypb";
-#[cfg(not(feature = "bazel"))]
-const RK_EVIDENCE_PATH: &str = "testdata/rk_evidence.binarypb";
-#[cfg(not(feature = "bazel"))]
-const RK_OBSOLETE_EVIDENCE_PATH: &str = "testdata/rk_evidence_20240312.binarypb";
-#[cfg(not(feature = "bazel"))]
-const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
-#[cfg(not(feature = "bazel"))]
-const GENOA_OC_EVIDENCE_PATH: &str = "testdata/genoa_oc_evidence.binarypb";
-#[cfg(not(feature = "bazel"))]
-const GENOA_VCEK_CERT_DER: &str = "testdata/vcek_genoa.der";
-#[cfg(not(feature = "bazel"))]
-const GENOA_OC_REFERENCE_PATH: &str = "testdata/genoa_oc_reference_values.binarypb";
-#[cfg(not(feature = "bazel"))]
-// These expected values were generaeted by running verification on the fake
-// evidence.
-const FAKE_EXPECTED_VALUES_PATH: &str = "testdata/fake_expected_values.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -122,62 +71,66 @@ const NOW_UTC_MILLIS: i64 = 1698829200000;
 // Creates a valid AMD SEV-SNP evidence instance for a confidential borg
 // application.
 fn create_cb_evidence() -> Evidence {
-    let serialized = fs::read(CB_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized = fs::read(data_path(CB_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid AMD SEV-SNP endorsement instance for a confidential borg
 // application.
 fn create_cb_endorsements() -> Endorsements {
-    let serialized = fs::read(CB_ENDORSEMENT_PATH).expect("could not read endorsement");
+    let serialized = fs::read(data_path(CB_ENDORSEMENT_PATH)).expect("could not read endorsement");
     Endorsements::decode(serialized.as_slice()).expect("could not decode endorsement")
 }
 
 // Creates a valid AMD SEV-SNP refernece values instance for a confidential borg
 // application.
 fn create_cb_reference_values() -> ReferenceValues {
-    let serialized = fs::read(CB_REFERENCE_VALUES_PATH).expect("could not read references");
+    let serialized =
+        fs::read(data_path(CB_REFERENCE_VALUES_PATH)).expect("could not read references");
     ReferenceValues::decode(serialized.as_slice()).expect("could not decode references")
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
 fn create_containers_evidence() -> Evidence {
-    let serialized = fs::read(CONTAINERS_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized =
+        fs::read(data_path(CONTAINERS_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
 // application.
 fn create_rk_evidence() -> Evidence {
-    let serialized = fs::read(RK_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized = fs::read(data_path(RK_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
 // application but with obsolete DICE data that is still used by some clients.
 fn create_rk_obsolete_evidence() -> Evidence {
-    let serialized = fs::read(RK_OBSOLETE_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized =
+        fs::read(data_path(RK_OBSOLETE_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Creates a valid fake evidence instance.
 fn create_fake_evidence() -> Evidence {
-    let serialized = fs::read(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
+    let serialized = fs::read(data_path(FAKE_EVIDENCE_PATH)).expect("could not read fake evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
 }
 
 fn create_fake_expected_values() -> ExpectedValues {
-    let serialized =
-        fs::read(FAKE_EXPECTED_VALUES_PATH).expect("could not read fake expected values");
+    let serialized = fs::read(data_path(FAKE_EXPECTED_VALUES_PATH))
+        .expect("could not read fake expected values");
     ExpectedValues::decode(serialized.as_slice()).expect("could not decode fake expected values")
 }
 
 // Creates valid endorsements for an Oak Containers chain.
 fn create_containers_endorsements() -> Endorsements {
-    let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
-    let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
-    let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
-    let vcek_milan_cert = fs::read(CONTAINERS_VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
+    let endorsement = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
+    let signature = fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
+    let log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
+    let vcek_milan_cert =
+        fs::read(data_path(CONTAINERS_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
 
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
@@ -215,7 +168,8 @@ fn create_containers_endorsements() -> Endorsements {
 
 // Creates valid endorsements for a restricted kernel application.
 fn create_rk_endorsements() -> Endorsements {
-    let vcek_milan_cert = fs::read(RK_VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
+    let vcek_milan_cert =
+        fs::read(data_path(RK_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
 
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
     #[allow(deprecated)]
@@ -244,13 +198,14 @@ fn create_rk_endorsements() -> Endorsements {
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers running in
 // Genoa CPU.
 fn create_genoa_oc_evidence() -> Evidence {
-    let serialized = fs::read(GENOA_OC_EVIDENCE_PATH).expect("could not read evidence");
+    let serialized = fs::read(data_path(GENOA_OC_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 // Create a valid endorsement for Oak container.
 fn create_genoa_oc_endorsements() -> Endorsements {
-    let vcek_milan_cert = fs::read(GENOA_VCEK_CERT_DER).expect("could not read TEE cert");
+    let vcek_milan_cert =
+        fs::read(data_path(GENOA_VCEK_CERT_DER)).expect("could not read TEE cert");
     let root_layer = oak_proto_rust::oak::attestation::v1::RootLayerEndorsements {
         tee_certificate: vcek_milan_cert,
         stage0: None,
@@ -267,7 +222,8 @@ fn create_genoa_oc_endorsements() -> Endorsements {
 }
 
 fn create_genoa_oc_reference_values() -> ReferenceValues {
-    let serialized = fs::read(GENOA_OC_REFERENCE_PATH).expect("could not read reference");
+    let serialized =
+        fs::read(data_path(GENOA_OC_REFERENCE_PATH)).expect("could not read reference");
     ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference")
 }
 

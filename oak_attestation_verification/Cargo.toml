@@ -52,3 +52,4 @@ zerocopy = "*"
 
 [dev-dependencies]
 oak_attestation_verification_test_utils = { workspace = true }
+oak_file_utils = { workspace = true }

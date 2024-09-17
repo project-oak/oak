@@ -2296,6 +2296,7 @@ dependencies = [
  "hex",
  "oak_attestation_verification_test_utils",
  "oak_dice",
+ "oak_file_utils",
  "oak_proto_rust",
  "oak_sev_snp_attestation_report",
  "p256",
@@ -2642,6 +2643,10 @@ dependencies = [
  "rlsf",
  "spinning_top",
 ]
+
+[[package]]
+name = "oak_file_utils"
+version = "0.1.0"
 
 [[package]]
 name = "oak_functions_abi"

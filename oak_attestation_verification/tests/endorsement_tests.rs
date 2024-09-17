@@ -24,40 +24,17 @@ use oak_attestation_verification::{
     rekor::{verify_rekor_log_entry, verify_rekor_signature},
     util::convert_pem_to_raw,
 };
+use oak_file_utils::data_path;
 
-// The digest of the endorsement under ENDORSEMENT_PATH.
-#[cfg(feature = "bazel")]
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
-
-#[cfg(feature = "bazel")]
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
-
-#[cfg(feature = "bazel")]
 const ENDORSER_PUBLIC_KEY_PATH: &str =
     "oak_attestation_verification/testdata/endorser_public_key.pem";
-
-#[cfg(feature = "bazel")]
 const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
-
-#[cfg(feature = "bazel")]
-const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
-
-#[cfg(not(feature = "bazel"))]
-const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
-
-#[cfg(not(feature = "bazel"))]
-const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
-
-#[cfg(not(feature = "bazel"))]
-const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/endorser_public_key.pem";
-
-#[cfg(not(feature = "bazel"))]
-const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 
 // Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
 // from https://rekor.sigstore.dev/api/v1/log/publicKey.
-#[cfg(not(feature = "bazel"))]
-const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
+const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC
 const NOW_UTC_MILLIS: i64 = 1709294400000;
@@ -77,13 +54,13 @@ struct TestData {
 }
 
 fn load_testdata() -> TestData {
-    let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
-    let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
-    let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
-    let endorser_public_key_pem =
-        fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
-    let rekor_public_key_pem =
-        fs::read_to_string(REKOR_PUBLIC_KEY_PATH).expect("couldn't read rekor public key");
+    let endorsement = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
+    let signature = fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
+    let log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
+    let endorser_public_key_pem = fs::read_to_string(data_path(ENDORSER_PUBLIC_KEY_PATH))
+        .expect("couldn't read endorser public key");
+    let rekor_public_key_pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
+        .expect("couldn't read rekor public key");
 
     let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
         .expect("failed to convert endorser key");
