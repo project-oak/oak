@@ -186,7 +186,7 @@
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>LauncherClient {
-    addr: tonic::transport::Uri,
+    channel: tonic::transport::Channel,
     inner: GrpcLauncherClient&lt;Channel&gt;,
     hostlib_key_provisioning_client: HostlibKeyProvisioningClient&lt;Channel&gt;,
 }
@@ -213,8 +213,8 @@
             Channel::builder(addr.clone()).connect().<span class="kw">await</span><span class="question-mark">?
         </span>};
         <span class="kw">let </span>inner = GrpcLauncherClient::new(channel.clone());
-        <span class="kw">let </span>hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ addr, inner, hostlib_key_provisioning_client })
+        <span class="kw">let </span>hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel.clone());
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ channel, inner, hostlib_key_provisioning_client })
     }
 
     <span class="kw">pub async fn </span>get_container_bundle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
@@ -305,7 +305,7 @@
     }
 
     <span class="kw">pub fn </span>openmetrics_builder(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; TonicExporterBuilder {
-        opentelemetry_otlp::new_exporter().tonic().with_endpoint(<span class="self">self</span>.addr.clone().to_string())
+        opentelemetry_otlp::new_exporter().tonic().with_channel(<span class="self">self</span>.channel.clone())
     }
 }
 </code></pre></div></section></main></body></html>
