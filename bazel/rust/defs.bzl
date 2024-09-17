@@ -18,6 +18,7 @@ RUST_SHA256S = {
     RUST_NIGHTLY_DATE + "/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "b227753189981d9a115527ba0e95b365388fb0fe7f1a1ff93116c4448c854197",
     RUST_NIGHTLY_DATE + "/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "b1a444f8e8f33d813c4d532c12717743edd9b34f685ff5293b6375fc75c2421e",
     RUST_NIGHTLY_DATE + "/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "7d80f21ff1e365241beae5dc070badea25a96466e974caa80d781bf5ce4965ee",
+    RUST_NIGHTLY_DATE + "/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "b872973f978fb261b52c7fdddfb913b3d916e6427cb3ba34912a58cd19480927",
 }
 
 RUST_EDITION = "2021"
