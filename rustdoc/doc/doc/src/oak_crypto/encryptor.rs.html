@@ -332,7 +332,7 @@
     }
 }
 
-<span class="kw">pub trait </span>Encryptor {
+<span class="kw">pub trait </span>Encryptor: Send {
     <span class="kw">fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>Payload) -&gt; anyhow::Result&lt;Payload&gt;;
     <span class="kw">fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ciphertext: <span class="kw-2">&amp;</span>Payload) -&gt; anyhow::Result&lt;Payload&gt;;
 }

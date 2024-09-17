@@ -288,12 +288,12 @@
 <span class="kw">use crate</span>::{config::AttestationProviderConfig, ProtocolEngine};
 
 <span class="attr">#[cfg_attr(test, automock)]
-</span><span class="kw">pub trait </span>Attester {
+</span><span class="kw">pub trait </span>Attester: Send {
     <span class="kw">fn </span>get_endorsed_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt;;
 }
 
 <span class="attr">#[cfg_attr(test, automock)]
-</span><span class="kw">pub trait </span>AttestationVerifier {
+</span><span class="kw">pub trait </span>AttestationVerifier: Send {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         evidence: <span class="kw-2">&amp;</span>Evidence,
@@ -317,11 +317,11 @@
     </span>Unattested,
 }
 
-<span class="kw">pub trait </span>AttestationProvider {
+<span class="kw">pub trait </span>AttestationProvider: Send {
     <span class="kw">fn </span>take_attestation_report(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;;
 }
 
-<span class="kw">pub trait </span>AttestationAggregator {
+<span class="kw">pub trait </span>AttestationAggregator: Send {
     <span class="kw">fn </span>aggregate_attestation_results(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         results: BTreeMap&lt;String, AttestationResults&gt;,

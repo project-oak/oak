@@ -392,7 +392,7 @@
 /// If one of the methods returns an error, it means that there was a protocol
 /// error and the session needs to be restarted (because the state-machine is in
 /// an incorrect state).
-</span><span class="kw">pub trait </span>Session {
+</span><span class="kw">pub trait </span>Session: Send {
     <span class="doccomment">/// Checks whether session is ready to send and receive encrypted messages.
     /// Session becomes ready once remote attestation and crypto handshake have
     /// been successfully finished.

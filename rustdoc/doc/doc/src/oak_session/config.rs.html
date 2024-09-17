@@ -260,7 +260,7 @@
 
     <span class="kw">pub fn </span>set_encryption_provider(
         <span class="kw-2">mut </span><span class="self">self</span>,
-        encryptor_provider: Box&lt;<span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
+        encryptor_provider: Box&lt;<span class="kw">dyn </span>Send + Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.encryptor_config.encryptor_provider = encryptor_provider;
         <span class="self">self
@@ -292,6 +292,6 @@
 }
 
 <span class="kw">pub struct </span>EncryptorConfig {
-    <span class="kw">pub </span>encryptor_provider: Box&lt;<span class="kw">dyn </span>Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
+    <span class="kw">pub </span>encryptor_provider: Box&lt;<span class="kw">dyn </span>Send + Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
 }
 </code></pre></div></section></main></body></html>

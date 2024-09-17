@@ -83,7 +83,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{p256_scalar_mult, P256Scalar};
 
-<span class="kw">pub trait </span>IdentityKeyHandle {
+<span class="kw">pub trait </span>IdentityKeyHandle: Send {
     <span class="kw">fn </span>get_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt;;
     <span class="kw">fn </span>derive_dh_secret(<span class="kw-2">&amp;</span><span class="self">self</span>, peer_public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt;;
 }
