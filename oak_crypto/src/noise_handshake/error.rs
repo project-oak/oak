@@ -20,8 +20,10 @@ pub enum Error {
     EcdhFailed,
     EmptyPlaintext,
     InvalidHandshake,
+    InvalidNonce,
     InvalidPrivateKey,
     InvalidPublicKey,
     MissingPeerPublicKey,
+    ReplayedNonce,
     Unknown(&'static str),
 }

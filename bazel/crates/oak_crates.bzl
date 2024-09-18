@@ -96,6 +96,7 @@ def _common_crates(std):
         "hashbrown": crate.spec(
             default_features = False,
             version = "0.14.3",
+            features = ["ahash"],
         ),
         "hex": crate.spec(
             default_features = False,

@@ -22,7 +22,7 @@ pub use crate::noise_handshake::crypto_wrapper::{
 use crate::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
-    Crypter, IdentityKeyHandle, NoiseMessage,
+    IdentityKeyHandle, NoiseMessage, OrderedCrypter,
 };
 
 pub struct HandshakeInitiator {
@@ -104,7 +104,7 @@ impl HandshakeInitiator {
     pub fn process_response(
         &mut self,
         handshake_response: &NoiseMessage,
-    ) -> Result<([u8; SHA256_OUTPUT_LEN], Crypter), Error> {
+    ) -> Result<([u8; SHA256_OUTPUT_LEN], OrderedCrypter), Error> {
         let ee_ecdh_bytes = p256_scalar_mult(
             &self.ephemeral_priv_key,
             handshake_response
@@ -123,6 +123,6 @@ impl HandshakeInitiator {
             .map_err(|_| Error::DecryptFailed)?;
         assert_eq!(plaintext.len(), 0);
         let (write_key, read_key) = self.noise.traffic_keys();
-        Ok((self.noise.handshake_hash(), Crypter::new(&read_key, &write_key)))
+        Ok((self.noise.handshake_hash(), OrderedCrypter::new(&read_key, &write_key)))
     }
 }

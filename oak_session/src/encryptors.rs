@@ -20,14 +20,14 @@
 use anyhow::{anyhow, Context, Error};
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
-    noise_handshake::Crypter,
+    noise_handshake::{OrderedCrypter, UnorderedCrypter, NONCE_LEN},
 };
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 // This is the default implementation of the encryptor to use for the Noise
 // protocol (consecutive nonces, no packet drop or reordering allowed)
 pub struct OrderedChannelEncryptor {
-    crypter: Crypter,
+    crypter: OrderedCrypter,
 }
 
 impl Encryptor for OrderedChannelEncryptor {
@@ -54,6 +54,51 @@ impl TryFrom<SessionKeys> for OrderedChannelEncryptor {
             crypter: sk
                 .try_into()
                 .context("error creating Noise crypter from the provided session keys")?,
+        })
+    }
+}
+
+/// Modified implementation of the `OrderedChannelEncryptor` that explicitly
+/// ignores message ordering but protects against replayed messages. This
+/// implementation ratchets messages upto a given `window_size` i.e. very old
+/// messages outside the given window will fail decryption. Messages within the
+/// allowed window will be decrypted in any order. Applications using this
+/// implementation must ensure they can handle re-ordered and dropped messages.
+pub struct UnorderedChannelEncryptor {
+    pub crypter: UnorderedCrypter,
+}
+
+impl Encryptor for UnorderedChannelEncryptor {
+    fn encrypt(&mut self, plaintext: &Payload) -> anyhow::Result<Payload> {
+        self.crypter
+            .encrypt(plaintext.message.as_slice())
+            .map(From::from)
+            .map_err(|e| anyhow!("Encryption error: {e:#?}"))
+    }
+
+    fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload> {
+        let nonce: [u8; NONCE_LEN] = ciphertext
+            .nonce
+            .as_ref()
+            .unwrap()
+            .clone()
+            .try_into()
+            .map_err(|e| anyhow!("Failed to extract nonce error: {e:#?}"))?;
+        self.crypter
+            .decrypt(&nonce, ciphertext.message.as_slice())
+            .map(From::from)
+            .map_err(|e| anyhow!("Encryption error: {e:#?}"))
+    }
+}
+
+impl TryFrom<(SessionKeys, u32)> for UnorderedChannelEncryptor {
+    type Error = anyhow::Error;
+
+    fn try_from(sk_and_window_size: (SessionKeys, u32)) -> Result<Self, Error> {
+        Ok(Self {
+            crypter: sk_and_window_size.try_into().context(
+                "error creating Noise crypter from the provided session keys and window size",
+            )?,
         })
     }
 }

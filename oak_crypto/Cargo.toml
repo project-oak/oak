@@ -20,6 +20,7 @@ ecdsa = { version = "*", default-features = false, features = [
   "pkcs8",
   "signing",
 ] }
+hashbrown = { version = "*", default-features = false, features = ["ahash"] }
 hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = { version = "*", default-features = false }
 hpke = { version = "*", default-features = false, features = [

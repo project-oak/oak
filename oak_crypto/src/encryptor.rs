@@ -46,6 +46,12 @@ impl From<Vec<u8>> for Payload {
     }
 }
 
+impl From<(Vec<u8>, Vec<u8>)> for Payload {
+    fn from(message_and_nonce: (Vec<u8>, Vec<u8>)) -> Self {
+        Payload { message: message_and_nonce.0, aad: None, nonce: Some(message_and_nonce.1) }
+    }
+}
+
 impl From<PlaintextMessage> for Payload {
     fn from(value: PlaintextMessage) -> Self {
         Payload { message: value.plaintext, nonce: None, aad: None }

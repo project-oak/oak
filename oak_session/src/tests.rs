@@ -15,8 +15,9 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 use oak_crypto::{
-    encryptor::Encryptor,
+    encryptor::{Encryptor, Payload},
     identity_key::{IdentityKey, IdentityKeyHandle},
+    noise_handshake::{UnorderedCrypter, SYMMETRIC_KEY_LEN},
 };
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
@@ -31,7 +32,7 @@ use crate::{
         MockAttester, ServerAttestationProvider,
     },
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
-    encryptors::OrderedChannelEncryptor,
+    encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
     session_binding::MockSessionBindingVerifier,
     ClientSession, ProtocolEngine, ServerSession, Session,
@@ -369,4 +370,110 @@ fn test_session_sendable() {
         .build();
     let server_session = ServerSession::new(server_config);
     test(server_session);
+}
+
+#[test]
+fn test_unordered_encryptor_inorder_messages() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut replica_1 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_1, key_2, 0) };
+    let mut replica_2 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 0) };
+
+    for message in test_messages() {
+        let payload = Payload { message: message.plaintext.to_vec(), nonce: None, aad: None };
+        let encrypted_payload = replica_1.encrypt(&payload).unwrap();
+        let plaintext = replica_2.decrypt(&encrypted_payload).unwrap().message;
+        assert_eq!(message.plaintext, plaintext);
+    }
+}
+
+#[test]
+fn test_unordered_encryptor_window_size_0() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut replica_1 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_1, key_2, 0) };
+    let mut replica_2 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 0) };
+    let test_messages = test_messages();
+
+    let encrypted_payload_1 = replica_1
+        .encrypt(&Payload { message: test_messages[0].plaintext.to_vec(), nonce: None, aad: None })
+        .unwrap();
+    let encrypted_payload_2 = replica_1
+        .encrypt(&Payload { message: test_messages[1].plaintext.to_vec(), nonce: None, aad: None })
+        .unwrap();
+
+    // Decrypt in reverse order
+    let plaintext_2 = replica_2.decrypt(&encrypted_payload_2).unwrap().message;
+    assert_eq!(test_messages[1].plaintext, plaintext_2);
+    // Decrypting first message fails since it is from a lower nonce.
+    assert_eq!(true, replica_2.decrypt(&encrypted_payload_1).is_err());
+}
+
+fn clone_payload(payload: &Payload) -> Payload {
+    Payload {
+        message: payload.message.clone(),
+        nonce: payload.nonce.clone(),
+        aad: payload.aad.clone(),
+    }
+}
+
+#[test]
+fn test_unordered_encryptor_window_size_3() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let test_messages = vec![
+        vec![1u8, 2u8, 3u8, 4u8],
+        vec![4u8, 3u8, 2u8, 1u8],
+        vec![1u8, 1u8, 1u8, 1u8],
+        vec![2u8, 2u8, 2u8, 2u8],
+        vec![3u8, 3u8, 3u8, 3u8],
+        vec![4u8, 4u8, 4u8, 4u8],
+    ];
+    let mut replica_1 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_1, key_2, 3) };
+    let mut replica_2 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 3) };
+    let mut encrypted_payloads = vec![];
+    for i in 0..test_messages.len() {
+        encrypted_payloads.push(
+            replica_1
+                .encrypt(&Payload { message: test_messages[i].to_vec(), nonce: None, aad: None })
+                .unwrap(),
+        );
+    }
+
+    // Out-of-order decryption
+    assert_eq!(
+        test_messages[3],
+        replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).unwrap().message
+    );
+    // Decrypting messages within the window should be ok.
+    assert_eq!(
+        test_messages[1],
+        replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).unwrap().message
+    );
+    assert_eq!(
+        test_messages[2],
+        replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).unwrap().message
+    );
+    // Replaying message should fail.
+    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).is_err());
+    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).is_err());
+    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).is_err());
+    // Decrypting messages outside the window should fail.
+    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[0])).is_err());
+
+    // Decrypt more messages in order.
+    assert_eq!(
+        test_messages[4],
+        replica_2.decrypt(&clone_payload(&encrypted_payloads[4])).unwrap().message
+    );
+    assert_eq!(
+        test_messages[5],
+        replica_2.decrypt(&clone_payload(&encrypted_payloads[5])).unwrap().message
+    );
 }

@@ -43,6 +43,7 @@ rust_library(
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:ecdsa",
+        "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:hkdf",
         "@oak_crates_index//:hpke",
         "@oak_crates_index//:p256",

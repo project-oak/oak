@@ -27,6 +27,7 @@ mod tests;
 use alloc::vec::Vec;
 
 use anyhow::anyhow;
+use hashbrown::HashSet;
 use oak_proto_rust::oak::{crypto::v1::SessionKeys, session::v1::NoiseHandshakeMessage};
 
 use crate::noise_handshake::{
@@ -59,6 +60,17 @@ impl Nonce {
         self.nonce += 1;
         Ok(ret)
     }
+
+    // Nonce must be `NONCE_LEN` bytes with the last 4 bytes holding the nonce value
+    // and the rest padded with 0.
+    pub fn get_nonce_value(nonce: &[u8; NONCE_LEN]) -> Result<u32, Error> {
+        if !nonce.starts_with(&[0u8; NONCE_LEN - 4]) {
+            return Err(Error::InvalidNonce);
+        }
+        let mut nonce_be_bytes = [0u8; 4];
+        nonce_be_bytes.copy_from_slice(&nonce[NONCE_LEN - 4..]);
+        Ok(u32::from_be_bytes(nonce_be_bytes))
+    }
 }
 
 pub struct NoiseMessage {
@@ -75,7 +87,60 @@ impl From<&NoiseHandshakeMessage> for NoiseMessage {
     }
 }
 
-pub struct Crypter {
+fn aes_gcm_256_encrypt(
+    key: &[u8; SYMMETRIC_KEY_LEN],
+    nonce: &[u8; NONCE_LEN],
+    plaintext: &[u8],
+) -> Result<Vec<u8>, Error> {
+    const PADDING_GRANULARITY: usize = 32;
+    static_assertions::const_assert!(PADDING_GRANULARITY < 256);
+    static_assertions::const_assert!((PADDING_GRANULARITY & (PADDING_GRANULARITY - 1)) == 0);
+
+    let mut padded_size: usize = plaintext.len();
+    // AES GCM is limited to encrypting 64GiB of data in a single AEAD invocation.
+    // 256MiB is just a sane upper limit on message size, which greatly exceeds
+    // the noise specified 64KiB, which will be too restrictive for our use cases.
+    if padded_size > (1usize << 28) {
+        return Err(Error::DataTooLarge(padded_size));
+    }
+    padded_size += 1; // padding-length byte
+    // This is standard low-level bit manipulation to round up to the nearest
+    // multiple of PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a
+    // power of 2, so we compute the mask with !(PADDING_GRANULARITY - 1).
+    // If padded_size is not already a multiple of PADDING_GRANULARITY, then
+    // padded_size will not change.  Otherwise, it is rounded up to the next
+    // multiple of PADDED_GRANULARITY.
+    padded_size = (padded_size + PADDING_GRANULARITY - 1) & !(PADDING_GRANULARITY - 1);
+
+    let mut padded_encrypt_data = Vec::with_capacity(padded_size);
+    padded_encrypt_data.extend_from_slice(plaintext);
+    padded_encrypt_data.resize(padded_size, 0u8);
+    let num_zeros = padded_size - plaintext.len() - 1;
+    padded_encrypt_data[padded_size - 1] = num_zeros as u8;
+
+    crypto_wrapper::aes_256_gcm_seal_in_place(key, nonce, &[], &mut padded_encrypt_data);
+    Ok(padded_encrypt_data)
+}
+
+fn aes_gcm_256_decrypt(
+    key: &[u8; SYMMETRIC_KEY_LEN],
+    nonce: &[u8; NONCE_LEN],
+    ciphertext: &[u8],
+) -> Result<Vec<u8>, Error> {
+    let plaintext =
+        crypto_wrapper::aes_256_gcm_open_in_place(key, nonce, &[], Vec::from(ciphertext))
+            .map_err(|_| Error::DecryptFailed)?;
+
+    // Plaintext must have a padding byte, and the unpadded length must be
+    // at least one.
+    if plaintext.is_empty() || (plaintext[plaintext.len() - 1] as usize) >= plaintext.len() {
+        return Err(Error::DecryptionPadding);
+    }
+    let unpadded_length = plaintext.len() - (plaintext[plaintext.len() - 1] as usize);
+    Ok(Vec::from(&plaintext[0..unpadded_length - 1]))
+}
+
+pub struct OrderedCrypter {
     read_key: [u8; SYMMETRIC_KEY_LEN],
     write_key: [u8; SYMMETRIC_KEY_LEN],
     read_nonce: Nonce,
@@ -83,9 +148,10 @@ pub struct Crypter {
 }
 
 /// Utility for encrypting and decrypting traffic between the Noise endpoints.
+/// This implementation guarantees message ordering.
 /// It is created by |respond| and configured with a key for each traffic
 /// direction.
-impl Crypter {
+impl OrderedCrypter {
     fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
         Self {
             read_key: *read_key,
@@ -96,73 +162,25 @@ impl Crypter {
     }
 
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, Error> {
-        const PADDING_GRANULARITY: usize = 32;
-        static_assertions::const_assert!(PADDING_GRANULARITY < 256);
-        static_assertions::const_assert!((PADDING_GRANULARITY & (PADDING_GRANULARITY - 1)) == 0);
-
-        let mut padded_size: usize = plaintext.len();
-        // AES GCM is limited to encrypting 64GiB of data with the same key.
-        // TODO(#4917): in a follow-on CL, track total data per key and drop the
-        // connection after 64 GiB. 256MiB is just a sane upper limit on
-        // message size, which greatly exceeds the noise specified 64KiB, which
-        // will be too restrictive for our use cases.
-        if padded_size > (1usize << 28) {
-            return Err(Error::DataTooLarge(padded_size));
-        }
-        padded_size += 1; // padding-length byte
-        // This is standard low-level bit manipulation to round up to the nearest
-        // multiple of PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a
-        // power of 2, so we compute the mask with !(PADDING_GRANULARITY - 1).
-        // If padded_size is not already a multiple of PADDING_GRANULARITY, then
-        // padded_size will not change.  Otherwise, it is rounded up to the next
-        // multiple of PADDED_GRANULARITY.
-        padded_size = (padded_size + PADDING_GRANULARITY - 1) & !(PADDING_GRANULARITY - 1);
-
-        let mut padded_encrypt_data = Vec::with_capacity(padded_size);
-        padded_encrypt_data.extend_from_slice(plaintext);
-        padded_encrypt_data.resize(padded_size, 0u8);
-        let num_zeros = padded_size - plaintext.len() - 1;
-        padded_encrypt_data[padded_size - 1] = num_zeros as u8;
-
-        crypto_wrapper::aes_256_gcm_seal_in_place(
-            &self.write_key,
-            &self.write_nonce.next()?,
-            &[],
-            &mut padded_encrypt_data,
-        );
-        Ok(padded_encrypt_data)
+        aes_gcm_256_encrypt(&self.write_key, &self.write_nonce.next()?, plaintext)
     }
 
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
-        let plaintext = crypto_wrapper::aes_256_gcm_open_in_place(
-            &self.read_key,
-            &self.read_nonce.next()?,
-            &[],
-            Vec::from(ciphertext),
-        )
-        .map_err(|_| Error::DecryptFailed)?;
-
-        // Plaintext must have a padding byte, and the unpadded length must be
-        // at least one.
-        if plaintext.is_empty() || (plaintext[plaintext.len() - 1] as usize) >= plaintext.len() {
-            return Err(Error::DecryptionPadding);
-        }
-        let unpadded_length = plaintext.len() - (plaintext[plaintext.len() - 1] as usize);
-        Ok(Vec::from(&plaintext[0..unpadded_length - 1]))
+        aes_gcm_256_decrypt(&self.read_key, &self.read_nonce.next()?, ciphertext)
     }
 }
 
-impl From<Crypter> for SessionKeys {
-    fn from(value: Crypter) -> Self {
+impl From<OrderedCrypter> for SessionKeys {
+    fn from(value: OrderedCrypter) -> Self {
         SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
     }
 }
 
-impl TryFrom<SessionKeys> for Crypter {
+impl TryFrom<SessionKeys> for OrderedCrypter {
     type Error = anyhow::Error;
 
     fn try_from(sk: SessionKeys) -> Result<Self, Self::Error> {
-        Ok(Crypter::new(
+        Ok(OrderedCrypter::new(
             sk.response_key
                 .as_slice()
                 .try_into()
@@ -175,8 +193,112 @@ impl TryFrom<SessionKeys> for Crypter {
     }
 }
 
+/// Modified implementation of the `OrderedCrypter` that explicitly ignores
+/// message ordering but protects against replayed messages. This implementation
+/// ratchets messages upto a given `window_size` i.e. very old messages outside
+/// the given window will fail decryption. Messages within the allowed window
+/// will be decrypted in any order. Applications using this implementation must
+/// ensure they can handle re-ordered and dropped messages. This implementation
+/// is primarily meant for unreliable transport protocols such as UDP.
+pub struct UnorderedCrypter {
+    read_key: [u8; SYMMETRIC_KEY_LEN],
+    write_key: [u8; SYMMETRIC_KEY_LEN],
+    write_nonce: Nonce,
+    // The current furthest read nonce seen so far.
+    furthest_read_nonce: u32,
+    // Window size to ratchet receiving nonces in order to avoid receiving
+    // nonces way too far in the past.
+    window_size: u32,
+    // Buffered read nonces with max capacity equivalent to `window_size` i.e.
+    // nonces lower than (`furthest_read_nonce` - `window_size`) will not be decrypted.
+    buffered_read_nonces: HashSet<u32>,
+}
+
+impl UnorderedCrypter {
+    pub fn new(
+        read_key: &[u8; SYMMETRIC_KEY_LEN],
+        write_key: &[u8; SYMMETRIC_KEY_LEN],
+        window_size: u32,
+    ) -> Self {
+        Self {
+            read_key: *read_key,
+            write_key: *write_key,
+            write_nonce: Nonce { nonce: 1 },
+            furthest_read_nonce: 0,
+            window_size,
+            buffered_read_nonces: HashSet::with_capacity(window_size.try_into().unwrap()),
+        }
+    }
+
+    fn get_lowest_acceptable_read_nonce(&self) -> u32 {
+        let mut lowest_acceptable_read_nonce = 1;
+        if self.furthest_read_nonce > self.window_size {
+            lowest_acceptable_read_nonce = self.furthest_read_nonce - self.window_size + 1;
+        }
+        lowest_acceptable_read_nonce
+    }
+
+    pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        let nonce = self.write_nonce.next()?;
+        let encrypted_message = aes_gcm_256_encrypt(&self.write_key, &nonce, plaintext)?;
+        Ok((encrypted_message, nonce.to_vec()))
+    }
+
+    pub fn decrypt(
+        &mut self,
+        nonce: &[u8; NONCE_LEN],
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let nonce_value = Nonce::get_nonce_value(&nonce)?;
+        let lowest_acceptable_nonce = self.get_lowest_acceptable_read_nonce();
+        // Nonce is way too far in the past, reject it.
+        if nonce_value < lowest_acceptable_nonce {
+            return Err(Error::InvalidNonce);
+        }
+        // Nonce is within the window, check for replayed nonces.
+        else if nonce_value >= lowest_acceptable_nonce && nonce_value <= self.furthest_read_nonce
+        {
+            if self.buffered_read_nonces.contains(&nonce_value) {
+                return Err(Error::ReplayedNonce);
+            }
+            self.buffered_read_nonces.insert(nonce_value);
+        }
+        // Nonce is greater than the furthest seen so far.
+        else {
+            self.furthest_read_nonce = nonce_value;
+            // Retain only buffered nonces in the new window span.
+            let new_lowest_acceptable_nonce = self.get_lowest_acceptable_read_nonce();
+            self.buffered_read_nonces.retain(|&n| n >= new_lowest_acceptable_nonce);
+            self.buffered_read_nonces.insert(nonce_value);
+        }
+        aes_gcm_256_decrypt(&self.read_key, &nonce, ciphertext)
+    }
+}
+
+impl TryFrom<(SessionKeys, u32)> for UnorderedCrypter {
+    type Error = anyhow::Error;
+
+    fn try_from(sk_and_window_size: (SessionKeys, u32)) -> Result<Self, Self::Error> {
+        Ok(UnorderedCrypter::new(
+            sk_and_window_size
+                .0
+                .response_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
+            sk_and_window_size
+                .0
+                .request_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
+            sk_and_window_size.1,
+        ))
+    }
+}
+
 pub struct Response {
-    pub crypter: Crypter,
+    pub crypter: OrderedCrypter,
     pub handshake_hash: [u8; SHA256_OUTPUT_LEN],
     pub response: NoiseMessage,
 }
@@ -273,7 +395,7 @@ fn finish_response(noise: &mut Noise, in_message: &NoiseMessage) -> Result<Respo
 
     let keys = noise.traffic_keys();
     Ok(Response {
-        crypter: Crypter::new(&keys.0, &keys.1),
+        crypter: OrderedCrypter::new(&keys.0, &keys.1),
         handshake_hash: noise.handshake_hash(),
         response: NoiseMessage {
             ciphertext: response_ciphertext,
