@@ -44,6 +44,8 @@ message OakRequest {
 // Wrapper around OakRequest that is used in cases where it is necessary to
 // identify a contiguous session across multiple invocations/streams.
 message OakRequestWithSessionIdentifier {
+  // We will use different wrapper message per protocol.
+  option deprecated = true;
   // Unique string to identify the session. This should be at least 128 bits of
   // unique information.
   bytes session_id = 1;

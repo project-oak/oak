@@ -180,6 +180,18 @@ pub mod session_request {
         EncryptedMessage(super::EncryptedMessage),
     }
 }
+/// Wrapper around SessionRequest that is used in cases where it is necessary to
+/// identify a contiguous session across multiple invocations/streams.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct SessionRequestWithSessionId {
+    /// Unique string to identify the session. This should be at least 128 bits of
+    /// unique information.
+    #[prost(bytes = "vec", tag = "1")]
+    pub session_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "2")]
+    pub request: ::core::option::Option<SessionRequest>,
+}
 /// Response message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
 /// attestation, handshake and encrypted data exchange.
