@@ -33,7 +33,14 @@ impl LauncherClient {
                     .unwrap_or(format!("{}", tokio_vsock::VMADDR_CID_HOST).as_str())
                     .parse()
                     .context("invalid vsock CID")?,
-                addr.port_u16().context("invalid vsock port")?.into(),
+                addr.authority()
+                    .context("failed to extract authority from vsock address")?
+                    .as_str()
+                    .split(':')
+                    .last()
+                    .context("failed to extract port from vsock address")?
+                    .parse::<u32>()
+                    .context("invalid vsock port")?,
             );
             // The C++ gRPC implementations are more particular about the URI scheme; in
             // particular, they may get confused by the "vsock" scheme. Therfore, create a
