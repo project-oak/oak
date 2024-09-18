@@ -331,20 +331,23 @@ pub struct ClaimReferenceValue {
     pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Verifies the transparency log entry, including signatures and the digest.
-///
-/// ------------------------------------------------------------------------
-/// First generation fields starting here.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EndorsementReferenceValue {
     /// The endorser's public verifying key for signature verification. The
     /// attestation verification requires that all endorsements need to be
     /// signed, therefore this cannot be empty.
+    ///
+    /// Field will be deprecated in the future. For standalone endorsement
+    /// verification, use `endorser` field instead.
     #[prost(bytes = "vec", tag = "1")]
     pub endorser_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Rekor's public verifying key for log entry verification. Needs to be
     /// set when a log entry is present that should be verified. If it is not set,
     /// then log entry verification is skipped.
+    ///
+    /// Field will be deprecated in the future. For standalone endorsement
+    /// verification, use `rekor` field instead.
     #[prost(bytes = "vec", tag = "2")]
     pub rekor_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Verifies the endorsement. Since the signed endorsement is required to

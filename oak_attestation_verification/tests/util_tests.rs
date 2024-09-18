@@ -19,7 +19,7 @@ use std::fs;
 use oak_attestation_verification::util::{
     convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
     convert_raw_to_verifying_key, equal_keys, get_hex_digest_match, looks_like_pem,
-    verify_signature_raw, MatchResult,
+    verify_signature_ecdsa, MatchResult,
 };
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::HexDigest;
@@ -119,9 +119,9 @@ fn test_convert_inverse_right() {
 }
 
 #[test]
-fn test_verify_signature() {
+fn test_verify_signature_ecdsa() {
     let testdata = load_testdata();
-    let result = verify_signature_raw(
+    let result = verify_signature_ecdsa(
         &testdata.endorsement_signature,
         &testdata.endorsement,
         &testdata.endorser_public_key,

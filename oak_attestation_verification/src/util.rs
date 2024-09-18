@@ -18,9 +18,11 @@ use alloc::{string::String, vec::Vec};
 use core::{cmp::Ordering, str::FromStr};
 
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use ecdsa::{signature::Verifier, Signature};
-use oak_proto_rust::oak::{HexDigest, RawDigest};
-use p256::ecdsa::VerifyingKey;
+use ecdsa::signature::Verifier;
+use oak_proto_rust::oak::{
+    attestation::v1::{KeyType, Signature, VerifyingKeySet},
+    HexDigest, RawDigest,
+};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
@@ -61,14 +63,18 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 }
 
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-pub fn convert_pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<VerifyingKey> {
-    VerifyingKey::from_str(public_key_pem).map_err(|error| {
+pub fn convert_pem_to_verifying_key(
+    public_key_pem: &str,
+) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
+    p256::ecdsa::VerifyingKey::from_str(public_key_pem).map_err(|error| {
         anyhow::anyhow!("couldn't parse pem as a p256::ecdsa::VerifyingKey: {}", error)
     })
 }
 
 /// Converts a raw public key to a verifying key.
-pub fn convert_raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<VerifyingKey> {
+pub fn convert_raw_to_verifying_key(
+    public_key: &[u8],
+) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
     // Need to figure out how to create a VerifyingKey without the PEM detour.
     let public_key_pem = convert_raw_to_pem(public_key);
     convert_pem_to_verifying_key(&public_key_pem)
@@ -84,13 +90,30 @@ pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bo
     Ok(key_a.cmp(&key_b) == Ordering::Equal)
 }
 
+/// Verifies a signature against a key set, given the signed contents.
+pub fn verify_signature(
+    signature: &Signature,
+    contents: &[u8],
+    key_set: &VerifyingKeySet,
+) -> anyhow::Result<()> {
+    let key = key_set
+        .keys
+        .iter()
+        .find(|k| k.key_id == signature.key_id)
+        .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
+    return match key.r#type() {
+        KeyType::Undefined => anyhow::bail!("Undefined key type"),
+        KeyType::EcdsaP256Sha256 => verify_signature_ecdsa(&signature.raw, contents, &key.raw),
+    };
+}
+
 /// Verifies the signature over the contents using the public key.
-pub fn verify_signature_raw(
+pub fn verify_signature_ecdsa(
     signature: &[u8],
     contents: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let sig = Signature::from_der(signature)
+    let sig = ecdsa::Signature::from_der(signature)
         .map_err(|error| anyhow::anyhow!("invalid ASN.1 signature: {}", error))?;
     let key = convert_raw_to_verifying_key(public_key)?;
 

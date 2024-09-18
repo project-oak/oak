@@ -21,11 +21,12 @@ use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
 
-use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
+use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -180,25 +181,35 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
     }
 }
 
+/// Verifies a Rekor log entry by key set.
+pub fn verify_rekor_log_entry(
+    log_entry: &[u8],
+    rekor_key_set: &VerifyingKeySet,
+    serialized_endorsement: &[u8],
+) -> anyhow::Result<()> {
+    if !rekor_key_set.keys.iter().any(|k| verify_rekor_signature(log_entry, &k.raw).is_ok()) {
+        anyhow::bail!("could not verify rekor signature");
+    }
+
+    let body = get_rekor_log_entry_body(log_entry)?;
+    verify_rekor_body(&body, serialized_endorsement)
+}
+
 /// Verifies a Rekor LogEntry. This includes verifying:
 ///
 /// 1. the signature in `signedEntryTimestamp` using Rekor's public key,
 /// 1. the signature in `body.RekordObj.signature` using the endorser's public
 ///    key,
 /// 1. that the content of the body equals `endorsement`.
-pub fn verify_rekor_log_entry(
+pub fn verify_rekor_log_entry_ecdsa(
     log_entry: &[u8],
     rekor_public_key: &[u8],
-    endorsement: &[u8],
+    serialized_endorsement: &[u8],
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry, rekor_public_key)?;
 
     let body = get_rekor_log_entry_body(log_entry)?;
-
-    // Verify the body in the Rekor LogEntry
-    verify_rekor_body(&body, endorsement)?;
-
-    Ok(())
+    verify_rekor_body(&body, serialized_endorsement)
 }
 
 /// Parses the given bytes into a Rekor `LogEntry` object, and returns its
@@ -224,7 +235,7 @@ pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
 pub fn verify_rekor_signature(log_entry: &[u8], rekor_public_key: &[u8]) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry)?;
 
-    verify_signature_raw(
+    verify_signature_ecdsa(
         &signature_bundle.signature,
         &signature_bundle.canonicalized,
         rekor_public_key,
@@ -272,7 +283,7 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
         core::str::from_utf8(&public_key_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
     let public_key = convert_pem_to_raw(public_key_pem)?;
 
-    verify_signature_raw(&signature, contents_bytes, &public_key)
+    verify_signature_ecdsa(&signature, contents_bytes, &public_key)
         .context("couldn't verify signature over the endorsement")
 }
 

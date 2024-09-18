@@ -19,9 +19,9 @@ use std::fs;
 use oak_attestation_verification::{
     endorsement::{
         get_digest, parse_statement, validate_statement, verify_binary_endorsement,
-        verify_endorser_public_key,
+        verify_endorser_public_key_ecdsa,
     },
-    rekor::{verify_rekor_log_entry, verify_rekor_signature},
+    rekor::{verify_rekor_log_entry_ecdsa, verify_rekor_signature},
     util::convert_pem_to_raw,
 };
 use oak_file_utils::data_path;
@@ -81,7 +81,7 @@ fn test_verify_rekor_signature_success() {
 fn test_verify_rekor_log_entry_success() {
     let testdata = load_testdata();
 
-    let result = verify_rekor_log_entry(
+    let result = verify_rekor_log_entry_ecdsa(
         &testdata.log_entry,
         &testdata.rekor_public_key,
         &testdata.endorsement,
@@ -94,7 +94,7 @@ fn test_validate_endorsement_statement_success() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(NOW_UTC_MILLIS, &statement);
+    let result = validate_statement(NOW_UTC_MILLIS, &vec![], &statement);
     assert!(result.is_ok(), "{:?}", result);
 }
 
@@ -103,7 +103,7 @@ fn test_validate_endorsement_statement_fails_too_early() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(TOO_EARLY_UTC_MILLIS, &statement);
+    let result = validate_statement(TOO_EARLY_UTC_MILLIS, &vec![], &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 
@@ -112,15 +112,16 @@ fn test_validate_statement_fails_too_late() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(TOO_LATE_UTC_MILLIS, &statement);
+    let result = validate_statement(TOO_LATE_UTC_MILLIS, &vec![], &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 
 #[test]
-fn test_verify_endorser_public_key_success() {
+fn test_verify_endorser_public_key_ecdsa_success() {
     let testdata = load_testdata();
 
-    let result = verify_endorser_public_key(&testdata.log_entry, &testdata.endorser_public_key);
+    let result =
+        verify_endorser_public_key_ecdsa(&testdata.log_entry, &testdata.endorser_public_key);
     assert!(result.is_ok(), "{:?}", result);
 }
 

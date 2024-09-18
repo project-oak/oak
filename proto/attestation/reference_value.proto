@@ -83,21 +83,21 @@ message ClaimReferenceValue {
 
 // Verifies the transparency log entry, including signatures and the digest.
 message EndorsementReferenceValue {
-  // ------------------------------------------------------------------------
-  // First generation fields starting here.
-
   // The endorser's public verifying key for signature verification. The
   // attestation verification requires that all endorsements need to be
   // signed, therefore this cannot be empty.
+  //
+  // Field will be deprecated in the future. For standalone endorsement
+  // verification, use `endorser` field instead.
   bytes endorser_public_key = 1;
 
   // Rekor's public verifying key for log entry verification. Needs to be
   // set when a log entry is present that should be verified. If it is not set,
   // then log entry verification is skipped.
+  //
+  // Field will be deprecated in the future. For standalone endorsement
+  // verification, use `rekor` field instead.
   bytes rekor_public_key = 2;
-
-  // ------------------------------------------------------------------------
-  // Second generation fields starting here. Do not mix with first Gen.
 
   // Verifies the endorsement. Since the signed endorsement is required to
   // be present, this cannot be skipped as part of this message. (It may

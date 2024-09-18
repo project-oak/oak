@@ -19,27 +19,41 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, vec, vec::Vec};
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_proto_rust::oak::HexDigest;
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
+        VerifyingKeySet,
+    },
+    HexDigest,
+};
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
 use time::OffsetDateTime;
 
 use crate::{
-    rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
-    util::{convert_pem_to_raw, equal_keys, verify_signature_raw},
+    rekor::{get_rekor_log_entry_body, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa},
+    util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
 };
 
-/// URI representing in-toto statements. We only use V1.
+/// URI representing in-toto statements. We only use V1, earlier and later
+/// versions will be rejected.
 const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
 
-/// Admissible predicate type of in-toto endorsement statements.
+/// Oldest predicate type for in-toto endorsement statements. References still
+/// exist, but fully removing it will be easy.
 const PREDICATE_TYPE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
+
+/// Previous predicate type of in-toto endorsement statements. In operation.
 const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
+
+/// Current predicate type of in-toto endorsement statements, which loses
+/// the `usage` field and adds claim types.
+const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
 // A map from algorithm name to lowercase hex-encoded value.
 type DigestSet = BTreeMap<String, String>;
@@ -69,12 +83,19 @@ pub struct Validity {
     pub not_after: OffsetDateTime,
 }
 
+// A single claim about the endorsement subject.
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
+pub struct Claim {
+    pub r#type: String,
+}
+
 /// The predicate part of an endorsement subject.
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct DefaultPredicate {
     // Specifies how to interpret the endorsement subject.
-    // The `default` option should be removed once this is in operation.
+    // The `default` option is needed to support predicate V2.
     #[serde(default, rename = "usage")]
     pub usage: String,
 
@@ -87,6 +108,9 @@ pub struct DefaultPredicate {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "validity")]
     pub validity: Option<Validity>,
+
+    #[serde(default)]
+    pub claims: Vec<Claim>,
 }
 
 /// Represents a generic statement that binds a predicate to a subject.
@@ -101,6 +125,54 @@ pub struct Statement<P> {
 }
 
 pub type DefaultStatement = Statement<DefaultPredicate>;
+
+/// Public interface for verifying a standalone endorsement.
+pub fn verify_endorsement(
+    now_utc_millis: i64,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &EndorsementReferenceValue,
+) -> anyhow::Result<()> {
+    // Reject ref_value instances using the potentially deprecated fields.
+    if !ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
+        anyhow::bail!("verify_endorsement does not support first gen fields");
+    }
+
+    let endorsement =
+        signed_endorsement.endorsement.as_ref().context("no endorsement in signed endorsement")?;
+    let signature =
+        signed_endorsement.signature.as_ref().context("no signature in signed endorsement")?;
+    let endorser_key_set =
+        ref_value.endorser.as_ref().context("no endorser key set in signed endorsement")?;
+    let required_claims = ref_value.required_claims.as_ref().context("required claims missing")?;
+
+    // The signature verification is also part of log entry verification,
+    // so in some cases this check will be dispensable. We verify the
+    // signature nonetheless before parsing the endorsement.
+    verify_signature(&signature, &endorsement.serialized, &endorser_key_set)
+        .context("verifying signature")?;
+
+    let statement =
+        parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
+    let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
+    validate_statement(now_utc_millis, &claims, &statement)
+        .context("verifying endorsement statement")?;
+
+    let rekor_ref_value =
+        ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
+    return match rekor_ref_value.r#type.as_ref() {
+        Some(verifying_key_reference_value::Type::Skip(_)) => Ok(()),
+        Some(verifying_key_reference_value::Type::Verify(key_set)) => {
+            let log_entry = &signed_endorsement.rekor_log_entry;
+            if log_entry.is_empty() {
+                anyhow::bail!("log entry unavailable but verification was requested");
+            }
+            verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized)
+                .context("verifying rekor log entry")?;
+            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)
+        }
+        None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
+    };
+}
 
 /// Verifies the binary endorsement against log entry and public keys.
 ///
@@ -128,28 +200,45 @@ pub fn verify_binary_endorsement(
     // The signature verification is also part of log entry verification,
     // so in some cases this check will be dispensable. We verify the
     // signature nonetheless before parsing the endorsement.
-    verify_signature_raw(signature, endorsement, endorser_public_key)
+    verify_signature_ecdsa(signature, endorsement, endorser_public_key)
         .context("verifying signature")?;
 
     let statement = parse_statement(endorsement).context("parsing endorsement statement")?;
-    validate_statement(now_utc_millis, &statement).context("verifying endorsement statement")?;
+    validate_statement(now_utc_millis, &vec![], &statement)
+        .context("verifying endorsement statement")?;
 
     if !rekor_public_key.is_empty() {
         if log_entry.is_empty() {
             anyhow::bail!("log entry unavailable but verification was requested");
         }
-        verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)
+        verify_rekor_log_entry_ecdsa(log_entry, rekor_public_key, endorsement)
             .context("verifying rekor log entry")?;
-        verify_endorser_public_key(log_entry, endorser_public_key)
+        verify_endorser_public_key_ecdsa(log_entry, endorser_public_key)
             .context("verifying endorser public key")?;
     }
 
     Ok(())
 }
 
+fn verify_endorser_public_key(
+    log_entry: &[u8],
+    signature_key_id: u32,
+    endorser_key_set: &VerifyingKeySet,
+) -> anyhow::Result<()> {
+    let key = endorser_key_set
+        .keys
+        .iter()
+        .find(|k| k.key_id == signature_key_id)
+        .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
+    return match key.r#type() {
+        KeyType::Undefined => anyhow::bail!("Undefined key type"),
+        KeyType::EcdsaP256Sha256 => verify_endorser_public_key_ecdsa(log_entry, &key.raw),
+    };
+}
+
 /// Verifies that the endorser public key coincides with the one contained in
 /// the attestation.
-pub fn verify_endorser_public_key(
+pub fn verify_endorser_public_key_ecdsa(
     log_entry: &[u8],
     endorser_public_key: &[u8],
 ) -> anyhow::Result<()> {
@@ -184,13 +273,19 @@ pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {
     serde_json::from_slice(bytes).map_err(|error| anyhow::anyhow!("failed to parse: {}", error))
 }
 
-/// Checks that the given endorsement statement is valid.
-pub fn validate_statement(now_utc_millis: i64, statement: &DefaultStatement) -> anyhow::Result<()> {
+/// Checks that the given endorsement statement is valid, based on timestamp
+/// and required claims.
+pub fn validate_statement(
+    now_utc_millis: i64,
+    required_claims: &[&str],
+    statement: &DefaultStatement,
+) -> anyhow::Result<()> {
     if statement._type != STATEMENT_TYPE {
         anyhow::bail!("unsupported statement type");
     }
     if statement.predicate_type != PREDICATE_TYPE_V1
         && statement.predicate_type != PREDICATE_TYPE_V2
+        && statement.predicate_type != PREDICATE_TYPE_V3
     {
         anyhow::bail!("unsupported predicate type");
     }
@@ -203,10 +298,20 @@ pub fn validate_statement(now_utc_millis: i64, statement: &DefaultStatement) -> 
             if validity.not_after.unix_timestamp_nanos() / 1000000 < now_utc_millis.into() {
                 anyhow::bail!("the claim is no longer applicable")
             }
-            Ok(())
         }
         None => anyhow::bail!("the validity field is not set"),
     }
+
+    for claim_type in required_claims {
+        statement
+            .predicate
+            .claims
+            .iter()
+            .find(|k| &k.r#type == claim_type)
+            .context("required claim type not found")?;
+    }
+
+    Ok(())
 }
 
 fn set_digest_field_from_map_entry(
