@@ -1,0 +1,16 @@
+[package]
+name = "oak_containers_stage1_dice"
+version = "0.1.0"
+edition = "2021"
+authors = ["Andri Saar <andrisaar@google.com>"]
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+ciborium = { version = "*", default-features = false }
+coset = { version = "*", features = ["std"] }
+oak_attestation = { workspace = true }
+oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
+prost = { workspace = true }
+prost-types = "*"

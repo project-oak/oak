@@ -11,11 +11,13 @@ oak_grpc_utils = { workspace = true }
 [dependencies]
 anyhow = "*"
 async-trait = { version = "*", default-features = false }
+oak_attestation = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
 oak_crypto = { workspace = true }
 oak_stage0_dice = { workspace = true }
+oak_containers_stage1_dice = { workspace = true }
 prost = "*"
 prost-types = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }

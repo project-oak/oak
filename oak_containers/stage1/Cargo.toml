@@ -10,24 +10,21 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
-ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
-coset = { version = "*", features = ["std"] }
 futures-util = "*"
 oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
+oak_containers_stage1_dice = { workspace = true }
 nix = { version = "0.27.1", features = ["mman"] }
 p256 = { version = "*" }
 prost = { workspace = true }
-prost-types = "*"
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }
 rtnetlink = "*"
-sha2 = { version = "*", default-features = false }
 tar = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",

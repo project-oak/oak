@@ -20,6 +20,7 @@ members = [
   "oak_containers/orchestrator",
   "oak_containers_sdk",
   "oak_containers/stage1",
+  "oak_containers/stage1_dice",
   "oak_containers/syslogd",
   "oak_core",
   "oak_crypto",
@@ -138,6 +139,7 @@ oak_restricted_kernel_orchestrator = { path = "./oak_restricted_kernel_orchestra
 oak_session = { path = "./oak_session" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
+oak_containers_stage1_dice = { path = "./oak_containers/stage1_dice" }
 oak_stage0_dice = { path = "./stage0_dice" }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }

@@ -2487,6 +2487,8 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
+ "oak_attestation",
+ "oak_containers_stage1_dice",
  "oak_crypto",
  "oak_dice",
  "oak_grpc",
@@ -2506,12 +2508,11 @@ name = "oak_containers_stage1"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ciborium",
  "clap",
- "coset",
  "futures-util",
  "nix 0.27.1",
  "oak_attestation",
+ "oak_containers_stage1_dice",
  "oak_crypto",
  "oak_dice",
  "oak_grpc",
@@ -2519,10 +2520,8 @@ dependencies = [
  "oak_proto_rust",
  "p256",
  "prost",
- "prost-types",
  "rand_core",
  "rtnetlink",
- "sha2",
  "tar",
  "tokio",
  "tokio-vsock",
@@ -2532,6 +2531,20 @@ dependencies = [
  "xz2",
  "zerocopy",
  "zeroize",
+]
+
+[[package]]
+name = "oak_containers_stage1_dice"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "coset",
+ "oak_attestation",
+ "oak_dice",
+ "oak_proto_rust",
+ "prost",
+ "prost-types",
 ]
 
 [[package]]

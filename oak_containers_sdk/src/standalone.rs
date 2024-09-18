@@ -42,7 +42,7 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
 ) -> EndorsedEvidence {
     // TODO: b/347970899 - Create mock events and dice data for the subsequent
     // layers.
-    let (mut _mock_event_log, _mock_stage0_dice_data): (
+    let (mock_event_log, mock_stage0_dice_data): (
         oak_proto_rust::oak::attestation::v1::EventLog,
         oak_dice::evidence::Stage0DiceData,
     ) = {
@@ -65,6 +65,14 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
         );
         (mock_event_log, stage0_dice_data)
     };
+    let mut attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
+        mock_stage0_dice_data,
+        mock_event_log,
+    )
+    .expect("failed to create dice attester");
+    let layer_data = oak_containers_stage1_dice::get_layer_data(&[]);
+    attester.add_layer(layer_data).expect("failred to add stage1 layer data");
+
     EndorsedEvidence {
         evidence: Some(Evidence {
             // TODO: b/347970899 - Create something here that will be compatible with the

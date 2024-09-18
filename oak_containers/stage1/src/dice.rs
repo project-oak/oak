@@ -18,18 +18,9 @@ use core::ops::RangeBounds;
 use std::fs::{read_dir, read_to_string, OpenOptions};
 
 use anyhow::Context;
-use ciborium::Value;
-use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-use oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceAttester};
-use oak_dice::{
-    cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
-    evidence::STAGE0_MAGIC,
-};
-use oak_proto_rust::oak::{
-    attestation::v1::{DiceData, EventLog},
-    RawDigest,
-};
+use oak_dice::evidence::STAGE0_MAGIC;
+use oak_proto_rust::oak::attestation::v1::EventLog;
 use prost::Message;
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;
@@ -48,39 +39,6 @@ const MEMMAP_PATH: &str = "/sys/firmware/memmap";
 
 /// The path for reading the physical memory from the mem device.
 const PHYS_MEM_PATH: &str = "/dev/mem";
-
-/// Returns the SHA2-256 digest of the system image bytes and the event
-/// digest as vectors of additional CWT claims.
-pub fn get_system_image_measurement_claims(
-    digest: &RawDigest,
-    event: oak_proto_rust::oak::attestation::v1::Event,
-) -> oak_attestation::dice::LayerData {
-    let encoded_event = event.encode_to_vec();
-    let event_digest =
-        oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
-    oak_attestation::dice::LayerData {
-        additional_claims: vec![
-            (
-                ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
-                Value::Map(vec![(
-                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-                    Value::Map(vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(digest.sha2_256.clone()),
-                    )]),
-                )]),
-            ),
-            (
-                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
-                Value::Map(vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(event_digest.sha2_256),
-                )]),
-            ),
-        ],
-        encoded_event,
-    }
-}
 
 #[derive(Debug)]
 struct MemoryRange {
@@ -224,12 +182,10 @@ impl SensitiveDiceDataMemory {
 
     /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
     /// located at the given physical address.
-    pub fn read_into_attester(self) -> anyhow::Result<DiceAttester> {
+    pub fn read_into_attester(self) -> anyhow::Result<oak_attestation::dice::DiceAttester> {
         let stage0_dice_data = self.read_stage0_dice_data()?;
         let eventlog = self.read_eventlog()?;
-        let dice_data: DiceData =
-            stage0_dice_data_and_event_log_to_proto(stage0_dice_data, eventlog)?;
-        dice_data.try_into()
+        oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(stage0_dice_data, eventlog)
     }
 }
 

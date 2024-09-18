@@ -39,8 +39,6 @@ use nix::{
     unistd::{chdir, chroot},
 };
 use oak_attestation::attester::Serializable;
-use oak_proto_rust::oak::attestation::v1::{Event, SystemLayerData};
-use prost::Message;
 use tokio::process::Command;
 use tonic::transport::Uri;
 use x86_64::PhysAddr;
@@ -120,20 +118,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         buf
     };
 
-    let system_image_digest = oak_attestation::dice::MeasureDigest::measure_digest(&buf.as_slice());
-    let event = Event {
-        tag: "stage1".to_string(),
-        event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.SystemLayerData".to_string(),
-            value: SystemLayerData { system_image: Some(system_image_digest.clone()) }
-                .encode_to_vec(),
-        }),
-    };
-    let layer_data = dice::get_system_image_measurement_claims(&system_image_digest, event);
-
     // For safety we generate the DICE data for the next layer before processing the
-    // compressed system image. This consumes the `Attester` which also clears
-    // the ECA private key provided by Stage 0.
+    // compressed system image. This consumes the `DiceBuilder` which also
+    // clears the ECA private key provided by Stage 0.
+    let layer_data = oak_containers_stage1_dice::get_layer_data(&buf);
     attester.add_layer(layer_data)?;
     let dice_data = attester.serialize();
 
