@@ -20,7 +20,10 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use oak_attestation::dice::evidence_and_event_log_to_proto;
+use oak_attestation::{
+    attester::{Attester, Serializable},
+    dice::{evidence_and_event_log_to_proto, DiceAttester},
+};
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
@@ -28,10 +31,10 @@ use oak_crypto::{
 };
 use oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
+    attestation::v1::{ApplicationLayerData, DiceData, EventLog, Evidence},
     RawDigest,
 };
-use oak_session::attestation::Attester;
+use oak_session::attestation::Attester as SessionAttester;
 use p256::ecdsa::SigningKey;
 use prost::Message;
 
@@ -51,17 +54,31 @@ fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
         let stage0_event = oak_stage0_dice::encode_stage0_event(
             oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
+
         let mock_event_log = {
             let mut base = oak_proto_rust::oak::attestation::v1::EventLog::default();
             base.encoded_events.push(stage0_event.to_vec());
             base
         };
-        let (stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
-            oak_stage0_dice::mock_attestation_report,
-            oak_stage0_dice::mock_derived_key,
-            TeePlatform::None,
-            &stage0_event,
-        );
+
+        let stage0_dice_data = {
+            let mut dice_attester: DiceAttester = oak_stage0_dice::generate_initial_dice_data(
+                oak_stage0_dice::mock_attestation_report,
+                TeePlatform::None,
+            )
+            .expect("couldn't generate initial DICE data")
+            .try_into()
+            .expect("couldn't convert dice data to an attester");
+
+            dice_attester.extend(&stage0_event).expect("couldn't extend attester evidence");
+
+            oak_stage0_dice::dice_data_proto_to_stage0_dice_data(
+                &DiceData::decode_length_delimited(dice_attester.serialize().as_slice())
+                    .expect("couldn't decode attestation data"),
+            )
+            .expect("couldn't create attestation data struct")
+        };
+
         (mock_event_log, stage0_dice_data)
     };
 
@@ -161,7 +178,7 @@ impl MockAttester {
     }
 }
 
-impl Attester for MockAttester {
+impl SessionAttester for MockAttester {
     fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
         anyhow::bail!("mock attester doesn't support extending the evidence");
     }

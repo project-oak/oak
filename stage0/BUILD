@@ -32,6 +32,7 @@ rust_library(
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
+        "//oak_attestation",
         "//oak_core",
         "//oak_dice",
         "//oak_linux_boot_params",
@@ -40,6 +41,7 @@ rust_library(
         "//oak_sev_snp_attestation_report",
         "//sev_serial",
         "//stage0_dice",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:elf",

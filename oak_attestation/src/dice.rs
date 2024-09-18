@@ -18,10 +18,11 @@ use alloc::{vec, vec::Vec};
 
 use anyhow::{anyhow, Context};
 use ciborium::Value;
-use coset::{cwt::ClaimName, CborSerializable};
+use coset::{cwt::ClaimName, CborSerializable, CoseKey};
 use oak_dice::{
     cert::{
-        generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
+        cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
+        generate_kem_certificate, generate_signing_certificate,
         get_claims_set_from_certificate_bytes, SHA2_256_ID,
     },
     evidence::Stage0DiceData,
@@ -221,18 +222,37 @@ impl DiceAttester {
 impl Attester for DiceAttester {
     fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()> {
         // The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        let layer_evidence = self
+        // Since the builder contains an existing signing key there must be at least one
+        // layer of evidence that contains the certificate, or a root layer that is
+        // bound to the attestation report.
+        let issuer_id = match self
             .evidence
             .layers
             .last()
-            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?;
-        let claims_set = get_claims_set_from_certificate_bytes(&layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)?;
-
-        // The issuer for the next layer is the subject of the current last layer.
-        let issuer_id = claims_set.subject.ok_or_else(|| anyhow!("no subject in certificate"))?;
+            .map(|last| {
+                get_claims_set_from_certificate_bytes(&last.eca_certificate)
+                    .map_err(anyhow::Error::msg)
+            })
+            .transpose()?
+            .map(|claims_set| {
+                claims_set.subject.ok_or_else(|| anyhow!("no subject in certificate"))
+            })
+            .transpose()?
+        {
+            Some(issuer_id) => issuer_id,
+            None => {
+                let root_layer = self
+                    .evidence
+                    .root_layer
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
+                let cose_key = CoseKey::from_slice(root_layer.eca_public_key.as_slice())
+                    .map_err(anyhow::Error::msg)?;
+                let verifying_key =
+                    cose_key_to_verifying_key(&cose_key).map_err(anyhow::Error::msg)?;
+                hex::encode(derive_verifying_key_id(&verifying_key))
+            }
+        };
 
         // Generate a signing key for the next layer.
         let (signing_key, verifying_key) = generate_ecdsa_key_pair();

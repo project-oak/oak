@@ -18,10 +18,11 @@ pub mod base;
 
 use core::arch::x86_64::CpuidResult;
 
+pub use base::Base;
+use oak_attestation::attester::{Attester, Serializable};
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
-use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
     structures::{
@@ -71,6 +72,7 @@ pub enum PageAssignment {
 
 pub trait Platform {
     type Mmio<S: PageSize>: Mmio<S>;
+    type Attester: Attester + Serializable;
 
     /// Performs the CPUID instruction.
     fn cpuid(leaf: u32) -> CpuidResult;
@@ -125,21 +127,10 @@ pub trait Platform {
     /// Example: locations of the SEV Secrets and CPUID pages.
     fn populate_zero_page(zero_page: &mut ZeroPage);
 
-    /// Returns an attestation report.
-    ///
-    /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation
-    /// report. In other cases it generates an empty attestation report for
-    /// testing. The additional data will be set in both cases to bind the
-    /// DICE chain to the attestation report.
-    ///
-    /// # Arguments
-    ///
-    /// * `report_data` - The custom data that must be included in the report.
-    ///   This is typically used to bind information (such as the hash of a
-    ///   public key) to the report.
-    fn get_attestation(
-        report_data: [u8; REPORT_DATA_SIZE],
-    ) -> Result<AttestationReport, &'static str>;
+    /// Returns an attester that can be used to extend the attestation
+    /// information with an event log entry and serialize the attestation data
+    /// so that it can be passed to the next boot stage.
+    fn get_attester() -> Result<Self::Attester, &'static str>;
 
     /// Requests a derived key.
     ///
@@ -185,7 +176,6 @@ pub trait Platform {
     /// The caller must guarantee that the MSR is valid.
     unsafe fn write_msr(msr: u32, value: u64);
 }
-pub use base::Base;
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending
 /// on the environment.

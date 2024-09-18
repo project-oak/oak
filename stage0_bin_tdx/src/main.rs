@@ -286,6 +286,8 @@ struct Tdx {}
 
 impl oak_stage0::Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
+    type Attester = oak_stage0::hal::base::NoOpAttester;
+
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
         call_cpuid(leaf, 0).unwrap()
     }
@@ -548,11 +550,9 @@ impl oak_stage0::Platform for Tdx {
         info!("populate_zero_page start");
         info!("populate_zero_page completed");
     }
-    fn get_attestation(
-        _: [u8; 64],
-    ) -> Result<oak_sev_snp_attestation_report::AttestationReport, &'static str> {
-        //TODO: b/360488295 - impl get_attestation
-        Ok(oak_sev_snp_attestation_report::AttestationReport::from_report_data([0; 64]))
+    fn get_attester() -> Result<Self::Attester, &'static str> {
+        // TODO: b/367564134 - impl TDX attester using RTMRs.
+        oak_stage0::hal::base::Base::get_attester()
     }
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
         // TODO: b/360488668 - impl get_derived_key

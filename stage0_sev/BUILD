@@ -32,6 +32,7 @@ rust_library(
     ],
     aliases = {"//stage0": "oak_stage0"},
     deps = [
+        "//oak_attestation",
         "//oak_core",
         "//oak_dice",
         "//oak_linux_boot_params",

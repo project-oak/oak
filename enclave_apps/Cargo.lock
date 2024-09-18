@@ -810,6 +810,7 @@ dependencies = [
  "anyhow",
  "ciborium",
  "coset",
+ "hex",
  "micro_rpc_build",
  "oak_dice",
  "oak_proto_rust",

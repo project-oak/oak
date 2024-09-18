@@ -24,6 +24,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use oak_attestation::{attester::Attester, dice::DiceAttester};
 use oak_crypto::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
@@ -83,19 +84,16 @@ impl StandaloneOrchestrator {
         let mut mock_event_log = oak_proto_rust::oak::attestation::v1::EventLog::default();
         mock_event_log.encoded_events.push(encoded_stage0_event.to_vec());
 
-        // Generate mock Stage0 DICE data
-        let (mock_stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
+        // Create a DICE attester from the mock Stage0 data
+        let mut attester: DiceAttester = oak_stage0_dice::generate_initial_dice_data(
             oak_stage0_dice::mock_attestation_report,
-            oak_stage0_dice::mock_derived_key,
             oak_dice::evidence::TeePlatform::None,
-            &encoded_stage0_event,
-        );
+        )
+        .expect("couldn't create initial DICE data")
+        .try_into()
+        .expect("couldn't convert dice data to an attester");
 
-        // Create a DICE attester from the Stage0 data
-        let mut attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
-            mock_stage0_dice_data,
-            mock_event_log,
-        )?;
+        attester.extend(&encoded_stage0_event).expect("couldn't extend attester evidence");
 
         // Add Stage1 layer data
         let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);

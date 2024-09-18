@@ -25,11 +25,14 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
+use oak_attestation::attester::{Attester, Serializable};
 use oak_dice::evidence::{
     DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
     STAGE0_DICE_PROTO_MAGIC,
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+use oak_proto_rust::oak::attestation::v1::DiceData;
+use oak_stage0_dice::{derive_sealing_cdi, DerivedKey};
 use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -176,17 +179,25 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     let memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
+    let stage0_event_proto = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+        setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
+        kernel_measurement: kernel_sha2_256_digest.as_bytes().to_vec(),
+        ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
+        memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
+        acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
+        kernel_cmdline: cmdline.clone(),
+    };
+
+    // Use the root derived key as the UDS (unique device secret) for deriving
+    // sealing keys.
+    let mut uds: DerivedKey = P::get_derived_key().expect("couldn't get derived key");
+
+    let mut cdi = derive_sealing_cdi(&uds, &stage0_event_proto);
+    // Zero out the UDS.
+    uds.zeroize();
+
     // Generate Stage0 Event Log data.
-    let stage0_event = oak_stage0_dice::encode_stage0_event(
-        oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-            setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
-            kernel_measurement: kernel_sha2_256_digest.as_bytes().to_vec(),
-            ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
-            memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
-            acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
-            kernel_cmdline: cmdline.clone(),
-        },
-    );
+    let stage0_event = oak_stage0_dice::encode_stage0_event(stage0_event_proto);
     let event_sha2_256_digest = Sha256::digest(&stage0_event).to_vec();
     let event_log_proto = {
         let mut base = oak_proto_rust::oak::attestation::v1::EventLog::default();
@@ -202,23 +213,41 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
     log::debug!("Event digest: sha2-256:{}", hex::encode(event_sha2_256_digest));
 
-    let tee_platform = P::tee_platform();
+    let mut attester = P::get_attester().expect("couldn't get a valid attester");
+    attester.extend(&stage0_event[..]).expect("couldn't extend attester");
+    let mut serialized_attestation_data = attester.serialize();
 
-    let (dice_data_struct, dice_data_proto) = oak_stage0_dice::generate_dice_data(
-        P::get_attestation,
-        P::get_derived_key,
-        tee_platform,
-        &stage0_event,
-    );
-    let dice_data = Box::leak(Box::new_in(dice_data_struct, &crate::BOOT_ALLOC));
+    let mut attestation_data_struct = {
+        let attestation_data = DiceData::decode_length_delimited(&serialized_attestation_data[..])
+            .expect("couldn't decode attestation data");
+
+        let result = oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
+            .expect("couldn't create attestation data struct");
+
+        // Zero out the copy of the private key in the proto that we just created.
+        attestation_data
+            .certificate_authority
+            .expect("no certificate authority")
+            .eca_private_key
+            .zeroize();
+
+        result
+    };
+
+    attestation_data_struct.layer_1_cdi.cdi[..].copy_from_slice(&cdi[..]);
+    // Zero out the copy of the sealing CDIs.
+    cdi.zeroize();
+
+    let attestation_data = Box::leak(Box::new_in(attestation_data_struct, &crate::BOOT_ALLOC));
 
     // Reserve the memory containing the DICE data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        dice_data.as_bytes().as_ptr() as usize,
-        dice_data.as_bytes().len(),
+        attestation_data.as_bytes().as_ptr() as usize,
+        attestation_data.as_bytes().len(),
         E820EntryType::RESERVED,
     ));
-    let mut sensitive_dice_data_length = core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
+    let mut sensitive_attestation_data_length =
+        core::mem::size_of::<oak_dice::evidence::Stage0DiceData>();
 
     // Write Eventlog data to memory.
     let mut event_log = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
@@ -236,37 +265,34 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
-    sensitive_dice_data_length += PAGE_SIZE;
+    sensitive_attestation_data_length += PAGE_SIZE;
 
     // TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
     // write all of it in memory.
     // Write DiceData protobuf bytes to memory.
-    let mut encoded_dice_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
+    let mut encoded_attestation_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
     // Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
     // the size of the encoded DiceData proto.
-    assert!(dice_data_proto.encoded_len() < PAGE_SIZE - 8 * 2);
+    assert!(serialized_attestation_data.len() < PAGE_SIZE - 8 * 2);
     // Insert a magic number to ensure the correctness of the data being read.
-    encoded_dice_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
-    encoded_dice_proto.extend_from_slice(dice_data_proto.encoded_len().to_le_bytes().as_slice());
-    encoded_dice_proto.extend_from_slice(dice_data_proto.encode_to_vec().as_bytes());
-    // Zero out the ECA private key in the proto.
-    dice_data_proto
-        .certificate_authority
-        .expect("no certificate authority")
-        .eca_private_key
-        .zeroize();
+    encoded_attestation_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
+    encoded_attestation_proto
+        .extend_from_slice(serialized_attestation_data.len().to_le_bytes().as_slice());
+    encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_bytes());
+    // Zero out the serialized proto since it contains a copy of the private key.
+    serialized_attestation_data.zeroize();
 
     // Reserve memory containing DICE proto Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        encoded_dice_proto.as_bytes().as_ptr() as usize,
+        encoded_attestation_proto.as_bytes().as_ptr() as usize,
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
-    sensitive_dice_data_length += PAGE_SIZE;
+    sensitive_attestation_data_length += PAGE_SIZE;
 
     // Append the DICE data address to the kernel command-line.
     let extra = format!(
-        "--{DICE_DATA_CMDLINE_PARAM}={dice_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_dice_data_length}"
+        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
     );
     let cmdline = if cmdline.is_empty() {
         extra

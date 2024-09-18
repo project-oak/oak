@@ -27,6 +27,16 @@ const TEST_APPLICATION_DIGEST: [u8; 4] = [0, 1, 2, 3];
 
 #[test]
 fn dice_attester_generates_correct_dice_chain() {
+    let stage0_dice_data_proto = oak_stage0_dice::generate_initial_dice_data(
+        oak_stage0_dice::mock_attestation_report,
+        TeePlatform::None,
+    )
+    .expect("couldn't create initial DICE data");
+    let serialized_stage0_dice_data = stage0_dice_data_proto.encode_length_delimited_to_vec();
+
+    let mut dice_attester = DiceAttester::deserialize(&serialized_stage0_dice_data)
+        .expect("couldn't deserialize attester");
+
     let test_stage0_measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
         setup_data_digest: vec![],
         kernel_measurement: vec![],
@@ -36,16 +46,7 @@ fn dice_attester_generates_correct_dice_chain() {
         kernel_cmdline: String::new(),
     };
     let stage0_event = oak_stage0_dice::encode_stage0_event(test_stage0_measurements);
-    let (_, stage0_dice_data_proto) = oak_stage0_dice::generate_dice_data(
-        oak_stage0_dice::mock_attestation_report,
-        oak_stage0_dice::mock_derived_key,
-        TeePlatform::None,
-        &stage0_event,
-    );
-    let serialized_stage0_dice_data = stage0_dice_data_proto.encode_length_delimited_to_vec();
-
-    let mut dice_attester = DiceAttester::deserialize(&serialized_stage0_dice_data)
-        .expect("couldn't deserialize attester");
+    dice_attester.extend(&stage0_event).expect("couldn't extend attester evidence");
 
     let application_event = oak_proto_rust::oak::attestation::v1::Event {
         tag: "application_layer".to_string(),

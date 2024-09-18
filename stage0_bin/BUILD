@@ -41,7 +41,7 @@ rust_binary(
         "--codegen=relocation-model=static",
         "--codegen=opt-level=z",
         "--codegen=lto=fat",
-        "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=256K",
+        "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=512K",
         "--codegen=link-arg=-static",
         "--codegen=link-arg=-Wl,-static",
     ],

@@ -21,13 +21,13 @@ mod mmio;
 use alloc::boxed::Box;
 use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 
+use oak_attestation::dice::DiceAttester;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
-use oak_sev_snp_attestation_report::AttestationReport;
 use oak_stage0::{
     allocator::Shared,
     hal::{Base, PageAssignment, Platform, PortFactory},
@@ -149,6 +149,7 @@ pub struct Sev {}
 
 impl Platform for Sev {
     type Mmio<S: PageSize> = mmio::Mmio<S>;
+    type Attester = DiceAttester;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
@@ -292,10 +293,8 @@ impl Platform for Sev {
         }
     }
 
-    fn get_attestation(
-        report_data: [u8; oak_sev_snp_attestation_report::REPORT_DATA_SIZE],
-    ) -> Result<AttestationReport, &'static str> {
-        dice_attestation::get_attestation(report_data)
+    fn get_attester() -> Result<Self::Attester, &'static str> {
+        dice_attestation::get_attester()
     }
 
     fn get_derived_key() -> Result<oak_stage0_dice::DerivedKey, &'static str> {

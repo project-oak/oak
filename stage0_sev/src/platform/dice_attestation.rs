@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use oak_attestation::dice::DiceAttester;
 use oak_sev_guest::{
     crypto::GuestMessageEncryptor,
     guest::{
@@ -77,9 +78,16 @@ fn send_guest_message_request<
     encryptor.decrypt_message::<Response>(response_message.as_ref())
 }
 
-pub fn get_attestation(
-    report_data: [u8; REPORT_DATA_SIZE],
-) -> Result<AttestationReport, &'static str> {
+pub fn get_attester() -> Result<DiceAttester, &'static str> {
+    oak_stage0_dice::generate_initial_dice_data(
+        get_attestation,
+        crate::platform::Sev::tee_platform(),
+    )?
+    .try_into()
+    .map_err(|_| "couldn't convert initial DICE evidence to an attester")
+}
+
+fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> Result<AttestationReport, &'static str> {
     if super::sev_status().contains(SevStatus::SNP_ACTIVE) {
         let mut report_request = AttestationRequest::new();
         report_request.report_data = report_data;
@@ -90,7 +98,7 @@ pub fn get_attestation(
         }
         Ok(attestation_response.report)
     } else {
-        oak_stage0::hal::Base::get_attestation(report_data)
+        oak_stage0_dice::mock_attestation_report(report_data)
     }
 }
 
