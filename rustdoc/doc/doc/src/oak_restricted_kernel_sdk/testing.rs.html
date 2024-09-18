@@ -166,6 +166,9 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -191,7 +194,7 @@
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
-<span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
+<span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{ApplicationLayerData, EventLog},
     crypto::v1::Signature,
@@ -216,23 +219,26 @@
 }
 
 <span class="kw">fn </span>get_mock_dice_data_and_event_log() -&gt; (RestrictedKernelDiceData, Vec&lt;u8&gt;) {
-    <span class="kw">let </span><span class="kw-2">mut </span>mock_stage0_measurements = oak_stage0_dice::Measurements::default();
-    <span class="kw">let </span>(<span class="kw-2">mut </span>mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-        mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.cmdline.clone(),
-    );
-    mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
-    <span class="kw">let </span>(stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
-        <span class="kw-2">&amp;</span>mock_stage0_measurements,
-        oak_stage0_dice::mock_attestation_report,
-        oak_stage0_dice::mock_derived_key,
-        TeePlatform::None,
-        EventLog::default(),
-    );
+    <span class="kw">let </span>(<span class="kw-2">mut </span>mock_event_log, stage0_dice_data): (EventLog, Stage0DiceData) = {
+        <span class="kw">let </span><span class="kw-2">mut </span>mock_stage0_measurements = oak_stage0_dice::Measurements::default();
+        <span class="kw">let </span>(mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
+            mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.cmdline.clone(),
+        );
+        mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
+        <span class="kw">let </span>(stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
+            <span class="kw-2">&amp;</span>mock_stage0_measurements,
+            oak_stage0_dice::mock_attestation_report,
+            oak_stage0_dice::mock_derived_key,
+            TeePlatform::None,
+            EventLog::default(),
+        );
+        (mock_event_log, stage0_dice_data)
+    };
 
     <span class="kw">let </span>application_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
     <span class="kw">let </span>application_event = oak_proto_rust::oak::attestation::v1::Event {
