@@ -23,7 +23,7 @@ use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
-use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
+use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
     attestation::v1::{ApplicationLayerData, EventLog},
     crypto::v1::Signature,
@@ -48,23 +48,26 @@ lazy_static::lazy_static! {
 }
 
 fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
-    let mut mock_stage0_measurements = oak_stage0_dice::Measurements::default();
-    let (mut mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-        mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
-        mock_stage0_measurements.cmdline.clone(),
-    );
-    mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
-    let (stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
-        &mock_stage0_measurements,
-        oak_stage0_dice::mock_attestation_report,
-        oak_stage0_dice::mock_derived_key,
-        TeePlatform::None,
-        EventLog::default(),
-    );
+    let (mut mock_event_log, stage0_dice_data): (EventLog, Stage0DiceData) = {
+        let mut mock_stage0_measurements = oak_stage0_dice::Measurements::default();
+        let (mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
+            mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
+            mock_stage0_measurements.cmdline.clone(),
+        );
+        mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
+        let (stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
+            &mock_stage0_measurements,
+            oak_stage0_dice::mock_attestation_report,
+            oak_stage0_dice::mock_derived_key,
+            TeePlatform::None,
+            EventLog::default(),
+        );
+        (mock_event_log, stage0_dice_data)
+    };
 
     let application_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
     let application_event = oak_proto_rust::oak::attestation::v1::Event {

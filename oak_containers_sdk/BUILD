@@ -37,8 +37,10 @@ rust_library(
     ],
     deps = [
         "//oak_crypto",
+        "//oak_dice",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//stage0_dice",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:prost",
