@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MEMMAP_PATH","PHYS_MEM_PATH","RESERVED_E820_TYPE"],"fn":["get_system_image_measurement_claims","read_memory_ranges"],"struct":["MemoryRange","SensitiveDiceDataMemory"]};
+window.SIDEBAR_ITEMS = {"constant":["MEMMAP_PATH","PHYS_MEM_PATH","RESERVED_E820_TYPE"],"fn":["read_memory_ranges"],"struct":["MemoryRange","SensitiveDiceDataMemory"]};

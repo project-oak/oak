@@ -185,18 +185,6 @@
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -238,8 +226,6 @@
     unistd::{chdir, chroot},
 };
 <span class="kw">use </span>oak_attestation::attester::Serializable;
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, SystemLayerData};
-<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tokio::process::Command;
 <span class="kw">use </span>tonic::transport::Uri;
 <span class="kw">use </span>x86_64::PhysAddr;
@@ -319,21 +305,11 @@
         buf
     };
 
-    <span class="kw">let </span>system_image_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>buf.as_slice());
-    <span class="kw">let </span>event = Event {
-        tag: <span class="string">"stage1"</span>.to_string(),
-        event: <span class="prelude-val">Some</span>(prost_types::Any {
-            type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.SystemLayerData"</span>.to_string(),
-            value: SystemLayerData { system_image: <span class="prelude-val">Some</span>(system_image_digest.clone()) }
-                .encode_to_vec(),
-        }),
-    };
-    <span class="kw">let </span>layer_data = dice::get_system_image_measurement_claims(<span class="kw-2">&amp;</span>system_image_digest, event);
-
     <span class="comment">// For safety we generate the DICE data for the next layer before processing the
-    // compressed system image. This consumes the `Attester` which also clears
-    // the ECA private key provided by Stage 0.
-    </span>attester.add_layer(layer_data)<span class="question-mark">?</span>;
+    // compressed system image. This consumes the `DiceBuilder` which also
+    // clears the ECA private key provided by Stage 0.
+    </span><span class="kw">let </span>layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>buf);
+    attester.add_layer(layer_data)<span class="question-mark">?</span>;
     <span class="kw">let </span>dice_data = attester.serialize();
 
     image::extract(<span class="kw-2">&amp;</span>buf, Path::new(<span class="string">"/"</span>)).<span class="kw">await</span>.context(<span class="string">"error loading the system image"</span>)<span class="question-mark">?</span>;
