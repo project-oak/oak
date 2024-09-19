@@ -37,6 +37,17 @@ package_group(
     includes = [
         ":internal",
     ],
+    # "//..." and "//visibility:public" are not equivalent - they were
+    # in Bazel before V6.0. We need the default settings of options
+    #   --incompatible_package_group_has_public_syntax=true
+    #   --incompatible_package_group_includes_double_slash=true
+    # for this to work (so don't unset them). See
+    #    https://github.com/bazelbuild/bazel/issues/16323
+    #    https://github.com/bazelbuild/bazel/issues/16355
+    # for background.
+    packages = [
+        "public",
+    ],
 )
 
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.

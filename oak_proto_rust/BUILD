@@ -20,7 +20,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
