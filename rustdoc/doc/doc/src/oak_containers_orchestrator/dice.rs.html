@@ -172,7 +172,7 @@
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
-<span class="kw">use </span>oak_attestation::dice::DiceBuilder;
+<span class="kw">use </span>oak_attestation::dice::DiceAttester;
 <span class="kw">use </span>oak_dice::cert::{
     CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
     SHA2_256_ID,
@@ -188,11 +188,11 @@
 ///
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
-</span><span class="kw">pub fn </span>load_stage1_dice_data() -&gt; anyhow::Result&lt;DiceBuilder&gt; {
+</span><span class="kw">pub fn </span>load_stage1_dice_data() -&gt; anyhow::Result&lt;DiceAttester&gt; {
     load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
 }
 
-<span class="kw">fn </span>load_stage1_dice_data_from_path(path: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
+<span class="kw">fn </span>load_stage1_dice_data_from_path(path: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;DiceAttester&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>file = OpenOptions::new()
         .read(<span class="bool-val">true</span>)
         .write(<span class="bool-val">true</span>)

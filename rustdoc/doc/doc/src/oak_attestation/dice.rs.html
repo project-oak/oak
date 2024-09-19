@@ -320,6 +320,80 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -339,11 +413,12 @@
 </span><span class="kw">use </span>alloc::{vec, vec::Vec};
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable};
 <span class="kw">use </span>oak_dice::{
     cert::{
         generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
-        get_claims_set_from_certificate_bytes,
+        get_claims_set_from_certificate_bytes, SHA2_256_ID,
     },
     evidence::Stage0DiceData,
 };
@@ -355,8 +430,11 @@
     RawDigest,
 };
 <span class="kw">use </span>p256::ecdsa::{SigningKey, VerifyingKey};
+<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use </span><span class="kw">crate</span>::attester::{Attester, Serializable};
 
 <span class="kw">pub trait </span>MeasureDigest {
     <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest;
@@ -382,12 +460,14 @@
 }
 
 <span class="doccomment">/// Builds the DICE evidence and certificate authority for the next DICE layer.
-</span><span class="kw">pub struct </span>DiceBuilder {
+</span><span class="kw">pub struct </span>DiceAttester {
     evidence: Evidence,
     signing_key: SigningKey,
 }
 
-<span class="kw">impl </span>DiceBuilder {
+<span class="comment">// TODO: b/366141836 - Remove this implementation once all Oak clients have been
+// updated to the EventLog attestation.
+</span><span class="kw">impl </span>DiceAttester {
     <span class="doccomment">/// Adds an additional layer of evidence to the DICE data.
     ///
     /// The evidence is in the form of a CWT certificate that contains the
@@ -399,7 +479,6 @@
         <span class="comment">// The last evidence layer contains the certificate for the current signing key.
         // Since the builder contains an existing signing key there must be at
         // least one layer of evidence that contains the certificate.
-
         </span><span class="kw">let </span>layer_evidence = <span class="self">self
             </span>.evidence
             .layers
@@ -535,18 +614,87 @@
             .push(layer_data.encoded_event);
         <span class="prelude-val">Ok</span>(evidence)
     }
+}
 
-    <span class="kw">pub fn </span>serialize(<span class="self">self</span>) -&gt; DiceData {
-        DiceData {
+<span class="kw">impl </span>Attester <span class="kw">for </span>DiceAttester {
+    <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="comment">// The last evidence layer contains the certificate for the current signing key.
+        // Since the builder contains an existing signing key there must be at
+        // least one layer of evidence that contains the certificate.
+        </span><span class="kw">let </span>layer_evidence = <span class="self">self
+            </span>.evidence
+            .layers
+            .last()
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence layers found"</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+
+        <span class="comment">// The issuer for the next layer is the subject of the current last layer.
+        </span><span class="kw">let </span>issuer_id = claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))<span class="question-mark">?</span>;
+
+        <span class="comment">// Generate a signing key for the next layer.
+        </span><span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
+
+        <span class="comment">// Generate a claim for CWT which contains the event digest.
+        </span><span class="kw">let </span>event_digest = MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event);
+        <span class="kw">let </span>event_claim = (
+            ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+            Value::Map(<span class="macro">vec!</span>[(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(event_digest.sha2_256),
+            )]),
+        );
+
+        <span class="comment">// Generate new CWT.
+        </span><span class="kw">let </span>eca_certificate = generate_signing_certificate(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
+            issuer_id,
+            <span class="kw-2">&amp;</span>verifying_key,
+            <span class="macro">vec!</span>[event_claim],
+        )
+        .map_err(anyhow::Error::msg)
+        .context(<span class="string">"couldn't generate ECA certificate for the next layer"</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Add new layer to the evidence.
+        </span><span class="self">self</span>.evidence.layers.push(LayerEvidence {
+            eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)<span class="question-mark">?</span>,
+        });
+        <span class="self">self</span>.evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(encoded_event.to_vec());
+
+        <span class="comment">// Replacing the signing key will cause the previous signing key to be dropped,
+        // which will zero out its memory.
+        </span><span class="self">self</span>.signing_key = signing_key;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Evidence&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.evidence.clone())
+    }
+}
+
+<span class="kw">impl </span>Serializable <span class="kw">for </span>DiceAttester {
+    <span class="kw">fn </span>deserialize(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>dice_data = DiceData::decode_length_delimited(bytes)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"couldn't parse DICE data: {:?}"</span>, error))<span class="question-mark">?</span>;
+        dice_data.try_into()
+    }
+
+    <span class="kw">fn </span>serialize(<span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+        <span class="kw">let </span>dice_data = DiceData {
             evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence),
             certificate_authority: <span class="prelude-val">Some</span>(CertificateAuthority {
                 eca_private_key: <span class="self">self</span>.signing_key.to_bytes().as_slice().into(),
             }),
-        }
+        };
+        dice_data.encode_length_delimited_to_vec()
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;DiceData&gt; <span class="kw">for </span>DiceBuilder {
+<span class="kw">impl </span>TryFrom&lt;DiceData&gt; <span class="kw">for </span>DiceAttester {
     <span class="kw">type </span>Error = anyhow::Error;
     <span class="kw">fn </span>try_from(<span class="kw-2">mut </span>value: DiceData) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>evidence = value.evidence.as_ref().ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence"</span>))<span class="question-mark">?</span>;
@@ -562,7 +710,7 @@
             certificate_authority.eca_private_key.zeroize();
         }
 
-        <span class="prelude-val">Ok</span>(DiceBuilder { evidence: evidence.clone(), signing_key: signing_key.clone() })
+        <span class="prelude-val">Ok</span>(DiceAttester { evidence: evidence.clone(), signing_key: signing_key.clone() })
     }
 }
 

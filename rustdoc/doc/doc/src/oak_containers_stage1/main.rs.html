@@ -237,7 +237,8 @@
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
+<span class="kw">use </span>oak_attestation::attester::Serializable;
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Event, SystemLayerData};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tokio::process::Command;
 <span class="kw">use </span>tonic::transport::Uri;
@@ -284,7 +285,7 @@
     mount(<span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="string">"/sys"</span>, <span class="prelude-val">Some</span>(<span class="string">"sysfs"</span>), MsFlags::empty(), <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;)
         .context(<span class="string">"error mounting /sys"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = {
+    <span class="kw">let </span><span class="kw-2">mut </span>attester = {
         <span class="comment">// Safety: This will be the only instance of this struct.
         </span><span class="kw">unsafe </span>{
             dice::SensitiveDiceDataMemory::new(
@@ -293,7 +294,7 @@
                 args.dice_data_length,
             )
         }<span class="question-mark">?
-        </span>.read_into_dice_builder()<span class="question-mark">?
+        </span>.read_into_attester()<span class="question-mark">?
     </span>};
 
     <span class="comment">// Unmount /sys and /dev as they are no longer needed.
@@ -330,10 +331,10 @@
     <span class="kw">let </span>layer_data = dice::get_system_image_measurement_claims(<span class="kw-2">&amp;</span>system_image_digest, event);
 
     <span class="comment">// For safety we generate the DICE data for the next layer before processing the
-    // compressed system image. This consumes the `DiceBuilder` which also
-    // clears the ECA private key provided by Stage 0.
-    </span>dice_builder.add_layer(layer_data)<span class="question-mark">?</span>;
-    <span class="kw">let </span>dice_data: DiceData = dice_builder.serialize();
+    // compressed system image. This consumes the `Attester` which also clears
+    // the ECA private key provided by Stage 0.
+    </span>attester.add_layer(layer_data)<span class="question-mark">?</span>;
+    <span class="kw">let </span>dice_data = attester.serialize();
 
     image::extract(<span class="kw-2">&amp;</span>buf, Path::new(<span class="string">"/"</span>)).<span class="kw">await</span>.context(<span class="string">"error loading the system image"</span>)<span class="question-mark">?</span>;
 
@@ -347,8 +348,7 @@
     <span class="comment">// Write the DICE data to a well-known location as a length-delimited protobuf
     // file.
     </span>create_dir(<span class="string">"/oak"</span>).context(<span class="string">"error creating `oak` directory"</span>)<span class="question-mark">?</span>;
-    fs::write(<span class="string">"/oak/dice"</span>, dice_data.encode_length_delimited_to_vec())
-        .context(<span class="string">"error writing DICE data"</span>)<span class="question-mark">?</span>;
+    fs::write(<span class="string">"/oak/dice"</span>, dice_data).context(<span class="string">"error writing DICE data"</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Configure eth0 down, as systemd will want to manage it itself and gets
     // confused if it already has an IP address.

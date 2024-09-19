@@ -289,7 +289,7 @@
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-<span class="kw">use </span>oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceBuilder};
+<span class="kw">use </span>oak_attestation::dice::{stage0_dice_data_and_event_log_to_proto, DiceAttester};
 <span class="kw">use </span>oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::STAGE0_MAGIC,
@@ -492,7 +492,7 @@
 
     <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
     /// located at the given physical address.
-    </span><span class="kw">pub fn </span>read_into_dice_builder(<span class="self">self</span>) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
+    </span><span class="kw">pub fn </span>read_into_attester(<span class="self">self</span>) -&gt; anyhow::Result&lt;DiceAttester&gt; {
         <span class="kw">let </span>stage0_dice_data = <span class="self">self</span>.read_stage0_dice_data()<span class="question-mark">?</span>;
         <span class="kw">let </span>eventlog = <span class="self">self</span>.read_eventlog()<span class="question-mark">?</span>;
         <span class="kw">let </span>dice_data: DiceData =
