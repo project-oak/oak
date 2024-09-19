@@ -64,6 +64,7 @@ rust_test(
 rust_test_suite(
     name = "integration_tests",
     srcs = [
+        "tests/endorsement_tests.rs",
         "tests/verifier_tests.rs",
     ],
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
@@ -79,6 +80,7 @@ rust_test_suite(
         "//oak_file_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:x509-cert",
@@ -130,6 +132,7 @@ rust_test(
 rust_test_suite(
     name = "integration_tests_with_regex",
     srcs = [
+        "tests/endorsement_tests.rs",
         "tests/verifier_tests.rs",
     ],
     aliases = {":oak_attestation_verification_with_regex": "oak_attestation_verification"},
@@ -149,6 +152,7 @@ rust_test_suite(
         "//oak_file_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:x509-cert",

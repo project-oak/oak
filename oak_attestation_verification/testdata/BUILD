@@ -26,7 +26,7 @@ filegroup(
         "endorsement.json",
         "endorsement.json.sig",
         "logentry.json",
-        "endorser_public_key.pem",
+        "endorser_public_key.pem",  # tr_development_verifying_key
         # Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
         # from https://rekor.sigstore.dev/api/v1/log/publicKey.
         "rekor_public_key.pem",

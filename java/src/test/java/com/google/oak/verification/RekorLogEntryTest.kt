@@ -28,7 +28,7 @@ class RekorLogEntryTest {
     val r = RekorLogEntry.createFromJson(json)
     assertTrue(r.hasVerification())
     assertTrue(r.logEntry.body.isNotEmpty() == true)
-    assertEquals(74497915, r.logEntry.logIndex)
+    assertEquals(132193865, r.logEntry.logIndex)
     assertEquals("rekord", r.logEntry.bodyObject?.kind)
     assertEquals("sha256", r.logEntry.bodyObject?.spec?.data?.hash?.algorithm)
     assertEquals("x509", r.logEntry.bodyObject?.spec?.signature?.format)
