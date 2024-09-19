@@ -60,6 +60,10 @@
             {
               name = "tdx-skip-probe-roms";
               patch = ./oak_containers/kernel/patches/tdx-probe-roms.patch;
+            }
+            {
+              name = "rtmr-enabling";
+              patch = ./oak_containers/kernel/patches/rtmr-enable.patch;
             }];
           });
           # Vanilla kernel

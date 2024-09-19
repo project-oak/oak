@@ -1,0 +1,775 @@
+diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c linux-6.9.1-new-patch/arch/x86/coco/tdx/tdx.c
+--- linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/arch/x86/coco/tdx/tdx.c	2024-11-25 09:38:08.146837959 -0800
+@@ -35,6 +35,7 @@
+ /* TDX Module call error codes */
+ #define TDCALL_RETURN_CODE(a)	((a) >> 32)
+ #define TDCALL_INVALID_OPERAND	0xc0000100
++#define TDCALL_OPERAND_BUSY	0x80000200
+ 
+ #define TDREPORT_SUBTYPE_0	0
+ 
+@@ -108,6 +109,41 @@
+ EXPORT_SYMBOL_GPL(tdx_mcall_get_report0);
+ 
+ /**
++ * tdx_mcall_rtmr_extend() - Wrapper to extend RTMR registers using
++ *			     TDG.MR.RTMR.EXTEND TDCALL.
++ * @index: Index of RTMR register to be extended.
++ * @data: Address of the input buffer with RTMR register extend data.
++ *
++ * Refer to section titled "TDG.MR.RTMR.EXTEND leaf" in the TDX Module
++ * v1.0 specification for more information on TDG.MR.RTMR.EXTEND TDCALL.
++ * It is used in the TDX guest driver module to allow user extend the
++ * RTMR registers (index > 1).
++ *
++ * Return 0 on success, -EINVAL for invalid operands, -EBUSY for busy
++ * operation or -EIO on other TDCALL failures.
++ */
++int tdx_mcall_rtmr_extend(u8 index, u8 *data)
++{
++	struct tdx_module_args args = {
++		.rcx = virt_to_phys(data),
++		.rdx = index,
++	};
++	u64 ret;
++
++	ret = __tdcall(TDG_MR_RTMR_EXTEND, &args);
++	if (ret) {
++		if (TDCALL_RETURN_CODE(ret) == TDCALL_INVALID_OPERAND)
++			return -EINVAL;
++		if (TDCALL_RETURN_CODE(ret) == TDCALL_OPERAND_BUSY)
++			return -EBUSY;
++		return -EIO;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(tdx_mcall_rtmr_extend);
++
++/**
+  * tdx_hcall_get_quote() - Wrapper to request TD Quote using GetQuote
+  *                         hypercall.
+  * @buf: Address of the directly mapped shared kernel buffer which
+diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/shared/tdx.h linux-6.9.1-new-patch/arch/x86/include/asm/shared/tdx.h
+--- linux-6.9.1-orig/arch/x86/include/asm/shared/tdx.h	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/arch/x86/include/asm/shared/tdx.h	2024-11-25 09:38:08.146837959 -0800
+@@ -12,6 +12,7 @@
+ 
+ /* TDX module Call Leaf IDs */
+ #define TDG_VP_VMCALL			0
++#define TDG_MR_RTMR_EXTEND		2
+ #define TDG_VP_INFO			1
+ #define TDG_VP_VEINFO_GET		3
+ #define TDG_MR_REPORT			4
+diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/tdx.h linux-6.9.1-new-patch/arch/x86/include/asm/tdx.h
+--- linux-6.9.1-orig/arch/x86/include/asm/tdx.h	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/arch/x86/include/asm/tdx.h	2024-11-25 09:38:08.146837959 -0800
+@@ -64,6 +64,8 @@
+ 
+ int tdx_mcall_get_report0(u8 *reportdata, u8 *tdreport);
+ 
++int tdx_mcall_rtmr_extend(u8 index, u8 *data);
++
+ u64 tdx_hcall_get_quote(u8 *buf, size_t size);
+ 
+ #else
+diff '--color=auto' -u -r linux-6.9.1-orig/Documentation/ABI/testing/configfs-tsm linux-6.9.1-new-patch/Documentation/ABI/testing/configfs-tsm
+--- linux-6.9.1-orig/Documentation/ABI/testing/configfs-tsm	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/Documentation/ABI/testing/configfs-tsm	2024-11-25 09:37:57.802757718 -0800
+@@ -80,3 +80,39 @@
+ Description:
+ 		(RO) Indicates the minimum permissible value that can be written
+ 		to @privlevel.
++
++What:		/sys/kernel/config/tsm/rtmrs/$name/digest
++Date:		January, 2024
++KernelVersion:	v6.8
++Contact:	linux-coco@lists.linux.dev
++Description:
++		(RW) The value in this attribute is the Runtime Measurement
++		Register (RTMR) digest. Callers can extend this digest with
++		additional hashes by writing into it. Binary blobs written to
++		this attribute must be of the exact length used by the hash
++		algorithm for this RTMR.
++
++What:		/sys/kernel/config/tsm/rtmrs/$name/index
++Date:		January, 2024
++KernelVersion:	v6.8
++Contact:	linux-coco@lists.linux.dev
++Description:
++		(RW) A Runtime Measurement Register (RTMR) hardware index.
++                Once created under /sys/kernel/config/tsm/rtmrs/, an RTMR entry
++                can be mapped to a hardware RTMR by writing into its index
++                attribute. The TSM provider will then map the configfs entry to
++                its corresponding hardware register.
++
++What:		/sys/kernel/config/tsm/rtmrs/$name/tcg_map
++Date:		January, 2024
++KernelVersion:	v6.8
++Contact:	linux-coco@lists.linux.dev
++Description:
++		(RO) A representation of the architecturally defined mapping
++		between this RTMR and one or more TCG TPM PCRs [1]. When using
++		a TSM as Root of Trust for Storage (RTS), TCG TPM PCRs
++		associated semantics and indexes can be used when RTMRs are
++		logically mapped to TPM PCRs.
++
++		[1]: TCG PC Client Specific Platform Firmware Profile Specification
++		https://trustedcomputinggroup.org/resource/pc-client-specific-platform-firmware-profile-specification/
+diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/Kconfig linux-6.9.1-new-patch/drivers/virt/coco/Kconfig
+--- linux-6.9.1-orig/drivers/virt/coco/Kconfig	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/drivers/virt/coco/Kconfig	2024-11-25 09:37:57.802757718 -0800
+@@ -5,6 +5,7 @@
+ 
+ config TSM_REPORTS
+ 	select CONFIGFS_FS
++	select CRYPTO_HASH_INFO
+ 	tristate
+ 
+ source "drivers/virt/coco/efi_secret/Kconfig"
+diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest.c linux-6.9.1-new-patch/drivers/virt/coco/tdx-guest/tdx-guest.c
+--- linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest.c	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/drivers/virt/coco/tdx-guest/tdx-guest.c	2024-11-25 09:38:17.362909465 -0800
+@@ -17,6 +17,7 @@
+ #include <linux/delay.h>
+ #include <linux/tsm.h>
+ #include <linux/sizes.h>
++#include <linux/bits.h>
+ 
+ #include <uapi/linux/tdx-guest.h>
+ 
+@@ -35,6 +36,12 @@
+ #define GET_QUOTE_SUCCESS		0
+ #define GET_QUOTE_IN_FLIGHT		0xffffffffffffffff
+ 
++/* TDX RTMR macros */
++#define RTMR_INDEX_USER_APPLICATION	2
++#define RTMR_INDEX_SPECIAL		3
++#define RTMR_BUF_LEN			64
++#define TDREPORT_RTMR_OFFSET		720
++
+ /* struct tdx_quote_buf: Format of Quote request buffer.
+  * @version: Quote format version, filled by TD.
+  * @status: Status code of Quote request, filled by VMM.
+@@ -249,6 +256,75 @@
+ 	return ret;
+ }
+ 
++static int tdx_rtmr_extend(u32 index, const u8 *digest, size_t digest_size)
++{
++	/*
++	 * Per Intel TDX Virtual Firmware Design Guide, section titled
++	 * "Measurement Register Usage in TD", only RTMR index 2 or 3 can
++	 * be used for userspace measurement extension.
++	 */
++	if (index != RTMR_INDEX_USER_APPLICATION && index != RTMR_INDEX_SPECIAL) {
++		pr_err("RTMR extend failed, index %d is not allowed for user updates\n",
++			index);
++		return -EINVAL;
++	}
++
++	/*
++	 * Per TDX Module specification r1.0, section titled "RTMR: Run-Time
++	 * Measurement Registers", RTMR extend only uses SHA384. Ensure
++	 * digest size matches it.
++	 */
++	if (digest_size != SHA384_DIGEST_SIZE) {
++		pr_err("RTMR extend failed, invalid digest size:%ld\n", digest_size);
++		return -EINVAL;
++	}
++
++	void *buf __free(kfree) = kzalloc(RTMR_BUF_LEN, GFP_KERNEL);
++	if (!buf)
++		return -ENOMEM;
++
++	memcpy(buf, digest, digest_size);
++
++	/* Extend RTMR registers using "TDG.MR.RTMR.EXTEND" TDCALL */
++	return tdx_mcall_rtmr_extend(index, buf);
++}
++
++static ssize_t tdx_rtmr_read(u32 index, u8 *digest, size_t digest_size)
++{
++	u8 *rtmr;
++	int ret;
++
++	/*
++	 * Per TDX Module specification r1.0, section titled "RTMR: Run-Time
++	 * Measurement Registers", RTMR extend only uses SHA384. Ensure
++	 * digest size matches it.
++	 */
++	if (digest_size != SHA384_DIGEST_SIZE) {
++		pr_err("RTMR read failed, invalid digest size:%ld\n", digest_size);
++		return -EINVAL;
++	}
++
++	u8 *reportdata __free(kfree) = kmalloc(TDX_REPORTDATA_LEN, GFP_KERNEL);
++	if (!reportdata)
++		return -ENOMEM;
++
++	u8 *tdreport __free(kfree) = kzalloc(TDX_REPORT_LEN, GFP_KERNEL);
++	if (!tdreport)
++		return -ENOMEM;
++
++	ret = tdx_mcall_get_report0(reportdata, tdreport);
++	if (ret) {
++		pr_err("GetReport call failed\n");
++		return ret;
++	}
++
++	rtmr = tdreport + TDREPORT_RTMR_OFFSET + (digest_size * index);
++
++	memcpy(digest, rtmr, digest_size);
++
++	return digest_size;
++}
++
+ static long tdx_guest_ioctl(struct file *file, unsigned int cmd,
+ 			    unsigned long arg)
+ {
+@@ -278,9 +354,40 @@
+ };
+ MODULE_DEVICE_TABLE(x86cpu, tdx_guest_ids);
+ 
++const struct tsm_rtmr_desc rtmrs[] = {
++	{
++		.hash_alg	= HASH_ALGO_SHA384,
++		/* RTMR 0 => PCR 1 & 7 */
++		.tcg_pcr_mask	= BIT(1) | BIT(7),
++	},
++	{
++		.hash_alg	= HASH_ALGO_SHA384,
++		/* RTMR 1 => PCR 2~6 */
++		.tcg_pcr_mask	= GENMASK(6, 2),
++	},
++	{
++		.hash_alg	= HASH_ALGO_SHA384,
++		/* RTMR 2 => PCR 8~15 */
++		.tcg_pcr_mask	= GENMASK(15, 8),
++	},
++	{
++		.hash_alg	= HASH_ALGO_SHA384,
++		/* No PCR mapping */
++		.tcg_pcr_mask	= 0,
++	},
++};
++
++static const struct tsm_capabilities tdx_rtmr_cap = {
++	.num_rtmrs = ARRAY_SIZE(rtmrs),
++	.rtmrs = rtmrs,
++};
++
+ static const struct tsm_ops tdx_tsm_ops = {
+ 	.name = KBUILD_MODNAME,
++	.capabilities = tdx_rtmr_cap,
+ 	.report_new = tdx_report_new,
++	.rtmr_extend = tdx_rtmr_extend,
++	.rtmr_read = tdx_rtmr_read
+ };
+ 
+ static int __init tdx_guest_init(void)
+diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-new-patch/drivers/virt/coco/tsm.c
+--- linux-6.9.1-orig/drivers/virt/coco/tsm.c	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/drivers/virt/coco/tsm.c	2024-11-25 09:37:57.806757747 -0800
+@@ -11,6 +11,7 @@
+ #include <linux/module.h>
+ #include <linux/cleanup.h>
+ #include <linux/configfs.h>
++#include <linux/tpm.h>
+ 
+ static struct tsm_provider {
+ 	const struct tsm_ops *ops;
+@@ -50,6 +51,85 @@
+ 	TSM_CERTS,
+ };
+ 
++/**
++ * DOC: Trusted Security Module (TSM) Runtime Measurement Register (RTMR) Interface
++ *
++ * The TSM RTMR interface is a common ABI for allowing TVMs to extend
++ * and read measurement registers at runtime, i.e. after the TVM initial
++ * measurement is finalized. TSMs that support such capability will typically
++ * include all runtime measurement registers values into their signed
++ * attestation report, providing the TVM post-boot measurements to e.g. remote
++ * attestation services.
++ *
++ * A TVM uses the TSM RTMR configfs ABI to create all runtime measurement
++ * registers (RTMR) that it needs. Each created RTMR must be configured first
++ * before being readable and extensible. TVM configures an RTMR by setting its
++ * index and optionally by mapping it to one or more TCG PCR indexes.
++ *
++ * A TSM backend statically declares the number of RTMRs it supports and which
++ * hash algorithm must be used when extending them. This declaration is done
++ * through the tsm_capabilities structure, at TSM registration time (see
++ * tsm_register()).
++ */
++
++/**
++ * struct tsm_rtmr_state - tracks the state of a TSM RTMR.
++ * @index: The RTMR hardware index.
++ * @alg: The hash algorithm used for this RTMR.
++ * @digest: The RTMR cached digest value.
++ * @cached_digest: Is the RTMR cached digest valid or not.
++ * @cfg: The configfs item for this RTMR.
++ */
++struct tsm_rtmr_state {
++	u32 index;
++	enum hash_algo alg;
++	u8 digest[TSM_DIGEST_MAX];
++	bool cached_digest;
++	struct config_item cfg;
++};
++
++static bool is_rtmr_configured(struct tsm_rtmr_state *rtmr_state)
++{
++	return rtmr_state->index != U32_MAX;
++}
++
++/**
++ * struct tsm_rtmrs_state - tracks the state of all RTMRs for a TSM.
++ * @rtmrs: The array of all created RTMRs.
++ * @tcg_map: A mapping between TCG PCR and RTMRs, indexed by PCR indexes.
++ * Entry `i` on this map points to an RTMR that covers TCG PCR[i] for the TSM
++ * hash algorithm.
++ * @group: The configfs group for a TSM RTMRs.
++ */
++static struct tsm_rtmrs_state {
++	struct tsm_rtmr_state **rtmrs;
++	const struct tsm_rtmr_state *tcg_map[TPM2_PLATFORM_PCR];
++	struct config_group *group;
++} *tsm_rtmrs;
++
++static int tsm_rtmr_read(struct tsm_provider *tsm, u32 idx,
++			 u8 *digest, size_t digest_size)
++{
++	if (tsm->ops && tsm->ops->rtmr_read)
++		return tsm->ops->rtmr_read(idx, digest, digest_size);
++
++	return -ENXIO;
++}
++
++static int tsm_rtmr_extend(struct tsm_provider *tsm, u32 idx,
++			   const u8 *digest, size_t digest_size)
++{
++	if (tsm->ops && tsm->ops->rtmr_extend)
++		return tsm->ops->rtmr_extend(idx, digest, digest_size);
++
++	return -ENXIO;
++}
++
++static struct tsm_rtmr_state *to_tsm_rtmr_state(struct config_item *cfg)
++{
++	return container_of(cfg, struct tsm_rtmr_state, cfg);
++}
++
+ static struct tsm_report *to_tsm_report(struct config_item *cfg)
+ {
+ 	struct tsm_report_state *state =
+@@ -339,6 +419,240 @@
+ 	.ct_group_ops = &tsm_report_group_ops,
+ };
+ 
++static int tsm_rtmr_build_tcg_map(const struct tsm_provider *tsm,
++				const struct tsm_rtmr_state *rtmr_state,
++				u32 rtmr_idx)
++{
++	const struct tsm_ops *ops;
++	unsigned long pcr_mask;
++	int i;
++
++	lockdep_assert_held_write(&tsm_rwsem);
++
++	ops = tsm->ops;
++	if (!ops)
++		return -ENOTTY;
++
++	if (!ops->capabilities.rtmrs)
++		return -ENXIO;
++
++	pcr_mask = ops->capabilities.rtmrs[rtmr_idx].tcg_pcr_mask;
++
++	/* Check that the PCR mask is valid  */
++	for (i = 0; i < TPM2_PLATFORM_PCR; i++) {
++		if (!(pcr_mask & BIT(i)))
++			continue;
++
++		/* If another RTMR maps to this PCR, the mask is discarded */
++		if (tsm_rtmrs->tcg_map[i] &&
++			tsm_rtmrs->tcg_map[i] != rtmr_state)
++			return -EBUSY;
++	}
++
++	for (i = 0; i < TPM2_PLATFORM_PCR; i++) {
++		if (!(pcr_mask & BIT(i)))
++			continue;
++
++		tsm_rtmrs->tcg_map[i] = rtmr_state;
++	}
++
++	return 0;
++}
++
++static ssize_t tsm_rtmr_index_store(struct config_item *cfg,
++				    const char *buf, size_t len)
++{
++	struct tsm_rtmr_state *rtmr_state = to_tsm_rtmr_state(cfg);
++	const struct tsm_ops *ops;
++	unsigned int val;
++	int rc;
++
++	rc = kstrtouint(buf, 0, &val);
++	if (rc)
++		return rc;
++
++	guard(rwsem_write)(&tsm_rwsem);
++
++	/* Index can only be configured once */
++	if (is_rtmr_configured(rtmr_state))
++		return -EBUSY;
++
++	/* Check that index stays within the TSM provided capabilities */
++	ops = provider.ops;
++	if (!ops)
++		return -ENOTTY;
++
++	if (val > ops->capabilities.num_rtmrs - 1)
++		return -EINVAL;
++
++	/* Check that this index is available */
++	if (tsm_rtmrs->rtmrs[val])
++		return -EINVAL;
++
++	rc = tsm_rtmr_build_tcg_map(&provider, rtmr_state, val);
++	if (rc)
++		return rc;
++
++	rtmr_state->index = val;
++	rtmr_state->alg = ops->capabilities.rtmrs[val].hash_alg;
++
++	tsm_rtmrs->rtmrs[val] = rtmr_state;
++
++	return len;
++}
++
++static ssize_t tsm_rtmr_index_show(struct config_item *cfg,
++				   char *buf)
++{
++	struct tsm_rtmr_state *rtmr_state = to_tsm_rtmr_state(cfg);
++
++	guard(rwsem_read)(&tsm_rwsem);
++
++	/* An RTMR is not available if it has not been configured */
++	if (!is_rtmr_configured(rtmr_state))
++		return -ENXIO;
++
++	return sysfs_emit(buf, "%u\n", rtmr_state->index);
++}
++CONFIGFS_ATTR(tsm_rtmr_, index);
++
++static ssize_t tsm_rtmr_tcg_map_show(struct config_item *cfg,
++				     char *buf)
++{
++	struct tsm_rtmr_state *rtmr_state = to_tsm_rtmr_state(cfg);
++	unsigned int nr_pcrs = ARRAY_SIZE(tsm_rtmrs->tcg_map), i;
++	unsigned long *pcr_mask;
++	ssize_t len;
++
++	/* Build a bitmap mask of all PCRs that this RTMR covers */
++	pcr_mask = bitmap_zalloc(nr_pcrs, GFP_KERNEL);
++	if (!pcr_mask)
++		return -ENOMEM;
++
++	guard(rwsem_read)(&tsm_rwsem);
++	for (i = 0; i < nr_pcrs; i++) {
++		if (tsm_rtmrs->tcg_map[i] != rtmr_state)
++			continue;
++
++		__set_bit(i, pcr_mask);
++	}
++
++	len = bitmap_print_list_to_buf(buf, pcr_mask, nr_pcrs, 0,
++				       nr_pcrs * 3 /* 2 ASCII digits and one comma */);
++	bitmap_free(pcr_mask);
++
++	return len;
++}
++CONFIGFS_ATTR_RO(tsm_rtmr_, tcg_map);
++
++static struct configfs_attribute *tsm_rtmr_attrs[] = {
++	&tsm_rtmr_attr_index,
++	&tsm_rtmr_attr_tcg_map,
++	NULL,
++};
++
++static ssize_t tsm_rtmr_digest_read(struct config_item *cfg, void *buf,
++				    size_t count)
++{
++	struct tsm_rtmr_state *rtmr_state = to_tsm_rtmr_state(cfg);
++	int rc, digest_size = hash_digest_size[rtmr_state->alg];
++
++	/* configfs is asking for the digest size */
++	if (!buf)
++		return digest_size;
++
++	if (!is_rtmr_configured(rtmr_state))
++		return -ENXIO;
++
++	if (count > TSM_DIGEST_MAX || count < digest_size)
++		return -EINVAL;
++
++	/* Read from the cached digest */
++	if (rtmr_state->cached_digest) {
++		memcpy(buf, rtmr_state->digest, count);
++		return digest_size;
++	}
++
++	/* Slow path, this RTMR got extended */
++	guard(rwsem_write)(&tsm_rwsem);
++	rc = tsm_rtmr_read(&provider, rtmr_state->index, buf, count);
++	if (rc < 0)
++		return rc;
++
++	/* Update the cached digest */
++	memcpy(rtmr_state->digest, buf, count);
++	rtmr_state->cached_digest = true;
++
++	return rc;
++}
++
++static ssize_t tsm_rtmr_digest_write(struct config_item *cfg,
++				     const void *buf, size_t count)
++{
++	struct tsm_rtmr_state *rtmr_state = to_tsm_rtmr_state(cfg);
++
++	if (!is_rtmr_configured(rtmr_state))
++		return -ENXIO;
++
++	if (count > TSM_DIGEST_MAX || count < hash_digest_size[rtmr_state->alg])
++		return -EINVAL;
++
++	guard(rwsem_write)(&tsm_rwsem);
++	rtmr_state->cached_digest = false;
++	return tsm_rtmr_extend(&provider, rtmr_state->index, buf, count);
++}
++CONFIGFS_BIN_ATTR(tsm_rtmr_, digest, NULL, TSM_DIGEST_MAX);
++
++static struct configfs_bin_attribute *tsm_rtmr_bin_attrs[] = {
++	&tsm_rtmr_attr_digest,
++	NULL,
++};
++
++static void tsm_rtmr_item_release(struct config_item *cfg)
++{
++	struct tsm_rtmr_state *state = to_tsm_rtmr_state(cfg);
++
++	kfree(state);
++}
++
++static struct configfs_item_operations tsm_rtmr_item_ops = {
++	.release = tsm_rtmr_item_release,
++};
++
++const struct config_item_type tsm_rtmr_type = {
++	.ct_owner = THIS_MODULE,
++	.ct_bin_attrs = tsm_rtmr_bin_attrs,
++	.ct_attrs = tsm_rtmr_attrs,
++	.ct_item_ops = &tsm_rtmr_item_ops,
++};
++
++static struct config_item *tsm_rtmrs_make_item(struct config_group *group,
++					       const char *name)
++{
++	struct tsm_rtmr_state *state;
++
++	guard(rwsem_read)(&tsm_rwsem);
++	if (!(provider.ops && (provider.ops->capabilities.num_rtmrs > 0)))
++		return ERR_PTR(-ENXIO);
++
++	state = kzalloc(sizeof(*state), GFP_KERNEL);
++	if (!state)
++		return ERR_PTR(-ENOMEM);
++	state->index = U32_MAX;
++
++	config_item_init_type_name(&state->cfg, name, &tsm_rtmr_type);
++	return &state->cfg;
++}
++
++static struct configfs_group_operations tsm_rtmrs_group_ops = {
++	.make_item = tsm_rtmrs_make_item,
++};
++
++static const struct config_item_type tsm_rtmrs_type = {
++	.ct_owner = THIS_MODULE,
++	.ct_group_ops = &tsm_rtmrs_group_ops,
++};
++
+ static const struct config_item_type tsm_root_group_type = {
+ 	.ct_owner = THIS_MODULE,
+ };
+@@ -353,10 +667,48 @@
+ 	.su_mutex = __MUTEX_INITIALIZER(tsm_configfs.su_mutex),
+ };
+ 
++static int tsm_rtmr_register(const struct tsm_ops *ops)
++{
++	struct config_group *rtmrs_group;
++
++	lockdep_assert_held_write(&tsm_rwsem);
++
++	if (!ops || !ops->capabilities.num_rtmrs)
++		return 0;
++
++	if (ops->capabilities.num_rtmrs > TSM_MAX_RTMR)
++		return -EINVAL;
++
++	tsm_rtmrs = kzalloc(sizeof(struct tsm_rtmrs_state), GFP_KERNEL);
++	if (!tsm_rtmrs)
++		return -ENOMEM;
++
++	tsm_rtmrs->rtmrs = kcalloc(ops->capabilities.num_rtmrs,
++				   sizeof(struct tsm_rtmr_state *),
++				   GFP_KERNEL);
++	if (!tsm_rtmrs->rtmrs) {
++		kfree(tsm_rtmrs);
++		return -ENOMEM;
++	}
++
++	rtmrs_group = configfs_register_default_group(&tsm_configfs.su_group, "rtmrs",
++						      &tsm_rtmrs_type);
++	if (IS_ERR(rtmrs_group)) {
++		kfree(tsm_rtmrs->rtmrs);
++		kfree(tsm_rtmrs);
++		return PTR_ERR(rtmrs_group);
++	}
++
++	tsm_rtmrs->group = rtmrs_group;
++
++	return 0;
++}
++
+ int tsm_register(const struct tsm_ops *ops, void *priv,
+ 		 const struct config_item_type *type)
+ {
+ 	const struct tsm_ops *conflict;
++	int rc;
+ 
+ 	if (!type)
+ 		type = &tsm_report_default_type;
+@@ -370,6 +722,10 @@
+ 		return -EBUSY;
+ 	}
+ 
++	rc = tsm_rtmr_register(ops);
++	if (rc < 0)
++		return rc;
++
+ 	provider.ops = ops;
+ 	provider.data = priv;
+ 	provider.type = type;
+@@ -377,11 +733,31 @@
+ }
+ EXPORT_SYMBOL_GPL(tsm_register);
+ 
++static int tsm_rtmr_unregister(const struct tsm_ops *ops)
++{
++	lockdep_assert_held_write(&tsm_rwsem);
++
++	if ((ops) && (ops->capabilities.num_rtmrs > 0)) {
++		configfs_unregister_default_group(tsm_rtmrs->group);
++		kfree(tsm_rtmrs->rtmrs);
++		kfree(tsm_rtmrs);
++	}
++
++	return 0;
++}
++
+ int tsm_unregister(const struct tsm_ops *ops)
+ {
++	int rc;
++
+ 	guard(rwsem_write)(&tsm_rwsem);
+ 	if (ops != provider.ops)
+ 		return -EBUSY;
++
++	rc = tsm_rtmr_unregister(ops);
++	if (rc < 0)
++		return rc;
++
+ 	provider.ops = NULL;
+ 	provider.data = NULL;
+ 	provider.type = NULL;
+diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-patch/include/linux/tsm.h
+--- linux-6.9.1-orig/include/linux/tsm.h	2024-05-17 03:18:09.000000000 -0700
++++ linux-6.9.1-new-patch/include/linux/tsm.h	2024-11-25 09:37:14.354420689 -0800
+@@ -2,11 +2,13 @@
+ #ifndef __TSM_H
+ #define __TSM_H
+ 
++#include <crypto/hash_info.h>
+ #include <linux/sizes.h>
+ #include <linux/types.h>
+ 
+ #define TSM_INBLOB_MAX 64
+ #define TSM_OUTBLOB_MAX SZ_32K
++#define TSM_DIGEST_MAX SHA512_DIGEST_SIZE
+ 
+ /*
+  * Privilege level is a nested permission concept to allow confidential
+@@ -42,12 +44,44 @@
+ 	u8 *auxblob;
+ };
+ 
++#define TSM_MAX_RTMR 32
++
++/**
++ * struct tsm_rtmr_desc - Describes a TSM Runtime Measurement Register (RTMR).
++ * @hash_alg: The hash algorithm used to extend this runtime measurement
++ *            register.
++ * @tcg_pcr_mask: A bit mask of all TCG PCRs mapped to this RTMR.
++ */
++struct tsm_rtmr_desc {
++	enum hash_algo hash_alg;
++	unsigned long tcg_pcr_mask;
++};
++
++/**
++ * struct tsm_capabilities - Describes a TSM capabilities.
++ * @num_rtmrs: The number of Runtime Measurement Registers (RTMR) available from
++ *             a TSM.
++ * @rtmr_hash_alg: The hash algorithm used to extend a runtime measurement
++ *                 register.
++ */
++struct tsm_capabilities {
++	size_t num_rtmrs;
++	const struct tsm_rtmr_desc *rtmrs;
++};
++
+ /**
+  * struct tsm_ops - attributes and operations for tsm instances
+  * @name: tsm id reflected in /sys/kernel/config/tsm/report/$report/provider
+  * @privlevel_floor: convey base privlevel for nested scenarios
++ * @capabilities: Describe the TSM capabilities, e.g. the number of available
++ *                runtime measurement registers (see `struct tsm_capabilities`).
+  * @report_new: Populate @report with the report blob and auxblob
+- * (optional), return 0 on successful population, or -errno otherwise
++ *              (optional), return 0 on successful population, or -errno
++ *              otherwise
++ * @rtmr_extend: Extend an RTMR with the provided digest.
++ *               Return 0 on successful extension, or -errno otherwise.
++ * @rtmr_read: Reads the value of an RTMR.
++ *             Return the number of bytes read or -errno for errors.
+  *
+  * Implementation specific ops, only one is expected to be registered at
+  * a time i.e. only one of "sev-guest", "tdx-guest", etc.
+@@ -55,7 +89,10 @@
+ struct tsm_ops {
+ 	const char *name;
+ 	const unsigned int privlevel_floor;
++	const struct tsm_capabilities capabilities;
+ 	int (*report_new)(struct tsm_report *report, void *data);
++	int (*rtmr_extend)(u32 idx, const u8 *digest, size_t digest_size);
++	ssize_t (*rtmr_read)(u32 idx, u8 *digest, size_t digest_size);
+ };
+ 
+ extern const struct config_item_type tsm_report_default_type;

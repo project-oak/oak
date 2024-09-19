@@ -327,7 +327,7 @@ pub enum RtmrIndex {
 /// It must be 64-byte aligned and have a length of 48 bytes.
 #[repr(C, align(64))]
 pub struct ExtensionBuffer {
-    data: [u8; 48],
+    pub data: [u8; 48],
 }
 
 /// Error when extending an RTMR.

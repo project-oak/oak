@@ -38,7 +38,7 @@ use oak_stage0::{
     paging, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
-    tdcall::get_td_info,
+    tdcall::{extend_rtmr, get_td_info, ExtensionBuffer, RtmrIndex},
     vmcall::{call_cpuid, mmio_read_u32, mmio_write_u32, msr_read, msr_write, tdvmcall_wbinvd},
 };
 use serial::Debug;
@@ -278,6 +278,9 @@ impl oak_stage0::Platform for Tdx {
 
     fn early_initialize_platform() {
         serial::debug!("early_initialize_platform");
+        let ri = RtmrIndex::Rtmr0;
+        let buf = ExtensionBuffer { data: *b"TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST" };
+        let _ = extend_rtmr(ri, buf);
         serial::debug!("early_initialize_platform completed");
     }
 
