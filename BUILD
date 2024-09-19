@@ -77,6 +77,7 @@ platform(
         "//bazel/rust:avx_ON",
         "//bazel/rust:code_model_NORMAL",
     ],
+    visibility = ["//:default_visibility"],
 )
 
 platform(
