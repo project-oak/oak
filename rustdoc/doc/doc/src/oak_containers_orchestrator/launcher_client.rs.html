@@ -154,6 +154,13 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -199,7 +206,14 @@
                     .unwrap_or(<span class="macro">format!</span>(<span class="string">"{}"</span>, tokio_vsock::VMADDR_CID_HOST).as_str())
                     .parse()
                     .context(<span class="string">"invalid vsock CID"</span>)<span class="question-mark">?</span>,
-                addr.port_u16().context(<span class="string">"invalid vsock port"</span>)<span class="question-mark">?</span>.into(),
+                addr.authority()
+                    .context(<span class="string">"failed to extract authority from vsock address"</span>)<span class="question-mark">?
+                    </span>.as_str()
+                    .split(<span class="string">':'</span>)
+                    .last()
+                    .context(<span class="string">"failed to extract port from vsock address"</span>)<span class="question-mark">?
+                    </span>.parse::&lt;u32&gt;()
+                    .context(<span class="string">"invalid vsock port"</span>)<span class="question-mark">?</span>,
             );
 
             <span class="comment">// The C++ gRPC implementations are more particular about the URI scheme; in
