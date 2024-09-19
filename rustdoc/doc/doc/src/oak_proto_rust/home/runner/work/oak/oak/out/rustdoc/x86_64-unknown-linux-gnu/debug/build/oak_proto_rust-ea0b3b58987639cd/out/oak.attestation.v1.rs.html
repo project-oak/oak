@@ -1442,6 +1442,9 @@
 <a href="#1440" id="1440">1440</a>
 <a href="#1441" id="1441">1441</a>
 <a href="#1442" id="1442">1442</a>
+<a href="#1443" id="1443">1443</a>
+<a href="#1444" id="1444">1444</a>
+<a href="#1445" id="1445">1445</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -1775,20 +1778,23 @@
     </span><span class="kw">pub </span>claim_types: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
 }
 <span class="doccomment">/// Verifies the transparency log entry, including signatures and the digest.
-///
-/// ------------------------------------------------------------------------
-/// First generation fields starting here.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>EndorsementReferenceValue {
     <span class="doccomment">/// The endorser's public verifying key for signature verification. The
     /// attestation verification requires that all endorsements need to be
     /// signed, therefore this cannot be empty.
+    ///
+    /// Field will be deprecated in the future. For standalone endorsement
+    /// verification, use `endorser` field instead.
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>endorser_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="doccomment">/// Rekor's public verifying key for log entry verification. Needs to be
     /// set when a log entry is present that should be verified. If it is not set,
     /// then log entry verification is skipped.
+    ///
+    /// Field will be deprecated in the future. For standalone endorsement
+    /// verification, use `rekor` field instead.
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>rekor_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="doccomment">/// Verifies the endorsement. Since the signed endorsement is required to
