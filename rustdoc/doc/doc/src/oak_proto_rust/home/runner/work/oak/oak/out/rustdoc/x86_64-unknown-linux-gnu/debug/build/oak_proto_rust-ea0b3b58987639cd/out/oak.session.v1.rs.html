@@ -306,6 +306,18 @@
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -487,6 +499,18 @@
         <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>EncryptedMessage(<span class="kw">super</span>::EncryptedMessage),
     }
+}
+<span class="doccomment">/// Wrapper around SessionRequest that is used in cases where it is necessary to
+/// identify a contiguous session across multiple invocations/streams.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>SessionRequestWithSessionId {
+    <span class="doccomment">/// Unique string to identify the session. This should be at least 128 bits of
+    /// unique information.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>session_id: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>request: ::core::option::Option&lt;SessionRequest&gt;,
 }
 <span class="doccomment">/// Response message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
