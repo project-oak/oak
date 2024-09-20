@@ -348,6 +348,35 @@
 <a href="#346" id="346">346</a>
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -367,20 +396,25 @@
 </span><span class="doccomment">//! This module provides an SDK for creating secure attested sessions between
 //! two parties.
 
-</span><span class="kw">use </span>alloc::{boxed::Box, collections::VecDeque};
-
-<span class="kw">use </span>anyhow::{anyhow, Context, Error};
-<span class="kw">use </span>oak_crypto::encryptor::Encryptor;
-<span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults},
-    session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-        SessionRequest, SessionResponse,
-    },
+</span><span class="kw">use </span>alloc::{
+    boxed::Box,
+    collections::{BTreeMap, VecDeque},
+    string::String,
 };
 
+<span class="kw">use </span>anyhow::{anyhow, Context, Error, <span class="prelude-val">Ok</span>};
+<span class="kw">use </span>oak_crypto::encryptor::Encryptor;
+<span class="kw">use </span>oak_proto_rust::oak::session::v1::{
+    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+    SessionBinding, SessionRequest, SessionResponse,
+};
+<span class="kw">use </span>prost::Message;
+
 <span class="kw">use crate</span>::{
-    attestation::{AttestationProvider, ClientAttestationProvider, ServerAttestationProvider},
+    attestation::{
+        AttestationFailure, AttestationProvider, AttestationSuccess, ClientAttestationProvider,
+        ServerAttestationProvider,
+    },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
     ProtocolEngine,
@@ -422,7 +456,7 @@
     handshaker: ClientHandshaker,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
     </span>encryptor_config: EncryptorConfig,
-    attestation_results: <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;,
+    attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
     encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
     outgoing_requests: VecDeque&lt;SessionRequest&gt;,
     incoming_responses: VecDeque&lt;SessionResponse&gt;,
@@ -435,7 +469,7 @@
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
             encryptor_config: config.encryptor_config,
-            attestation_results: <span class="prelude-val">None</span>,
+            attestation_result: <span class="prelude-val">None</span>,
             encryptor: <span class="prelude-val">None</span>,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -518,14 +552,8 @@
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
                      any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_results) = <span class="self">self</span>.attester.take_attestation_report() {
-                    <span class="self">self</span>.attestation_results = <span class="prelude-val">Some</span>(attestation_results.clone());
-                    <span class="kw">if </span>attestation_results.status != attestation_results::Status::Success.into() {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                            <span class="string">"Attestation verification failed: {}"</span>,
-                            attestation_results.reason
-                        ));
-                    }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="self">self</span>.attester.take_attestation_result() {
+                    <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result);
                 }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
@@ -534,9 +562,16 @@
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
+                        verify_session_binding(
+                            <span class="kw-2">&amp;</span>attestation_result,
+                            <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
+                            handshake_result.handshake_hash.as_slice(),
+                        )<span class="question-mark">?</span>;
+                    }
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(session_keys)
+                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(handshake_result.session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }
@@ -563,7 +598,7 @@
     handshaker: ServerHandshaker,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
     </span>encryptor_config: EncryptorConfig,
-    attestation_results: <span class="prelude-ty">Option</span>&lt;AttestationResults&gt;,
+    attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
     encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
     outgoing_responses: VecDeque&lt;SessionResponse&gt;,
     incoming_requests: VecDeque&lt;SessionRequest&gt;,
@@ -575,7 +610,7 @@
             attester: ServerAttestationProvider::new(config.attestation_provider_config),
             handshaker: ServerHandshaker::new(config.handshaker_config),
             encryptor_config: config.encryptor_config,
-            attestation_results: <span class="prelude-val">None</span>,
+            attestation_result: <span class="prelude-val">None</span>,
             encryptor: <span class="prelude-val">None</span>,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -658,14 +693,8 @@
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
                  any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_results) = <span class="self">self</span>.attester.take_attestation_report() {
-                    <span class="self">self</span>.attestation_results = <span class="prelude-val">Some</span>(attestation_results.clone());
-                    <span class="kw">if </span>attestation_results.status != attestation_results::Status::Success.into() {
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                            <span class="string">"Attestation verification failed: {}"</span>,
-                            attestation_results.reason
-                        ));
-                    }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="self">self</span>.attester.take_attestation_result() {
+                    <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result);
                 }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
@@ -674,9 +703,16 @@
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
                  expect any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(session_keys) = <span class="self">self</span>.handshaker.derive_session_keys() {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
+                        verify_session_binding(
+                            <span class="kw-2">&amp;</span>attestation_result,
+                            <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
+                            handshake_result.handshake_hash.as_slice(),
+                        )<span class="question-mark">?</span>;
+                    }
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(session_keys)
+                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(handshake_result.session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }
@@ -695,5 +731,27 @@
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
         }
     }
+}
+
+<span class="kw">fn </span>verify_session_binding(
+    attestation_result: <span class="kw-2">&amp;</span><span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;,
+    bindings: <span class="kw-2">&amp;</span>BTreeMap&lt;String, SessionBinding&gt;,
+    handshake_hash: <span class="kw-2">&amp;</span>[u8],
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="kw">let </span>attestation = attestation_result
+        .as_ref()
+        .map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"attempt to verify attestation binding to a failed attestation"</span>))<span class="question-mark">?</span>;
+
+    <span class="kw">for </span>(verifier_id, binding_verifier) <span class="kw">in </span><span class="kw-2">&amp;</span>attestation.session_binding_verifiers {
+        binding_verifier.verify_binding(
+            handshake_hash,
+            bindings
+                .get(verifier_id)
+                .ok_or(<span class="macro">anyhow!</span>(<span class="string">"handshake message doesn't have a binding for ID {}"</span>, verifier_id))<span class="question-mark">?
+                </span>.encode_to_vec()
+                .as_slice(),
+        )<span class="question-mark">?</span>;
+    }
+    <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

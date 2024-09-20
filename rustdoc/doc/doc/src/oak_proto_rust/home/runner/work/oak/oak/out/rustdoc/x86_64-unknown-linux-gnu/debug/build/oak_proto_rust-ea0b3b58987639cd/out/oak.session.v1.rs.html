@@ -316,8 +316,6 @@
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -402,33 +400,27 @@
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="doccomment">/// Message to be signed as part of the attestation binding.
+<span class="doccomment">/// Message that binds the Noise session (and optionally other data) to the
+/// Attestation Evidence.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AttestationBindingMessage {
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>handshake_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>endorsements_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
-    </span><span class="kw">pub </span>peer_reference_values_hash: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="doccomment">/// Message that binds the Noise session (and optionally Attestation Endorsement
-/// and peer Reference Values) to the Attestation Evidence.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AttestationBinding {
-    <span class="doccomment">/// Signature of the serialized `AttestationBindingMessage` Protobuf message.
+</span><span class="kw">pub struct </span>SessionBinding {
+    <span class="doccomment">/// Representation the serialized message cryptographically bound to the
+    /// handshake and the associated data (e.g., a signature).
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>signature: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    </span><span class="kw">pub </span>binding: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="doccomment">/// Request message for the crypto handshake request needed to establish a set of
 /// session keys.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HandshakeRequest {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>attestation_binding: ::core::option::Option&lt;AttestationBinding&gt;,
+    <span class="doccomment">/// Bindings to the attestation evidence, per binding type.
+    </span><span class="attr">#[prost(btree_map = <span class="string">"string, message"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>attestation_bindings: ::prost::alloc::collections::BTreeMap&lt;
+        ::prost::alloc::string::String,
+        SessionBinding,
+    &gt;,
     <span class="attr">#[prost(oneof = <span class="string">"handshake_request::HandshakeType"</span>, tags = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>handshake_type: ::core::option::Option&lt;handshake_request::HandshakeType&gt;,
 }
@@ -446,8 +438,12 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HandshakeResponse {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
-    </span><span class="kw">pub </span>attestation_binding: ::core::option::Option&lt;AttestationBinding&gt;,
+    <span class="doccomment">/// Bindings to the attestation evidence, per binding type.
+    </span><span class="attr">#[prost(btree_map = <span class="string">"string, message"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>attestation_bindings: ::prost::alloc::collections::BTreeMap&lt;
+        ::prost::alloc::string::String,
+        SessionBinding,
+    &gt;,
     <span class="attr">#[prost(oneof = <span class="string">"handshake_response::HandshakeType"</span>, tags = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>handshake_type: ::core::option::Option&lt;handshake_response::HandshakeType&gt;,
 }

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","config","encryptors","handshake","session"],"trait":["ProtocolEngine"]};
+window.SIDEBAR_ITEMS = {"mod":["attestation","config","encryptors","handshake","session","session_binding"],"trait":["ProtocolEngine"]};
