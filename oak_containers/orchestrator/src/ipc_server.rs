@@ -16,13 +16,21 @@
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 
 use anyhow::Context;
+use oak_containers_orchestrator_attestation::{GroupKeys, InstanceKeys};
+use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
-    v1::orchestrator_crypto_server::OrchestratorCryptoServer,
+    v1::orchestrator_crypto_server::{OrchestratorCrypto, OrchestratorCryptoServer},
 };
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    containers::GetApplicationConfigResponse,
+    containers::{
+        v1::{
+            DeriveSessionKeysRequest, DeriveSessionKeysResponse, KeyOrigin, SignRequest,
+            SignResponse,
+        },
+        GetApplicationConfigResponse,
+    },
     session::v1::EndorsedEvidence,
 };
 use tokio::{fs::set_permissions, net::UnixListener};
@@ -30,10 +38,77 @@ use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
-use crate::{
-    crypto::{CryptoService, GroupKeys, InstanceKeys},
-    launcher_client::LauncherClient,
-};
+use crate::launcher_client::LauncherClient;
+
+pub struct CryptoService {
+    instance_keys: InstanceKeys,
+    group_keys: Arc<GroupKeys>,
+}
+
+impl CryptoService {
+    pub fn new(instance_keys: InstanceKeys, group_keys: Arc<GroupKeys>) -> Self {
+        Self { instance_keys, group_keys }
+    }
+
+    fn signing_key(
+        &self,
+        key_origin: KeyOrigin,
+    ) -> Result<&p256::ecdsa::SigningKey, tonic::Status> {
+        match key_origin {
+            KeyOrigin::Unspecified => {
+                Err(tonic::Status::invalid_argument("unspecified key origin"))?
+            }
+            KeyOrigin::Instance => Ok(&self.instance_keys.signing_key),
+            KeyOrigin::Group =>
+            // TODO(#4442): Implement with key provisioning.
+            {
+                Err(tonic::Status::unimplemented(
+                    "signing using the group key is not yet implemented",
+                ))
+            }
+        }
+    }
+}
+
+#[tonic::async_trait]
+impl OrchestratorCrypto for CryptoService {
+    async fn derive_session_keys(
+        &self,
+        request: Request<DeriveSessionKeysRequest>,
+    ) -> Result<Response<DeriveSessionKeysResponse>, tonic::Status> {
+        let request = request.into_inner();
+
+        let encryption_key = match request.key_origin() {
+            KeyOrigin::Unspecified => {
+                Err(tonic::Status::invalid_argument("unspecified key origin"))?
+            }
+            KeyOrigin::Instance => &self.instance_keys.encryption_key,
+            KeyOrigin::Group => &self.group_keys.encryption_key,
+        };
+
+        let session_keys = encryption_key
+            .generate_recipient_context(&request.serialized_encapsulated_public_key)
+            .map_err(|err| tonic::Status::internal(format!("couldn't derive session keys: {err}")))?
+            .serialize()
+            .map_err(|err| {
+                tonic::Status::internal(format!("couldn't serialize session keys: {err}"))
+            })?;
+        Ok(tonic::Response::new(DeriveSessionKeysResponse { session_keys: Some(session_keys) }))
+    }
+
+    async fn sign(
+        &self,
+        request: Request<SignRequest>,
+    ) -> Result<Response<SignResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let signing_key = self.signing_key(request.key_origin())?;
+        let signature = <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
+            signing_key,
+            &request.message,
+        );
+        Ok(tonic::Response::new(SignResponse { signature: Some(signature) }))
+    }
+}
 
 pub struct ServiceImplementation {
     application_config: Vec<u8>,

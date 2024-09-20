@@ -23,7 +23,7 @@ use oak_proto_rust::oak::{
     containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
-use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use opentelemetry_otlp::TonicExporterBuilder;
 use tokio_vsock::{VsockAddr, VsockStream};
 use tonic::transport::Channel;
 use tower::service_fn;

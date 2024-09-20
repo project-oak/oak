@@ -19,13 +19,7 @@ use std::{
 };
 
 use anyhow::Context;
-use ciborium::Value;
-use coset::cwt::ClaimName;
 use oak_attestation::dice::DiceAttester;
-use oak_dice::cert::{
-    CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID,
-    SHA2_256_ID,
-};
 use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
 use zeroize::Zeroize;
@@ -66,61 +60,6 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
     // filesystem might pick other memory pages to write the data on.
     file.write_all(&zeros).context("couldn't overwrite DICE data file")?;
     result.try_into()
-}
-
-/// Measures the downloaded container image bytes and configuration and returns
-/// these as a vector of additional CWT claims.
-pub fn measure_container_and_config(
-    container_bytes: &[u8],
-    config_bytes: &[u8],
-) -> oak_attestation::dice::LayerData {
-    let container_digest = oak_attestation::dice::MeasureDigest::measure_digest(&container_bytes);
-    let config_digest = oak_attestation::dice::MeasureDigest::measure_digest(&config_bytes);
-    let encoded_event = oak_proto_rust::oak::attestation::v1::Event {
-        tag: "ORCHESTRATOR".to_string(),
-        event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.ContainerLayerData".to_string(),
-            value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
-                bundle: Some(container_digest.clone()),
-                config: Some(config_digest.clone()),
-            }
-            .encode_to_vec(),
-        }),
-    }
-    .encode_to_vec();
-    let event_digest =
-        oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
-    oak_attestation::dice::LayerData {
-        additional_claims: vec![
-            (
-                ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
-                Value::Map(vec![
-                    (
-                        Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
-                        Value::Map(vec![(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(container_digest.sha2_256),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
-                        Value::Map(vec![(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(config_digest.sha2_256),
-                        )]),
-                    ),
-                ]),
-            ),
-            (
-                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
-                Value::Map(vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(event_digest.sha2_256),
-                )]),
-            ),
-        ],
-        encoded_event,
-    }
 }
 
 #[cfg(test)]

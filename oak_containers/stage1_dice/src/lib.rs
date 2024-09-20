@@ -20,10 +20,7 @@
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use oak_dice::cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID};
-use oak_proto_rust::oak::{
-    attestation::v1::{DiceData, Event, SystemLayerData},
-    RawDigest,
-};
+use oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
 use prost::Message;
 
 pub fn stage0_dice_data_into_dice_attester(

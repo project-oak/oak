@@ -27,10 +27,7 @@ use oak_crypto::{
     hpke::RecipientContext,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        endorsements, ApplicationKeys, Endorsements, Evidence, OakStandaloneEndorsements,
-        RootLayerEvidence, TeePlatform,
-    },
+    attestation::v1::{endorsements, Endorsements, OakStandaloneEndorsements},
     session::v1::EndorsedEvidence,
 };
 
@@ -38,10 +35,8 @@ use oak_proto_rust::oak::{
 /// This can be provided in circumstances where you'd normally request an
 /// [`EndorsedEvidence`] from the Orchestrator.
 pub fn standalone_endorsed_evidence_containing_only_public_keys(
-    public_key: impl Into<Vec<u8>>,
+    public_encryption_key: impl Into<Vec<u8>>,
 ) -> EndorsedEvidence {
-    // TODO: b/347970899 - Create mock events and dice data for the subsequent
-    // layers.
     let (mock_event_log, mock_stage0_dice_data): (
         oak_proto_rust::oak::attestation::v1::EventLog,
         oak_dice::evidence::Stage0DiceData,
@@ -70,29 +65,29 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
         mock_event_log,
     )
     .expect("failed to create dice attester");
-    let layer_data = oak_containers_stage1_dice::get_layer_data(&[]);
-    attester.add_layer(layer_data).expect("failred to add stage1 layer data");
+    let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(&[]);
+    attester.add_layer(stage1_layer_data).expect("failred to add stage1 layer data");
+    let orchestrator_layer_data =
+        oak_containers_orchestrator_attestation::measure_container_and_config(&[], &[]);
+    let (_instance_keys, instance_public_keys) =
+        oak_containers_orchestrator_attestation::generate_instance_keys();
+    let mut evidence = attester
+        .add_application_keys(
+            orchestrator_layer_data,
+            &instance_public_keys.encryption_public_key,
+            &instance_public_keys.signing_public_key,
+            None,
+            None,
+        )
+        .expect("failed to add application keys");
+
+    evidence.application_keys.as_mut().map(|keys| {
+        keys.encryption_public_key_certificate = public_encryption_key.into();
+        return keys;
+    });
 
     EndorsedEvidence {
-        evidence: Some(Evidence {
-            // TODO: b/347970899 - Create something here that will be compatible with the
-            // verification framework.
-            root_layer: Some(RootLayerEvidence {
-                platform: TeePlatform::None.into(),
-                eca_public_key: vec![],
-                remote_attestation_report: vec![],
-            }),
-            layers: vec![],
-            application_keys: Some(ApplicationKeys {
-                // TODO: b/347970899 - Store the public key in the format expected by
-                // the attestation verification framework.
-                encryption_public_key_certificate: public_key.into(),
-                group_encryption_public_key_certificate: vec![],
-                signing_public_key_certificate: vec![],
-                group_signing_public_key_certificate: vec![],
-            }),
-            event_log: None,
-        }),
+        evidence: Some(evidence),
         endorsements: Some(Endorsements {
             r#type: Some(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
         }),

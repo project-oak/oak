@@ -1,0 +1,20 @@
+[package]
+name = "oak_containers_orchestrator_attestation"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+ciborium = "*"
+coset = { version = "*", features = ["std"] }
+oak_attestation = { workspace = true }
+oak_crypto = { workspace = true }
+oak_dice = { workspace = true }
+oak_grpc = { workspace = true }
+oak_proto_rust = { workspace = true }
+p256 = { version = "*", features = ["ecdsa"] }
+prost = "*"
+prost-types = "*"
+tonic = { workspace = true }

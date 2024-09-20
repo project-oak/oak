@@ -16,6 +16,7 @@
 use std::sync::Arc;
 
 use oak_attestation_verification::verifier::verify_dice_chain;
+use oak_containers_orchestrator_attestation::GroupKeys;
 use oak_grpc::oak::key_provisioning::v1::key_provisioning_server::{
     KeyProvisioning, KeyProvisioningServer,
 };
@@ -26,8 +27,6 @@ use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
-
-use crate::crypto::GroupKeys;
 
 struct KeyProvisioningService {
     group_keys: Arc<GroupKeys>,

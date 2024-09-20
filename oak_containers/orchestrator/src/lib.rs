@@ -15,7 +15,6 @@
 
 mod cdi;
 pub mod container_runtime;
-pub mod crypto;
 pub mod dice;
 pub mod ipc_server;
 pub mod key_provisioning;

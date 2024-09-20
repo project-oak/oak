@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive", "env"] }
 coset = { version = "*", features = ["std"] }
 hpke = { version = "*", default-features = false, features = [
@@ -23,6 +22,7 @@ oak_containers_agent = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
+oak_containers_orchestrator_attestation = { workspace = true }
 oci-spec = "*"
 opentelemetry-otlp = { version = "*", default-features = false, features = [
   "grpc-tonic",

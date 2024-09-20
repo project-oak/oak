@@ -2444,7 +2444,6 @@ name = "oak_containers_orchestrator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ciborium",
  "clap",
  "coset",
  "hpke",
@@ -2453,6 +2452,7 @@ dependencies = [
  "oak_attestation",
  "oak_attestation_verification",
  "oak_containers_agent",
+ "oak_containers_orchestrator_attestation",
  "oak_crypto",
  "oak_dice",
  "oak_grpc",
@@ -2481,6 +2481,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_orchestrator_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "coset",
+ "oak_attestation",
+ "oak_crypto",
+ "oak_dice",
+ "oak_grpc",
+ "oak_proto_rust",
+ "p256",
+ "prost",
+ "prost-types",
+ "tonic",
+]
+
+[[package]]
 name = "oak_containers_sdk"
 version = "0.1.0"
 dependencies = [
@@ -2488,6 +2506,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "oak_attestation",
+ "oak_containers_orchestrator_attestation",
  "oak_containers_stage1_dice",
  "oak_crypto",
  "oak_dice",

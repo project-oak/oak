@@ -22,35 +22,20 @@ package(
 )
 
 rust_library(
-    name = "oak_containers_sdk",
+    name = "oak_containers_orchestrator_attestation",
     srcs = [
-        "src/crypto.rs",
-        "src/handler.rs",
         "src/lib.rs",
-        "src/oak_session_context.rs",
-        "src/orchestrator_client.rs",
-        "src/standalone.rs",
-        "src/tonic.rs",
-    ],
-    proc_macro_deps = [
-        "@oak_crates_index//:async-trait",
     ],
     deps = [
         "//oak_attestation",
-        "//oak_containers/oak_containers_orchestrator_attestation",
-        "//oak_containers/stage1_dice",
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "//stage0_dice",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:ciborium",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
-        "@oak_crates_index//:tower",
     ],
 )
