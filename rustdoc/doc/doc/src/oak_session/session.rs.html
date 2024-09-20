@@ -377,6 +377,10 @@
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
 <a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -571,7 +575,9 @@
                         )<span class="question-mark">?</span>;
                     }
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(handshake_result.session_keys)
+                        <span class="self">self</span>.encryptor_config
+                            .encryptor_provider
+                            .provide_encryptor(handshake_result.session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }
@@ -712,7 +718,9 @@
                         )<span class="question-mark">?</span>;
                     }
                     <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        (<span class="self">self</span>.encryptor_config.encryptor_provider)(handshake_result.session_keys)
+                        <span class="self">self</span>.encryptor_config
+                            .encryptor_provider
+                            .provide_encryptor(handshake_result.session_keys)
                             .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
                     )
                 }

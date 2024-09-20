@@ -147,6 +147,15 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -198,6 +207,19 @@
     config: SessionConfig,
 }
 
+<span class="kw">pub trait </span>EncryptorProvider: Send {
+    <span class="kw">fn </span>provide_encryptor(<span class="kw-2">&amp;</span><span class="self">self</span>, session_keys: SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;;
+}
+
+<span class="kw">pub struct </span>OrderedChannelEncryptorProvider;
+
+<span class="kw">impl </span>EncryptorProvider <span class="kw">for </span>OrderedChannelEncryptorProvider {
+    <span class="kw">fn </span>provide_encryptor(<span class="kw-2">&amp;</span><span class="self">self</span>, session_keys: SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt; {
+        TryInto::&lt;OrderedChannelEncryptor&gt;::try_into(session_keys)
+            .map(|v| Box::new(v) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Encryptor&gt;)
+    }
+}
+
 <span class="kw">impl </span>SessionConfigBuilder {
     <span class="kw">fn </span>new(attestation_type: AttestationType, handshake_type: HandshakeType) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>attestation_provider_config = AttestationProviderConfig {
@@ -214,12 +236,8 @@
             peer_attestation_binding_public_key: <span class="prelude-val">None</span>,
         };
 
-        <span class="kw">let </span>encryptor_config = EncryptorConfig {
-            encryptor_provider: Box::new(|sk| {
-                &lt;SessionKeys <span class="kw">as </span>TryInto&lt;OrderedChannelEncryptor&gt;&gt;::try_into(sk)
-                    .map(|v| Box::new(v) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Encryptor&gt;)
-            }),
-        };
+        <span class="kw">let </span>encryptor_config =
+            EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
         <span class="kw">let </span>config =
             SessionConfig { attestation_provider_config, handshaker_config, encryptor_config };
@@ -260,7 +278,7 @@
 
     <span class="kw">pub fn </span>set_encryption_provider(
         <span class="kw-2">mut </span><span class="self">self</span>,
-        encryptor_provider: Box&lt;<span class="kw">dyn </span>Send + Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
+        encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.encryptor_config.encryptor_provider = encryptor_provider;
         <span class="self">self
@@ -292,6 +310,6 @@
 }
 
 <span class="kw">pub struct </span>EncryptorConfig {
-    <span class="kw">pub </span>encryptor_provider: Box&lt;<span class="kw">dyn </span>Send + Fn(SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;, Error&gt;&gt;,
+    <span class="kw">pub </span>encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt;,
 }
 </code></pre></div></section></main></body></html>
