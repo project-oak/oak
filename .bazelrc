@@ -59,6 +59,9 @@ build:ci --show_result=1000000
 build:ci --noshow_progress
 build:ci --curses=no
 
+# Inline CI failures, since log files are hard to access in this enviroment
+build:ci --verbose_failures
+
 # Always show test errors in CI
 test:ci --test_output=errors
 # Show stdout/stderr in test output in CI
