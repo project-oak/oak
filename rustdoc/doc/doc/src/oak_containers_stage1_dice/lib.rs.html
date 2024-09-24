@@ -69,9 +69,6 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -94,10 +91,7 @@
 </span><span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>oak_dice::cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID};
-<span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{DiceData, Event, SystemLayerData},
-    RawDigest,
-};
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
 <span class="kw">use </span>prost::Message;
 
 <span class="kw">pub fn </span>stage0_dice_data_into_dice_attester(

@@ -186,7 +186,7 @@
     containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
-<span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+<span class="kw">use </span>opentelemetry_otlp::TonicExporterBuilder;
 <span class="kw">use </span>tokio_vsock::{VsockAddr, VsockStream};
 <span class="kw">use </span>tonic::transport::Channel;
 <span class="kw">use </span>tower::service_fn;

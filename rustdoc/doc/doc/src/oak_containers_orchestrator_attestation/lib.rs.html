@@ -1,6 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers/orchestrator/src/crypto.rs`."><title>crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_orchestrator" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers/oak_containers_orchestrator_attestation/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_orchestrator_attestation" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_containers_orchestrator/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_containers_orchestrator_attestation/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -156,21 +156,8 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
 </pre></div><pre class="rust"><code><span class="comment">//
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -184,23 +171,80 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">extern crate </span>alloc;
+
+<span class="kw">use </span>alloc::{string::ToString, vec};
 
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>ciborium::Value;
+<span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>oak_crypto::{
-    encryption_key::{generate_encryption_key_pair, EncryptionKey, EncryptionKeyHandle},
+    encryption_key::{generate_encryption_key_pair, EncryptionKey},
     encryptor::ServerEncryptor,
 };
-<span class="kw">use </span>oak_dice::cert::generate_ecdsa_key_pair;
-<span class="kw">use </span>oak_grpc::oak::containers::v1::orchestrator_crypto_server::OrchestratorCrypto;
-<span class="kw">use </span>oak_proto_rust::oak::{
-    containers::v1::{
-        DeriveSessionKeysRequest, DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
-    },
-    crypto::v1::EncryptedRequest,
-    key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
+<span class="kw">use </span>oak_dice::cert::{
+    generate_ecdsa_key_pair, CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
+    LAYER_3_CODE_MEASUREMENT_ID, SHA2_256_ID,
 };
-<span class="kw">use </span>tonic::{Request, Response};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    crypto::v1::EncryptedRequest, key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
+};
+<span class="kw">use </span>prost::Message;
+
+<span class="doccomment">/// Measures the downloaded container image bytes and configuration and returns
+/// these as a vector of additional CWT claims.
+</span><span class="kw">pub fn </span>measure_container_and_config(
+    container_bytes: <span class="kw-2">&amp;</span>[u8],
+    config_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; oak_attestation::dice::LayerData {
+    <span class="kw">let </span>container_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>container_bytes);
+    <span class="kw">let </span>config_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>config_bytes);
+    <span class="kw">let </span>encoded_event = oak_proto_rust::oak::attestation::v1::Event {
+        tag: <span class="string">"ORCHESTRATOR"</span>.to_string(),
+        event: <span class="prelude-val">Some</span>(prost_types::Any {
+            type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.ContainerLayerData"</span>.to_string(),
+            value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
+                bundle: <span class="prelude-val">Some</span>(container_digest.clone()),
+                config: <span class="prelude-val">Some</span>(config_digest.clone()),
+            }
+            .encode_to_vec(),
+        }),
+    }
+    .encode_to_vec();
+    <span class="kw">let </span>event_digest =
+        oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event.as_slice());
+    oak_attestation::dice::LayerData {
+        additional_claims: <span class="macro">vec!</span>[
+            (
+                ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
+                Value::Map(<span class="macro">vec!</span>[
+                    (
+                        Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(container_digest.sha2_256),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(config_digest.sha2_256),
+                        )]),
+                    ),
+                ]),
+            ),
+            (
+                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(event_digest.sha2_256),
+                )]),
+            ),
+        ],
+        encoded_event,
+    }
+}
 
 <span class="kw">pub fn </span>generate_instance_keys() -&gt; (InstanceKeys, InstancePublicKeys) {
     <span class="kw">let </span>(encryption_key, encryption_public_key) = generate_encryption_key_pair();
@@ -212,8 +256,8 @@
 }
 
 <span class="kw">pub struct </span>InstanceKeys {
-    encryption_key: EncryptionKey,
-    signing_key: p256::ecdsa::SigningKey,
+    <span class="kw">pub </span>encryption_key: EncryptionKey,
+    <span class="kw">pub </span>signing_key: p256::ecdsa::SigningKey,
 }
 
 <span class="kw">pub struct </span>InstancePublicKeys {
@@ -251,7 +295,7 @@
 }
 
 <span class="kw">pub struct </span>GroupKeys {
-    encryption_key: EncryptionKey,
+    <span class="kw">pub </span>encryption_key: EncryptionKey,
 }
 
 <span class="kw">pub struct </span>GroupPublicKeys {
@@ -266,76 +310,6 @@
         peer_public_key: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
         <span class="self">self</span>.encryption_key.encrypted_private_key(peer_public_key)
-    }
-}
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CryptoService {
-    instance_keys: InstanceKeys,
-    group_keys: Arc&lt;GroupKeys&gt;,
-}
-
-<span class="kw">impl </span>CryptoService {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(instance_keys: InstanceKeys, group_keys: Arc&lt;GroupKeys&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ instance_keys, group_keys }
-    }
-
-    <span class="kw">fn </span>signing_key(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        key_origin: KeyOrigin,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>p256::ecdsa::SigningKey, tonic::Status&gt; {
-        <span class="kw">match </span>key_origin {
-            KeyOrigin::Unspecified =&gt; {
-                <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">"unspecified key origin"</span>))<span class="question-mark">?
-            </span>}
-            KeyOrigin::Instance =&gt; <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.instance_keys.signing_key),
-            KeyOrigin::Group =&gt;
-            <span class="comment">// TODO(#4442): Implement with key provisioning.
-            </span>{
-                <span class="prelude-val">Err</span>(tonic::Status::unimplemented(
-                    <span class="string">"signing using the group key is not yet implemented"</span>,
-                ))
-            }
-        }
-    }
-}
-
-<span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl </span>OrchestratorCrypto <span class="kw">for </span>CryptoService {
-    <span class="kw">async fn </span>derive_session_keys(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Request&lt;DeriveSessionKeysRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;DeriveSessionKeysResponse&gt;, tonic::Status&gt; {
-        <span class="kw">let </span>request = request.into_inner();
-
-        <span class="kw">let </span>encryption_key = <span class="kw">match </span>request.key_origin() {
-            KeyOrigin::Unspecified =&gt; {
-                <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">"unspecified key origin"</span>))<span class="question-mark">?
-            </span>}
-            KeyOrigin::Instance =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.instance_keys.encryption_key,
-            KeyOrigin::Group =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.group_keys.encryption_key,
-        };
-
-        <span class="kw">let </span>session_keys = encryption_key
-            .generate_recipient_context(<span class="kw-2">&amp;</span>request.serialized_encapsulated_public_key)
-            .map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"couldn't derive session keys: {err}"</span>)))<span class="question-mark">?
-            </span>.serialize()
-            .map_err(|err| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"couldn't serialize session keys: {err}"</span>))
-            })<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(tonic::Response::new(DeriveSessionKeysResponse { session_keys: <span class="prelude-val">Some</span>(session_keys) }))
-    }
-
-    <span class="kw">async fn </span>sign(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Request&lt;SignRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;SignResponse&gt;, tonic::Status&gt; {
-        <span class="kw">let </span>request = request.into_inner();
-        <span class="kw">let </span>signing_key = <span class="self">self</span>.signing_key(request.key_origin())<span class="question-mark">?</span>;
-        <span class="kw">let </span>signature = &lt;p256::ecdsa::SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(
-            signing_key,
-            <span class="kw-2">&amp;</span>request.message,
-        );
-        <span class="prelude-val">Ok</span>(tonic::Response::new(SignResponse { signature: <span class="prelude-val">Some</span>(signature) }))
     }
 }
 </code></pre></div></section></main></body></html>

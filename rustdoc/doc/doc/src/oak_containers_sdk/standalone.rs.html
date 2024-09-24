@@ -136,11 +136,6 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -170,10 +165,7 @@
     hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{
-        endorsements, ApplicationKeys, Endorsements, Evidence, OakStandaloneEndorsements,
-        RootLayerEvidence, TeePlatform,
-    },
+    attestation::v1::{endorsements, Endorsements, OakStandaloneEndorsements},
     session::v1::EndorsedEvidence,
 };
 
@@ -181,11 +173,9 @@
 /// This can be provided in circumstances where you'd normally request an
 /// [`EndorsedEvidence`] from the Orchestrator.
 </span><span class="kw">pub fn </span>standalone_endorsed_evidence_containing_only_public_keys(
-    public_key: <span class="kw">impl </span>Into&lt;Vec&lt;u8&gt;&gt;,
+    public_encryption_key: <span class="kw">impl </span>Into&lt;Vec&lt;u8&gt;&gt;,
 ) -&gt; EndorsedEvidence {
-    <span class="comment">// TODO: b/347970899 - Create mock events and dice data for the subsequent
-    // layers.
-    </span><span class="kw">let </span>(mock_event_log, mock_stage0_dice_data): (
+    <span class="kw">let </span>(mock_event_log, mock_stage0_dice_data): (
         oak_proto_rust::oak::attestation::v1::EventLog,
         oak_dice::evidence::Stage0DiceData,
     ) = {
@@ -213,29 +203,29 @@
         mock_event_log,
     )
     .expect(<span class="string">"failed to create dice attester"</span>);
-    <span class="kw">let </span>layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>[]);
-    attester.add_layer(layer_data).expect(<span class="string">"failred to add stage1 layer data"</span>);
+    <span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>[]);
+    attester.add_layer(stage1_layer_data).expect(<span class="string">"failred to add stage1 layer data"</span>);
+    <span class="kw">let </span>orchestrator_layer_data =
+        oak_containers_orchestrator_attestation::measure_container_and_config(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]);
+    <span class="kw">let </span>(_instance_keys, instance_public_keys) =
+        oak_containers_orchestrator_attestation::generate_instance_keys();
+    <span class="kw">let </span><span class="kw-2">mut </span>evidence = attester
+        .add_application_keys(
+            orchestrator_layer_data,
+            <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
+            <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+        )
+        .expect(<span class="string">"failed to add application keys"</span>);
+
+    evidence.application_keys.as_mut().map(|keys| {
+        keys.encryption_public_key_certificate = public_encryption_key.into();
+        <span class="kw">return </span>keys;
+    });
 
     EndorsedEvidence {
-        evidence: <span class="prelude-val">Some</span>(Evidence {
-            <span class="comment">// TODO: b/347970899 - Create something here that will be compatible with the
-            // verification framework.
-            </span>root_layer: <span class="prelude-val">Some</span>(RootLayerEvidence {
-                platform: TeePlatform::None.into(),
-                eca_public_key: <span class="macro">vec!</span>[],
-                remote_attestation_report: <span class="macro">vec!</span>[],
-            }),
-            layers: <span class="macro">vec!</span>[],
-            application_keys: <span class="prelude-val">Some</span>(ApplicationKeys {
-                <span class="comment">// TODO: b/347970899 - Store the public key in the format expected by
-                // the attestation verification framework.
-                </span>encryption_public_key_certificate: public_key.into(),
-                group_encryption_public_key_certificate: <span class="macro">vec!</span>[],
-                signing_public_key_certificate: <span class="macro">vec!</span>[],
-                group_signing_public_key_certificate: <span class="macro">vec!</span>[],
-            }),
-            event_log: <span class="prelude-val">None</span>,
-        }),
+        evidence: <span class="prelude-val">Some</span>(evidence),
         endorsements: <span class="prelude-val">Some</span>(Endorsements {
             r#type: <span class="prelude-val">Some</span>(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
         }),
