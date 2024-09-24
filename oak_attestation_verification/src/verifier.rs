@@ -71,7 +71,9 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{product_name, verify_attestation_report_signature, verify_cert_signature},
-    endorsement::{get_digest, parse_statement, verify_binary_endorsement},
+    endorsement::{
+        get_digest, is_firmware_type, is_kernel_type, parse_statement, verify_binary_endorsement,
+    },
     util::{
         hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
         raw_digest_from_contents, raw_to_hex_digest,
@@ -1068,8 +1070,8 @@ fn get_verified_stage0_attachment(
     // Parse endorsement statement and verify attachment digest.
     let parsed_statement =
         parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
-    if parsed_statement.predicate.usage != "firmware" {
-        anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
+    if !is_firmware_type(&parsed_statement) {
+        anyhow::bail!("expected endorsement for firmware-type binary");
     }
     let expected_digest = get_digest(&parsed_statement).context("getting expected digest")?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));
@@ -1137,8 +1139,8 @@ fn get_verified_kernel_attachment(
     // Parse endorsement statement and verify attachment digest.
     let parsed_statement =
         parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
-    if parsed_statement.predicate.usage != "kernel" {
-        anyhow::bail!("unexpected endorsement usage: {}", parsed_statement.predicate.usage);
+    if !is_kernel_type(&parsed_statement) {
+        anyhow::bail!("expected endorsement for kernel-type binary");
     }
     let expected_digest = get_digest(&parsed_statement).context("getting expected digest")?;
     let actual_digest = raw_to_hex_digest(&raw_digest_from_contents(&endorsement.subject));

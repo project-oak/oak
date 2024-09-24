@@ -55,6 +55,16 @@ const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-rele
 /// the `usage` field and adds claim types.
 const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
+/// No attempt will be made to decode the attachment of a firmware-type
+/// binary unless this claim is present in the endorsement.
+const FIRMWARE_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md";
+
+/// No attempt will be made to decode the attachment of a kernel-type
+/// binary unless this claim is present in the endorsement.
+const KERNEL_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
+
 // A map from algorithm name to lowercase hex-encoded value.
 type DigestSet = BTreeMap<String, String>;
 
@@ -125,6 +135,18 @@ pub struct Statement<P> {
 }
 
 pub type DefaultStatement = Statement<DefaultPredicate>;
+
+pub fn is_firmware_type(statement: &DefaultStatement) -> bool {
+    // TODO: b/369602264 - remove usage field in struct, remove checking it.
+    return statement.predicate.usage == "firmware"
+        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE);
+}
+
+pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
+    // TODO: b/369602264 - remove usage field in struct, remove checking it.
+    return statement.predicate.usage == "kernel"
+        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
+}
 
 /// Public interface for verifying a standalone endorsement.
 pub fn verify_endorsement(
