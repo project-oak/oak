@@ -17,8 +17,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
 use oak_client::{
-    client::OakClient, standalone::StandaloneNoOpAttestationVerifier,
-    transport::GrpcStreamingTransport,
+    client::OakClient, transport::GrpcStreamingTransport, verifier::InsecureAttestationVerifier,
 };
 use oak_containers_sdk::{
     standalone::{
@@ -83,7 +82,7 @@ async fn test1() {
         .await
         .expect("couldn't create GRPC streaming transport");
 
-    let attestation_verifier = StandaloneNoOpAttestationVerifier::new();
+    let attestation_verifier = InsecureAttestationVerifier {};
 
     // Create client
     let mut oak_client = OakClient::create(transport, &attestation_verifier).await.unwrap();

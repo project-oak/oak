@@ -71,20 +71,18 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
         oak_containers_orchestrator_attestation::measure_container_and_config(&[], &[]);
     let (_instance_keys, instance_public_keys) =
         oak_containers_orchestrator_attestation::generate_instance_keys();
-    let mut evidence = attester
-        .add_application_keys(
-            orchestrator_layer_data,
-            &instance_public_keys.encryption_public_key,
-            &instance_public_keys.signing_public_key,
-            None,
-            None,
-        )
-        .expect("failed to add application keys");
-
-    evidence.application_keys.as_mut().map(|keys| {
-        keys.encryption_public_key_certificate = public_encryption_key.into();
-        return keys;
-    });
+    let evidence = {
+        let public_encryption_key_vec: Vec<u8> = public_encryption_key.into();
+        attester
+            .add_application_keys(
+                orchestrator_layer_data,
+                &public_encryption_key_vec,
+                &instance_public_keys.signing_public_key,
+                None,
+                None,
+            )
+            .expect("failed to add application keys")
+    };
 
     EndorsedEvidence {
         evidence: Some(evidence),
