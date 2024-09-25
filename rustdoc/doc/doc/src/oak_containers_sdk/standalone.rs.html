@@ -134,8 +134,6 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -209,20 +207,18 @@
         oak_containers_orchestrator_attestation::measure_container_and_config(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]);
     <span class="kw">let </span>(_instance_keys, instance_public_keys) =
         oak_containers_orchestrator_attestation::generate_instance_keys();
-    <span class="kw">let </span><span class="kw-2">mut </span>evidence = attester
-        .add_application_keys(
-            orchestrator_layer_data,
-            <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
-            <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
-            <span class="prelude-val">None</span>,
-            <span class="prelude-val">None</span>,
-        )
-        .expect(<span class="string">"failed to add application keys"</span>);
-
-    evidence.application_keys.as_mut().map(|keys| {
-        keys.encryption_public_key_certificate = public_encryption_key.into();
-        <span class="kw">return </span>keys;
-    });
+    <span class="kw">let </span>evidence = {
+        <span class="kw">let </span>public_encryption_key_vec: Vec&lt;u8&gt; = public_encryption_key.into();
+        attester
+            .add_application_keys(
+                orchestrator_layer_data,
+                <span class="kw-2">&amp;</span>public_encryption_key_vec,
+                <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
+                <span class="prelude-val">None</span>,
+                <span class="prelude-val">None</span>,
+            )
+            .expect(<span class="string">"failed to add application keys"</span>)
+    };
 
     EndorsedEvidence {
         evidence: <span class="prelude-val">Some</span>(evidence),
