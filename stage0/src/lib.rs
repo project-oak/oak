@@ -44,8 +44,6 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
-use crate::alloc::string::ToString;
-
 mod acpi;
 mod acpi_tables;
 pub mod allocator;
@@ -145,7 +143,6 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     P::populate_zero_page(&mut zero_page);
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
-    let cmdline_sha2_256_digest = cmdline.measure();
 
     // Safety: this is the only place where we try to load a kernel, so the backing
     // memory is unused.
@@ -179,14 +176,22 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     // Generate Stage0 Event Log data.
-    let (event_log_proto, event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-        kernel_sha2_256_digest.as_bytes().to_vec(),
-        acpi_sha2_256_digest.as_bytes().to_vec(),
-        memory_map_sha2_256_digest.as_bytes().to_vec(),
-        ram_disk_sha2_256_digest.as_bytes().to_vec(),
-        setup_data_sha2_256_digest.as_bytes().to_vec(),
-        cmdline.clone(),
+    let stage0_event = oak_stage0_dice::encoded_stage0_event(
+        oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+            setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
+            kernel_measurement: kernel_sha2_256_digest.as_bytes().to_vec(),
+            ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
+            memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
+            acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
+            kernel_cmdline: cmdline.clone(),
+        },
     );
+    let event_sha2_256_digest = Sha256::digest(&stage0_event).to_vec();
+    let event_log_proto = {
+        let mut base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+        base.encoded_events.push(stage0_event.to_vec());
+        base
+    };
 
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_sha2_256_digest));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
@@ -196,31 +201,13 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
     log::debug!("Event digest: sha2-256:{}", hex::encode(event_sha2_256_digest));
 
-    // TODO: b/331252282 - Remove temporary workaround for cmd line length.
-    let cmdline_max_len = 256;
-    let measurements = oak_stage0_dice::Measurements {
-        acpi_sha2_256_digest,
-        kernel_sha2_256_digest,
-        cmdline_sha2_256_digest,
-        cmdline: if cmdline.len() > cmdline_max_len {
-            cmdline[..cmdline_max_len].to_string()
-        } else {
-            cmdline.clone()
-        },
-        ram_disk_sha2_256_digest,
-        setup_data_sha2_256_digest,
-        memory_map_sha2_256_digest,
-        event_sha2_256_digest,
-    };
-
     let tee_platform = P::tee_platform();
 
     let (dice_data_struct, dice_data_proto) = oak_stage0_dice::generate_dice_data(
-        &measurements,
         P::get_attestation,
         P::get_derived_key,
         tee_platform,
-        event_log_proto.clone(),
+        &stage0_event,
     );
     let dice_data = Box::leak(Box::new_in(dice_data_struct, &crate::BOOT_ALLOC));
 

@@ -20,23 +20,27 @@ use oak_attestation::{
 };
 use oak_attestation_verification::verifier::verify_dice_chain;
 use oak_dice::evidence::TeePlatform;
-use oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog},
-    RawDigest,
-};
+use oak_proto_rust::oak::{attestation::v1::ApplicationLayerData, RawDigest};
 use prost::Message;
 
 const TEST_APPLICATION_DIGEST: [u8; 4] = [0, 1, 2, 3];
 
 #[test]
 fn dice_attester_generates_correct_dice_chain() {
-    let test_stage0_measurements = oak_stage0_dice::Measurements::default();
+    let test_stage0_measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+        setup_data_digest: vec![],
+        kernel_measurement: vec![],
+        ram_disk_digest: vec![],
+        memory_map_digest: vec![],
+        acpi_digest: vec![],
+        kernel_cmdline: String::new(),
+    };
+    let stage0_event = oak_stage0_dice::encoded_stage0_event(test_stage0_measurements);
     let (_, stage0_dice_data_proto) = oak_stage0_dice::generate_dice_data(
-        &test_stage0_measurements,
         oak_stage0_dice::mock_attestation_report,
         oak_stage0_dice::mock_derived_key,
         TeePlatform::None,
-        EventLog::default(),
+        &stage0_event,
     );
     let serialized_stage0_dice_data = stage0_dice_data_proto.encode_length_delimited_to_vec();
 

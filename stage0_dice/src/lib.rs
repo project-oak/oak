@@ -46,98 +46,84 @@ use prost::Message;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
-pub type DerivedKey = [u8; 32];
+use crate::alloc::string::ToString;
 
-/// Measurements of various components in Stage1.
-#[derive(Default)]
-pub struct Measurements {
-    /// The measurement of the kernel image.
-    pub kernel_sha2_256_digest: [u8; 32],
-    /// The measurement of the kernel command-line.
-    pub cmdline_sha2_256_digest: [u8; 32],
-    /// The raw kernel command-line.
-    pub cmdline: String,
-    /// The measurement of the kernel setup data.
-    pub setup_data_sha2_256_digest: [u8; 32],
-    /// The measurement of the initial RAM disk.
-    pub ram_disk_sha2_256_digest: [u8; 32],
-    /// The measurement of the physical memory map.
-    pub memory_map_sha2_256_digest: [u8; 32],
-    /// The concatenated measurement of the command used for building the ACPI
-    /// tables.
-    pub acpi_sha2_256_digest: [u8; 32],
-    /// Event measurement containing the hashes of other components
-    pub event_sha2_256_digest: [u8; 32],
-}
+pub type DerivedKey = [u8; 32];
 
 /// Generates an ECA certificate for use by the next boot stage (Stage 1).
 fn generate_stage1_certificate(
     stage0_eca_key: &SigningKey,
     stage0_cert_issuer: String,
-    measurements: &Measurements,
+    encoded_stage0_event: &[u8],
 ) -> (CoseSign1, SigningKey) {
     // Generate additional claims to cover the measurements.
-
-    let additional_claims = vec![
-        (
-            ClaimName::PrivateUse(KERNEL_LAYER_ID),
-            Value::Map(vec![
-                (
-                    Value::Integer(KERNEL_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.kernel_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                    Value::Text(measurements.cmdline.clone()),
-                ),
-                (
-                    Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(INITRD_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(ACPI_MEASUREMENT_ID.into()),
-                    Value::Map(alloc::vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.acpi_sha2_256_digest.into()),
-                    )]),
-                ),
-            ]),
-        ),
-        (
-            ClaimName::PrivateUse(EVENT_ID),
-            Value::Map(alloc::vec![(
-                Value::Integer(SHA2_256_ID.into()),
-                Value::Bytes(measurements.event_sha2_256_digest.into()),
-            )]),
-        ),
-    ];
+    let additional_claims = {
+        let measurements = decode_stage0_event(encoded_stage0_event);
+        vec![
+            (
+                ClaimName::PrivateUse(KERNEL_LAYER_ID),
+                Value::Map(vec![
+                    (
+                        Value::Integer(KERNEL_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(
+                                shorten_cmdline(&measurements.kernel_cmdline).as_bytes().into()
+                            ),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(
+                                Sha256::digest(measurements.kernel_cmdline.as_bytes()).to_vec()
+                            ),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(KERNEL_COMMANDLINE_ID.into()),
+                        Value::Text(measurements.kernel_cmdline),
+                    ),
+                    (
+                        Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.setup_data_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(INITRD_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.ram_disk_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.memory_map_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(ACPI_MEASUREMENT_ID.into()),
+                        Value::Map(alloc::vec![(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.acpi_digest),
+                        )]),
+                    ),
+                ]),
+            ),
+            (
+                ClaimName::PrivateUse(EVENT_ID),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(Sha256::digest(encoded_stage0_event).to_vec()),
+                )]),
+            ),
+        ]
+    };
 
     let (signing_key, verifying_key) = generate_ecdsa_key_pair();
     (
@@ -152,17 +138,32 @@ fn generate_stage1_certificate(
     )
 }
 
+// TODO: b/331252282 - Remove temporary workaround for cmd line length.
+fn shorten_cmdline(cmdline: &str) -> String {
+    let max_length: usize = 256;
+    if cmdline.len() > max_length { cmdline[..max_length].to_string() } else { cmdline.to_string() }
+}
+
+fn decode_stage0_event(
+    encoded_event: &[u8],
+) -> oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+    let decoded_event: oak_proto_rust::oak::attestation::v1::Event =
+        Message::decode(encoded_event).expect("Failed to decode stage0 event");
+
+    Message::decode(decoded_event.event.unwrap().value.as_slice())
+        .expect("Failed to decode stage0 measurements")
+}
+
 /// Generates attestation evidence for the 'measurements' of all Stage 1
 /// components.
 pub fn generate_dice_data<
     F: FnOnce([u8; REPORT_DATA_SIZE]) -> Result<AttestationReport, &'static str>,
     G: FnOnce() -> Result<DerivedKey, &'static str>,
 >(
-    measurements: &Measurements,
     get_attestation: F,
     get_derived_key: G,
     tee_platform: TeePlatform,
-    event_log: EventLog,
+    encoded_stage0_event: &[u8],
 ) -> (Stage0DiceData, DiceData) {
     let mut result = Stage0DiceData::new_zeroed();
     // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
@@ -172,7 +173,7 @@ pub fn generate_dice_data<
     let (stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
         &stage0_eca_key,
         hex::encode(derive_verifying_key_id(&stage0_eca_verifying_key)),
-        measurements,
+        encoded_stage0_event,
     );
 
     let stage0_eca_verifying_key = verifying_key_to_cose_key(&stage0_eca_verifying_key)
@@ -202,13 +203,22 @@ pub fn generate_dice_data<
 
     // Mix in the measurements of the kernel, the kernel command-line, the kernel
     // setup data and the initial RAM disk when deriving the CDI for Layer 1.
-    let mut salt: Vec<u8> = Vec::with_capacity(128);
-    salt.extend_from_slice(&measurements.kernel_sha2_256_digest[..]);
-    salt.extend_from_slice(measurements.cmdline.as_bytes());
-    salt.extend_from_slice(&measurements.setup_data_sha2_256_digest[..]);
-    salt.extend_from_slice(&measurements.ram_disk_sha2_256_digest[..]);
+    let salt: Vec<u8> = {
+        let measurements = decode_stage0_event(encoded_stage0_event);
+        let mut salt = Vec::with_capacity(128);
+        salt.extend_from_slice(&measurements.kernel_measurement);
+        salt.extend_from_slice(shorten_cmdline(&measurements.kernel_cmdline).as_bytes());
+        salt.extend_from_slice(&measurements.setup_data_digest);
+        salt.extend_from_slice(&measurements.ram_disk_digest);
+        salt
+    };
     let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);
 
+    let event_log = {
+        let mut base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+        base.encoded_events.push(encoded_stage0_event.to_vec());
+        base
+    };
     let result_evidence = Evidence {
         root_layer: Some(RootLayerEvidence {
             remote_attestation_report: report_bytes.to_vec(),
@@ -267,34 +277,11 @@ pub fn mock_derived_key() -> Result<DerivedKey, &'static str> {
     Ok(DerivedKey::default())
 }
 
-pub fn generate_event_log(
-    kernel_measurement: Vec<u8>,
-    acpi_digest: Vec<u8>,
-    memory_map_digest: Vec<u8>,
-    ram_disk_digest: Vec<u8>,
-    setup_data_digest: Vec<u8>,
-    kernel_cmdline: String,
-) -> (oak_proto_rust::oak::attestation::v1::EventLog, [u8; 32]) {
-    let measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-        kernel_measurement,
-        acpi_digest,
-        memory_map_digest,
-        ram_disk_digest,
-        setup_data_digest,
-        kernel_cmdline,
-    };
-
+pub fn encoded_stage0_event(
+    measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
+) -> Vec<u8> {
     let tag = String::from("Stage0");
     let any = prost_types::Any::from_msg(&measurements);
     let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
-    let encoded_event = event.encode_to_vec();
-
-    let mut eventlog = EventLog::default();
-    eventlog.encoded_events.push(encoded_event.clone());
-
-    let event_digest = Sha256::digest(&encoded_event);
-    let mut event_sha2_256_digest = [0u8; 32];
-    event_sha2_256_digest.copy_from_slice(&event_digest);
-
-    (eventlog, event_sha2_256_digest)
+    event.encode_to_vec()
 }

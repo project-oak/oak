@@ -41,24 +41,21 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
         oak_proto_rust::oak::attestation::v1::EventLog,
         oak_dice::evidence::Stage0DiceData,
     ) = {
-        let mut mock_stage0_measurements = oak_stage0_dice::Measurements::default();
-        let (mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-            mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.cmdline.clone(),
+        let encoded_stage0_event = oak_stage0_dice::encoded_stage0_event(
+            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
-        mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
-        let (stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
-            &mock_stage0_measurements,
+        let mock_event_log = {
+            let mut base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+            base.encoded_events.push(encoded_stage0_event.to_vec());
+            base
+        };
+        let (mock_stage0_dice_data, _) = oak_stage0_dice::generate_dice_data(
             oak_stage0_dice::mock_attestation_report,
             oak_stage0_dice::mock_derived_key,
             oak_dice::evidence::TeePlatform::None,
-            oak_proto_rust::oak::attestation::v1::EventLog::default(),
+            &encoded_stage0_event,
         );
-        (mock_event_log, stage0_dice_data)
+        (mock_event_log, mock_stage0_dice_data)
     };
     let mut attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
         mock_stage0_dice_data,
@@ -66,7 +63,7 @@ pub fn standalone_endorsed_evidence_containing_only_public_keys(
     )
     .expect("failed to create dice attester");
     let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(&[]);
-    attester.add_layer(stage1_layer_data).expect("failred to add stage1 layer data");
+    attester.add_layer(stage1_layer_data).expect("failed to add stage1 layer data");
     let orchestrator_layer_data =
         oak_containers_orchestrator_attestation::measure_container_and_config(&[], &[]);
     let (_instance_keys, instance_public_keys) =
