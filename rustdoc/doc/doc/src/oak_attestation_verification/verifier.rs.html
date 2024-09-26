@@ -1906,6 +1906,8 @@
 <a href="#1904" id="1904">1904</a>
 <a href="#1905" id="1905">1905</a>
 <a href="#1906" id="1906">1906</a>
+<a href="#1907" id="1907">1907</a>
+<a href="#1908" id="1908">1908</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1979,7 +1981,9 @@
 
 <span class="kw">use crate</span>::{
     amd::{product_name, verify_attestation_report_signature, verify_cert_signature},
-    endorsement::{get_digest, parse_statement, verify_binary_endorsement},
+    endorsement::{
+        get_digest, is_firmware_type, is_kernel_type, parse_statement, verify_binary_endorsement,
+    },
     util::{
         hash_sha2_256, hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match,
         raw_digest_from_contents, raw_to_hex_digest,
@@ -2976,8 +2980,8 @@
     <span class="comment">// Parse endorsement statement and verify attachment digest.
     </span><span class="kw">let </span>parsed_statement =
         parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement).context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
-    <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">"firmware" </span>{
-        <span class="macro">anyhow::bail!</span>(<span class="string">"unexpected endorsement usage: {}"</span>, parsed_statement.predicate.usage);
+    <span class="kw">if </span>!is_firmware_type(<span class="kw-2">&amp;</span>parsed_statement) {
+        <span class="macro">anyhow::bail!</span>(<span class="string">"expected endorsement for firmware-type binary"</span>);
     }
     <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement).context(<span class="string">"getting expected digest"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
@@ -3045,8 +3049,8 @@
     <span class="comment">// Parse endorsement statement and verify attachment digest.
     </span><span class="kw">let </span>parsed_statement =
         parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement).context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
-    <span class="kw">if </span>parsed_statement.predicate.usage != <span class="string">"kernel" </span>{
-        <span class="macro">anyhow::bail!</span>(<span class="string">"unexpected endorsement usage: {}"</span>, parsed_statement.predicate.usage);
+    <span class="kw">if </span>!is_kernel_type(<span class="kw-2">&amp;</span>parsed_statement) {
+        <span class="macro">anyhow::bail!</span>(<span class="string">"expected endorsement for kernel-type binary"</span>);
     }
     <span class="kw">let </span>expected_digest = get_digest(<span class="kw-2">&amp;</span>parsed_statement).context(<span class="string">"getting expected digest"</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>actual_digest = raw_to_hex_digest(<span class="kw-2">&amp;</span>raw_digest_from_contents(<span class="kw-2">&amp;</span>endorsement.subject));
