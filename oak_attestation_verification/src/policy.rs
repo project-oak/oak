@@ -16,8 +16,14 @@
 
 //! Contains code related to attestation verification policies.
 
+pub mod application;
+pub mod binary;
+pub mod combined;
+pub mod kernel;
+pub mod system;
+
 use oak_proto_rust::oak::attestation::v1::{
-    AttestationResults, Endorsements, EventAttestationResults, EventLog,
+    AttestationResults, EventAttestationResults, EventEndorsements, EventLog,
 };
 
 /// Verification Policy that takes an EventLog and corresponding Event
@@ -28,17 +34,18 @@ use oak_proto_rust::oak::attestation::v1::{
 /// <https://datatracker.ietf.org/doc/html/rfc9334#section-8.5>
 pub trait Policy {
     fn verify(
+        &self,
         event_log: &EventLog,
-        endorsements: &Endorsements,
+        event_endorsements: &EventEndorsements,
     ) -> anyhow::Result<AttestationResults>;
 }
 
-/// Verification Policy that takes a serialized Event and a serialized Event
+/// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
 pub trait EventPolicy {
     fn verify(
         &self,
-        serialized_event: &[u8],
-        serialized_event_endorsements: &[u8],
+        encoded_event: &[u8],
+        encoded_event_endorsement: &[u8],
     ) -> anyhow::Result<EventAttestationResults>;
 }

@@ -82,3 +82,18 @@ message EventLog {
   // of serialized events.
   repeated bytes encoded_events = 2;
 }
+
+// Endorsement for a specific  [`Event`].
+message EventEndorsement {
+  // Combination of endorsements for a specific event.
+  // There can be multiple endorsements per single event because each event
+  // might contain multiple binary measurements.
+  google.protobuf.Any event_endorsement = 1;
+}
+
+message EventEndorsements {
+  // Holds serialized instances of the the [`EventEndorsement`] message.
+  // Each item with an index `i` corresponds to a specific event with an index
+  // `i` in the [`EventLog`].
+  repeated bytes encoded_event_endorsements = 1;
+}

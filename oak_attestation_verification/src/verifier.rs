@@ -554,7 +554,7 @@ fn compare_root_layer_measurement_digests(
 
 /// Verifies the measurement values of the kernel layer, which is common to both
 /// the Oak Restricted Kernel and Oak Containers setups.
-fn compare_kernel_layer_measurement_digests(
+pub(crate) fn compare_kernel_layer_measurement_digests(
     values: &KernelLayerData,
     expected: &KernelLayerExpectedValues,
 ) -> anyhow::Result<()> {
@@ -610,7 +610,7 @@ fn compare_kernel_layer_measurement_digests(
     .context("ACPI table value failed verification")
 }
 
-fn compare_event_measurement_digests(
+pub(crate) fn compare_event_measurement_digests(
     values: &EventData,
     expected: &EventExpectedValues,
 ) -> anyhow::Result<()> {
@@ -621,7 +621,7 @@ fn compare_event_measurement_digests(
     .context("event failed verification")
 }
 
-fn compare_system_layer_measurement_digests(
+pub(crate) fn compare_system_layer_measurement_digests(
     values: &SystemLayerData,
     expected: &SystemLayerExpectedValues,
 ) -> anyhow::Result<()> {
@@ -632,7 +632,7 @@ fn compare_system_layer_measurement_digests(
     .context("system layer system image failed verification")
 }
 
-fn compare_application_layer_measurement_digests(
+pub(crate) fn compare_application_layer_measurement_digests(
     values: &ApplicationLayerData,
     expected: &ApplicationLayerExpectedValues,
 ) -> anyhow::Result<()> {
@@ -648,7 +648,7 @@ fn compare_application_layer_measurement_digests(
     .context("application layer config failed verification")
 }
 
-fn compare_container_layer_measurement_digests(
+pub(crate) fn compare_container_layer_measurement_digests(
     values: &ContainerLayerData,
     expected: &ContainerLayerExpectedValues,
 ) -> anyhow::Result<()> {

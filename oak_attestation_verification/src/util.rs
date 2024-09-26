@@ -17,21 +17,24 @@
 use alloc::{string::String, vec, vec::Vec};
 use core::{cmp::Ordering, str::FromStr};
 
+use anyhow::Context;
 use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
-        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
-        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Digests, Event, EventEndorsement, ExtractedEvidence, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerReferenceValues,
+        KeyType, OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
 use p256::pkcs8::{der::Decode, DecodePublicKey};
+use prost::Message;
+use prost_types::Any;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
@@ -407,6 +410,55 @@ fn kernel_layer_reference_values_from_evidence(
             })),
         }),
     }
+}
+
+/// Decodes a serialized event into a specified [`Message`].
+pub fn decode_event_proto<M: Message + Default>(
+    expected_type_url: &str,
+    encoded_event: &[u8],
+) -> anyhow::Result<M> {
+    let event_proto = Event::decode(encoded_event.as_ref())
+        .map_err(|error| anyhow::anyhow!("failed to decode event: {}", error))?;
+    decode_protobuf_any::<M>(
+        expected_type_url,
+        event_proto.event.context("no event found in the `event` field")?,
+    )
+}
+
+/// Decodes serialized event endorsements into a specified [`Message`].
+pub fn decode_event_endorsement_proto<M: Message + Default>(
+    expected_type_url: &str,
+    encoded_event_endorsement: &[u8],
+) -> anyhow::Result<M> {
+    let event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement.as_ref())
+        .map_err(|error| anyhow::anyhow!("failed to decode event endorsement: {}", error))?;
+    decode_protobuf_any::<M>(
+        expected_type_url,
+        event_endorsement_proto
+            .event_endorsement
+            .context("no event endorsement found in the `event_endorsement` field")?,
+    )
+}
+
+/// Decodes [`Any`] message into a specified [`Message`].
+pub fn decode_protobuf_any<M: Message + Default>(
+    expected_type_url: &str,
+    message: Any,
+) -> anyhow::Result<M> {
+    if message.type_url.as_str() != expected_type_url {
+        anyhow::bail!(
+            "expected message with type url: {}, found: {}",
+            expected_type_url,
+            message.type_url.as_str()
+        );
+    }
+    M::decode(message.value.as_ref()).map_err(|error| {
+        anyhow::anyhow!(
+            "couldn't decode `google.protobuf.Any` message into {}: {:?}",
+            expected_type_url,
+            error
+        )
+    })
 }
 
 #[cfg(test)]
