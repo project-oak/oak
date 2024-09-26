@@ -287,19 +287,6 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -348,98 +335,84 @@
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
-<span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
+<span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
 
-<span class="doccomment">/// Measurements of various components in Stage1.
-</span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>Measurements {
-    <span class="doccomment">/// The measurement of the kernel image.
-    </span><span class="kw">pub </span>kernel_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The measurement of the kernel command-line.
-    </span><span class="kw">pub </span>cmdline_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The raw kernel command-line.
-    </span><span class="kw">pub </span>cmdline: String,
-    <span class="doccomment">/// The measurement of the kernel setup data.
-    </span><span class="kw">pub </span>setup_data_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The measurement of the initial RAM disk.
-    </span><span class="kw">pub </span>ram_disk_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The measurement of the physical memory map.
-    </span><span class="kw">pub </span>memory_map_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// The concatenated measurement of the command used for building the ACPI
-    /// tables.
-    </span><span class="kw">pub </span>acpi_sha2_256_digest: [u8; <span class="number">32</span>],
-    <span class="doccomment">/// Event measurement containing the hashes of other components
-    </span><span class="kw">pub </span>event_sha2_256_digest: [u8; <span class="number">32</span>],
-}
+<span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
 
 <span class="doccomment">/// Generates an ECA certificate for use by the next boot stage (Stage 1).
 </span><span class="kw">fn </span>generate_stage1_certificate(
     stage0_eca_key: <span class="kw-2">&amp;</span>SigningKey,
     stage0_cert_issuer: String,
-    measurements: <span class="kw-2">&amp;</span>Measurements,
+    encoded_stage0_event: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; (CoseSign1, SigningKey) {
     <span class="comment">// Generate additional claims to cover the measurements.
-
-    </span><span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[
-        (
-            ClaimName::PrivateUse(KERNEL_LAYER_ID),
-            Value::Map(<span class="macro">vec!</span>[
-                (
-                    Value::Integer(KERNEL_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.kernel_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                    Value::Text(measurements.cmdline.clone()),
-                ),
-                (
-                    Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(INITRD_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
-                    )]),
-                ),
-                (
-                    Value::Integer(ACPI_MEASUREMENT_ID.into()),
-                    Value::Map(<span class="macro">alloc::vec!</span>[(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(measurements.acpi_sha2_256_digest.into()),
-                    )]),
-                ),
-            ]),
-        ),
-        (
-            ClaimName::PrivateUse(EVENT_ID),
-            Value::Map(<span class="macro">alloc::vec!</span>[(
-                Value::Integer(SHA2_256_ID.into()),
-                Value::Bytes(measurements.event_sha2_256_digest.into()),
-            )]),
-        ),
-    ];
+    </span><span class="kw">let </span>additional_claims = {
+        <span class="kw">let </span>measurements = decode_stage0_event(encoded_stage0_event);
+        <span class="macro">vec!</span>[
+            (
+                ClaimName::PrivateUse(KERNEL_LAYER_ID),
+                Value::Map(<span class="macro">vec!</span>[
+                    (
+                        Value::Integer(KERNEL_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(
+                                shorten_cmdline(<span class="kw-2">&amp;</span>measurements.kernel_cmdline).as_bytes().into()
+                            ),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(
+                                Sha256::digest(measurements.kernel_cmdline.as_bytes()).to_vec()
+                            ),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(KERNEL_COMMANDLINE_ID.into()),
+                        Value::Text(measurements.kernel_cmdline),
+                    ),
+                    (
+                        Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.setup_data_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(INITRD_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.ram_disk_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.memory_map_digest),
+                        )]),
+                    ),
+                    (
+                        Value::Integer(ACPI_MEASUREMENT_ID.into()),
+                        Value::Map(<span class="macro">alloc::vec!</span>[(
+                            Value::Integer(SHA2_256_ID.into()),
+                            Value::Bytes(measurements.acpi_digest),
+                        )]),
+                    ),
+                ]),
+            ),
+            (
+                ClaimName::PrivateUse(EVENT_ID),
+                Value::Map(<span class="macro">alloc::vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(Sha256::digest(encoded_stage0_event).to_vec()),
+                )]),
+            ),
+        ]
+    };
 
     <span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
     (
@@ -454,17 +427,32 @@
     )
 }
 
+<span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line length.
+</span><span class="kw">fn </span>shorten_cmdline(cmdline: <span class="kw-2">&amp;</span>str) -&gt; String {
+    <span class="kw">let </span>max_length: usize = <span class="number">256</span>;
+    <span class="kw">if </span>cmdline.len() &gt; max_length { cmdline[..max_length].to_string() } <span class="kw">else </span>{ cmdline.to_string() }
+}
+
+<span class="kw">fn </span>decode_stage0_event(
+    encoded_event: <span class="kw-2">&amp;</span>[u8],
+) -&gt; oak_proto_rust::oak::attestation::v1::Stage0Measurements {
+    <span class="kw">let </span>decoded_event: oak_proto_rust::oak::attestation::v1::Event =
+        Message::decode(encoded_event).expect(<span class="string">"Failed to decode stage0 event"</span>);
+
+    Message::decode(decoded_event.event.unwrap().value.as_slice())
+        .expect(<span class="string">"Failed to decode stage0 measurements"</span>)
+}
+
 <span class="doccomment">/// Generates attestation evidence for the 'measurements' of all Stage 1
 /// components.
 </span><span class="kw">pub fn </span>generate_dice_data&lt;
     F: FnOnce([u8; REPORT_DATA_SIZE]) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
     G: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 &gt;(
-    measurements: <span class="kw-2">&amp;</span>Measurements,
     get_attestation: F,
     get_derived_key: G,
     tee_platform: TeePlatform,
-    event_log: EventLog,
+    encoded_stage0_event: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; (Stage0DiceData, DiceData) {
     <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
     <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
@@ -474,7 +462,7 @@
     <span class="kw">let </span>(stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
         <span class="kw-2">&amp;</span>stage0_eca_key,
         hex::encode(derive_verifying_key_id(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)),
-        measurements,
+        encoded_stage0_event,
     );
 
     <span class="kw">let </span>stage0_eca_verifying_key = verifying_key_to_cose_key(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)
@@ -504,13 +492,22 @@
 
     <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel
     // setup data and the initial RAM disk when deriving the CDI for Layer 1.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>salt: Vec&lt;u8&gt; = Vec::with_capacity(<span class="number">128</span>);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_sha2_256_digest[..]);
-    salt.extend_from_slice(measurements.cmdline.as_bytes());
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.setup_data_sha2_256_digest[..]);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_sha2_256_digest[..]);
+    </span><span class="kw">let </span>salt: Vec&lt;u8&gt; = {
+        <span class="kw">let </span>measurements = decode_stage0_event(encoded_stage0_event);
+        <span class="kw">let </span><span class="kw-2">mut </span>salt = Vec::with_capacity(<span class="number">128</span>);
+        salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_measurement);
+        salt.extend_from_slice(shorten_cmdline(<span class="kw-2">&amp;</span>measurements.kernel_cmdline).as_bytes());
+        salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.setup_data_digest);
+        salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_digest);
+        salt
+    };
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>ikm[..]);
 
+    <span class="kw">let </span>event_log = {
+        <span class="kw">let </span><span class="kw-2">mut </span>base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+        base.encoded_events.push(encoded_stage0_event.to_vec());
+        base
+    };
     <span class="kw">let </span>result_evidence = Evidence {
         root_layer: <span class="prelude-val">Some</span>(RootLayerEvidence {
             remote_attestation_report: report_bytes.to_vec(),
@@ -569,35 +566,12 @@
     <span class="prelude-val">Ok</span>(DerivedKey::default())
 }
 
-<span class="kw">pub fn </span>generate_event_log(
-    kernel_measurement: Vec&lt;u8&gt;,
-    acpi_digest: Vec&lt;u8&gt;,
-    memory_map_digest: Vec&lt;u8&gt;,
-    ram_disk_digest: Vec&lt;u8&gt;,
-    setup_data_digest: Vec&lt;u8&gt;,
-    kernel_cmdline: String,
-) -&gt; (oak_proto_rust::oak::attestation::v1::EventLog, [u8; <span class="number">32</span>]) {
-    <span class="kw">let </span>measurements = oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-        kernel_measurement,
-        acpi_digest,
-        memory_map_digest,
-        ram_disk_digest,
-        setup_data_digest,
-        kernel_cmdline,
-    };
-
+<span class="kw">pub fn </span>encoded_stage0_event(
+    measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
+) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span>tag = String::from(<span class="string">"Stage0"</span>);
     <span class="kw">let </span>any = prost_types::Any::from_msg(<span class="kw-2">&amp;</span>measurements);
     <span class="kw">let </span>event = oak_proto_rust::oak::attestation::v1::Event { tag, event: <span class="prelude-val">Some</span>(any.unwrap()) };
-    <span class="kw">let </span>encoded_event = event.encode_to_vec();
-
-    <span class="kw">let </span><span class="kw-2">mut </span>eventlog = EventLog::default();
-    eventlog.encoded_events.push(encoded_event.clone());
-
-    <span class="kw">let </span>event_digest = Sha256::digest(<span class="kw-2">&amp;</span>encoded_event);
-    <span class="kw">let </span><span class="kw-2">mut </span>event_sha2_256_digest = [<span class="number">0u8</span>; <span class="number">32</span>];
-    event_sha2_256_digest.copy_from_slice(<span class="kw-2">&amp;</span>event_digest);
-
-    (eventlog, event_sha2_256_digest)
+    event.encode_to_vec()
 }
 </code></pre></div></section></main></body></html>

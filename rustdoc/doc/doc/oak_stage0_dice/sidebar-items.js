@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_dice_data","generate_event_log","mock_attestation_report","mock_derived_key"],"struct":["Measurements"],"type":["DerivedKey"]};
+window.SIDEBAR_ITEMS = {"fn":["encoded_stage0_event","generate_dice_data","mock_attestation_report","mock_derived_key"],"type":["DerivedKey"]};

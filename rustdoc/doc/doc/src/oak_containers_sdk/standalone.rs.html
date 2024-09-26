@@ -131,9 +131,6 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -177,24 +174,21 @@
         oak_proto_rust::oak::attestation::v1::EventLog,
         oak_dice::evidence::Stage0DiceData,
     ) = {
-        <span class="kw">let </span><span class="kw-2">mut </span>mock_stage0_measurements = oak_stage0_dice::Measurements::default();
-        <span class="kw">let </span>(mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-            mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.cmdline.clone(),
+        <span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encoded_stage0_event(
+            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
-        mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
-        <span class="kw">let </span>(stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
-            <span class="kw-2">&amp;</span>mock_stage0_measurements,
+        <span class="kw">let </span>mock_event_log = {
+            <span class="kw">let </span><span class="kw-2">mut </span>base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+            base.encoded_events.push(encoded_stage0_event.to_vec());
+            base
+        };
+        <span class="kw">let </span>(mock_stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
             oak_stage0_dice::mock_attestation_report,
             oak_stage0_dice::mock_derived_key,
             oak_dice::evidence::TeePlatform::None,
-            oak_proto_rust::oak::attestation::v1::EventLog::default(),
+            <span class="kw-2">&amp;</span>encoded_stage0_event,
         );
-        (mock_event_log, stage0_dice_data)
+        (mock_event_log, mock_stage0_dice_data)
     };
     <span class="kw">let </span><span class="kw-2">mut </span>attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
         mock_stage0_dice_data,
@@ -202,7 +196,7 @@
     )
     .expect(<span class="string">"failed to create dice attester"</span>);
     <span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>[]);
-    attester.add_layer(stage1_layer_data).expect(<span class="string">"failred to add stage1 layer data"</span>);
+    attester.add_layer(stage1_layer_data).expect(<span class="string">"failed to add stage1 layer data"</span>);
     <span class="kw">let </span>orchestrator_layer_data =
         oak_containers_orchestrator_attestation::measure_container_and_config(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]);
     <span class="kw">let </span>(_instance_keys, instance_public_keys) =
