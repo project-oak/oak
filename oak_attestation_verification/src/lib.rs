@@ -21,6 +21,8 @@ extern crate alloc;
 
 pub mod amd;
 pub mod endorsement;
+pub mod expect;
+pub(crate) mod extract;
 pub mod policy;
 pub mod rekor;
 pub mod util;

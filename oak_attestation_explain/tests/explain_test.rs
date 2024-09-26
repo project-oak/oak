@@ -16,6 +16,7 @@
 #![feature(assert_matches)]
 
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
+use oak_attestation_verification::verifier::extract_evidence;
 use oak_attestation_verification_test_utils::reference_values_from_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData, ReferenceValues,
@@ -29,8 +30,7 @@ fn produces_expected_explaination() {
     let mut extracted_evidence = {
         // TODO: b/334900893 - Generate extracted evidence programatically.
         let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
-        oak_attestation_verification::verifier::extract_evidence(&evidence)
-            .expect("could not extract evidence")
+        extract_evidence(&evidence).expect("could not extract evidence")
     };
     match extracted_evidence.evidence_values.take() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
@@ -118,8 +118,7 @@ fn produces_expected_reference_values_explaination() {
     let reference_values: ReferenceValues = {
         let extracted_evidence = {
             let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
-            oak_attestation_verification::verifier::extract_evidence(&evidence)
-                .expect("could not extract evidence")
+            extract_evidence(&evidence).expect("could not extract evidence")
         };
         reference_values_from_evidence(extracted_evidence)
     };

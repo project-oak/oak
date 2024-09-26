@@ -16,9 +16,9 @@
 
 use std::fs;
 
-use oak_attestation_verification::verifier::{
-    get_expected_values, to_attestation_results, verify, verify_dice_chain,
-    verify_with_expected_values,
+use oak_attestation_verification::{
+    expect::get_expected_values,
+    verifier::{to_attestation_results, verify, verify_dice_chain, verify_with_expected_values},
 };
 use oak_attestation_verification_test_utils::{
     create_containers_reference_values, create_rk_reference_values, reference_values_from_evidence,

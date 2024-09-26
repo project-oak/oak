@@ -18,6 +18,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
+use oak_attestation_verification::verifier::extract_evidence;
 use oak_attestation_verification_test_utils::reference_values_from_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData,
@@ -72,7 +73,7 @@ fn main() {
             Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
         };
 
-        oak_attestation_verification::verifier::extract_evidence(&evidence).unwrap()
+        extract_evidence(&evidence).unwrap()
     };
 
     print!("{}", title("Evidence:"));
