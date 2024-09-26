@@ -2514,6 +2514,7 @@ dependencies = [
  "oak_grpc_utils",
  "oak_proto_rust",
  "oak_stage0_dice",
+ "p256",
  "prost",
  "prost-types",
  "tokio",

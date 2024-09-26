@@ -57,6 +57,7 @@ rust_test(
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",
         "//oak_crypto",
+        "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",

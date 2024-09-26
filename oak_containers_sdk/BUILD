@@ -46,6 +46,7 @@ rust_library(
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",

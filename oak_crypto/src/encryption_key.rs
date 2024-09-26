@@ -38,6 +38,7 @@ pub fn generate_encryption_key_pair() -> (EncryptionKey, Vec<u8>) {
     (EncryptionKey::new(private_key), public_key.to_bytes().to_vec())
 }
 
+#[derive(Clone)]
 pub struct EncryptionKey {
     private_key: PrivateKey,
 }

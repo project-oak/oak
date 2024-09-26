@@ -20,10 +20,7 @@ use oak_client::{
     client::OakClient, transport::GrpcStreamingTransport, verifier::InsecureAttestationVerifier,
 };
 use oak_containers_sdk::{
-    standalone::{
-        standalone_endorsed_evidence_containing_only_public_keys, StandaloneEncryptionKeyHandle,
-    },
-    OakSessionContext,
+    standalone::StandaloneOrchestrator, OakSessionContext, OrchestratorInterface,
 };
 use oak_hello_world_proto::oak::containers::example::trusted_application_client::TrustedApplicationClient;
 use tokio::net::TcpListener;
@@ -34,13 +31,11 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let encryption_key_handle = StandaloneEncryptionKeyHandle::default();
+    let mut orchestrator = StandaloneOrchestrator::default();
+    let encryption_key_handle = orchestrator.get_instance_encryption_key_handle();
 
-    let application_config = vec![1, 2, 3, 4];
-
-    let endorsed_evidence = standalone_endorsed_evidence_containing_only_public_keys(
-        encryption_key_handle.public_key(),
-    );
+    let endorsed_evidence = orchestrator.get_endorsed_evidence().await?;
+    let application_config = orchestrator.get_application_config().await?;
 
     Ok((
         addr,
@@ -89,7 +84,7 @@ async fn test1() {
 
     // Send single request, see the response
     assert_eq!(
-        oak_client.invoke(b"standalone user").await.unwrap(),
-        b"Hello from the trusted side, standalone user! Btw, the Trusted App has a config with a length of 4 bytes."
+        String::from_utf8(oak_client.invoke(b"standalone user").await.unwrap()).unwrap(),
+        "Hello from the trusted side, standalone user! Btw, the Trusted App has a config with a length of 4 bytes."
     );
 }
