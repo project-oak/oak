@@ -16,19 +16,24 @@
 
 use oak_attestation::dice::evidence_to_proto;
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
-use oak_containers_sdk::OrchestratorInterface;
-use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, endorsements,
-    kernel_binary_reference_value, reference_values, text_reference_value,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-    Endorsements, Event, EventLog, InsecureReferenceValues, KernelBinaryReferenceValue,
-    KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-    RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
-    TextReferenceValue,
+use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, endorsements,
+        kernel_binary_reference_value, reference_values, text_reference_value,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
+        Digests, Endorsements, Event, EventLog, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelDigests, KernelLayerReferenceValues,
+        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, Stage0Measurements, StringLiterals,
+        SystemLayerReferenceValues, TextReferenceValue,
+    },
+    RawDigest,
 };
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 use prost::Message;
+use sha2::Digest;
 use tokio;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
@@ -229,6 +234,44 @@ async fn verify_mock_oak_containers_evidence() {
 
     // Create reference values that skip all verifications
     let reference_values = oak_containers_skip_all_reference_values();
+
+    // Perform verification
+    let verification_result = verify(NOW_UTC_MILLIS, evidence, endorsements, &reference_values);
+    let attestation_results = to_attestation_results(&verification_result);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", attestation_results.status, attestation_results.reason);
+    eprintln!("======================================");
+    // Assert verification success
+    assert!(verification_result.is_ok(), "Verification failed");
+    assert_eq!(attestation_results.status(), Status::Success, "Unexpected attestation status");
+}
+
+#[tokio::test]
+async fn verify_mock_oak_containers_evidence_with_custom_evidence() {
+    let stage0_digests = Stage0Measurements {
+        setup_data_digest: vec![1u8; 32],
+        kernel_measurement: vec![2u8; 32],
+        ram_disk_digest: vec![3u8; 32],
+        memory_map_digest: vec![4u8; 32],
+        acpi_digest: vec![5u8; 32],
+        kernel_cmdline: "custom kernel command line".to_string(),
+    };
+    let stage1_system_image = [6u8; 32];
+    let application_image = [7u8; 32];
+    let application_config = vec![8u8; 32];
+
+    let (endorsed_evidence, reference_values) =
+        oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
+            stage0_digests,
+            &stage1_system_image,
+            &application_image,
+            application_config,
+        )
+        .await;
+
+    let evidence = endorsed_evidence.evidence.as_ref().expect("No evidence found");
+    let endorsements = endorsed_evidence.endorsements.as_ref().expect("No endorsements found");
 
     // Perform verification
     let verification_result = verify(NOW_UTC_MILLIS, evidence, endorsements, &reference_values);

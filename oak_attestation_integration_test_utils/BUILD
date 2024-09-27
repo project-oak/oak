@@ -14,28 +14,23 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-rust_test_suite(
-    name = "oak_attestation_integration_tests",
-    srcs = glob(["tests/**"]),
+rust_library(
+    name = "oak_attestation_integration_test_utils",
+    srcs = glob(["src/**"]),
     deps = [
         "//oak_attestation",
-        "//oak_attestation_integration_test_utils",
         "//oak_attestation_verification",
         "//oak_containers_sdk",
-        "//oak_dice",
         "//oak_proto_rust",
-        "//oak_restricted_kernel_sdk",
-        "//stage0_dice",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:sha2",
-        "@oak_crates_index//:tokio",
     ],
 )
