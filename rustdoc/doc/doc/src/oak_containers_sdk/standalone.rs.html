@@ -131,6 +131,58 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -155,111 +207,163 @@
 //!
 //! It does not currently support any sort of attestation flow.
 
-</span><span class="kw">use </span>oak_crypto::{
-    encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},
+</span><span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>oak_crypto::{
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, OakStandaloneEndorsements},
+    attestation::v1::{endorsements, Endorsements, Evidence, OakStandaloneEndorsements},
+    crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
+<span class="kw">use </span>p256::ecdsa::signature::Signer;
 
-<span class="doccomment">/// Create an [`EndorsedEvidence`] instance that your TEE application can use.
-/// This can be provided in circumstances where you'd normally request an
-/// [`EndorsedEvidence`] from the Orchestrator.
-</span><span class="kw">pub fn </span>standalone_endorsed_evidence_containing_only_public_keys(
-    public_encryption_key: <span class="kw">impl </span>Into&lt;Vec&lt;u8&gt;&gt;,
-) -&gt; EndorsedEvidence {
-    <span class="kw">let </span>(mock_event_log, mock_stage0_dice_data): (
-        oak_proto_rust::oak::attestation::v1::EventLog,
-        oak_dice::evidence::Stage0DiceData,
-    ) = {
-        <span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encoded_stage0_event(
+<span class="kw">use </span><span class="kw">crate</span>::OrchestratorInterface;
+
+<span class="doccomment">/// Default values for StandaloneOrchestrator to measure
+</span><span class="kw">const </span>DEFAULT_STAGE1_SYSTEM_IMAGE: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[];
+<span class="kw">const </span>DEFAULT_APPLICATION_IMAGE: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[];
+<span class="kw">const </span>DEFAULT_APPLICATION_CONFIG: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>];
+
+<span class="doccomment">/// A mock implementation of the OrchestratorInterface for standalone testing
+</span><span class="kw">pub struct </span>StandaloneOrchestrator {
+    instance_private_keys: oak_containers_orchestrator_attestation::InstanceKeys,
+    evidence: Evidence,
+    application_config: Vec&lt;u8&gt;,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>StandaloneOrchestrator {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::create_with_custom_config_and_measurements(
             oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
-        );
-        <span class="kw">let </span>mock_event_log = {
-            <span class="kw">let </span><span class="kw-2">mut </span>base = oak_proto_rust::oak::attestation::v1::EventLog::default();
-            base.encoded_events.push(encoded_stage0_event.to_vec());
-            base
-        };
-        <span class="kw">let </span>(mock_stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
+            DEFAULT_STAGE1_SYSTEM_IMAGE,
+            DEFAULT_APPLICATION_IMAGE,
+            DEFAULT_APPLICATION_CONFIG.to_vec(),
+        )
+        .expect(<span class="string">"Failed to create default StandaloneOrchestrator"</span>)
+    }
+}
+
+<span class="kw">impl </span>StandaloneOrchestrator {
+    <span class="kw">pub fn </span>create_with_custom_config(application_config: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="self">Self</span>::create_with_custom_config_and_measurements(
+            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
+            DEFAULT_STAGE1_SYSTEM_IMAGE,
+            DEFAULT_APPLICATION_IMAGE,
+            application_config,
+        )
+    }
+    <span class="kw">pub fn </span>create_with_custom_config_and_measurements(
+        root_layer_event: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
+        stage1_system_image: <span class="kw-2">&amp;</span>[u8],
+        application_image: <span class="kw-2">&amp;</span>[u8],
+        application_config: Vec&lt;u8&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// Generate the root layer (Stage0) event
+        </span><span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encoded_stage0_event(root_layer_event.clone());
+
+        <span class="comment">// Create a mock event log with the root layer event
+        </span><span class="kw">let </span><span class="kw-2">mut </span>mock_event_log = oak_proto_rust::oak::attestation::v1::EventLog::default();
+        mock_event_log.encoded_events.push(encoded_stage0_event.to_vec());
+
+        <span class="comment">// Generate mock Stage0 DICE data
+        </span><span class="kw">let </span>(mock_stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
             oak_stage0_dice::mock_attestation_report,
             oak_stage0_dice::mock_derived_key,
             oak_dice::evidence::TeePlatform::None,
             <span class="kw-2">&amp;</span>encoded_stage0_event,
         );
-        (mock_event_log, mock_stage0_dice_data)
-    };
-    <span class="kw">let </span><span class="kw-2">mut </span>attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
-        mock_stage0_dice_data,
-        mock_event_log,
-    )
-    .expect(<span class="string">"failed to create dice attester"</span>);
-    <span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>[]);
-    attester.add_layer(stage1_layer_data).expect(<span class="string">"failed to add stage1 layer data"</span>);
-    <span class="kw">let </span>orchestrator_layer_data =
-        oak_containers_orchestrator_attestation::measure_container_and_config(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]);
-    <span class="kw">let </span>(_instance_keys, instance_public_keys) =
-        oak_containers_orchestrator_attestation::generate_instance_keys();
-    <span class="kw">let </span>evidence = {
-        <span class="kw">let </span>public_encryption_key_vec: Vec&lt;u8&gt; = public_encryption_key.into();
-        attester
-            .add_application_keys(
-                orchestrator_layer_data,
-                <span class="kw-2">&amp;</span>public_encryption_key_vec,
-                <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
-                <span class="prelude-val">None</span>,
-                <span class="prelude-val">None</span>,
-            )
-            .expect(<span class="string">"failed to add application keys"</span>)
-    };
 
-    EndorsedEvidence {
-        evidence: <span class="prelude-val">Some</span>(evidence),
-        endorsements: <span class="prelude-val">Some</span>(Endorsements {
-            r#type: <span class="prelude-val">Some</span>(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
-        }),
+        <span class="comment">// Create a DICE attester from the Stage0 data
+        </span><span class="kw">let </span><span class="kw-2">mut </span>attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
+            mock_stage0_dice_data,
+            mock_event_log,
+        )<span class="question-mark">?</span>;
+
+        <span class="comment">// Add Stage1 layer data
+        </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>stage1_system_image);
+        attester.add_layer(stage1_layer_data)<span class="question-mark">?</span>;
+
+        <span class="comment">// Add Orchestrator layer data
+        </span><span class="kw">let </span>orchestrator_layer_data =
+            oak_containers_orchestrator_attestation::measure_container_and_config(
+                <span class="kw-2">&amp;</span>application_image,
+                <span class="kw-2">&amp;</span>application_config,
+            );
+
+        <span class="comment">// Generate instance keys
+        </span><span class="kw">let </span>(instance_private_keys, instance_public_keys) =
+            oak_containers_orchestrator_attestation::generate_instance_keys();
+
+        <span class="comment">// Add application keys and generate the final evidence
+        </span><span class="kw">let </span>evidence = attester.add_application_keys(
+            orchestrator_layer_data,
+            <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
+            <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
+            <span class="prelude-val">None</span>,
+            <span class="prelude-val">None</span>,
+        )<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys, evidence, application_config })
+    }
+
+    <span class="kw">pub fn </span>get_instance_encryption_key_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StandaloneInstanceEncryptionKeyHandle {
+        StandaloneInstanceEncryptionKeyHandle {
+            encryption_key: <span class="self">self</span>.instance_private_keys.encryption_key.clone(),
+        }
+    }
+
+    <span class="kw">pub fn </span>get_instance_signer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StandaloneInstanceSigner {
+        StandaloneInstanceSigner { signing_key: <span class="self">self</span>.instance_private_keys.signing_key.clone() }
     }
 }
 
-<span class="doccomment">/// A structure implementing [`AsyncEncryptionKeyHandle``] trait, which can be
-/// provided to a TEE application instead of the normal orchestrator-driven
-/// instance type.
-</span><span class="kw">pub struct </span>StandaloneEncryptionKeyHandle {
-    public_key: Vec&lt;u8&gt;,
-    private_key: EncryptionKey,
-}
-
-<span class="kw">impl </span>StandaloneEncryptionKeyHandle {
-    <span class="doccomment">/// Generates a new public/private keypair and returns a new instance
-    /// containing them.
-    </span><span class="kw">pub fn </span>new(
-        private_key: EncryptionKey,
-        public_key: <span class="kw">impl </span>Into&lt;Vec&lt;u8&gt;&gt;,
-    ) -&gt; StandaloneEncryptionKeyHandle {
-        <span class="self">Self </span>{ private_key, public_key: public_key.into() }
+<span class="attr">#[async_trait]
+</span><span class="kw">impl </span>OrchestratorInterface <span class="kw">for </span>StandaloneOrchestrator {
+    <span class="kw">async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.application_config.clone())
     }
 
-    <span class="doccomment">/// Return the public_key created on construction.
-    </span><span class="kw">pub fn </span>public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.public_key
+    <span class="kw">async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="comment">// In standalone mode, we don't need to notify anyone
+        </span><span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
+        <span class="prelude-val">Ok</span>(EndorsedEvidence {
+            evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
+            endorsements: <span class="prelude-val">Some</span>(Endorsements {
+                r#type: <span class="prelude-val">Some</span>(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
+            }),
+        })
     }
 }
 
-<span class="kw">impl </span>Default <span class="kw">for </span>StandaloneEncryptionKeyHandle {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(private_key, public_key) = generate_encryption_key_pair();
-        <span class="self">Self</span>::new(private_key, public_key)
-    }
+<span class="kw">pub struct </span>StandaloneInstanceEncryptionKeyHandle {
+    encryption_key: EncryptionKey,
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>AsyncEncryptionKeyHandle <span class="kw">for </span>StandaloneEncryptionKeyHandle {
+</span><span class="kw">impl </span>AsyncEncryptionKeyHandle <span class="kw">for </span>StandaloneInstanceEncryptionKeyHandle {
     <span class="kw">async fn </span>generate_recipient_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
-        <span class="self">self</span>.private_key.generate_recipient_context(encapsulated_public_key).<span class="kw">await
+        <span class="self">self</span>.encryption_key.generate_recipient_context(encapsulated_public_key).<span class="kw">await
     </span>}
+}
+
+<span class="kw">pub struct </span>StandaloneInstanceSigner {
+    signing_key: p256::ecdsa::SigningKey,
+}
+
+<span class="attr">#[async_trait::async_trait(<span class="question-mark">?</span>Send)]
+</span><span class="kw">impl </span><span class="kw">crate</span>::crypto::Signer <span class="kw">for </span>StandaloneInstanceSigner {
+    <span class="kw">async fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt; {
+        <span class="kw">let </span>signature: p256::ecdsa::Signature = <span class="self">self</span>.signing_key.sign(message);
+        <span class="prelude-val">Ok</span>(Signature { signature: signature.to_vec() })
+    }
 }
 </code></pre></div></section></main></body></html>

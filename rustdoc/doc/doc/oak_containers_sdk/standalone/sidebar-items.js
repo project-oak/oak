@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["standalone_endorsed_evidence_containing_only_public_keys"],"struct":["StandaloneEncryptionKeyHandle"]};
+window.SIDEBAR_ITEMS = {"struct":["StandaloneInstanceEncryptionKeyHandle","StandaloneInstanceSigner","StandaloneOrchestrator"]};

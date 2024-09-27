@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["OrchestratorClient"]};
+window.SIDEBAR_ITEMS = {"struct":["OrchestratorClient"],"trait":["OrchestratorInterface"]};

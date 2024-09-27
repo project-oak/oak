@@ -68,6 +68,53 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -100,13 +147,53 @@
 // and the trusted application.
 </span><span class="kw">const </span>IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">"/oak_utils/orchestrator_ipc"</span>;
 
-<span class="doccomment">/// Utility struct used to interface with the launcher
+<span class="doccomment">/// Trait defining the interface for interacting with the Orchestrator.
+/// This trait can be implemented by the real Orchestrator or mocked for testing
+/// purposes.
+</span><span class="attr">#[async_trait::async_trait]
+</span><span class="kw">pub trait </span>OrchestratorInterface {
+    <span class="doccomment">/// Retrieves the application configuration from the Orchestrator.
+    /// This configuration contains settings and parameters specific to the
+    /// application.
+    </span><span class="kw">async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt;;
+
+    <span class="doccomment">/// Notifies the Orchestrator that the application is ready to receive
+    /// requests. This should be called after the application has completed
+    /// its initialization.
+    </span><span class="kw">async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
+
+    <span class="doccomment">/// Retrieves the endorsed evidence from the Orchestrator.
+    /// This evidence is used to prove the authenticity and integrity of the
+    /// application.
+    </span><span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt;;
+}
+
+<span class="doccomment">/// Utility struct used to interface with the Orchestrator.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>OrchestratorClient {
     inner: GrpcOrchestratorClient&lt;tonic::transport::channel::Channel&gt;,
 }
 
-<span class="kw">impl </span>OrchestratorClient {
+<span class="attr">#[async_trait::async_trait]
+</span><span class="kw">impl </span>OrchestratorInterface <span class="kw">for </span>OrchestratorClient {
+    <span class="kw">async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.inner.get_application_config(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner().config;
+        <span class="prelude-val">Ok</span>(config)
+    }
+
+    <span class="kw">async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="self">self</span>.inner.notify_app_ready(tonic::Request::new(())).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.inner.get_endorsed_evidence(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner())
+    }
+}
+
+<span class="comment">// New functionality should be added to the OrchestratorInterface trait, not
+// here.
+</span><span class="kw">impl </span>OrchestratorClient {
     <span class="kw">pub async fn </span>create() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>inner: GrpcOrchestratorClient&lt;tonic::transport::channel::Channel&gt; = {
             <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
@@ -122,18 +209,25 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 
-    <span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>config = <span class="self">self</span>.inner.get_application_config(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner().config;
-        <span class="prelude-val">Ok</span>(config)
-    }
+    <span class="attr">#[deprecated(
+        note = <span class="string">"This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
+    </span>)]
+    </span><span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
+        &lt;<span class="self">Self </span><span class="kw">as </span>OrchestratorInterface&gt;::get_application_config(<span class="self">self</span>).<span class="kw">await
+    </span>}
 
-    <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="self">self</span>.inner.notify_app_ready(tonic::Request::new(())).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
-    }
+    <span class="attr">#[deprecated(
+        note = <span class="string">"This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
+    </span>)]
+    </span><span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        &lt;<span class="self">Self </span><span class="kw">as </span>OrchestratorInterface&gt;::notify_app_ready(<span class="self">self</span>).<span class="kw">await
+    </span>}
 
-    <span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.inner.get_endorsed_evidence(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner())
-    }
+    <span class="attr">#[deprecated(
+        note = <span class="string">"This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
+    </span>)]
+    </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
+        &lt;<span class="self">Self </span><span class="kw">as </span>OrchestratorInterface&gt;::get_endorsed_evidence(<span class="self">self</span>).<span class="kw">await
+    </span>}
 }
 </code></pre></div></section></main></body></html>
