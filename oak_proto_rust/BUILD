@@ -75,7 +75,6 @@ cargo_build_script(
         "//proto/oak_functions:testing_proto",
         "//proto/oak_functions/sdk:oak_functions_wasm_proto",
         "//proto/oak_functions/service:oak_functions_proto",
-        "//proto/session:protocol_proto",
         "//proto/session:service_streaming_proto",
         "//proto/session:session_proto",
         "@com_google_protobuf//:descriptor_proto_srcs",

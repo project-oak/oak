@@ -39,6 +39,40 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct RequestWrapper {
+    #[prost(oneof = "request_wrapper::Request", tags = "2, 3")]
+    pub request: ::core::option::Option<request_wrapper::Request>,
+}
+/// Nested message and enum types in `RequestWrapper`.
+pub mod request_wrapper {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Request {
+        #[prost(message, tag = "2")]
+        InvokeRequest(super::InvokeRequest),
+        #[prost(message, tag = "3")]
+        GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ResponseWrapper {
+    #[prost(oneof = "response_wrapper::Response", tags = "2, 3")]
+    pub response: ::core::option::Option<response_wrapper::Response>,
+}
+/// Nested message and enum types in `ResponseWrapper`.
+pub mod response_wrapper {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Response {
+        #[prost(message, tag = "2")]
+        InvokeResponse(super::InvokeResponse),
+        #[prost(message, tag = "3")]
+        GetEndorsedEvidenceResponse(super::GetEndorsedEvidenceResponse),
+    }
+}
 /// Request message for the remote attestation.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
@@ -210,107 +244,5 @@ pub mod session_response {
         HandshakeResponse(super::HandshakeResponse),
         #[prost(message, tag = "3")]
         EncryptedMessage(super::EncryptedMessage),
-    }
-}
-/// A wrapper message type that is used by the Oak transport protocol. It can be
-/// used to support the older HPKE-based protocol, the newer noise protocol, or a
-/// no-op encryption scheme.
-///
-/// This type is meant to replace the now-deprecated RequestWrapper type.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakRequest {
-    #[prost(oneof = "oak_request::Request", tags = "1, 2, 3")]
-    pub request: ::core::option::Option<oak_request::Request>,
-}
-/// Nested message and enum types in `OakRequest`.
-pub mod oak_request {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Request {
-        /// Noise handshake & data channel implementation.
-        /// See the SessionRequest proto messages for more detail.
-        #[prost(message, tag = "1")]
-        SessionRequest(super::SessionRequest),
-        /// Zero-RTT request for HPKE-based Enclave Application.
-        #[prost(message, tag = "2")]
-        InvokeRequest(super::InvokeRequest),
-        /// Request attestation measurements and HPKE server public key.
-        #[prost(message, tag = "3")]
-        GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
-    }
-}
-/// Wrapper around OakRequest that is used in cases where it is necessary to
-/// identify a contiguous session across multiple invocations/streams.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakRequestWithSessionIdentifier {
-    /// Unique string to identify the session. This should be at least 128 bits of
-    /// unique information.
-    #[prost(bytes = "vec", tag = "1")]
-    pub session_id: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag = "2")]
-    pub request: ::core::option::Option<OakRequest>,
-}
-/// A wrapper message type that is used by the Oak transport protocol. It can be
-/// used to support the older HPKE-based protocol, the newer noise protocol, or a
-/// no-op encryption scheme.
-///
-/// This type is meant to replace the now-deprecated ResponseWrapper type.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakResponse {
-    #[prost(oneof = "oak_response::Request", tags = "1, 2, 3")]
-    pub request: ::core::option::Option<oak_response::Request>,
-}
-/// Nested message and enum types in `OakResponse`.
-pub mod oak_response {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Request {
-        /// Noise handshake & data channel implementation.
-        /// See the SessionRequest proto messages for more detail.
-        #[prost(message, tag = "1")]
-        SessionResponse(super::SessionResponse),
-        /// Zero-RTT request for HPKE-based Enclave Application.
-        #[prost(message, tag = "2")]
-        InvokeResponse(super::InvokeResponse),
-        /// Evidence response for attestation and providing HPKE server key.
-        #[prost(message, tag = "3")]
-        GetEndorsedEvidenceResponse(super::GetEndorsedEvidenceResponse),
-    }
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct RequestWrapper {
-    #[prost(oneof = "request_wrapper::Request", tags = "2, 3")]
-    pub request: ::core::option::Option<request_wrapper::Request>,
-}
-/// Nested message and enum types in `RequestWrapper`.
-pub mod request_wrapper {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Request {
-        #[prost(message, tag = "2")]
-        InvokeRequest(super::InvokeRequest),
-        #[prost(message, tag = "3")]
-        GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
-    }
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ResponseWrapper {
-    #[prost(oneof = "response_wrapper::Response", tags = "2, 3")]
-    pub response: ::core::option::Option<response_wrapper::Response>,
-}
-/// Nested message and enum types in `ResponseWrapper`.
-pub mod response_wrapper {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Response {
-        #[prost(message, tag = "2")]
-        InvokeResponse(super::InvokeResponse),
-        #[prost(message, tag = "3")]
-        GetEndorsedEvidenceResponse(super::GetEndorsedEvidenceResponse),
     }
 }

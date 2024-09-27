@@ -45,25 +45,6 @@ java_proto_library(
 )
 
 proto_library(
-    name = "protocol_proto",
-    srcs = ["protocol.proto"],
-    deps = [
-        ":messages_proto",
-        ":session_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "protocol_cc_proto",
-    deps = [":protocol_proto"],
-)
-
-java_proto_library(
-    name = "protocol_java_proto",
-    deps = [":protocol_proto"],
-)
-
-proto_library(
     name = "service_streaming_proto",
     srcs = ["service_streaming.proto"],
     deps = [":messages_proto"],
