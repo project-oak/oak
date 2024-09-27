@@ -16,17 +16,20 @@
 
 use oak_attestation::dice::evidence_to_proto;
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
+use oak_containers_sdk::OrchestratorInterface;
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, endorsements,
     kernel_binary_reference_value, reference_values, text_reference_value,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, Event, EventLog,
-    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerReferenceValues,
-    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, Stage0Measurements,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
+    Endorsements, Event, EventLog, InsecureReferenceValues, KernelBinaryReferenceValue,
+    KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
+    RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
     TextReferenceValue,
 };
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 use prost::Message;
+use tokio;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -47,7 +50,8 @@ fn verify_mock_dice_chain() {
     assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
 }
 
-fn get_evidence_proto_with_eventlog() -> oak_proto_rust::oak::attestation::v1::Evidence {
+fn get_restricted_kernel_evidence_proto_with_eventlog()
+-> oak_proto_rust::oak::attestation::v1::Evidence {
     let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
         .expect("failed to create mock provider");
 
@@ -64,7 +68,7 @@ fn get_evidence_proto_with_eventlog() -> oak_proto_rust::oak::attestation::v1::E
 
 #[test]
 fn verify_mock_dice_chain_with_valid_event_log() {
-    let result = verify_dice_chain(&get_evidence_proto_with_eventlog());
+    let result = verify_dice_chain(&get_restricted_kernel_evidence_proto_with_eventlog());
 
     assert!(result.is_ok());
     let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
@@ -74,7 +78,7 @@ fn verify_mock_dice_chain_with_valid_event_log() {
 
 #[test]
 fn verify_mock_dice_chain_with_invalid_event_log() {
-    let mut evidence = get_evidence_proto_with_eventlog();
+    let mut evidence = get_restricted_kernel_evidence_proto_with_eventlog();
     let encoded_stage0_event: &mut Vec<u8> = evidence
         .event_log
         .as_mut()
@@ -105,7 +109,7 @@ fn verify_mock_dice_chain_with_invalid_event_log() {
 }
 
 #[test]
-fn verify_mock_evidence() {
+fn verify_mock_restricted_kernel_evidence() {
     let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
         .expect("failed to create mock provider");
     let evidence = evidence_to_proto(mock_evidence_provider.get_evidence().clone())
@@ -165,4 +169,75 @@ fn verify_mock_evidence() {
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
+}
+
+fn oak_containers_skip_all_reference_values() -> ReferenceValues {
+    #[allow(deprecated)]
+    ReferenceValues {
+        r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
+            root_layer: Some(RootLayerReferenceValues {
+                insecure: Some(InsecureReferenceValues::default()),
+                ..Default::default()
+            }),
+            kernel_layer: Some(KernelLayerReferenceValues {
+                kernel: Some(KernelBinaryReferenceValue {
+                    r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+                kernel_setup_data: None,
+                kernel_image: None,
+                kernel_cmd_line: None,
+                kernel_cmd_line_regex: None,
+                kernel_cmd_line_text: Some(TextReferenceValue {
+                    r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
+                }),
+                init_ram_fs: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+                memory_map: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+                acpi: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+            }),
+            system_layer: Some(SystemLayerReferenceValues {
+                system_image: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+            }),
+            container_layer: Some(ContainerLayerReferenceValues {
+                binary: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+                configuration: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+                }),
+            }),
+        })),
+    }
+}
+
+#[tokio::test]
+async fn verify_mock_oak_containers_evidence() {
+    // Create a mock orchestrator and get endorsed evidence
+    let mut orchestrator = oak_containers_sdk::standalone::StandaloneOrchestrator::default();
+    let endorsed_evidence =
+        orchestrator.get_endorsed_evidence().await.expect("Failed to get endorsed evidence");
+
+    let evidence = endorsed_evidence.evidence.as_ref().expect("No evidence found");
+    let endorsements = endorsed_evidence.endorsements.as_ref().expect("No endorsements found");
+
+    // Create reference values that skip all verifications
+    let reference_values = oak_containers_skip_all_reference_values();
+
+    // Perform verification
+    let verification_result = verify(NOW_UTC_MILLIS, evidence, endorsements, &reference_values);
+    let attestation_results = to_attestation_results(&verification_result);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", attestation_results.status, attestation_results.reason);
+    eprintln!("======================================");
+    // Assert verification success
+    assert!(verification_result.is_ok(), "Verification failed");
+    assert_eq!(attestation_results.status(), Status::Success, "Unexpected attestation status");
 }

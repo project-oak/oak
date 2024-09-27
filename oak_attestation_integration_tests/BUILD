@@ -27,11 +27,14 @@ rust_test_suite(
     deps = [
         "//oak_attestation",
         "//oak_attestation_verification",
+        "//oak_attestation_verification_test_utils",
+        "//oak_containers_sdk",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
         "//stage0_dice",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:tokio",
     ],
 )

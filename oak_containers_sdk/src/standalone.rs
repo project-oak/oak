@@ -29,7 +29,7 @@ use oak_crypto::{
     hpke::RecipientContext,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence, OakStandaloneEndorsements},
+    attestation::v1::{endorsements, Endorsements, Evidence},
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
@@ -150,7 +150,14 @@ impl OrchestratorInterface for StandaloneOrchestrator {
         Ok(EndorsedEvidence {
             evidence: Some(self.evidence.clone()),
             endorsements: Some(Endorsements {
-                r#type: Some(endorsements::Type::Standalone(OakStandaloneEndorsements {})),
+                r#type: Some(endorsements::Type::OakContainers(
+                    oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
+                        root_layer: Some(
+                            oak_proto_rust::oak::attestation::v1::RootLayerEndorsements::default(),
+                        ),
+                        ..Default::default()
+                    },
+                )),
             }),
         })
     }

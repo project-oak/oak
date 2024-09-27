@@ -157,7 +157,6 @@ pub fn verify_with_expected_values(
                     .context("no root layer endorsements")?
                     .tee_certificate
                     .as_ref(),
-                endorsements::Type::Standalone(_) => &[],
             };
         let root_layer = evidence.root_layer.as_ref().context("no root layer evidence")?;
         verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)
@@ -210,7 +209,9 @@ pub fn get_expected_values(
         (None, _) => anyhow::bail!("Endorsements are empty"),
         (_, None) => anyhow::bail!("Reference values are empty"),
         (Some(_), Some(_)) => {
-            anyhow::bail!("Mismatch between evidence, endorsements and reference values")
+            anyhow::bail!(
+                "Getting expected values: mismatch between evidence, endorsements and reference values"
+            )
         }
     }
 }
