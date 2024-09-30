@@ -38,7 +38,7 @@ use oak_dice::{
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence, RootLayerEvidence,
+    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
 };
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
@@ -67,7 +67,7 @@ fn generate_stage1_certificate(
                         Value::Integer(KERNEL_MEASUREMENT_ID.into()),
                         Value::Map(alloc::vec![(
                             Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.kernel_cmdline.as_bytes().into()),
+                            Value::Bytes(measurements.kernel_measurement),
                         )]),
                     ),
                     (
