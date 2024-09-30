@@ -325,7 +325,7 @@
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence, RootLayerEvidence,
+    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
@@ -354,7 +354,7 @@
                         Value::Integer(KERNEL_MEASUREMENT_ID.into()),
                         Value::Map(<span class="macro">alloc::vec!</span>[(
                             Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.kernel_cmdline.as_bytes().into()),
+                            Value::Bytes(measurements.kernel_measurement),
                         )]),
                     ),
                     (
