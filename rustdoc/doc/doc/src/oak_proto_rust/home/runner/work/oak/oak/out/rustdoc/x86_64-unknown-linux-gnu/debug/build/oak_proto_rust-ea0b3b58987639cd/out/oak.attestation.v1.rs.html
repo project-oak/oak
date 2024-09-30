@@ -1438,13 +1438,6 @@
 <a href="#1436" id="1436">1436</a>
 <a href="#1437" id="1437">1437</a>
 <a href="#1438" id="1438">1438</a>
-<a href="#1439" id="1439">1439</a>
-<a href="#1440" id="1440">1440</a>
-<a href="#1441" id="1441">1441</a>
-<a href="#1442" id="1442">1442</a>
-<a href="#1443" id="1443">1443</a>
-<a href="#1444" id="1444">1444</a>
-<a href="#1445" id="1445">1445</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -2335,11 +2328,6 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
 }
-<span class="doccomment">/// There are currently no endorsements in standalone mode.
-/// This may change in the future.
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>OakStandaloneEndorsements {}
 <span class="doccomment">/// Endorsement contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running
 /// on it.
@@ -2349,7 +2337,7 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Endorsements {
-    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3, 5646"</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
     </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;endorsements::Type&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `Endorsements`.
@@ -2363,8 +2351,6 @@
         </span>OakContainers(<span class="kw">super</span>::OakContainersEndorsements),
         <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Cb(<span class="kw">super</span>::CbEndorsements),
-        <span class="attr">#[prost(message, tag = <span class="string">"5646"</span>)]
-        </span>Standalone(<span class="kw">super</span>::OakStandaloneEndorsements),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]

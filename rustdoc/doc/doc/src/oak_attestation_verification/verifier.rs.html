@@ -1908,6 +1908,7 @@
 <a href="#1906" id="1906">1906</a>
 <a href="#1907" id="1907">1907</a>
 <a href="#1908" id="1908">1908</a>
+<a href="#1909" id="1909">1909</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -2067,7 +2068,6 @@
                     .context(<span class="string">"no root layer endorsements"</span>)<span class="question-mark">?
                     </span>.tee_certificate
                     .as_ref(),
-                endorsements::Type::Standalone(<span class="kw">_</span>) =&gt; <span class="kw-2">&amp;</span>[],
             };
         <span class="kw">let </span>root_layer = evidence.root_layer.as_ref().context(<span class="string">"no root layer evidence"</span>)<span class="question-mark">?</span>;
         verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)
@@ -2120,7 +2120,9 @@
         </span>(<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Endorsements are empty"</span>),
         (<span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Reference values are empty"</span>),
         (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; {
-            <span class="macro">anyhow::bail!</span>(<span class="string">"Mismatch between evidence, endorsements and reference values"</span>)
+            <span class="macro">anyhow::bail!</span>(
+                <span class="string">"Getting expected values: mismatch between evidence, endorsements and reference values"
+            </span>)
         }
     }
 }
