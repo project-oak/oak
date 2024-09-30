@@ -24,7 +24,7 @@ use oak_proto_rust::oak::{
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
-use crate::{IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET};
+use crate::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 struct OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel>,
@@ -36,7 +36,7 @@ impl OrchestratorCryptoClient {
             let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
                 .context("couldn't form endpoint")?
                 .connect_with_connector(service_fn(move |_: Uri| {
-                    tokio::net::UnixStream::connect(ORCHESTRATOR_IPC_SOCKET)
+                    tokio::net::UnixStream::connect(IPC_SOCKET)
                 }))
                 .await
                 .context("couldn't connect to UDS socket")?;

@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_containers_sdk",
     srcs = [
+        "src/attestation.rs",
         "src/crypto.rs",
         "src/handler.rs",
         "src/lib.rs",
@@ -43,6 +44,7 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_session",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",

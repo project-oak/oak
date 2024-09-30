@@ -71,6 +71,7 @@ rust_binary(
     deps = [
         ":lib",
         "//oak_containers_sdk",
+        "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",
     ],

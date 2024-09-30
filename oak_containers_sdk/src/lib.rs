@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod attestation;
 pub mod crypto;
 pub mod handler;
 pub mod oak_session_context;
@@ -29,9 +30,10 @@ static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
 
 // Path used to facilitate inter-process communication between the orchestrator
 // and the trusted application.
-const ORCHESTRATOR_IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
+const IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 // Re-export structs so that they are available at the top level of the SDK.
+pub use attestation::InstanceAttester;
 pub use crypto::InstanceEncryptionKeyHandle;
 pub use oak_session_context::{ApplicationHandler, OakSessionContext};
 pub use orchestrator_client::{OrchestratorClient, OrchestratorInterface};

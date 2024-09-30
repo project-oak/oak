@@ -19,6 +19,7 @@ oak_crypto = { workspace = true }
 oak_stage0_dice = { workspace = true }
 oak_containers_stage1_dice = { workspace = true }
 oak_containers_orchestrator_attestation = { workspace = true }
+oak_session = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 prost = "*"
 prost-types = "*"

@@ -19,16 +19,7 @@ use oak_proto_rust::oak::session::v1::EndorsedEvidence;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
-// Unix Domain Sockets do not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel, since a URI has to
-// be supplied to create an `Endpoint`. Even though in this case the endpoint
-// is technically a file, tonic expects us to provide our own connector, and
-// this ignored endpoint. :(
-static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
-
-// Path used to facilitate inter-process communication between the orchestrator
-// and the trusted application.
-const IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
+use crate::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 /// Trait defining the interface for interacting with the Orchestrator.
 /// This trait can be implemented by the real Orchestrator or mocked for testing
@@ -48,6 +39,8 @@ pub trait OrchestratorInterface {
     /// Retrieves the endorsed evidence from the Orchestrator.
     /// This evidence is used to prove the authenticity and integrity of the
     /// application.
+    // TODO: b/356381841 - Remove this function once all clients start using
+    // the `EndorsedEvidenceProvider`.
     async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence>;
 }
 

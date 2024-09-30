@@ -2519,6 +2519,7 @@ dependencies = [
  "oak_grpc",
  "oak_grpc_utils",
  "oak_proto_rust",
+ "oak_session",
  "oak_stage0_dice",
  "p256",
  "prost",
