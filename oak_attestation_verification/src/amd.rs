@@ -24,7 +24,7 @@ use rsa::{pss::Signature, signature::Verifier, RsaPublicKey};
 use sha2::Sha384;
 use x509_cert::{
     der::{referenced::OwnedToRef, Encode},
-    Certificate, Version,
+    Certificate,
 };
 use zerocopy::{AsBytes, FromZeroes};
 
@@ -39,21 +39,6 @@ const TEE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704
 const SNP_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.3");
 const CHIP_ID_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.4");
 const UCODE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.8");
-
-// Verifies validity of a matching ARK, ASK certificate pair.
-//
-// Validate at least a subset of Appendix B.3 of
-// https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
-// Ideally, we'd check everything listed there.
-pub fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::Result<()> {
-    anyhow::ensure!(ark.tbs_certificate.version == Version::V3, "unexpected version of ARK cert");
-    anyhow::ensure!(ask.tbs_certificate.version == Version::V3, "unexpected version of ASK cert");
-
-    verify_cert_signature(ark, ask)?;
-    verify_cert_signature(ark, ark)?;
-
-    Ok(())
-}
 
 pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyhow::Result<()> {
     anyhow::ensure!(
@@ -209,3 +194,6 @@ pub fn verify_attestation_report_signature(
         .verify(message, &signature)
         .map_err(|_err| anyhow::anyhow!("failed to verify ECDSA P-384 signature"))
 }
+
+#[cfg(test)]
+mod tests;

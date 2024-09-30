@@ -13,15 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#[cfg(test)]
+extern crate std;
 
-use oak_attestation_verification::amd::{validate_ark_ask_certs, verify_cert_signature};
-use x509_cert::{der::DecodePem, Certificate};
+use std::eprintln;
 
-const ARK_MILAN_CERT_PEM: &str = include_str!("../data/ark_milan.pem");
-const ARK_GENOA_CERT_PEM: &str = include_str!("../data/ark_genoa.pem");
-const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
-const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
-const VCEK_MILAN_CERT_PEM: &str = include_str!("../testdata/oc_vcek_milan.pem");
+use x509_cert::{certificate::Version, der::DecodePem, Certificate};
+
+use crate::amd::verify_cert_signature;
+
+const ARK_MILAN_CERT_PEM: &str = include_str!("../../data/ark_milan.pem");
+const ARK_GENOA_CERT_PEM: &str = include_str!("../../data/ark_genoa.pem");
+const ASK_MILAN_CERT_PEM: &str = include_str!("../../data/ask_milan.pem");
+const ASK_GENOA_CERT_PEM: &str = include_str!("../../data/ask_genoa.pem");
+const VCEK_MILAN_CERT_PEM: &str = include_str!("../../testdata/oc_vcek_milan.pem");
+
+// Verifies validity of a matching ARK, ASK certificate pair.
+//
+// Validate at least a subset of Appendix B.3 of
+// https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
+// Ideally, we'd check everything listed there.
+fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::Result<()> {
+    anyhow::ensure!(ark.tbs_certificate.version == Version::V3, "unexpected version of ARK cert");
+    anyhow::ensure!(ask.tbs_certificate.version == Version::V3, "unexpected version of ASK cert");
+
+    verify_cert_signature(ark, ask)?;
+    verify_cert_signature(ark, ark)
+}
 
 // Utility to print all extension in a certificate.
 fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {

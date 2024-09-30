@@ -13,16 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+#[cfg(test)]
+extern crate std;
 
+use alloc::{borrow::ToOwned, string::String, vec::Vec};
 use std::fs;
 
-use oak_attestation_verification::util::{
+use oak_file_utils::data_path;
+use oak_proto_rust::oak::HexDigest;
+
+use crate::util::{
     convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
     convert_raw_to_verifying_key, equal_keys, get_hex_digest_match, looks_like_pem,
     verify_signature_ecdsa, MatchResult,
 };
-use oak_file_utils::data_path;
-use oak_proto_rust::oak::HexDigest;
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 const ENDORSEMENT_SIGNATURE_PATH: &str =

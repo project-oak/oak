@@ -29,6 +29,7 @@ const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
 const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
 
 /// Makes a plausible guess whether the public key is in PEM format.
+#[allow(dead_code)]
 pub fn looks_like_pem(maybe_pem: &str) -> bool {
     let p = maybe_pem.trim();
     p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER)
@@ -321,3 +322,6 @@ pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
 
     Ok(raw)
 }
+
+#[cfg(test)]
+mod tests;

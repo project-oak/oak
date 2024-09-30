@@ -82,8 +82,6 @@ pub fn to_attestation_results(
 }
 
 /// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work
-/// progresses.
 ///
 /// This just fetches expected values using [get_expected_values], and then
 /// calls [verify_with_expected_values] with those.
@@ -103,8 +101,6 @@ pub fn verify(
 }
 
 /// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work
-/// progresses.
 /// This variant returns expected values along with the extracted evidence.
 pub fn verify_with_expected_values(
     now_utc_millis: i64,

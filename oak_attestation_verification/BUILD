@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -47,9 +47,25 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "unit_tests",
+    crate = ":oak_attestation_verification",
+    data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:evidence",
+    ],
+    deps = [
+        "//oak_file_utils",
+    ],
+)
+
 rust_test_suite(
     name = "integration_tests",
-    srcs = glob(["tests/**"]),
+    srcs = [
+        "tests/verifier_tests.rs",
+    ],
     crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
@@ -97,9 +113,25 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "unit_tests_with_regex",
+    crate = ":oak_attestation_verification_with_regex",
+    data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:evidence",
+    ],
+    deps = [
+        "//oak_file_utils",
+    ],
+)
+
 rust_test_suite(
     name = "integration_tests_with_regex",
-    srcs = glob(["tests/**"]),
+    srcs = [
+        "tests/verifier_tests.rs",
+    ],
     aliases = {":oak_attestation_verification_with_regex": "oak_attestation_verification"},
     crate_features = [
         "regex",

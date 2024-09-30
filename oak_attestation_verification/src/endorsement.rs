@@ -148,7 +148,6 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
         || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
 }
 
-/// Public interface for verifying a standalone endorsement.
 pub fn verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
@@ -156,7 +155,7 @@ pub fn verify_endorsement(
 ) -> anyhow::Result<()> {
     // Reject ref_value instances using the potentially deprecated fields.
     if !ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
-        anyhow::bail!("verify_endorsement does not support first gen fields");
+        anyhow::bail!("verify_endorsement does not support the deprecated fields");
     }
 
     let endorsement =
@@ -242,7 +241,7 @@ pub fn verify_binary_endorsement(
     Ok(())
 }
 
-fn verify_endorser_public_key(
+pub fn verify_endorser_public_key(
     log_entry: &[u8],
     signature_key_id: u32,
     endorser_key_set: &VerifyingKeySet,
@@ -416,3 +415,6 @@ pub fn get_digest<T>(statement: &Statement<T>) -> anyhow::Result<HexDigest> {
 
     Ok(digest)
 }
+
+#[cfg(test)]
+mod tests;
