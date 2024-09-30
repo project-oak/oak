@@ -8,7 +8,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_attestation",["",[],["attester.rs","dice.rs","lib.rs"]]],\
 ["oak_attestation_explain",["",[],["json_serialization.rs","lib.rs"]]],\
 ["oak_attestation_explain_wasm",["",[],["lib.rs"]]],\
-["oak_attestation_verification",["",[],["amd.rs","endorsement.rs","lib.rs","policy.rs","rekor.rs","util.rs","verifier.rs"]]],\
+["oak_attestation_verification",["",[],["amd.rs","endorsement.rs","expect.rs","extract.rs","lib.rs","policy.rs","rekor.rs","util.rs","verifier.rs"]]],\
 ["oak_attestation_verification_test_utils",["",[],["lib.rs"]]],\
 ["oak_channel",["",[],["basic_framed.rs","client.rs","frame.rs","lib.rs","message.rs","server.rs"]]],\
 ["oak_client",["",[],["client.rs","lib.rs","transport.rs","verifier.rs"]]],\
