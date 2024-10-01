@@ -181,7 +181,18 @@ _protected_mode_start:
     and $0b111111, %ebx       # zero out all but EBX[5:0], which the C-bit location
     mov %ebx, %edi            # save the full C-bit location value for later to pass into the Rust
                               # entry point (RDI contains the first argument according to sysv ABI)
-    sub $32, %ebx             # let's assume the encrypted bit is > 32, as it simplifies logic below
+    cmp $32, %ebx             # is the C-bit less (or equal) to 32?
+    jg 1f                     # if it's greater, proceed; otherwise, crash
+    xor %edx, %edx            # EDX = 0x0
+    mov $0x100, %eax          # EAX = 0x100 - Termination Request
+    mov $0xC0010130, %ecx     # ECX = 0xC001_0130 -- GHCB MSR
+    wrmsr                     # MSR[ECX] = EDX:EAX
+    rep vmmcall               # VMGEXIT
+    2:                        # If we're still alive, just go into a HLT loop.
+    hlt
+    jmp 2b
+    1:                        # at this point we know the C-bit is > 32
+    sub $32, %ebx             # we know the C-bit is > 32, so subtract that
     mov $1, %esi
     mov %ebx, %ecx
     shl %cl, %esi             # construct the encrypted bit mask, store it in ESI
