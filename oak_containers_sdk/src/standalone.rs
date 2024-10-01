@@ -44,7 +44,7 @@ const DEFAULT_APPLICATION_CONFIG: &[u8] = &[1, 2, 3, 4];
 
 /// A mock implementation of the OrchestratorInterface for standalone testing
 pub struct StandaloneOrchestrator {
-    instance_private_keys: oak_containers_orchestrator_attestation::InstanceKeys,
+    instance_private_keys: oak_containers_attestation::InstanceKeys,
     evidence: Evidence,
     application_config: Vec<u8>,
 }
@@ -102,15 +102,14 @@ impl StandaloneOrchestrator {
         attester.add_layer(stage1_layer_data)?;
 
         // Add Orchestrator layer data
-        let orchestrator_layer_data =
-            oak_containers_orchestrator_attestation::measure_container_and_config(
-                &application_image,
-                &application_config,
-            );
+        let orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
+            &application_image,
+            &application_config,
+        );
 
         // Generate instance keys
         let (instance_private_keys, instance_public_keys) =
-            oak_containers_orchestrator_attestation::generate_instance_keys();
+            oak_containers_attestation::generate_instance_keys();
 
         // Add application keys and generate the final evidence
         let evidence = attester.add_application_keys(

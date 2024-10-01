@@ -16,7 +16,7 @@
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 
 use anyhow::Context;
-use oak_containers_orchestrator_attestation::{GroupKeys, InstanceKeys};
+use oak_containers_attestation::{GroupKeys, InstanceKeys};
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},

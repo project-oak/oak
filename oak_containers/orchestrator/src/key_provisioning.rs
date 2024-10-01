@@ -16,7 +16,7 @@
 use std::sync::Arc;
 
 use oak_attestation_verification::verifier::verify_dice_chain;
-use oak_containers_orchestrator_attestation::GroupKeys;
+use oak_containers_attestation::GroupKeys;
 use oak_grpc::oak::key_provisioning::v1::key_provisioning_server::{
     KeyProvisioning, KeyProvisioningServer,
 };

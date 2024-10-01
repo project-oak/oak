@@ -18,8 +18,8 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
+use oak_containers_attestation::generate_instance_keys;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use oak_containers_orchestrator_attestation::generate_instance_keys;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use tokio_util::sync::CancellationToken;
 
@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Generate attestation evidence and send it to the Hostlib.
     let attester = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
-    let layer_data = oak_containers_orchestrator_attestation::measure_container_and_config(
+    let layer_data = oak_containers_attestation::measure_container_and_config(
         &container_bundle,
         &application_config,
     );

@@ -1,5 +1,5 @@
 [package]
-name = "oak_containers_orchestrator_attestation"
+name = "oak_containers_attestation"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"

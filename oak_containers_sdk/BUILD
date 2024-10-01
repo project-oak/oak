@@ -38,7 +38,7 @@ rust_library(
     ],
     deps = [
         "//oak_attestation",
-        "//oak_containers/oak_containers_orchestrator_attestation",
+        "//oak_containers/attestation:oak_containers_attestation",
         "//oak_containers/stage1_dice",
         "//oak_crypto",
         "//oak_dice",

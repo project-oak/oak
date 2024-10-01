@@ -22,7 +22,7 @@ package(
 )
 
 rust_library(
-    name = "oak_containers_orchestrator_attestation",
+    name = "oak_containers_attestation",
     srcs = [
         "src/lib.rs",
     ],

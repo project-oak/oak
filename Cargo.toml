@@ -18,7 +18,7 @@ members = [
   "oak_containers/examples/hello_world/web_client",
   "oak_containers/launcher",
   "oak_containers/orchestrator",
-  "oak_containers/oak_containers_orchestrator_attestation",
+  "oak_containers/attestation",
   "oak_containers_sdk",
   "oak_containers/stage1",
   "oak_containers/stage1_dice",
@@ -107,8 +107,10 @@ oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_containers_agent = { path = "./oak_containers/agent" }
 oak_containers_orchestrator = { path = "./oak_containers/orchestrator" }
+oak_containers_attestation = { path = "./oak_containers/attestation" }
 oak_containers_launcher = { path = "./oak_containers/launcher" }
 oak_containers_sdk = { path = "./oak_containers_sdk" }
+oak_containers_stage1_dice = { path = "./oak_containers/stage1_dice" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_debug_service = { path = "./oak_debug_service" }
@@ -140,8 +142,6 @@ oak_restricted_kernel_orchestrator = { path = "./oak_restricted_kernel_orchestra
 oak_session = { path = "./oak_session" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
-oak_containers_stage1_dice = { path = "./oak_containers/stage1_dice" }
-oak_containers_orchestrator_attestation = { path = "./oak_containers/oak_containers_orchestrator_attestation" }
 oak_stage0_dice = { path = "./stage0_dice" }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }

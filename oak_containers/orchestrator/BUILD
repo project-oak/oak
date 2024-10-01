@@ -38,7 +38,7 @@ rust_library(
     deps = [
         "//oak_attestation",
         "//oak_attestation_verification",
-        "//oak_containers/oak_containers_orchestrator_attestation",
+        "//oak_containers/attestation:oak_containers_attestation",
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
@@ -127,7 +127,7 @@ rust_binary(
     deps = [
         ":lib",
         "//oak_containers/agent:lib",
-        "//oak_containers/oak_containers_orchestrator_attestation",
+        "//oak_containers/attestation:oak_containers_attestation",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
