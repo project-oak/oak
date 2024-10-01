@@ -285,6 +285,8 @@
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -336,6 +338,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
 
 <span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
+
+<span class="kw">const </span>STAGE0_TAG: <span class="kw-2">&amp;</span>str = <span class="string">"Stage0"</span>;
 
 <span class="doccomment">/// Generates an ECA certificate for use by the next boot stage (Stage 1).
 </span><span class="kw">fn </span>generate_stage1_certificate(
@@ -435,8 +439,8 @@
     <span class="kw">let </span>decoded_event: oak_proto_rust::oak::attestation::v1::Event =
         Message::decode(encoded_event).expect(<span class="string">"Failed to decode stage0 event"</span>);
 
-    Message::decode(decoded_event.event.unwrap().value.as_slice())
-        .expect(<span class="string">"Failed to decode stage0 measurements"</span>)
+    <span class="macro">assert_eq!</span>(decoded_event.tag, STAGE0_TAG);
+    decoded_event.event.unwrap().to_msg().expect(<span class="string">"Failed to decode stage0 measurements"</span>)
 }
 
 <span class="doccomment">/// Generates attestation evidence for the 'measurements' of all Stage 1
@@ -562,10 +566,10 @@
     <span class="prelude-val">Ok</span>(DerivedKey::default())
 }
 
-<span class="kw">pub fn </span>encoded_stage0_event(
+<span class="kw">pub fn </span>encode_stage0_event(
     measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
 ) -&gt; Vec&lt;u8&gt; {
-    <span class="kw">let </span>tag = String::from(<span class="string">"Stage0"</span>);
+    <span class="kw">let </span>tag = String::from(STAGE0_TAG);
     <span class="kw">let </span>any = prost_types::Any::from_msg(<span class="kw-2">&amp;</span>measurements);
     <span class="kw">let </span>event = oak_proto_rust::oak::attestation::v1::Event { tag, event: <span class="prelude-val">Some</span>(any.unwrap()) };
     event.encode_to_vec()

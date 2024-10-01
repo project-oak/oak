@@ -217,7 +217,7 @@
 
 <span class="kw">fn </span>get_mock_dice_data_and_event_log() -&gt; (RestrictedKernelDiceData, Vec&lt;u8&gt;) {
     <span class="kw">let </span>(<span class="kw-2">mut </span>mock_event_log, stage0_dice_data): (EventLog, Stage0DiceData) = {
-        <span class="kw">let </span>stage0_event = oak_stage0_dice::encoded_stage0_event(
+        <span class="kw">let </span>stage0_event = oak_stage0_dice::encode_stage0_event(
             oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
         <span class="kw">let </span>mock_event_log = {
