@@ -49,7 +49,7 @@ lazy_static::lazy_static! {
 
 fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
     let (mut mock_event_log, stage0_dice_data): (EventLog, Stage0DiceData) = {
-        let stage0_event = oak_stage0_dice::encoded_stage0_event(
+        let stage0_event = oak_stage0_dice::encode_stage0_event(
             oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
         let mock_event_log = {

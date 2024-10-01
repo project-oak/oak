@@ -35,7 +35,7 @@ fn dice_attester_generates_correct_dice_chain() {
         acpi_digest: vec![],
         kernel_cmdline: String::new(),
     };
-    let stage0_event = oak_stage0_dice::encoded_stage0_event(test_stage0_measurements);
+    let stage0_event = oak_stage0_dice::encode_stage0_event(test_stage0_measurements);
     let (_, stage0_dice_data_proto) = oak_stage0_dice::generate_dice_data(
         oak_stage0_dice::mock_attestation_report,
         oak_stage0_dice::mock_derived_key,

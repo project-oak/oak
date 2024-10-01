@@ -77,7 +77,7 @@ impl StandaloneOrchestrator {
         application_config: Vec<u8>,
     ) -> Result<Self> {
         // Generate the root layer (Stage0) event
-        let encoded_stage0_event = oak_stage0_dice::encoded_stage0_event(root_layer_event.clone());
+        let encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
 
         // Create a mock event log with the root layer event
         let mut mock_event_log = oak_proto_rust::oak::attestation::v1::EventLog::default();

@@ -177,7 +177,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let memory_map_sha2_256_digest = zero_page.e820_table().measure();
 
     // Generate Stage0 Event Log data.
-    let stage0_event = oak_stage0_dice::encoded_stage0_event(
+    let stage0_event = oak_stage0_dice::encode_stage0_event(
         oak_proto_rust::oak::attestation::v1::Stage0Measurements {
             setup_data_digest: setup_data_sha2_256_digest.as_bytes().to_vec(),
             kernel_measurement: kernel_sha2_256_digest.as_bytes().to_vec(),

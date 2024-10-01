@@ -50,6 +50,8 @@ use crate::alloc::string::ToString;
 
 pub type DerivedKey = [u8; 32];
 
+const STAGE0_TAG: &str = "Stage0";
+
 /// Generates an ECA certificate for use by the next boot stage (Stage 1).
 fn generate_stage1_certificate(
     stage0_eca_key: &SigningKey,
@@ -148,8 +150,8 @@ fn decode_stage0_event(
     let decoded_event: oak_proto_rust::oak::attestation::v1::Event =
         Message::decode(encoded_event).expect("Failed to decode stage0 event");
 
-    Message::decode(decoded_event.event.unwrap().value.as_slice())
-        .expect("Failed to decode stage0 measurements")
+    assert_eq!(decoded_event.tag, STAGE0_TAG);
+    decoded_event.event.unwrap().to_msg().expect("Failed to decode stage0 measurements")
 }
 
 /// Generates attestation evidence for the 'measurements' of all Stage 1
@@ -275,10 +277,10 @@ pub fn mock_derived_key() -> Result<DerivedKey, &'static str> {
     Ok(DerivedKey::default())
 }
 
-pub fn encoded_stage0_event(
+pub fn encode_stage0_event(
     measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
 ) -> Vec<u8> {
-    let tag = String::from("Stage0");
+    let tag = String::from(STAGE0_TAG);
     let any = prost_types::Any::from_msg(&measurements);
     let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
     event.encode_to_vec()
