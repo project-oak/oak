@@ -294,7 +294,16 @@ impl Serializable for DiceAttester {
                 eca_private_key: self.signing_key.to_bytes().as_slice().into(),
             }),
         };
-        dice_data.encode_length_delimited_to_vec()
+        let result = dice_data.encode_length_delimited_to_vec();
+
+        // Zero out the ECA private key in the proto.
+        dice_data
+            .certificate_authority
+            .expect("no certificate authority")
+            .eca_private_key
+            .zeroize();
+
+        result
     }
 }
 
@@ -314,7 +323,7 @@ impl TryFrom<DiceData> for DiceAttester {
             certificate_authority.eca_private_key.zeroize();
         }
 
-        Ok(DiceAttester { evidence: evidence.clone(), signing_key: signing_key.clone() })
+        Ok(DiceAttester { evidence: evidence.clone(), signing_key: signing_key })
     }
 }
 

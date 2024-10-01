@@ -43,6 +43,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::AsBytes;
+use zeroize::Zeroize;
 
 mod acpi;
 mod acpi_tables;
@@ -248,6 +249,12 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     encoded_dice_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
     encoded_dice_proto.extend_from_slice(dice_data_proto.encoded_len().to_le_bytes().as_slice());
     encoded_dice_proto.extend_from_slice(dice_data_proto.encode_to_vec().as_bytes());
+    // Zero out the ECA private key in the proto.
+    dice_data_proto
+        .certificate_authority
+        .expect("no certificate authority")
+        .eca_private_key
+        .zeroize();
 
     // Reserve memory containing DICE proto Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
