@@ -418,6 +418,8 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -568,15 +570,14 @@
         </span>|| statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
 }
 
-<span class="doccomment">/// Public interface for verifying a standalone endorsement.
-</span><span class="kw">pub fn </span>verify_endorsement(
+<span class="kw">pub fn </span>verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: <span class="kw-2">&amp;</span>SignedEndorsement,
     ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="comment">// Reject ref_value instances using the potentially deprecated fields.
     </span><span class="kw">if </span>!ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
-        <span class="macro">anyhow::bail!</span>(<span class="string">"verify_endorsement does not support first gen fields"</span>);
+        <span class="macro">anyhow::bail!</span>(<span class="string">"verify_endorsement does not support the deprecated fields"</span>);
     }
 
     <span class="kw">let </span>endorsement =
@@ -662,7 +663,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>verify_endorser_public_key(
+<span class="kw">pub fn </span>verify_endorser_public_key(
     log_entry: <span class="kw-2">&amp;</span>[u8],
     signature_key_id: u32,
     endorser_key_set: <span class="kw-2">&amp;</span>VerifyingKeySet,
@@ -836,4 +837,7 @@
 
     <span class="prelude-val">Ok</span>(digest)
 }
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

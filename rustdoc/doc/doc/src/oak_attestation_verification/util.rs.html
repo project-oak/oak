@@ -323,6 +323,10 @@
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -354,6 +358,7 @@
 <span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">"-----END PUBLIC KEY-----"</span>;
 
 <span class="doccomment">/// Makes a plausible guess whether the public key is in PEM format.
+</span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub fn </span>looks_like_pem(maybe_pem: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">let </span>p = maybe_pem.trim();
     p.starts_with(PEM_HEADER) &amp;&amp; p.ends_with(PEM_FOOTER)
@@ -646,4 +651,7 @@
 
     <span class="prelude-val">Ok</span>(raw)
 }
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

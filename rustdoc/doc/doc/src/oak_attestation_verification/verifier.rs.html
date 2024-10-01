@@ -720,10 +720,6 @@
 <a href="#718" id="718">718</a>
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
-<a href="#721" id="721">721</a>
-<a href="#722" id="722">722</a>
-<a href="#723" id="723">723</a>
-<a href="#724" id="724">724</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -808,8 +804,6 @@
 }
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work
-/// progresses.
 ///
 /// This just fetches expected values using [get_expected_values], and then
 /// calls [verify_with_expected_values] with those.
@@ -829,8 +823,6 @@
 }
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` argument will be changed to a time type as work
-/// progresses.
 /// This variant returns expected values along with the extracted evidence.
 </span><span class="kw">pub fn </span>verify_with_expected_values(
     now_utc_millis: i64,

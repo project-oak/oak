@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_digest","is_firmware_type","is_kernel_type","parse_statement","validate_statement","verify_binary_endorsement","verify_endorsement","verify_endorser_public_key_ecdsa"],"struct":["Claim","DefaultPredicate","Statement","Subject","Validity"],"type":["DefaultStatement"]};
