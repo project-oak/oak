@@ -116,6 +116,7 @@
               ];
               packages = [
                 (rust-bin.selectLatestNightlyWith (toolchain: rustToolchain))
+                cargo-audit
                 cargo-deadlinks
                 cargo-binutils
                 cargo-deny

@@ -15,6 +15,7 @@ export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { 
 # Quick-and-dirty Cargo.toml workspace finder for cargo commands.
 # We plan to remove Cargo.toml files soon, and then this can go as well.
 export CARGO_WORKSPACE_LIST_CMD := 'grep -l "\[workspace" **/Cargo.toml --exclude="third_party/*"'
+export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
 
 key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
@@ -351,6 +352,22 @@ cargo-clippy:
         env --chdir=$(dirname "$workspace") cargo clippy --all-features --all-targets --no-deps -- --deny=warnings
     done
 
+
+cargo-lockfiles:
+    #!/bin/sh
+    echo $CARGO_LOCKFILES_LIST_CMD
+    for lockfile in $({{CARGO_LOCKFILES_LIST_CMD}})
+    do
+        echo Lockfile: $lockfile
+    done
+
+cargo-audit:
+    #!/bin/sh
+    for lockfile in $({{CARGO_LOCKFILES_LIST_CMD}})
+    do
+        echo Cargo auditing: $lockfile
+        cargo-audit audit -f $lockfile
+    done
 
 cargo-deny:
     #!/bin/sh
