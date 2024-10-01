@@ -76,6 +76,8 @@ impl InstanceSigner {
 
 impl Signer for InstanceSigner {
     fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
-        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(self.key, message))
+        Ok(Signature {
+            signature: <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message),
+        })
     }
 }

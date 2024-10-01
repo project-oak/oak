@@ -14,18 +14,17 @@
 // limitations under the License.
 //
 
-use oak_proto_rust::oak::crypto::v1::Signature;
+use alloc::vec::Vec;
 
-pub trait Signer {
-    fn sign(&self, message: &[u8]) -> Signature;
+pub trait Signer: Send {
+    fn sign(&self, message: &[u8]) -> Vec<u8>;
 }
 
 impl Signer for p256::ecdsa::SigningKey {
-    fn sign(&self, message: &[u8]) -> Signature {
-        let signature = <p256::ecdsa::SigningKey as p256::ecdsa::signature::Signer<
-            p256::ecdsa::Signature,
-        >>::sign(self, message)
-        .to_vec();
-        Signature { signature }
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        <p256::ecdsa::SigningKey as p256::ecdsa::signature::Signer<p256::ecdsa::Signature>>::sign(
+            self, message,
+        )
+        .to_vec()
     }
 }

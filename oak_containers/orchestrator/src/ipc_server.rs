@@ -31,6 +31,7 @@ use oak_proto_rust::oak::{
         },
         GetApplicationConfigResponse,
     },
+    crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
 use tokio::{fs::set_permissions, net::UnixListener};
@@ -102,10 +103,12 @@ impl OrchestratorCrypto for CryptoService {
     ) -> Result<Response<SignResponse>, tonic::Status> {
         let request = request.into_inner();
         let signing_key = self.signing_key(request.key_origin())?;
-        let signature = <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
-            signing_key,
-            &request.message,
-        );
+        let signature = Signature {
+            signature: <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
+                signing_key,
+                &request.message,
+            ),
+        };
         Ok(tonic::Response::new(SignResponse { signature: Some(signature) }))
     }
 }

@@ -64,6 +64,11 @@ def _common_crates(std):
             default_features = False,
             version = "=4.1.1",
         ),
+        "derive_builder": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "0.20.0",
+        ),
         "ecdsa": crate.spec(
             default_features = False,
             features = [

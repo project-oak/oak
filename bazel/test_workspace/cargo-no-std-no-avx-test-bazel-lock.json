@@ -1,5 +1,5 @@
 {
-  "checksum": "a5d966d3f6506848dfbb474cd6c55d0501161b7fe96517e4865c1be8dcf73417",
+  "checksum": "187843d48517cbe6de570bb9986ff3ece3e7a30e3fa6ab9e8a3358899da5359e",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -2044,6 +2044,198 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "darling 0.20.10": {
+      "name": "darling",
+      "version": "0.20.10",
+      "package_url": "https://github.com/TedDriggs/darling",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/darling/0.20.10/download",
+          "sha256": "6f63b86c8a8826a49b8c21f08a2d07338eec8d900540f8630dc76284be802989"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "darling",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "darling",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "suggestions"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "darling_core 0.20.10",
+              "target": "darling_core"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "darling_macro 0.20.10",
+              "target": "darling_macro"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.20.10"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "darling_core 0.20.10": {
+      "name": "darling_core",
+      "version": "0.20.10",
+      "package_url": "https://github.com/TedDriggs/darling",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/darling_core/0.20.10/download",
+          "sha256": "95133861a8032aaea082871032f5815eb9e98cef03fa916ab4500513994df9e5"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "darling_core",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "darling_core",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "strsim",
+            "suggestions"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "fnv 1.0.7",
+              "target": "fnv"
+            },
+            {
+              "id": "ident_case 1.0.1",
+              "target": "ident_case"
+            },
+            {
+              "id": "proc-macro2 1.0.86",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "strsim 0.11.1",
+              "target": "strsim"
+            },
+            {
+              "id": "syn 2.0.68",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.20.10"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "darling_macro 0.20.10": {
+      "name": "darling_macro",
+      "version": "0.20.10",
+      "package_url": "https://github.com/TedDriggs/darling",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/darling_macro/0.20.10/download",
+          "sha256": "d336a2a514f6ccccaa3e09b02d41d35330c07ddf03a62165fcec10bb561c7806"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "darling_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "darling_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "darling_core 0.20.10",
+              "target": "darling_core"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.68",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.20.10"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "der 0.7.9": {
       "name": "der",
       "version": "0.7.9",
@@ -2103,6 +2295,184 @@
         "version": "0.7.9"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "derive_builder 0.20.1": {
+      "name": "derive_builder",
+      "version": "0.20.1",
+      "package_url": "https://github.com/colin-kiegel/rust-derive-builder",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/derive_builder/0.20.1/download",
+          "sha256": "cd33f37ee6a119146a1781d3356a7c26028f83d779b2e04ecd45fdc75c76877b"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "derive_builder",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "derive_builder",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "derive_builder_macro 0.20.1",
+              "target": "derive_builder_macro"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.20.1"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "derive_builder_core 0.20.1": {
+      "name": "derive_builder_core",
+      "version": "0.20.1",
+      "package_url": "https://github.com/colin-kiegel/rust-derive-builder",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/derive_builder_core/0.20.1/download",
+          "sha256": "7431fa049613920234f22c47fdc33e6cf3ee83067091ea4277a3f8c4587aae38"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "derive_builder_core",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "derive_builder_core",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "darling 0.20.10",
+              "target": "darling"
+            },
+            {
+              "id": "proc-macro2 1.0.86",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.68",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.20.1"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "derive_builder_macro 0.20.1": {
+      "name": "derive_builder_macro",
+      "version": "0.20.1",
+      "package_url": "https://github.com/colin-kiegel/rust-derive-builder",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/derive_builder_macro/0.20.1/download",
+          "sha256": "4abae7035bf79b9877b779505d8cf3749285b80c43941eda66604841889451dc"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "derive_builder_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "derive_builder_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "derive_builder_core 0.20.1",
+              "target": "derive_builder_core"
+            },
+            {
+              "id": "syn 2.0.68",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.20.1"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -2258,6 +2628,10 @@
             {
               "id": "curve25519-dalek 4.1.1",
               "target": "curve25519_dalek"
+            },
+            {
+              "id": "derive_builder 0.20.1",
+              "target": "derive_builder"
             },
             {
               "id": "ecdsa 0.16.9",
@@ -2847,6 +3221,52 @@
       "license_ids": [
         "Apache-2.0",
         "BSD-1-Clause",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "fnv 1.0.7": {
+      "name": "fnv",
+      "version": "1.0.7",
+      "package_url": "https://github.com/servo/rust-fnv",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/fnv/1.0.7/download",
+          "sha256": "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "fnv",
+            "crate_root": "lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "fnv",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "1.0.7"
+      },
+      "license": "Apache-2.0 / MIT",
+      "license_ids": [
+        "Apache-2.0",
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
@@ -3658,6 +4078,45 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "ident_case 1.0.1": {
+      "name": "ident_case",
+      "version": "1.0.1",
+      "package_url": "https://github.com/TedDriggs/ident_case",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ident_case/1.0.1/download",
+          "sha256": "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ident_case",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ident_case",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.0.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE"
     },
     "indexmap-nostd 0.4.0": {
       "name": "indexmap-nostd",
@@ -6799,6 +7258,44 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "strsim 0.11.1": {
+      "name": "strsim",
+      "version": "0.11.1",
+      "package_url": "https://github.com/rapidfuzz/strsim-rs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/strsim/0.11.1/download",
+          "sha256": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "strsim",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "strsim",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "0.11.1"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "strum 0.26.3": {
       "name": "strum",
       "version": "0.26.3",
@@ -8274,6 +8771,7 @@
     "ciborium 0.2.2",
     "coset 0.3.7",
     "curve25519-dalek 4.1.1",
+    "derive_builder 0.20.1",
     "ecdsa 0.16.9",
     "elf 0.7.4",
     "getrandom 0.2.15",

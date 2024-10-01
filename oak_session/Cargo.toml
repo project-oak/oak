@@ -8,6 +8,9 @@ license = "Apache-2.0"
 [dependencies]
 aead = { version = "*", default-features = false }
 anyhow = { version = "*", default-features = false }
+derive_builder = { version = "0.20.0", default-features = false, features = [
+  "alloc",
+] }
 itertools = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
 oak_proto_rust = { workspace = true }
@@ -15,3 +18,5 @@ prost = { version = "*", default-features = false }
 
 [dev-dependencies]
 mockall = { version = "*", default-features = false }
+p256 = { version = "*", default-features = false }
+rand_core = { version = "*", default-features = false }

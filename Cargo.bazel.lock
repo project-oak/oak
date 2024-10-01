@@ -1086,6 +1086,7 @@ dependencies = [
  "criterion",
  "criterion-macro",
  "curve25519-dalek",
+ "derive_builder",
  "ecdsa",
  "elf",
  "env_logger",

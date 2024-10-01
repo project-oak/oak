@@ -1,5 +1,5 @@
 {
-  "checksum": "3c1178878efdf953b56a4b45bdad1d770c2b4efcab8ef5268c0bd7566af83a58",
+  "checksum": "8c3dc1fc9806b6ff764ace396c6688de93109f82004200395eed62fa7f7c7085",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6194,6 +6194,7 @@
         ],
         "crate_features": {
           "common": [
+            "alloc",
             "default",
             "std"
           ],
@@ -6249,6 +6250,7 @@
         ],
         "crate_features": {
           "common": [
+            "alloc",
             "lib_has_std"
           ],
           "selects": {}
@@ -6315,6 +6317,7 @@
         ],
         "crate_features": {
           "common": [
+            "alloc",
             "lib_has_std"
           ],
           "selects": {}
@@ -6576,6 +6579,10 @@
             {
               "id": "curve25519-dalek 4.1.1",
               "target": "curve25519_dalek"
+            },
+            {
+              "id": "derive_builder 0.20.0",
+              "target": "derive_builder"
             },
             {
               "id": "ecdsa 0.16.9",
@@ -30616,6 +30623,7 @@
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
     "curve25519-dalek 4.1.1",
+    "derive_builder 0.20.0",
     "ecdsa 0.16.9",
     "elf 0.7.4",
     "env_logger 0.11.3",
