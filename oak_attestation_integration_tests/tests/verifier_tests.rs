@@ -284,3 +284,67 @@ async fn verify_mock_oak_containers_evidence_with_custom_evidence() {
     assert!(verification_result.is_ok(), "Verification failed");
     assert_eq!(attestation_results.status(), Status::Success, "Unexpected attestation status");
 }
+
+#[tokio::test]
+async fn verify_mock_oak_containers_evidence_with_fuzzed_measurements() {
+    use rand_chacha::ChaCha8Rng;
+    use rand_core::{RngCore, SeedableRng};
+
+    // We use a seed for determinsitic randomness.
+    const SEED: u64 = 42; // The answer to it all.
+
+    // Helper function to generate random bytes with fixed length of 32 bytes.
+    fn random_sha2_256_digest() -> Vec<u8> {
+        let mut rng = ChaCha8Rng::seed_from_u64(SEED);
+        let mut bytes = vec![0u8; 32];
+        rng.fill_bytes(&mut bytes);
+        bytes
+    }
+
+    // Helper function to generate random bytes with random length.
+    fn random_bytes() -> Vec<u8> {
+        const MAX_RANDOM_BYTES_LENGTH: usize = 64;
+        let mut rng = ChaCha8Rng::seed_from_u64(SEED);
+        let length = rng.next_u32() as usize % MAX_RANDOM_BYTES_LENGTH + 1; // Random length between 1 and MAX_RANDOM_BYTES_LENGTH
+        let mut bytes = vec![0u8; length];
+        rng.fill_bytes(&mut bytes);
+        bytes
+    }
+
+    // Generate a variety of measurements.
+    for _ in 0..10 {
+        let stage0_digests = Stage0Measurements {
+            setup_data_digest: random_sha2_256_digest(),
+            kernel_measurement: random_sha2_256_digest(),
+            ram_disk_digest: random_sha2_256_digest(),
+            memory_map_digest: random_sha2_256_digest(),
+            acpi_digest: random_sha2_256_digest(),
+            kernel_cmdline: String::from_utf8_lossy(&random_bytes()).to_string(),
+        };
+        let stage1_system_image = random_bytes();
+        let application_image = random_bytes();
+        let application_config = random_bytes();
+
+        let (endorsed_evidence, reference_values) =
+            oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
+                stage0_digests,
+                &stage1_system_image,
+                &application_image,
+                application_config,
+            )
+            .await;
+
+        let evidence = endorsed_evidence.evidence.as_ref().expect("No evidence found");
+        let endorsements = endorsed_evidence.endorsements.as_ref().expect("No endorsements found");
+
+        let verification_result = verify(NOW_UTC_MILLIS, evidence, endorsements, &reference_values);
+        let attestation_results = to_attestation_results(&verification_result);
+
+        assert!(verification_result.is_ok(), "Verification failed for fuzzed measurements");
+        assert_eq!(
+            attestation_results.status(),
+            Status::Success,
+            "Unexpected attestation status for fuzzed measurements"
+        );
+    }
+}
