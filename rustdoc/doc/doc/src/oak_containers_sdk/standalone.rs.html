@@ -189,7 +189,6 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -236,7 +235,7 @@
 
 <span class="doccomment">/// A mock implementation of the OrchestratorInterface for standalone testing
 </span><span class="kw">pub struct </span>StandaloneOrchestrator {
-    instance_private_keys: oak_containers_orchestrator_attestation::InstanceKeys,
+    instance_private_keys: oak_containers_attestation::InstanceKeys,
     evidence: Evidence,
     application_config: Vec&lt;u8&gt;,
 }
@@ -294,15 +293,14 @@
         attester.add_layer(stage1_layer_data)<span class="question-mark">?</span>;
 
         <span class="comment">// Add Orchestrator layer data
-        </span><span class="kw">let </span>orchestrator_layer_data =
-            oak_containers_orchestrator_attestation::measure_container_and_config(
-                <span class="kw-2">&amp;</span>application_image,
-                <span class="kw-2">&amp;</span>application_config,
-            );
+        </span><span class="kw">let </span>orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
+            <span class="kw-2">&amp;</span>application_image,
+            <span class="kw-2">&amp;</span>application_config,
+        );
 
         <span class="comment">// Generate instance keys
         </span><span class="kw">let </span>(instance_private_keys, instance_public_keys) =
-            oak_containers_orchestrator_attestation::generate_instance_keys();
+            oak_containers_attestation::generate_instance_keys();
 
         <span class="comment">// Add application keys and generate the final evidence
         </span><span class="kw">let </span>evidence = attester.add_application_keys(
