@@ -16,13 +16,9 @@
 
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Utc};
+use anyhow::Context;
 use oak_proto_rust::oak::{attestation::v1::ReferenceValues, session::v1::EndorsedEvidence};
 use prost::Message;
-use tokio::{
-    fs::{File, ReadDir},
-    io::AsyncWriteExt,
-};
 
 pub struct SnapshotPath {
     version: u16,
@@ -118,5 +114,120 @@ impl Snapshot {
             .map_err(|e| anyhow::anyhow!("Failed to write reference values file: {}", e))?;
 
         Ok(())
+    }
+
+    /// Asserts that the current attestation outputs indicate no breaking
+    /// changes.
+    ///
+    /// Effectively this simulates a client running an old version of the
+    /// verification library encountering attestation outputs created by the
+    /// current version of the attestation logic.
+    ///
+    /// This is hard to simulate directly so instead the current snapshot is
+    /// compared to the previous one. It may only add properties, never
+    /// change or removed any. The assumption is that since all the fields known
+    /// to the older client remain the same, verification should still work.
+    ///
+    /// Returns a list of any newly added properties.
+    pub async fn assert_is_not_a_breaking_change(
+        &self,
+        previous: &Self,
+    ) -> anyhow::Result<Vec<String>> {
+        // Utility to remove dynamic properties prior to comparing equality.
+        fn remove_skipped_properties(value: &mut serde_json::Value, properties: &[&str]) {
+            for field in properties {
+                if let Some(current) = value.pointer_mut(field) {
+                    *current = serde_json::Value::Null;
+                }
+            }
+        }
+
+        // TODO: b/370445356 - Instead of skipping these entirely, do a more
+        // sophisticated equality check, e.g. by parsing the certificates and comparing
+        // properties.
+        const SKIPPED_DYNAMIC_PROPERTIES: &[&str] = &[
+            "/evidence/applicationKeys/encryptionPublicKeyCertificate",
+            "/evidence/applicationKeys/signingPublicKeyCertificate",
+            "/evidence/layers/0/ecaCertificate",
+            "/evidence/layers/1/ecaCertificate",
+            "/evidence/rootLayer/ecaPublicKey",
+            "/evidence/rootLayer/remoteAttestationReport",
+        ];
+
+        let (
+            mut self_endorsed_evidence_json,
+            previous_endorsed_evidence_json,
+            mut self_reference_values_json,
+            previous_reference_values_json,
+        ) = tokio::try_join!(
+            async {
+                let mut json = oak_attestation_integration_test_utils::endorsed_evidence_as_json(
+                    &self.endorsed_evidence,
+                )
+                .await?;
+                remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
+                Ok::<_, anyhow::Error>(json)
+            },
+            async {
+                let mut json = oak_attestation_integration_test_utils::endorsed_evidence_as_json(
+                    &previous.endorsed_evidence,
+                )
+                .await?;
+                remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
+                Ok::<_, anyhow::Error>(json)
+            },
+            async {
+                let mut json = oak_attestation_integration_test_utils::reference_values_as_json(
+                    &self.reference_values,
+                )
+                .await?;
+                remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
+                Ok::<_, anyhow::Error>(json)
+            },
+            async {
+                let mut json = oak_attestation_integration_test_utils::reference_values_as_json(
+                    &previous.reference_values,
+                )
+                .await?;
+                remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
+                Ok::<_, anyhow::Error>(json)
+            }
+        )?;
+
+        /// Checks equality on shared properties between current and previous
+        /// JSON values, and returns a list of new properties found in the
+        /// current value.
+        fn assert_existing_fields_unchanged_and_get_new_properties(
+            mut current: serde_json::Value,
+            previous: &serde_json::Value,
+        ) -> anyhow::Result<Vec<String>> {
+            let new_properties = oak_attestation_integration_test_utils::remove_new_properties(
+                &mut current,
+                previous,
+                "",
+            );
+
+            let config = assert_json_diff::Config::new(assert_json_diff::CompareMode::Inclusive);
+            assert_json_diff::assert_json_matches_no_panic(&current, previous, config)
+                .map_err(anyhow::Error::msg)?;
+
+            Ok(new_properties)
+        }
+
+        let mut new_properties = assert_existing_fields_unchanged_and_get_new_properties(
+            self_endorsed_evidence_json,
+            &previous_endorsed_evidence_json,
+        )
+        .context("Endorsed evidence mismatch")?;
+
+        new_properties.extend(
+            assert_existing_fields_unchanged_and_get_new_properties(
+                self_reference_values_json,
+                &previous_reference_values_json,
+            )
+            .context("Reference values mismatch")?,
+        );
+
+        Ok(new_properties)
     }
 }

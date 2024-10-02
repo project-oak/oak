@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -37,4 +37,9 @@ rust_library(
         "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
     ],
+)
+
+rust_test(
+    name = "oak_attestation_integration_test_utils_tests",
+    crate = ":oak_attestation_integration_test_utils",
 )

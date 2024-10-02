@@ -348,3 +348,5 @@ async fn verify_mock_oak_containers_evidence_with_fuzzed_measurements() {
         );
     }
 }
+
+// TODO: b/370463888 - Test verification against snapshots in testdata.

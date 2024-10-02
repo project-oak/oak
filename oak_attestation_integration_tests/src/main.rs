@@ -22,11 +22,7 @@
 
 // TODO: b/370445356 - Write tests that use the created testdata.
 
-use chrono::Utc;
 use oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values;
-use oak_proto_rust::oak::{attestation::v1::ReferenceValues, session::v1::EndorsedEvidence};
-use prost::Message;
-use tokio::{fs::File, io::AsyncWriteExt};
 
 mod snapshot;
 
@@ -61,11 +57,18 @@ async fn main() -> anyhow::Result<()> {
         .await
     };
 
-    let new_path = snapshot::SnapshotPath::next().await?;
     let snapshot = snapshot::Snapshot { endorsed_evidence, reference_values };
-    // TODO: b/370445356 - Only save a new snapshot if it's different from the most
-    // recent one.
-    snapshot.write_to_path(&new_path).await?;
+    let previous_snapshot =
+        snapshot::Snapshot::read_from_path(&snapshot::SnapshotPath::most_recent().await?).await?;
+
+    let new_properties = snapshot.assert_is_not_a_breaking_change(&previous_snapshot).await.expect("Found changes in attestation outputs, that may break verification for older versions of the attestation library. This usually happens when removing fields, or changing the contents of existing ones.");
+    if new_properties.is_empty() {
+        println!("No changes detected! Doing nothing.");
+    } else {
+        println!("Saving new snapshot, as new properties were added: {:?}", new_properties);
+        let new_path = snapshot::SnapshotPath::next().await?;
+        snapshot.write_to_path(&new_path).await?;
+    }
 
     Ok(())
 }

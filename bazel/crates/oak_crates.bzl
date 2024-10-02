@@ -271,6 +271,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "async-recursion": crate.spec(version = "1.1.1"),
     "async-stream": crate.spec(version = "0.3.5"),
     "assertables": crate.spec(version = "7.0.1"),
+    "assert-json-diff": crate.spec(version = "2.0.2"),
     "async-trait": crate.spec(
         default_features = False,
         version = "0.1.77",

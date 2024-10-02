@@ -26,8 +26,9 @@ filegroup(
     srcs = glob(["testdata/**"]),
 )
 
+# TODO: b/370463888 - Run this in CI.
 rust_binary(
-    name = "snapshot_attestation_outputs",
+    name = "snapshot_attestation_outputs_assert_no_breaking_changes",
     srcs = glob(["src/**"]),
     data = [
         ":testdata",
@@ -49,8 +50,9 @@ rust_binary(
         "//oak_attestation_integration_test_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:chrono",
+        "@oak_crates_index//:assert-json-diff",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
     ],
 )

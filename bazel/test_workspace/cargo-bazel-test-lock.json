@@ -1,5 +1,5 @@
 {
-  "checksum": "f856a02dce137f0226c05307810bee0e555f0349f737eea203d943a2fcd46bc1",
+  "checksum": "d5ba9f20632351d6d584639829c7521d5e80e808ece9d6ec9dfa715457bb1f30",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1164,6 +1164,57 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "assert-json-diff 2.0.2": {
+      "name": "assert-json-diff",
+      "version": "2.0.2",
+      "package_url": "https://github.com/davidpdrsn/assert-json-diff.git",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/assert-json-diff/2.0.2/download",
+          "sha256": "47e4f2b81832e72834d7518d8487a0396a28cc408186a2e8854c0f98011faf12"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "assert_json_diff",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "assert_json_diff",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "serde 1.0.203",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.117",
+              "target": "serde_json"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "2.0.2"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
     },
     "assertables 7.0.1": {
       "name": "assertables",
@@ -6411,6 +6462,10 @@
             {
               "id": "arrayvec 0.7.4",
               "target": "arrayvec"
+            },
+            {
+              "id": "assert-json-diff 2.0.2",
+              "target": "assert_json_diff"
             },
             {
               "id": "assertables 7.0.1",
@@ -30586,6 +30641,7 @@
     "aml 0.16.4",
     "anyhow 1.0.86",
     "arrayvec 0.7.4",
+    "assert-json-diff 2.0.2",
     "assertables 7.0.1",
     "async-recursion 1.1.1",
     "async-stream 0.3.5",
