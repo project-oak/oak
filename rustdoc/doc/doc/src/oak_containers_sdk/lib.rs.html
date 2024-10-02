@@ -37,6 +37,8 @@
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
 <a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -52,7 +54,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">pub mod </span>crypto;
+</span><span class="kw">pub mod </span>attestation;
+<span class="kw">pub mod </span>crypto;
 <span class="kw">pub mod </span>handler;
 <span class="kw">pub mod </span>oak_session_context;
 <span class="kw">pub mod </span>orchestrator_client;
@@ -68,10 +71,11 @@
 
 <span class="comment">// Path used to facilitate inter-process communication between the orchestrator
 // and the trusted application.
-</span><span class="kw">const </span>ORCHESTRATOR_IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">"/oak_utils/orchestrator_ipc"</span>;
+</span><span class="kw">const </span>IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">"/oak_utils/orchestrator_ipc"</span>;
 
 <span class="comment">// Re-export structs so that they are available at the top level of the SDK.
-</span><span class="kw">pub use </span>crypto::InstanceEncryptionKeyHandle;
+</span><span class="kw">pub use </span>attestation::InstanceAttester;
+<span class="kw">pub use </span>crypto::InstanceEncryptionKeyHandle;
 <span class="kw">pub use </span>oak_session_context::{ApplicationHandler, OakSessionContext};
 <span class="kw">pub use </span>orchestrator_client::{OrchestratorClient, OrchestratorInterface};
 </code></pre></div></section></main></body></html>

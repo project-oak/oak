@@ -169,7 +169,7 @@
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
-<span class="kw">use crate</span>::{IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET};
+<span class="kw">use crate</span>::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 <span class="kw">struct </span>OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient&lt;tonic::transport::channel::Channel&gt;,
@@ -181,7 +181,7 @@
             <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
                 .context(<span class="string">"couldn't form endpoint"</span>)<span class="question-mark">?
                 </span>.connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>: Uri| {
-                    tokio::net::UnixStream::connect(ORCHESTRATOR_IPC_SOCKET)
+                    tokio::net::UnixStream::connect(IPC_SOCKET)
                 }))
                 .<span class="kw">await
                 </span>.context(<span class="string">"couldn't connect to UDS socket"</span>)<span class="question-mark">?</span>;

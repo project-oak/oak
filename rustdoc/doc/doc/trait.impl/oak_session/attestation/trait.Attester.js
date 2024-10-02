@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oak_containers_sdk":[["impl <a class=\"trait\" href=\"oak_session/attestation/trait.Attester.html\" title=\"trait oak_session::attestation::Attester\">Attester</a> for <a class=\"struct\" href=\"oak_containers_sdk/attestation/struct.InstanceAttester.html\" title=\"struct oak_containers_sdk::attestation::InstanceAttester\">InstanceAttester</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

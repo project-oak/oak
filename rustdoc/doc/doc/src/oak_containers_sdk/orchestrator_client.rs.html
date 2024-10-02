@@ -108,13 +108,6 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -136,16 +129,7 @@
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
-<span class="comment">// Unix Domain Sockets do not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel, since a URI has to
-// be supplied to create an `Endpoint`. Even though in this case the endpoint
-// is technically a file, tonic expects us to provide our own connector, and
-// this ignored endpoint. :(
-</span><span class="kw">static </span>IGNORED_ENDPOINT_URI: <span class="kw-2">&amp;</span>str = <span class="string">"file://[::]:0"</span>;
-
-<span class="comment">// Path used to facilitate inter-process communication between the orchestrator
-// and the trusted application.
-</span><span class="kw">const </span>IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">"/oak_utils/orchestrator_ipc"</span>;
+<span class="kw">use crate</span>::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 <span class="doccomment">/// Trait defining the interface for interacting with the Orchestrator.
 /// This trait can be implemented by the real Orchestrator or mocked for testing
@@ -165,6 +149,8 @@
     <span class="doccomment">/// Retrieves the endorsed evidence from the Orchestrator.
     /// This evidence is used to prove the authenticity and integrity of the
     /// application.
+    </span><span class="comment">// TODO: b/356381841 - Remove this function once all clients start using
+    // the `EndorsedEvidenceProvider`.
     </span><span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt;;
 }
 

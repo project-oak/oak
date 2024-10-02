@@ -18,7 +18,7 @@ var srcIndex = new Map(JSON.parse('[\
 ["oak_containers_launcher",["",[],["lib.rs","qemu.rs","server.rs"]]],\
 ["oak_containers_orchestrator",["",[],["cdi.rs","container_runtime.rs","dice.rs","ipc_server.rs","key_provisioning.rs","launcher_client.rs","lib.rs","logging.rs"]]],\
 ["oak_containers_orchestrator_attestation",["",[],["lib.rs"]]],\
-["oak_containers_sdk",["",[],["crypto.rs","handler.rs","lib.rs","oak_session_context.rs","orchestrator_client.rs","standalone.rs","tonic.rs"]]],\
+["oak_containers_sdk",["",[],["attestation.rs","crypto.rs","handler.rs","lib.rs","oak_session_context.rs","orchestrator_client.rs","standalone.rs","tonic.rs"]]],\
 ["oak_containers_stage1",["",[],["client.rs","dice.rs","image.rs","main.rs"]]],\
 ["oak_containers_stage1_dice",["",[],["lib.rs"]]],\
 ["oak_containers_syslogd",["",[],["log_relay.rs","main.rs","systemd_journal.rs"]]],\
