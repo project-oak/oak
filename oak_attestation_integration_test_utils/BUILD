@@ -29,8 +29,12 @@ rust_library(
         "//oak_attestation_verification",
         "//oak_containers_sdk",
         "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
+        "@oak_crates_index//:tempfile",
+        "@oak_crates_index//:tokio",
     ],
 )

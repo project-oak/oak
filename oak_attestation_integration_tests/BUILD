@@ -29,7 +29,22 @@ filegroup(
 rust_binary(
     name = "snapshot_attestation_outputs",
     srcs = glob(["src/**"]),
-    data = [":testdata"],
+    data = [
+        ":testdata",
+        "//proto:digest_proto",
+        "//proto/attestation:attachment_proto",
+        "//proto/attestation:dice_proto",
+        "//proto/attestation:endorsement_proto",
+        "//proto/attestation:eventlog_proto",
+        "//proto/attestation:evidence_proto",
+        "//proto/attestation:expected_value_proto",
+        "//proto/attestation:reference_value_proto",
+        "//proto/attestation:tcb_version_proto",
+        "//proto/attestation:verification_proto",
+        "//proto/crypto:crypto_proto",
+        "//proto/session:service_streaming_proto",
+        "//proto/session:session_proto",
+    ],
     deps = [
         "//oak_attestation_integration_test_utils",
         "//oak_proto_rust",
