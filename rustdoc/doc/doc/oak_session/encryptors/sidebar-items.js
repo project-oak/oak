@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["OrderedChannelEncryptor"]};
+window.SIDEBAR_ITEMS = {"struct":["OrderedChannelEncryptor","UnorderedChannelEncryptor"]};

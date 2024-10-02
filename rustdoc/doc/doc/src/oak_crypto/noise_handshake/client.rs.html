@@ -152,7 +152,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
     error::Error,
     noise::{HandshakeType, Noise},
-    Crypter, IdentityKeyHandle, NoiseMessage,
+    IdentityKeyHandle, NoiseMessage, OrderedCrypter,
 };
 
 <span class="kw">pub struct </span>HandshakeInitiator {
@@ -234,7 +234,7 @@
     <span class="kw">pub fn </span>process_response(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         handshake_response: <span class="kw-2">&amp;</span>NoiseMessage,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;([u8; SHA256_OUTPUT_LEN], Crypter), Error&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;([u8; SHA256_OUTPUT_LEN], OrderedCrypter), Error&gt; {
         <span class="kw">let </span>ee_ecdh_bytes = p256_scalar_mult(
             <span class="kw-2">&amp;</span><span class="self">self</span>.ephemeral_priv_key,
             handshake_response
@@ -253,7 +253,7 @@
             .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
         <span class="macro">assert_eq!</span>(plaintext.len(), <span class="number">0</span>);
         <span class="kw">let </span>(write_key, read_key) = <span class="self">self</span>.noise.traffic_keys();
-        <span class="prelude-val">Ok</span>((<span class="self">self</span>.noise.handshake_hash(), Crypter::new(<span class="kw-2">&amp;</span>read_key, <span class="kw-2">&amp;</span>write_key)))
+        <span class="prelude-val">Ok</span>((<span class="self">self</span>.noise.handshake_hash(), OrderedCrypter::new(<span class="kw-2">&amp;</span>read_key, <span class="kw-2">&amp;</span>write_key)))
     }
 }
 </code></pre></div></section></main></body></html>
