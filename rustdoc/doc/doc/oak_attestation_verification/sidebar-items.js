@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["verify_endorsement"],"mod":["expect","policy","verifier"]};
+window.SIDEBAR_ITEMS = {"fn":["convert_pem_to_raw","verify_endorsement"],"mod":["expect","policy","verifier"]};
