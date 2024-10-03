@@ -30,7 +30,7 @@ impl SnapshotPath {
     const REFERENCE_VALUES_FILE: &'static str = "reference_values.binarypb";
 
     /// Returns the directory name for this snapshot.
-    fn dirname(&self) -> PathBuf {
+    pub fn dirname(&self) -> PathBuf {
         Path::new(Self::TESTDATA_DIR).join(format!("{:05}", self.version))
     }
 
@@ -63,13 +63,21 @@ impl SnapshotPath {
 
         Ok(Self { version: max_version })
     }
+}
 
-    /// Creates a new SnapshotPath with a version number one higher than the
-    /// most recent snapshot. This function is used to generate the next
-    /// sequential snapshot.
-    pub async fn next() -> anyhow::Result<Self> {
-        let most_recent_snapshot = Self::most_recent().await?;
-        Ok(Self { version: most_recent_snapshot.version() + 1 })
+impl Iterator for SnapshotPath {
+    type Item = Self;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.version = self.version.checked_add(1)?;
+        Some(Self { version: self.version })
+    }
+}
+
+impl DoubleEndedIterator for SnapshotPath {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.version = self.version.checked_sub(1)?;
+        Some(Self { version: self.version })
     }
 }
 

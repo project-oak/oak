@@ -15,6 +15,7 @@
 //
 
 use oak_attestation::dice::evidence_to_proto;
+use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
 use oak_proto_rust::oak::{
@@ -349,4 +350,45 @@ async fn verify_mock_oak_containers_evidence_with_fuzzed_measurements() {
     }
 }
 
-// TODO: b/370463888 - Test verification against snapshots in testdata.
+/// Assert that there are no breaking changes to the verification library.
+///
+/// Effectively it simulates a client running the current version of the
+/// verification library, encountering attesation outputs created by an older
+/// version of the attestation logic.
+///
+/// It does this by:
+/// 1. Loading snapshots of old attestation outputs (created by previous
+///    versions of our attestation logic).
+/// 2. Running the current version of the verification library against each
+///    snapshot.
+/// 3. Asserting that verification succeeds every time.
+#[tokio::test]
+async fn test_verification_against_snapshots() {
+    let most_recent_snapshot =
+        SnapshotPath::most_recent().await.expect("Failed to get most recent snapshot");
+
+    for snapshot_path in most_recent_snapshot.rev() {
+        let snapshot =
+            Snapshot::read_from_path(&snapshot_path).await.expect("Failed to read snapshot");
+
+        let evidence = snapshot.endorsed_evidence.evidence.as_ref().expect("No evidence found");
+        let endorsements =
+            snapshot.endorsed_evidence.endorsements.as_ref().expect("No endorsements found");
+
+        let verification_result =
+            verify(NOW_UTC_MILLIS, evidence, endorsements, &snapshot.reference_values);
+        let attestation_results = to_attestation_results(&verification_result);
+
+        assert!(
+            verification_result.is_ok(),
+            "Verification failed for snapshot in {:?}",
+            snapshot_path.dirname()
+        );
+        assert_eq!(
+            attestation_results.status(),
+            Status::Success,
+            "Unexpected attestation status for snapshot in {:?}",
+            snapshot_path.dirname()
+        );
+    }
+}

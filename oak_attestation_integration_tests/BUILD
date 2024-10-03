@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//:internal"],
@@ -26,10 +26,25 @@ filegroup(
     srcs = glob(["testdata/**"]),
 )
 
+rust_library(
+    name = "lib",
+    srcs = glob(["src/**"]),
+    crate_name = "oak_attestation_integration_tests",
+    deps = [
+        "//oak_attestation_integration_test_utils",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:assert-json-diff",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tokio",
+    ],
+)
+
 # TODO: b/370463888 - Run this in CI.
 rust_binary(
     name = "snapshot_attestation_outputs_assert_no_breaking_changes",
-    srcs = glob(["src/**"]),
+    srcs = ["src/main.rs"],
     data = [
         ":testdata",
         "//proto:digest_proto",
@@ -47,20 +62,35 @@ rust_binary(
         "//proto/session:session_proto",
     ],
     deps = [
+        ":lib",
         "//oak_attestation_integration_test_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:assert-json-diff",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
     ],
 )
 
 rust_test_suite(
-    name = "oak_attestation_integration_tests",
+    name = "oak_attestation_integration_tests_tests",
     srcs = glob(["tests/**"]),
+    data = [
+        ":testdata",
+        "//proto:digest_proto",
+        "//proto/attestation:attachment_proto",
+        "//proto/attestation:dice_proto",
+        "//proto/attestation:endorsement_proto",
+        "//proto/attestation:eventlog_proto",
+        "//proto/attestation:evidence_proto",
+        "//proto/attestation:expected_value_proto",
+        "//proto/attestation:reference_value_proto",
+        "//proto/attestation:tcb_version_proto",
+        "//proto/attestation:verification_proto",
+        "//proto/crypto:crypto_proto",
+        "//proto/session:service_streaming_proto",
+        "//proto/session:session_proto",
+    ],
     deps = [
+        ":lib",
         "//oak_attestation",
         "//oak_attestation_integration_test_utils",
         "//oak_attestation_verification",
