@@ -420,6 +420,15 @@
 <a href="#418" id="418">418</a>
 <a href="#419" id="419">419</a>
 <a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -570,7 +579,16 @@
         </span>|| statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
 }
 
-<span class="kw">pub fn </span>verify_endorsement(
+<span class="doccomment">/// Verifies a signed endorsement against reference value.
+///
+/// Returns Ok whenever the verification succeeds, or an error otherwise.
+///
+/// `now_utc_millis`: The current time in milliseconds UTC since Unix Epoch.
+/// `signed_endorsement`: The endorsement along with signature and (optional)
+///     Rekor log entry.
+/// `ref_value`: A reference value containing e.g. the public keys needed
+///     for the verification.
+</span><span class="kw">pub fn </span>verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: <span class="kw-2">&amp;</span>SignedEndorsement,
     ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
