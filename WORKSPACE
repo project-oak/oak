@@ -281,6 +281,22 @@ load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()
 
+# Experimental sysroot for the build toolchain, based on Oak Containers sysimage.
+#
+# Rebuild it using:
+# $ oak_containers/system_image/build-base.sh sysroot
+# (See oak_containers/system_image/README.md for more details.)
+#
+# Upload it using:
+# $ xz oak_containers/system_image/target/sysroot.tar
+# $ gsutil cp oak_containers/system_image/target/sysroot.tar.xz gs://oak-bins/sysroot/sysroot.tar.xz
+http_archive(
+    name = "oak_cc_toolchain_sysroot",
+    build_file = "//:toolchain/sysroot.BUILD",
+    sha256 = "3429bb94042a4c4cac986d7e070437e8eb3dfee89c1835120c00a0d912ff795d",
+    url = "https://storage.googleapis.com/oak-bins/sysroot/sysroot.tar.xz",
+)
+
 # Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by
 # distroless images. The glibc version provided by nix may be too new.
 # This (currently) needs to be loaded after rules_oci because it defaults to using an older version
@@ -305,8 +321,10 @@ gcc_register_toolchain(
     # Prevents aspect_gcc from rendering -nostdinc flag. Needed to compile wasmtime.
     # See b/352306808#comment25.
     extra_cflags = [],
-    target_arch = ARCHS.x86_64,
+    # Doesn't work, so don't enable sysroot yet.
+    # sysroot = "//@oak_cc_toolchain_sysroot:sysroot",
     # target_compatible_with defaults to os:linux.
+    target_arch = ARCHS.x86_64,
 )
 
 gcc_register_toolchain(
