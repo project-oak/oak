@@ -50,6 +50,7 @@ rust_library(
 rust_test(
     name = "unit_tests",
     crate = ":oak_attestation_verification",
+    crate_features = ["std"],
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
@@ -58,6 +59,7 @@ rust_test(
     ],
     deps = [
         "//oak_file_utils",
+        "@oak_crates_index//:rand_core",
     ],
 )
 
@@ -117,6 +119,7 @@ rust_library(
 rust_test(
     name = "unit_tests_with_regex",
     crate = ":oak_attestation_verification_with_regex",
+    crate_features = ["std"],
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
@@ -125,6 +128,7 @@ rust_test(
     ],
     deps = [
         "//oak_file_utils",
+        "@oak_crates_index//:rand_core",
     ],
 )
 

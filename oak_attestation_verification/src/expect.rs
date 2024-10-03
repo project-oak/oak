@@ -610,3 +610,6 @@ fn into_expected_digests(source: &[RawDigest]) -> ExpectedDigests {
         r#type: Some(expected_digests::Type::Digests(RawDigests { digests: source.to_vec() })),
     }
 }
+
+#[cfg(test)]
+mod tests;

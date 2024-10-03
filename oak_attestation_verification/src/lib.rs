@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(let_chains)]
 
 extern crate alloc;
@@ -27,6 +27,9 @@ pub mod policy;
 pub(crate) mod rekor;
 pub(crate) mod util;
 pub mod verifier;
+
+#[cfg(test)]
+mod test_util;
 
 pub use endorsement::verify_endorsement;
 pub use util::convert_pem_to_raw;

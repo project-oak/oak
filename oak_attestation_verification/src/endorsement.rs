@@ -42,27 +42,29 @@ use crate::{
 
 /// URI representing in-toto statements. We only use V1, earlier and later
 /// versions will be rejected.
-const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
+pub(crate) const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
 
 /// Oldest predicate type for in-toto endorsement statements. References still
 /// exist, but fully removing it will be easy.
+#[deprecated = "Use PREDICATE_TYPE_V3"]
 const PREDICATE_TYPE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
 
 /// Previous predicate type of in-toto endorsement statements. In operation.
+#[deprecated = "Use PREDICATE_TYPE_V3"]
 const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
 
 /// Current predicate type of in-toto endorsement statements, which loses
 /// the `usage` field and adds claim types.
-const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
+pub(crate) const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
-const FIRMWARE_CLAIM_TYPE: &str =
+pub(crate) const FIRMWARE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md";
 
 /// No attempt will be made to decode the attachment of a kernel-type
 /// binary unless this claim is present in the endorsement.
-const KERNEL_CLAIM_TYPE: &str =
+pub(crate) const KERNEL_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
 
 // A map from algorithm name to lowercase hex-encoded value.
@@ -313,6 +315,7 @@ pub fn validate_statement(
     if statement._type != STATEMENT_TYPE {
         anyhow::bail!("unsupported statement type");
     }
+    #[allow(deprecated)] // We still need to validate the older types.
     if statement.predicate_type != PREDICATE_TYPE_V1
         && statement.predicate_type != PREDICATE_TYPE_V2
         && statement.predicate_type != PREDICATE_TYPE_V3

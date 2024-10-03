@@ -76,7 +76,7 @@ pub fn convert_pem_to_verifying_key(
 pub fn convert_raw_to_verifying_key(
     public_key: &[u8],
 ) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    // Need to figure out how to create a VerifyingKey without the PEM detour.
+    // TODO: (b/371081270) - Can we create a VerifyingKey without the PEM detour?
     let public_key_pem = convert_raw_to_pem(public_key);
     convert_pem_to_verifying_key(&public_key_pem)
 }
@@ -116,7 +116,8 @@ pub fn verify_signature_ecdsa(
 ) -> anyhow::Result<()> {
     let sig = ecdsa::Signature::from_der(signature)
         .map_err(|error| anyhow::anyhow!("invalid ASN.1 signature: {}", error))?;
-    let key = convert_raw_to_verifying_key(public_key)?;
+    let key = convert_raw_to_verifying_key(public_key)
+        .map_err(|error| anyhow::anyhow!("couldn't convert public key: {error}"))?;
 
     key.verify(contents, &sig)
         .map_err(|error| anyhow::anyhow!("couldn't verify signature: {}", error))
