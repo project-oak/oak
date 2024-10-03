@@ -12,6 +12,7 @@ testing = ["oak_stage0_dice", "oak_restricted_kernel_dice", "prost-types"]
 [dependencies]
 anyhow = { version = "*", default-features = false }
 log = "*"
+oak_attestation = { workspace = true }
 oak_attestation_verification = { workspace = true }
 oak_channel = { workspace = true }
 oak_crypto = { workspace = true }

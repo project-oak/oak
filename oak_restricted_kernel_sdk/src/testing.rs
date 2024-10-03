@@ -19,23 +19,23 @@
 
 use alloc::vec::Vec;
 
+use anyhow::Context;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
     signer::Signer,
 };
-use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
+use oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog},
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
 };
+use oak_session::attestation::Attester;
 use p256::ecdsa::SigningKey;
 use prost::Message;
 
-use crate::{
-    alloc::string::ToString,
-    attestation::{DiceWrapper, EvidenceProvider},
-};
+use crate::{alloc::string::ToString, attestation::DiceWrapper};
 
 lazy_static::lazy_static! {
   static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
@@ -141,29 +141,33 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
     }
 }
 
-/// [`EvidenceProvider`] implementation that exposes mock evidence.
-pub struct MockEvidenceProvider {
-    evidence: &'static Evidence,
-    encoded_event_log: &'static [u8],
+/// [`Attester`] implementation that exposes mock evidence.
+pub struct MockAttester {
+    evidence: Evidence,
 }
 
-impl MockEvidenceProvider {
+impl MockAttester {
     pub fn create() -> anyhow::Result<Self> {
-        MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
-            evidence: &d.evidence,
-            encoded_event_log: d
-                .encoded_event_log
-                .as_ref()
-                .expect("mock dice wrapper contains event log"),
-        })
+        let evidence = MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                // TODO: b/368022950 - Remove dependency on `oak_attestation` once Restricted
+                // Kernel uses Protobuf for the Evidence.
+                evidence_and_event_log_to_proto(d.evidence.clone(), d.encoded_event_log.as_deref())
+                    .context("couldn't convert evidence to proto")
+            })
+            .context("couldn't get evidence")?;
+        Ok(MockAttester { evidence })
     }
 }
 
-impl EvidenceProvider for MockEvidenceProvider {
-    fn get_evidence(&self) -> &Evidence {
-        self.evidence
+impl Attester for MockAttester {
+    fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
+        anyhow::bail!("mock attester doesn't support extending the evidence");
     }
-    fn get_encoded_event_log(&self) -> Option<&[u8]> {
-        Some(self.encoded_event_log)
+
+    fn quote(&self) -> anyhow::Result<Evidence> {
+        Ok(self.evidence.clone())
     }
 }

@@ -22,8 +22,7 @@ extern crate alloc;
 use alloc::format;
 
 use log::info;
-use oak_attestation::dice::evidence_and_event_log_to_proto;
-use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
+use oak_restricted_kernel_sdk::Attester;
 
 pub mod proto {
     pub mod oak {
@@ -43,13 +42,13 @@ pub mod proto {
 }
 
 #[derive(Default)]
-pub struct EchoService<EP: EvidenceProvider> {
-    pub evidence_provider: EP,
+pub struct EchoService<A: Attester> {
+    pub attester: A,
 }
 
-impl<EP> proto::oak::echo::Echo for EchoService<EP>
+impl<A> proto::oak::echo::Echo for EchoService<A>
 where
-    EP: EvidenceProvider,
+    A: Attester,
 {
     fn echo(
         &mut self,
@@ -66,14 +65,10 @@ where
         &mut self,
         _request: (),
     ) -> Result<proto::oak::echo::GetEvidenceResponse, micro_rpc::Status> {
-        let evidence = evidence_and_event_log_to_proto(
-            self.evidence_provider.get_evidence().clone(),
-            self.evidence_provider.get_encoded_event_log(),
-        )
-        .map_err(|err| {
+        let evidence = self.attester.quote().map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
-                format!("failed to convert evidence to proto: {err}"),
+                format!("failed to get evidence: {err}"),
             )
         })?;
         Ok(proto::oak::echo::GetEvidenceResponse { evidence: Some(evidence) })

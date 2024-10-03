@@ -24,7 +24,7 @@ use alloc::{boxed::Box, sync::Arc};
 
 use oak_functions_service::wasm::{WasmConfig, WasmHandler};
 use oak_restricted_kernel_sdk::{
-    attestation::InstanceEvidenceProvider,
+    attestation::InstanceAttester,
     channel::{start_blocking_server, FileDescriptorChannel},
     crypto::InstanceEncryptionKeyHandle,
     entrypoint,
@@ -43,9 +43,9 @@ fn main() -> ! {
 
     let encryption_key_handle =
         InstanceEncryptionKeyHandle::create().expect("couldn't encryption key");
-    let evidencer = InstanceEvidenceProvider::create().expect("couldn't get evidence");
+    let attester = InstanceAttester::create().expect("couldn't create attester");
     let service = oak_functions_enclave_service::OakFunctionsService::<_, _, WasmHandler>::new(
-        evidencer,
+        attester,
         Arc::new(encryption_key_handle),
         None,
         WasmConfig::default(),

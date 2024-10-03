@@ -29,9 +29,9 @@ const TEST_DATA: &[u8] = b"test_data";
 
 #[test]
 fn it_should_handle_echo_requests() {
-    let evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
-        .expect("couldn't create evidence provider");
-    let service = EchoService { evidence_provider };
+    let mock_attester = oak_restricted_kernel_sdk::testing::MockAttester::create()
+        .expect("couldn't create mock attester");
+    let service = EchoService { attester: mock_attester };
     let mut client = EchoClient::new(EchoServer::new(service));
 
     let request = EchoRequest { body: TEST_DATA.to_vec() };
@@ -43,9 +43,9 @@ fn it_should_handle_echo_requests() {
 
 #[test]
 fn it_should_provide_evidence() {
-    let evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
-        .expect("couldn't create evidence provider");
-    let service = EchoService { evidence_provider };
+    let mock_attester = oak_restricted_kernel_sdk::testing::MockAttester::create()
+        .expect("couldn't create mock attester");
+    let service = EchoService { attester: mock_attester };
     let mut client = EchoClient::new(EchoServer::new(service));
 
     let response = client.get_evidence(&()).into_ok();

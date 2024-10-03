@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use oak_restricted_kernel_sdk::{
-    attestation::InstanceEvidenceProvider,
+    attestation::InstanceAttester,
     channel::{start_blocking_server, FileDescriptorChannel},
     entrypoint,
     utils::samplestore::StaticSampleStore,
@@ -34,9 +34,9 @@ use oak_restricted_kernel_sdk::{
 #[entrypoint]
 fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let evidence_provider = InstanceEvidenceProvider::create().expect("couldn't get evidence");
+    let attester = InstanceAttester::create().expect("couldn't create attester");
 
-    let service = oak_echo_service::EchoService { evidence_provider };
+    let service = oak_echo_service::EchoService { attester };
     let server = oak_echo_service::proto::oak::echo::EchoServer::new(service);
     start_blocking_server(Box::<FileDescriptorChannel>::default(), server, &mut invocation_stats)
         .expect("server encountered an unrecoverable error");

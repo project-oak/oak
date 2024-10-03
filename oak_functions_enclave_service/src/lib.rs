@@ -20,7 +20,6 @@ extern crate alloc;
 
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -31,36 +30,36 @@ use oak_proto_rust::oak::functions::{
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
     InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
 };
-use oak_restricted_kernel_sdk::handler::EncryptionHandler;
+use oak_restricted_kernel_sdk::{handler::EncryptionHandler, Attester};
 use prost::Message;
 
-pub struct OakFunctionsService<EKH, EP, H>
+pub struct OakFunctionsService<EKH, A, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
-    evidence_provider: EP,
+    attester: A,
     encryption_key_handle: Arc<EKH>,
     instance_config: H::HandlerConfig,
     instance: OnceCell<OakFunctionsInstance<H>>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<EKH, EP, H> OakFunctionsService<EKH, EP, H>
+impl<EKH, A, H> OakFunctionsService<EKH, A, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
     pub fn new(
-        evidence_provider: EP,
+        attester: A,
         encryption_key_handle: Arc<EKH>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
         instance_config: H::HandlerConfig,
     ) -> Self {
         Self {
-            evidence_provider,
+            attester,
             encryption_key_handle,
             instance_config,
             instance: OnceCell::new(),
@@ -77,10 +76,10 @@ where
     }
 }
 
-impl<EKH, EP, H> OakFunctions for OakFunctionsService<EKH, EP, H>
+impl<EKH, A, H> OakFunctions for OakFunctionsService<EKH, A, H>
 where
     EKH: EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
     fn initialize(
@@ -105,14 +104,10 @@ where
                         "already initialized",
                     ));
                 }
-                let evidence = evidence_and_event_log_to_proto(
-                    self.evidence_provider.get_evidence().clone(),
-                    self.evidence_provider.get_encoded_event_log(),
-                )
-                .map_err(|err| {
+                let evidence = self.attester.quote().map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
-                        format!("failed to convert evidence to proto: {err}"),
+                        format!("failed to get evidence: {err}"),
                     )
                 })?;
                 Ok(InitializeResponse { evidence: Some(evidence) })

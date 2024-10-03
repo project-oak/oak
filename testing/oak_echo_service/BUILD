@@ -36,7 +36,6 @@ rust_library(
     deps = [
         ":build",
         "//micro_rpc",
-        "//oak_attestation",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:hashbrown",

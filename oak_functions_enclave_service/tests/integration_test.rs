@@ -51,11 +51,11 @@ fn init() {
 
 fn new_service_for_testing() -> OakFunctionsService<
     oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle,
-    oak_restricted_kernel_sdk::testing::MockEvidenceProvider,
+    oak_restricted_kernel_sdk::testing::MockAttester,
     oak_functions_service::wasm::WasmHandler,
 > {
     OakFunctionsService::new(
-        oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
+        oak_restricted_kernel_sdk::testing::MockAttester::create()
             .expect("failed to create EvidenceProvidder"),
         Arc::new(
             oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle::create()
@@ -317,7 +317,7 @@ fn it_should_handle_wasm_panic() {
             OakFunctionsServer<
                 OakFunctionsService<
                     oak_restricted_kernel_sdk::testing::MockEncryptionKeyHandle,
-                    oak_restricted_kernel_sdk::testing::MockEvidenceProvider,
+                    oak_restricted_kernel_sdk::testing::MockAttester,
                     oak_functions_service::wasm::WasmHandler,
                 >,
             >,

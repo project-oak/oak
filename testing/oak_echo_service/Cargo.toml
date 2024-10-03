@@ -9,7 +9,6 @@ license = "Apache-2.0"
 hashbrown = "*"
 log = "*"
 micro_rpc = { workspace = true }
-oak_attestation = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
 prost = { workspace = true }

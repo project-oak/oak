@@ -24,7 +24,6 @@ package(
 
 DEPS = [
     "//micro_rpc",
-    "//oak_attestation",
     "//oak_core",
     "//oak_crypto",
     "//oak_proto_rust",

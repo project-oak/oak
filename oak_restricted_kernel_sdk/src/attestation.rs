@@ -19,9 +19,14 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_crypto::encryption_key::EncryptionKey;
-use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
+use oak_dice::evidence::{
+    Evidence as EvidenceStruct, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE,
+};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD, EVENT_LOG_FD};
+use oak_session::attestation::{Attester, Endorser};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
@@ -62,7 +67,8 @@ fn get_encoded_event_log() -> anyhow::Result<Vec<u8>> {
 
 /// Wrapper for DICE evidence and application private keys.
 pub(crate) struct DiceWrapper {
-    pub evidence: Evidence,
+    // TODO: b/372232116 - Use protos instead of C-structs.
+    pub evidence: EvidenceStruct,
     pub encryption_key: EncryptionKey,
     pub signing_key: p256::ecdsa::SigningKey,
     pub encoded_event_log: Option<Vec<u8>>,
@@ -84,36 +90,50 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
     }
 }
 
-/// Exposes the ability to read the Attestation Evidence.
+/// [`Attester`] implementation that exposes the instance's evidence that
+/// exposes the ability to read the Attestation Evidence.
+///
 /// Note: Applications should only use the evidence to initially send it to the
 /// host application once, which then sends it to the clients. It is discouraged
 /// for enclave applications to operate directly with evidences.
-pub trait EvidenceProvider {
-    fn get_evidence(&self) -> &Evidence;
-    fn get_encoded_event_log(&self) -> Option<&[u8]>;
+pub struct InstanceAttester {
+    evidence: Evidence,
 }
 
-/// [`EvidenceProvider`] implementation that exposes the instance's evidence.
-pub struct InstanceEvidenceProvider {
-    evidence: &'static Evidence,
-    encoded_event_log: Option<&'static [u8]>,
-}
-
-impl InstanceEvidenceProvider {
+impl InstanceAttester {
     pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| InstanceEvidenceProvider {
-            evidence: &d.evidence,
-            encoded_event_log: d.encoded_event_log.as_deref(),
-        })
+        let evidence = DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                // TODO: b/368022950 - Remove dependency on `oak_attestation` once Restricted
+                // Kernel uses Protobuf for the Evidence.
+                evidence_and_event_log_to_proto(d.evidence.clone(), d.encoded_event_log.as_deref())
+                    .context("couldn't convert evidence to proto")
+            })
+            .context("couldn't get evidence")?;
+        Ok(InstanceAttester { evidence })
     }
 }
 
-impl EvidenceProvider for InstanceEvidenceProvider {
-    fn get_evidence(&self) -> &Evidence {
-        self.evidence
+impl Attester for InstanceAttester {
+    fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
+        anyhow::bail!("evidence extension is not currently supported in Restricted Kernel");
     }
 
-    fn get_encoded_event_log(&self) -> Option<&[u8]> {
-        self.encoded_event_log
+    fn quote(&self) -> anyhow::Result<Evidence> {
+        Ok(self.evidence.clone())
+    }
+}
+
+/// [`Endorser`] implementation that exposes the instance's evidence that
+/// exposes the ability to read Endorsements.
+pub struct InstanceEndorser;
+
+impl Endorser for InstanceEndorser {
+    fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
+        // TODO: b/365975893 - Pass Endorsements from Hostlib to the Restricted
+        // Kernel application.
+        Ok(Endorsements { r#type: None })
     }
 }

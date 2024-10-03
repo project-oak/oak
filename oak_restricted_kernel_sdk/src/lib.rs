@@ -64,3 +64,4 @@ pub use oak_crypto::{encryption_key::EncryptionKeyHandle, signer::Signer};
 /// }
 /// ```
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
+pub use oak_session::attestation::{Attester, Endorser};
