@@ -16,8 +16,7 @@
 
 use std::fs;
 
-use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_attestation_verification::verify_endorsement;
+use oak_attestation_verification::{convert_pem_to_raw, verify_endorsement};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
@@ -42,23 +41,6 @@ const TOO_EARLY_UTC_MILLIS: i64 = 1680000000000;
 const TOO_LATE_UTC_MILLIS: i64 = 1743000000000;
 
 const KEY_ID: u32 = 4711;
-
-const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
-const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
-
-/// Converts a PEM key to raw. Will panic if it does not look like PEM.
-/// This is repeated from util.rs which is inaccessible to integration tests.
-pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
-    let stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect("could not find expected header")
-        .strip_suffix(PEM_FOOTER)
-        .expect("could not find expected footer");
-    let remove_newlines = stripped.replace('\n', "");
-
-    BASE64_STANDARD.decode(remove_newlines).map_err(|error| anyhow::anyhow!(error))
-}
 
 struct TestData {
     now_utc_millis: i64,

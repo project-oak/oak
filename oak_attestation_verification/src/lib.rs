@@ -29,3 +29,4 @@ pub(crate) mod util;
 pub mod verifier;
 
 pub use endorsement::verify_endorsement;
+pub use util::convert_pem_to_raw;
