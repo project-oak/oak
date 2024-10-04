@@ -16,18 +16,21 @@
 
 //! Structs for providing attestation related logic such as getting an evidence.
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
+use anyhow::Context;
 use oak_crypto::encryption_key::EncryptionKey;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
-use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
+use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD, EVENT_LOG_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
 lazy_static::lazy_static! {
     pub(crate) static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
-        let dice_data = get_restricted_kernel_dice_data()?;
-        let dice_wrapper = dice_data.try_into()?;
+        let dice_data = get_restricted_kernel_dice_data().context("couldn't get DICE data")?;
+        let encoded_event_log = get_encoded_event_log().context("couldn't get event log")?;
+        let mut dice_wrapper: DiceWrapper = dice_data.try_into()?;
+        dice_wrapper.encoded_event_log = Some(encoded_event_log);
         Ok(dice_wrapper)
     };
 }
@@ -40,6 +43,21 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
         anyhow::bail!("invalid dice data size");
     }
     Ok(result)
+}
+
+/// Requests encoded event log from Restricted Kernel via syscall.
+fn get_encoded_event_log() -> anyhow::Result<Vec<u8>> {
+    let mut event_log = Vec::new();
+    let mut buffer = [0u8; 4 * 1024]; // Read in 4KB chunks
+
+    loop {
+        match read(EVENT_LOG_FD, &mut buffer) {
+            Ok(0) => break, // End of file
+            Ok(n) => event_log.extend_from_slice(&buffer[..n]),
+            Err(e) => anyhow::bail!("failed to read event log: {:?}", e),
+        }
+    }
+    Ok(event_log)
 }
 
 /// Wrapper for DICE evidence and application private keys.
