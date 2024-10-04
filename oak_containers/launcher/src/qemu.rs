@@ -172,9 +172,7 @@ impl Qemu {
         // TDX machine suffix
         let tdx_machine_suffix = ",kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1";
         let tdx_common_object = format!(
-            // Note: private=on is only needed in Ubuntu's QEMU and kernel.
-            // Intel's reference implementation does not need `private=on`.
-            "memory-backend-ram,id=ram1,size={},private=on", // only works on Ubuntu's QEMU
+            "memory-backend-ram,id=ram1,size={}",
             params.memory_size.unwrap_or("8G".to_string())
         );
         // Generate the parameters and add them to cmd.args.
@@ -209,7 +207,10 @@ impl Qemu {
             ),
             VmType::Tdx => (
                 microvm_common + tdx_machine_suffix,
-                vec!["tdx-guest,sept-ve-disable=on,id=tdx".to_string(), tdx_common_object],
+                // The command line comes from
+                // https://patchwork.kernel.org/project/qemu-devel/patch/20240125032328.2522472-51-xiaoyao.li@intel.com/
+                vec![r#"{"qom-type":"tdx-guest","id":"tdx","sept-ve-disable":true, "quote-generation-socket":{"type": "vsock", "cid":"2","port":"4050"}}"#.to_string(),
+                    tdx_common_object],
             ),
         };
         cmd.args(["-machine", &machine_arg]);
