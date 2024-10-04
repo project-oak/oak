@@ -43,7 +43,6 @@
 <a href="#41" id="41">41</a>
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
-<a href="#44" id="44">44</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -61,15 +60,14 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_proto_rust::oak::crypto::v1::Signature;
 
-<span class="kw">pub trait </span>Verifier {
-    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>Signature) -&gt; anyhow::Result&lt;()&gt;;
+<span class="kw">pub trait </span>Verifier: Send {
+    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
 }
 
 <span class="kw">impl </span>Verifier <span class="kw">for </span>p256::ecdsa::VerifyingKey {
-    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>Signature) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>parsed_signature = p256::ecdsa::Signature::from_slice(<span class="kw-2">&amp;</span>signature.signature)
+    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span>parsed_signature = p256::ecdsa::Signature::from_slice(signature)
             .map_err(anyhow::Error::msg)
             .context(<span class="string">"could not parse signature"</span>)<span class="question-mark">?</span>;
         &lt;p256::ecdsa::VerifyingKey <span class="kw">as </span>p256::ecdsa::signature::Verifier&lt;
@@ -84,7 +82,7 @@
 }
 
 <span class="kw">impl </span>Verifier <span class="kw">for </span>VerifierKeyHandle {
-    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>Signature) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.inner.verify(message, signature)
     }
 }

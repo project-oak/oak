@@ -81,6 +81,8 @@
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -159,7 +161,9 @@
 
 <span class="kw">impl </span>Signer <span class="kw">for </span>InstanceSigner {
     <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt; {
-        <span class="prelude-val">Ok</span>(&lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message))
+        <span class="prelude-val">Ok</span>(Signature {
+            signature: &lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message),
+        })
     }
 }
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":["SessionBinder","SessionBindingVerifier"]};
+window.SIDEBAR_ITEMS = {"enum":["SignatureBinderBuilderError","SignatureBindingVerifierBuilderError"],"struct":["SignatureBinder","SignatureBinderBuilder","SignatureBindingVerifier","SignatureBindingVerifierBuilder"],"trait":["SessionBinder","SessionBindingVerifier"]};

@@ -188,6 +188,9 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -221,6 +224,7 @@
         },
         GetApplicationConfigResponse,
     },
+    crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
 <span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener};
@@ -292,10 +296,12 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;SignResponse&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request = request.into_inner();
         <span class="kw">let </span>signing_key = <span class="self">self</span>.signing_key(request.key_origin())<span class="question-mark">?</span>;
-        <span class="kw">let </span>signature = &lt;p256::ecdsa::SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(
-            signing_key,
-            <span class="kw-2">&amp;</span>request.message,
-        );
+        <span class="kw">let </span>signature = Signature {
+            signature: &lt;p256::ecdsa::SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(
+                signing_key,
+                <span class="kw-2">&amp;</span>request.message,
+            ),
+        };
         <span class="prelude-val">Ok</span>(tonic::Response::new(SignResponse { signature: <span class="prelude-val">Some</span>(signature) }))
     }
 }
