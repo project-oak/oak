@@ -1,3 +1,10 @@
+# Builds a Docker image from which we can extract a sysroot.
+
+# At the moment we don't use this image to run anything - only to copy out
+# the sysroot (essesntially, C libraries and tools). The goal is to plug this
+# sysroot into Bazel C toolchains so as to align compiler and library versions
+# at build time (Bazel) and at runtime (e.g. containers system image).
+
 # The expectation is that we build `base_image.Dockerfile` before this one.
 # hadolint ignore=DL3007
 FROM oak-containers-sysimage-base:latest

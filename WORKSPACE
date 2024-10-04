@@ -252,6 +252,16 @@ oci_register_toolchains(
 
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
+# This is the base docker image we use to bundle example apps like hello world
+# trusted apps. We don't build these, we pull them from the existing repo.
+#
+# E.g.: //oak_containers/examples/hello_world/trusted_app:bundle . You can find
+# these images at: gcr.io/distroless/cc-debian12 . We do not need root access
+# so you can search with ":nonroot" (gcr.io/distroless/cc-debian12:nonroot) or
+# "latest" (gcr.io/distroless/cc-debian12:latest). Note files tagged as ".sig"
+# or ".att" do not contain images. You can find a given digest (like the one
+# below) at http://gcr.io/distroless/cc-debian12@{digest} where {digest}
+# includes the "sha256:" bit.
 oci_pull(
     name = "distroless_cc_debian12",
     digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
@@ -259,6 +269,9 @@ oci_pull(
     platforms = ["linux/amd64"],
 )
 
+# System image for Oak Containers
+# We build these (see oak_containers/system_image) and push them to the repo below before
+# this snippet can pull them.
 # This image is based on debian:stable-20240612
 oci_pull(
     name = "oak_containers_sysimage_base",
@@ -266,7 +279,8 @@ oci_pull(
     image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
 )
 
-# This image is based on debian:stable-20240612
+# Same as previous, for Nvidia GPU support (see
+# oak_containers/system_image/README.md). Based on debian:stable-20240612 .
 oci_pull(
     name = "oak_containers_nvidia_sysimage_base",
     digest = "sha256:9e69576783ad3c0a420bcb978dec53da5de6fd1a304b9b0f9d6c6bc6f188e894",

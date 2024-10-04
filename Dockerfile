@@ -1,3 +1,5 @@
+# Docker image we use to run CI. Build with scripts/docker_build.
+# Open a shell to this image with scripts/docker_sh.
 # Use a fixed snapshot of the base image to create a deterministic environment.
 # Snapshot tags can be found at https://hub.docker.com/_/debian/tags
 ARG image_digest=sha256:f528891ab1aa484bf7233dbcc84f3c806c3e427571d75510a9d74bb5ec535b33

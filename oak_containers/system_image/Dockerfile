@@ -1,3 +1,4 @@
+# Deprecated - use base_image.Dockerfile or nvidia version, see README.md.
 # debian:stable-20240612
 ARG debian_snapshot=sha256:26878d0d3aa5e1980d6f8060b4af32fc48b8edeb1fc4d2d074a13a04b17c95f2
 FROM debian@${debian_snapshot}

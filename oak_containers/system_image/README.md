@@ -6,6 +6,8 @@
 
 # System Image Build Tools
 
+We use this Docker image to build the base system image for Oak Containers.
+
 ## Full System Image Tools
 
 `build-old.sh` and `Dockerfile`
@@ -55,6 +57,13 @@ How this works:
    binaries onto it.
 
 5. `oci_runtime_bundle` exports the bundle to a tarball that we can use.
+
+## Sysroot
+
+We use this to get a full, consistent set of libraries, tools and compilers, and
+extract them to make a sysroot. The plan is to plug this sysroot into Bazel to
+get a consistent toolchain. This image is not used to run anything at the
+moment.
 
 # Current Issues/Improvements
 

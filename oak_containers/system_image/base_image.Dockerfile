@@ -1,4 +1,6 @@
-# debian:stable-20240612
+# System Image for Oak Containers. Contains base Debian plus binaries and 
+# configs to run Oak. This MUST be based on a stable Debian image.
+# debian:stable-20240612 - https://hub.docker.com/_/debian/tags
 ARG debian_snapshot=sha256:26878d0d3aa5e1980d6f8060b4af32fc48b8edeb1fc4d2d074a13a04b17c95f2
 FROM debian@${debian_snapshot}
 
@@ -8,10 +10,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # This takes advantage of the fact that the base image contains the snapshot
 # URL as a comment in /etc/apt/sources.list.d/debian.sources, with a switch
 # to snapshot-cloudflare in case it has higher availability.
+# NOTE: Using snapshot-cloudflare may cause issues in future image bases.
+# If you get errors like b/365523488#comment60, remove the following block.
+# Tracking: b/369706690.
 RUN sed -i -e '/^URIs/d' \
     -e '/^# http:\/\/snapshot/{s/#/URIs:/;s/snapshot/snapshot-cloudflare/}' \
     -e '/^Signed-By/a\Check-Valid-Until: no' \
     /etc/apt/sources.list.d/debian.sources
+
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
     systemd systemd-sysv dbus udev runc \
