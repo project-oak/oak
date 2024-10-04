@@ -313,21 +313,6 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -347,50 +332,34 @@
 </span><span class="kw">use </span>alloc::{string::String, vec::Vec};
 <span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
 
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>ecdsa::signature::Verifier;
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{KeyType, Signature, VerifyingKeySet},
     HexDigest, RawDigest,
 };
+<span class="kw">use </span>p256::pkcs8::{der::Decode, DecodePublicKey};
 <span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
 
-<span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">"-----BEGIN PUBLIC KEY-----"</span>;
-<span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">"-----END PUBLIC KEY-----"</span>;
+<span class="kw">const </span>PUBLIC_KEY_PEM_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"PUBLIC KEY"</span>;
 
-<span class="doccomment">/// Makes a plausible guess whether the public key is in PEM format.
-</span><span class="attr">#[allow(dead_code)]
-</span><span class="kw">pub fn </span>looks_like_pem(maybe_pem: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">let </span>p = maybe_pem.trim();
-    p.starts_with(PEM_HEADER) &amp;&amp; p.ends_with(PEM_FOOTER)
-}
-
-<span class="doccomment">/// Converts a PEM key to raw. Will panic if it does not look like PEM.
+<span class="doccomment">/// Converts a PEM public key to raw ASN.1 DER bytes.
 </span><span class="kw">pub fn </span>convert_pem_to_raw(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span>stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect(<span class="string">"could not find expected header"</span>)
-        .strip_suffix(PEM_FOOTER)
-        .expect(<span class="string">"could not find expected footer"</span>);
-    <span class="kw">let </span>remove_newlines = stripped.replace(<span class="string">'\n'</span>, <span class="string">""</span>);
+    <span class="kw">let </span>(label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Couldn't interpret PEM: {e}"</span>))<span class="question-mark">?</span>;
 
-    BASE64_STANDARD.decode(remove_newlines).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
+    <span class="macro">anyhow::ensure!</span>(
+        label == PUBLIC_KEY_PEM_LABEL,
+        <span class="string">"PEM label {label} is not {PUBLIC_KEY_PEM_LABEL}"
+    </span>);
+
+    <span class="prelude-val">Ok</span>(key.into_vec())
 }
 
-<span class="doccomment">/// Converts a raw public key to PEM format.
-</span><span class="kw">pub fn </span>convert_raw_to_pem(public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>pem = String::from(PEM_HEADER);
-    <span class="kw">for </span>(i, c) <span class="kw">in </span>BASE64_STANDARD.encode(public_key).chars().enumerate() {
-        <span class="kw">if </span>i % <span class="number">64 </span>== <span class="number">0 </span>{
-            pem.push(<span class="string">'\n'</span>);
-        }
-        pem.push(c);
-    }
-    pem.push(<span class="string">'\n'</span>);
-    pem.push_str(PEM_FOOTER);
-    pem.push(<span class="string">'\n'</span>);
-    pem
+<span class="doccomment">/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
+</span><span class="kw">pub fn </span>convert_raw_to_pem(asn1_der_public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
+    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
+        .expect(<span class="string">"public key bytes are not ASN.1 DER"</span>);
+    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect(<span class="string">"couldn't create pem"</span>)
 }
 
 <span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
@@ -402,13 +371,14 @@
     })
 }
 
-<span class="doccomment">/// Converts a raw public key to a verifying key.
+<span class="doccomment">/// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
 </span><span class="kw">pub fn </span>convert_raw_to_verifying_key(
     public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    <span class="comment">// TODO: (b/371081270) - Can we create a VerifyingKey without the PEM detour?
-    </span><span class="kw">let </span>public_key_pem = convert_raw_to_pem(public_key);
-    convert_pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
+    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(public_key)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Could not interpret bytes as ASN.1 DER: {e}"</span>))<span class="question-mark">?</span>;
+    p256::ecdsa::VerifyingKey::from_public_key_der(doc.as_bytes())
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't convert der to verifying key: {e}"</span>))
 }
 
 <span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the
