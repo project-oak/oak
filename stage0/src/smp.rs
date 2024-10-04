@@ -23,7 +23,10 @@ use core::{
 use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
 use crate::{
-    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    acpi_tables::{
+        ControllerStructureType, LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic,
+        ProcessorLocalX2Apic, Rsdp,
+    },
     apic::Lapic,
     pic::disable_pic8259,
     Platform,
@@ -104,21 +107,30 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if
     // the APIC ID is too large to fit into the one-byte field of the APIC
     // structure (e.g. if you have more than 256 CPUs).
-    for item in madt.iter() {
-        let (remote_lapic_id, flags) = match item.structure_type {
-            ProcessorLocalApic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalApic::new(item)?;
+    for controller_header in madt.controller_struct_headers() {
+        let (remote_lapic_id, flags) = match controller_header.structure_type {
+            ControllerStructureType::ProcessorLocalApic => {
+                let remote_lapic = ProcessorLocalApic::new(controller_header)?;
                 log::debug!("Local APIC: {:?}", remote_lapic);
                 (remote_lapic.apic_id as u32, remote_lapic.flags)
             }
-            ProcessorLocalX2Apic::STRUCTURE_TYPE => {
-                let remote_lapic = ProcessorLocalX2Apic::new(item)?;
+            ControllerStructureType::ProcessorLocalX2Apic => {
+                let remote_lapic = ProcessorLocalX2Apic::new(controller_header)?;
                 log::debug!("Local X2APIC: {:?}", remote_lapic);
                 (remote_lapic.x2apic_id, remote_lapic.flags)
             }
+            ControllerStructureType::MultiprocessorWakeup => {
+                let multiprocessor_wakeup =
+                    MultiprocessorWakeup::from_header_cast(controller_header)?;
+                log::debug!(
+                    "Found a MultiprocessorWakeup :D MailBox address: {:?}",
+                    multiprocessor_wakeup.mailbox_address
+                );
+                continue;
+            }
             // We don't care about other interrupt controller structure types.
             _ => {
-                log::debug!("uninteresting structure: {}", item.structure_type);
+                log::debug!("uninteresting structure: {:?}", controller_header.structure_type);
                 continue;
             }
         };

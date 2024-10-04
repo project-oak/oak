@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+/// Defines ACPI structures based on ACPI specification.
+/// You can find this specification here:
+/// https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html
 use core::{marker::PhantomData, mem::size_of, ops::Deref, slice};
 
 use bitflags::bitflags;
@@ -369,6 +372,10 @@ bitflags! {
 /// Multiple APIC Description Table (MADT).
 ///
 /// See Section 5.2.12 in the ACPI specification for more details.
+/// Note that the MADT has the same fields as the RSDT plus a few more,
+/// the first few fields are the same. These common fields are represented
+/// by DescriptionHeader; here we reuse that and add the remaining fields.
+/// Table 5.19 of ACPI Spec lists the fields.
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Madt {
@@ -380,13 +387,18 @@ pub struct Madt {
     /// Multiple APIC flags.
     flags: MadtFlags,
     // This is followed by a dynamic number of variable-length interrupt controller structures,
-    // which unfortunately can't be expressed in safe Rust.
+    // which unfortunately can't be expressed in safe Rust. See ControllerHeader below.
 }
 
+/// Header for values in MADT field "Interrupt Controller Structure".
+/// This is the last field in the MADT and can appear N times, each time
+/// containing a different structure (e.g. ProcessorLocalApic) and length
+/// according to its type. However, all of these structures look the same in
+/// their first 2 fields - we factor them here for reuse and call it a header.
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct ControllerHeader {
-    pub structure_type: u8,
+    pub structure_type: ControllerStructureType,
     len: u8,
 }
 
@@ -408,6 +420,20 @@ impl ControllerHeader {
     }
 }
 
+/// Structure type for an entry in the field "Interrupt Controller Structure"
+/// in the MADT. Valid types documented in Table 5.21 of ACPI Specification.
+/// Only adding here the types that we currently use.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
+pub enum ControllerStructureType {
+    ProcessorLocalApic = 0,
+    ProcessorLocalX2Apic = 9,
+    MultiprocessorWakeup = 0x10,
+}
+
+/// Processor Local Apic Structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. Documented in section 5.2.12.2 of APIC Specification.
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct ProcessorLocalApic {
@@ -424,10 +450,8 @@ pub struct ProcessorLocalApic {
 }
 
 impl ProcessorLocalApic {
-    pub const STRUCTURE_TYPE: u8 = 0;
-
     pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
+        if header.structure_type != ControllerStructureType::ProcessorLocalApic {
             return Err("structure is not Processor Local APIC Structure");
         }
         header.validate()?;
@@ -437,6 +461,9 @@ impl ProcessorLocalApic {
     }
 }
 
+/// Processor Local x2APIC structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. Documented in section 5.2.12.12 of APIC Specification.
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct ProcessorLocalX2Apic {
@@ -459,16 +486,58 @@ pub struct ProcessorLocalX2Apic {
 }
 
 impl ProcessorLocalX2Apic {
-    pub const STRUCTURE_TYPE: u8 = 9;
-
     pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
+        if header.structure_type != ControllerStructureType::ProcessorLocalX2Apic {
             return Err("structure is not Processor Local X2APIC Structure");
         }
         header.validate()?;
 
         // Safety: we're verified that the structure type is correct.
         Ok(unsafe { &*(header as *const _ as usize as *const Self) })
+    }
+}
+
+/// Multiprocessor Wakeup structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. Documented in section 5.2.12.19 of APIC Specification.
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct MultiprocessorWakeup {
+    /// Interrupt structure common header.
+    /// Type must be 0x10, length must be 16.
+    header: ControllerHeader,
+
+    /// MailBox version: must be set to 0.
+    mailbox_version: u16,
+
+    /// 4 bytes reserved.
+    _reserved: [u8; 4],
+
+    /// Physical address of the mailbox. It must be in ACPINvs. It must also be
+    /// 4K bytes aligned. Memory declared in stage0_bin/layout.ld. Mailbox
+    /// structure defined in table 5.44 of ACPI Spec.
+    pub mailbox_address: u8,
+}
+
+impl MultiprocessorWakeup {
+    const MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH: u8 = 16;
+
+    /// Gets a reference to a MultiprocessorWakeup given a reference to its
+    /// first field (header). This assumes that the memory that immediately
+    /// follows header is actually a MultiprocessorWakeup.
+    pub fn from_header_cast(header: &ControllerHeader) -> Result<&Self, &'static str> {
+        if header.structure_type != ControllerStructureType::MultiprocessorWakeup {
+            return Err("structure is not MultiprocessorWakeup");
+        }
+        if header.len != Self::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH {
+            return Err("MultiprocessorWakeup structure length must be 16");
+        }
+        header.validate()?;
+
+        let header_raw_pointer = header as *const _ as *const Self;
+        // Deref to get a &Self. Safety: we're verified correct structure type.
+        // There's no guarantee the actual structure comforms to that type.
+        Ok(unsafe { &*(header_raw_pointer) })
     }
 }
 
@@ -492,13 +561,24 @@ impl Madt {
         Ok(())
     }
 
-    pub fn iter(&self) -> MadtIterator<'_> {
+    /// Create an iterator over entries of field Interrupt Controller Structure
+    /// that returns references to the entries' headers.
+    pub fn controller_struct_headers(&self) -> MadtIterator<'_> {
+        // The Madt struct does not itself contain the interrupt controller
+        // entries (see struct Madt above) but these entries are expected to
+        // exist right after the Madt struct. Therefore, we set the offset to
+        // point to one byte after, which is size_of Madt.
         MadtIterator { madt: self, offset: size_of::<Madt>() }
     }
 }
 
 pub struct MadtIterator<'a> {
     madt: &'a Madt,
+
+    /// Offset with respect to where Madt starts where the first interrupt
+    /// controller entry starts. The first interrupt controller entry
+    /// should be right after the Madt struct ends, and its address should be
+    /// address of Madt (madt, above) + length of madt (offset)
     offset: usize,
 }
 
