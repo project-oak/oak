@@ -909,6 +909,62 @@ pub struct CbEndorsements {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerEndorsements>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct AmdSevSnpEndorsement {
+    /// The serialized TEE certificate(s). The details of the format and how the
+    /// certificate(s) are encoded into this byte array are implementation
+    /// specific. In case of AMD-SEV-SNP, as described in
+    /// <https://www.amd.com/system/files/TechDocs/57230.pdf,> there are three
+    /// different certificates packaged in two different files. We only include
+    /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
+    /// AMD SEV Key (ASK) are long-lived.
+    #[prost(bytes = "vec", tag = "1")]
+    pub tee_certificate: ::prost::alloc::vec::Vec<u8>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct FirmwareEndorsement {
+    /// Endorsement of the stage0 firmware binary.
+    #[prost(message, optional, tag = "1")]
+    pub firmware: ::core::option::Option<SignedEndorsement>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct KernelEndorsement {
+    #[prost(message, optional, tag = "1")]
+    pub kernel: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "2")]
+    pub kernel_cmd_line: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "3")]
+    pub init_ram_fs: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "4")]
+    pub memory_map: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "5")]
+    pub acpi: ::core::option::Option<SignedEndorsement>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct SystemEndorsement {
+    #[prost(message, optional, tag = "1")]
+    pub system_image: ::core::option::Option<SignedEndorsement>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ApplicationEndorsement {
+    #[prost(message, optional, tag = "1")]
+    pub binary: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "2")]
+    pub configuration: ::core::option::Option<SignedEndorsement>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ContainerEndorsement {
+    #[prost(message, optional, tag = "1")]
+    pub binary: ::core::option::Option<SignedEndorsement>,
+    #[prost(message, optional, tag = "2")]
+    pub configuration: ::core::option::Option<SignedEndorsement>,
+}
 /// Endorsement contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running
 /// on it.

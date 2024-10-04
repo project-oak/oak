@@ -149,6 +149,44 @@ message CBEndorsements {
   RootLayerEndorsements root_layer = 1;
 }
 
+message AmdSevSnpEndorsement {
+  // The serialized TEE certificate(s). The details of the format and how the
+  // certificate(s) are encoded into this byte array are implementation
+  // specific. In case of AMD-SEV-SNP, as described in
+  // https://www.amd.com/system/files/TechDocs/57230.pdf, there are three
+  // different certificates packaged in two different files. We only include
+  // the machine-specific VCEK certificate since the AMD Root Key (ARK) and
+  // AMD SEV Key (ASK) are long-lived.
+  bytes tee_certificate = 1;
+}
+
+message FirmwareEndorsement {
+  // Endorsement of the stage0 firmware binary.
+  SignedEndorsement firmware = 1;
+}
+
+message KernelEndorsement {
+  SignedEndorsement kernel = 1;
+  SignedEndorsement kernel_cmd_line = 2;
+  SignedEndorsement init_ram_fs = 3;
+  SignedEndorsement memory_map = 4;
+  SignedEndorsement acpi = 5;
+}
+
+message SystemEndorsement {
+  SignedEndorsement system_image = 1;
+}
+
+message ApplicationEndorsement {
+  SignedEndorsement binary = 1;
+  SignedEndorsement configuration = 2;
+}
+
+message ContainerEndorsement {
+  SignedEndorsement binary = 1;
+  SignedEndorsement configuration = 2;
+}
+
 // Endorsement contains statements that some entity (e.g. a hardware provider)
 // vouches for the integrity of claims about the TEE or the software running
 // on it.
