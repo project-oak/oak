@@ -21,15 +21,15 @@ use oak_crypto::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
-    session::v1::{EndorsedEvidence, PlaintextMessage, SessionRequest, SessionResponse},
+    session::v1::{PlaintextMessage, SessionRequest, SessionResponse},
 };
 
 use crate::{
     alloc::string::ToString,
     attestation::{
         AttestationProvider, AttestationType, AttestationVerifier, Attester,
-        ClientAttestationProvider, DefaultAttestationAggregator, MockAttestationVerifier,
-        MockAttester, ServerAttestationProvider,
+        ClientAttestationProvider, DefaultAttestationAggregator, Endorser, MockAttestationVerifier,
+        MockAttester, MockEndorser, ServerAttestationProvider,
     },
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
@@ -60,6 +60,11 @@ fn attestation_verification_succeeds() {
             (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
             (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
         ]),
+        self_endorsers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
+        ]),
         peer_verifiers: BTreeMap::from([
             (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
             (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
@@ -73,6 +78,11 @@ fn attestation_verification_succeeds() {
             (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
             (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
             (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        self_endorsers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
         ]),
         peer_verifiers: BTreeMap::from([
             (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
@@ -111,6 +121,11 @@ fn attestation_verification_fails() {
             (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
             (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
         ]),
+        self_endorsers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
+        ]),
         peer_verifiers: BTreeMap::from([
             (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
             (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
@@ -124,6 +139,11 @@ fn attestation_verification_fails() {
             (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
             (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
             (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
+        ]),
+        self_endorsers: BTreeMap::from([
+            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
+            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
+            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
         ]),
         peer_verifiers: BTreeMap::from([
             (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
@@ -157,13 +177,14 @@ fn attestation_verification_fails() {
 
 fn create_mock_attester() -> Box<dyn Attester> {
     let mut attester = MockAttester::new();
-    attester.expect_get_endorsed_evidence().returning(|| {
-        Ok(EndorsedEvidence {
-            evidence: Some(Evidence { ..Default::default() }),
-            endorsements: Some(Endorsements { ..Default::default() }),
-        })
-    });
+    attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     Box::new(attester)
+}
+
+fn create_mock_endorser() -> Box<dyn Endorser> {
+    let mut endorser = MockEndorser::new();
+    endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
+    Box::new(endorser)
 }
 
 fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {

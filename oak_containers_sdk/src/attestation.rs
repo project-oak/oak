@@ -16,8 +16,11 @@
 
 use anyhow::Context;
 use oak_grpc::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
-use oak_proto_rust::oak::session::v1::EndorsedEvidence;
-use oak_session::attestation::Attester;
+use oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    session::v1::EndorsedEvidence,
+};
+use oak_session::attestation::{Attester, Endorser};
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -49,10 +52,60 @@ impl InstanceAttester {
 }
 
 impl Attester for InstanceAttester {
-    /// Retrieves the endorsed evidence from the Orchestrator.
-    /// This evidence is used to prove the authenticity and integrity of the
+    fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
+        anyhow::bail!("evidence extension is not currently supported in Oak Containers");
+    }
+
+    /// Retrieves the evidence from the Orchestrator.
+    /// The evidence is used to prove the authenticity and integrity of the
     /// application.
-    fn get_endorsed_evidence(&self) -> anyhow::Result<EndorsedEvidence> {
-        Ok(self.endorsed_evidence.clone())
+    fn quote(&self) -> anyhow::Result<Evidence> {
+        // TODO: b/370474308 - Currently we receive [`EndorsedEvidence`] from the
+        // Orchestrator, and have to split before returning to the Noise SDK.
+        // But we'll need make both Attester and Endorser request Evidence and
+        // Endorsements from the Attestation Agent separately.
+        self.endorsed_evidence
+            .evidence
+            .clone()
+            .context("evidence is not present in the EndorsedEvidence")
+    }
+}
+
+#[derive(Clone)]
+pub struct InstanceEndorser {
+    endorsed_evidence: EndorsedEvidence,
+}
+
+impl InstanceEndorser {
+    pub async fn create() -> anyhow::Result<Self> {
+        // TODO: b/370474308 - Use a dedicated attestation gRPC client once
+        // attestation is provided by a separate interface.
+        let mut grpc_client: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
+            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
+                .context("couldn't form endpoint")?
+                .connect_with_connector(service_fn(move |_: Uri| {
+                    tokio::net::UnixStream::connect(IPC_SOCKET)
+                }))
+                .await
+                .context("couldn't connect to UDS socket")?;
+
+            GrpcOrchestratorClient::new(channel)
+        };
+        let endorsed_evidence = grpc_client.get_endorsed_evidence(()).await?.into_inner();
+        Ok(Self { endorsed_evidence })
+    }
+}
+
+impl Endorser for InstanceEndorser {
+    /// Retrieves the endorsements from the Orchestrator.
+    fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
+        // TODO: b/370474308 - Currently we receive [`EndorsedEvidence`] from the
+        // Orchestrator, and have to split before returning to the Noise SDK.
+        // But we'll need make both Attester and Endorser request Evidence and
+        // Endorsements from the Attestation Agent separately.
+        self.endorsed_evidence
+            .endorsements
+            .clone()
+            .context("endorsements are not present in the EndorsedEvidence")
     }
 }

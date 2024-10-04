@@ -33,7 +33,7 @@ static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
 const IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 // Re-export structs so that they are available at the top level of the SDK.
-pub use attestation::InstanceAttester;
+pub use attestation::{InstanceAttester, InstanceEndorser};
 pub use crypto::InstanceEncryptionKeyHandle;
 pub use oak_session_context::{ApplicationHandler, OakSessionContext};
 pub use orchestrator_client::{OrchestratorClient, OrchestratorInterface};

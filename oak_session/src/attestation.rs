@@ -71,9 +71,19 @@ impl From<Error> for AttestationFailure {
     }
 }
 
+// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
+// logic has been moved to a separate crate.
 #[cfg_attr(test, automock)]
 pub trait Attester: Send {
-    fn get_endorsed_evidence(&self) -> anyhow::Result<EndorsedEvidence>;
+    fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;
+    fn quote(&self) -> anyhow::Result<Evidence>;
+}
+
+// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
+// logic has been moved to a separate crate.
+#[cfg_attr(test, automock)]
+pub trait Endorser: Send {
+    fn endorse<'a>(&self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
 }
 
 #[cfg_attr(test, automock)]
@@ -205,7 +215,21 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                         .config
                         .self_attesters
                         .iter()
-                        .map(|(id, att)| Ok((id.clone(), att.get_endorsed_evidence()?)))
+                        .map(|(id, attester)| {
+                            let evidence = attester.quote()?;
+                            // Adds endorsements with corresponding ID.
+                            // Endorsements that don't have a corresponding Evidence will not be
+                            // added to the `EndorsedEvidence`.
+                            let endorsements = self
+                                .config
+                                .self_endorsers
+                                .get(id)
+                                .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                                .transpose()?;
+                            let endorsed_evidence =
+                                EndorsedEvidence { evidence: Some(evidence), endorsements };
+                            Ok((id.clone(), endorsed_evidence))
+                        })
                         .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                 }))
             }
@@ -268,7 +292,21 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                         .config
                         .self_attesters
                         .iter()
-                        .map(|(id, att)| Ok((id.clone(), att.get_endorsed_evidence()?)))
+                        .map(|(id, attester)| {
+                            let evidence = attester.quote()?;
+                            // Adds endorsements with corresponding ID.
+                            // Endorsements that don't have a corresponding Evidence will not be
+                            // added to the `EndorsedEvidence`.
+                            let endorsements = self
+                                .config
+                                .self_endorsers
+                                .get(id)
+                                .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                                .transpose()?;
+                            let endorsed_evidence =
+                                EndorsedEvidence { evidence: Some(evidence), endorsements };
+                            Ok((id.clone(), endorsed_evidence))
+                        })
                         .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                 }))
             }

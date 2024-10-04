@@ -16,10 +16,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_containers_sdk::{
-    InstanceAttester, InstanceEncryptionKeyHandle, OakSessionContext, OrchestratorClient,
-};
-use oak_session::attestation::Attester;
+use oak_containers_sdk::{InstanceEncryptionKeyHandle, OakSessionContext, OrchestratorClient};
 use tokio::net::TcpListener;
 
 const TRUSTED_APP_PORT: u16 = 8080;
@@ -36,10 +33,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("failed to get application config")?;
 
-    let attester = InstanceAttester::create().await.context("Could't create attester")?;
-
-    let endorsed_evidence =
-        attester.get_endorsed_evidence().context("failed to get endorsed evidence")?;
+    let endorsed_evidence = orchestrator_client
+        .get_endorsed_evidence()
+        .await
+        .context("failed to get endorsed evidence")?;
 
     let encryption_key_handle = InstanceEncryptionKeyHandle::create()
         .await
