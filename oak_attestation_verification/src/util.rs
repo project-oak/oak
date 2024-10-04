@@ -17,50 +17,34 @@
 use alloc::{string::String, vec::Vec};
 use core::{cmp::Ordering, str::FromStr};
 
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{KeyType, Signature, VerifyingKeySet},
     HexDigest, RawDigest,
 };
+use p256::pkcs8::{der::Decode, DecodePublicKey};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
-const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
-const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
+const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
-/// Makes a plausible guess whether the public key is in PEM format.
-#[allow(dead_code)]
-pub fn looks_like_pem(maybe_pem: &str) -> bool {
-    let p = maybe_pem.trim();
-    p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER)
-}
-
-/// Converts a PEM key to raw. Will panic if it does not look like PEM.
+/// Converts a PEM public key to raw ASN.1 DER bytes.
 pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
-    let stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect("could not find expected header")
-        .strip_suffix(PEM_FOOTER)
-        .expect("could not find expected footer");
-    let remove_newlines = stripped.replace('\n', "");
+    let (label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
+        .map_err(|e| anyhow::anyhow!("Couldn't interpret PEM: {e}"))?;
 
-    BASE64_STANDARD.decode(remove_newlines).map_err(|error| anyhow::anyhow!(error))
+    anyhow::ensure!(
+        label == PUBLIC_KEY_PEM_LABEL,
+        "PEM label {label} is not {PUBLIC_KEY_PEM_LABEL}"
+    );
+
+    Ok(key.into_vec())
 }
 
-/// Converts a raw public key to PEM format.
-pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
-    let mut pem = String::from(PEM_HEADER);
-    for (i, c) in BASE64_STANDARD.encode(public_key).chars().enumerate() {
-        if i % 64 == 0 {
-            pem.push('\n');
-        }
-        pem.push(c);
-    }
-    pem.push('\n');
-    pem.push_str(PEM_FOOTER);
-    pem.push('\n');
-    pem
+/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
+pub fn convert_raw_to_pem(asn1_der_public_key_bytes: &[u8]) -> String {
+    let doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
+        .expect("public key bytes are not ASN.1 DER");
+    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect("couldn't create pem")
 }
 
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
@@ -72,13 +56,14 @@ pub fn convert_pem_to_verifying_key(
     })
 }
 
-/// Converts a raw public key to a verifying key.
+/// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
 pub fn convert_raw_to_verifying_key(
     public_key: &[u8],
 ) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    // TODO: (b/371081270) - Can we create a VerifyingKey without the PEM detour?
-    let public_key_pem = convert_raw_to_pem(public_key);
-    convert_pem_to_verifying_key(&public_key_pem)
+    let doc = p256::pkcs8::Document::from_der(public_key)
+        .map_err(|e| anyhow::anyhow!("Could not interpret bytes as ASN.1 DER: {e}"))?;
+    p256::ecdsa::VerifyingKey::from_public_key_der(doc.as_bytes())
+        .map_err(|e| anyhow::anyhow!("couldn't convert der to verifying key: {e}"))
 }
 
 /// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the

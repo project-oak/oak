@@ -24,8 +24,8 @@ use oak_proto_rust::oak::HexDigest;
 
 use crate::util::{
     convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
-    convert_raw_to_verifying_key, equal_keys, get_hex_digest_match, looks_like_pem,
-    verify_signature_ecdsa, MatchResult,
+    convert_raw_to_verifying_key, equal_keys, get_hex_digest_match, verify_signature_ecdsa,
+    MatchResult,
 };
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
@@ -43,7 +43,6 @@ const HASH4: &str = "fc5ed8a3ba1da6717da6031760a2deb45c52b836";
 struct TestData {
     endorsement: Vec<u8>,
     endorsement_signature: Vec<u8>,
-    endorser_public_key_pem: String,
     rekor_public_key_pem: String,
     endorser_public_key: Vec<u8>,
     rekor_public_key: Vec<u8>,
@@ -66,21 +65,10 @@ fn load_testdata() -> TestData {
     TestData {
         endorsement,
         endorsement_signature,
-        endorser_public_key_pem,
         rekor_public_key_pem,
         endorser_public_key,
         rekor_public_key,
     }
-}
-
-#[test]
-fn test_looks_like_pem() {
-    let testdata = load_testdata();
-    assert!(looks_like_pem(&testdata.endorser_public_key_pem));
-    assert!(looks_like_pem(&testdata.rekor_public_key_pem));
-    assert!(!looks_like_pem("-----BEGIN PUBLIC KEY-----\n"));
-    assert!(!looks_like_pem("\n-----END PUBLIC KEY-----\n"));
-    assert!(!looks_like_pem("whatever"));
 }
 
 #[test]
