@@ -32,6 +32,9 @@
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -48,7 +51,7 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![no_std]
+</span><span class="attr">#![cfg_attr(not(feature = <span class="string">"std"</span>), no_std)]
 #![feature(let_chains)]
 
 </span><span class="kw">extern crate </span>alloc;
@@ -61,6 +64,9 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>rekor;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>util;
 <span class="kw">pub mod </span>verifier;
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test_util;
 
 <span class="kw">pub use </span>endorsement::verify_endorsement;
 <span class="kw">pub use </span>util::convert_pem_to_raw;

@@ -327,6 +327,7 @@
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
 <a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -405,7 +406,7 @@
 </span><span class="kw">pub fn </span>convert_raw_to_verifying_key(
     public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    <span class="comment">// Need to figure out how to create a VerifyingKey without the PEM detour.
+    <span class="comment">// TODO: (b/371081270) - Can we create a VerifyingKey without the PEM detour?
     </span><span class="kw">let </span>public_key_pem = convert_raw_to_pem(public_key);
     convert_pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
 }
@@ -445,7 +446,8 @@
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>sig = ecdsa::Signature::from_der(signature)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid ASN.1 signature: {}"</span>, error))<span class="question-mark">?</span>;
-    <span class="kw">let </span>key = convert_raw_to_verifying_key(public_key)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key = convert_raw_to_verifying_key(public_key)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't convert public key: {error}"</span>))<span class="question-mark">?</span>;
 
     key.verify(contents, <span class="kw-2">&amp;</span>sig)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't verify signature: {}"</span>, error))

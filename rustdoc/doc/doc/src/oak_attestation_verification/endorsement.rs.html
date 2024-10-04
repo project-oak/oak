@@ -429,6 +429,9 @@
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -473,27 +476,29 @@
 
 <span class="doccomment">/// URI representing in-toto statements. We only use V1, earlier and later
 /// versions will be rejected.
-</span><span class="kw">const </span>STATEMENT_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">"https://in-toto.io/Statement/v1"</span>;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>STATEMENT_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">"https://in-toto.io/Statement/v1"</span>;
 
 <span class="doccomment">/// Oldest predicate type for in-toto endorsement statements. References still
 /// exist, but fully removing it will be easy.
+</span><span class="attr">#[deprecated = <span class="string">"Use PREDICATE_TYPE_V3"</span>]
 </span><span class="kw">const </span>PREDICATE_TYPE_V1: <span class="kw-2">&amp;</span>str = <span class="string">"https://github.com/project-oak/transparent-release/claim/v1"</span>;
 
 <span class="doccomment">/// Previous predicate type of in-toto endorsement statements. In operation.
+</span><span class="attr">#[deprecated = <span class="string">"Use PREDICATE_TYPE_V3"</span>]
 </span><span class="kw">const </span>PREDICATE_TYPE_V2: <span class="kw-2">&amp;</span>str = <span class="string">"https://github.com/project-oak/transparent-release/claim/v2"</span>;
 
 <span class="doccomment">/// Current predicate type of in-toto endorsement statements, which loses
 /// the `usage` field and adds claim types.
-</span><span class="kw">const </span>PREDICATE_TYPE_V3: <span class="kw-2">&amp;</span>str = <span class="string">"https://project-oak.github.io/oak/tr/endorsement/v1"</span>;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>PREDICATE_TYPE_V3: <span class="kw-2">&amp;</span>str = <span class="string">"https://project-oak.github.io/oak/tr/endorsement/v1"</span>;
 
 <span class="doccomment">/// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
-</span><span class="kw">const </span>FIRMWARE_CLAIM_TYPE: <span class="kw-2">&amp;</span>str =
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>FIRMWARE_CLAIM_TYPE: <span class="kw-2">&amp;</span>str =
     <span class="string">"https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md"</span>;
 
 <span class="doccomment">/// No attempt will be made to decode the attachment of a kernel-type
 /// binary unless this claim is present in the endorsement.
-</span><span class="kw">const </span>KERNEL_CLAIM_TYPE: <span class="kw-2">&amp;</span>str =
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>KERNEL_CLAIM_TYPE: <span class="kw-2">&amp;</span>str =
     <span class="string">"https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md"</span>;
 
 <span class="comment">// A map from algorithm name to lowercase hex-encoded value.
@@ -744,7 +749,8 @@
     <span class="kw">if </span>statement._type != STATEMENT_TYPE {
         <span class="macro">anyhow::bail!</span>(<span class="string">"unsupported statement type"</span>);
     }
-    <span class="kw">if </span>statement.predicate_type != PREDICATE_TYPE_V1
+    <span class="attr">#[allow(deprecated)] </span><span class="comment">// We still need to validate the older types.
+    </span><span class="kw">if </span>statement.predicate_type != PREDICATE_TYPE_V1
         &amp;&amp; statement.predicate_type != PREDICATE_TYPE_V2
         &amp;&amp; statement.predicate_type != PREDICATE_TYPE_V3
     {
