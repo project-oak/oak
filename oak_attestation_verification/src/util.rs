@@ -160,69 +160,25 @@ pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
     let mut same = 0;
     let mut different = 0;
 
-    if !a.psha2.is_empty() && !b.psha2.is_empty() {
-        if a.psha2 == b.psha2 {
-            same += 1;
-        } else {
-            different += 1;
+    let mut compare = |a: &str, b: &str| {
+        if !a.is_empty() && !b.is_empty() {
+            if a == b {
+                same += 1;
+            } else {
+                different += 1;
+            }
         }
-    }
-    if !a.sha1.is_empty() && !b.sha1.is_empty() {
-        if a.sha1 == b.sha1 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha2_256.is_empty() && !b.sha2_256.is_empty() {
-        if a.sha2_256 == b.sha2_256 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha2_512.is_empty() && !b.sha2_512.is_empty() {
-        if a.sha2_512 == b.sha2_512 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha3_512.is_empty() && !b.sha3_512.is_empty() {
-        if a.sha3_512 == b.sha3_512 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha3_384.is_empty() && !b.sha3_384.is_empty() {
-        if a.sha3_384 == b.sha3_384 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha3_256.is_empty() && !b.sha3_256.is_empty() {
-        if a.sha3_256 == b.sha3_256 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha3_224.is_empty() && !b.sha3_224.is_empty() {
-        if a.sha3_224 == b.sha3_224 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
-    if !a.sha2_384.is_empty() && !b.sha2_384.is_empty() {
-        if a.sha2_384 == b.sha2_384 {
-            same += 1;
-        } else {
-            different += 1;
-        }
-    }
+    };
+
+    compare(&a.psha2, &b.psha2);
+    compare(&a.sha1, &b.sha1);
+    compare(&a.sha2_256, &b.sha2_256);
+    compare(&a.sha2_512, &b.sha2_512);
+    compare(&a.sha3_512, &b.sha3_512);
+    compare(&a.sha3_384, &b.sha3_384);
+    compare(&a.sha3_256, &b.sha3_256);
+    compare(&a.sha3_224, &b.sha3_224);
+    compare(&a.sha2_384, &b.sha2_384);
 
     #[allow(clippy::collapsible_else_if)]
     if same > 0 {
@@ -276,34 +232,22 @@ pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
 
 /// Converts hex digest to raw digest.
 pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
+    let hex_decode = |field, name| {
+        hex::decode(field).map_err(|error| {
+            anyhow::anyhow!("could not decode field {name}: {error} (value {field})")
+        })
+    };
+
     let raw = RawDigest {
-        psha2: hex::decode(&h.psha2).map_err(|error| {
-            anyhow::anyhow!("could not decode field psha2: {} (value {})", error, h.psha2)
-        })?,
-        sha1: hex::decode(&h.sha1).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha1: {} (value {})", error, h.sha1)
-        })?,
-        sha2_256: hex::decode(&h.sha2_256).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha2_256: {} (value {})", error, h.sha2_256)
-        })?,
-        sha2_512: hex::decode(&h.sha2_512).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha2_512: {} (value {})", error, h.sha2_512)
-        })?,
-        sha3_512: hex::decode(&h.sha3_512).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha3_512: {} (value {})", error, h.sha3_512)
-        })?,
-        sha3_384: hex::decode(&h.sha3_384).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha3_384: {} (value {})", error, h.sha3_384)
-        })?,
-        sha3_256: hex::decode(&h.sha3_256).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha3_256: {} (value {})", error, h.sha3_256)
-        })?,
-        sha3_224: hex::decode(&h.sha3_224).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha3_224: {} (value {})", error, h.sha3_224)
-        })?,
-        sha2_384: hex::decode(&h.sha2_384).map_err(|error| {
-            anyhow::anyhow!("could not decode field sha2_384: {} (value {})", error, h.sha2_384)
-        })?,
+        psha2: hex_decode(&h.psha2, "psha2")?,
+        sha1: hex_decode(&h.sha1, "sha1")?,
+        sha2_256: hex_decode(&h.sha2_256, "sha2_256")?,
+        sha2_512: hex_decode(&h.sha2_512, "sha2_512")?,
+        sha3_512: hex_decode(&h.sha3_512, "sha3_512")?,
+        sha3_384: hex_decode(&h.sha3_384, "sha3_384")?,
+        sha3_256: hex_decode(&h.sha3_256, "sha3_256")?,
+        sha3_224: hex_decode(&h.sha3_224, "sha3_224")?,
+        sha2_384: hex_decode(&h.sha2_384, "sha2_384")?,
     };
 
     Ok(raw)
