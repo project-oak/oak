@@ -43,7 +43,6 @@ rust_test_suite(
     deps = [
         "//oak_attestation_explain",
         "//oak_attestation_verification",
-        "//oak_attestation_verification_test_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:prost",
     ],

@@ -2262,7 +2262,6 @@ dependencies = [
  "anyhow",
  "hex",
  "oak_attestation_verification",
- "oak_attestation_verification_test_utils",
  "oak_proto_rust",
  "prost",
  "serde",
@@ -2294,7 +2293,6 @@ dependencies = [
  "ecdsa",
  "getrandom",
  "hex",
- "oak_attestation_verification_test_utils",
  "oak_dice",
  "oak_file_utils",
  "oak_proto_rust",
@@ -2310,19 +2308,6 @@ dependencies = [
  "time",
  "x509-cert",
  "zerocopy",
-]
-
-[[package]]
-name = "oak_attestation_verification_test_utils"
-version = "0.1.0"
-dependencies = [
- "oak_attestation",
- "oak_attestation_verification",
- "oak_containers_sdk",
- "oak_proto_rust",
- "prost",
- "prost-types",
- "sha2",
 ]
 
 [[package]]

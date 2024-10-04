@@ -18,22 +18,23 @@ use std::fs;
 
 use oak_attestation_verification::{
     expect::get_expected_values,
+    reference_values_from_evidence,
     verifier::{to_attestation_results, verify, verify_dice_chain, verify_with_expected_values},
-};
-use oak_attestation_verification_test_utils::{
-    create_containers_reference_values, create_rk_reference_values, reference_values_from_evidence,
 };
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        text_reference_value, ApplicationLayerEndorsements, BinaryReferenceValue,
-        ContainerLayerEndorsements, Digests, Endorsements, Evidence, ExpectedValues,
-        InsecureReferenceValues, KernelLayerEndorsements, OakContainersEndorsements,
-        OakRestrictedKernelEndorsements, ReferenceValues, Regex, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements, TcbVersion,
-        TextReferenceValue, TransparentReleaseEndorsement,
+        text_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Digests, Endorsements, Evidence, ExpectedValues,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
+        TransparentReleaseEndorsement,
     },
     RawDigest,
 };
@@ -91,7 +92,7 @@ fn create_cb_reference_values() -> ReferenceValues {
 }
 
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
-fn create_containers_evidence() -> Evidence {
+fn create_oc_evidence() -> Evidence {
     let serialized =
         fs::read(data_path(CONTAINERS_EVIDENCE_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
@@ -125,7 +126,7 @@ fn create_fake_expected_values() -> ExpectedValues {
 }
 
 // Creates valid endorsements for an Oak Containers chain.
-fn create_containers_endorsements() -> Endorsements {
+fn create_oc_endorsements() -> Endorsements {
     let endorsement = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
     let signature = fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
     let log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
@@ -227,11 +228,103 @@ fn create_genoa_oc_reference_values() -> ReferenceValues {
     ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference")
 }
 
+// Creates valid reference values for an Oak Containers chain.
+fn create_oc_reference_values() -> ReferenceValues {
+    let skip = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+
+    let amd_sev = AmdSevReferenceValues {
+        min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
+        allow_debug: false,
+        // See b/327069120: Do not skip over stage0.
+        stage0: Some(skip.clone()),
+    };
+
+    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
+    #[allow(deprecated)]
+    let kernel_layer = KernelLayerReferenceValues {
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+        }),
+        kernel_setup_data: None,
+        kernel_image: None,
+        kernel_cmd_line: None,
+        kernel_cmd_line_regex: None,
+        kernel_cmd_line_text: Some(TextReferenceValue {
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from(
+                    "console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=3072000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet",
+                )],
+            })),
+        }),
+        init_ram_fs: Some(skip.clone()),
+        memory_map: Some(skip.clone()),
+        acpi: Some(skip.clone()),
+    };
+    let system_layer = SystemLayerReferenceValues { system_image: Some(skip.clone()) };
+    let container_layer = ContainerLayerReferenceValues {
+        binary: Some(skip.clone()),
+        configuration: Some(skip.clone()),
+    };
+    let vs = OakContainersReferenceValues {
+        root_layer: Some(root_layer),
+        kernel_layer: Some(kernel_layer),
+        system_layer: Some(system_layer),
+        container_layer: Some(container_layer),
+    };
+    ReferenceValues { r#type: Some(reference_values::Type::OakContainers(vs)) }
+}
+
+// Creates valid reference values for a restricted kernel application.
+fn create_rk_reference_values() -> ReferenceValues {
+    let skip = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+
+    let amd_sev = AmdSevReferenceValues {
+        min_tcb_version: Some(TcbVersion { boot_loader: 0, tee: 0, snp: 0, microcode: 0 }),
+        allow_debug: false,
+        // See b/327069120: Do not skip over stage0.
+        stage0: Some(skip.clone()),
+    };
+
+    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
+    #[allow(deprecated)]
+    let kernel_layer = KernelLayerReferenceValues {
+        kernel: Some(KernelBinaryReferenceValue {
+            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+        }),
+        kernel_setup_data: None,
+        kernel_image: None,
+        kernel_cmd_line: None,
+        kernel_cmd_line_regex: None,
+        kernel_cmd_line_text: Some(TextReferenceValue {
+            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: vec![String::from("console=ttyS0")],
+            })),
+        }),
+        init_ram_fs: Some(skip.clone()),
+        memory_map: Some(skip.clone()),
+        acpi: Some(skip.clone()),
+    };
+    let application_layer = ApplicationLayerReferenceValues {
+        binary: Some(skip.clone()),
+        configuration: Some(skip.clone()),
+    };
+    let vs = OakRestrictedKernelReferenceValues {
+        root_layer: Some(root_layer),
+        kernel_layer: Some(kernel_layer),
+        application_layer: Some(application_layer),
+    };
+    ReferenceValues { r#type: Some(reference_values::Type::OakRestrictedKernel(vs)) }
+}
+
 #[test]
 fn verify_containers_succeeds() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
-    let reference_values = create_containers_reference_values();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
+    let reference_values = create_oc_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
@@ -245,8 +338,8 @@ fn verify_containers_succeeds() {
 
 #[test]
 fn verify_containers_explicit_reference_values() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -312,8 +405,8 @@ fn verify_rk_explicit_reference_values() {
 #[test]
 fn verify_fake_evidence() {
     let evidence = create_fake_evidence();
-    let endorsements = create_containers_endorsements();
-    let mut reference_values = create_containers_reference_values();
+    let endorsements = create_oc_endorsements();
+    let mut reference_values = create_oc_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
     {
         reference.root_layer = Some(RootLayerReferenceValues {
@@ -337,7 +430,7 @@ fn verify_fake_evidence() {
 #[test]
 fn verify_fake_evidence_explicit_reference_values() {
     let evidence = create_fake_evidence();
-    let endorsements = create_containers_endorsements();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -354,7 +447,7 @@ fn verify_fake_evidence_explicit_reference_values() {
 #[test]
 fn verify_fake_evidence_split_verify_calls() {
     let evidence = create_fake_evidence();
-    let endorsements = create_containers_endorsements();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -380,7 +473,7 @@ fn verify_fake_evidence_split_verify_calls() {
 #[test]
 fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     let evidence = create_fake_evidence();
-    let endorsements = create_containers_endorsements();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -399,10 +492,10 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
 
 #[test]
 fn verify_fails_with_manipulated_root_public_key() {
-    let mut evidence = create_containers_evidence();
+    let mut evidence = create_oc_evidence();
     evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
-    let endorsements = create_containers_endorsements();
-    let reference_values = create_containers_reference_values();
+    let endorsements = create_oc_endorsements();
+    let reference_values = create_oc_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
@@ -416,9 +509,9 @@ fn verify_fails_with_manipulated_root_public_key() {
 
 #[test]
 fn verify_fails_with_unsupported_tcb_version() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
-    let mut reference_values = create_containers_reference_values();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
+    let mut reference_values = create_oc_reference_values();
 
     let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0 };
     match reference_values.r#type.as_mut() {
@@ -442,7 +535,7 @@ fn verify_fails_with_unsupported_tcb_version() {
 
 #[test]
 fn verify_succeeds_with_right_initial_measurement() {
-    let evidence = create_containers_evidence();
+    let evidence = create_oc_evidence();
     let actual = if let Some(EvidenceValues::OakContainers(values)) =
         verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
     {
@@ -458,8 +551,8 @@ fn verify_succeeds_with_right_initial_measurement() {
     }
     .expect("invalid DICE evidence");
 
-    let endorsements = create_containers_endorsements();
-    let mut reference_values = create_containers_reference_values();
+    let endorsements = create_oc_endorsements();
+    let mut reference_values = create_oc_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
     {
         let digests =
@@ -494,7 +587,7 @@ fn verify_succeeds_with_right_initial_measurement() {
 
 #[test]
 fn verify_fails_with_wrong_initial_measurement() {
-    let evidence = create_containers_evidence();
+    let evidence = create_oc_evidence();
     let mut wrong = if let Some(EvidenceValues::OakContainers(values)) =
         verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
     {
@@ -511,8 +604,8 @@ fn verify_fails_with_wrong_initial_measurement() {
     .expect("invalid DICE evidence");
     wrong[0] ^= 1;
 
-    let endorsements = create_containers_endorsements();
-    let mut reference_values = create_containers_reference_values();
+    let endorsements = create_oc_endorsements();
+    let mut reference_values = create_oc_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
     {
         let digests =
@@ -684,8 +777,8 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
 
 #[test]
 fn containers_invalid_boot_loader_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -710,8 +803,8 @@ fn containers_invalid_boot_loader_fails() {
 
 #[test]
 fn containers_invalid_microcode_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -736,8 +829,8 @@ fn containers_invalid_microcode_fails() {
 
 #[test]
 fn containers_invalid_tcb_snp_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -762,8 +855,8 @@ fn containers_invalid_tcb_snp_fails() {
 
 #[test]
 fn containers_invalid_tcb_tee_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -788,8 +881,8 @@ fn containers_invalid_tcb_tee_fails() {
 
 #[test]
 fn containers_invalid_stage0_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -827,8 +920,8 @@ fn containers_invalid_stage0_fails() {
 
 #[test]
 fn containers_invalid_acpi_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -863,8 +956,8 @@ fn containers_invalid_acpi_fails() {
 
 #[test]
 fn containers_invalid_init_ram_fs_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -899,8 +992,8 @@ fn containers_invalid_init_ram_fs_fails() {
 
 #[test]
 fn containers_invalid_kernel_cmd_line_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -930,8 +1023,8 @@ fn containers_invalid_kernel_cmd_line_fails() {
 
 #[test]
 fn containers_invalid_kernel_image_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -968,8 +1061,8 @@ fn containers_invalid_kernel_image_fails() {
 
 #[test]
 fn containers_invalid_kernel_setup_data_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -1006,8 +1099,8 @@ fn containers_invalid_kernel_setup_data_fails() {
 
 #[test]
 fn containers_invalid_system_image_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -1042,8 +1135,8 @@ fn containers_invalid_system_image_fails() {
 
 #[test]
 fn containers_invalid_container_bundle_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
@@ -1078,8 +1171,8 @@ fn containers_invalid_container_bundle_fails() {
 
 #[test]
 fn containers_invalid_container_config_fails() {
-    let evidence = create_containers_evidence();
-    let endorsements = create_containers_endorsements();
+    let evidence = create_oc_evidence();
+    let endorsements = create_oc_endorsements();
     let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 

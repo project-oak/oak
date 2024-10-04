@@ -78,7 +78,6 @@ rust_test_suite(
     ],
     deps = [
         ":oak_attestation_verification",
-        "//oak_attestation_verification_test_utils",
         "//oak_file_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
@@ -151,7 +150,6 @@ rust_test_suite(
     ],
     deps = [
         ":oak_attestation_verification_with_regex",
-        "//oak_attestation_verification_test_utils",
         "//oak_file_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",

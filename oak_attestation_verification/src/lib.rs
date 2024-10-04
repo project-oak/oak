@@ -32,4 +32,4 @@ pub mod verifier;
 mod test_util;
 
 pub use endorsement::verify_endorsement;
-pub use util::convert_pem_to_raw;
+pub use util::{convert_pem_to_raw, reference_values_from_evidence};

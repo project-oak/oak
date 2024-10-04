@@ -51,5 +51,4 @@ x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
 zerocopy = "*"
 
 [dev-dependencies]
-oak_attestation_verification_test_utils = { workspace = true }
 oak_file_utils = { workspace = true }
