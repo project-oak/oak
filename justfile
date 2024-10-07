@@ -328,6 +328,9 @@ bazel-ci:
     bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- $({{bare_metal_crates_query}})
     bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown -- $({{wasm_crates_query}})
 
+    # Verify that any changes to attestation outputs are non-breaking and that snapshots are up to date.
+    oak_attestation_integration_tests/update_testdata_assert_no_breaking_changes
+
 list-bare-metal-crates:
     {{bare_metal_crates_query}}
 

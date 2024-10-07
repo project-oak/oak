@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Entrypoint to the utility that creates snapshots of attestation outputs
+# and ensures that changes to it are non-breaking.
+
+# It runs the binary copies any newly created snapshot from bazel's
+#  runfiles to testdata, so it can be committed and run it in CI.
+# (Preferably this would be implemented as a bazel rule itself. But
+# configuring bazel is famously difficult. This script will do.)
+# TODO: b/372042879 - Replace with bazel rule.
+
+set -e
+
+# Check that there's no breaking changes, and update testdata if needed.
+bazel run //oak_attestation_integration_tests:update_testdata_assert_no_breaking_changes
+
+# If new testdata is generated, bazel will output it here.
+BAZEL_RUNFILES_TESTDATA=$(bazel info bazel-bin)/oak_attestation_integration_tests/update_testdata_assert_no_breaking_changes.runfiles/oak/oak_attestation_integration_tests/testdata/snapshots
+
+# The the equivalent dir in the source code. This is where we'll want to
+# commit the new testdata to.
+SRC_TESTDATA=$(bazel info workspace)/oak_attestation_integration_tests/testdata/snapshots
+
+# Copy any new testdata into the source code where it can be committed.
+for file in "$BAZEL_RUNFILES_TESTDATA"/*; do
+    if [ -f "$file" ]; then
+        filename=$(basename "$file")
+        if [ ! -e "$SRC_TESTDATA/$filename" ]; then
+            cp -r "$file" "$SRC_TESTDATA/$filename"
+        fi
+    fi
+done
