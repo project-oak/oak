@@ -16,35 +16,40 @@
 
 use alloc::collections::btree_map::BTreeMap;
 
-use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, BinaryReferenceValue, EndorsementReferenceValue,
+use oak_proto_rust::oak::{
+    attestation::v1::{binary_reference_value, BinaryReferenceValue, EndorsementReferenceValue},
+    RawDigest,
 };
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
 use time::macros::datetime;
 
-use crate::{
-    endorsement::{
-        self, DefaultPredicate, DefaultStatement, Subject, Validity as EndorsementValidity,
-    },
-    util::convert_pem_to_raw,
+use crate::endorsement::{
+    self, DefaultPredicate, DefaultStatement, Subject, Validity as EndorsementValidity,
 };
 
-/// A simple fake endorsement for basic generic testing purposes.
-pub fn fake_endorsement(sha256: &[u8; 32]) -> DefaultStatement {
-    let sha256_string = hex::encode(sha256);
+pub enum Usage {
+    None,
+    Firmware,
+}
 
-    let digests = {
-        let mut digests = BTreeMap::<String, String>::new();
-        digests.insert("sha256".to_string(), sha256_string);
-        digests
-    };
+impl Usage {
+    fn to_string(&self) -> String {
+        match self {
+            Self::None => "".to_string(),
+            Self::Firmware => "firmware".to_string(),
+        }
+    }
+}
+/// A simple fake endorsement for basic generic testing purposes.
+pub fn fake_endorsement(digests: &RawDigest, usage: Usage) -> DefaultStatement {
+    let map_digests = raw_digest_to_map(digests);
 
     DefaultStatement {
         _type: endorsement::STATEMENT_TYPE.to_owned(),
         predicate_type: endorsement::PREDICATE_TYPE_V3.to_owned(),
-        subject: vec![Subject { name: "Fake Subject".to_string(), digest: digests }],
+        subject: vec![Subject { name: "Fake Subject".to_string(), digest: map_digests }],
         predicate: DefaultPredicate {
-            usage: "".to_owned(),
+            usage: usage.to_string(),
             issued_on: datetime!(2024-10-01 12:08 UTC),
             validity: Some(EndorsementValidity {
                 not_before: datetime!(2024-09-01 12:00 UTC),
@@ -90,4 +95,28 @@ pub fn binary_reference_value_for_endorser_pk(public_key: PublicKey) -> BinaryRe
             ..Default::default()
         })),
     }
+}
+
+fn raw_digest_to_map(h: &RawDigest) -> BTreeMap<String, String> {
+    let mut map = BTreeMap::<String, String>::new();
+
+    macro_rules! insert_if_present {
+        ($field:ident) => {
+            if !h.$field.is_empty() {
+                map.insert(stringify!($field).into(), hex::encode(&h.$field));
+            }
+        };
+    }
+
+    insert_if_present!(psha2);
+    insert_if_present!(sha1);
+    insert_if_present!(sha2_256);
+    insert_if_present!(sha2_512);
+    insert_if_present!(sha3_512);
+    insert_if_present!(sha3_384);
+    insert_if_present!(sha3_256);
+    insert_if_present!(sha3_224);
+    insert_if_present!(sha2_384);
+
+    map
 }

@@ -407,7 +407,7 @@ fn set_digest_field_from_map_entry(
             }
             digest.sha2_384.push_str(value);
         }
-        _ => anyhow::bail!("unknown digest key"),
+        _ => anyhow::bail!("unknown digest key {key}"),
     }
 
     Ok(())

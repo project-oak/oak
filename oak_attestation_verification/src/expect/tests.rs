@@ -14,12 +14,16 @@
 // limitations under the License.
 //
 
+use std::collections::BTreeMap;
+
 use oak_proto_rust::oak::{
     attestation::v1::{
-        expected_digests, ExpectedDigests, RawDigests, TransparentReleaseEndorsement,
+        expected_digests, ExpectedDigests, FirmwareAttachment, RawDigests,
+        TransparentReleaseEndorsement,
     },
-    RawDigest,
+    HexDigest,
 };
+use prost::Message;
 use time::ext::NumericalDuration;
 
 use crate::{test_util, util};
@@ -27,9 +31,9 @@ use crate::{test_util, util};
 #[test]
 fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
-    let measured_content = "Just some abitrary content";
-    let content_digest = util::hash_sha2_256(measured_content.as_bytes());
-    let endorsement = test_util::fake_endorsement(&content_digest);
+    let measured_content = b"Just some abitrary content";
+    let content_digests = util::raw_digest_from_contents(measured_content);
+    let endorsement = test_util::fake_endorsement(&content_digests, test_util::Usage::None);
 
     // Now create the TR endorsement.
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
@@ -61,10 +65,57 @@ fn test_get_expected_measurement_digest_validity() {
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                digests: vec![RawDigest {
-                    sha2_256: content_digest.to_vec(),
-                    ..Default::default()
-                }]
+                digests: vec![content_digests],
+            })),
+        }
+    );
+}
+
+#[test]
+fn test_get_stage0_expected_values_validity() {
+    // Create the firmware attachement. This is what contains the *actual* digests
+    // to verify.
+    let mut configs = BTreeMap::<i32, HexDigest>::new();
+    let measured_content = b"Just some abitrary content";
+    let content_digests = util::raw_digest_from_contents(measured_content);
+    let hex_digest = util::raw_to_hex_digest(&content_digests);
+    let num_cpus = 2;
+    configs.insert(num_cpus, hex_digest);
+    let subject = FirmwareAttachment { configs };
+    let serialized_subject = subject.encode_to_vec();
+
+    // Now create the endorsement, containing the subject. The *endorsement*
+    // hash is the hash of the serialized firmware attachment.
+    let subject_digests = util::raw_digest_from_contents(&serialized_subject);
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+    let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Firmware);
+    let (serialized_endorsement, endorsement_signature) =
+        test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
+    let tr_endorsement = TransparentReleaseEndorsement {
+        endorsement: serialized_endorsement,
+        endorsement_signature: endorsement_signature.as_bytes().to_vec(),
+        subject: serialized_subject,
+        ..Default::default()
+    };
+
+    // Get the expected values.
+    // The reference_value should contain the public key corresponding the the
+    // endorsement signing key.
+    let reference_value = test_util::binary_reference_value_for_endorser_pk(public_key);
+    // Pretend it's a week into the validity period.
+    let now =
+        endorsement.predicate.validity.as_ref().unwrap().not_before.saturating_add((7).days());
+    let now_utc_millis = 1000 * now.unix_timestamp();
+    let expected_digests =
+        super::get_stage0_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
+            .expect("failed to get digests");
+
+    // We should have the hashes from the attachment.
+    assert_eq!(
+        expected_digests,
+        ExpectedDigests {
+            r#type: Some(expected_digests::Type::Digests(RawDigests {
+                digests: vec![content_digests],
             })),
         }
     );
