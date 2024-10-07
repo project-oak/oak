@@ -17,7 +17,10 @@
 use alloc::collections::btree_map::BTreeMap;
 
 use oak_proto_rust::oak::{
-    attestation::v1::{binary_reference_value, BinaryReferenceValue, EndorsementReferenceValue},
+    attestation::v1::{
+        binary_reference_value, kernel_binary_reference_value, BinaryReferenceValue,
+        EndorsementReferenceValue, KernelBinaryReferenceValue,
+    },
     RawDigest,
 };
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
@@ -30,6 +33,7 @@ use crate::endorsement::{
 pub enum Usage {
     None,
     Firmware,
+    Kernel,
 }
 
 impl Usage {
@@ -37,6 +41,7 @@ impl Usage {
         match self {
             Self::None => "".to_string(),
             Self::Firmware => "firmware".to_string(),
+            Self::Kernel => "kernel".to_string(),
         }
     }
 }
@@ -87,13 +92,29 @@ pub fn new_random_signing_keypair() -> (p256::ecdsa::SigningKey, p256::PublicKey
 /// other fields unset.
 pub fn binary_reference_value_for_endorser_pk(public_key: PublicKey) -> BinaryReferenceValue {
     BinaryReferenceValue {
-        r#type: Some(binary_reference_value::Type::Endorsement(EndorsementReferenceValue {
-            endorser_public_key: public_key
-                .to_public_key_der()
-                .expect("Couldn't convert public key to DER")
-                .into_vec(),
-            ..Default::default()
-        })),
+        r#type: Some(binary_reference_value::Type::Endorsement(endorsement_reference_value(
+            public_key,
+        ))),
+    }
+}
+
+pub fn kernel_binary_reference_value_for_endorser_pk(
+    public_key: PublicKey,
+) -> KernelBinaryReferenceValue {
+    KernelBinaryReferenceValue {
+        r#type: Some(kernel_binary_reference_value::Type::Endorsement(
+            endorsement_reference_value(public_key),
+        )),
+    }
+}
+
+fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceValue {
+    EndorsementReferenceValue {
+        endorser_public_key: public_key
+            .to_public_key_der()
+            .expect("Couldn't convert public key to DER")
+            .into_vec(),
+        ..Default::default()
     }
 }
 

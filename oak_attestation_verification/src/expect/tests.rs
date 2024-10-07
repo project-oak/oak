@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 
 use oak_proto_rust::oak::{
     attestation::v1::{
-        expected_digests, ExpectedDigests, FirmwareAttachment, RawDigests,
+        expected_digests, ExpectedDigests, FirmwareAttachment, KernelAttachment, RawDigests,
         TransparentReleaseEndorsement,
     },
     HexDigest,
@@ -118,5 +118,64 @@ fn test_get_stage0_expected_values_validity() {
                 digests: vec![content_digests],
             })),
         }
+    );
+}
+
+#[test]
+fn test_get_kernel_expected_values_validity() {
+    // Create the kernel attachement. This is what contains the *actual* digests
+    // to verify.
+    let measured_image = b"Just some abitrary kernel image";
+    let measured_setup = b"Just some abitrary kernel setup";
+    let image_digests = util::raw_digest_from_contents(measured_image);
+    let setup_digests = util::raw_digest_from_contents(measured_setup);
+    let subject = KernelAttachment {
+        image: Some(util::raw_to_hex_digest(&image_digests)),
+        setup_data: Some(util::raw_to_hex_digest(&setup_digests)),
+    };
+    let serialized_subject = subject.encode_to_vec();
+
+    // Now create the endorsement, containing the subject. The *endorsement*
+    // hash is the hash of the serialized kernel attachment.
+    let subject_digests = util::raw_digest_from_contents(&serialized_subject);
+    let (signing_key, public_key) = test_util::new_random_signing_keypair();
+    let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Kernel);
+    let (serialized_endorsement, endorsement_signature) =
+        test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
+    let tr_endorsement = TransparentReleaseEndorsement {
+        endorsement: serialized_endorsement,
+        endorsement_signature: endorsement_signature.as_bytes().to_vec(),
+        subject: serialized_subject,
+        ..Default::default()
+    };
+
+    // Get the expected values.
+    // The reference_value should contain the public key corresponding the the
+    // endorsement signing key.
+    let reference_value = test_util::kernel_binary_reference_value_for_endorser_pk(public_key);
+    // Pretend it's a week into the validity period.
+    let now =
+        endorsement.predicate.validity.as_ref().unwrap().not_before.saturating_add((7).days());
+    let now_utc_millis = 1000 * now.unix_timestamp();
+    let expected_digests =
+        super::get_kernel_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
+            .expect("failed to get digests");
+
+    // We should have the hashes from the attachment.
+    assert_eq!(
+        expected_digests.image,
+        Some(ExpectedDigests {
+            r#type: Some(expected_digests::Type::Digests(RawDigests {
+                digests: vec![image_digests],
+            })),
+        })
+    );
+    assert_eq!(
+        expected_digests.setup_data,
+        Some(ExpectedDigests {
+            r#type: Some(expected_digests::Type::Digests(RawDigests {
+                digests: vec![setup_digests],
+            })),
+        })
     );
 }
