@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["GrpcStreamingTransport"],"trait":["EvidenceProvider","Transport"]};
+window.SIDEBAR_ITEMS = {"trait":["EvidenceProvider","Transport"]};
