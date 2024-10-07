@@ -3124,6 +3124,7 @@ dependencies = [
  "derive_builder",
  "itertools 0.12.1",
  "mockall",
+ "oak_attestation_verification",
  "oak_crypto",
  "oak_proto_rust",
  "p256",

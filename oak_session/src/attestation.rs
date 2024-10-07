@@ -152,7 +152,7 @@ impl AttestationAggregator for DefaultAttestationAggregator {
         };
         let failures: BTreeMap<&String, &AttestationResults> = results
             .iter()
-            .filter(|(_, v)| v.status == attestation_results::Status::GenericFailure.into())
+            .filter(|(_, v)| v.status == attestation_results::Status::GenericFailure as i32)
             .collect();
         if !failures.is_empty() {
             return Err(AttestationFailure {

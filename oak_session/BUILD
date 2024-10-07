@@ -28,12 +28,14 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
+        "//oak_attestation_verification",
         "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:aead",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:derive_builder",
         "@oak_crates_index//:itertools",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
     ],
 )
@@ -43,7 +45,6 @@ rust_test(
     crate = ":oak_session",
     deps = [
         "@oak_crates_index//:mockall",
-        "@oak_crates_index//:p256",
         "@oak_crates_index//:rand_core",
     ],
 )
