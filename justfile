@@ -73,13 +73,13 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
 
     # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
+    bazel build $BAZEL_CONFIG_FLAG //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         --platforms=//:x86_64-unknown-none \
         --compilation_mode opt
 
     # Create provenance subjects for a kernel bzImage, by extracting the setup data
     # and image to the output directory.
-    bazel build //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement \
+    bazel build $BAZEL_CONFIG_FLAG //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement \
         --platforms=//:x86_64-unknown-none \
         --compilation_mode opt
 
@@ -105,7 +105,7 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
 oak_restricted_kernel_bin_virtio_console_channel:
     # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
+    bazel build $BAZEL_CONFIG_FLAG //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
         --platforms=//:x86_64-unknown-none \
         --compilation_mode opt
 
@@ -113,7 +113,7 @@ oak_restricted_kernel_wrapper_virtio_console_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
 
 oak_restricted_kernel_bin_simple_io_channel:
-    bazel build //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
+    bazel build $BAZEL_CONFIG_FLAG //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
         --platforms=//:x86_64-unknown-none \
         --compilation_mode=opt
 
@@ -121,7 +121,7 @@ oak_restricted_kernel_wrapper_simple_io_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
 
 oak_client_android_app:
-    bazel build --noexperimental_check_desugar_deps --compilation_mode opt \
+    bazel build $BAZEL_CONFIG_FLAG --noexperimental_check_desugar_deps --compilation_mode opt \
         //java/src/main/java/com/google/oak/client/android:client_app
     # Copy out to a directory which does not change with bazel config and does
     # not interfere with cargo. It should be reused for other targets as well.
@@ -139,7 +139,7 @@ wasm_release_crate name:
 all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
 
 stage0_bin:
-    bazel build //stage0_bin:stage0_bin \
+    bazel build $BAZEL_CONFIG_FLAG //stage0_bin:stage0_bin \
         --platforms=//:x86_64-firmware \
         --compilation_mode opt
 
@@ -149,7 +149,7 @@ stage0_bin:
         generated
 
 stage0_bin_tdx:
-    bazel build //stage0_bin_tdx:stage0_bin_tdx \
+    bazel build $BAZEL_CONFIG_FLAG //stage0_bin_tdx:stage0_bin_tdx \
         --platforms=//:x86_64-firmware \
         --compilation_mode opt
 
@@ -240,7 +240,7 @@ profile_wasm:
     google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
 
 bazel_wasm name:
-    bazel build {{name}} --platforms=":wasm32-unknown-unknown"
+    bazel build $BAZEL_CONFIG_FLAG {{name}} --platforms=":wasm32-unknown-unknown"
 
 
 # Oak Containers Hello World entry point.
