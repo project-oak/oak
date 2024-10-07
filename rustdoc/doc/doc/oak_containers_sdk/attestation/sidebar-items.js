@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["InstanceAttester"]};
+window.SIDEBAR_ITEMS = {"struct":["InstanceAttester","InstanceEndorser"]};

@@ -100,6 +100,24 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -118,18 +136,21 @@
 
 </span><span class="doccomment">//! Structs for providing attestation related logic such as getting an evidence.
 
-</span><span class="kw">use </span>alloc::vec::Vec;
+</span><span class="kw">use </span>alloc::{vec, vec::Vec};
 
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
-<span class="kw">use </span>oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
+<span class="kw">use </span>oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD, EVENT_LOG_FD};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
 <span class="macro">lazy_static::lazy_static! </span>{
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span><span class="kw-2">ref </span>DICE_WRAPPER: anyhow::Result&lt;DiceWrapper&gt; = {
-        <span class="kw">let </span>dice_data = get_restricted_kernel_dice_data()<span class="question-mark">?</span>;
-        <span class="kw">let </span>dice_wrapper = dice_data.try_into()<span class="question-mark">?</span>;
+        <span class="kw">let </span>dice_data = get_restricted_kernel_dice_data().context(<span class="string">"couldn't get DICE data"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>encoded_event_log = get_encoded_event_log().context(<span class="string">"couldn't get event log"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>dice_wrapper: DiceWrapper = dice_data.try_into()<span class="question-mark">?</span>;
+        dice_wrapper.encoded_event_log = <span class="prelude-val">Some</span>(encoded_event_log);
         <span class="prelude-val">Ok</span>(dice_wrapper)
     };
 }
@@ -142,6 +163,21 @@
         <span class="macro">anyhow::bail!</span>(<span class="string">"invalid dice data size"</span>);
     }
     <span class="prelude-val">Ok</span>(result)
+}
+
+<span class="doccomment">/// Requests encoded event log from Restricted Kernel via syscall.
+</span><span class="kw">fn </span>get_encoded_event_log() -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>event_log = Vec::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer = [<span class="number">0u8</span>; <span class="number">4 </span>* <span class="number">1024</span>]; <span class="comment">// Read in 4KB chunks
+
+    </span><span class="kw">loop </span>{
+        <span class="kw">match </span>read(EVENT_LOG_FD, <span class="kw-2">&amp;mut </span>buffer) {
+            <span class="prelude-val">Ok</span>(<span class="number">0</span>) =&gt; <span class="kw">break</span>, <span class="comment">// End of file
+            </span><span class="prelude-val">Ok</span>(n) =&gt; event_log.extend_from_slice(<span class="kw-2">&amp;</span>buffer[..n]),
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"failed to read event log: {:?}"</span>, e),
+        }
+    }
+    <span class="prelude-val">Ok</span>(event_log)
 }
 
 <span class="doccomment">/// Wrapper for DICE evidence and application private keys.

@@ -74,7 +74,7 @@
 </span><span class="kw">const </span>IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">"/oak_utils/orchestrator_ipc"</span>;
 
 <span class="comment">// Re-export structs so that they are available at the top level of the SDK.
-</span><span class="kw">pub use </span>attestation::InstanceAttester;
+</span><span class="kw">pub use </span>attestation::{InstanceAttester, InstanceEndorser};
 <span class="kw">pub use </span>crypto::InstanceEncryptionKeyHandle;
 <span class="kw">pub use </span>oak_session_context::{ApplicationHandler, OakSessionContext};
 <span class="kw">pub use </span>orchestrator_client::{OrchestratorClient, OrchestratorInterface};

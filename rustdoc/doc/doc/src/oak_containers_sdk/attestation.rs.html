@@ -58,6 +58,59 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -76,8 +129,11 @@
 
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_grpc::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
-<span class="kw">use </span>oak_proto_rust::oak::session::v1::EndorsedEvidence;
-<span class="kw">use </span>oak_session::attestation::Attester;
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Evidence},
+    session::v1::EndorsedEvidence,
+};
+<span class="kw">use </span>oak_session::attestation::{Attester, Endorser};
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
@@ -109,11 +165,61 @@
 }
 
 <span class="kw">impl </span>Attester <span class="kw">for </span>InstanceAttester {
-    <span class="doccomment">/// Retrieves the endorsed evidence from the Orchestrator.
-    /// This evidence is used to prove the authenticity and integrity of the
+    <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="macro">anyhow::bail!</span>(<span class="string">"evidence extension is not currently supported in Oak Containers"</span>);
+    }
+
+    <span class="doccomment">/// Retrieves the evidence from the Orchestrator.
+    /// The evidence is used to prove the authenticity and integrity of the
     /// application.
-    </span><span class="kw">fn </span>get_endorsed_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.endorsed_evidence.clone())
+    </span><span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Evidence&gt; {
+        <span class="comment">// TODO: b/370474308 - Currently we receive [`EndorsedEvidence`] from the
+        // Orchestrator, and have to split before returning to the Noise SDK.
+        // But we'll need make both Attester and Endorser request Evidence and
+        // Endorsements from the Attestation Agent separately.
+        </span><span class="self">self</span>.endorsed_evidence
+            .evidence
+            .clone()
+            .context(<span class="string">"evidence is not present in the EndorsedEvidence"</span>)
+    }
+}
+
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>InstanceEndorser {
+    endorsed_evidence: EndorsedEvidence,
+}
+
+<span class="kw">impl </span>InstanceEndorser {
+    <span class="kw">pub async fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="comment">// TODO: b/370474308 - Use a dedicated attestation gRPC client once
+        // attestation is provided by a separate interface.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>grpc_client: GrpcOrchestratorClient&lt;tonic::transport::channel::Channel&gt; = {
+            <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
+                .context(<span class="string">"couldn't form endpoint"</span>)<span class="question-mark">?
+                </span>.connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>: Uri| {
+                    tokio::net::UnixStream::connect(IPC_SOCKET)
+                }))
+                .<span class="kw">await
+                </span>.context(<span class="string">"couldn't connect to UDS socket"</span>)<span class="question-mark">?</span>;
+
+            GrpcOrchestratorClient::new(channel)
+        };
+        <span class="kw">let </span>endorsed_evidence = grpc_client.get_endorsed_evidence(()).<span class="kw">await</span><span class="question-mark">?</span>.into_inner();
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ endorsed_evidence })
+    }
+}
+
+<span class="kw">impl </span>Endorser <span class="kw">for </span>InstanceEndorser {
+    <span class="doccomment">/// Retrieves the endorsements from the Orchestrator.
+    </span><span class="kw">fn </span>endorse(<span class="kw-2">&amp;</span><span class="self">self</span>, _evidence: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Evidence&gt;) -&gt; anyhow::Result&lt;Endorsements&gt; {
+        <span class="comment">// TODO: b/370474308 - Currently we receive [`EndorsedEvidence`] from the
+        // Orchestrator, and have to split before returning to the Noise SDK.
+        // But we'll need make both Attester and Endorser request Evidence and
+        // Endorsements from the Attestation Agent separately.
+        </span><span class="self">self</span>.endorsed_evidence
+            .endorsements
+            .clone()
+            .context(<span class="string">"endorsements are not present in the EndorsedEvidence"</span>)
     }
 }
 </code></pre></div></section></main></body></html>
