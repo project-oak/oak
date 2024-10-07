@@ -1,0 +1,62 @@
+//
+// Copyright 2024 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.attestation.v1;
+
+import "google/protobuf/empty.proto";
+import "proto/attestation/endorsement.proto";
+import "proto/attestation/evidence.proto";
+
+option go_package = "proto/oak/attestation/v1";
+option java_multiple_files = true;
+option java_package = "com.google.oak.attestation.v1";
+
+message ExtendRequest {
+  // Encoded instance of the [`Event`] proto message.
+  bytes encoded_event = 1;
+}
+
+message QuoteResponse {
+  Evidence evidence = 1;
+}
+
+message EndorseRequest {
+  // Request can optionally provide an evidence to endorse if a particular
+  // TEE platform can endorse evidences on-demand.
+  optional Evidence evidence = 1;
+}
+
+message EndorseResponse {
+  Endorsements endorsements = 1;
+}
+
+// RPC service that provides an interface for generating attestation evidence.
+// The evidence is used to prove the authenticity and integrity of the
+// application.
+service Attester {
+  // Adds a provided event into the attestation evidence.
+  rpc Extend(ExtendRequest) returns (google.protobuf.Empty) {}
+  // Generates a signed evidence containing all events previously provided to
+  // the `Extend` function.
+  rpc Quote(google.protobuf.Empty) returns (QuoteResponse) {}
+}
+
+// RPC service that provides attestation endorsements.
+service Endorser {
+  rpc Endorse(EndorseRequest) returns (EndorseResponse) {}
+}

@@ -161,6 +161,16 @@ cc_proto_library(
     deps = [":eventlog_proto"],
 )
 
+proto_library(
+    name = "service_proto",
+    srcs = ["service.proto"],
+    deps = [
+        ":endorsement_proto",
+        ":evidence_proto",
+        "@com_google_protobuf//:empty_proto",
+    ],
+)
+
 build_test(
     name = "build_test",
     targets = [
