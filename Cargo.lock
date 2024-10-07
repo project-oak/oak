@@ -2339,6 +2339,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_client_tonic"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "log",
+ "oak_client",
+ "oak_proto_rust",
+ "prost",
+ "tonic",
+]
+
+[[package]]
 name = "oak_containers_agent"
 version = "0.1.0"
 dependencies = [
@@ -2390,6 +2404,7 @@ dependencies = [
  "hyper-util",
  "log",
  "oak_client",
+ "oak_client_tonic",
  "oak_containers_launcher",
  "oak_crypto",
  "oak_functions_test_utils",
@@ -2698,6 +2713,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_client",
+ "oak_client_tonic",
  "oak_functions_abi",
  "oak_grpc",
  "prost",

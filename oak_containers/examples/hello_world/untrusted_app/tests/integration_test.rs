@@ -25,9 +25,10 @@ use std::{
 
 use oak_client::{
     client::OakClient,
-    transport::{EvidenceProvider, GrpcStreamingTransport, Transport},
+    transport::{EvidenceProvider, Transport},
     verifier::InsecureAttestationVerifier,
 };
+use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_containers_hello_world_untrusted_app::demo_transport::{self, DemoTransport};
 use oak_containers_launcher::Args;
 use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;

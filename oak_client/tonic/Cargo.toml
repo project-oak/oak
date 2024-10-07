@@ -1,21 +1,19 @@
 [package]
-name = "oak_client"
+name = "oak_client_tonic"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[lib]
+path = "lib.rs"
+
 [dependencies]
 anyhow = "*"
 async-trait = "*"
 futures = "*"
-futures-util = "*"
 log = "*"
-oak_attestation_verification = { workspace = true }
-oak_crypto = { workspace = true }
+oak_client = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }
-tonic = { workspace = true, optional = true }
-
-[build-dependencies]
-oak_grpc_utils = { workspace = true }
+tonic = { workspace = true }

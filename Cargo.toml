@@ -12,6 +12,7 @@ members = [
   "oak_attestation_verification",
   "oak_channel",
   "oak_client",
+  "oak_client/tonic",
   "oak_containers/agent",
   "oak_containers/examples/hello_world/untrusted_app",
   "oak_containers/examples/hello_world/web_client",
@@ -103,6 +104,7 @@ oak_attestation_explain = { path = "./oak_attestation_explain" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
+oak_client_tonic = { path = "./oak_client/tonic" }
 oak_containers_agent = { path = "./oak_containers/agent" }
 oak_containers_orchestrator = { path = "./oak_containers/orchestrator" }
 oak_containers_attestation = { path = "./oak_containers/attestation" }

@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
@@ -22,31 +22,23 @@ package(
 )
 
 rust_library(
-    name = "lib",
-    srcs = ["src/lib.rs"],
-    crate_name = "oak_functions_client",
+    name = "oak_client_tonic",
+    srcs = [
+        "lib.rs",
+        "transport.rs",
+    ],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
     deps = [
-        "//micro_rpc",
+        "//oak_attestation_verification",
         "//oak_client",
-        "//oak_client/tonic:oak_client_tonic",
+        "//oak_crypto",
+        "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:prost",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
         "@oak_crates_index//:tonic",
-    ],
-)
-
-rust_binary(
-    name = "oak_functions_client",
-    srcs = ["src/main.rs"],
-    deps = [
-        ":lib",
-        "//oak_client",
-        "//oak_functions_abi",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:regex",
-        "@oak_crates_index//:tokio",
     ],
 )

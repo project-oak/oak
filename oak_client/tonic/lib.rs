@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,5 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-use oak_proto_rust::oak::{
-    crypto::v1::{EncryptedRequest, EncryptedResponse},
-    session::v1::EndorsedEvidence,
-};
-
-#[async_trait::async_trait(?Send)]
-pub trait Transport {
-    async fn invoke(
-        &mut self,
-        encrypted_request: &EncryptedRequest,
-    ) -> anyhow::Result<EncryptedResponse>;
-}
-
-#[async_trait::async_trait(?Send)]
-pub trait EvidenceProvider {
-    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence>;
-}
+pub mod transport;

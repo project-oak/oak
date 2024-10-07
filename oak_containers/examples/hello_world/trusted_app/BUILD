@@ -54,6 +54,7 @@ rust_test(
     deps = [
         ":lib",
         "//oak_client",
+        "//oak_client/tonic:oak_client_tonic",
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers_sdk",
         "//oak_crypto",

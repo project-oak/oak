@@ -14,9 +14,8 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_client::{
-    client::OakClient, transport::GrpcStreamingTransport, verifier::AttestationVerifier,
-};
+use oak_client::{client::OakClient, verifier::AttestationVerifier};
+use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 use prost::Message;
 use tonic::transport::Channel;

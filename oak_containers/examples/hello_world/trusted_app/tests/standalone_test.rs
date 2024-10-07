@@ -16,9 +16,8 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
-use oak_client::{
-    client::OakClient, transport::GrpcStreamingTransport, verifier::InsecureAttestationVerifier,
-};
+use oak_client::{client::OakClient, verifier::InsecureAttestationVerifier};
+use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_containers_sdk::{
     standalone::StandaloneOrchestrator, OakSessionContext, OrchestratorInterface,
 };
