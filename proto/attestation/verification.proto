@@ -68,6 +68,27 @@ message AttestationResults {
 // TODO: b/366419879 - Implement descriptive per-event attestation results.
 message EventAttestationResults {}
 
+// Specifies a temporal range of validity for an endorsement.
+message Validity {
+  // The time the endorsement first became valid. In milliseconds UTC since
+  // Unix Epoch.
+  int64 not_before = 1;
+
+  // The time the endorsement was last valid. In milliseconds UTC since
+  // Unix Epoch.
+  int64 not_after = 2;
+}
+
+// Details about the endorsement statement which can be passed across FFI
+// boundaries.
+message EndorsementDetails {
+  // Digest of the first subject in the endorsement.
+  RawDigest subject_digest = 1;
+
+  // Validity of the verified endorsement.
+  Validity validity = 2;
+}
+
 // Evidence values extracted from attestation evidence during verification.
 message ExtractedEvidence {
   oneof evidence_values {

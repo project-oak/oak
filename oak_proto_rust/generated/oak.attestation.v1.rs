@@ -1236,6 +1236,31 @@ pub mod attestation_results {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EventAttestationResults {}
+/// Specifies a temporal range of validity for an endorsement.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct Validity {
+    /// The time the endorsement first became valid. In milliseconds UTC since
+    /// Unix Epoch.
+    #[prost(int64, tag = "1")]
+    pub not_before: i64,
+    /// The time the endorsement was last valid. In milliseconds UTC since
+    /// Unix Epoch.
+    #[prost(int64, tag = "2")]
+    pub not_after: i64,
+}
+/// Details about the endorsement statement which can be passed across FFI
+/// boundaries.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct EndorsementDetails {
+    /// Digest of the first subject in the endorsement.
+    #[prost(message, optional, tag = "1")]
+    pub subject_digest: ::core::option::Option<super::super::RawDigest>,
+    /// Validity of the verified endorsement.
+    #[prost(message, optional, tag = "2")]
+    pub validity: ::core::option::Option<Validity>,
+}
 /// Evidence values extracted from attestation evidence during verification.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

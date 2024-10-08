@@ -16,7 +16,7 @@
 
 use std::fs;
 
-use oak_attestation_verification::{convert_pem_to_raw, verify_endorsement};
+use oak_attestation_verification::{convert_pem_to_raw, raw_to_hex_digest, verify_endorsement};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
@@ -110,6 +110,16 @@ fn test_verify_endorsement_success() {
         &testdata.ref_value,
     );
     assert!(result.is_ok(), "{:?}", result);
+
+    let details = result.unwrap();
+    let d = raw_to_hex_digest(&details.subject_digest.as_ref().unwrap());
+    assert!(
+        d.sha2_256 == "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc",
+        "{:?}",
+        details
+    );
+    assert!(details.validity.as_ref().unwrap().not_before == 1709113632000, "{:?}", details);
+    assert!(details.validity.as_ref().unwrap().not_after == 1740649632000, "{:?}", details);
 }
 
 #[test]

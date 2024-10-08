@@ -150,9 +150,10 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
         || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
 }
 
-/// Verifies a signed endorsement against reference value.
+/// Verifies a signed endorsement against a reference value.
 ///
-/// Returns Ok whenever the verification succeeds, or an error otherwise.
+/// Returns the parsed statement whenever the verification succeeds, or an error
+/// otherwise.
 ///
 /// `now_utc_millis`: The current time in milliseconds UTC since Unix Epoch.
 /// `signed_endorsement`: The endorsement along with signature and (optional)
@@ -163,7 +164,7 @@ pub fn verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<DefaultStatement> {
     // Reject ref_value instances using the potentially deprecated fields.
     if !ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
         anyhow::bail!("verify_endorsement does not support the deprecated fields");
@@ -192,7 +193,7 @@ pub fn verify_endorsement(
     let rekor_ref_value =
         ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
     return match rekor_ref_value.r#type.as_ref() {
-        Some(verifying_key_reference_value::Type::Skip(_)) => Ok(()),
+        Some(verifying_key_reference_value::Type::Skip(_)) => Ok(statement),
         Some(verifying_key_reference_value::Type::Verify(key_set)) => {
             let log_entry = &signed_endorsement.rekor_log_entry;
             if log_entry.is_empty() {
@@ -200,7 +201,8 @@ pub fn verify_endorsement(
             }
             verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized)
                 .context("verifying rekor log entry")?;
-            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)
+            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)?;
+            Ok(statement)
         }
         None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
     };
@@ -325,10 +327,10 @@ pub fn validate_statement(
 
     match &statement.predicate.validity {
         Some(validity) => {
-            if validity.not_before.unix_timestamp_nanos() / 1000000 > now_utc_millis.into() {
+            if 1000 * validity.not_before.unix_timestamp() > now_utc_millis.into() {
                 anyhow::bail!("the claim is not yet applicable")
             }
-            if validity.not_after.unix_timestamp_nanos() / 1000000 < now_utc_millis.into() {
+            if 1000 * validity.not_after.unix_timestamp() < now_utc_millis.into() {
                 anyhow::bail!("the claim is no longer applicable")
             }
         }
