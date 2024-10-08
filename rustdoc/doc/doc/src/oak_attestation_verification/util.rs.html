@@ -413,6 +413,58 @@
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -432,21 +484,24 @@
 </span><span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
 <span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
 
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ecdsa::signature::Verifier;
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
-        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
-        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Digests, Event, EventEndorsement, ExtractedEvidence, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerReferenceValues,
+        KeyType, OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
 <span class="kw">use </span>p256::pkcs8::{der::Decode, DecodePublicKey};
+<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>prost_types::Any;
 <span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
 
 <span class="kw">const </span>PUBLIC_KEY_PEM_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"PUBLIC KEY"</span>;
@@ -822,6 +877,55 @@
             })),
         }),
     }
+}
+
+<span class="doccomment">/// Decodes a serialized event into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_event_proto&lt;M: Message + Default&gt;(
+    expected_type_url: <span class="kw-2">&amp;</span>str,
+    encoded_event: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;M&gt; {
+    <span class="kw">let </span>event_proto = Event::decode(encoded_event.as_ref())
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event: {}"</span>, error))<span class="question-mark">?</span>;
+    decode_protobuf_any::&lt;M&gt;(
+        expected_type_url,
+        event_proto.event.context(<span class="string">"no event found in the `event` field"</span>)<span class="question-mark">?</span>,
+    )
+}
+
+<span class="doccomment">/// Decodes serialized event endorsements into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_event_endorsement_proto&lt;M: Message + Default&gt;(
+    expected_type_url: <span class="kw-2">&amp;</span>str,
+    encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;M&gt; {
+    <span class="kw">let </span>event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement.as_ref())
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event endorsement: {}"</span>, error))<span class="question-mark">?</span>;
+    decode_protobuf_any::&lt;M&gt;(
+        expected_type_url,
+        event_endorsement_proto
+            .event_endorsement
+            .context(<span class="string">"no event endorsement found in the `event_endorsement` field"</span>)<span class="question-mark">?</span>,
+    )
+}
+
+<span class="doccomment">/// Decodes [`Any`] message into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_protobuf_any&lt;M: Message + Default&gt;(
+    expected_type_url: <span class="kw-2">&amp;</span>str,
+    message: Any,
+) -&gt; anyhow::Result&lt;M&gt; {
+    <span class="kw">if </span>message.type_url.as_str() != expected_type_url {
+        <span class="macro">anyhow::bail!</span>(
+            <span class="string">"expected message with type url: {}, found: {}"</span>,
+            expected_type_url,
+            message.type_url.as_str()
+        );
+    }
+    M::decode(message.value.as_ref()).map_err(|error| {
+        <span class="macro">anyhow::anyhow!</span>(
+            <span class="string">"couldn't decode `google.protobuf.Any` message into {}: {:?}"</span>,
+            expected_type_url,
+            error
+        )
+    })
 }
 
 <span class="attr">#[cfg(test)]
