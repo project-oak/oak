@@ -20,7 +20,7 @@ extern crate alloc;
 
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-use oak_attestation::dice::evidence_to_proto;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -105,13 +105,16 @@ where
                         "already initialized",
                     ));
                 }
-                let evidence = evidence_to_proto(self.evidence_provider.get_evidence().clone())
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("failed to convert evidence to proto: {err}"),
-                        )
-                    })?;
+                let evidence = evidence_and_event_log_to_proto(
+                    self.evidence_provider.get_evidence().clone(),
+                    self.evidence_provider.get_encoded_event_log(),
+                )
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("failed to convert evidence to proto: {err}"),
+                    )
+                })?;
                 Ok(InitializeResponse { evidence: Some(evidence) })
             }
         }

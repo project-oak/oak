@@ -21,7 +21,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 #[cfg(feature = "exchange_evidence")]
-use oak_attestation::dice::evidence_to_proto;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_channel::basic_framed::receive_raw;
 #[cfg(feature = "exchange_evidence")]
 use oak_channel::basic_framed::send_raw;
@@ -74,17 +74,21 @@ impl AttestedApp {
             &app_digest,
             &event_digest,
         );
-        #[cfg(feature = "exchange_evidence")]
-        {
-            let evidence = evidence_to_proto(dice_data.evidence.clone())
-                .expect("failed to convert evidence to proto");
-            send_raw(&mut channel, &evidence.encode_to_vec()).expect("failed to return evidence");
-        }
 
         let mut event_log =
             EventLog::decode(encoded_event_log.as_slice()).expect("failed to decode event log");
 
         event_log.encoded_events.push(event.encode_to_vec());
+
+        #[cfg(feature = "exchange_evidence")]
+        {
+            let evidence = evidence_and_event_log_to_proto(
+                dice_data.evidence.clone(),
+                Some(event_log.encode_to_vec().as_slice()),
+            )
+            .expect("failed to convert evidence to proto");
+            send_raw(&mut channel, &evidence.encode_to_vec()).expect("failed to return evidence");
+        }
 
         Self { elf_binary, derived_key, dice_data, event_log }
     }

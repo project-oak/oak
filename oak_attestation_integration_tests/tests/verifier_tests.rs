@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_attestation::dice::evidence_to_proto;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
@@ -47,7 +47,11 @@ fn verify_mock_dice_chain() {
     let mock_evidence = mock_evidence_provider.get_evidence();
 
     let result = verify_dice_chain(
-        &evidence_to_proto(mock_evidence.clone()).expect("could not convert evidence to proto"),
+        &evidence_and_event_log_to_proto(
+            mock_evidence.clone(),
+            mock_evidence_provider.get_encoded_event_log(),
+        )
+        .expect("could not convert evidence to proto"),
     );
 
     assert!(result.is_ok());
@@ -61,15 +65,11 @@ fn get_restricted_kernel_evidence_proto_with_eventlog()
     let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
         .expect("failed to create mock provider");
 
-    let mock_evidence = mock_evidence_provider.get_evidence();
-    let mock_encoded_eventlog =
-        mock_evidence_provider.get_encoded_event_log().expect("failed to get eventlog");
-    let mock_eventlog =
-        EventLog::decode(mock_encoded_eventlog).expect("Failed to decode EventLog proto");
-    let mut mock_evidence_proto =
-        evidence_to_proto(mock_evidence.clone()).expect("could not convert evidence to proto");
-    let _ = mock_evidence_proto.event_log.insert(mock_eventlog);
-    mock_evidence_proto
+    evidence_and_event_log_to_proto(
+        mock_evidence_provider.get_evidence().clone(),
+        mock_evidence_provider.get_encoded_event_log(),
+    )
+    .expect("could not convert evidence to proto")
 }
 
 #[test]
@@ -118,8 +118,11 @@ fn verify_mock_dice_chain_with_invalid_event_log() {
 fn verify_mock_restricted_kernel_evidence() {
     let mock_evidence_provider = oak_restricted_kernel_sdk::testing::MockEvidenceProvider::create()
         .expect("failed to create mock provider");
-    let evidence = evidence_to_proto(mock_evidence_provider.get_evidence().clone())
-        .expect("failed to convert evidence to proto");
+    let evidence = evidence_and_event_log_to_proto(
+        mock_evidence_provider.get_evidence().clone(),
+        mock_evidence_provider.get_encoded_event_log(),
+    )
+    .expect("failed to convert evidence to proto");
 
     let endorsements = Endorsements {
         r#type: Some(endorsements::Type::OakRestrictedKernel(OakRestrictedKernelEndorsements {

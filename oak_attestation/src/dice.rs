@@ -359,11 +359,24 @@ fn tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -> TeePlatform {
     }
 }
 
+#[deprecated(note = "Use `oak_attestation::dice::evidence_and_event_log_to_proto` instead.")]
 pub fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evidence> {
+    evidence_and_event_log_to_proto(value, None)
+}
+
+pub fn evidence_and_event_log_to_proto(
+    value: oak_dice::evidence::Evidence,
+    encoded_event_log: Option<&[u8]>,
+) -> anyhow::Result<Evidence> {
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
     let application_keys = Some(application_keys_to_proto(value.application_keys)?);
-    Ok(Evidence { root_layer, layers, application_keys, event_log: None })
+    let event_log = encoded_event_log
+        .map(|data| EventLog::decode(data))
+        .transpose()
+        .map_err(anyhow::Error::msg)
+        .context("couldn't decode event log")?;
+    Ok(Evidence { root_layer, layers, application_keys, event_log: event_log })
 }
 
 fn root_layer_evidence_to_proto(

@@ -16,7 +16,7 @@
 
 //! Structs for providing attestation related logic such as getting an evidence.
 
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use anyhow::Context;
 use oak_crypto::encryption_key::EncryptionKey;
@@ -96,14 +96,15 @@ pub trait EvidenceProvider {
 /// [`EvidenceProvider`] implementation that exposes the instance's evidence.
 pub struct InstanceEvidenceProvider {
     evidence: &'static Evidence,
+    encoded_event_log: Option<&'static [u8]>,
 }
 
 impl InstanceEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .map(|d| InstanceEvidenceProvider { evidence: &d.evidence })
+        DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| InstanceEvidenceProvider {
+            evidence: &d.evidence,
+            encoded_event_log: d.encoded_event_log.as_ref().map(|buffer| buffer.as_slice()),
+        })
     }
 }
 
@@ -113,6 +114,6 @@ impl EvidenceProvider for InstanceEvidenceProvider {
     }
 
     fn get_encoded_event_log(&self) -> Option<&[u8]> {
-        None
+        self.encoded_event_log
     }
 }

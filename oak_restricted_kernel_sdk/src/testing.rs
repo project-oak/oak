@@ -67,6 +67,7 @@ fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
     };
 
     let application_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
+    let config_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
     let application_event = oak_proto_rust::oak::attestation::v1::Event {
         tag: "application_layer".to_string(),
         event: Some(prost_types::Any {
@@ -76,7 +77,10 @@ fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
                     sha2_256: application_digest.to_vec(),
                     ..RawDigest::default()
                 }),
-                config: None,
+                config: Some(RawDigest {
+                    sha2_256: config_digest.to_vec(),
+                    ..RawDigest::default()
+                }),
             }
             .encode_to_vec(),
         }),

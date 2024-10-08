@@ -22,7 +22,7 @@ extern crate alloc;
 use alloc::format;
 
 use log::info;
-use oak_attestation::dice::evidence_to_proto;
+use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
 pub mod proto {
@@ -66,13 +66,16 @@ where
         &mut self,
         _request: (),
     ) -> Result<proto::oak::echo::GetEvidenceResponse, micro_rpc::Status> {
-        let evidence =
-            evidence_to_proto(self.evidence_provider.get_evidence().clone()).map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::Internal,
-                    format!("failed to convert evidence to proto: {err}"),
-                )
-            })?;
+        let evidence = evidence_and_event_log_to_proto(
+            self.evidence_provider.get_evidence().clone(),
+            self.evidence_provider.get_encoded_event_log(),
+        )
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("failed to convert evidence to proto: {err}"),
+            )
+        })?;
         Ok(proto::oak::echo::GetEvidenceResponse { evidence: Some(evidence) })
     }
 }
