@@ -432,6 +432,8 @@
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -584,9 +586,10 @@
         </span>|| statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
 }
 
-<span class="doccomment">/// Verifies a signed endorsement against reference value.
+<span class="doccomment">/// Verifies a signed endorsement against a reference value.
 ///
-/// Returns Ok whenever the verification succeeds, or an error otherwise.
+/// Returns the parsed statement whenever the verification succeeds, or an error
+/// otherwise.
 ///
 /// `now_utc_millis`: The current time in milliseconds UTC since Unix Epoch.
 /// `signed_endorsement`: The endorsement along with signature and (optional)
@@ -597,7 +600,7 @@
     now_utc_millis: i64,
     signed_endorsement: <span class="kw-2">&amp;</span>SignedEndorsement,
     ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
-) -&gt; anyhow::Result&lt;()&gt; {
+) -&gt; anyhow::Result&lt;DefaultStatement&gt; {
     <span class="comment">// Reject ref_value instances using the potentially deprecated fields.
     </span><span class="kw">if </span>!ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
         <span class="macro">anyhow::bail!</span>(<span class="string">"verify_endorsement does not support the deprecated fields"</span>);
@@ -626,7 +629,7 @@
     <span class="kw">let </span>rekor_ref_value =
         ref_value.rekor.as_ref().context(<span class="string">"no rekor key set in signed endorsement"</span>)<span class="question-mark">?</span>;
     <span class="kw">return match </span>rekor_ref_value.r#type.as_ref() {
-        <span class="prelude-val">Some</span>(verifying_key_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Some</span>(verifying_key_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(statement),
         <span class="prelude-val">Some</span>(verifying_key_reference_value::Type::Verify(key_set)) =&gt; {
             <span class="kw">let </span>log_entry = <span class="kw-2">&amp;</span>signed_endorsement.rekor_log_entry;
             <span class="kw">if </span>log_entry.is_empty() {
@@ -634,7 +637,8 @@
             }
             verify_rekor_log_entry(log_entry, key_set, <span class="kw-2">&amp;</span>endorsement.serialized)
                 .context(<span class="string">"verifying rekor log entry"</span>)<span class="question-mark">?</span>;
-            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)
+            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(statement)
         }
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"empty Rekor verifying key set reference value"</span>)),
     };
@@ -759,10 +763,10 @@
 
     <span class="kw">match </span><span class="kw-2">&amp;</span>statement.predicate.validity {
         <span class="prelude-val">Some</span>(validity) =&gt; {
-            <span class="kw">if </span>validity.not_before.unix_timestamp_nanos() / <span class="number">1000000 </span>&gt; now_utc_millis.into() {
+            <span class="kw">if </span><span class="number">1000 </span>* validity.not_before.unix_timestamp() &gt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is not yet applicable"</span>)
             }
-            <span class="kw">if </span>validity.not_after.unix_timestamp_nanos() / <span class="number">1000000 </span>&lt; now_utc_millis.into() {
+            <span class="kw">if </span><span class="number">1000 </span>* validity.not_after.unix_timestamp() &lt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is no longer applicable"</span>)
             }
         }
