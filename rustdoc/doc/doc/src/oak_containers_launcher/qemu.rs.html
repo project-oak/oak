@@ -319,6 +319,7 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -493,10 +494,8 @@
         <span class="comment">// TDX machine suffix
         </span><span class="kw">let </span>tdx_machine_suffix = <span class="string">",kernel_irqchip=split,memory-encryption=tdx,memory-backend=ram1"</span>;
         <span class="kw">let </span>tdx_common_object = <span class="macro">format!</span>(
-            <span class="comment">// Note: private=on is only needed in Ubuntu's QEMU and kernel.
-            // Intel's reference implementation does not need `private=on`.
-            </span><span class="string">"memory-backend-ram,id=ram1,size={},private=on"</span>, <span class="comment">// only works on Ubuntu's QEMU
-            </span>params.memory_size.unwrap_or(<span class="string">"8G"</span>.to_string())
+            <span class="string">"memory-backend-ram,id=ram1,size={}"</span>,
+            params.memory_size.unwrap_or(<span class="string">"8G"</span>.to_string())
         );
         <span class="comment">// Generate the parameters and add them to cmd.args.
         </span><span class="kw">let </span>(machine_arg, object_args) = <span class="kw">match </span>params.vm_type {
@@ -530,7 +529,10 @@
             ),
             VmType::Tdx =&gt; (
                 microvm_common + tdx_machine_suffix,
-                <span class="macro">vec!</span>[<span class="string">"tdx-guest,sept-ve-disable=on,id=tdx"</span>.to_string(), tdx_common_object],
+                <span class="comment">// The command line comes from
+                // https://patchwork.kernel.org/project/qemu-devel/patch/20240125032328.2522472-51-xiaoyao.li@intel.com/
+                </span><span class="macro">vec!</span>[<span class="string">r#"{"qom-type":"tdx-guest","id":"tdx","sept-ve-disable":true, "quote-generation-socket":{"type": "vsock", "cid":"2","port":"4050"}}"#</span>.to_string(),
+                    tdx_common_object],
             ),
         };
         cmd.args([<span class="string">"-machine"</span>, <span class="kw-2">&amp;</span>machine_arg]);
