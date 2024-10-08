@@ -522,7 +522,7 @@
         };
         <span class="kw">let </span>failures: BTreeMap&lt;<span class="kw-2">&amp;</span>String, <span class="kw-2">&amp;</span>AttestationResults&gt; = results
             .iter()
-            .filter(|(<span class="kw">_</span>, v)| v.status == attestation_results::Status::GenericFailure.into())
+            .filter(|(<span class="kw">_</span>, v)| v.status == attestation_results::Status::GenericFailure <span class="kw">as </span>i32)
             .collect();
         <span class="kw">if </span>!failures.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(AttestationFailure {
