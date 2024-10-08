@@ -403,6 +403,19 @@
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
 <a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -764,11 +777,24 @@
     }
 }
 
-<span class="kw">pub fn </span>evidence_to_proto(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;Evidence&gt; {
+<span class="attr">#[deprecated(note = <span class="string">"Use `oak_attestation::dice::evidence_and_event_log_to_proto` instead."</span>)]
+</span><span class="kw">pub fn </span>evidence_to_proto(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;Evidence&gt; {
+    evidence_and_event_log_to_proto(value, <span class="prelude-val">None</span>)
+}
+
+<span class="kw">pub fn </span>evidence_and_event_log_to_proto(
+    value: oak_dice::evidence::Evidence,
+    encoded_event_log: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
+) -&gt; anyhow::Result&lt;Evidence&gt; {
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">None </span>})
+    <span class="kw">let </span>event_log = encoded_event_log
+        .map(|data| EventLog::decode(data))
+        .transpose()
+        .map_err(anyhow::Error::msg)
+        .context(<span class="string">"couldn't decode event log"</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: event_log })
 }
 
 <span class="kw">fn </span>root_layer_evidence_to_proto(

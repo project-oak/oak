@@ -203,6 +203,9 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -225,7 +228,7 @@
 
 <span class="kw">use </span>alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-<span class="kw">use </span>oak_attestation::dice::evidence_to_proto;
+<span class="kw">use </span>oak_attestation::dice::evidence_and_event_log_to_proto;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKeyHandle;
 <span class="kw">use </span>oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -310,13 +313,16 @@
                         <span class="string">"already initialized"</span>,
                     ));
                 }
-                <span class="kw">let </span>evidence = evidence_to_proto(<span class="self">self</span>.evidence_provider.get_evidence().clone())
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            <span class="macro">format!</span>(<span class="string">"failed to convert evidence to proto: {err}"</span>),
-                        )
-                    })<span class="question-mark">?</span>;
+                <span class="kw">let </span>evidence = evidence_and_event_log_to_proto(
+                    <span class="self">self</span>.evidence_provider.get_evidence().clone(),
+                    <span class="self">self</span>.evidence_provider.get_encoded_event_log(),
+                )
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        <span class="macro">format!</span>(<span class="string">"failed to convert evidence to proto: {err}"</span>),
+                    )
+                })<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(InitializeResponse { evidence: <span class="prelude-val">Some</span>(evidence) })
             }
         }

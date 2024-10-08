@@ -78,6 +78,9 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -102,7 +105,7 @@
 <span class="kw">use </span>alloc::format;
 
 <span class="kw">use </span>log::info;
-<span class="kw">use </span>oak_attestation::dice::evidence_to_proto;
+<span class="kw">use </span>oak_attestation::dice::evidence_and_event_log_to_proto;
 <span class="kw">use </span>oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 
 <span class="kw">pub mod </span>proto {
@@ -146,13 +149,16 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         _request: (),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;proto::oak::echo::GetEvidenceResponse, micro_rpc::Status&gt; {
-        <span class="kw">let </span>evidence =
-            evidence_to_proto(<span class="self">self</span>.evidence_provider.get_evidence().clone()).map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::Internal,
-                    <span class="macro">format!</span>(<span class="string">"failed to convert evidence to proto: {err}"</span>),
-                )
-            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>evidence = evidence_and_event_log_to_proto(
+            <span class="self">self</span>.evidence_provider.get_evidence().clone(),
+            <span class="self">self</span>.evidence_provider.get_encoded_event_log(),
+        )
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                <span class="macro">format!</span>(<span class="string">"failed to convert evidence to proto: {err}"</span>),
+            )
+        })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(proto::oak::echo::GetEvidenceResponse { evidence: <span class="prelude-val">Some</span>(evidence) })
     }
 }

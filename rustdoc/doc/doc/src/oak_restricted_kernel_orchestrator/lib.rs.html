@@ -95,6 +95,10 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -118,7 +122,7 @@
 <span class="kw">use </span>alloc::vec::Vec;
 
 <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
-</span><span class="kw">use </span>oak_attestation::dice::evidence_to_proto;
+</span><span class="kw">use </span>oak_attestation::dice::evidence_and_event_log_to_proto;
 <span class="kw">use </span>oak_channel::basic_framed::receive_raw;
 <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
 </span><span class="kw">use </span>oak_channel::basic_framed::send_raw;
@@ -171,17 +175,21 @@
             <span class="kw-2">&amp;</span>app_digest,
             <span class="kw-2">&amp;</span>event_digest,
         );
-        <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
-        </span>{
-            <span class="kw">let </span>evidence = evidence_to_proto(dice_data.evidence.clone())
-                .expect(<span class="string">"failed to convert evidence to proto"</span>);
-            send_raw(<span class="kw-2">&amp;mut </span>channel, <span class="kw-2">&amp;</span>evidence.encode_to_vec()).expect(<span class="string">"failed to return evidence"</span>);
-        }
 
         <span class="kw">let </span><span class="kw-2">mut </span>event_log =
             EventLog::decode(encoded_event_log.as_slice()).expect(<span class="string">"failed to decode event log"</span>);
 
         event_log.encoded_events.push(event.encode_to_vec());
+
+        <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
+        </span>{
+            <span class="kw">let </span>evidence = evidence_and_event_log_to_proto(
+                dice_data.evidence.clone(),
+                <span class="prelude-val">Some</span>(event_log.encode_to_vec().as_slice()),
+            )
+            .expect(<span class="string">"failed to convert evidence to proto"</span>);
+            send_raw(<span class="kw-2">&amp;mut </span>channel, <span class="kw-2">&amp;</span>evidence.encode_to_vec()).expect(<span class="string">"failed to return evidence"</span>);
+        }
 
         <span class="self">Self </span>{ elf_binary, derived_key, dice_data, event_log }
     }

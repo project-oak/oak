@@ -118,6 +118,7 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -136,7 +137,7 @@
 
 </span><span class="doccomment">//! Structs for providing attestation related logic such as getting an evidence.
 
-</span><span class="kw">use </span>alloc::{vec, vec::Vec};
+</span><span class="kw">use </span>alloc::vec::Vec;
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
@@ -216,14 +217,15 @@
 <span class="doccomment">/// [`EvidenceProvider`] implementation that exposes the instance's evidence.
 </span><span class="kw">pub struct </span>InstanceEvidenceProvider {
     evidence: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Evidence,
+    encoded_event_log: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]&gt;,
 }
 
 <span class="kw">impl </span>InstanceEvidenceProvider {
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .map(|d| InstanceEvidenceProvider { evidence: <span class="kw-2">&amp;</span>d.evidence })
+        DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| InstanceEvidenceProvider {
+            evidence: <span class="kw-2">&amp;</span>d.evidence,
+            encoded_event_log: d.encoded_event_log.as_ref().map(|buffer| buffer.as_slice()),
+        })
     }
 }
 
@@ -233,7 +235,7 @@
     }
 
     <span class="kw">fn </span>get_encoded_event_log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
-        <span class="prelude-val">None
-    </span>}
+        <span class="self">self</span>.encoded_event_log
+    }
 }
 </code></pre></div></section></main></body></html>
