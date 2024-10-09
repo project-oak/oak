@@ -17,11 +17,13 @@
 //! Structs for signing and encryption using keys attested in the instance's
 //! attestation evidence.
 
+use alloc::vec::Vec;
+
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
+    signer::Signer,
 };
-use oak_proto_rust::oak::crypto::v1::Signature;
 use p256::ecdsa::SigningKey;
 
 /// [`EncryptionKeyHandle`] implementation that using the instance's evidence
@@ -49,15 +51,6 @@ impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
     }
 }
 
-/// Exposes the ability to sign bytestrings using a private key that has been
-/// endorsed in the Attestation Evidence.
-pub trait Signer {
-    /// Attempt to sign the provided message bytestring using a signing private
-    /// key, a corresponding public key of which is contained in the
-    /// Attestation Evidence.
-    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
-}
-
 /// [`Signer`] implementation that using the instance's evidence and
 /// corresponding private keys.
 #[derive(Clone)]
@@ -75,9 +68,7 @@ impl InstanceSigner {
 }
 
 impl Signer for InstanceSigner {
-    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
-        Ok(Signature {
-            signature: <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message),
-        })
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
     }
 }

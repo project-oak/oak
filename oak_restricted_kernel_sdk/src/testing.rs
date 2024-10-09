@@ -22,11 +22,11 @@ use alloc::vec::Vec;
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
+    signer::Signer,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
     attestation::v1::{ApplicationLayerData, EventLog},
-    crypto::v1::Signature,
     RawDigest,
 };
 use p256::ecdsa::SigningKey;
@@ -35,7 +35,6 @@ use prost::Message;
 use crate::{
     alloc::string::ToString,
     attestation::{DiceWrapper, EvidenceProvider},
-    crypto::Signer,
 };
 
 lazy_static::lazy_static! {
@@ -112,10 +111,8 @@ impl MockSigner {
 }
 
 impl Signer for MockSigner {
-    fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
-        Ok(Signature {
-            signature: <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message),
-        })
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
     }
 }
 
