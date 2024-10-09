@@ -3100,6 +3100,7 @@ dependencies = [
  "oak_restricted_kernel_dice",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk_proc_macro",
+ "oak_session",
  "oak_stage0_dice",
  "p256",
  "prost",

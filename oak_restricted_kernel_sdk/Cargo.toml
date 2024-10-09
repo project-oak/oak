@@ -22,6 +22,7 @@ oak_restricted_kernel_interface = { workspace = true }
 oak_enclave_runtime_support = { default-features = false, workspace = true }
 oak_restricted_kernel_sdk_proc_macro = { workspace = true }
 oak_restricted_kernel_dice = { workspace = true, optional = true }
+oak_session = { workspace = true }
 oak_stage0_dice = { workspace = true, optional = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 prost = { version = "*", default-features = false }

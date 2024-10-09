@@ -48,6 +48,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_restricted_kernel_dice",
         "//oak_restricted_kernel_interface",
+        "//oak_session",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:lazy_static",

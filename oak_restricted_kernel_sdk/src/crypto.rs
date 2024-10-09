@@ -17,13 +17,15 @@
 //! Structs for signing and encryption using keys attested in the instance's
 //! attestation evidence.
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 
+use anyhow::Context;
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
     signer::Signer,
 };
+use oak_session::session_binding::{SessionBinder, SignatureBinder, SignatureBinderBuilder};
 use p256::ecdsa::SigningKey;
 
 /// [`EncryptionKeyHandle`] implementation that using the instance's evidence
@@ -70,5 +72,29 @@ impl InstanceSigner {
 impl Signer for InstanceSigner {
     fn sign(&self, message: &[u8]) -> Vec<u8> {
         <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
+    }
+}
+
+pub struct InstanceSessionBinder {
+    signature_binder: SignatureBinder,
+}
+
+impl InstanceSessionBinder {
+    pub fn create() -> anyhow::Result<Self> {
+        // TODO: b/368030563 - Add a separate session binding key and use it instead
+        // of signing key.
+        let signer = InstanceSigner::create().context("couldn't get binding key")?;
+
+        let signature_binder = SignatureBinderBuilder::default()
+            .signer(Box::new(signer))
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        Ok(Self { signature_binder })
+    }
+}
+
+impl SessionBinder for InstanceSessionBinder {
+    fn bind(&self, bound_data: &[u8]) -> Vec<u8> {
+        self.signature_binder.bind(bound_data)
     }
 }
