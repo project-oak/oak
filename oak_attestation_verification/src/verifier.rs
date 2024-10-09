@@ -83,11 +83,11 @@ pub fn to_attestation_results(
 
 /// Verifies entire setup by forwarding to individual setup types.
 ///
-/// This just fetches expected values using [get_expected_values], and then
-/// calls [verify_with_expected_values] with those.
+/// This just fetches expected values using [`expect::get_expected_values`],
+/// and then call [`verify_with_expected_values`] providing those values.
 ///
 /// If you'd like to cache and reuse the values, call those two methods
-/// indepedently, and cache the results of the first.
+/// independently, and cache the results of the first.
 pub fn verify(
     now_utc_millis: i64,
     evidence: &Evidence,
@@ -101,7 +101,6 @@ pub fn verify(
 }
 
 /// Verifies entire setup by forwarding to individual setup types.
-/// This variant returns expected values along with the extracted evidence.
 pub fn verify_with_expected_values(
     now_utc_millis: i64,
     evidence: &Evidence,

@@ -42,7 +42,8 @@ use prost::Message;
 
 use crate::{
     endorsement::{
-        get_digest, is_firmware_type, is_kernel_type, parse_statement, verify_binary_endorsement,
+        self, get_digest, is_firmware_type, is_kernel_type, parse_statement,
+        verify_binary_endorsement,
     },
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
@@ -389,12 +390,15 @@ pub(crate) fn get_expected_measurement_digest(
                 &public_keys.rekor_public_key,
             )
             .context("verifying binary endorsement")?;
-            Ok(into_expected_digests(&[hex_to_raw_digest(&get_digest(&parse_statement(
-                &endorsement.endorsement,
-            )?)?)?]))
+            let endorsement_statement = parse_statement(&endorsement.endorsement)
+                .context("parsing endorsement statement")?;
+            Ok(to_expected_digests(
+                &[hex_to_raw_digest(&get_digest(&endorsement_statement)?)?],
+                endorsement_statement.predicate.validity.as_ref(),
+            ))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
-            Ok(into_expected_digests(&expected_digests.digests))
+            Ok(to_expected_digests(&expected_digests.digests, None))
         }
         None => Err(anyhow::anyhow!("empty binary reference value")),
     }
@@ -445,24 +449,28 @@ fn get_stage0_expected_values(
             r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
         }),
         Some(binary_reference_value::Type::Endorsement(public_keys)) => {
-            let firmware_attachment = get_verified_stage0_attachment(
-                now_utc_millis,
-                endorsement.context("matching endorsement not found for reference value")?,
-                public_keys,
-            )
-            .context("getting verified stage0 attachment")?;
+            let endorsement =
+                endorsement.context("matching endorsement not found for reference value")?;
 
-            Ok(into_expected_digests(
+            let firmware_attachment =
+                get_verified_stage0_attachment(now_utc_millis, endorsement, public_keys)
+                    .context("getting verified stage0 attachment")?;
+
+            let endorsement_statement = parse_statement(&endorsement.endorsement)
+                .context("parsing endorsement statement")?;
+
+            Ok(to_expected_digests(
                 firmware_attachment
                     .configs
                     .values()
                     .map(|digest| hex_to_raw_digest(digest).unwrap())
                     .collect::<Vec<RawDigest>>()
                     .as_slice(),
+                endorsement_statement.predicate.validity.as_ref(),
             ))
         }
         Some(binary_reference_value::Type::Digests(expected_digests)) => {
-            Ok(into_expected_digests(expected_digests.digests.as_slice()))
+            Ok(to_expected_digests(expected_digests.digests.as_slice(), None))
         }
 
         None => Err(anyhow::anyhow!("empty stage0 reference value")),
@@ -532,28 +540,38 @@ fn get_kernel_expected_values(
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
 
+            let endorsement = endorsement.context("No endorsement provided")?;
+            let parsed_statement = parse_statement(&endorsement.endorsement)
+                .context("parsing endorsement statement")?;
+
             Ok(KernelExpectedValues {
-                image: Some(into_expected_digests(&[hex_to_raw_digest(&expected_image)?])),
-                setup_data: Some(into_expected_digests(&[hex_to_raw_digest(
-                    &expected_setup_data,
-                )?])),
+                image: Some(to_expected_digests(
+                    &[hex_to_raw_digest(&expected_image)?],
+                    parsed_statement.predicate.validity.as_ref(),
+                )),
+                setup_data: Some(to_expected_digests(
+                    &[hex_to_raw_digest(&expected_setup_data)?],
+                    parsed_statement.predicate.validity.as_ref(),
+                )),
             })
         }
         Some(kernel_binary_reference_value::Type::Digests(expected_digests)) => {
             Ok(KernelExpectedValues {
-                image: Some(into_expected_digests(
+                image: Some(to_expected_digests(
                     &expected_digests
                         .image
                         .as_ref()
                         .ok_or_else(|| anyhow::anyhow!("no image digests provided"))?
                         .digests,
+                    None,
                 )),
-                setup_data: Some(into_expected_digests(
+                setup_data: Some(to_expected_digests(
                     &expected_digests
                         .setup_data
                         .as_ref()
                         .ok_or_else(|| anyhow::anyhow!("no setup_data digests provided"))?
                         .digests,
+                    None,
                 )),
             })
         }
@@ -605,9 +623,15 @@ pub(crate) fn get_text_expected_values(
     }
 }
 
-fn into_expected_digests(source: &[RawDigest]) -> ExpectedDigests {
+fn to_expected_digests(
+    source: &[RawDigest],
+    claim_validity: Option<&endorsement::Validity>,
+) -> ExpectedDigests {
     ExpectedDigests {
-        r#type: Some(expected_digests::Type::Digests(RawDigests { digests: source.to_vec() })),
+        r#type: Some(expected_digests::Type::Digests(RawDigests {
+            digests: source.to_vec(),
+            validity: claim_validity.map(|cv| cv.into()),
+        })),
     }
 }
 

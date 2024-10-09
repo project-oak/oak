@@ -28,7 +28,7 @@ use oak_proto_rust::oak::{
         KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerReferenceValues,
         KeyType, OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
-        SystemLayerReferenceValues, TextReferenceValue, VerifyingKeySet,
+        SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
@@ -36,6 +36,9 @@ use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
 use prost_types::Any;
 use sha2::{Digest, Sha256, Sha384, Sha512};
+use time::OffsetDateTime;
+
+use crate::endorsement;
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
@@ -459,6 +462,33 @@ pub fn decode_protobuf_any<M: Message + Default>(
             error
         )
     })
+}
+
+/// Return a milliseconds-since-the-epoch timestamp value.
+/// ///
+/// Endorsement validity structures in our JSON-based endorsements use
+/// milliseconds resolution, but [`OffsetDateTime`] provides only seconds or
+/// nanoseconds since the epoch.
+///
+/// This bridges a convenience gap, and helps with readability of code that
+/// works with validity times.
+pub trait UnixTimestampMillis {
+    fn unix_timestamp_millis(&self) -> i64;
+}
+
+impl UnixTimestampMillis for OffsetDateTime {
+    fn unix_timestamp_millis(&self) -> i64 {
+        self.unix_timestamp() * 1000
+    }
+}
+
+impl From<&endorsement::Validity> for Validity {
+    fn from(value: &endorsement::Validity) -> Validity {
+        Validity {
+            not_before: value.not_before.unix_timestamp_millis(),
+            not_after: value.not_after.unix_timestamp_millis(),
+        }
+    }
 }
 
 #[cfg(test)]

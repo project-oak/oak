@@ -934,224 +934,6 @@ pub mod endorsements {
         Cb(super::CbEndorsements),
     }
 }
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct VerificationSkipped {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct RawDigests {
-    #[prost(message, repeated, tag = "1")]
-    pub digests: ::prost::alloc::vec::Vec<super::super::RawDigest>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ExpectedDigests {
-    #[prost(oneof = "expected_digests::Type", tags = "1, 2")]
-    pub r#type: ::core::option::Option<expected_digests::Type>,
-}
-/// Nested message and enum types in `ExpectedDigests`.
-pub mod expected_digests {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Type {
-        /// If the reference value was set to SkipVerification, we represent that
-        /// here.
-        #[prost(message, tag = "1")]
-        Skipped(super::VerificationSkipped),
-        /// One or more digests that should be considered a valid match against an
-        /// actual value.
-        #[prost(message, tag = "2")]
-        Digests(super::RawDigests),
-    }
-}
-/// The expected values for kernel image and setup data, computed from previously
-/// provided endorsements and reference values.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct KernelExpectedValues {
-    /// Allowable digests for the image.
-    #[prost(message, optional, tag = "1")]
-    pub image: ::core::option::Option<ExpectedDigests>,
-    /// Allowable digests for the setup data.
-    #[prost(message, optional, tag = "2")]
-    pub setup_data: ::core::option::Option<ExpectedDigests>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct AmdSevExpectedValues {
-    #[prost(message, optional, tag = "1")]
-    pub stage0_expected: ::core::option::Option<ExpectedDigests>,
-    /// Minimum accepted versions of all TCB components.
-    #[prost(message, optional, tag = "2")]
-    pub min_tcb_version: ::core::option::Option<TcbVersion>,
-    /// If true, will skip the check that the TEE is not in debug mode.
-    #[prost(bool, tag = "3")]
-    pub allow_debug: bool,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct IntelTdxExpectedValues {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct InsecureExpectedValues {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ExpectedRegex {
-    #[prost(string, tag = "1")]
-    pub value: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ExpectedStringLiterals {
-    #[prost(string, repeated, tag = "1")]
-    pub value: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct TextExpectedValue {
-    #[prost(oneof = "text_expected_value::Type", tags = "1, 2, 3")]
-    pub r#type: ::core::option::Option<text_expected_value::Type>,
-}
-/// Nested message and enum types in `TextExpectedValue`.
-pub mod text_expected_value {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Type {
-        /// If the reference value was set to SkipVerification, we represent that
-        /// here.
-        #[prost(message, tag = "1")]
-        Skipped(super::VerificationSkipped),
-        #[prost(message, tag = "2")]
-        Regex(super::ExpectedRegex),
-        #[prost(message, tag = "3")]
-        StringLiterals(super::ExpectedStringLiterals),
-    }
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct RootLayerExpectedValues {
-    /// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
-    /// Verification is skipped when not running in a TEE.
-    #[prost(message, optional, tag = "1")]
-    pub amd_sev: ::core::option::Option<AmdSevExpectedValues>,
-    #[prost(message, optional, tag = "2")]
-    pub intel_tdx: ::core::option::Option<IntelTdxExpectedValues>,
-    /// When insecure is set no verification of the TEE platform is performed. This
-    /// can be used when not running in a TEE or when the client is agnostic about
-    /// the platform and doesn't care about the hardware verification.
-    #[prost(message, optional, tag = "3")]
-    pub insecure: ::core::option::Option<InsecureExpectedValues>,
-}
-/// Reference values of the kernel layer, as measured by stage0.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct KernelLayerExpectedValues {
-    /// Verifies the kernel based on endorsement.
-    #[prost(message, optional, tag = "1")]
-    pub kernel: ::core::option::Option<KernelExpectedValues>,
-    /// Verifies the kernel command line, i.e. the parameters passed to the
-    /// kernel on boot.
-    #[prost(message, optional, tag = "2")]
-    pub kernel_cmd_line_text: ::core::option::Option<TextExpectedValue>,
-    /// Verifies the stage1 binary if running as Oak Containers.
-    #[prost(message, optional, tag = "3")]
-    pub init_ram_fs: ::core::option::Option<ExpectedDigests>,
-    #[prost(message, optional, tag = "4")]
-    pub memory_map: ::core::option::Option<ExpectedDigests>,
-    #[prost(message, optional, tag = "5")]
-    pub acpi: ::core::option::Option<ExpectedDigests>,
-}
-/// The expected binary digests for a system layer image.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct SystemLayerExpectedValues {
-    /// The allowable digest values for a system layer image.
-    #[prost(message, optional, tag = "1")]
-    pub system_image: ::core::option::Option<ExpectedDigests>,
-}
-/// The expected bundle and configuration digests for a container layer.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ContainerLayerExpectedValues {
-    /// The allowable digest values for a container bundle.
-    #[prost(message, optional, tag = "1")]
-    pub bundle: ::core::option::Option<ExpectedDigests>,
-    /// The allowable digest values for a configuration passed into a container.
-    #[prost(message, optional, tag = "2")]
-    pub config: ::core::option::Option<ExpectedDigests>,
-}
-/// The expected binary and configuration digests for an application layer.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ApplicationLayerExpectedValues {
-    /// The allowable digest values for an application binary.
-    #[prost(message, optional, tag = "1")]
-    pub binary: ::core::option::Option<ExpectedDigests>,
-    /// The allowable digest values for a configuration passed to the application
-    /// binary.
-    #[prost(message, optional, tag = "2")]
-    pub configuration: ::core::option::Option<ExpectedDigests>,
-}
-/// Represents digest of an event.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct EventExpectedValues {
-    #[prost(message, optional, tag = "1")]
-    pub event: ::core::option::Option<ExpectedDigests>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakRestrictedKernelExpectedValues {
-    #[prost(message, optional, tag = "1")]
-    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<KernelLayerExpectedValues>,
-    #[prost(message, optional, tag = "3")]
-    pub application_layer: ::core::option::Option<ApplicationLayerExpectedValues>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct OakContainersExpectedValues {
-    #[prost(message, optional, tag = "1")]
-    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<KernelLayerExpectedValues>,
-    #[prost(message, optional, tag = "3")]
-    pub system_layer: ::core::option::Option<SystemLayerExpectedValues>,
-    #[prost(message, optional, tag = "4")]
-    pub container_layer: ::core::option::Option<ContainerLayerExpectedValues>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct CbExpectedValues {
-    #[prost(message, optional, tag = "1")]
-    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<EventExpectedValues>,
-    #[prost(message, optional, tag = "3")]
-    pub system_layer: ::core::option::Option<EventExpectedValues>,
-    #[prost(message, optional, tag = "4")]
-    pub application_layer: ::core::option::Option<EventExpectedValues>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct ExpectedValues {
-    #[prost(oneof = "expected_values::Type", tags = "1, 2, 3")]
-    pub r#type: ::core::option::Option<expected_values::Type>,
-}
-/// Nested message and enum types in `ExpectedValues`.
-pub mod expected_values {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Type {
-        #[prost(message, tag = "1")]
-        OakRestrictedKernel(super::OakRestrictedKernelExpectedValues),
-        #[prost(message, tag = "2")]
-        OakContainers(super::OakContainersExpectedValues),
-        #[prost(message, tag = "3")]
-        Cb(super::CbExpectedValues),
-    }
-}
 /// Represents a verification result. Can be extended to return certain
 /// measurements and other detail to the client for further processing.
 /// Nomenclature follows RFC 9334.
@@ -1482,3 +1264,225 @@ pub struct CbData {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct OakStandaloneData {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct VerificationSkipped {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct RawDigests {
+    #[prost(message, repeated, tag = "1")]
+    pub digests: ::prost::alloc::vec::Vec<super::super::RawDigest>,
+    /// This field is optional, and only used for some optional
+    /// optimizations like client-side caching of verified expected values.
+    #[prost(message, optional, tag = "2")]
+    pub validity: ::core::option::Option<Validity>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ExpectedDigests {
+    #[prost(oneof = "expected_digests::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<expected_digests::Type>,
+}
+/// Nested message and enum types in `ExpectedDigests`.
+pub mod expected_digests {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Type {
+        /// If the reference value was set to SkipVerification, we represent that
+        /// here.
+        #[prost(message, tag = "1")]
+        Skipped(super::VerificationSkipped),
+        /// One or more digests that should be considered a valid match against an
+        /// actual value.
+        #[prost(message, tag = "2")]
+        Digests(super::RawDigests),
+    }
+}
+/// The expected values for kernel image and setup data, computed from previously
+/// provided endorsements and reference values.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct KernelExpectedValues {
+    /// Allowable digests for the image.
+    #[prost(message, optional, tag = "1")]
+    pub image: ::core::option::Option<ExpectedDigests>,
+    /// Allowable digests for the setup data.
+    #[prost(message, optional, tag = "2")]
+    pub setup_data: ::core::option::Option<ExpectedDigests>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct AmdSevExpectedValues {
+    #[prost(message, optional, tag = "1")]
+    pub stage0_expected: ::core::option::Option<ExpectedDigests>,
+    /// Minimum accepted versions of all TCB components.
+    #[prost(message, optional, tag = "2")]
+    pub min_tcb_version: ::core::option::Option<TcbVersion>,
+    /// If true, will skip the check that the TEE is not in debug mode.
+    #[prost(bool, tag = "3")]
+    pub allow_debug: bool,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct IntelTdxExpectedValues {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct InsecureExpectedValues {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ExpectedRegex {
+    #[prost(string, tag = "1")]
+    pub value: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ExpectedStringLiterals {
+    #[prost(string, repeated, tag = "1")]
+    pub value: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct TextExpectedValue {
+    #[prost(oneof = "text_expected_value::Type", tags = "1, 2, 3")]
+    pub r#type: ::core::option::Option<text_expected_value::Type>,
+}
+/// Nested message and enum types in `TextExpectedValue`.
+pub mod text_expected_value {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Type {
+        /// If the reference value was set to SkipVerification, we represent that
+        /// here.
+        #[prost(message, tag = "1")]
+        Skipped(super::VerificationSkipped),
+        #[prost(message, tag = "2")]
+        Regex(super::ExpectedRegex),
+        #[prost(message, tag = "3")]
+        StringLiterals(super::ExpectedStringLiterals),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct RootLayerExpectedValues {
+    /// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+    /// Verification is skipped when not running in a TEE.
+    #[prost(message, optional, tag = "1")]
+    pub amd_sev: ::core::option::Option<AmdSevExpectedValues>,
+    #[prost(message, optional, tag = "2")]
+    pub intel_tdx: ::core::option::Option<IntelTdxExpectedValues>,
+    /// When insecure is set no verification of the TEE platform is performed. This
+    /// can be used when not running in a TEE or when the client is agnostic about
+    /// the platform and doesn't care about the hardware verification.
+    #[prost(message, optional, tag = "3")]
+    pub insecure: ::core::option::Option<InsecureExpectedValues>,
+}
+/// Reference values of the kernel layer, as measured by stage0.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct KernelLayerExpectedValues {
+    /// Verifies the kernel based on endorsement.
+    #[prost(message, optional, tag = "1")]
+    pub kernel: ::core::option::Option<KernelExpectedValues>,
+    /// Verifies the kernel command line, i.e. the parameters passed to the
+    /// kernel on boot.
+    #[prost(message, optional, tag = "2")]
+    pub kernel_cmd_line_text: ::core::option::Option<TextExpectedValue>,
+    /// Verifies the stage1 binary if running as Oak Containers.
+    #[prost(message, optional, tag = "3")]
+    pub init_ram_fs: ::core::option::Option<ExpectedDigests>,
+    #[prost(message, optional, tag = "4")]
+    pub memory_map: ::core::option::Option<ExpectedDigests>,
+    #[prost(message, optional, tag = "5")]
+    pub acpi: ::core::option::Option<ExpectedDigests>,
+}
+/// The expected binary digests for a system layer image.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct SystemLayerExpectedValues {
+    /// The allowable digest values for a system layer image.
+    #[prost(message, optional, tag = "1")]
+    pub system_image: ::core::option::Option<ExpectedDigests>,
+}
+/// The expected bundle and configuration digests for a container layer.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ContainerLayerExpectedValues {
+    /// The allowable digest values for a container bundle.
+    #[prost(message, optional, tag = "1")]
+    pub bundle: ::core::option::Option<ExpectedDigests>,
+    /// The allowable digest values for a configuration passed into a container.
+    #[prost(message, optional, tag = "2")]
+    pub config: ::core::option::Option<ExpectedDigests>,
+}
+/// The expected binary and configuration digests for an application layer.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ApplicationLayerExpectedValues {
+    /// The allowable digest values for an application binary.
+    #[prost(message, optional, tag = "1")]
+    pub binary: ::core::option::Option<ExpectedDigests>,
+    /// The allowable digest values for a configuration passed to the application
+    /// binary.
+    #[prost(message, optional, tag = "2")]
+    pub configuration: ::core::option::Option<ExpectedDigests>,
+}
+/// Represents digest of an event.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct EventExpectedValues {
+    #[prost(message, optional, tag = "1")]
+    pub event: ::core::option::Option<ExpectedDigests>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct OakRestrictedKernelExpectedValues {
+    #[prost(message, optional, tag = "1")]
+    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
+    #[prost(message, optional, tag = "2")]
+    pub kernel_layer: ::core::option::Option<KernelLayerExpectedValues>,
+    #[prost(message, optional, tag = "3")]
+    pub application_layer: ::core::option::Option<ApplicationLayerExpectedValues>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct OakContainersExpectedValues {
+    #[prost(message, optional, tag = "1")]
+    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
+    #[prost(message, optional, tag = "2")]
+    pub kernel_layer: ::core::option::Option<KernelLayerExpectedValues>,
+    #[prost(message, optional, tag = "3")]
+    pub system_layer: ::core::option::Option<SystemLayerExpectedValues>,
+    #[prost(message, optional, tag = "4")]
+    pub container_layer: ::core::option::Option<ContainerLayerExpectedValues>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct CbExpectedValues {
+    #[prost(message, optional, tag = "1")]
+    pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
+    #[prost(message, optional, tag = "2")]
+    pub kernel_layer: ::core::option::Option<EventExpectedValues>,
+    #[prost(message, optional, tag = "3")]
+    pub system_layer: ::core::option::Option<EventExpectedValues>,
+    #[prost(message, optional, tag = "4")]
+    pub application_layer: ::core::option::Option<EventExpectedValues>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ExpectedValues {
+    #[prost(oneof = "expected_values::Type", tags = "1, 2, 3")]
+    pub r#type: ::core::option::Option<expected_values::Type>,
+}
+/// Nested message and enum types in `ExpectedValues`.
+pub mod expected_values {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    pub enum Type {
+        #[prost(message, tag = "1")]
+        OakRestrictedKernel(super::OakRestrictedKernelExpectedValues),
+        #[prost(message, tag = "2")]
+        OakContainers(super::OakContainersExpectedValues),
+        #[prost(message, tag = "3")]
+        Cb(super::CbExpectedValues),
+    }
+}

@@ -37,6 +37,7 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 pub use util::{
     convert_pem_to_raw, hex_to_raw_digest, raw_to_hex_digest, reference_values_from_evidence,
+    UnixTimestampMillis,
 };
 
 /// Verifies a signed endorsement against a reference value.
@@ -57,8 +58,8 @@ pub fn verify_endorsement(
     Ok(EndorsementDetails {
         subject_digest: Some(digest),
         validity: Some(Validity {
-            not_before: 1000 * validity.not_before.unix_timestamp(),
-            not_after: 1000 * validity.not_after.unix_timestamp(),
+            not_before: validity.not_before.unix_timestamp_millis(),
+            not_after: validity.not_after.unix_timestamp_millis(),
         }),
     })
 }

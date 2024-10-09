@@ -26,9 +26,7 @@ use oak_proto_rust::oak::{
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
 use time::macros::datetime;
 
-use crate::endorsement::{
-    self, DefaultPredicate, DefaultStatement, Subject, Validity as EndorsementValidity,
-};
+use crate::endorsement::{self, DefaultPredicate, DefaultStatement, Statement, Subject};
 
 pub enum Usage {
     None,
@@ -56,7 +54,7 @@ pub fn fake_endorsement(digests: &RawDigest, usage: Usage) -> DefaultStatement {
         predicate: DefaultPredicate {
             usage: usage.to_string(),
             issued_on: datetime!(2024-10-01 12:08 UTC),
-            validity: Some(EndorsementValidity {
+            validity: Some(endorsement::Validity {
                 not_before: datetime!(2024-09-01 12:00 UTC),
                 not_after: datetime!(2024-12-01 12:00 UTC),
             }),
@@ -140,4 +138,14 @@ fn raw_digest_to_map(h: &RawDigest) -> BTreeMap<String, String> {
     insert_if_present!(sha2_384);
 
     map
+}
+
+pub trait GetValidity {
+    fn validity(&self) -> &endorsement::Validity;
+}
+
+impl GetValidity for Statement<DefaultPredicate> {
+    fn validity(&self) -> &endorsement::Validity {
+        self.predicate.validity.as_ref().expect("missing validity")
+    }
 }

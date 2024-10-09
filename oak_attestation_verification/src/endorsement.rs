@@ -37,7 +37,10 @@ use time::OffsetDateTime;
 
 use crate::{
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa},
-    util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
+    util::{
+        convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa,
+        UnixTimestampMillis,
+    },
 };
 
 /// URI representing in-toto statements. We only use V1, earlier and later
@@ -327,10 +330,10 @@ pub fn validate_statement(
 
     match &statement.predicate.validity {
         Some(validity) => {
-            if 1000 * validity.not_before.unix_timestamp() > now_utc_millis.into() {
+            if validity.not_before.unix_timestamp_millis() > now_utc_millis.into() {
                 anyhow::bail!("the claim is not yet applicable")
             }
-            if 1000 * validity.not_after.unix_timestamp() < now_utc_millis.into() {
+            if validity.not_after.unix_timestamp_millis() < now_utc_millis.into() {
                 anyhow::bail!("the claim is no longer applicable")
             }
         }

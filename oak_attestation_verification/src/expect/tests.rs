@@ -26,7 +26,10 @@ use oak_proto_rust::oak::{
 use prost::Message;
 use time::ext::NumericalDuration;
 
-use crate::{test_util, util};
+use crate::{
+    test_util::{self, GetValidity},
+    util::{self, UnixTimestampMillis},
+};
 
 #[test]
 fn test_get_expected_measurement_digest_validity() {
@@ -34,6 +37,7 @@ fn test_get_expected_measurement_digest_validity() {
     let measured_content = b"Just some abitrary content";
     let content_digests = util::raw_digest_from_contents(measured_content);
     let endorsement = test_util::fake_endorsement(&content_digests, test_util::Usage::None);
+    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
 
     // Now create the TR endorsement.
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
@@ -50,9 +54,9 @@ fn test_get_expected_measurement_digest_validity() {
     // endorsement signing key.
     let reference_value = test_util::binary_reference_value_for_endorser_pk(public_key);
     // Pretend it's a week into validity.
-    let now =
-        endorsement.predicate.validity.as_ref().unwrap().not_before.saturating_add((7).days());
-    let now_utc_millis = 1000 * now.unix_timestamp();
+    let now_utc_millis =
+        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
+
     let expected_digests = super::get_expected_measurement_digest(
         now_utc_millis,
         Some(&tr_endorsement),
@@ -61,10 +65,12 @@ fn test_get_expected_measurement_digest_validity() {
     .expect("failed to get digests");
 
     // Assert that the expected digests are those from the verified endorsement.
+
     assert_eq!(
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
+                validity: Some(endorsement_validity.into()),
                 digests: vec![content_digests],
             })),
         }
@@ -89,6 +95,7 @@ fn test_get_stage0_expected_values_validity() {
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Firmware);
+    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
     let tr_endorsement = TransparentReleaseEndorsement {
@@ -103,9 +110,8 @@ fn test_get_stage0_expected_values_validity() {
     // endorsement signing key.
     let reference_value = test_util::binary_reference_value_for_endorser_pk(public_key);
     // Pretend it's a week into the validity period.
-    let now =
-        endorsement.predicate.validity.as_ref().unwrap().not_before.saturating_add((7).days());
-    let now_utc_millis = 1000 * now.unix_timestamp();
+    let now_utc_millis =
+        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
     let expected_digests =
         super::get_stage0_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
             .expect("failed to get digests");
@@ -115,6 +121,7 @@ fn test_get_stage0_expected_values_validity() {
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
+                validity: Some(endorsement_validity.into()),
                 digests: vec![content_digests],
             })),
         }
@@ -140,6 +147,7 @@ fn test_get_kernel_expected_values_validity() {
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Kernel);
+    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
     let tr_endorsement = TransparentReleaseEndorsement {
@@ -154,9 +162,8 @@ fn test_get_kernel_expected_values_validity() {
     // endorsement signing key.
     let reference_value = test_util::kernel_binary_reference_value_for_endorser_pk(public_key);
     // Pretend it's a week into the validity period.
-    let now =
-        endorsement.predicate.validity.as_ref().unwrap().not_before.saturating_add((7).days());
-    let now_utc_millis = 1000 * now.unix_timestamp();
+    let now_utc_millis =
+        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
     let expected_digests =
         super::get_kernel_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
             .expect("failed to get digests");
@@ -166,6 +173,7 @@ fn test_get_kernel_expected_values_validity() {
         expected_digests.image,
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
+                validity: Some(endorsement_validity.into()),
                 digests: vec![image_digests],
             })),
         })
@@ -174,6 +182,7 @@ fn test_get_kernel_expected_values_validity() {
         expected_digests.setup_data,
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
+                validity: Some(endorsement_validity.into()),
                 digests: vec![setup_digests],
             })),
         })
