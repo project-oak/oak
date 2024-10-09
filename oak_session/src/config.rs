@@ -27,6 +27,7 @@ use crate::{
     },
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
+    key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
 };
 
 #[allow(dead_code)]
@@ -34,6 +35,7 @@ pub struct SessionConfig {
     pub attestation_provider_config: AttestationProviderConfig,
     pub handshaker_config: HandshakerConfig,
     pub encryptor_config: EncryptorConfig,
+    pub binding_key_extractor: Box<dyn KeyExtractor>,
 }
 
 impl SessionConfig {
@@ -82,8 +84,14 @@ impl SessionConfigBuilder {
         let encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        let config =
-            SessionConfig { attestation_provider_config, handshaker_config, encryptor_config };
+        let binding_key_extractor = Box::new(DefaultSigningKeyExtractor);
+
+        let config = SessionConfig {
+            attestation_provider_config,
+            handshaker_config,
+            encryptor_config,
+            binding_key_extractor,
+        };
         Self { config }
     }
 
@@ -144,6 +152,14 @@ impl SessionConfigBuilder {
         encryptor_provider: Box<dyn EncryptorProvider>,
     ) -> Self {
         self.config.encryptor_config.encryptor_provider = encryptor_provider;
+        self
+    }
+
+    pub fn set_binding_key_extractor(
+        mut self,
+        binding_key_extractor: Box<dyn KeyExtractor>,
+    ) -> Self {
+        self.config.binding_key_extractor = binding_key_extractor;
         self
     }
 

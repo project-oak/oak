@@ -34,14 +34,11 @@ use oak_proto_rust::oak::{
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
-use crate::{
-    config::AttestationProviderConfig, session_binding::SessionBindingVerifier, ProtocolEngine,
-};
+use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
 pub struct AttestationSuccess {
-    // Binders allowing to bind different types of attestation to the session (keyed by the
-    // attestation type ID).
-    pub session_binding_verifiers: BTreeMap<String, Box<dyn SessionBindingVerifier>>,
+    // Results from individual verifiers keyed by the attestation type ID.
+    pub attestation_results: BTreeMap<String, AttestationResults>,
 }
 #[derive(Debug)]
 pub struct AttestationFailure {
@@ -94,11 +91,6 @@ pub trait AttestationVerifier: Send {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults>;
-
-    fn create_session_binding_verifier(
-        &self,
-        results: &AttestationResults,
-    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
 }
 
 /// Configuration of the attestation behavior that the AttestationProvider will
@@ -131,7 +123,6 @@ pub trait AttestationProvider: Send {
 pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
-        verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
         results: BTreeMap<String, AttestationResults>,
     ) -> Result<AttestationSuccess, AttestationFailure>;
 }
@@ -141,7 +132,6 @@ pub struct DefaultAttestationAggregator {}
 impl AttestationAggregator for DefaultAttestationAggregator {
     fn aggregate_attestation_results(
         &self,
-        verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
         results: BTreeMap<String, AttestationResults>,
     ) -> Result<AttestationSuccess, AttestationFailure> {
         if results.is_empty() {
@@ -163,24 +153,7 @@ impl AttestationAggregator for DefaultAttestationAggregator {
                     .collect(),
             });
         };
-        Ok(AttestationSuccess {
-            session_binding_verifiers: results
-                .iter()
-                .map(|(id, results)| {
-                    Ok((
-                        id.clone(),
-                        verifiers
-                            .get(id)
-                            .ok_or(anyhow!(
-                                "Missing verifier for attestation result with ID {}",
-                                id
-                            ))?
-                            .create_session_binding_verifier(results)?,
-                    ))
-                })
-                .collect::<Result<BTreeMap<String, Box<dyn SessionBindingVerifier>>, Error>>()?,
-        })
-        .map_err(AttestationFailure::from)
+        Ok(AttestationSuccess { attestation_results: results }).map_err(AttestationFailure::from)
     }
 }
 
@@ -247,7 +220,6 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
         self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
-                    &self.config.peer_verifiers,
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
@@ -324,7 +296,6 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
         self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
                 Some(self.config.attestation_aggregator.aggregate_attestation_results(
-                    &self.config.peer_verifiers,
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,

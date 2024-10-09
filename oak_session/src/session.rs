@@ -38,6 +38,8 @@ use crate::{
     },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
+    key_extractor::KeyExtractor,
+    session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder},
     ProtocolEngine,
 };
 
@@ -75,6 +77,7 @@ pub trait Session: Send {
 pub struct ClientSession {
     attester: ClientAttestationProvider,
     handshaker: ClientHandshaker,
+    binding_key_extractor: Box<dyn KeyExtractor>,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
     attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
@@ -89,6 +92,7 @@ impl ClientSession {
             attester: ClientAttestationProvider::new(config.attestation_provider_config),
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
+            binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: None,
             encryptor: None,
@@ -186,6 +190,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 if let Some(handshake_result) = self.handshaker.take_handshake_result() {
                     if let Some(attestation_result) = &self.attestation_result {
                         verify_session_binding(
+                            self.binding_key_extractor.as_ref(),
                             &attestation_result,
                             &handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
@@ -219,6 +224,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 pub struct ServerSession {
     attester: ServerAttestationProvider,
     handshaker: ServerHandshaker,
+    binding_key_extractor: Box<dyn KeyExtractor>,
     // encryptor is initialized once the handshake is completed and the session becomes open
     encryptor_config: EncryptorConfig,
     attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
@@ -232,6 +238,7 @@ impl ServerSession {
         Self {
             attester: ServerAttestationProvider::new(config.attestation_provider_config),
             handshaker: ServerHandshaker::new(config.handshaker_config),
+            binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: None,
             encryptor: None,
@@ -329,6 +336,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 if let Some(handshake_result) = self.handshaker.take_handshake_result() {
                     if let Some(attestation_result) = &self.attestation_result {
                         verify_session_binding(
+                            self.binding_key_extractor.as_ref(),
                             &attestation_result,
                             &handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
@@ -359,6 +367,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 }
 
 fn verify_session_binding(
+    binding_key_extractor: &dyn KeyExtractor,
     attestation_result: &Result<AttestationSuccess, AttestationFailure>,
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_hash: &[u8],
@@ -367,7 +376,11 @@ fn verify_session_binding(
         .as_ref()
         .map_err(|_| anyhow!("attempt to verify attestation binding to a failed attestation"))?;
 
-    for (verifier_id, binding_verifier) in &attestation.session_binding_verifiers {
+    for (verifier_id, results) in &attestation.attestation_results {
+        let binding_verifier = SignatureBindingVerifierBuilder::default()
+            .verifier(binding_key_extractor.extract_verifying_key(results)?)
+            .build()
+            .map_err(|err| anyhow!("couldn't build SignatureBindingVerifier: {}", err))?;
         binding_verifier.verify_binding(
             handshake_hash,
             bindings

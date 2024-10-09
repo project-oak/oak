@@ -28,6 +28,7 @@ pub mod config;
 pub mod dice_attestation;
 pub mod encryptors;
 pub mod handshake;
+pub mod key_extractor;
 pub mod session;
 pub mod session_binding;
 

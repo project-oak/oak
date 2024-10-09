@@ -19,18 +19,12 @@
 
 use alloc::{boxed::Box, string::ToString};
 
-use anyhow::anyhow;
 use oak_attestation_verification::verifier::verify;
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
-use p256::ecdsa::VerifyingKey;
 
-use crate::{
-    attestation::AttestationVerifier,
-    clock::Clock,
-    session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder},
-};
+use crate::{attestation::AttestationVerifier, clock::Clock};
 
 struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
@@ -62,25 +56,5 @@ impl AttestationVerifier for DiceAttestationVerifier {
                 ..Default::default()
             }),
         }
-    }
-
-    fn create_session_binding_verifier(
-        &self,
-        results: &AttestationResults,
-    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>> {
-        // TODO: b/365745680 - replace with the session binding public key.
-        let verifying_key = results
-            .extracted_evidence
-            .as_ref()
-            .ok_or(anyhow!("missing signing public key in the evidence"))?
-            .signing_public_key
-            .clone();
-        Ok(Box::new(SignatureBindingVerifierBuilder::default()
-            .verifier(Box::new(VerifyingKey::from_sec1_bytes(verifying_key.as_slice())
-                .map_err(|err|anyhow!(
-                    "couldn't create a verifying key from the signing key in the evidence: {}",
-                     err))?))
-            .build()
-            .map_err(|err|anyhow!("couldn't build signature binding verifier: {}", err))?))
     }
 }

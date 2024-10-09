@@ -34,7 +34,6 @@ use crate::{
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
-    session_binding::MockSessionBindingVerifier,
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
@@ -195,9 +194,6 @@ fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
             ..Default::default()
         })
     });
-    verifier
-        .expect_create_session_binding_verifier()
-        .returning(|_| Ok(Box::new(MockSessionBindingVerifier::new())));
     Box::new(verifier)
 }
 
