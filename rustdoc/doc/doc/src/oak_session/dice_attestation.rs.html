@@ -60,32 +60,6 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -107,18 +81,12 @@
 
 </span><span class="kw">use </span>alloc::{boxed::Box, string::ToString};
 
-<span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>oak_attestation_verification::verifier::verify;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
-<span class="kw">use </span>p256::ecdsa::VerifyingKey;
 
-<span class="kw">use crate</span>::{
-    attestation::AttestationVerifier,
-    clock::Clock,
-    session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder},
-};
+<span class="kw">use crate</span>::{attestation::AttestationVerifier, clock::Clock};
 
 <span class="kw">struct </span>DiceAttestationVerifier {
     ref_values: ReferenceValues,
@@ -150,26 +118,6 @@
                 ..Default::default()
             }),
         }
-    }
-
-    <span class="kw">fn </span>create_session_binding_verifier(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        results: <span class="kw-2">&amp;</span>AttestationResults,
-    ) -&gt; anyhow::Result&lt;Box&lt;<span class="kw">dyn </span>SessionBindingVerifier&gt;&gt; {
-        <span class="comment">// TODO: b/365745680 - replace with the session binding public key.
-        </span><span class="kw">let </span>verifying_key = results
-            .extracted_evidence
-            .as_ref()
-            .ok_or(<span class="macro">anyhow!</span>(<span class="string">"missing signing public key in the evidence"</span>))<span class="question-mark">?
-            </span>.signing_public_key
-            .clone();
-        <span class="prelude-val">Ok</span>(Box::new(SignatureBindingVerifierBuilder::default()
-            .verifier(Box::new(VerifyingKey::from_sec1_bytes(verifying_key.as_slice())
-                .map_err(|err|<span class="macro">anyhow!</span>(
-                    <span class="string">"couldn't create a verifying key from the signing key in the evidence: {}"</span>,
-                     err))<span class="question-mark">?</span>))
-            .build()
-            .map_err(|err|<span class="macro">anyhow!</span>(<span class="string">"couldn't build signature binding verifier: {}"</span>, err))<span class="question-mark">?</span>))
     }
 }
 </code></pre></div></section></main></body></html>

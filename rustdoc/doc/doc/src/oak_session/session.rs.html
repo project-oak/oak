@@ -381,6 +381,19 @@
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -421,6 +434,8 @@
     },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
+    key_extractor::KeyExtractor,
+    session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder},
     ProtocolEngine,
 };
 
@@ -458,6 +473,7 @@
 </span><span class="kw">pub struct </span>ClientSession {
     attester: ClientAttestationProvider,
     handshaker: ClientHandshaker,
+    binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
     </span>encryptor_config: EncryptorConfig,
     attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
@@ -472,6 +488,7 @@
             attester: ClientAttestationProvider::new(config.attestation_provider_config),
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
+            binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: <span class="prelude-val">None</span>,
             encryptor: <span class="prelude-val">None</span>,
@@ -569,6 +586,7 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
                         verify_session_binding(
+                            <span class="self">self</span>.binding_key_extractor.as_ref(),
                             <span class="kw-2">&amp;</span>attestation_result,
                             <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
@@ -602,6 +620,7 @@
 </span><span class="kw">pub struct </span>ServerSession {
     attester: ServerAttestationProvider,
     handshaker: ServerHandshaker,
+    binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
     </span>encryptor_config: EncryptorConfig,
     attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
@@ -615,6 +634,7 @@
         <span class="self">Self </span>{
             attester: ServerAttestationProvider::new(config.attestation_provider_config),
             handshaker: ServerHandshaker::new(config.handshaker_config),
+            binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: <span class="prelude-val">None</span>,
             encryptor: <span class="prelude-val">None</span>,
@@ -712,6 +732,7 @@
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
                         verify_session_binding(
+                            <span class="self">self</span>.binding_key_extractor.as_ref(),
                             <span class="kw-2">&amp;</span>attestation_result,
                             <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
@@ -742,6 +763,7 @@
 }
 
 <span class="kw">fn </span>verify_session_binding(
+    binding_key_extractor: <span class="kw-2">&amp;</span><span class="kw">dyn </span>KeyExtractor,
     attestation_result: <span class="kw-2">&amp;</span><span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;,
     bindings: <span class="kw-2">&amp;</span>BTreeMap&lt;String, SessionBinding&gt;,
     handshake_hash: <span class="kw-2">&amp;</span>[u8],
@@ -750,7 +772,11 @@
         .as_ref()
         .map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"attempt to verify attestation binding to a failed attestation"</span>))<span class="question-mark">?</span>;
 
-    <span class="kw">for </span>(verifier_id, binding_verifier) <span class="kw">in </span><span class="kw-2">&amp;</span>attestation.session_binding_verifiers {
+    <span class="kw">for </span>(verifier_id, results) <span class="kw">in </span><span class="kw-2">&amp;</span>attestation.attestation_results {
+        <span class="kw">let </span>binding_verifier = SignatureBindingVerifierBuilder::default()
+            .verifier(binding_key_extractor.extract_verifying_key(results)<span class="question-mark">?</span>)
+            .build()
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">"couldn't build SignatureBindingVerifier: {}"</span>, err))<span class="question-mark">?</span>;
         binding_verifier.verify_binding(
             handshake_hash,
             bindings

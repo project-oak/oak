@@ -178,6 +178,22 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -207,6 +223,7 @@
     },
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
+    key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
 };
 
 <span class="attr">#[allow(dead_code)]
@@ -214,6 +231,7 @@
     <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig,
     <span class="kw">pub </span>handshaker_config: HandshakerConfig,
     <span class="kw">pub </span>encryptor_config: EncryptorConfig,
+    <span class="kw">pub </span>binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
 }
 
 <span class="kw">impl </span>SessionConfig {
@@ -262,8 +280,14 @@
         <span class="kw">let </span>encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        <span class="kw">let </span>config =
-            SessionConfig { attestation_provider_config, handshaker_config, encryptor_config };
+        <span class="kw">let </span>binding_key_extractor = Box::new(DefaultSigningKeyExtractor);
+
+        <span class="kw">let </span>config = SessionConfig {
+            attestation_provider_config,
+            handshaker_config,
+            encryptor_config,
+            binding_key_extractor,
+        };
         <span class="self">Self </span>{ config }
     }
 
@@ -324,6 +348,14 @@
         encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.encryptor_config.encryptor_provider = encryptor_provider;
+        <span class="self">self
+    </span>}
+
+    <span class="kw">pub fn </span>set_binding_key_extractor(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config.binding_key_extractor = binding_key_extractor;
         <span class="self">self
     </span>}
 
