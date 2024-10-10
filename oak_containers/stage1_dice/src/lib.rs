@@ -19,7 +19,7 @@
 
 use ciborium::Value;
 use coset::cwt::ClaimName;
-use oak_dice::cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID};
+use oak_dice::cert::SHA2_256_ID;
 use oak_proto_rust::oak::attestation::v1::{DiceData, Event, SystemLayerData};
 use prost::Message;
 
@@ -45,25 +45,13 @@ pub fn get_layer_data(system_image: &[u8]) -> oak_attestation::dice::LayerData {
     let event_digest =
         oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
     oak_attestation::dice::LayerData {
-        additional_claims: vec![
-            (
-                ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
-                Value::Map(vec![(
-                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-                    Value::Map(vec![(
-                        Value::Integer(SHA2_256_ID.into()),
-                        Value::Bytes(digest.sha2_256.clone()),
-                    )]),
-                )]),
-            ),
-            (
-                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
-                Value::Map(vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(event_digest.sha2_256),
-                )]),
-            ),
-        ],
+        additional_claims: vec![(
+            ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+            Value::Map(vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(event_digest.sha2_256),
+            )]),
+        )],
         encoded_event,
     }
 }

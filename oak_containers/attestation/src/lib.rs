@@ -24,10 +24,7 @@ use oak_crypto::{
     encryption_key::{generate_encryption_key_pair, EncryptionKey},
     encryptor::ServerEncryptor,
 };
-use oak_dice::cert::{
-    generate_ecdsa_key_pair, CONTAINER_IMAGE_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, SHA2_256_ID,
-};
+use oak_dice::cert::{generate_ecdsa_key_pair, SHA2_256_ID};
 use oak_proto_rust::oak::{
     crypto::v1::EncryptedRequest, key_provisioning::v1::GroupKeys as GroupKeysProto,
 };
@@ -56,34 +53,13 @@ pub fn measure_container_and_config(
     let event_digest =
         oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
     oak_attestation::dice::LayerData {
-        additional_claims: vec![
-            (
-                ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
-                Value::Map(vec![
-                    (
-                        Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
-                        Value::Map(vec![(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(container_digest.sha2_256),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
-                        Value::Map(vec![(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(config_digest.sha2_256),
-                        )]),
-                    ),
-                ]),
-            ),
-            (
-                ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
-                Value::Map(vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(event_digest.sha2_256),
-                )]),
-            ),
-        ],
+        additional_claims: vec![(
+            ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
+            Value::Map(vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(event_digest.sha2_256),
+            )]),
+        )],
         encoded_event,
     }
 }
