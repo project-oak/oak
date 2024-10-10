@@ -28,6 +28,7 @@ use crate::{
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
+    session_binding::SessionBinder,
 };
 
 #[allow(dead_code)]
@@ -78,7 +79,7 @@ impl SessionConfigBuilder {
             handshake_type,
             self_static_private_key: None,
             peer_static_public_key: None,
-            peer_attestation_binding_public_key: None,
+            session_binders: BTreeMap::new(),
         };
 
         let encryptor_config =
@@ -163,6 +164,15 @@ impl SessionConfigBuilder {
         self
     }
 
+    pub fn add_session_binder(
+        mut self,
+        attester_id: String,
+        session_binder: Box<dyn SessionBinder>,
+    ) -> Self {
+        self.config.handshaker_config.session_binders.insert(attester_id, session_binder);
+        self
+    }
+
     pub fn build(self) -> SessionConfig {
         self.config
     }
@@ -185,8 +195,9 @@ pub struct HandshakerConfig {
     // Used for authentication schemes where a responder's static public key is pre-shared with
     // the initiator.
     pub peer_static_public_key: Option<Vec<u8>>,
-    // Public key that can be used to bind the attestation obtained from the peer to the handshake.
-    pub peer_attestation_binding_public_key: Option<Vec<u8>>,
+    // Session binders to bind the handshake hash to the previously received attestation data,
+    // keyed by the attestation type.
+    pub session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
 }
 
 pub struct EncryptorConfig {

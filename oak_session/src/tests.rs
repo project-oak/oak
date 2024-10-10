@@ -20,9 +20,13 @@ use oak_crypto::{
     noise_handshake::{UnorderedCrypter, SYMMETRIC_KEY_LEN},
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{
+        attestation_results, AttestationResults, Endorsements, Evidence, ExtractedEvidence,
+    },
     session::v1::{PlaintextMessage, SessionRequest, SessionResponse},
 };
+use p256::ecdsa::SigningKey;
+use rand_core::OsRng;
 
 use crate::{
     alloc::string::ToString,
@@ -34,6 +38,7 @@ use crate::{
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
+    session_binding::SignatureBinderBuilder,
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
@@ -90,8 +95,8 @@ fn attestation_verification_succeeds() {
         ]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let mut client_attestation_provider = ClientAttestationProvider::new(client_config);
-    let mut server_attestation_provider = ServerAttestationProvider::new(server_config);
+    let mut client_attestation_provider = ClientAttestationProvider::create(client_config).unwrap();
+    let mut server_attestation_provider = ServerAttestationProvider::create(server_config).unwrap();
 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
@@ -151,8 +156,8 @@ fn attestation_verification_fails() {
         ]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let mut client_attestation_provider = ClientAttestationProvider::new(client_config);
-    let mut server_attestation_provider = ServerAttestationProvider::new(server_config);
+    let mut client_attestation_provider = ClientAttestationProvider::create(client_config).unwrap();
+    let mut server_attestation_provider = ServerAttestationProvider::create(server_config).unwrap();
 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
@@ -218,15 +223,18 @@ fn process_kk_handshake() {
         handshake_type: HandshakeType::NoiseKK,
         self_static_private_key: Some(responder_identity_key),
         peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
-        peer_attestation_binding_public_key: None,
+        session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
-        handshake_type: HandshakeType::NoiseKK,
-        self_static_private_key: Some(initiator_identity_key),
-        peer_static_public_key: Some(responder_public_key),
-        peer_attestation_binding_public_key: None,
-    });
+    let server_handshaker = ServerHandshaker::new(
+        HandshakerConfig {
+            handshake_type: HandshakeType::NoiseKK,
+            self_static_private_key: Some(initiator_identity_key),
+            peer_static_public_key: Some(responder_public_key),
+            session_binders: BTreeMap::new(),
+        },
+        false,
+    );
     do_handshake(client_handshaker, server_handshaker);
 }
 
@@ -237,15 +245,18 @@ fn process_nk_handshake() {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: None,
         peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
-        peer_attestation_binding_public_key: None,
+        session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
-        handshake_type: HandshakeType::NoiseNK,
-        self_static_private_key: Some(identity_key),
-        peer_static_public_key: None,
-        peer_attestation_binding_public_key: None,
-    });
+    let server_handshaker = ServerHandshaker::new(
+        HandshakerConfig {
+            handshake_type: HandshakeType::NoiseNK,
+            self_static_private_key: Some(identity_key),
+            peer_static_public_key: None,
+            session_binders: BTreeMap::new(),
+        },
+        false,
+    );
     do_handshake(client_handshaker, server_handshaker);
 }
 
@@ -255,15 +266,18 @@ fn process_nn_handshake() {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
-        peer_attestation_binding_public_key: None,
+        session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(HandshakerConfig {
-        handshake_type: HandshakeType::NoiseNN,
-        self_static_private_key: None,
-        peer_static_public_key: None,
-        peer_attestation_binding_public_key: None,
-    });
+    let server_handshaker = ServerHandshaker::new(
+        HandshakerConfig {
+            handshake_type: HandshakeType::NoiseNN,
+            self_static_private_key: None,
+            peer_static_public_key: None,
+            session_binders: BTreeMap::new(),
+        },
+        false,
+    );
     do_handshake(client_handshaker, server_handshaker);
 }
 
@@ -271,11 +285,16 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     let request = client_handshaker.get_outgoing_message().unwrap().unwrap();
     server_handshaker
         .put_incoming_message(&request)
-        .expect("Failed to process the server incoming message");
+        .expect("Failed to process the incoming message from the client");
     let response = server_handshaker.get_outgoing_message().unwrap().unwrap();
     client_handshaker
         .put_incoming_message(&response)
-        .expect("Failed to process the client incoming message");
+        .expect("Failed to process the response from the server");
+    if let Some(followup) = client_handshaker.get_outgoing_message().unwrap() {
+        server_handshaker
+            .put_incoming_message(&followup)
+            .expect("Failed to process the follow up from the client");
+    }
     let session_keys_client = client_handshaker.take_handshake_result().unwrap().session_keys;
     let session_keys_server = server_handshaker.take_handshake_result().unwrap().session_keys;
     assert_eq!(session_keys_client.request_key, session_keys_server.response_key);
@@ -298,13 +317,196 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
 }
 
 #[test]
+fn session_succeeds_with_bidirectional_attestation() {
+    let attester_id = "id".to_string();
+    let binding_key_client = SigningKey::random(&mut OsRng);
+    let verifying_key_client_vec: Vec<u8> =
+        binding_key_client.verifying_key().to_sec1_bytes().to_vec();
+    let binding_key_server = SigningKey::random(&mut OsRng);
+    let verifying_key_server_vec: Vec<u8> =
+        binding_key_server.verifying_key().to_sec1_bytes().to_vec();
+    let mut client_attester = MockAttester::new();
+    let mut client_endorser = MockEndorser::new();
+    let mut client_verifier = MockAttestationVerifier::new();
+    client_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
+    client_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
+    client_verifier.expect_verify().returning(move |_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            extracted_evidence: Some(ExtractedEvidence {
+                signing_public_key: verifying_key_server_vec.clone(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+    });
+    let mut server_attester = MockAttester::new();
+    let mut server_endorser = MockEndorser::new();
+    let mut server_verifier = MockAttestationVerifier::new();
+    server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
+    server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
+    server_verifier.expect_verify().returning(move |_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            extracted_evidence: Some(ExtractedEvidence {
+                signing_public_key: verifying_key_client_vec.clone(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+    });
+    let client_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(attester_id.clone(), Box::new(client_attester))
+            .add_self_endorser(attester_id.clone(), Box::new(client_endorser))
+            .add_peer_verifier(attester_id.clone(), Box::new(client_verifier))
+            .add_session_binder(
+                attester_id.clone(),
+                Box::new(
+                    SignatureBinderBuilder::default()
+                        .signer(Box::new(binding_key_client.clone()))
+                        .build()
+                        .unwrap(),
+                ),
+            )
+            .build();
+    let mut client_session = ClientSession::create(client_config).unwrap();
+    let server_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(attester_id.clone(), Box::new(server_attester))
+            .add_self_endorser(attester_id.clone(), Box::new(server_endorser))
+            .add_peer_verifier(attester_id.clone(), Box::new(server_verifier))
+            .add_session_binder(
+                attester_id.clone(),
+                Box::new(
+                    SignatureBinderBuilder::default()
+                        .signer(Box::new(binding_key_server.clone()))
+                        .build()
+                        .unwrap(),
+                ),
+            )
+            .build();
+    let mut server_session = ServerSession::create(server_config).unwrap();
+    do_session_handshake(&mut client_session, &mut server_session);
+
+    for message in test_messages() {
+        verify_session_message(&mut client_session, &mut server_session, &message);
+        verify_session_message(&mut server_session, &mut client_session, &message);
+    }
+}
+
+#[test]
+fn session_succeeds_with_unidirectional_attestation() {
+    let attester_id = "id".to_string();
+    let binding_key_server = SigningKey::random(&mut OsRng);
+    let verifying_key_server_vec: Vec<u8> =
+        binding_key_server.verifying_key().to_sec1_bytes().to_vec();
+    let mut client_verifier = MockAttestationVerifier::new();
+    client_verifier.expect_verify().returning(move |_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            extracted_evidence: Some(ExtractedEvidence {
+                signing_public_key: verifying_key_server_vec.clone(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+    });
+    let mut server_attester = MockAttester::new();
+    let mut server_endorser = MockEndorser::new();
+    server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
+    server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier(attester_id.clone(), Box::new(client_verifier))
+            .build();
+    let mut client_session = ClientSession::create(client_config).unwrap();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(attester_id.clone(), Box::new(server_attester))
+            .add_self_endorser(attester_id.clone(), Box::new(server_endorser))
+            .add_session_binder(
+                attester_id.clone(),
+                Box::new(
+                    SignatureBinderBuilder::default()
+                        .signer(Box::new(binding_key_server.clone()))
+                        .build()
+                        .unwrap(),
+                ),
+            )
+            .build();
+    let mut server_session = ServerSession::create(server_config).unwrap();
+    do_session_handshake(&mut client_session, &mut server_session);
+
+    for message in test_messages() {
+        verify_session_message(&mut client_session, &mut server_session, &message);
+        verify_session_message(&mut server_session, &mut client_session, &message);
+    }
+}
+
+#[test]
+fn session_fails_with_attestation_binding_fail() {
+    let attester_id = "id".to_string();
+    let binding_key_server = SigningKey::random(&mut OsRng);
+    let mismatched_verifying_key_server_vec: Vec<u8> =
+        SigningKey::random(&mut OsRng).verifying_key().to_sec1_bytes().to_vec();
+    let mut client_verifier = MockAttestationVerifier::new();
+    client_verifier.expect_verify().returning(move |_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::Success.into(),
+            extracted_evidence: Some(ExtractedEvidence {
+                signing_public_key: mismatched_verifying_key_server_vec.clone(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+    });
+    let mut server_attester = MockAttester::new();
+    let mut server_endorser = MockEndorser::new();
+    server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
+    server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier(attester_id.clone(), Box::new(client_verifier))
+            .build();
+    let mut client_session = ClientSession::create(client_config).unwrap();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(attester_id.clone(), Box::new(server_attester))
+            .add_self_endorser(attester_id.clone(), Box::new(server_endorser))
+            .add_session_binder(
+                attester_id.clone(),
+                Box::new(
+                    SignatureBinderBuilder::default()
+                        .signer(Box::new(binding_key_server.clone()))
+                        .build()
+                        .unwrap(),
+                ),
+            )
+            .build();
+    let mut server_session = ServerSession::create(server_config).unwrap();
+
+    // Attestation succeeds
+    let attest_request = client_session.get_outgoing_message().unwrap().unwrap();
+    server_session.put_incoming_message(&attest_request).unwrap();
+    let attest_response = server_session.get_outgoing_message().unwrap().unwrap();
+    client_session.put_incoming_message(&attest_response).unwrap();
+
+    // Handshake fails
+    let handshake_request = client_session.get_outgoing_message().unwrap().unwrap();
+    server_session.put_incoming_message(&handshake_request).unwrap();
+    let handshake_response = server_session.get_outgoing_message().unwrap().unwrap();
+    assert!(client_session.put_incoming_message(&handshake_response).is_err());
+}
+
+#[test]
 fn session_nn_succeeds() {
     let client_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
     let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    let mut server_session = ServerSession::new(server_config);
+    let mut server_session = ServerSession::create(server_config).unwrap();
     do_session_handshake(&mut client_session, &mut server_session);
 
     for message in test_messages() {
@@ -323,7 +525,7 @@ fn session_nk_succeeds() {
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_self_private_key(identity_key)
         .build();
-    let mut server_session = ServerSession::new(server_config);
+    let mut server_session = ServerSession::create(server_config).unwrap();
     do_session_handshake(&mut client_session, &mut server_session);
 
     for message in test_messages() {
@@ -343,18 +545,18 @@ fn session_nk_key_mismatch() {
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_self_private_key(identity_key2)
         .build();
-    let mut server_session = ServerSession::new(server_config);
+    let mut server_session = ServerSession::create(server_config).unwrap();
     do_session_handshake(&mut client_session, &mut server_session);
 }
 
 fn do_session_handshake(client_session: &mut ClientSession, server_session: &mut ServerSession) {
-    while !client_session.is_open() {
+    while !client_session.is_open() || !server_session.is_open() {
         let request = client_session.get_outgoing_message().unwrap().unwrap();
         server_session.put_incoming_message(&request).unwrap();
-        let response = server_session.get_outgoing_message().unwrap().unwrap();
-        client_session.put_incoming_message(&response).unwrap();
+        if let Some(response) = server_session.get_outgoing_message().unwrap() {
+            client_session.put_incoming_message(&response).unwrap();
+        }
     }
-    assert!(server_session.is_open());
 }
 
 trait ProtocolSession<I, O>: Session + ProtocolEngine<I, O> {}
@@ -385,7 +587,7 @@ fn test_session_sendable() {
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_self_private_key(identity_key)
         .build();
-    let server_session = ServerSession::new(server_config);
+    let server_session = ServerSession::create(server_config).unwrap();
     test(server_session);
 }
 

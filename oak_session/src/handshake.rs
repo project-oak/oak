@@ -17,28 +17,25 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 use core::convert::TryInto;
 
-use aead::Error;
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context, Error};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
-    noise_handshake::{
-        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, NoiseMessage,
-    },
+    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Response},
 };
 use oak_proto_rust::oak::{
     crypto::v1::SessionKeys,
     session::v1::{
         handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
-        NoiseHandshakeMessage,
+        NoiseHandshakeMessage, SessionBinding,
     },
 };
 
-use crate::{config::HandshakerConfig, ProtocolEngine};
+use crate::{config::HandshakerConfig, session_binding::SessionBinder, ProtocolEngine};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum HandshakeType {
     NoiseKK,
     NoiseKN,
@@ -49,6 +46,7 @@ pub enum HandshakeType {
 pub struct HandshakeResult {
     pub session_keys: SessionKeys,
     pub handshake_hash: Vec<u8>,
+    pub session_bindings: BTreeMap<String, SessionBinding>,
 }
 
 pub trait Handshaker: Send {
@@ -59,9 +57,10 @@ pub trait Handshaker: Send {
 
 /// Client-side Handshaker that initiates the crypto handshake with the server.
 pub struct ClientHandshaker {
-    handshake_type: HandshakeType,
     handshake_initiator: HandshakeInitiator,
-    initial_message: Option<NoiseMessage>,
+    session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
+    initial_message: Option<HandshakeRequest>,
+    followup_message: Option<HandshakeRequest>,
     handshake_result: Option<HandshakeResult>,
 }
 
@@ -90,13 +89,29 @@ impl ClientHandshaker {
             ),
             HandshakeType::NoiseNN => HandshakeInitiator::new_nn(),
         };
-        let initial_message = handshake_initiator
+        let initial_noise_message = handshake_initiator
             .build_initial_message()
             .map_err(|e| anyhow!("Error building initial message: {e:?}"))?;
+        let initial_message = HandshakeRequest {
+            r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
+                NoiseHandshakeMessage {
+                    ephemeral_public_key: initial_noise_message.ephemeral_public_key,
+                    static_public_key: match handshake_type {
+                        HandshakeType::NoiseKK
+                        | HandshakeType::NoiseKN
+                        | HandshakeType::NoiseNK
+                        | HandshakeType::NoiseNN => vec![],
+                    },
+                    ciphertext: initial_noise_message.ciphertext,
+                },
+            )),
+            attestation_bindings: BTreeMap::new(),
+        };
         Ok(Self {
-            handshake_type,
             handshake_initiator,
+            session_binders: handshaker_config.session_binders,
             initial_message: Some(initial_message),
+            followup_message: None,
             handshake_result: None,
         })
     }
@@ -110,38 +125,52 @@ impl Handshaker for ClientHandshaker {
 
 impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<HandshakeRequest>> {
-        Ok(self.initial_message.take().map(|initial_message| HandshakeRequest {
-            r#handshake_type: Some(handshake_request::HandshakeType::NoiseHandshakeMessage(
-                NoiseHandshakeMessage {
-                    ephemeral_public_key: initial_message.ephemeral_public_key,
-                    static_public_key: match self.handshake_type {
-                        HandshakeType::NoiseKK
-                        | HandshakeType::NoiseKN
-                        | HandshakeType::NoiseNK
-                        | HandshakeType::NoiseNN => vec![],
-                    },
-                    ciphertext: initial_message.ciphertext,
-                },
-            )),
-            attestation_bindings: BTreeMap::new(),
-        }))
+        if let Some(initial_message) = self.initial_message.take() {
+            Ok(Some(initial_message))
+        } else {
+            Ok(self.followup_message.take())
+        }
     }
 
     fn put_incoming_message(
         &mut self,
         incoming_message: &HandshakeResponse,
     ) -> anyhow::Result<Option<()>> {
+        if self.handshake_result.is_some() {
+            // The handshake result is ready - no other messages expected.
+            return Ok(None);
+        }
         match incoming_message.r#handshake_type.as_ref() {
             Some(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
-                self.handshake_result = Some(
-                    self.handshake_initiator
-                        .process_response(&noise_message.into())
-                        .map_err(|e| anyhow!("Error processing response: {e:?}"))
-                        .map(|(handshake_hash, crypter)| HandshakeResult {
-                            session_keys: crypter.into(),
-                            handshake_hash: handshake_hash.to_vec(),
-                        })?,
-                );
+                let handshake_result = self
+                    .handshake_initiator
+                    .process_response(&noise_message.into())
+                    .map_err(|e| anyhow!("Error processing response: {e:?}"))
+                    .map(|(handshake_hash, crypter)| HandshakeResult {
+                        session_keys: crypter.into(),
+                        handshake_hash: handshake_hash.to_vec(),
+                        session_bindings: incoming_message.attestation_bindings.clone(),
+                    })?;
+                if !self.session_binders.is_empty() {
+                    self.followup_message = Some(HandshakeRequest {
+                        r#handshake_type: None,
+                        attestation_bindings: self
+                            .session_binders
+                            .iter()
+                            .map(|(id, binder)| {
+                                Ok((
+                                    id.clone(),
+                                    SessionBinding {
+                                        binding: binder
+                                            .bind(handshake_result.handshake_hash.as_slice()),
+                                    },
+                                ))
+                            })
+                            .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
+                    });
+                }
+
+                self.handshake_result = Some(handshake_result);
                 Ok(Some(()))
             }
             None => Err(anyhow!("Missing handshake_type")),
@@ -156,16 +185,22 @@ pub struct ServerHandshaker {
     handshake_type: HandshakeType,
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
     peer_public_key: Option<Vec<u8>>,
+    session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
+    client_binding_expected: bool,
+    noise_response: Option<Response>,
     handshake_response: Option<HandshakeResponse>,
     handshake_result: Option<HandshakeResult>,
 }
 
 impl ServerHandshaker {
-    pub fn new(handshaker_config: HandshakerConfig) -> Self {
+    pub fn new(handshaker_config: HandshakerConfig, client_binding_expected: bool) -> Self {
         Self {
             handshake_type: handshaker_config.handshake_type,
             self_identity_key: handshaker_config.self_static_private_key,
             peer_public_key: handshaker_config.peer_static_public_key,
+            session_binders: handshaker_config.session_binders,
+            client_binding_expected,
+            noise_response: None,
             handshake_response: None,
             handshake_result: None,
         }
@@ -187,55 +222,82 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
         &mut self,
         incoming_message: &HandshakeRequest,
     ) -> anyhow::Result<Option<()>> {
-        let noise_response = match incoming_message.r#handshake_type.as_ref() {
-            Some(handshake_request::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
-                match self.handshake_type {
-                    HandshakeType::NoiseKN => core::unimplemented!(),
-                    HandshakeType::NoiseKK => respond_kk(
-                        self.self_identity_key
-                            .as_ref()
-                            .context("handshaker_config missing the self private key")?
-                            .as_ref(),
-                        self.peer_public_key
-                            .as_ref()
-                            .ok_or(|_: Error| "")
-                            .map_err(|_| anyhow!("Must provide public key for Kk"))?,
-                        &noise_message.into(),
-                    )
-                    .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
-                    HandshakeType::NoiseNK => respond_nk(
-                        self.self_identity_key
-                            .as_ref()
-                            .context("handshaker_config missing the self private key")?
-                            .as_ref(),
-                        &noise_message.into(),
-                    )
-                    .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
-                    HandshakeType::NoiseNN => respond_nn(&noise_message.into())
+        if self.handshake_result.is_some() {
+            // The handshake result is ready - no other messages expected.
+            return Ok(None);
+        }
+        if let Some(noise_response) = self.noise_response.take() {
+            self.handshake_result = Some(HandshakeResult {
+                session_keys: noise_response.crypter.into(),
+                handshake_hash: noise_response.handshake_hash.to_vec(),
+                session_bindings: incoming_message.attestation_bindings.clone(),
+            });
+        } else {
+            let noise_response = match incoming_message.r#handshake_type.as_ref() {
+                Some(handshake_request::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
+                    match self.handshake_type {
+                        HandshakeType::NoiseKN => core::unimplemented!(),
+                        HandshakeType::NoiseKK => respond_kk(
+                            self.self_identity_key
+                                .as_ref()
+                                .context("handshaker_config missing the self private key")?
+                                .as_ref(),
+                            self.peer_public_key
+                                .as_ref()
+                                .ok_or(anyhow!("Must provide public key for Kk"))?,
+                            &noise_message.into(),
+                        )
                         .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
+                        HandshakeType::NoiseNK => respond_nk(
+                            self.self_identity_key
+                                .as_ref()
+                                .context("handshaker_config missing the self private key")?
+                                .as_ref(),
+                            &noise_message.into(),
+                        )
+                        .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
+                        HandshakeType::NoiseNN => respond_nn(&noise_message.into())
+                            .map_err(|e| anyhow!("handshake response failed: {e:?}"))?,
+                    }
                 }
-            }
-            None => return Err(anyhow!("Missing handshake_type")),
-        };
-        self.handshake_result = Some(HandshakeResult {
-            session_keys: noise_response.crypter.into(),
-            handshake_hash: noise_response.handshake_hash.to_vec(),
-        });
-        self.handshake_response = Some(HandshakeResponse {
-            r#handshake_type: Some(handshake_response::HandshakeType::NoiseHandshakeMessage(
-                NoiseHandshakeMessage {
-                    ephemeral_public_key: noise_response.response.ephemeral_public_key,
-                    static_public_key: match self.handshake_type {
-                        HandshakeType::NoiseKK
-                        | HandshakeType::NoiseKN
-                        | HandshakeType::NoiseNK
-                        | HandshakeType::NoiseNN => vec![],
+                None => return Err(anyhow!("Missing handshake_type")),
+            };
+            self.handshake_response = Some(HandshakeResponse {
+                r#handshake_type: Some(handshake_response::HandshakeType::NoiseHandshakeMessage(
+                    NoiseHandshakeMessage {
+                        ephemeral_public_key: noise_response.response.ephemeral_public_key.clone(),
+                        static_public_key: match self.handshake_type {
+                            HandshakeType::NoiseKK
+                            | HandshakeType::NoiseKN
+                            | HandshakeType::NoiseNK
+                            | HandshakeType::NoiseNN => vec![],
+                        },
+                        ciphertext: noise_response.response.ciphertext.clone(),
                     },
-                    ciphertext: noise_response.response.ciphertext,
-                },
-            )),
-            attestation_bindings: BTreeMap::new(),
-        });
+                )),
+                attestation_bindings: self
+                    .session_binders
+                    .iter()
+                    .map(|(id, binder)| {
+                        Ok((
+                            id.clone(),
+                            SessionBinding {
+                                binding: binder.bind(noise_response.handshake_hash.as_slice()),
+                            },
+                        ))
+                    })
+                    .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
+            });
+            if self.client_binding_expected {
+                self.noise_response = Some(noise_response);
+            } else {
+                self.handshake_result = Some(HandshakeResult {
+                    session_keys: noise_response.crypter.into(),
+                    handshake_hash: noise_response.handshake_hash.to_vec(),
+                    session_bindings: BTreeMap::new(),
+                })
+            }
+        }
         Ok(Some(()))
     }
 }

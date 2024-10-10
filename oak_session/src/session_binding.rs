@@ -24,6 +24,7 @@ use mockall::automock;
 use oak_crypto::{signer::Signer, verifier::Verifier};
 
 // Trait that allows binding session to the arbitrary data
+#[cfg_attr(test, automock)]
 pub trait SessionBinder: Send {
     fn bind(&self, bound_data: &[u8]) -> Vec<u8>;
 }

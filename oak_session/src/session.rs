@@ -29,12 +29,11 @@ use oak_proto_rust::oak::session::v1::{
     session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
     SessionBinding, SessionRequest, SessionResponse,
 };
-use prost::Message;
 
 use crate::{
     attestation::{
-        AttestationFailure, AttestationProvider, AttestationSuccess, ClientAttestationProvider,
-        ServerAttestationProvider,
+        AttestationFailure, AttestationProvider, AttestationSuccess, AttestationType,
+        ClientAttestationProvider, ServerAttestationProvider,
     },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
@@ -89,7 +88,7 @@ pub struct ClientSession {
 impl ClientSession {
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
-            attester: ClientAttestationProvider::new(config.attestation_provider_config),
+            attester: ClientAttestationProvider::create(config.attestation_provider_config)?,
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context("couldn't create the client handshaker")?,
             binding_key_extractor: config.binding_key_extractor,
@@ -234,17 +233,24 @@ pub struct ServerSession {
 }
 
 impl ServerSession {
-    pub fn new(config: SessionConfig) -> Self {
-        Self {
-            attester: ServerAttestationProvider::new(config.attestation_provider_config),
-            handshaker: ServerHandshaker::new(config.handshaker_config),
+    pub fn create(config: SessionConfig) -> Result<Self, Error> {
+        let attestation_type = config.attestation_provider_config.attestation_type;
+        Ok(Self {
+            attester: ServerAttestationProvider::create(config.attestation_provider_config)?,
+            handshaker: ServerHandshaker::new(
+                config.handshaker_config,
+                matches!(
+                    attestation_type,
+                    AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+                ),
+            ),
             binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: None,
             encryptor: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
-        }
+        })
     }
 }
 
@@ -387,7 +393,7 @@ fn verify_session_binding(
             bindings
                 .get(verifier_id)
                 .ok_or(anyhow!("handshake message doesn't have a binding for ID {}", verifier_id))?
-                .encode_to_vec()
+                .binding
                 .as_slice(),
         )?;
     }
