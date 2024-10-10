@@ -2290,6 +2290,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_proto_rust",
+]
+
+[[package]]
 name = "oak_attestation_verification"
 version = "0.1.0"
 dependencies = [
@@ -2316,6 +2324,14 @@ dependencies = [
  "time",
  "x509-cert",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_attestation_verification_types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_proto_rust",
 ]
 
 [[package]]

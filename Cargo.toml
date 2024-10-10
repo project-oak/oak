@@ -9,7 +9,9 @@ members = [
   "oak_attestation",
   "oak_attestation_explain",
   "oak_attestation_explain_wasm",
+  "oak_attestation_types",
   "oak_attestation_verification",
+  "oak_attestation_verification_types",
   "oak_channel",
   "oak_client",
   "oak_client/tonic",
@@ -102,7 +104,9 @@ micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation = { path = "./oak_attestation" }
 oak_attestation_explain = { path = "./oak_attestation_explain" }
+oak_attestation_types = { path = "./oak_attestation_types" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
+oak_attestation_verification_types = { path = "./oak_attestation_verification_types" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_client_tonic = { path = "./oak_client/tonic" }
