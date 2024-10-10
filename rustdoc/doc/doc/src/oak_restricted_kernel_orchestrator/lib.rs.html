@@ -153,7 +153,7 @@
         <span class="kw">let </span>app_digest = oak_restricted_kernel_dice::measure_digest_sha2_256(<span class="kw-2">&amp;</span>elf_binary);
         <span class="kw">let </span>application_layer_data = ApplicationLayerData {
             binary: <span class="prelude-val">Some</span>(RawDigest { sha2_256: app_digest.to_vec(), ..Default::default() }),
-            config: <span class="prelude-val">None</span>,
+            config: <span class="prelude-val">Some</span>(RawDigest { ..Default::default() }),
         };
         <span class="kw">let </span>event = oak_proto_rust::oak::attestation::v1::Event {
             tag: <span class="string">"oak_restricted_kernel_orchestrator"</span>.to_string(),
