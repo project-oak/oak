@@ -52,7 +52,7 @@ impl AttestedApp {
         let app_digest = oak_restricted_kernel_dice::measure_digest_sha2_256(&elf_binary);
         let application_layer_data = ApplicationLayerData {
             binary: Some(RawDigest { sha2_256: app_digest.to_vec(), ..Default::default() }),
-            config: None,
+            config: Some(RawDigest { ..Default::default() }),
         };
         let event = oak_proto_rust::oak::attestation::v1::Event {
             tag: "oak_restricted_kernel_orchestrator".to_string(),
