@@ -146,8 +146,8 @@ impl Journal {
                     let (name, value) =
                         field.split_at(field.iter().position(|x| *x == b'=').unwrap_or(0));
                     fields.insert(
-                        std::str::from_utf8(name).unwrap().to_string(),
-                        std::str::from_utf8(&value[1..]).unwrap().to_string(),
+                        std::str::from_utf8(name).unwrap_or("non-string").to_string(),
+                        std::str::from_utf8(&value[1..]).unwrap_or("non-string").to_string(),
                     );
                 }
 
