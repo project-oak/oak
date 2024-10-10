@@ -288,7 +288,7 @@ oak_attestation_explain_wasm:
 # Entry points for Kokoro CI.
 
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
-    oak_restricted_kernel_wrapper_simple_io_channel stage0_bin \
+    oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
     oak_client_android_app
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
