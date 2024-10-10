@@ -1,0 +1,12 @@
+--- toolchain/defs.bzl
++++ toolchain/defs.bzl
+@@ -31,7 +31,8 @@
+     sysroot = ""
+     if rctx.attr.sysroot:
+         sysroot_label = Label(rctx.attr.sysroot)
+-        sysroot = "external/{workspace}/{package}".format(
++        sysroot = "{execroot}/external/{workspace}/{package}".format(
++            execroot = execroot,
+             workspace = sysroot_label.workspace_name,
+             package = sysroot_label.package,
+         )

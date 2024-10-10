@@ -15,7 +15,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
-    libc6-dev flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
+    libc6-dev libstdc++-12-dev \
+    flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
     kmod \
     # Cleanup
     && apt-get clean \
@@ -30,3 +31,8 @@ RUN tar --directory=/tmp --extract --file /tmp/linux-${LINUX_KERNEL_VERSION}.tar
     && dpkg --install /tmp/linux-headers-${LINUX_KERNEL_VERSION}_${LINUX_KERNEL_VERSION}-1_amd64.deb \
     && rm -rf /tmp/linux-${LINUX_KERNEL_VERSION} /tmp/linux-${LINUX_KERNEL_VERSION}.tar.xz /tmp/minimal.config
 
+# hadolint ignore=SC2114
+RUN rm --recursive /usr/share
+RUN rm --recursive /usr/src
+# hadolint ignore=SC2114
+RUN rm --recursive /var

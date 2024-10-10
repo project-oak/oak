@@ -208,6 +208,7 @@ git_repository(
     commit = "20d2be8672d24bfb441d075f82cc317d17d601f8",
     patches = [
         "@//:third_party/google/libcppbor/remove_macro.patch",
+        "@//:third_party/google/libcppbor/limits.patch",
     ],
     remote = "https://android.googlesource.com/platform/external/libcppbor",
 )
@@ -307,7 +308,7 @@ oak_toolchain_repositories()
 http_archive(
     name = "oak_cc_toolchain_sysroot",
     build_file = "//:toolchain/sysroot.BUILD",
-    sha256 = "3429bb94042a4c4cac986d7e070437e8eb3dfee89c1835120c00a0d912ff795d",
+    sha256 = "99577f5f525c6816c9f3f0c5c8756c9fb13a23517b55f376393375f6ad630316",
     url = "https://storage.googleapis.com/oak-bins/sysroot/sysroot.tar.xz",
 )
 
@@ -317,6 +318,9 @@ http_archive(
 # of aspect-build/bazel-lib.
 http_archive(
     name = "aspect_gcc_toolchain",
+    patches = [
+        "@//:third_party/aspect-gcc.patch",
+    ],
     sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
     strip_prefix = "gcc-toolchain-0.4.2",
     urls = [
@@ -334,11 +338,39 @@ gcc_register_toolchain(
     name = "gcc_toolchain_x86_64",
     # Prevents aspect_gcc from rendering -nostdinc flag. Needed to compile wasmtime.
     # See b/352306808#comment25.
-    extra_cflags = [],
-    # Doesn't work, so don't enable sysroot yet.
-    # sysroot = "//@oak_cc_toolchain_sysroot:sysroot",
+    extra_cflags = [
+        "-B%workspace%/bin",
+    ],
+    # Manually override ldflags and includes to paths we know exist in our sysroot.
+    # These are based on https://github.com/f0rmiga/gcc-toolchain/blob/36e3e1f430871b539ce9261f53491564aa91c170/sysroot/flags.bzl,
+    # just adjusted for our environment.
+    extra_ldflags = [
+        "-B%workspace%/bin",
+        "-B%sysroot%/usr/lib/x86_64-linux-gnu",
+        "-B%sysroot%/lib64/x86_64-linux-gnu",
+        "-L%sysroot%/lib64/x86_64-linux-gnu",
+        "-L%sysroot%/usr/lib/x86_64-linux-gnu",
+        "-L%sysroot%/lib/gcc/x86_64-linux-gnu/12",
+        "-L%sysroot%/usr/lib/x86_64-linux-gnu",
+    ],
+    includes = [
+        # Order matters here! Don't let it get sorted.
+        "%sysroot%/lib/gcc/x86_64-linux-gnu/12/include",
+        "%sysroot%/usr/include/x86_64-linux-gnu",
+        "%sysroot%/usr/include/c++/12",
+        "%sysroot%/usr/include/x86_64-linux-gnu/c++/12/",
+        "%sysroot%/usr/include",
+    ],
+    # sha256 of the compiler package
+    sha256 = "ed68f8d487f52beb95e5ff80da01b959222f53e089728b63ce38b99f80b597ca",
+    # what prefix to strip from the compiler package
+    strip_prefix = "x86-64-v4--glibc--stable-2024.02-1",
+    # Use the sysroot which is effectively our system image for consistency.
+    sysroot = "@oak_cc_toolchain_sysroot//:sysroot",
     # target_compatible_with defaults to os:linux.
     target_arch = ARCHS.x86_64,
+    # Which compiler to use: this is GCC 12, just as in Debian.
+    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64-v4/tarballs/x86-64-v4--glibc--stable-2024.02-1.tar.bz2",
 )
 
 gcc_register_toolchain(

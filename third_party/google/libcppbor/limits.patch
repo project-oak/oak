@@ -1,0 +1,21 @@
+--- src/cppbor.cpp
++++ src/cppbor.cpp
+@@ -19,6 +19,7 @@
+ #include <inttypes.h>
+ #include <openssl/sha.h>
+ #include <cstdint>
++#include <limits>
+ 
+ #include "include/cppbor/cppbor_parse.h"
+
+
+--- src/cppbor_parse.cpp
++++ src/cppbor_parse.cpp
+@@ -18,6 +18,7 @@
+ 
+ #include <sstream>
+ #include <stack>
++#include <limits>
+ 
+ #define CHECK(x) (void)(x)
+ 
