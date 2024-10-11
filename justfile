@@ -315,11 +315,9 @@ clang-tidy:
 bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)"
 wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
-bazel-ci:
-    # Test Oak as a dependency in the test workspace
-    # Some dependencies aren't properly exposed yet, so just testing a subset of targets
-    cd bazel/test_workspace && ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
+bazel-ci: test-workspace-ci std-crates-ci bare-metal-crates-ci
 
+std-crates-ci:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     bazel build --config=unsafe-fast-presubmit -- //...:all
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
