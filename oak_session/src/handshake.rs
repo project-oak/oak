@@ -196,8 +196,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                             .as_ref()
                             .context("handshaker_config missing the self private key")?
                             .as_ref(),
-                        &self
-                            .peer_public_key
+                        self.peer_public_key
                             .as_ref()
                             .ok_or(|_: Error| "")
                             .map_err(|_| anyhow!("Must provide public key for Kk"))?,

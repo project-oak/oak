@@ -23,9 +23,8 @@ use oak_file_utils::data_path;
 use oak_proto_rust::oak::HexDigest;
 
 use crate::util::{
-    convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
-    convert_raw_to_verifying_key, equal_keys, get_hex_digest_match, verify_signature_ecdsa,
-    MatchResult,
+    convert_pem_to_raw, convert_raw_to_pem, convert_raw_to_verifying_key, equal_keys,
+    get_hex_digest_match, verify_signature_ecdsa, MatchResult,
 };
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
@@ -69,13 +68,6 @@ fn load_testdata() -> TestData {
         endorser_public_key,
         rekor_public_key,
     }
-}
-
-#[test]
-fn test_convert_from_pem() {
-    let testdata = load_testdata();
-    let key = convert_pem_to_verifying_key(&testdata.rekor_public_key_pem);
-    assert!(key.is_ok());
 }
 
 #[test]
@@ -125,7 +117,7 @@ fn test_verify_signature_ecdsa() {
 fn test_both_empty_undecidable() {
     let empty = HexDigest { ..Default::default() };
     let result = get_hex_digest_match(&empty, &empty);
-    assert!(result == MatchResult::UNDECIDABLE);
+    assert!(result == MatchResult::Undecidable);
 }
 
 #[test]
@@ -133,7 +125,7 @@ fn test_one_empty_undecidable() {
     let a = HexDigest { sha1: HASH3.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let empty = HexDigest { ..Default::default() };
     let result = get_hex_digest_match(&a, &empty);
-    assert!(result == MatchResult::UNDECIDABLE);
+    assert!(result == MatchResult::Undecidable);
 }
 
 #[test]
@@ -141,7 +133,7 @@ fn test_same() {
     let a = HexDigest { sha1: HASH3.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let b = HexDigest { sha1: HASH3.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let result = get_hex_digest_match(&a, &b);
-    assert!(result == MatchResult::SAME);
+    assert!(result == MatchResult::Same);
 }
 
 #[test]
@@ -149,7 +141,7 @@ fn test_different() {
     let a = HexDigest { sha2_256: HASH1.to_owned(), ..Default::default() };
     let b = HexDigest { sha2_256: HASH2.to_owned(), ..Default::default() };
     let result = get_hex_digest_match(&a, &b);
-    assert!(result == MatchResult::DIFFERENT);
+    assert!(result == MatchResult::Different);
 }
 
 #[test]
@@ -157,5 +149,5 @@ fn test_contradictory() {
     let a = HexDigest { sha1: HASH3.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let b = HexDigest { sha1: HASH4.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let result = get_hex_digest_match(&a, &b);
-    assert!(result == MatchResult::CONTRADICTORY);
+    assert!(result == MatchResult::Contradictory);
 }

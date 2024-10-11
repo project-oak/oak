@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 #
 # bazel-clippy without all the noise
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Command to run bazel clippy
-COMMAND="bazel build --config=clippy --config=unsafe-fast-presubmit //...:all -- -third_party/..."
+readonly COMMAND="bazel build --keep_going --config=unsafe-fast-presubmit --config=clippy //...:all -- -third_party/..."
 
 # Run the command and filter the output
 $COMMAND 2>&1 | awk '

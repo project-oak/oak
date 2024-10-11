@@ -138,12 +138,12 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         anyhow::anyhow!("Failed to decode oak containers container layer data")
                     })?;
 
-                return Ok(EvidenceValues::OakContainers(OakContainersData {
+                Ok(EvidenceValues::OakContainers(OakContainersData {
                     root_layer,
                     kernel_layer: Some(kernel_layer),
                     system_layer: Some(system_layer),
                     container_layer: Some(container_layer),
-                }));
+                }))
             }
             EvidenceType::LegacyOakContainers => {
                 let kernel_layer = decoded_events[0]
@@ -172,12 +172,12 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                             "Failed to decode legacy oak containers container layer data"
                         )
                     })?;
-                return Ok(EvidenceValues::OakContainers(OakContainersData {
+                Ok(EvidenceValues::OakContainers(OakContainersData {
                     root_layer,
                     kernel_layer: Some(kernel_layer),
                     system_layer: Some(system_layer),
                     container_layer: Some(container_layer),
-                }));
+                }))
             }
             EvidenceType::OakRestrictedKernel => {
                 let kernel_layer = decoded_events[0]
@@ -196,11 +196,11 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         anyhow::anyhow!("Failed to decode oak restricted application layer data")
                     })?;
 
-                return Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
+                Ok(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
                     root_layer,
                     kernel_layer: Some(kernel_layer),
                     application_layer: Some(application_layer),
-                }));
+                }))
             }
             EvidenceType::CB => Ok(EvidenceValues::Cb(CbData {
                 root_layer,
@@ -574,9 +574,10 @@ fn value_to_raw_digest(value: &Value) -> anyhow::Result<RawDigest> {
                 anyhow::bail!("digest is not a byte array");
             }
         }
-        return Ok(result);
+        Ok(result)
+    } else {
+        Err(anyhow::anyhow!("value is not a map of digests"))
     }
-    Err(anyhow::anyhow!("value is not a map of digests"))
 }
 
 /// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same

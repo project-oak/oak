@@ -103,7 +103,7 @@ impl InstanceEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
         DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| InstanceEvidenceProvider {
             evidence: &d.evidence,
-            encoded_event_log: d.encoded_event_log.as_ref().map(|buffer| buffer.as_slice()),
+            encoded_event_log: d.encoded_event_log.as_deref(),
         })
     }
 }

@@ -165,6 +165,8 @@ pub struct X2ApicIdRegister;
 impl X2ApicIdRegister {
     const MSR: Msr = Msr::new(0x0000_00802);
 
+    /// # Safety
+    ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn apic_id<P: Platform>() -> u32 {
         (Self::MSR.read::<P>() & 0xFFFF_FFFF) as u32
     }
@@ -178,6 +180,8 @@ impl X2ApicVersionRegister {
 }
 
 impl X2ApicVersionRegister {
+    /// # Safety
+    ///   - X2ApicVersionRegister must be present on this system.
     pub unsafe fn read<P: Platform>() -> (bool, u8, u8) {
         let val = Self::MSR.read::<P>();
 
@@ -211,12 +215,16 @@ impl X2ApicSpuriousInterruptRegister {
 }
 
 impl X2ApicSpuriousInterruptRegister {
+    /// # Safety
+    ///   - X2ApicSpuriousInterruptRegister must be present on this system.
     pub unsafe fn read<P: Platform>() -> (SpuriousInterruptFlags, u8) {
         let val = Self::MSR.read::<P>();
 
         (SpuriousInterruptFlags::from_bits_truncate((val & 0xFFFF_FF00) as u32), (val & 0xFF) as u8)
     }
 
+    /// # Safety
+    ///   - X2ApicSpuriousInterruptRegister must be present on this system.
     pub unsafe fn write<P: Platform>(flags: SpuriousInterruptFlags, vec: u8) {
         // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
         let val = flags.bits() as u64 | vec as u64;
@@ -266,17 +274,23 @@ impl X2ApicErrorStatusRegister {
 }
 
 impl X2ApicErrorStatusRegister {
+    /// # Safety
+    ///   - X2ApicIdRegister must be present on this system.
     #[allow(unused)]
     pub unsafe fn read<P: Platform>() -> ApicErrorFlags {
         let val = Self::MSR.read::<P>();
         ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
     }
 
+    /// # Safety
+    ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn write<P: Platform>(val: ApicErrorFlags) {
         let mut msr = Self::MSR;
         msr.write::<P>(val.bits() as u64)
     }
 
+    /// # Safety
+    ///   - X2ApicIdRegister must be present on this system.
     pub unsafe fn clear<P: Platform>() {
         Self::write::<P>(ApicErrorFlags::empty())
     }
@@ -382,6 +396,8 @@ pub struct X2ApicInterruptCommandRegister;
 impl X2ApicInterruptCommandRegister {
     const MSR: Msr = Msr::new(0x0000_00830);
 
+    /// # Safety
+    ///   - X2ApicInterruptCommandRegister must be present on this system.
     pub unsafe fn send<P: Platform>(
         vec: u8,
         mt: MessageType,

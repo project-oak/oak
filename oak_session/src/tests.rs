@@ -427,7 +427,7 @@ fn test_unordered_encryptor_window_size_0() {
     let plaintext_2 = replica_2.decrypt(&encrypted_payload_2).unwrap().message;
     assert_eq!(test_messages[1].plaintext, plaintext_2);
     // Decrypting first message fails since it is from a lower nonce.
-    assert_eq!(true, replica_2.decrypt(&encrypted_payload_1).is_err());
+    assert!(replica_2.decrypt(&encrypted_payload_1).is_err());
 }
 
 fn clone_payload(payload: &Payload) -> Payload {
@@ -442,7 +442,7 @@ fn clone_payload(payload: &Payload) -> Payload {
 fn test_unordered_encryptor_window_size_3() {
     let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
     let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
-    let test_messages = vec![
+    let test_messages = &[
         vec![1u8, 2u8, 3u8, 4u8],
         vec![4u8, 3u8, 2u8, 1u8],
         vec![1u8, 1u8, 1u8, 1u8],
@@ -455,11 +455,9 @@ fn test_unordered_encryptor_window_size_3() {
     let mut replica_2 =
         UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 3) };
     let mut encrypted_payloads = vec![];
-    for i in 0..test_messages.len() {
+    for item in test_messages {
         encrypted_payloads.push(
-            replica_1
-                .encrypt(&Payload { message: test_messages[i].to_vec(), nonce: None, aad: None })
-                .unwrap(),
+            replica_1.encrypt(&Payload { message: item.to_vec(), nonce: None, aad: None }).unwrap(),
         );
     }
 
@@ -478,11 +476,11 @@ fn test_unordered_encryptor_window_size_3() {
         replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).unwrap().message
     );
     // Replaying message should fail.
-    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).is_err());
-    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).is_err());
-    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).is_err());
+    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).is_err());
+    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).is_err());
+    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).is_err());
     // Decrypting messages outside the window should fail.
-    assert_eq!(true, replica_2.decrypt(&clone_payload(&encrypted_payloads[0])).is_err());
+    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[0])).is_err());
 
     // Decrypt more messages in order.
     assert_eq!(

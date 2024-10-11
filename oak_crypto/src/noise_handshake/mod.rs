@@ -51,7 +51,7 @@ pub struct Nonce {
 }
 
 impl Nonce {
-    pub fn next(&mut self) -> Result<[u8; NONCE_LEN], Error> {
+    pub fn next_nonce(&mut self) -> Result<[u8; NONCE_LEN], Error> {
         if self.nonce > MAX_SEQUENCE {
             return Err(Error::DecryptFailed);
         }
@@ -162,11 +162,11 @@ impl OrderedCrypter {
     }
 
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>, Error> {
-        aes_gcm_256_encrypt(&self.write_key, &self.write_nonce.next()?, plaintext)
+        aes_gcm_256_encrypt(&self.write_key, &self.write_nonce.next_nonce()?, plaintext)
     }
 
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, Error> {
-        aes_gcm_256_decrypt(&self.read_key, &self.read_nonce.next()?, ciphertext)
+        aes_gcm_256_decrypt(&self.read_key, &self.read_nonce.next_nonce()?, ciphertext)
     }
 }
 
@@ -239,7 +239,7 @@ impl UnorderedCrypter {
     }
 
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Error> {
-        let nonce = self.write_nonce.next()?;
+        let nonce = self.write_nonce.next_nonce()?;
         let encrypted_message = aes_gcm_256_encrypt(&self.write_key, &nonce, plaintext)?;
         Ok((encrypted_message, nonce.to_vec()))
     }
@@ -249,7 +249,7 @@ impl UnorderedCrypter {
         nonce: &[u8; NONCE_LEN],
         ciphertext: &[u8],
     ) -> Result<Vec<u8>, Error> {
-        let nonce_value = Nonce::get_nonce_value(&nonce)?;
+        let nonce_value = Nonce::get_nonce_value(nonce)?;
         let lowest_acceptable_nonce = self.get_lowest_acceptable_read_nonce();
         // Nonce is way too far in the past, reject it.
         if nonce_value < lowest_acceptable_nonce {
@@ -271,7 +271,7 @@ impl UnorderedCrypter {
             self.buffered_read_nonces.retain(|&n| n >= new_lowest_acceptable_nonce);
             self.buffered_read_nonces.insert(nonce_value);
         }
-        aes_gcm_256_decrypt(&self.read_key, &nonce, ciphertext)
+        aes_gcm_256_decrypt(&self.read_key, nonce, ciphertext)
     }
 }
 
@@ -329,7 +329,7 @@ pub fn respond_nn(in_message: &NoiseMessage) -> Result<Response, Error> {
     noise.mix_hash(&[0; 1]); // Prologue
 
     noise.mix_hash(in_message.ephemeral_public_key.as_slice());
-    noise.mix_key(&in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
     finish_response(&mut noise, in_message)
 }
 

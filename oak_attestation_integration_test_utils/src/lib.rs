@@ -17,14 +17,12 @@
 use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
-        reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
-        KernelDigests, KernelLayerData, KernelLayerReferenceValues, OakContainersReferenceValues,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData,
-        RootLayerReferenceValues, SkipVerification, Stage0Measurements, StringLiterals,
-        SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
+        binary_reference_value, kernel_binary_reference_value, reference_values,
+        text_reference_value, BinaryReferenceValue, ContainerLayerReferenceValues, Digests,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelDigests,
+        KernelLayerReferenceValues, OakContainersReferenceValues, ReferenceValues,
+        RootLayerReferenceValues, Stage0Measurements, StringLiterals, SystemLayerReferenceValues,
+        TextReferenceValue,
     },
     session::v1::EndorsedEvidence,
     RawDigest,

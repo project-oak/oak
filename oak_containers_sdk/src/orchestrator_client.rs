@@ -53,17 +53,15 @@ pub struct OrchestratorClient {
 #[async_trait::async_trait]
 impl OrchestratorInterface for OrchestratorClient {
     async fn get_application_config(&mut self) -> Result<Vec<u8>> {
-        let config = self.inner.get_application_config(()).await?.into_inner().config;
-        Ok(config)
+        self.get_application_config().await
     }
 
     async fn notify_app_ready(&mut self) -> Result<()> {
-        self.inner.notify_app_ready(tonic::Request::new(())).await?;
-        Ok(())
+        self.notify_app_ready().await
     }
 
     async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
-        Ok(self.inner.get_endorsed_evidence(()).await?.into_inner())
+        self.get_endorsed_evidence().await
     }
 }
 
@@ -85,24 +83,44 @@ impl OrchestratorClient {
         Ok(Self { inner })
     }
 
-    #[deprecated(
-        note = "This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
-    )]
     pub async fn get_application_config(&mut self) -> Result<Vec<u8>> {
-        <Self as OrchestratorInterface>::get_application_config(self).await
+        Ok(self.inner.get_application_config(()).await?.into_inner().config)
     }
 
-    #[deprecated(
-        note = "This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
-    )]
     pub async fn notify_app_ready(&mut self) -> Result<()> {
-        <Self as OrchestratorInterface>::notify_app_ready(self).await
+        self.inner.notify_app_ready(tonic::Request::new(())).await?;
+        Ok(())
     }
 
-    #[deprecated(
-        note = "This method has been moved to the [`OrchestratorInterface`] trait, which [`OrchestratorClient`] implements. Temporarily it will continue to be exposed as plain methods for backwards compatibility. This will change in future updates."
-    )]
     pub async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
-        <Self as OrchestratorInterface>::get_endorsed_evidence(self).await
+        Ok(self.inner.get_endorsed_evidence(()).await?.into_inner())
     }
+}
+
+#[tokio::test]
+async fn test_trait_usage() {
+    struct Fake {}
+
+    const APP_CONFIG: &[u8] = b"app config";
+
+    #[async_trait::async_trait]
+    impl OrchestratorInterface for Fake {
+        async fn get_application_config(&mut self) -> Result<Vec<u8>> {
+            Ok(APP_CONFIG.to_vec())
+        }
+
+        async fn notify_app_ready(&mut self) -> Result<()> {
+            Ok(())
+        }
+
+        async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
+            Err(anyhow::anyhow!("nah"))
+        }
+    }
+
+    async fn orchestrator_stuff(mut iorch: Box<dyn OrchestratorInterface>) -> Vec<u8> {
+        iorch.get_application_config().await.unwrap()
+    }
+
+    assert_eq!(orchestrator_stuff(Box::new(Fake {})).await, APP_CONFIG)
 }

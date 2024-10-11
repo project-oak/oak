@@ -34,12 +34,12 @@ pub enum Usage {
     Kernel,
 }
 
-impl Usage {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for Usage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            Self::None => "".to_string(),
-            Self::Firmware => "firmware".to_string(),
-            Self::Kernel => "kernel".to_string(),
+            Self::None => write!(f, ""),
+            Self::Firmware => write!(f, "firmware"),
+            Self::Kernel => write!(f, "kernel"),
         }
     }
 }

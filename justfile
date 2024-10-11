@@ -335,6 +335,9 @@ list-bare-metal-crates:
     {{bare_metal_crates_query}}
 
 bazel-clippy:
+    bazel build --keep_going --config=clippy "$@" //...:all -- -third_party/...
+
+bazel-clippy-ci:
     scripts/clippy_clean
 
 bazel-repin:
@@ -346,7 +349,7 @@ bazel-fmt:
 bazel-rustfmt:
     bazel build --config=rustfmt --config=unsafe-fast-presubmit //...:all -- -third_party/...
 
-clippy-ci: bazel-clippy cargo-clippy
+clippy-ci: bazel-clippy-ci cargo-clippy
 
 cargo-clippy:
     #!/bin/sh

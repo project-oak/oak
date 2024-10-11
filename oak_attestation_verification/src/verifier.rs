@@ -16,7 +16,7 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::{format, vec::Vec};
+use alloc::format;
 
 use anyhow::Context;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
@@ -273,7 +273,7 @@ pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence
 /// correctly described in the claims of the associated dice layers.
 fn validate_that_event_log_is_captured_in_dice_layers(
     event_log: &EventLog,
-    dice_layers: &Vec<LayerEvidence>,
+    dice_layers: &[LayerEvidence],
 ) -> anyhow::Result<()> {
     dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
         |(current_layer, encoded_event)| {
@@ -286,11 +286,11 @@ fn validate_that_event_log_is_captured_in_dice_layers(
                     .context("Missing event")?
             };
             let actual_event_hash = &<sha2::Sha256 as sha2::Digest>::digest(encoded_event).to_vec();
-            return if actual_event_hash != &event_digest.sha2_256 {
+            if actual_event_hash != &event_digest.sha2_256 {
                 Err(anyhow::anyhow!("event log hash mismatch"))
             } else {
                 Ok(())
-            };
+            }
         },
     )
 }

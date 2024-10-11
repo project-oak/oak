@@ -16,7 +16,7 @@
 #[cfg(test)]
 extern crate std;
 
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 use std::fs;
 
 use oak_file_utils::data_path;
@@ -98,7 +98,7 @@ fn test_validate_endorsement_statement_success() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(NOW_UTC_MILLIS, &vec![], &statement);
+    let result = validate_statement(NOW_UTC_MILLIS, &[], &statement);
     assert!(result.is_ok(), "{:?}", result);
 }
 
@@ -107,7 +107,7 @@ fn test_validate_endorsement_statement_fails_too_early() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(TOO_EARLY_UTC_MILLIS, &vec![], &statement);
+    let result = validate_statement(TOO_EARLY_UTC_MILLIS, &[], &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 
@@ -116,7 +116,7 @@ fn test_validate_statement_fails_too_late() {
     let testdata = load_testdata();
     let statement =
         parse_statement(&testdata.endorsement).expect("could not parse endorsement statement");
-    let result = validate_statement(TOO_LATE_UTC_MILLIS, &vec![], &statement);
+    let result = validate_statement(TOO_LATE_UTC_MILLIS, &[], &statement);
     assert!(result.is_err(), "{:?}", result);
 }
 

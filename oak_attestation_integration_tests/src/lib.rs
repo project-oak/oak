@@ -34,7 +34,7 @@ impl SnapshotPath {
         Path::new(Self::TESTDATA_DIR).join(format!("{:05}", self.version))
     }
 
-    fn version(&self) -> u16 {
+    pub fn version(&self) -> u16 {
         self.version
     }
 
@@ -163,9 +163,9 @@ impl Snapshot {
         ];
 
         let (
-            mut self_endorsed_evidence_json,
+            self_endorsed_evidence_json,
             previous_endorsed_evidence_json,
-            mut self_reference_values_json,
+            self_reference_values_json,
             previous_reference_values_json,
         ) = tokio::try_join!(
             async {

@@ -35,6 +35,10 @@ pub struct Mmio<S: PageSize> {
 }
 
 impl<S: PageSize> Mmio<S> {
+    /// # Safety
+    //   - base_address is aligned to u32
+    //   - we've checked it's within the page size
+    //   - we were promised that he memory is valid
     pub unsafe fn new(base_address: PhysAddr) -> Self {
         // Tehcnically we only need a chunk of virtual memory (as we remap the physical
         // memory backing it anyway), but the easiest way how to get a chunk of virtual
@@ -67,7 +71,7 @@ impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
         if offset >= S::SIZE as usize {
             panic!("invalid MMIO access for read: offset would read beyond memory boundary");
         }
-        // Safety:
+        // # Safety
         //   - offset is aligned to u32
         //   - we've checked it's within the page size
         //   - when calling new() we were promised the memory is valid
@@ -79,7 +83,7 @@ impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
         if offset >= S::SIZE as usize {
             panic!("invalid MMIO access for write: offset would write beyond memory boundary");
         }
-        // Safety:
+        // # Safety
         //   - offset is aligned to u32
         //   - we've checked it's within the page size
         //   - when calling new() we were promised the memory is valid

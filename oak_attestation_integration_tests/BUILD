@@ -41,7 +41,6 @@ rust_library(
     ],
 )
 
-# TODO: b/370463888 - Run this in CI.
 rust_binary(
     name = "update_testdata_assert_no_breaking_changes",
     srcs = ["src/main.rs"],

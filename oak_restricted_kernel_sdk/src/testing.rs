@@ -151,7 +151,7 @@ impl MockEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
             evidence: &d.evidence,
-            encoded_event_log: &d
+            encoded_event_log: d
                 .encoded_event_log
                 .as_ref()
                 .expect("mock dice wrapper contains event log"),

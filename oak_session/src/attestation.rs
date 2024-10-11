@@ -80,7 +80,7 @@ pub trait Attester: Send {
 // logic has been moved to a separate crate.
 #[cfg_attr(test, automock)]
 pub trait Endorser: Send {
-    fn endorse<'a>(&self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
+    fn endorse<'a>(&'a self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
 }
 
 #[cfg_attr(test, automock)]

@@ -15,7 +15,7 @@
 //
 
 use alloc::{string::String, vec, vec::Vec};
-use core::{cmp::Ordering, str::FromStr};
+use core::cmp::Ordering;
 
 use anyhow::Context;
 use ecdsa::signature::Verifier;
@@ -42,6 +42,14 @@ use crate::endorsement;
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
+/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
+#[allow(unused)]
+pub fn convert_raw_to_pem(asn1_der_public_key_bytes: &[u8]) -> String {
+    let doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
+        .expect("public key bytes are not ASN.1 DER");
+    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect("couldn't create pem")
+}
+
 /// Converts a PEM public key to raw ASN.1 DER bytes.
 pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
     let (label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
@@ -53,22 +61,6 @@ pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
     );
 
     Ok(key.into_vec())
-}
-
-/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
-pub fn convert_raw_to_pem(asn1_der_public_key_bytes: &[u8]) -> String {
-    let doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
-        .expect("public key bytes are not ASN.1 DER");
-    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect("couldn't create pem")
-}
-
-/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-pub fn convert_pem_to_verifying_key(
-    public_key_pem: &str,
-) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem).map_err(|error| {
-        anyhow::anyhow!("couldn't parse pem as a p256::ecdsa::VerifyingKey: {}", error)
-    })
 }
 
 /// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
@@ -102,10 +94,10 @@ pub fn verify_signature(
         .iter()
         .find(|k| k.key_id == signature.key_id)
         .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
-    return match key.r#type() {
+    match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
         KeyType::EcdsaP256Sha256 => verify_signature_ecdsa(&signature.raw, contents, &key.raw),
-    };
+    }
 }
 
 /// Verifies the signature over the contents using the public key.
@@ -154,10 +146,10 @@ pub fn raw_digest_from_contents(contents: &[u8]) -> RawDigest {
 
 #[derive(PartialEq)]
 pub enum MatchResult {
-    SAME = 0,
-    DIFFERENT = 1,
-    UNDECIDABLE = 2,
-    CONTRADICTORY = 3,
+    Same = 0,
+    Different = 1,
+    Undecidable = 2,
+    Contradictory = 3,
 }
 
 /// Compares two digests instances for equality.
@@ -166,11 +158,11 @@ pub enum MatchResult {
 /// If it is undesirable to include the weak sha1 hash in the decision simply
 /// remove it from either input.
 ///
-/// SAME if underlying binaries are the same, DIFFERENT if they differ.
-/// UNDECIDABLE if the constellation in the protos doesn't provide enough
-/// information, CONTRADICTORY if the constellation suggest same and different
-/// at the same time. UNDECIDABLE and CONTRADICTORY usually point to problems
-/// which are unlikely to be addressable at run time.
+/// [`Same`] if underlying binaries are the same, [`Different`] if they differ.
+/// [`Undecidable`] if the constellation in the protos doesn't provide enough
+/// information, [`Contradictory`] if the constellation suggest same and
+/// different at the same time. [`Undecidable`] and [`Contradictory`] usually
+/// point to problems which are unlikely to be addressable at run time.
 pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
     let mut same = 0;
     let mut different = 0;
@@ -197,9 +189,9 @@ pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
 
     #[allow(clippy::collapsible_else_if)]
     if same > 0 {
-        if different > 0 { MatchResult::CONTRADICTORY } else { MatchResult::SAME }
+        if different > 0 { MatchResult::Contradictory } else { MatchResult::Same }
     } else {
-        if different > 0 { MatchResult::DIFFERENT } else { MatchResult::UNDECIDABLE }
+        if different > 0 { MatchResult::Different } else { MatchResult::Undecidable }
     }
 }
 
@@ -210,23 +202,23 @@ pub fn get_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
 
 pub fn is_hex_digest_match(actual: &HexDigest, expected: &HexDigest) -> anyhow::Result<()> {
     match get_hex_digest_match(actual, expected) {
-        MatchResult::SAME => Ok(()),
-        MatchResult::DIFFERENT => {
+        MatchResult::Same => Ok(()),
+        MatchResult::Different => {
             Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
         }
-        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
-        MatchResult::CONTRADICTORY => Err(anyhow::anyhow!("hash collision")),
+        MatchResult::Undecidable => Err(anyhow::anyhow!("invalid digests")),
+        MatchResult::Contradictory => Err(anyhow::anyhow!("hash collision")),
     }
 }
 
 pub fn is_raw_digest_match(actual: &RawDigest, expected: &RawDigest) -> anyhow::Result<()> {
     match get_raw_digest_match(actual, expected) {
-        MatchResult::SAME => Ok(()),
-        MatchResult::DIFFERENT => {
+        MatchResult::Same => Ok(()),
+        MatchResult::Different => {
             Err(anyhow::anyhow!("mismatched digests: expected={expected:?} actual={actual:?}",))
         }
-        MatchResult::UNDECIDABLE => Err(anyhow::anyhow!("invalid digests")),
-        MatchResult::CONTRADICTORY => Err(anyhow::anyhow!("hash collision")),
+        MatchResult::Undecidable => Err(anyhow::anyhow!("invalid digests")),
+        MatchResult::Contradictory => Err(anyhow::anyhow!("hash collision")),
     }
 }
 
@@ -420,7 +412,7 @@ pub fn decode_event_proto<M: Message + Default>(
     expected_type_url: &str,
     encoded_event: &[u8],
 ) -> anyhow::Result<M> {
-    let event_proto = Event::decode(encoded_event.as_ref())
+    let event_proto = Event::decode(encoded_event)
         .map_err(|error| anyhow::anyhow!("failed to decode event: {}", error))?;
     decode_protobuf_any::<M>(
         expected_type_url,
@@ -433,7 +425,7 @@ pub fn decode_event_endorsement_proto<M: Message + Default>(
     expected_type_url: &str,
     encoded_event_endorsement: &[u8],
 ) -> anyhow::Result<M> {
-    let event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement.as_ref())
+    let event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement)
         .map_err(|error| anyhow::anyhow!("failed to decode event endorsement: {}", error))?;
     decode_protobuf_any::<M>(
         expected_type_url,

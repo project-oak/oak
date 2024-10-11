@@ -17,25 +17,19 @@
 use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
-use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results::Status, binary_reference_value, endorsements,
-        kernel_binary_reference_value, reference_values, text_reference_value,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, Endorsements, Event, EventLog, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelDigests, KernelLayerReferenceValues,
-        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, Stage0Measurements, StringLiterals,
-        SystemLayerReferenceValues, TextReferenceValue,
-    },
-    RawDigest,
+use oak_containers_sdk::OrchestratorInterface;
+use oak_proto_rust::oak::attestation::v1::{
+    attestation_results::Status, binary_reference_value, endorsements,
+    kernel_binary_reference_value, reference_values, text_reference_value,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
+    Endorsements, Event, InsecureReferenceValues, KernelBinaryReferenceValue,
+    KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
+    RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
+    TextReferenceValue,
 };
 use oak_restricted_kernel_sdk::attestation::EvidenceProvider;
 use prost::Message;
-use sha2::Digest;
-use tokio;
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;

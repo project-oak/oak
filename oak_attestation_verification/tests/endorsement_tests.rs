@@ -112,7 +112,7 @@ fn test_verify_endorsement_success() {
     assert!(result.is_ok(), "{:?}", result);
 
     let details = result.unwrap();
-    let d = raw_to_hex_digest(&details.subject_digest.as_ref().unwrap());
+    let d = raw_to_hex_digest(details.subject_digest.as_ref().unwrap());
     assert!(
         d.sha2_256 == "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc",
         "{:?}",

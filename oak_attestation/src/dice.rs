@@ -49,9 +49,7 @@ impl MeasureDigest for &[u8] {
         let mut digest = sha2::Sha256::default();
         digest.update(self);
         let digest_bytes: [u8; 32] = digest.finalize().into();
-        let mut raw_digest = RawDigest::default();
-        raw_digest.sha2_256 = digest_bytes.to_vec();
-        raw_digest
+        RawDigest { sha2_256: digest_bytes.to_vec(), ..Default::default() }
     }
 }
 
@@ -323,7 +321,7 @@ impl TryFrom<DiceData> for DiceAttester {
             certificate_authority.eca_private_key.zeroize();
         }
 
-        Ok(DiceAttester { evidence: evidence.clone(), signing_key: signing_key })
+        Ok(DiceAttester { evidence: evidence.clone(), signing_key })
     }
 }
 
@@ -372,11 +370,11 @@ pub fn evidence_and_event_log_to_proto(
     let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
     let application_keys = Some(application_keys_to_proto(value.application_keys)?);
     let event_log = encoded_event_log
-        .map(|data| EventLog::decode(data))
+        .map(EventLog::decode)
         .transpose()
         .map_err(anyhow::Error::msg)
         .context("couldn't decode event log")?;
-    Ok(Evidence { root_layer, layers, application_keys, event_log: event_log })
+    Ok(Evidence { root_layer, layers, application_keys, event_log })
 }
 
 fn root_layer_evidence_to_proto(

@@ -19,7 +19,7 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
@@ -184,7 +184,7 @@ pub fn verify_endorsement(
     // The signature verification is also part of log entry verification,
     // so in some cases this check will be dispensable. We verify the
     // signature nonetheless before parsing the endorsement.
-    verify_signature(&signature, &endorsement.serialized, &endorser_key_set)
+    verify_signature(signature, &endorsement.serialized, endorser_key_set)
         .context("verifying signature")?;
 
     let statement =
@@ -241,7 +241,7 @@ pub fn verify_binary_endorsement(
         .context("verifying signature")?;
 
     let statement = parse_statement(endorsement).context("parsing endorsement statement")?;
-    validate_statement(now_utc_millis, &vec![], &statement)
+    validate_statement(now_utc_millis, &[], &statement)
         .context("verifying endorsement statement")?;
 
     if !rekor_public_key.is_empty() {
@@ -267,10 +267,10 @@ pub fn verify_endorser_public_key(
         .iter()
         .find(|k| k.key_id == signature_key_id)
         .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
-    return match key.r#type() {
+    match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
         KeyType::EcdsaP256Sha256 => verify_endorser_public_key_ecdsa(log_entry, &key.raw),
-    };
+    }
 }
 
 /// Verifies that the endorser public key coincides with the one contained in
@@ -330,10 +330,10 @@ pub fn validate_statement(
 
     match &statement.predicate.validity {
         Some(validity) => {
-            if validity.not_before.unix_timestamp_millis() > now_utc_millis.into() {
+            if validity.not_before.unix_timestamp_millis() > now_utc_millis {
                 anyhow::bail!("the claim is not yet applicable")
             }
-            if validity.not_after.unix_timestamp_millis() < now_utc_millis.into() {
+            if validity.not_after.unix_timestamp_millis() < now_utc_millis {
                 anyhow::bail!("the claim is no longer applicable")
             }
         }

@@ -115,7 +115,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             break maybe_client.unwrap();
         } else {
             if (Instant::now() - start) > timeout {
-                maybe_client.expect("couldn't create client");
+                panic!("couldn't create client");
             }
             std::thread::sleep(Duration::from_secs(5));
         }

@@ -20,8 +20,6 @@
 //! that newer versions of the verification library continue to be able to
 //! verify older versions of these artifacts.
 
-// TODO: b/370445356 - Write tests that use the created testdata.
-
 use oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values;
 use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
 

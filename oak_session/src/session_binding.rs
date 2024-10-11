@@ -134,10 +134,7 @@ mod tests {
             .expect("Failed to create the session binding verifier");
 
         let binding = session_binder.bind(bound_data1);
-        assert!(matches!(
-            session_binding_verifier.verify_binding(bound_data2, binding.as_slice()),
-            Err(_)
-        ));
+        assert!(session_binding_verifier.verify_binding(bound_data2, binding.as_slice()).is_err());
     }
 
     #[test]
@@ -160,9 +157,6 @@ mod tests {
             .expect("Failed to create the session binding verifier");
 
         let binding = session_binder.bind(bound_data);
-        assert!(matches!(
-            session_binding_verifier.verify_binding(bound_data, binding.as_slice()),
-            Err(_)
-        ));
+        assert!(session_binding_verifier.verify_binding(bound_data, binding.as_slice()).is_err());
     }
 }

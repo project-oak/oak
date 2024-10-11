@@ -359,7 +359,7 @@ pub fn extend_rtmr<T: Into<ExtensionBuffer>>(
     const LEAF: u64 = 2;
 
     let mut result: u64;
-    let buf_gpa = (&buf.into().data).as_ptr() as usize as u64;
+    let buf_gpa = (buf.into().data).as_ptr() as usize as u64;
     let rtmr_index = rtmr_index as u64;
 
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The

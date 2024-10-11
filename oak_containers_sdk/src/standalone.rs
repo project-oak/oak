@@ -98,12 +98,12 @@ impl StandaloneOrchestrator {
         )?;
 
         // Add Stage1 layer data
-        let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(&stage1_system_image);
+        let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
         attester.add_layer(stage1_layer_data)?;
 
         // Add Orchestrator layer data
         let orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
-            &application_image,
+            application_image,
             &application_config,
         );
 

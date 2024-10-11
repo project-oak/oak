@@ -54,6 +54,8 @@ pub trait Mmio<S: PageSize> {
     ///
     /// Panics if the read would go outside the memory range.
     ///
+    /// # Safety
+    ///
     /// The caller needs to guarantee that the value is valid for the register
     /// it is written to.
     unsafe fn write_u32(&mut self, offset: usize, value: u32);
@@ -72,6 +74,10 @@ pub trait Platform {
     /// Performs the CPUID instruction.
     fn cpuid(leaf: u32) -> CpuidResult;
 
+    /// # Safety
+    //   - base_address is aligned to u32
+    //   - we've checked it's within the page size
+    //   - we were promised that he memory is valid
     unsafe fn mmio<S: PageSize>(base_address: PhysAddr) -> Self::Mmio<S>;
 
     fn port_factory() -> PortFactory;

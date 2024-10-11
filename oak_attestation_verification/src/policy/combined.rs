@@ -69,10 +69,10 @@ impl Policy for CombinedPolicy {
         );
         let event_attestation_results = verification_iterator
             .map(|(event_policy, event, event_endorsements)| {
-                event_policy.verify(event, event_endorsements).unwrap_or_else(|_| {
+                event_policy.verify(event, event_endorsements).unwrap_or(
                     // TODO: b/366186091 - Use Rust error types for failed attestation.
-                    EventAttestationResults {}
-                })
+                    EventAttestationResults {},
+                )
             })
             .collect::<Vec<EventAttestationResults>>();
 

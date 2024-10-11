@@ -40,6 +40,7 @@ rust_binary(
         "--codegen=link-arg=-static",
         "--codegen=link-arg=-Wl,-static",
     ],
+    tags = ["no-clippy"],
     deps = [
         "//oak_dice",
         "//oak_linux_boot_params",

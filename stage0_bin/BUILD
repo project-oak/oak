@@ -45,6 +45,7 @@ rust_binary(
         "--codegen=link-arg=-static",
         "--codegen=link-arg=-Wl,-static",
     ],
+    tags = ["no-clippy"],
     deps = [
         "//stage0",
         "//stage0_sev",

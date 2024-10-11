@@ -132,11 +132,11 @@ pub(crate) fn encrypted() -> u64 {
 }
 
 trait IntoMsrPageAssigment {
-    fn into_msr(&self) -> oak_sev_guest::msr::PageAssignment;
+    fn into_msr(self) -> oak_sev_guest::msr::PageAssignment;
 }
 
 impl IntoMsrPageAssigment for PageAssignment {
-    fn into_msr(&self) -> oak_sev_guest::msr::PageAssignment {
+    fn into_msr(self) -> oak_sev_guest::msr::PageAssignment {
         match self {
             PageAssignment::Shared => oak_sev_guest::msr::PageAssignment::Shared,
             PageAssignment::Private => oak_sev_guest::msr::PageAssignment::Private,
