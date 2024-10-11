@@ -29,6 +29,9 @@ pub mod handler;
 #[doc(cfg(feature = "testing"))]
 pub mod testing;
 pub mod utils;
+
+/// Expose oak_attestation_verification to users of the restricted kernel SDK.
+pub use oak_attestation_verification;
 pub use oak_crypto::{encryption_key::EncryptionKeyHandle, signer::Signer};
 /// Marks a function as the entrypoint to an enclave app and sets up an
 /// conviences such an allocator, logger, panic handler.

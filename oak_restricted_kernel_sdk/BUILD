@@ -39,6 +39,7 @@ rust_library(
     ]),
     deps = [
         "//micro_rpc",
+        "//oak_attestation_verification",
         "//oak_channel",
         "//oak_core",
         "//oak_crypto",

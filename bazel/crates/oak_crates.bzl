@@ -41,6 +41,11 @@ def _common_crates(std):
             version = "0.7.4",
         ),
         "atomic_refcell": crate.spec(version = "0.1.13"),
+        "base64": crate.spec(
+            version = "0.21.7",
+            default_features = False,
+            features = ["alloc"],
+        ),
         "bitflags": crate.spec(version = "2.4.1"),
         "bitvec": crate.spec(
             default_features = False,
@@ -156,6 +161,18 @@ def _common_crates(std):
             ],
             version = "0.13.2",
         ),
+        "p384": crate.spec(
+            default_features = False,
+            features = [
+                "ecdsa",
+                "pem",
+            ],
+            version = "0.13.0",
+        ),
+        "rsa": crate.spec(
+            default_features = False,
+            version = "0.9.6",
+        ),
         "pkcs8": crate.spec(
             default_features = False,
             features = ["alloc"],
@@ -181,8 +198,23 @@ def _common_crates(std):
             features = ["getrandom"],
             version = "0.6.4",
         ),
+        "regex-lite": crate.spec(
+            default_features = False,
+            features = [],
+            version = "0.1.6",
+        ),
         "rlsf": crate.spec(version = "0.2.1"),
         "self_cell": crate.spec(version = "1.0.4"),
+        "serde": crate.spec(
+            default_features = False,
+            features = ["derive"],
+            version = "1.0.195",
+        ),
+        "serde_json": crate.spec(
+            default_features = False,
+            features = ["alloc"],
+            version = "1.0.111",
+        ),
         "sha2": crate.spec(
             default_features = False,
             version = "0.10.8",
@@ -198,10 +230,23 @@ def _common_crates(std):
             features = ["derive"],
             version = "0.26.3",
         ),
+        "time": crate.spec(
+            default_features = False,
+            features = [
+                "serde",
+                "parsing",
+            ],
+            version = "0.3.28",
+        ),
         "wasmi": crate.spec(
             default_features = std,
             # same version as cargo, newer versions had compatibility issues
             version = "0.31.2",
+        ),
+        "x509-cert": crate.spec(
+            default_features = False,
+            features = ["pem"],
+            version = "0.2.5",
         ),
         "x86_64": crate.spec(version = "=0.14"),  #  0.15 does not support LowerHex formatting.
         "zerocopy": crate.spec(
@@ -280,11 +325,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "async-trait": crate.spec(
         default_features = False,
         version = "0.1.77",
-    ),
-    "base64": crate.spec(
-        default_features = False,
-        features = ["alloc"],
-        version = "0.21.7",
     ),
     "bmrng": crate.spec(version = "0.5.2"),
     "chrono": crate.spec(
@@ -374,14 +414,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "os_pipe": crate.spec(version = "1.1.5"),
     "ouroboros": crate.spec(version = "0.18.4"),
-    "p384": crate.spec(
-        default_features = False,
-        features = [
-            "ecdsa",
-            "pem",
-        ],
-        version = "0.13.0",
-    ),
     "parking_lot": crate.spec(version = "0.12.1"),
     "port_check": crate.spec(version = "0.1.5"),
     "portpicker": crate.spec(version = "0.1.1"),
@@ -411,21 +443,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "0.1.6",
     ),
-    "rsa": crate.spec(
-        default_features = False,
-        version = "0.9.6",
-    ),
     "rtnetlink": crate.spec(version = "0.14.1"),
-    "serde": crate.spec(
-        default_features = False,
-        features = ["derive"],
-        version = "1.0.195",
-    ),
-    "serde_json": crate.spec(
-        default_features = False,
-        features = ["alloc"],
-        version = "1.0.111",
-    ),
     "serde_yaml": crate.spec(version = "0.9.30"),
     "signal-hook": crate.spec(version = "0.3.17"),
     "signal-hook-tokio": crate.spec(
@@ -444,14 +462,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "temp-env": crate.spec(version = "0.3.6"),
     "tempfile": crate.spec(version = "3.10.1"),
     "tikv-jemallocator": crate.spec(version = "0.5.4"),
-    "time": crate.spec(
-        default_features = False,
-        features = [
-            "serde",
-            "parsing",
-        ],
-        version = "0.3.28",
-    ),
     "tokio": crate.spec(
         features = [
             "fs",
@@ -523,10 +533,5 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "18.0.4",
     ),
     "which": crate.spec(version = "5.0.0"),
-    "x509-cert": crate.spec(
-        default_features = False,
-        features = ["pem"],
-        version = "0.2.5",
-    ),
     "xz2": crate.spec(version = "0.1.7"),
 }

@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
+load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -25,6 +26,11 @@ rust_library(
     name = "oak_attestation_verification",
     srcs = glob(["src/**"]),
     compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
+    target_compatible_with = either_platform([
+        "//:x86_64-linux-setting",
+        "//:x86_64-none-no_avx-setting",
+        "//:x86_64-none-setting",
+    ]),
     deps = [
         "//oak_dice",
         "//oak_proto_rust",

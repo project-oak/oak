@@ -318,7 +318,7 @@ wasm_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"ta
 bazel-ci:
     # Test Oak as a dependency in the test workspace
     # Some dependencies aren't properly exposed yet, so just testing a subset of targets
-    cd bazel/test_workspace && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
+    cd bazel/test_workspace && ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     bazel build --config=unsafe-fast-presubmit -- //...:all

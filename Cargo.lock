@@ -3090,6 +3090,7 @@ dependencies = [
  "lazy_static",
  "log",
  "micro_rpc",
+ "oak_attestation_verification",
  "oak_channel",
  "oak_core",
  "oak_crypto",
