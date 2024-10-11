@@ -64,6 +64,7 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -103,6 +104,7 @@
 };
 <span class="kw">pub use </span>util::{
     convert_pem_to_raw, hex_to_raw_digest, raw_to_hex_digest, reference_values_from_evidence,
+    UnixTimestampMillis,
 };
 
 <span class="doccomment">/// Verifies a signed endorsement against a reference value.
@@ -123,8 +125,8 @@
     <span class="prelude-val">Ok</span>(EndorsementDetails {
         subject_digest: <span class="prelude-val">Some</span>(digest),
         validity: <span class="prelude-val">Some</span>(Validity {
-            not_before: <span class="number">1000 </span>* validity.not_before.unix_timestamp(),
-            not_after: <span class="number">1000 </span>* validity.not_after.unix_timestamp(),
+            not_before: validity.not_before.unix_timestamp_millis(),
+            not_after: validity.not_after.unix_timestamp_millis(),
         }),
     })
 }

@@ -615,6 +615,30 @@
 <a href="#613" id="613">613</a>
 <a href="#614" id="614">614</a>
 <a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -659,7 +683,8 @@
 
 <span class="kw">use crate</span>::{
     endorsement::{
-        get_digest, is_firmware_type, is_kernel_type, parse_statement, verify_binary_endorsement,
+        <span class="self">self</span>, get_digest, is_firmware_type, is_kernel_type, parse_statement,
+        verify_binary_endorsement,
     },
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
@@ -1006,12 +1031,15 @@
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
             )
             .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(into_expected_digests(<span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>get_digest(<span class="kw-2">&amp;</span>parse_statement(
-                <span class="kw-2">&amp;</span>endorsement.endorsement,
-            )<span class="question-mark">?</span>)<span class="question-mark">?</span>)<span class="question-mark">?</span>]))
+            <span class="kw">let </span>endorsement_statement = parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
+                .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(to_expected_digests(
+                <span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>get_digest(<span class="kw-2">&amp;</span>endorsement_statement)<span class="question-mark">?</span>)<span class="question-mark">?</span>],
+                endorsement_statement.predicate.validity.as_ref(),
+            ))
         }
         <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(expected_digests)) =&gt; {
-            <span class="prelude-val">Ok</span>(into_expected_digests(<span class="kw-2">&amp;</span>expected_digests.digests))
+            <span class="prelude-val">Ok</span>(to_expected_digests(<span class="kw-2">&amp;</span>expected_digests.digests, <span class="prelude-val">None</span>))
         }
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"empty binary reference value"</span>)),
     }
@@ -1062,24 +1090,28 @@
             r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Skipped(VerificationSkipped {})),
         }),
         <span class="prelude-val">Some</span>(binary_reference_value::Type::Endorsement(public_keys)) =&gt; {
-            <span class="kw">let </span>firmware_attachment = get_verified_stage0_attachment(
-                now_utc_millis,
-                endorsement.context(<span class="string">"matching endorsement not found for reference value"</span>)<span class="question-mark">?</span>,
-                public_keys,
-            )
-            .context(<span class="string">"getting verified stage0 attachment"</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>endorsement =
+                endorsement.context(<span class="string">"matching endorsement not found for reference value"</span>)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(into_expected_digests(
+            <span class="kw">let </span>firmware_attachment =
+                get_verified_stage0_attachment(now_utc_millis, endorsement, public_keys)
+                    .context(<span class="string">"getting verified stage0 attachment"</span>)<span class="question-mark">?</span>;
+
+            <span class="kw">let </span>endorsement_statement = parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
+                .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
+
+            <span class="prelude-val">Ok</span>(to_expected_digests(
                 firmware_attachment
                     .configs
                     .values()
                     .map(|digest| hex_to_raw_digest(digest).unwrap())
                     .collect::&lt;Vec&lt;RawDigest&gt;&gt;()
                     .as_slice(),
+                endorsement_statement.predicate.validity.as_ref(),
             ))
         }
         <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(expected_digests)) =&gt; {
-            <span class="prelude-val">Ok</span>(into_expected_digests(expected_digests.digests.as_slice()))
+            <span class="prelude-val">Ok</span>(to_expected_digests(expected_digests.digests.as_slice(), <span class="prelude-val">None</span>))
         }
 
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"empty stage0 reference value"</span>)),
@@ -1149,28 +1181,38 @@
                 .setup_data
                 .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no setup data digest in kernel attachment"</span>))<span class="question-mark">?</span>;
 
+            <span class="kw">let </span>endorsement = endorsement.context(<span class="string">"No endorsement provided"</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>parsed_statement = parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
+                .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
+
             <span class="prelude-val">Ok</span>(KernelExpectedValues {
-                image: <span class="prelude-val">Some</span>(into_expected_digests(<span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>expected_image)<span class="question-mark">?</span>])),
-                setup_data: <span class="prelude-val">Some</span>(into_expected_digests(<span class="kw-2">&amp;</span>[hex_to_raw_digest(
-                    <span class="kw-2">&amp;</span>expected_setup_data,
-                )<span class="question-mark">?</span>])),
+                image: <span class="prelude-val">Some</span>(to_expected_digests(
+                    <span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>expected_image)<span class="question-mark">?</span>],
+                    parsed_statement.predicate.validity.as_ref(),
+                )),
+                setup_data: <span class="prelude-val">Some</span>(to_expected_digests(
+                    <span class="kw-2">&amp;</span>[hex_to_raw_digest(<span class="kw-2">&amp;</span>expected_setup_data)<span class="question-mark">?</span>],
+                    parsed_statement.predicate.validity.as_ref(),
+                )),
             })
         }
         <span class="prelude-val">Some</span>(kernel_binary_reference_value::Type::Digests(expected_digests)) =&gt; {
             <span class="prelude-val">Ok</span>(KernelExpectedValues {
-                image: <span class="prelude-val">Some</span>(into_expected_digests(
+                image: <span class="prelude-val">Some</span>(to_expected_digests(
                     <span class="kw-2">&amp;</span>expected_digests
                         .image
                         .as_ref()
                         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no image digests provided"</span>))<span class="question-mark">?
                         </span>.digests,
+                    <span class="prelude-val">None</span>,
                 )),
-                setup_data: <span class="prelude-val">Some</span>(into_expected_digests(
+                setup_data: <span class="prelude-val">Some</span>(to_expected_digests(
                     <span class="kw-2">&amp;</span>expected_digests
                         .setup_data
                         .as_ref()
                         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no setup_data digests provided"</span>))<span class="question-mark">?
                         </span>.digests,
+                    <span class="prelude-val">None</span>,
                 )),
             })
         }
@@ -1222,9 +1264,15 @@
     }
 }
 
-<span class="kw">fn </span>into_expected_digests(source: <span class="kw-2">&amp;</span>[RawDigest]) -&gt; ExpectedDigests {
+<span class="kw">fn </span>to_expected_digests(
+    source: <span class="kw-2">&amp;</span>[RawDigest],
+    claim_validity: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>endorsement::Validity&gt;,
+) -&gt; ExpectedDigests {
     ExpectedDigests {
-        r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Digests(RawDigests { digests: source.to_vec() })),
+        r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Digests(RawDigests {
+            digests: source.to_vec(),
+            validity: claim_validity.map(|cv| cv.into()),
+        })),
     }
 }
 

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["convert_pem_to_raw","hex_to_raw_digest","raw_to_hex_digest","reference_values_from_evidence","verify_endorsement"],"mod":["expect","policy","verifier"]};
+window.SIDEBAR_ITEMS = {"fn":["convert_pem_to_raw","hex_to_raw_digest","raw_to_hex_digest","reference_values_from_evidence","verify_endorsement"],"mod":["expect","policy","verifier"],"trait":["UnixTimestampMillis"]};

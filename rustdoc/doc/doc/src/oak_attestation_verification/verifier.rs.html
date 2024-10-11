@@ -719,7 +719,6 @@
 <a href="#717" id="717">717</a>
 <a href="#718" id="718">718</a>
 <a href="#719" id="719">719</a>
-<a href="#720" id="720">720</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -805,11 +804,11 @@
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
 ///
-/// This just fetches expected values using [get_expected_values], and then
-/// calls [verify_with_expected_values] with those.
+/// This just fetches expected values using [`expect::get_expected_values`],
+/// and then call [`verify_with_expected_values`] providing those values.
 ///
 /// If you'd like to cache and reuse the values, call those two methods
-/// indepedently, and cache the results of the first.
+/// independently, and cache the results of the first.
 </span><span class="kw">pub fn </span>verify(
     now_utc_millis: i64,
     evidence: <span class="kw-2">&amp;</span>Evidence,
@@ -823,7 +822,6 @@
 }
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
-/// This variant returns expected values along with the extracted evidence.
 </span><span class="kw">pub fn </span>verify_with_expected_values(
     now_utc_millis: i64,
     evidence: <span class="kw-2">&amp;</span>Evidence,

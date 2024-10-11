@@ -434,6 +434,9 @@
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
 <a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -473,7 +476,10 @@
 
 <span class="kw">use crate</span>::{
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa},
-    util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
+    util::{
+        convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa,
+        UnixTimestampMillis,
+    },
 };
 
 <span class="doccomment">/// URI representing in-toto statements. We only use V1, earlier and later
@@ -763,10 +769,10 @@
 
     <span class="kw">match </span><span class="kw-2">&amp;</span>statement.predicate.validity {
         <span class="prelude-val">Some</span>(validity) =&gt; {
-            <span class="kw">if </span><span class="number">1000 </span>* validity.not_before.unix_timestamp() &gt; now_utc_millis.into() {
+            <span class="kw">if </span>validity.not_before.unix_timestamp_millis() &gt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is not yet applicable"</span>)
             }
-            <span class="kw">if </span><span class="number">1000 </span>* validity.not_after.unix_timestamp() &lt; now_utc_millis.into() {
+            <span class="kw">if </span>validity.not_after.unix_timestamp_millis() &lt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is no longer applicable"</span>)
             }
         }
