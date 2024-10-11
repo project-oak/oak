@@ -458,7 +458,7 @@
 }
 
 <span class="kw">impl </span>Nonce {
-    <span class="kw">pub fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
+    <span class="kw">pub fn </span>next_nonce(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.nonce &gt; MAX_SEQUENCE {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptFailed);
         }
@@ -569,11 +569,11 @@
     }
 
     <span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        aes_gcm_256_encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.write_key, <span class="kw-2">&amp;</span><span class="self">self</span>.write_nonce.next()<span class="question-mark">?</span>, plaintext)
+        aes_gcm_256_encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.write_key, <span class="kw-2">&amp;</span><span class="self">self</span>.write_nonce.next_nonce()<span class="question-mark">?</span>, plaintext)
     }
 
     <span class="kw">pub fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ciphertext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, <span class="kw-2">&amp;</span><span class="self">self</span>.read_nonce.next()<span class="question-mark">?</span>, ciphertext)
+        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, <span class="kw-2">&amp;</span><span class="self">self</span>.read_nonce.next_nonce()<span class="question-mark">?</span>, ciphertext)
     }
 }
 
@@ -646,7 +646,7 @@
     }
 
     <span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;), Error&gt; {
-        <span class="kw">let </span>nonce = <span class="self">self</span>.write_nonce.next()<span class="question-mark">?</span>;
+        <span class="kw">let </span>nonce = <span class="self">self</span>.write_nonce.next_nonce()<span class="question-mark">?</span>;
         <span class="kw">let </span>encrypted_message = aes_gcm_256_encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.write_key, <span class="kw-2">&amp;</span>nonce, plaintext)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>((encrypted_message, nonce.to_vec()))
     }
@@ -656,7 +656,7 @@
         nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN],
         ciphertext: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        <span class="kw">let </span>nonce_value = Nonce::get_nonce_value(<span class="kw-2">&amp;</span>nonce)<span class="question-mark">?</span>;
+        <span class="kw">let </span>nonce_value = Nonce::get_nonce_value(nonce)<span class="question-mark">?</span>;
         <span class="kw">let </span>lowest_acceptable_nonce = <span class="self">self</span>.get_lowest_acceptable_read_nonce();
         <span class="comment">// Nonce is way too far in the past, reject it.
         </span><span class="kw">if </span>nonce_value &lt; lowest_acceptable_nonce {
@@ -678,7 +678,7 @@
             <span class="self">self</span>.buffered_read_nonces.retain(|<span class="kw-2">&amp;</span>n| n &gt;= new_lowest_acceptable_nonce);
             <span class="self">self</span>.buffered_read_nonces.insert(nonce_value);
         }
-        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, <span class="kw-2">&amp;</span>nonce, ciphertext)
+        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, nonce, ciphertext)
     }
 }
 
@@ -736,7 +736,7 @@
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
 
     </span>noise.mix_hash(in_message.ephemeral_public_key.as_slice());
-    noise.mix_key(<span class="kw-2">&amp;</span>in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
     finish_response(<span class="kw-2">&amp;mut </span>noise, in_message)
 }
 

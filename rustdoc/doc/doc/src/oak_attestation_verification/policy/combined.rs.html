@@ -161,10 +161,10 @@
         );
         <span class="kw">let </span>event_attestation_results = verification_iterator
             .map(|(event_policy, event, event_endorsements)| {
-                event_policy.verify(event, event_endorsements).unwrap_or_else(|<span class="kw">_</span>| {
+                event_policy.verify(event, event_endorsements).unwrap_or(
                     <span class="comment">// TODO: b/366186091 - Use Rust error types for failed attestation.
-                    </span>EventAttestationResults {}
-                })
+                    </span>EventAttestationResults {},
+                )
             })
             .collect::&lt;Vec&lt;EventAttestationResults&gt;&gt;();
 

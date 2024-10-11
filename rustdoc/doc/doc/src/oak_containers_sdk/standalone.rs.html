@@ -289,12 +289,12 @@
         )<span class="question-mark">?</span>;
 
         <span class="comment">// Add Stage1 layer data
-        </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(<span class="kw-2">&amp;</span>stage1_system_image);
+        </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
         attester.add_layer(stage1_layer_data)<span class="question-mark">?</span>;
 
         <span class="comment">// Add Orchestrator layer data
         </span><span class="kw">let </span>orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
-            <span class="kw-2">&amp;</span>application_image,
+            application_image,
             <span class="kw-2">&amp;</span>application_config,
         );
 

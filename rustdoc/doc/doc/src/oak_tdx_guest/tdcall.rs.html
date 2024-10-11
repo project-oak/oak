@@ -763,7 +763,7 @@
     </span><span class="kw">const </span>LEAF: u64 = <span class="number">2</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>result: u64;
-    <span class="kw">let </span>buf_gpa = (<span class="kw-2">&amp;</span>buf.into().data).as_ptr() <span class="kw">as </span>usize <span class="kw">as </span>u64;
+    <span class="kw">let </span>buf_gpa = (buf.into().data).as_ptr() <span class="kw">as </span>usize <span class="kw">as </span>u64;
     <span class="kw">let </span>rtmr_index = rtmr_index <span class="kw">as </span>u64;
 
     <span class="comment">// The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The

@@ -458,7 +458,7 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec, vec::Vec};
+<span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
@@ -623,7 +623,7 @@
     <span class="comment">// The signature verification is also part of log entry verification,
     // so in some cases this check will be dispensable. We verify the
     // signature nonetheless before parsing the endorsement.
-    </span>verify_signature(<span class="kw-2">&amp;</span>signature, <span class="kw-2">&amp;</span>endorsement.serialized, <span class="kw-2">&amp;</span>endorser_key_set)
+    </span>verify_signature(signature, <span class="kw-2">&amp;</span>endorsement.serialized, endorser_key_set)
         .context(<span class="string">"verifying signature"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>statement =
@@ -680,7 +680,7 @@
         .context(<span class="string">"verifying signature"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>statement = parse_statement(endorsement).context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
-    validate_statement(now_utc_millis, <span class="kw-2">&amp;</span><span class="macro">vec!</span>[], <span class="kw-2">&amp;</span>statement)
+    validate_statement(now_utc_millis, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>statement)
         .context(<span class="string">"verifying endorsement statement"</span>)<span class="question-mark">?</span>;
 
     <span class="kw">if </span>!rekor_public_key.is_empty() {
@@ -706,10 +706,10 @@
         .iter()
         .find(|k| k.key_id == signature_key_id)
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not find key id in key set"</span>))<span class="question-mark">?</span>;
-    <span class="kw">return match </span>key.r#type() {
+    <span class="kw">match </span>key.r#type() {
         KeyType::Undefined =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Undefined key type"</span>),
         KeyType::EcdsaP256Sha256 =&gt; verify_endorser_public_key_ecdsa(log_entry, <span class="kw-2">&amp;</span>key.raw),
-    };
+    }
 }
 
 <span class="doccomment">/// Verifies that the endorser public key coincides with the one contained in
@@ -769,10 +769,10 @@
 
     <span class="kw">match </span><span class="kw-2">&amp;</span>statement.predicate.validity {
         <span class="prelude-val">Some</span>(validity) =&gt; {
-            <span class="kw">if </span>validity.not_before.unix_timestamp_millis() &gt; now_utc_millis.into() {
+            <span class="kw">if </span>validity.not_before.unix_timestamp_millis() &gt; now_utc_millis {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is not yet applicable"</span>)
             }
-            <span class="kw">if </span>validity.not_after.unix_timestamp_millis() &lt; now_utc_millis.into() {
+            <span class="kw">if </span>validity.not_after.unix_timestamp_millis() &lt; now_utc_millis {
                 <span class="macro">anyhow::bail!</span>(<span class="string">"the claim is no longer applicable"</span>)
             }
         }

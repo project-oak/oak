@@ -394,6 +394,7 @@
 <a href="#392" id="392">392</a>
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -510,7 +511,7 @@
                 .map(From::from)
                 .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.outgoing_requests.push_back(SessionRequest {
-                request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message.into())),
+                request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message)),
             });
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
@@ -569,7 +570,7 @@
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
         <span class="kw">match </span>incoming_message.response.as_ref() {
             <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)) =&gt; {
-                <span class="self">self</span>.attester.put_incoming_message(<span class="kw-2">&amp;</span>attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                <span class="self">self</span>.attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
                      any"
                 </span>))<span class="question-mark">?</span>;
@@ -579,7 +580,7 @@
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
             <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)) =&gt; {
-                <span class="self">self</span>.handshaker.put_incoming_message(<span class="kw-2">&amp;</span>handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 </span>))<span class="question-mark">?</span>;
@@ -587,7 +588,7 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
                         verify_session_binding(
                             <span class="self">self</span>.binding_key_extractor.as_ref(),
-                            <span class="kw-2">&amp;</span>attestation_result,
+                            attestation_result,
                             <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
                         )<span class="question-mark">?</span>;
@@ -604,11 +605,11 @@
             <span class="prelude-val">Some</span>(Response::EncryptedMessage(<span class="kw">_</span>)) =&gt; {
                 <span class="kw">if </span><span class="self">self</span>.is_open() {
                     <span class="self">self</span>.incoming_responses.push_back(incoming_message.clone());
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()));
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
                 } <span class="kw">else </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
                         <span class="string">"invalid session state: incoming encrypted message received but session is not open"
-                    </span>));
+                    </span>))
                 }
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
@@ -698,15 +699,16 @@
                 response: <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)),
             }));
         }
+
         <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_message) = <span class="self">self</span>.handshaker.get_outgoing_message()<span class="question-mark">? </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
                 response: <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)),
-            }));
+            }))
+        } <span class="kw">else if </span><span class="self">self</span>.is_open() {
+            <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front())
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session in unexpected state"</span>))
         }
-        <span class="kw">if </span><span class="self">self</span>.is_open() {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front());
-        };
-        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session in unexpected state"</span>))
     }
 
     <span class="kw">fn </span>put_incoming_message(
@@ -715,7 +717,7 @@
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
         <span class="kw">match </span>incoming_message.request.as_ref() {
             <span class="prelude-val">Some</span>(Request::AttestRequest(attest_message)) =&gt; {
-                <span class="self">self</span>.attester.put_incoming_message(<span class="kw-2">&amp;</span>attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                <span class="self">self</span>.attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
                  any"
                 </span>))<span class="question-mark">?</span>;
@@ -725,7 +727,7 @@
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
             <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)) =&gt; {
-                <span class="self">self</span>.handshaker.put_incoming_message(<span class="kw-2">&amp;</span>handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
                  expect any"
                 </span>))<span class="question-mark">?</span>;
@@ -733,7 +735,7 @@
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
                         verify_session_binding(
                             <span class="self">self</span>.binding_key_extractor.as_ref(),
-                            <span class="kw-2">&amp;</span>attestation_result,
+                            attestation_result,
                             <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
                             handshake_result.handshake_hash.as_slice(),
                         )<span class="question-mark">?</span>;
@@ -750,11 +752,11 @@
             <span class="prelude-val">Some</span>(Request::EncryptedMessage(<span class="kw">_</span>)) =&gt; {
                 <span class="kw">if </span><span class="self">self</span>.is_open() {
                     <span class="self">self</span>.incoming_requests.push_back(incoming_message.clone());
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()));
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
                 } <span class="kw">else </span>{
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
                         <span class="string">"invalid session state: incoming encrypted message received but session is not open"
-                    </span>));
+                    </span>))
                 }
             }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),

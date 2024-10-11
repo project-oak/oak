@@ -421,7 +421,7 @@
 // logic has been moved to a separate crate.
 </span><span class="attr">#[cfg_attr(test, automock)]
 </span><span class="kw">pub trait </span>Endorser: Send {
-    <span class="kw">fn </span>endorse&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, evidence: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Evidence&gt;) -&gt; anyhow::Result&lt;Endorsements&gt;;
+    <span class="kw">fn </span>endorse&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, evidence: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Evidence&gt;) -&gt; anyhow::Result&lt;Endorsements&gt;;
 }
 
 <span class="attr">#[cfg_attr(test, automock)]

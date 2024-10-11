@@ -322,7 +322,7 @@
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
             evidence: <span class="kw-2">&amp;</span>d.evidence,
-            encoded_event_log: <span class="kw-2">&amp;</span>d
+            encoded_event_log: d
                 .encoded_event_log
                 .as_ref()
                 .expect(<span class="string">"mock dice wrapper contains event log"</span>),

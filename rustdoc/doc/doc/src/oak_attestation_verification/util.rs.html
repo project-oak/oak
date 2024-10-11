@@ -487,14 +487,6 @@
 <a href="#485" id="485">485</a>
 <a href="#486" id="486">486</a>
 <a href="#487" id="487">487</a>
-<a href="#488" id="488">488</a>
-<a href="#489" id="489">489</a>
-<a href="#490" id="490">490</a>
-<a href="#491" id="491">491</a>
-<a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -512,7 +504,7 @@
 //
 
 </span><span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
-<span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
+<span class="kw">use </span>core::cmp::Ordering;
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ecdsa::signature::Verifier;
@@ -539,6 +531,14 @@
 
 <span class="kw">const </span>PUBLIC_KEY_PEM_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"PUBLIC KEY"</span>;
 
+<span class="doccomment">/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
+</span><span class="attr">#[allow(unused)]
+</span><span class="kw">pub fn </span>convert_raw_to_pem(asn1_der_public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
+    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
+        .expect(<span class="string">"public key bytes are not ASN.1 DER"</span>);
+    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect(<span class="string">"couldn't create pem"</span>)
+}
+
 <span class="doccomment">/// Converts a PEM public key to raw ASN.1 DER bytes.
 </span><span class="kw">pub fn </span>convert_pem_to_raw(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span>(label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
@@ -550,22 +550,6 @@
     </span>);
 
     <span class="prelude-val">Ok</span>(key.into_vec())
-}
-
-<span class="doccomment">/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
-</span><span class="kw">pub fn </span>convert_raw_to_pem(asn1_der_public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
-        .expect(<span class="string">"public key bytes are not ASN.1 DER"</span>);
-    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect(<span class="string">"couldn't create pem"</span>)
-}
-
-<span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-</span><span class="kw">pub fn </span>convert_pem_to_verifying_key(
-    public_key_pem: <span class="kw-2">&amp;</span>str,
-) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem).map_err(|error| {
-        <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't parse pem as a p256::ecdsa::VerifyingKey: {}"</span>, error)
-    })
 }
 
 <span class="doccomment">/// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
@@ -599,10 +583,10 @@
         .iter()
         .find(|k| k.key_id == signature.key_id)
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not find key id in key set"</span>))<span class="question-mark">?</span>;
-    <span class="kw">return match </span>key.r#type() {
+    <span class="kw">match </span>key.r#type() {
         KeyType::Undefined =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Undefined key type"</span>),
         KeyType::EcdsaP256Sha256 =&gt; verify_signature_ecdsa(<span class="kw-2">&amp;</span>signature.raw, contents, <span class="kw-2">&amp;</span>key.raw),
-    };
+    }
 }
 
 <span class="doccomment">/// Verifies the signature over the contents using the public key.
@@ -651,10 +635,10 @@
 
 <span class="attr">#[derive(PartialEq)]
 </span><span class="kw">pub enum </span>MatchResult {
-    SAME = <span class="number">0</span>,
-    DIFFERENT = <span class="number">1</span>,
-    UNDECIDABLE = <span class="number">2</span>,
-    CONTRADICTORY = <span class="number">3</span>,
+    Same = <span class="number">0</span>,
+    Different = <span class="number">1</span>,
+    Undecidable = <span class="number">2</span>,
+    Contradictory = <span class="number">3</span>,
 }
 
 <span class="doccomment">/// Compares two digests instances for equality.
@@ -663,11 +647,11 @@
 /// If it is undesirable to include the weak sha1 hash in the decision simply
 /// remove it from either input.
 ///
-/// SAME if underlying binaries are the same, DIFFERENT if they differ.
-/// UNDECIDABLE if the constellation in the protos doesn't provide enough
-/// information, CONTRADICTORY if the constellation suggest same and different
-/// at the same time. UNDECIDABLE and CONTRADICTORY usually point to problems
-/// which are unlikely to be addressable at run time.
+/// [`Same`] if underlying binaries are the same, [`Different`] if they differ.
+/// [`Undecidable`] if the constellation in the protos doesn't provide enough
+/// information, [`Contradictory`] if the constellation suggest same and
+/// different at the same time. [`Undecidable`] and [`Contradictory`] usually
+/// point to problems which are unlikely to be addressable at run time.
 </span><span class="kw">pub fn </span>get_hex_digest_match(a: <span class="kw-2">&amp;</span>HexDigest, b: <span class="kw-2">&amp;</span>HexDigest) -&gt; MatchResult {
     <span class="kw">let </span><span class="kw-2">mut </span>same = <span class="number">0</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>different = <span class="number">0</span>;
@@ -694,9 +678,9 @@
 
     <span class="attr">#[allow(clippy::collapsible_else_if)]
     </span><span class="kw">if </span>same &gt; <span class="number">0 </span>{
-        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::CONTRADICTORY } <span class="kw">else </span>{ MatchResult::SAME }
+        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::Contradictory } <span class="kw">else </span>{ MatchResult::Same }
     } <span class="kw">else </span>{
-        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::DIFFERENT } <span class="kw">else </span>{ MatchResult::UNDECIDABLE }
+        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::Different } <span class="kw">else </span>{ MatchResult::Undecidable }
     }
 }
 
@@ -707,23 +691,23 @@
 
 <span class="kw">pub fn </span>is_hex_digest_match(actual: <span class="kw-2">&amp;</span>HexDigest, expected: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>get_hex_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
+        MatchResult::Same =&gt; <span class="prelude-val">Ok</span>(()),
+        MatchResult::Different =&gt; {
             <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
         }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
-        MatchResult::CONTRADICTORY =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
+        MatchResult::Undecidable =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
+        MatchResult::Contradictory =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
     }
 }
 
 <span class="kw">pub fn </span>is_raw_digest_match(actual: <span class="kw-2">&amp;</span>RawDigest, expected: <span class="kw-2">&amp;</span>RawDigest) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>get_raw_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
+        MatchResult::Same =&gt; <span class="prelude-val">Ok</span>(()),
+        MatchResult::Different =&gt; {
             <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
         }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
-        MatchResult::CONTRADICTORY =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
+        MatchResult::Undecidable =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
+        MatchResult::Contradictory =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
     }
 }
 
@@ -917,7 +901,7 @@
     expected_type_url: <span class="kw-2">&amp;</span>str,
     encoded_event: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;M&gt; {
-    <span class="kw">let </span>event_proto = Event::decode(encoded_event.as_ref())
+    <span class="kw">let </span>event_proto = Event::decode(encoded_event)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event: {}"</span>, error))<span class="question-mark">?</span>;
     decode_protobuf_any::&lt;M&gt;(
         expected_type_url,
@@ -930,7 +914,7 @@
     expected_type_url: <span class="kw-2">&amp;</span>str,
     encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;M&gt; {
-    <span class="kw">let </span>event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement.as_ref())
+    <span class="kw">let </span>event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event endorsement: {}"</span>, error))<span class="question-mark">?</span>;
     decode_protobuf_any::&lt;M&gt;(
         expected_type_url,

@@ -414,8 +414,6 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -467,9 +465,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>digest = sha2::Sha256::default();
         digest.update(<span class="self">self</span>);
         <span class="kw">let </span>digest_bytes: [u8; <span class="number">32</span>] = digest.finalize().into();
-        <span class="kw">let </span><span class="kw-2">mut </span>raw_digest = RawDigest::default();
-        raw_digest.sha2_256 = digest_bytes.to_vec();
-        raw_digest
+        RawDigest { sha2_256: digest_bytes.to_vec(), ..Default::default() }
     }
 }
 
@@ -741,7 +737,7 @@
             certificate_authority.eca_private_key.zeroize();
         }
 
-        <span class="prelude-val">Ok</span>(DiceAttester { evidence: evidence.clone(), signing_key: signing_key })
+        <span class="prelude-val">Ok</span>(DiceAttester { evidence: evidence.clone(), signing_key })
     }
 }
 
@@ -790,11 +786,11 @@
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
     <span class="kw">let </span>event_log = encoded_event_log
-        .map(|data| EventLog::decode(data))
+        .map(EventLog::decode)
         .transpose()
         .map_err(anyhow::Error::msg)
         .context(<span class="string">"couldn't decode event log"</span>)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: event_log })
+    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log })
 }
 
 <span class="kw">fn </span>root_layer_evidence_to_proto(

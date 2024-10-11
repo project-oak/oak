@@ -737,7 +737,7 @@
 
 </span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
-</span><span class="kw">use </span>alloc::{format, vec::Vec};
+</span><span class="kw">use </span>alloc::format;
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
@@ -994,7 +994,7 @@
 /// correctly described in the claims of the associated dice layers.
 </span><span class="kw">fn </span>validate_that_event_log_is_captured_in_dice_layers(
     event_log: <span class="kw-2">&amp;</span>EventLog,
-    dice_layers: <span class="kw-2">&amp;</span>Vec&lt;LayerEvidence&gt;,
+    dice_layers: <span class="kw-2">&amp;</span>[LayerEvidence],
 ) -&gt; anyhow::Result&lt;()&gt; {
     dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
         |(current_layer, encoded_event)| {
@@ -1007,11 +1007,11 @@
                     .context(<span class="string">"Missing event"</span>)<span class="question-mark">?
             </span>};
             <span class="kw">let </span>actual_event_hash = <span class="kw-2">&amp;</span>&lt;sha2::Sha256 <span class="kw">as </span>sha2::Digest&gt;::digest(encoded_event).to_vec();
-            <span class="kw">return if </span>actual_event_hash != <span class="kw-2">&amp;</span>event_digest.sha2_256 {
+            <span class="kw">if </span>actual_event_hash != <span class="kw-2">&amp;</span>event_digest.sha2_256 {
                 <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"event log hash mismatch"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">Ok</span>(())
-            };
+            }
         },
     )
 }

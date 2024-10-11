@@ -643,6 +643,7 @@
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -783,12 +784,12 @@
                         <span class="macro">anyhow::anyhow!</span>(<span class="string">"Failed to decode oak containers container layer data"</span>)
                     })<span class="question-mark">?</span>;
 
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(EvidenceValues::OakContainers(OakContainersData {
+                <span class="prelude-val">Ok</span>(EvidenceValues::OakContainers(OakContainersData {
                     root_layer,
                     kernel_layer: <span class="prelude-val">Some</span>(kernel_layer),
                     system_layer: <span class="prelude-val">Some</span>(system_layer),
                     container_layer: <span class="prelude-val">Some</span>(container_layer),
-                }));
+                }))
             }
             EvidenceType::LegacyOakContainers =&gt; {
                 <span class="kw">let </span>kernel_layer = decoded_events[<span class="number">0</span>]
@@ -817,12 +818,12 @@
                             <span class="string">"Failed to decode legacy oak containers container layer data"
                         </span>)
                     })<span class="question-mark">?</span>;
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(EvidenceValues::OakContainers(OakContainersData {
+                <span class="prelude-val">Ok</span>(EvidenceValues::OakContainers(OakContainersData {
                     root_layer,
                     kernel_layer: <span class="prelude-val">Some</span>(kernel_layer),
                     system_layer: <span class="prelude-val">Some</span>(system_layer),
                     container_layer: <span class="prelude-val">Some</span>(container_layer),
-                }));
+                }))
             }
             EvidenceType::OakRestrictedKernel =&gt; {
                 <span class="kw">let </span>kernel_layer = decoded_events[<span class="number">0</span>]
@@ -841,11 +842,11 @@
                         <span class="macro">anyhow::anyhow!</span>(<span class="string">"Failed to decode oak restricted application layer data"</span>)
                     })<span class="question-mark">?</span>;
 
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
+                <span class="prelude-val">Ok</span>(EvidenceValues::OakRestrictedKernel(OakRestrictedKernelData {
                     root_layer,
                     kernel_layer: <span class="prelude-val">Some</span>(kernel_layer),
                     application_layer: <span class="prelude-val">Some</span>(application_layer),
-                }));
+                }))
             }
             EvidenceType::CB =&gt; <span class="prelude-val">Ok</span>(EvidenceValues::Cb(CbData {
                 root_layer,
@@ -1219,9 +1220,10 @@
                 <span class="macro">anyhow::bail!</span>(<span class="string">"digest is not a byte array"</span>);
             }
         }
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(result);
+        <span class="prelude-val">Ok</span>(result)
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"value is not a map of digests"</span>))
     }
-    <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"value is not a map of digests"</span>))
 }
 
 <span class="doccomment">/// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same
