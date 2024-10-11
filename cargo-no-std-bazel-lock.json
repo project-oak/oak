@@ -1,5 +1,5 @@
 {
-  "checksum": "55b86a830ab7076e4a9408496e514c1beefaf2e311e1a0c21325e5693da39190",
+  "checksum": "902695f928360044cdf4c834db41d1c54f0305d87c8b44e3ecc7149cef953a14",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -860,6 +860,51 @@
         "version": "0.10.2"
       },
       "license": "Apache-2.0/MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "bitflags 1.3.2": {
+      "name": "bitflags",
+      "version": "1.3.2",
+      "package_url": "https://github.com/bitflags/bitflags",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bitflags/1.3.2/download",
+          "sha256": "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bitflags",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bitflags",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.3.2"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -2958,6 +3003,10 @@
             {
               "id": "time 0.3.36",
               "target": "time"
+            },
+            {
+              "id": "uart_16550 0.3.1",
+              "target": "uart_16550"
             },
             {
               "id": "virtio-drivers 0.7.3",
@@ -6870,6 +6919,53 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "raw-cpuid 10.7.0": {
+      "name": "raw-cpuid",
+      "version": "10.7.0",
+      "package_url": "https://github.com/gz/rust-cpuid",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/raw-cpuid/10.7.0/download",
+          "sha256": "6c297679cb867470fa8c9f67dbba74a78d78e3e98d7cf2b08d6d71540f797332"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "raw_cpuid",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "raw_cpuid",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "bitflags 1.3.2",
+              "target": "bitflags"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "10.7.0"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE.md"
+    },
     "regex-lite 0.1.6": {
       "name": "regex-lite",
       "version": "0.1.6",
@@ -9089,6 +9185,75 @@
       ],
       "license_file": "LICENSE"
     },
+    "uart_16550 0.3.1": {
+      "name": "uart_16550",
+      "version": "0.3.1",
+      "package_url": "https://github.com/rust-osdev/uart_16550",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/uart_16550/0.3.1/download",
+          "sha256": "4922792855b1bce30997fbaa5418597902c278a92d20dfe348e6f062c3bd861d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "uart_16550",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "uart_16550",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bitflags 2.5.0",
+              "target": "bitflags"
+            }
+          ],
+          "selects": {
+            "cfg(any(target_arch = \"x86\", target_arch = \"x86_64\"))": [
+              {
+                "id": "x86 0.52.0",
+                "target": "x86"
+              }
+            ]
+          }
+        },
+        "edition": "2018",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "rustversion 1.0.16",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.3.1"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "unicode-ident 1.0.12": {
       "name": "unicode-ident",
       "version": "1.0.12",
@@ -9788,6 +9953,82 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "x86 0.52.0": {
+      "name": "x86",
+      "version": "0.52.0",
+      "package_url": "https://github.com/gz/rust-x86",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x86/0.52.0/download",
+          "sha256": "2781db97787217ad2a2845c396a5efe286f87467a5810836db6d74926e94a385"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x86",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x86",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "bit_field 0.10.2",
+              "target": "bit_field"
+            },
+            {
+              "id": "bitflags 1.3.2",
+              "target": "bitflags"
+            },
+            {
+              "id": "raw-cpuid 10.7.0",
+              "target": "raw_cpuid"
+            },
+            {
+              "id": "x86 0.52.0",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.52.0"
+      },
+      "build_script_attrs": {
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "x86_64 0.14.11": {
       "name": "x86_64",
       "version": "0.14.11",
@@ -10121,6 +10362,10 @@
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
     ],
+    "cfg(any(target_arch = \"x86\", target_arch = \"x86_64\"))": [
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-none"
+    ],
     "cfg(any(target_arch = \"x86_64\", target_arch = \"x86\"))": [
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
@@ -10201,6 +10446,7 @@
     "static_assertions 1.1.0",
     "strum 0.26.3",
     "time 0.3.36",
+    "uart_16550 0.3.1",
     "virtio-drivers 0.7.3",
     "wasmi 0.31.2",
     "x509-cert 0.2.5",

@@ -312,8 +312,8 @@ clang-tidy:
 # We store the command for the query in this variable, but defer executing it
 # until usage to prevent bazel invocation on any just invocation.
 # Lazy assignment is not yet supported: https://github.com/casey/just/issues/953
-bare_metal_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)' --platforms=//:x86_64-unknown-none | cut -d' ' -f1 | tr '\\n' ' '"
-wasm_crates_query := "bazel cquery 'kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)' | cut -d' ' -f1 | tr '\\n' ' '"
+bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)"
+wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
 bazel-ci:
     # Test Oak as a dependency in the test workspace
@@ -324,15 +324,20 @@ bazel-ci:
     bazel build --config=unsafe-fast-presubmit -- //...:all
     bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 
-    # Some crates also need to be built for x86_64-unknown-none and for wasm32-unknown-unknown.
-    bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none -- $({{bare_metal_crates_query}})
-    bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown -- $({{wasm_crates_query}})
+test-workspace-ci:
+    # Test Oak as a dependency in the test workspace
+    # Some dependencies aren't properly exposed yet, so just testing a subset of targets
+    cd bazel/test_workspace && ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build --config=unsafe-fast-presubmit @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
-    # Verify that any changes to attestation outputs are non-breaking and that snapshots are up to date.
-    oak_attestation_integration_tests/update_testdata_assert_no_breaking_changes
+bare-metal-crates-ci:
+    #!/bin/bash
+    set -o pipefail
+    # Some crates also need to be built for x86_64-unknown-none and for wasm32-unknown-unknown.
+    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none
+    bazel query "{{wasm_crates_query}}" | xargs bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown
 
 list-bare-metal-crates:
-    {{bare_metal_crates_query}}
+    bazel query "{{bare_metal_crates_query}}"
 
 bazel-clippy:
     bazel build --keep_going --config=clippy "$@" //...:all -- -third_party/...

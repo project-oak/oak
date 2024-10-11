@@ -238,6 +238,7 @@ def _common_crates(std):
             ],
             version = "0.3.28",
         ),
+        "uart_16550": crate.spec(version = "0.3.0"),
         "wasmi": crate.spec(
             default_features = std,
             # same version as cargo, newer versions had compatibility issues
@@ -515,7 +516,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.4.4",
     ),
     "tracing": crate.spec(version = "0.1.40"),
-    "uart_16550": crate.spec(version = "0.3.0"),
     "ubyte": crate.spec(version = "0.10.4"),
     "walkdir": crate.spec(version = "2.5.0"),
     "wasmtime": crate.spec(
