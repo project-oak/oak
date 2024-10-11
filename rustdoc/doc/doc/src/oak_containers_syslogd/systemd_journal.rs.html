@@ -351,8 +351,8 @@
                     <span class="kw">let </span>(name, value) =
                         field.split_at(field.iter().position(|x| <span class="kw-2">*</span>x == <span class="string">b'='</span>).unwrap_or(<span class="number">0</span>));
                     fields.insert(
-                        std::str::from_utf8(name).unwrap().to_string(),
-                        std::str::from_utf8(<span class="kw-2">&amp;</span>value[<span class="number">1</span>..]).unwrap().to_string(),
+                        std::str::from_utf8(name).unwrap_or(<span class="string">"non-string"</span>).to_string(),
+                        std::str::from_utf8(<span class="kw-2">&amp;</span>value[<span class="number">1</span>..]).unwrap_or(<span class="string">"non-string"</span>).to_string(),
                     );
                 }
 
