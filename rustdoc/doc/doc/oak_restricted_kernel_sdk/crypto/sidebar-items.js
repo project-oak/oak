@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["InstanceEncryptionKeyHandle","InstanceSigner"]};
+window.SIDEBAR_ITEMS = {"struct":["InstanceEncryptionKeyHandle","InstanceSessionBinder","InstanceSigner"]};
