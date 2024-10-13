@@ -30,6 +30,7 @@ use x86_64::{
     },
     PhysAddr,
 };
+use zerocopy::{AsBytes, FromBytes};
 
 use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
@@ -93,6 +94,14 @@ pub trait Platform {
     ///   - You do not have access to heap allocator (BOOT_ALLOCATOR will still
     ///     work).
     fn early_initialize_platform();
+
+    /// Prefill E820 Table using platform specific features.
+    ///
+    /// Intel TDX requires the virtual firmware to consume inputs from TD HoB
+    /// and measure them. This gets executed before asking the fw_cfg device
+    /// for E820 table. It should populate the inner E820 table. If this
+    /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
+    fn prefill_e820_table<T: AsBytes + FromBytes>(input: &mut T) -> Result<usize, &'static str>;
 
     /// Platform-specific intialization.
     ///

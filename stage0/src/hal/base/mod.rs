@@ -30,6 +30,7 @@ use x86_64::{
         port::{PortRead, PortWrite},
     },
 };
+use zerocopy::{AsBytes, FromBytes};
 
 use super::{PageAssignment, PortFactory};
 use crate::{paging::PageEncryption, zero_page::ZeroPage};
@@ -71,6 +72,10 @@ impl crate::Platform for Base {
     }
 
     fn early_initialize_platform() {}
+
+    fn prefill_e820_table<T: AsBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
+        Err("not needed")
+    }
 
     fn initialize_platform(_e820_table: &[BootE820Entry]) {}
 

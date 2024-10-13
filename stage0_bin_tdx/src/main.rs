@@ -18,13 +18,14 @@
 #![no_main]
 
 use core::{
+    mem::{size_of, MaybeUninit},
     ops::{Index, IndexMut},
     panic::PanicInfo,
     sync::atomic::Ordering,
 };
 
 use log::info;
-use oak_linux_boot_params::E820EntryType;
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::paging::{self, PageEncryption};
 use oak_tdx_guest::{
     tdcall::get_td_info,
@@ -42,6 +43,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
 mod asm;
@@ -61,6 +63,12 @@ mod counters {
 }
 
 #[no_mangle]
+static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit();
+
+#[no_mangle]
+static mut TD_MAILBOX_START: MaybeUninit<u32> = MaybeUninit::uninit();
+
+#[no_mangle]
 static mut GPAW: u32 = 0;
 
 #[no_mangle]
@@ -68,10 +76,45 @@ static mut AP_IN_64BIT_COUNT: u32 = 0;
 
 static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
 
+const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;
+const EFI_HOB_TYPE_RESOURCE_DESCRIPTOR: u16 = 0x0003;
+const EFI_HOB_TYPE_END_OF_HOB_LIST: u16 = 0xFFFF;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Header {
+    pub hob_type: u16,
+    pub hob_length: u16,
+    pub reserved: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct HandoffInfoTable {
+    header: Header,
+    version: u32,
+    boot_mode: u32,
+    memory_top: u64,
+    memory_bottom: u64,
+    free_memory_top: u64,
+    free_memory_bottom: u64,
+    end_of_hob_list: u64,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct ResourceDescription {
+    header: Header,
+    owner: [u8; 16], // Guid
+    resource_type: u32,
+    resource_attribute: u32,
+    physical_start: u64,
+    resource_length: u64,
+}
+
 fn get_tdx_shared_bit() -> usize {
     unsafe { GPAW as usize - 1 }
 }
-
 // Inspired by TD-shim and credits to TD-shim
 fn offset_pt() -> OffsetPageTable<'static> {
     let cr3 = Cr3::read().0.start_address().as_u64();
@@ -119,13 +162,6 @@ trait TdAcceptPage {
 impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for PhysFrameRange<S> {
     fn accept_page(&self) -> Result<(), &'static str> {
         for frame in *self {
-            // Hardcode the location of TD-HoB at this moment
-            // TODO: b/360255120 - UEFI memory image parser
-            // TODO: b/360255152 - TD-HoB parser
-            if frame.start_address().as_u64() == 0x800000 {
-                info!("skipping td-hob at 0x800000");
-                continue;
-            }
             if frame.size() == 4096 {
                 oak_tdx_guest::tdcall::accept_memory(frame).expect("map 4k cannot fail");
                 counters::ACCEPTED_4K.fetch_add(1, Ordering::SeqCst);
@@ -247,6 +283,7 @@ impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for
 }
 
 struct Tdx {}
+
 impl oak_stage0::Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
@@ -275,6 +312,89 @@ impl oak_stage0::Platform for Tdx {
         write_str("early_initialize_platform");
         write_str("early_initialize_platform completed");
     }
+
+    fn prefill_e820_table<T: AsBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
+        write_str("Prefill e820 table from TDHOB");
+
+        let hit = unsafe { TD_HOB_START.assume_init() };
+        debug_u32_variable("HOB TYPE", hit.header.hob_type as u32);
+        debug_u32_variable("HOB LENGTH", hit.header.hob_length as u32);
+        debug_u32_variable("HOB VERSION", hit.version);
+        debug_u32_variable("HOB BOOT MODE", hit.boot_mode);
+        debug_u64_variable("HOB MEMORY TOP", hit.memory_top);
+        debug_u64_variable("HOB MEMORY BOTTOM", hit.memory_bottom);
+        debug_u64_variable("HOB FREE MEMORY TOP", hit.free_memory_top);
+        debug_u64_variable("HOB FREE MEMORY BOTTOM", hit.free_memory_bottom);
+        debug_u64_variable("HOB END OF HOB LIST", hit.end_of_hob_list);
+
+        if hit.header.hob_length as usize != size_of::<HandoffInfoTable>()
+            || hit.header.hob_type != EFI_HOB_TYPE_HANDOFF
+        {
+            return Err("Corrupted TD HoB header");
+        }
+
+        let mut curr_ptr = unsafe {
+            TD_HOB_START.as_ptr().byte_offset(hit.header.hob_length as isize) as *const Header
+        };
+        let mut curr_hdr = unsafe { *curr_ptr };
+        let mut index = 0;
+
+        while (curr_ptr as u64) < hit.end_of_hob_list {
+            // Every HoB entry starts with a Header struct
+            write_str("==================");
+            debug_u32_variable("HOB PTR", curr_ptr as u32);
+            debug_u32_variable("HOB TYPE", curr_hdr.hob_type as u32);
+            debug_u32_variable("HOB LENGTH", curr_hdr.hob_length as u32);
+
+            // We only care the resource descriptor entries
+            if curr_hdr.hob_type == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR && curr_hdr.hob_length == 0x30
+            {
+                let curr_src = unsafe { *(curr_ptr as *const ResourceDescription) };
+                debug_u32_variable("Resource type", curr_src.resource_type);
+                debug_u32_variable("Resource attribute", curr_src.resource_attribute);
+                debug_u64_variable("Physical start", curr_src.physical_start);
+                debug_u64_variable("Resource length", curr_src.resource_length);
+
+                // Figure out the location of the next E820 entry
+                let new_entry_ptr: *mut BootE820Entry = unsafe {
+                    dest.as_bytes_mut().as_mut_ptr().byte_add(index) as *mut BootE820Entry
+                };
+
+                let entry_type = if curr_src.physical_start
+                    == unsafe { TD_HOB_START.as_ptr() as u64 }
+                {
+                    E820EntryType::NVS // is this correct?
+                } else if curr_src.physical_start == unsafe { TD_MAILBOX_START.as_ptr() as u64 } {
+                    E820EntryType::NVS // ditto
+                } else if curr_src.physical_start == 0 {
+                    // [0x0, 512KB) is usable
+                    E820EntryType::RAM
+                } else if curr_src.resource_type == 0 {
+                    // [0xF_0000, 0x10_0000)
+                    E820EntryType::RESERVED
+                } else {
+                    E820EntryType::RAM
+                };
+
+                unsafe {
+                    *new_entry_ptr = BootE820Entry::new(
+                        curr_src.physical_start as usize,
+                        curr_src.resource_length as usize,
+                        entry_type,
+                    );
+                }
+                index = index + size_of::<BootE820Entry>();
+            } else if curr_hdr.hob_type == EFI_HOB_TYPE_END_OF_HOB_LIST {
+                // reached at the end
+            } else {
+                return Err("Unknown resource type found in TD HoB");
+            }
+            curr_ptr = unsafe { curr_ptr.byte_offset(curr_hdr.hob_length as isize) };
+            curr_hdr = unsafe { *curr_ptr };
+        }
+        if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
+    }
+
     fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
         // logger is initialized starting from here
         info!("initialize platform");
@@ -491,6 +611,7 @@ pub extern "C" fn rust64_start() -> ! {
     debug_u32_variable(stringify!(td_info.max_vcpus), td_info.max_vcpus);
     debug_u32_variable(stringify!(td_info.num_vcpus), td_info.num_vcpus);
     debug_u32_variable(stringify!(AP_IN_64BIT_COUNT), unsafe { AP_IN_64BIT_COUNT });
+    debug_u32_variable(stringify!(FIRST_DWORD_OF_MAILBOX), unsafe { *TD_MAILBOX_START.as_ptr() });
 
     oak_stage0::rust64_start::<Tdx>()
 }

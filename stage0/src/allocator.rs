@@ -218,8 +218,8 @@ impl<T, A: Allocator, P: Platform> AsMut<T> for Shared<T, A, P> {
 }
 
 pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
-    // Create the heap between 1MiB and 2MiB.
-    let start = VirtAddr::new(0x100000);
+    // Create the heap between 2MiB and 3MiB.
+    let start = VirtAddr::new(0x200000);
     let size = 0x100000usize;
     let end = start + size as u64;
 

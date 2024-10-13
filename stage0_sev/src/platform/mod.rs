@@ -36,6 +36,7 @@ use oak_stage0::{
 };
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
+use zerocopy::{AsBytes, FromBytes};
 
 #[link_section = ".boot"]
 #[no_mangle]
@@ -176,6 +177,10 @@ impl Platform for Sev {
         } else {
             oak_stage0::hal::Base::port_factory()
         }
+    }
+
+    fn prefill_e820_table<T: AsBytes + FromBytes>(_: &mut T) -> Result<usize, &'static str> {
+        Err("SEV does not support E820 prefill")
     }
 
     fn early_initialize_platform() {

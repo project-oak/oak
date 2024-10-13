@@ -121,15 +121,17 @@ impl ZeroPage {
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if
     /// that is not available, fall back to querying RTC NVRAM.
     pub fn fill_e820_table<P: crate::Platform>(&mut self, fw_cfg: &mut FwCfg<P>) {
-        // Try to load the E820 table from fw_cfg.
-        // Safety: BootE820Entry has the same structure as what qemu uses, and we're
-        // limiting ourselves to up to 128 entries.
-        let len_bytes = unsafe {
+        // Try to load the E820 table from platform specific functions first
+        let len_bytes = P::prefill_e820_table(&mut self.inner.e820_table).or_else(|_| unsafe {
+            // Try to load the E820 table from fw_cfg.
+            // Safety: BootE820Entry has the same structure as what qemu uses, and we're
+            // limiting ourselves to up to 128 entries.
+            log::debug!("Using fw_cfg to create the E820 table");
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
                 &mut self.inner.e820_table,
             )
-        };
+        });
 
         let e820_entries = match len_bytes {
             Ok(len_bytes) => {
