@@ -194,6 +194,17 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -224,6 +235,7 @@
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
+    session_binding::SessionBinder,
 };
 
 <span class="attr">#[allow(dead_code)]
@@ -274,7 +286,7 @@
             handshake_type,
             self_static_private_key: <span class="prelude-val">None</span>,
             peer_static_public_key: <span class="prelude-val">None</span>,
-            peer_attestation_binding_public_key: <span class="prelude-val">None</span>,
+            session_binders: BTreeMap::new(),
         };
 
         <span class="kw">let </span>encryptor_config =
@@ -359,6 +371,15 @@
         <span class="self">self
     </span>}
 
+    <span class="kw">pub fn </span>add_session_binder(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        session_binder: Box&lt;<span class="kw">dyn </span>SessionBinder&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config.handshaker_config.session_binders.insert(attester_id, session_binder);
+        <span class="self">self
+    </span>}
+
     <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; SessionConfig {
         <span class="self">self</span>.config
     }
@@ -381,8 +402,9 @@
     <span class="comment">// Used for authentication schemes where a responder's static public key is pre-shared with
     // the initiator.
     </span><span class="kw">pub </span>peer_static_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
-    <span class="comment">// Public key that can be used to bind the attestation obtained from the peer to the handshake.
-    </span><span class="kw">pub </span>peer_attestation_binding_public_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
+    <span class="comment">// Session binders to bind the handshake hash to the previously received attestation data,
+    // keyed by the attestation type.
+    </span><span class="kw">pub </span>session_binders: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>SessionBinder&gt;&gt;,
 }
 
 <span class="kw">pub struct </span>EncryptorConfig {

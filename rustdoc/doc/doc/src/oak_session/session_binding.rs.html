@@ -162,6 +162,7 @@
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -188,6 +189,7 @@
 <span class="kw">use </span>oak_crypto::{signer::Signer, verifier::Verifier};
 
 <span class="comment">// Trait that allows binding session to the arbitrary data
+</span><span class="attr">#[cfg_attr(test, automock)]
 </span><span class="kw">pub trait </span>SessionBinder: Send {
     <span class="kw">fn </span>bind(<span class="kw-2">&amp;</span><span class="self">self</span>, bound_data: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt;;
 }

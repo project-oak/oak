@@ -395,6 +395,12 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -426,12 +432,11 @@
     session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
     SessionBinding, SessionRequest, SessionResponse,
 };
-<span class="kw">use </span>prost::Message;
 
 <span class="kw">use crate</span>::{
     attestation::{
-        AttestationFailure, AttestationProvider, AttestationSuccess, ClientAttestationProvider,
-        ServerAttestationProvider,
+        AttestationFailure, AttestationProvider, AttestationSuccess, AttestationType,
+        ClientAttestationProvider, ServerAttestationProvider,
     },
     config::{EncryptorConfig, SessionConfig},
     handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
@@ -486,7 +491,7 @@
 <span class="kw">impl </span>ClientSession {
     <span class="kw">pub fn </span>create(config: SessionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            attester: ClientAttestationProvider::new(config.attestation_provider_config),
+            attester: ClientAttestationProvider::create(config.attestation_provider_config)<span class="question-mark">?</span>,
             handshaker: ClientHandshaker::create(config.handshaker_config)
                 .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
             binding_key_extractor: config.binding_key_extractor,
@@ -631,17 +636,24 @@
 }
 
 <span class="kw">impl </span>ServerSession {
-    <span class="kw">pub fn </span>new(config: SessionConfig) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            attester: ServerAttestationProvider::new(config.attestation_provider_config),
-            handshaker: ServerHandshaker::new(config.handshaker_config),
+    <span class="kw">pub fn </span>create(config: SessionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>attestation_type = config.attestation_provider_config.attestation_type;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            attester: ServerAttestationProvider::create(config.attestation_provider_config)<span class="question-mark">?</span>,
+            handshaker: ServerHandshaker::new(
+                config.handshaker_config,
+                <span class="macro">matches!</span>(
+                    attestation_type,
+                    AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+                ),
+            ),
             binding_key_extractor: config.binding_key_extractor,
             encryptor_config: config.encryptor_config,
             attestation_result: <span class="prelude-val">None</span>,
             encryptor: <span class="prelude-val">None</span>,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
-        }
+        })
     }
 }
 
@@ -784,7 +796,7 @@
             bindings
                 .get(verifier_id)
                 .ok_or(<span class="macro">anyhow!</span>(<span class="string">"handshake message doesn't have a binding for ID {}"</span>, verifier_id))<span class="question-mark">?
-                </span>.encode_to_vec()
+                </span>.binding
                 .as_slice(),
         )<span class="question-mark">?</span>;
     }

@@ -339,6 +339,21 @@
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -439,6 +454,7 @@
 ///
 /// When configuring the Client: "Self" is the Client and "Peer" is the Server.
 /// When configuring the Server: "Self" is the Server and "Peer" is the Client.
+</span><span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub enum </span>AttestationType {
     <span class="doccomment">/// Both parties attest each other.
     </span>Bidirectional,
@@ -503,12 +519,44 @@
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ClientAttestationProvider {
     config: AttestationProviderConfig,
+    attest_request: <span class="prelude-ty">Option</span>&lt;AttestRequest&gt;,
     attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
 }
 
 <span class="kw">impl </span>ClientAttestationProvider {
-    <span class="kw">pub fn </span>new(config: AttestationProviderConfig) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ config, attestation_result: <span class="prelude-val">None </span>}
+    <span class="kw">pub fn </span>create(config: AttestationProviderConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            attest_request: <span class="kw">match </span>config.attestation_type {
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional =&gt; {
+                    <span class="prelude-val">Some</span>(AttestRequest {
+                        endorsed_evidence: config
+                            .self_attesters
+                            .iter()
+                            .map(|(id, attester)| {
+                                <span class="kw">let </span>evidence = attester.quote()<span class="question-mark">?</span>;
+                                <span class="comment">// Adds endorsements with corresponding ID.
+                                // Endorsements that don't have a corresponding Evidence will not be
+                                // added to the `EndorsedEvidence`.
+                                </span><span class="kw">let </span>endorsements = config
+                                    .self_endorsers
+                                    .get(id)
+                                    .map(|endorser| <span class="prelude-val">Ok</span>(endorser.endorse(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>evidence))<span class="question-mark">?</span>))
+                                    .transpose()<span class="question-mark">?</span>;
+                                <span class="kw">let </span>endorsed_evidence =
+                                    EndorsedEvidence { evidence: <span class="prelude-val">Some</span>(evidence), endorsements };
+                                <span class="prelude-val">Ok</span>((id.clone(), endorsed_evidence))
+                            })
+                            .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
+                    })
+                }
+                AttestationType::PeerUnidirectional =&gt; {
+                    <span class="prelude-val">Some</span>(AttestRequest { endorsed_evidence: BTreeMap::new() })
+                }
+                AttestationType::Unattested =&gt; <span class="prelude-val">None</span>,
+            },
+            config,
+            attestation_result: <span class="prelude-val">None</span>,
+        })
     }
 }
 
@@ -522,42 +570,17 @@
 
 <span class="kw">impl </span>ProtocolEngine&lt;AttestResponse, AttestRequest&gt; <span class="kw">for </span>ClientAttestationProvider {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestRequest&gt;&gt; {
-        <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
-            AttestationType::Bidirectional | AttestationType::SelfUnidirectional =&gt; {
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestRequest {
-                    endorsed_evidence: <span class="self">self
-                        </span>.config
-                        .self_attesters
-                        .iter()
-                        .map(|(id, attester)| {
-                            <span class="kw">let </span>evidence = attester.quote()<span class="question-mark">?</span>;
-                            <span class="comment">// Adds endorsements with corresponding ID.
-                            // Endorsements that don't have a corresponding Evidence will not be
-                            // added to the `EndorsedEvidence`.
-                            </span><span class="kw">let </span>endorsements = <span class="self">self
-                                </span>.config
-                                .self_endorsers
-                                .get(id)
-                                .map(|endorser| <span class="prelude-val">Ok</span>(endorser.endorse(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>evidence))<span class="question-mark">?</span>))
-                                .transpose()<span class="question-mark">?</span>;
-                            <span class="kw">let </span>endorsed_evidence =
-                                EndorsedEvidence { evidence: <span class="prelude-val">Some</span>(evidence), endorsements };
-                            <span class="prelude-val">Ok</span>((id.clone(), endorsed_evidence))
-                        })
-                        .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
-                }))
-            }
-            AttestationType::PeerUnidirectional =&gt; {
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestRequest { endorsed_evidence: BTreeMap::new() }))
-            }
-            AttestationType::Unattested =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-        }
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.attest_request.take())
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         incoming_message: <span class="kw-2">&amp;</span>AttestResponse,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
+        <span class="kw">if </span><span class="self">self</span>.attestation_result.is_some() {
+            <span class="comment">// Attestation result is already obtained - no new messages expected.
+            </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+        }
         <span class="self">self</span>.attestation_result = <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Some</span>(<span class="self">self</span>.config.attestation_aggregator.aggregate_attestation_results(
@@ -579,12 +602,44 @@
 </span><span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>ServerAttestationProvider {
     config: AttestationProviderConfig,
+    attest_response: <span class="prelude-ty">Option</span>&lt;AttestResponse&gt;,
     attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
 }
 
 <span class="kw">impl </span>ServerAttestationProvider {
-    <span class="kw">pub fn </span>new(config: AttestationProviderConfig) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ config, attestation_result: <span class="prelude-val">None </span>}
+    <span class="kw">pub fn </span>create(config: AttestationProviderConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            attest_response: <span class="kw">match </span>config.attestation_type {
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional =&gt; {
+                    <span class="prelude-val">Some</span>(AttestResponse {
+                        endorsed_evidence: config
+                            .self_attesters
+                            .iter()
+                            .map(|(id, attester)| {
+                                <span class="kw">let </span>evidence = attester.quote()<span class="question-mark">?</span>;
+                                <span class="comment">// Adds endorsements with corresponding ID.
+                                // Endorsements that don't have a corresponding Evidence will not be
+                                // added to the `EndorsedEvidence`.
+                                </span><span class="kw">let </span>endorsements = config
+                                    .self_endorsers
+                                    .get(id)
+                                    .map(|endorser| <span class="prelude-val">Ok</span>(endorser.endorse(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>evidence))<span class="question-mark">?</span>))
+                                    .transpose()<span class="question-mark">?</span>;
+                                <span class="kw">let </span>endorsed_evidence =
+                                    EndorsedEvidence { evidence: <span class="prelude-val">Some</span>(evidence), endorsements };
+                                <span class="prelude-val">Ok</span>((id.clone(), endorsed_evidence))
+                            })
+                            .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
+                    })
+                }
+                AttestationType::PeerUnidirectional =&gt; {
+                    <span class="prelude-val">Some</span>(AttestResponse { endorsed_evidence: BTreeMap::new() })
+                }
+                AttestationType::Unattested =&gt; <span class="prelude-val">None</span>,
+            },
+            config,
+            attestation_result: <span class="prelude-val">None</span>,
+        })
     }
 }
 
@@ -598,42 +653,17 @@
 
 <span class="kw">impl </span>ProtocolEngine&lt;AttestRequest, AttestResponse&gt; <span class="kw">for </span>ServerAttestationProvider {
     <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;AttestResponse&gt;&gt; {
-        <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
-            AttestationType::Bidirectional | AttestationType::SelfUnidirectional =&gt; {
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestResponse {
-                    endorsed_evidence: <span class="self">self
-                        </span>.config
-                        .self_attesters
-                        .iter()
-                        .map(|(id, attester)| {
-                            <span class="kw">let </span>evidence = attester.quote()<span class="question-mark">?</span>;
-                            <span class="comment">// Adds endorsements with corresponding ID.
-                            // Endorsements that don't have a corresponding Evidence will not be
-                            // added to the `EndorsedEvidence`.
-                            </span><span class="kw">let </span>endorsements = <span class="self">self
-                                </span>.config
-                                .self_endorsers
-                                .get(id)
-                                .map(|endorser| <span class="prelude-val">Ok</span>(endorser.endorse(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>evidence))<span class="question-mark">?</span>))
-                                .transpose()<span class="question-mark">?</span>;
-                            <span class="kw">let </span>endorsed_evidence =
-                                EndorsedEvidence { evidence: <span class="prelude-val">Some</span>(evidence), endorsements };
-                            <span class="prelude-val">Ok</span>((id.clone(), endorsed_evidence))
-                        })
-                        .collect::&lt;<span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, EndorsedEvidence&gt;, Error&gt;&gt;()<span class="question-mark">?</span>,
-                }))
-            }
-            AttestationType::PeerUnidirectional =&gt; {
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(AttestResponse { endorsed_evidence: BTreeMap::new() }))
-            }
-            AttestationType::Unattested =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-        }
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.attest_response.take())
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         incoming_message: <span class="kw-2">&amp;</span>AttestRequest,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
+        <span class="kw">if </span><span class="self">self</span>.attestation_result.is_some() {
+            <span class="comment">// Attestation result is already obtained - no new messages expected.
+            </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+        }
         <span class="self">self</span>.attestation_result = <span class="kw">match </span><span class="self">self</span>.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional =&gt; {
                 <span class="prelude-val">Some</span>(<span class="self">self</span>.config.attestation_aggregator.aggregate_attestation_results(
