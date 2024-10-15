@@ -172,7 +172,6 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -263,7 +262,6 @@
     mock_event_log.encoded_events.push(encoded_application_event.clone());
     <span class="kw">let </span>dice_data = oak_restricted_kernel_dice::generate_dice_data(
         stage0_dice_data,
-        <span class="kw-2">&amp;</span>oak_restricted_kernel_dice::DigestSha2_256::default(),
         <span class="kw-2">&amp;</span>oak_restricted_kernel_dice::measure_digest_sha2_256(<span class="kw-2">&amp;</span>encoded_application_event),
     );
     (dice_data, mock_event_log.encode_to_vec())
