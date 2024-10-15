@@ -169,6 +169,10 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -190,23 +194,23 @@
 
 </span><span class="kw">use </span>alloc::vec::Vec;
 
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation::dice::evidence_and_event_log_to_proto;
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
     signer::Signer,
 };
-<span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
+<span class="kw">use </span>oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog},
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
 };
+<span class="kw">use </span>oak_session::attestation::Attester;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>prost::Message;
 
-<span class="kw">use crate</span>::{
-    alloc::string::ToString,
-    attestation::{DiceWrapper, EvidenceProvider},
-};
+<span class="kw">use crate</span>::{alloc::string::ToString, attestation::DiceWrapper};
 
 <span class="macro">lazy_static::lazy_static! </span>{
   <span class="kw">static </span><span class="kw-2">ref </span>MOCK_DICE_WRAPPER: anyhow::Result&lt;DiceWrapper&gt; = {
@@ -312,30 +316,34 @@
     }
 }
 
-<span class="doccomment">/// [`EvidenceProvider`] implementation that exposes mock evidence.
-</span><span class="kw">pub struct </span>MockEvidenceProvider {
-    evidence: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Evidence,
-    encoded_event_log: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8],
+<span class="doccomment">/// [`Attester`] implementation that exposes mock evidence.
+</span><span class="kw">pub struct </span>MockAttester {
+    evidence: Evidence,
 }
 
-<span class="kw">impl </span>MockEvidenceProvider {
+<span class="kw">impl </span>MockAttester {
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
-            evidence: <span class="kw-2">&amp;</span>d.evidence,
-            encoded_event_log: d
-                .encoded_event_log
-                .as_ref()
-                .expect(<span class="string">"mock dice wrapper contains event log"</span>),
-        })
+        <span class="kw">let </span>evidence = MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                <span class="comment">// TODO: b/368022950 - Remove dependency on `oak_attestation` once Restricted
+                // Kernel uses Protobuf for the Evidence.
+                </span>evidence_and_event_log_to_proto(d.evidence.clone(), d.encoded_event_log.as_deref())
+                    .context(<span class="string">"couldn't convert evidence to proto"</span>)
+            })
+            .context(<span class="string">"couldn't get evidence"</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(MockAttester { evidence })
     }
 }
 
-<span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>MockEvidenceProvider {
-    <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence {
-        <span class="self">self</span>.evidence
+<span class="kw">impl </span>Attester <span class="kw">for </span>MockAttester {
+    <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="macro">anyhow::bail!</span>(<span class="string">"mock attester doesn't support extending the evidence"</span>);
     }
-    <span class="kw">fn </span>get_encoded_event_log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.encoded_event_log)
+
+    <span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Evidence&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.evidence.clone())
     }
 }
 </code></pre></div></section></main></body></html>

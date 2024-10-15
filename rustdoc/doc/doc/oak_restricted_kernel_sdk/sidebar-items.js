@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"attr":["entrypoint"],"mod":["attestation","channel","crypto","handler","testing","utils"],"trait":["EncryptionKeyHandle","Signer"]};
+window.SIDEBAR_ITEMS = {"attr":["entrypoint"],"mod":["attestation","channel","crypto","handler","testing","utils"],"trait":["Attester","EncryptionKeyHandle","Endorser","Signer"]};

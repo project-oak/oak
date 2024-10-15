@@ -201,11 +201,6 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -228,7 +223,6 @@
 
 <span class="kw">use </span>alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-<span class="kw">use </span>oak_attestation::dice::evidence_and_event_log_to_proto;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_crypto::encryption_key::EncryptionKeyHandle;
 <span class="kw">use </span>oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
@@ -239,36 +233,36 @@
     FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
     InvokeResponse, LookupDataChunk, ReserveRequest, ReserveResponse,
 };
-<span class="kw">use </span>oak_restricted_kernel_sdk::handler::EncryptionHandler;
+<span class="kw">use </span>oak_restricted_kernel_sdk::{handler::EncryptionHandler, Attester};
 <span class="kw">use </span>prost::Message;
 
-<span class="kw">pub struct </span>OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">pub struct </span>OakFunctionsService&lt;EKH, A, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">'static</span>,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
-    evidence_provider: EP,
+    attester: A,
     encryption_key_handle: Arc&lt;EKH&gt;,
     instance_config: H::HandlerConfig,
     instance: OnceCell&lt;OakFunctionsInstance&lt;H&gt;&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">impl</span>&lt;EKH, A, H&gt; OakFunctionsService&lt;EKH, A, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">'static</span>,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
     <span class="kw">pub fn </span>new(
-        evidence_provider: EP,
+        attester: A,
         encryption_key_handle: Arc&lt;EKH&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
         instance_config: H::HandlerConfig,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            evidence_provider,
+            attester,
             encryption_key_handle,
             instance_config,
             instance: OnceCell::new(),
@@ -285,10 +279,10 @@
     }
 }
 
-<span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctions <span class="kw">for </span>OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">impl</span>&lt;EKH, A, H&gt; OakFunctions <span class="kw">for </span>OakFunctionsService&lt;EKH, A, H&gt;
 <span class="kw">where
     </span>EKH: EncryptionKeyHandle + <span class="lifetime">'static</span>,
-    EP: oak_restricted_kernel_sdk::attestation::EvidenceProvider,
+    A: Attester,
     H: Handler,
 {
     <span class="kw">fn </span>initialize(
@@ -313,14 +307,10 @@
                         <span class="string">"already initialized"</span>,
                     ));
                 }
-                <span class="kw">let </span>evidence = evidence_and_event_log_to_proto(
-                    <span class="self">self</span>.evidence_provider.get_evidence().clone(),
-                    <span class="self">self</span>.evidence_provider.get_encoded_event_log(),
-                )
-                .map_err(|err| {
+                <span class="kw">let </span>evidence = <span class="self">self</span>.attester.quote().map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
-                        <span class="macro">format!</span>(<span class="string">"failed to convert evidence to proto: {err}"</span>),
+                        <span class="macro">format!</span>(<span class="string">"failed to get evidence: {err}"</span>),
                     )
                 })<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(InitializeResponse { evidence: <span class="prelude-val">Some</span>(evidence) })
