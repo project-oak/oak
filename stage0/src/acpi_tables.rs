@@ -395,10 +395,17 @@ pub struct Madt {
 /// containing a different structure (e.g. ProcessorLocalApic) and length
 /// according to its type. However, all of these structures look the same in
 /// their first 2 fields - we factor them here for reuse and call it a header.
+/// We treat this structure in a special way: we use it to parse existing
+/// memory and we assume that this is immediately followed by an actual MADT
+/// table structure, and it will only `validate` if an instance of this type is
+/// in the expected memory region (EBDA). Not meant to be built and passed
+/// around.
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct ControllerHeader {
-    pub structure_type: ControllerStructureType,
+pub(crate) struct ControllerHeader {
+    // There's only 17 possible types, the rest of the range is reserved. We need
+    // to use u8 (not enum) as we use this structure to parse existing memory.
+    pub structure_type: u8,
     len: u8,
 }
 
@@ -420,17 +427,6 @@ impl ControllerHeader {
     }
 }
 
-/// Structure type for an entry in the field "Interrupt Controller Structure"
-/// in the MADT. Valid types documented in Table 5.21 of ACPI Specification.
-/// Only adding here the types that we currently use.
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(u8)]
-pub enum ControllerStructureType {
-    ProcessorLocalApic = 0,
-    ProcessorLocalX2Apic = 9,
-    MultiprocessorWakeup = 0x10,
-}
-
 /// Processor Local Apic Structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.2 of APIC Specification.
@@ -450,8 +446,10 @@ pub struct ProcessorLocalApic {
 }
 
 impl ProcessorLocalApic {
+    pub const STRUCTURE_TYPE: u8 = 0;
+
     pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != ControllerStructureType::ProcessorLocalApic {
+        if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local APIC Structure");
         }
         header.validate()?;
@@ -486,8 +484,10 @@ pub struct ProcessorLocalX2Apic {
 }
 
 impl ProcessorLocalX2Apic {
+    pub const STRUCTURE_TYPE: u8 = 9;
+
     pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != ControllerStructureType::ProcessorLocalX2Apic {
+        if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local X2APIC Structure");
         }
         header.validate()?;
@@ -520,13 +520,14 @@ pub struct MultiprocessorWakeup {
 }
 
 impl MultiprocessorWakeup {
+    pub const STRUCTURE_TYPE: u8 = 0x10;
     const MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH: u8 = 16;
 
     /// Gets a reference to a MultiprocessorWakeup given a reference to its
     /// first field (header). This assumes that the memory that immediately
     /// follows header is actually a MultiprocessorWakeup.
     pub fn from_header_cast(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != ControllerStructureType::MultiprocessorWakeup {
+        if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not MultiprocessorWakeup");
         }
         if header.len != Self::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH {
@@ -572,7 +573,7 @@ impl Madt {
     }
 }
 
-pub struct MadtIterator<'a> {
+pub(crate) struct MadtIterator<'a> {
     madt: &'a Madt,
 
     /// Offset with respect to where Madt starts where the first interrupt

@@ -24,8 +24,7 @@ use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
 use crate::{
     acpi_tables::{
-        ControllerStructureType, LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic,
-        ProcessorLocalX2Apic, Rsdp,
+        LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     apic::Lapic,
     pic::disable_pic8259,
@@ -109,17 +108,17 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
     // structure (e.g. if you have more than 256 CPUs).
     for controller_header in madt.controller_struct_headers() {
         let (remote_lapic_id, flags) = match controller_header.structure_type {
-            ControllerStructureType::ProcessorLocalApic => {
+            ProcessorLocalApic::STRUCTURE_TYPE => {
                 let remote_lapic = ProcessorLocalApic::new(controller_header)?;
                 log::debug!("Local APIC: {:?}", remote_lapic);
                 (remote_lapic.apic_id as u32, remote_lapic.flags)
             }
-            ControllerStructureType::ProcessorLocalX2Apic => {
+            ProcessorLocalX2Apic::STRUCTURE_TYPE => {
                 let remote_lapic = ProcessorLocalX2Apic::new(controller_header)?;
                 log::debug!("Local X2APIC: {:?}", remote_lapic);
                 (remote_lapic.x2apic_id, remote_lapic.flags)
             }
-            ControllerStructureType::MultiprocessorWakeup => {
+            MultiprocessorWakeup::STRUCTURE_TYPE => {
                 let multiprocessor_wakeup =
                     MultiprocessorWakeup::from_header_cast(controller_header)?;
                 log::debug!(
