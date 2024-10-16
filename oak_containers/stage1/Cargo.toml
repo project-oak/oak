@@ -18,6 +18,7 @@ oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
 oak_containers_stage1_dice = { workspace = true }
+oak_containers_channel = { workspace = true }
 nix = { version = "0.27.1", features = ["mman"] }
 p256 = { version = "*" }
 prost = { workspace = true }
@@ -32,9 +33,7 @@ tokio = { version = "*", features = [
   "process",
   "sync",
 ] }
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
-tower = "*"
 x86_64 = "*"
 xz2 = "*"
 zerocopy = "*"

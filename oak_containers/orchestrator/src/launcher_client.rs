@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use anyhow::Context;
+use oak_containers_channel::create_channel;
 use oak_grpc::oak::containers::{
     launcher_client::LauncherClient as GrpcLauncherClient,
     v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
@@ -24,9 +25,7 @@ use oak_proto_rust::oak::{
     key_provisioning::v1::GroupKeys,
 };
 use opentelemetry_otlp::TonicExporterBuilder;
-use tokio_vsock::{VsockAddr, VsockStream};
 use tonic::transport::Channel;
-use tower::service_fn;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
@@ -37,32 +36,7 @@ pub struct LauncherClient {
 
 impl LauncherClient {
     pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
-        let channel = if addr.scheme_str() == Some("vsock") {
-            let vsock_addr = VsockAddr::new(
-                addr.host()
-                    .unwrap_or(format!("{}", tokio_vsock::VMADDR_CID_HOST).as_str())
-                    .parse()
-                    .context("invalid vsock CID")?,
-                addr.authority()
-                    .context("failed to extract authority from vsock address")?
-                    .as_str()
-                    .split(':')
-                    .last()
-                    .context("failed to extract port from vsock address")?
-                    .parse::<u32>()
-                    .context("invalid vsock port")?,
-            );
-
-            // The C++ gRPC implementations are more particular about the URI scheme; in
-            // particular, they may get confused by the "vsock" scheme. Therfore, create a
-            // fake URI with the "http" scheme to placate the libraries; the actual
-            // connection is made in `connect_with_connector` and that uses the correct URI.
-            Channel::builder(tonic::transport::Uri::from_static("http://0:0"))
-                .connect_with_connector(service_fn(move |_| VsockStream::connect(vsock_addr)))
-                .await?
-        } else {
-            Channel::builder(addr.clone()).connect().await?
-        };
+        let channel = create_channel(addr).await?;
         let inner = GrpcLauncherClient::new(channel.clone());
         let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel.clone());
         Ok(Self { channel, inner, hostlib_key_provisioning_client })

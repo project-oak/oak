@@ -19,6 +19,7 @@ oak_attestation = { workspace = true }
 oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_containers_agent = { workspace = true }
+oak_containers_channel = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }
@@ -50,9 +51,7 @@ tokio = { version = "*", features = [
 ] }
 tokio-stream = { version = "*", features = ["net"] }
 tokio-util = { version = "*", default-features = false }
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
-tower = "*"
 walkdir = "*"
 zeroize = "*"
 

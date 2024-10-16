@@ -2397,6 +2397,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_channel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "futures",
+ "oak_grpc",
+ "oak_proto_rust",
+ "tokio",
+ "tokio-stream",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+]
+
+[[package]]
 name = "oak_containers_hello_world_untrusted_app"
 version = "0.1.0"
 dependencies = [
@@ -2484,6 +2500,7 @@ dependencies = [
  "oak_attestation_verification",
  "oak_containers_agent",
  "oak_containers_attestation",
+ "oak_containers_channel",
  "oak_crypto",
  "oak_dice",
  "oak_grpc",
@@ -2504,9 +2521,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tokio-vsock",
  "tonic",
- "tower",
  "walkdir",
  "zeroize",
 ]
@@ -2546,6 +2561,7 @@ dependencies = [
  "futures-util",
  "nix 0.27.1",
  "oak_attestation",
+ "oak_containers_channel",
  "oak_containers_stage1_dice",
  "oak_crypto",
  "oak_dice",
@@ -2558,9 +2574,7 @@ dependencies = [
  "rtnetlink",
  "tar",
  "tokio",
- "tokio-vsock",
  "tonic",
- "tower",
  "x86_64",
  "xz2",
  "zerocopy",
