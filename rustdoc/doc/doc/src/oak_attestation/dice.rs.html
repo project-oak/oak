@@ -414,6 +414,26 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -434,10 +454,11 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>ciborium::Value;
-<span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable};
+<span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable, CoseKey};
 <span class="kw">use </span>oak_dice::{
     cert::{
-        generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
+        cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
+        generate_kem_certificate, generate_signing_certificate,
         get_claims_set_from_certificate_bytes, SHA2_256_ID,
     },
     evidence::Stage0DiceData,
@@ -637,18 +658,37 @@
 <span class="kw">impl </span>Attester <span class="kw">for </span>DiceAttester {
     <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        </span><span class="kw">let </span>layer_evidence = <span class="self">self
+        // Since the builder contains an existing signing key there must be at least one
+        // layer of evidence that contains the certificate, or a root layer that is
+        // bound to the attestation report.
+        </span><span class="kw">let </span>issuer_id = <span class="kw">match </span><span class="self">self
             </span>.evidence
             .layers
             .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence layers found"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-
-        <span class="comment">// The issuer for the next layer is the subject of the current last layer.
-        </span><span class="kw">let </span>issuer_id = claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))<span class="question-mark">?</span>;
+            .map(|last| {
+                get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>last.eca_certificate)
+                    .map_err(anyhow::Error::msg)
+            })
+            .transpose()<span class="question-mark">?
+            </span>.map(|claims_set| {
+                claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))
+            })
+            .transpose()<span class="question-mark">?
+        </span>{
+            <span class="prelude-val">Some</span>(issuer_id) =&gt; issuer_id,
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>root_layer = <span class="self">self
+                    </span>.evidence
+                    .root_layer
+                    .as_ref()
+                    .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no root layer evidence"</span>))<span class="question-mark">?</span>;
+                <span class="kw">let </span>cose_key = CoseKey::from_slice(root_layer.eca_public_key.as_slice())
+                    .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+                <span class="kw">let </span>verifying_key =
+                    cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+                hex::encode(derive_verifying_key_id(<span class="kw-2">&amp;</span>verifying_key))
+            }
+        };
 
         <span class="comment">// Generate a signing key for the next layer.
         </span><span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();

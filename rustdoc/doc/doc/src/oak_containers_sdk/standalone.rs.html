@@ -187,8 +187,6 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -215,6 +213,7 @@
 
 </span><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>oak_attestation::{attester::Attester, dice::DiceAttester};
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
@@ -274,19 +273,16 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>mock_event_log = oak_proto_rust::oak::attestation::v1::EventLog::default();
         mock_event_log.encoded_events.push(encoded_stage0_event.to_vec());
 
-        <span class="comment">// Generate mock Stage0 DICE data
-        </span><span class="kw">let </span>(mock_stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
+        <span class="comment">// Create a DICE attester from the mock Stage0 data
+        </span><span class="kw">let </span><span class="kw-2">mut </span>attester: DiceAttester = oak_stage0_dice::generate_initial_dice_data(
             oak_stage0_dice::mock_attestation_report,
-            oak_stage0_dice::mock_derived_key,
             oak_dice::evidence::TeePlatform::None,
-            <span class="kw-2">&amp;</span>encoded_stage0_event,
-        );
+        )
+        .expect(<span class="string">"couldn't create initial DICE data"</span>)
+        .try_into()
+        .expect(<span class="string">"couldn't convert dice data to an attester"</span>);
 
-        <span class="comment">// Create a DICE attester from the Stage0 data
-        </span><span class="kw">let </span><span class="kw-2">mut </span>attester = oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(
-            mock_stage0_dice_data,
-            mock_event_log,
-        )<span class="question-mark">?</span>;
+        attester.extend(<span class="kw-2">&amp;</span>encoded_stage0_event).expect(<span class="string">"couldn't extend attester evidence"</span>);
 
         <span class="comment">// Add Stage1 layer data
         </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);

@@ -189,104 +189,6 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -313,119 +215,28 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
+<span class="kw">use </span>alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
-<span class="kw">use </span>coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseSign1};
+<span class="kw">use </span>coset::CborSerializable;
 <span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>oak_dice::{
-    cert::{
-        derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
-        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, EVENT_ID, INITRD_MEASUREMENT_ID,
-        KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
-        KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    },
+    cert::{generate_ecdsa_key_pair, verifying_key_to_cose_key},
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    CertificateAuthority, DiceData, Evidence, RootLayerEvidence,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
-<span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
-<span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
-
 <span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
 
 <span class="kw">const </span>STAGE0_TAG: <span class="kw-2">&amp;</span>str = <span class="string">"Stage0"</span>;
-
-<span class="doccomment">/// Generates an ECA certificate for use by the next boot stage (Stage 1).
-</span><span class="kw">fn </span>generate_stage1_certificate(
-    stage0_eca_key: <span class="kw-2">&amp;</span>SigningKey,
-    stage0_cert_issuer: String,
-    encoded_stage0_event: <span class="kw-2">&amp;</span>[u8],
-) -&gt; (CoseSign1, SigningKey) {
-    <span class="comment">// Generate additional claims to cover the measurements.
-    </span><span class="kw">let </span>additional_claims = {
-        <span class="kw">let </span>measurements = decode_stage0_event(encoded_stage0_event);
-        <span class="macro">vec!</span>[
-            (
-                ClaimName::PrivateUse(KERNEL_LAYER_ID),
-                Value::Map(<span class="macro">vec!</span>[
-                    (
-                        Value::Integer(KERNEL_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.kernel_measurement),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(
-                                Sha256::digest(measurements.kernel_cmdline.as_bytes()).to_vec()
-                            ),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(KERNEL_COMMANDLINE_ID.into()),
-                        Value::Text(shorten_cmdline(<span class="kw-2">&amp;</span>measurements.kernel_cmdline)),
-                    ),
-                    (
-                        Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.setup_data_digest),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(INITRD_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.ram_disk_digest),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.memory_map_digest),
-                        )]),
-                    ),
-                    (
-                        Value::Integer(ACPI_MEASUREMENT_ID.into()),
-                        Value::Map(<span class="macro">alloc::vec!</span>[(
-                            Value::Integer(SHA2_256_ID.into()),
-                            Value::Bytes(measurements.acpi_digest),
-                        )]),
-                    ),
-                ]),
-            ),
-            (
-                ClaimName::PrivateUse(EVENT_ID),
-                Value::Map(<span class="macro">alloc::vec!</span>[(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(Sha256::digest(encoded_stage0_event).to_vec()),
-                )]),
-            ),
-        ]
-    };
-
-    <span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
-    (
-        generate_signing_certificate(
-            stage0_eca_key,
-            stage0_cert_issuer,
-            <span class="kw-2">&amp;</span>verifying_key,
-            additional_claims,
-        )
-        .expect(<span class="string">"couldn't generate ECA certificate"</span>),
-        signing_key,
-    )
-}
 
 <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line length.
 </span><span class="kw">fn </span>shorten_cmdline(cmdline: <span class="kw-2">&amp;</span>str) -&gt; String {
@@ -433,44 +244,55 @@
     <span class="kw">if </span>cmdline.len() &gt; max_length { cmdline[..max_length].to_string() } <span class="kw">else </span>{ cmdline.to_string() }
 }
 
-<span class="kw">fn </span>decode_stage0_event(
-    encoded_event: <span class="kw-2">&amp;</span>[u8],
-) -&gt; oak_proto_rust::oak::attestation::v1::Stage0Measurements {
-    <span class="kw">let </span>decoded_event: oak_proto_rust::oak::attestation::v1::Event =
-        Message::decode(encoded_event).expect(<span class="string">"Failed to decode stage0 event"</span>);
+<span class="kw">pub fn </span>dice_data_proto_to_stage0_dice_data(
+    attestation_data: <span class="kw-2">&amp;</span>DiceData,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Stage0DiceData, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
+    <span class="kw">let </span>evidence = attestation_data.evidence.as_ref().ok_or(<span class="string">"no evidence"</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>eca_private_key = attestation_data
+        .certificate_authority
+        .as_ref()
+        .ok_or(<span class="string">"no certificate authority"</span>)<span class="question-mark">?
+        </span>.eca_private_key
+        .as_slice();
 
-    <span class="macro">assert_eq!</span>(decoded_event.tag, STAGE0_TAG);
-    decoded_event.event.unwrap().to_msg().expect(<span class="string">"Failed to decode stage0 measurements"</span>)
+    result.layer_1_certificate_authority.eca_private_key[..eca_private_key.len()]
+        .copy_from_slice(eca_private_key);
+    result.magic = STAGE0_MAGIC;
+    <span class="kw">let </span>root_layer = evidence.root_layer.as_ref().ok_or(<span class="string">"no root layer evidence"</span>)<span class="question-mark">?</span>;
+    result.root_layer_evidence.tee_platform = root_layer.platform <span class="kw">as </span>u64;
+    result
+        .root_layer_evidence
+        .set_remote_attestation_report(root_layer.remote_attestation_report.as_slice())<span class="question-mark">?</span>;
+    result.root_layer_evidence.set_eca_public_key(root_layer.eca_public_key.as_slice())<span class="question-mark">?</span>;
+    <span class="kw">let </span>stage1_eca_cert =
+        <span class="kw-2">&amp;</span>evidence.layers.first().ok_or(<span class="string">"stage1 layer dice data not found"</span>)<span class="question-mark">?</span>.eca_certificate[..];
+    result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
+        .copy_from_slice(stage1_eca_cert);
+    <span class="kw">let </span>stage1_eca_signing_key = <span class="kw-2">&amp;</span>attestation_data
+        .certificate_authority
+        .as_ref()
+        .ok_or(<span class="string">"no certificate authority"</span>)<span class="question-mark">?
+        </span>.eca_private_key[..];
+    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
+        .copy_from_slice(stage1_eca_signing_key);
+    <span class="prelude-val">Ok</span>(result)
 }
 
-<span class="doccomment">/// Generates attestation evidence for the 'measurements' of all Stage 1
-/// components.
-</span><span class="kw">pub fn </span>generate_dice_data&lt;
+<span class="doccomment">/// Generates the initial DICE data that can be used as the starting state for a
+/// DICE attester.
+</span><span class="kw">pub fn </span>generate_initial_dice_data&lt;
     F: FnOnce([u8; REPORT_DATA_SIZE]) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
-    G: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
 &gt;(
     get_attestation: F,
-    get_derived_key: G,
     tee_platform: TeePlatform,
-    encoded_stage0_event: <span class="kw-2">&amp;</span>[u8],
-) -&gt; (Stage0DiceData, DiceData) {
-    <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
+) -&gt; <span class="prelude-ty">Result</span>&lt;DiceData, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
     <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA
     // certificate.
     </span><span class="kw">let </span>(stage0_eca_key, stage0_eca_verifying_key) = generate_ecdsa_key_pair();
-
-    <span class="kw">let </span>(stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
-        <span class="kw-2">&amp;</span>stage0_eca_key,
-        hex::encode(derive_verifying_key_id(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)),
-        encoded_stage0_event,
-    );
-
     <span class="kw">let </span>stage0_eca_verifying_key = verifying_key_to_cose_key(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)
         .to_vec()
-        .expect(<span class="string">"couldn't serialize the ECA public key"</span>);
-
-    <span class="kw">let </span>stage1_eca_cert =
-        stage1_eca_cert.to_vec().expect(<span class="string">"couldn't serialize stage 1 ECA certificate"</span>);
+        .map_err(|<span class="kw">_</span>| <span class="string">"couldn't serialize the ECA public key"</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report
     // data.
@@ -483,17 +305,36 @@
     <span class="kw">let </span><span class="kw-2">mut </span>report_data = [<span class="number">0u8</span>; REPORT_DATA_SIZE];
     report_data[..eca_sha2_256_digest.len()].copy_from_slice(<span class="kw-2">&amp;</span>eca_sha2_256_digest[..]);
 
-    <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">"couldn't get attestation report."</span>);
+    <span class="kw">let </span>report = get_attestation(report_data)<span class="question-mark">?</span>;
     <span class="kw">let </span>report_bytes = report.as_bytes();
 
-    <span class="comment">// Use the root derived key as the UDS (unique device secret) for deriving
-    // sealing keys.
-    </span><span class="kw">let </span>ikm: DerivedKey = get_derived_key().expect(<span class="string">"couldn't get derived key"</span>);
+    <span class="kw">let </span>event_log = oak_proto_rust::oak::attestation::v1::EventLog::default();
 
+    <span class="kw">let </span>result_evidence = Evidence {
+        root_layer: <span class="prelude-val">Some</span>(RootLayerEvidence {
+            remote_attestation_report: report_bytes.to_vec(),
+            eca_public_key: stage0_eca_verifying_key.to_vec(),
+            platform: tee_platform <span class="kw">as </span>i32,
+        }),
+        layers: Vec::new(),
+        application_keys: <span class="prelude-val">None</span>,
+        event_log: <span class="prelude-val">Some</span>(event_log),
+    };
+
+    <span class="kw">let </span>result_ca = CertificateAuthority { eca_private_key: stage0_eca_key.to_bytes().to_vec() };
+
+    <span class="prelude-val">Ok</span>(DiceData { evidence: <span class="prelude-val">Some</span>(result_evidence), certificate_authority: <span class="prelude-val">Some</span>(result_ca) })
+}
+
+<span class="doccomment">/// Uses Stage0's measurements of the next stage to derive a Compound Device
+/// Identifier (CDI) from a Unique Device Secret (UDS).
+</span><span class="kw">pub fn </span>derive_sealing_cdi(
+    uds: <span class="kw-2">&amp;</span>DerivedKey,
+    measurements: <span class="kw-2">&amp;</span>oak_proto_rust::oak::attestation::v1::Stage0Measurements,
+) -&gt; DerivedKey {
     <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel
     // setup data and the initial RAM disk when deriving the CDI for Layer 1.
     </span><span class="kw">let </span>salt: Vec&lt;u8&gt; = {
-        <span class="kw">let </span>measurements = decode_stage0_event(encoded_stage0_event);
         <span class="kw">let </span><span class="kw-2">mut </span>salt = Vec::with_capacity(<span class="number">128</span>);
         salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_measurement);
         salt.extend_from_slice(shorten_cmdline(<span class="kw-2">&amp;</span>measurements.kernel_cmdline).as_bytes());
@@ -501,48 +342,11 @@
         salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_digest);
         salt
     };
-    <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>ikm[..]);
 
-    <span class="kw">let </span>event_log = {
-        <span class="kw">let </span><span class="kw-2">mut </span>base = oak_proto_rust::oak::attestation::v1::EventLog::default();
-        base.encoded_events.push(encoded_stage0_event.to_vec());
-        base
-    };
-    <span class="kw">let </span>result_evidence = Evidence {
-        root_layer: <span class="prelude-val">Some</span>(RootLayerEvidence {
-            remote_attestation_report: report_bytes.to_vec(),
-            eca_public_key: stage0_eca_verifying_key.to_vec(),
-            platform: tee_platform <span class="kw">as </span>i32,
-        }),
-        layers: <span class="macro">vec!</span>[LayerEvidence { eca_certificate: stage1_eca_cert.clone() }],
-        application_keys: <span class="prelude-val">None</span>,
-        event_log: <span class="prelude-val">Some</span>(event_log),
-    };
-
-    <span class="kw">let </span>result_ca =
-        CertificateAuthority { eca_private_key: stage1_eca_signing_key.to_bytes().to_vec() };
-
-    <span class="kw">let </span>result_dice_data =
-        DiceData { evidence: <span class="prelude-val">Some</span>(result_evidence), certificate_authority: <span class="prelude-val">Some</span>(result_ca) };
-
-    result.magic = STAGE0_MAGIC;
-    result.root_layer_evidence.tee_platform = tee_platform <span class="kw">as </span>u64;
+    <span class="kw">let </span><span class="kw-2">mut </span>result = DerivedKey::default();
+    <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>uds[..]);
+    hkdf.expand(<span class="string">b"CDI_Seal"</span>, <span class="kw-2">&amp;mut </span>result[..]).expect(<span class="string">"invalid length for HKDF output"</span>);
     result
-        .root_layer_evidence
-        .set_remote_attestation_report(report_bytes)
-        .expect(<span class="string">"failed to set remote attestation report"</span>);
-    result
-        .root_layer_evidence
-        .set_eca_public_key(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)
-        .expect(<span class="string">"failed to set eca public key"</span>);
-    result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
-        .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_cert);
-    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.to_bytes().len()]
-        .copy_from_slice(stage1_eca_signing_key.to_bytes().as_slice());
-    hkdf.expand(<span class="string">b"CDI_Seal"</span>, <span class="kw-2">&amp;mut </span>result.layer_1_cdi.cdi[..])
-        .expect(<span class="string">"invalid length for HKDF output"</span>);
-
-    (result, result_dice_data)
 }
 
 <span class="doccomment">/// Returns an attestation report.
