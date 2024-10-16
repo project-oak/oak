@@ -79,7 +79,7 @@
 </span><span class="doccomment">//! This module provides an implementation of the Attestation Verifier bases on
 //! verifying the DICE chain.
 
-</span><span class="kw">use </span>alloc::{boxed::Box, string::ToString};
+</span><span class="kw">use </span>alloc::{string::ToString, sync::Arc};
 
 <span class="kw">use </span>oak_attestation_verification::verifier::verify;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
@@ -90,12 +90,12 @@
 
 <span class="kw">struct </span>DiceAttestationVerifier {
     ref_values: ReferenceValues,
-    clock: Box&lt;<span class="kw">dyn </span>Clock&gt;,
+    clock: Arc&lt;<span class="kw">dyn </span>Clock&gt;,
 }
 
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">impl </span>DiceAttestationVerifier {
-    <span class="kw">pub fn </span>create(ref_values: ReferenceValues, clock: Box&lt;<span class="kw">dyn </span>Clock&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>create(ref_values: ReferenceValues, clock: Arc&lt;<span class="kw">dyn </span>Clock&gt;) -&gt; <span class="self">Self </span>{
         DiceAttestationVerifier { ref_values, clock }
     }
 }

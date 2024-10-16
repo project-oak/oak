@@ -39,7 +39,7 @@
 
 </span><span class="doccomment">//! Trait for the time related functionality.
 
-</span><span class="kw">pub trait </span>Clock: Send {
+</span><span class="kw">pub trait </span>Clock: Sync + Send {
     <span class="kw">fn </span>get_current_time_ms(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i64;
 }
 </code></pre></div></section></main></body></html>
