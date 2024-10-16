@@ -15,6 +15,7 @@
 use std::{fs, path::PathBuf};
 
 /// Replaces refs to prost with prost_derive. See b/340185847.
+///
 /// Only to be called from build scripts of crates that generate prost code.
 /// Only to be called when building with Bazel.
 /// The issue that this fixes is that prost with "derive" feature uses
@@ -45,8 +46,9 @@ pub fn fix_prost_derives() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// Returns the include paths of common protos: Oak proto and
-// com_google_protobuf.
+/// Returns the include paths of common protos
+///
+///  Oak proto and com_google_protobuf.
 pub fn get_common_proto_path(root: &str) -> Vec<PathBuf> {
     // The root of all Oak protos
     let oak_proto_root = PathBuf::from(root);

@@ -76,8 +76,9 @@ pub struct ValueType {
     #[prost(int64, tag = "2")]
     pub unit: i64,
 }
-/// Each Sample records values encountered in some program
-/// context. The program context is typically a stack trace, perhaps
+/// Each Sample records values encountered in some program context.
+///
+/// The program context is typically a stack trace, perhaps
 /// augmented with auxiliary information like the thread-id, some
 /// indicator of a higher level request being handled etc.
 #[allow(clippy::derive_partial_eq_without_eq)]

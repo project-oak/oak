@@ -257,7 +257,11 @@ impl Rsdt {
         self.entries().iter().find_map(|&entry| {
             let ptr = entry as usize;
             let entry: &'static DescriptionHeader = unsafe { &*(ptr as *const DescriptionHeader) };
-            if entry.signature == *table { Some(entry) } else { None }
+            if entry.signature == *table {
+                Some(entry)
+            } else {
+                None
+            }
         })
     }
 }

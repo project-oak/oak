@@ -23,10 +23,11 @@ use oak_crypto::{
 };
 use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 
-/// Wraps a closure to an underlying function with request encryption and
-/// response decryption logic, based on the provided encryption key.
-/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`]
-/// is needed.
+/// Wraps a closure with request encryption and response decryption logic.
+///
+/// Wraps the provided closer with encryption/decryption logic based on the
+/// provided encryption key. [`AsyncEncryptionHandler`] can be used when an
+/// [`AsyncEncryptionKeyHandle`] is needed.
 pub struct AsyncEncryptionHandler<H, F>
 where
     H: FnOnce(Vec<u8>) -> F,

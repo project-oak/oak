@@ -38,6 +38,7 @@ mod cdi_spec {
     ///
     /// See <https://github.com/cncf-tags/container-device-interface/blob/main/SPEC.md> for more details.
     #[derive(Deserialize)]
+    #[allow(dead_code)]
     #[serde(rename_all = "camelCase")]
     pub struct Cdi {
         pub cdi_version: String,
@@ -66,6 +67,7 @@ mod cdi_spec {
 
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
     pub struct ContainerEdits {
         #[serde(default)]
         pub env: Vec<String>,
@@ -103,6 +105,7 @@ mod cdi_spec {
 
     #[derive(Clone, Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
     pub struct DeviceNode {
         pub path: String,
         pub host_path: Option<String>,
@@ -150,6 +153,7 @@ mod cdi_spec {
 
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
     pub struct Mounts {
         pub host_path: String,
         pub container_path: String,
@@ -202,6 +206,7 @@ mod cdi_spec {
 
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
     pub struct IntelRdt {
         #[serde(rename = "closID")]
         pub clos_id: Option<String>,
@@ -255,6 +260,7 @@ pub struct CdiSpec {
     fs: Box<dyn Fs>,
 }
 
+#[allow(dead_code)]
 impl CdiSpec {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = std::fs::File::open(path).context("could not open CDI spec file")?;
@@ -265,7 +271,6 @@ impl CdiSpec {
         })
     }
 
-    #[allow(dead_code)]
     fn new_from_str(fs: Box<dyn Fs>, contents: &str) -> Result<Self> {
         Ok(Self { spec: serde_json::from_str(contents).context("could not parse CDI spec")?, fs })
     }
@@ -274,7 +279,6 @@ impl CdiSpec {
         &self.spec.kind
     }
 
-    #[allow(dead_code)]
     pub fn devices(&self) -> Vec<&str> {
         self.spec.devices.iter().map(|device| device.name.as_str()).collect()
     }

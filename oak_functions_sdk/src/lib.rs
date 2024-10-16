@@ -71,7 +71,11 @@ where
 }
 
 fn bytes_value_to_option(b: BytesValue) -> Option<Vec<u8>> {
-    if b.found { Some(b.value) } else { None }
+    if b.found {
+        Some(b.value)
+    } else {
+        None
+    }
 }
 
 /// See [`StdWasmApiClient::log`].

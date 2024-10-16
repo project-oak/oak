@@ -1,5 +1,5 @@
 {
-  "checksum": "4e38de910463b48b56c3df5fc6ddc523927b744a00f8a7d28657ec1ccdcec19d",
+  "checksum": "0b1ef965429ff0855c31dda0a6fad5505758bbc6bfaa0cf4d8345f23008216ed",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -5562,14 +5562,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "curve25519-dalek 4.1.1": {
+    "curve25519-dalek 4.1.3": {
       "name": "curve25519-dalek",
-      "version": "4.1.1",
+      "version": "4.1.3",
       "package_url": "https://github.com/dalek-cryptography/curve25519-dalek/tree/main/curve25519-dalek",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/curve25519-dalek/4.1.1/download",
-          "sha256": "e89b8c6a2e4b1f45971ad09761aafb85514a84744b67a95e32c3cc1352d1f65c"
+          "url": "https://static.crates.io/crates/curve25519-dalek/4.1.3/download",
+          "sha256": "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
         }
       },
       "targets": [
@@ -5610,7 +5610,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "curve25519-dalek 4.1.1",
+              "id": "curve25519-dalek 4.1.3",
               "target": "build_script_build"
             },
             {
@@ -5645,7 +5645,7 @@
             ]
           }
         },
-        "version": "4.1.1"
+        "version": "4.1.3"
       },
       "build_script_attrs": {
         "data_glob": [
@@ -5653,10 +5653,6 @@
         ],
         "deps": {
           "common": [
-            {
-              "id": "platforms 3.4.0",
-              "target": "platforms"
-            },
             {
               "id": "rustc_version 0.4.0",
               "target": "rustc_version"
@@ -6577,7 +6573,7 @@
               "target": "criterion"
             },
             {
-              "id": "curve25519-dalek 4.1.1",
+              "id": "curve25519-dalek 4.1.3",
               "target": "curve25519_dalek"
             },
             {
@@ -6885,7 +6881,7 @@
               "target": "tikv_jemallocator"
             },
             {
-              "id": "time 0.3.34",
+              "id": "time 0.3.36",
               "target": "time"
             },
             {
@@ -16598,52 +16594,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "platforms 3.4.0": {
-      "name": "platforms",
-      "version": "3.4.0",
-      "package_url": "https://github.com/rustsec/rustsec/tree/main/platforms",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/platforms/3.4.0/download",
-          "sha256": "db23d408679286588f4d4644f965003d056e3dd5abcaaa938116871d7ce2fee7"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "platforms",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "platforms",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default",
-            "std"
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "3.4.0"
-      },
-      "license": "Apache-2.0 OR MIT",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "plotters 0.3.6": {
       "name": "plotters",
       "version": "0.3.6",
@@ -21126,7 +21076,7 @@
               "target": "log"
             },
             {
-              "id": "time 0.3.34",
+              "id": "time 0.3.36",
               "target": "time"
             }
           ],
@@ -22656,7 +22606,7 @@
               "target": "log"
             },
             {
-              "id": "time 0.3.34",
+              "id": "time 0.3.36",
               "target": "time"
             }
           ],
@@ -23404,14 +23354,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "time 0.3.34": {
+    "time 0.3.36": {
       "name": "time",
-      "version": "0.3.34",
+      "version": "0.3.36",
       "package_url": "https://github.com/time-rs/time",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/time/0.3.34/download",
-          "sha256": "c8248b6521bb14bc45b4067159b9b6ad792e2d6d754d6c41fb50e29fefe38749"
+          "url": "https://static.crates.io/crates/time/0.3.36/download",
+          "sha256": "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
         }
       },
       "targets": [
@@ -23490,13 +23440,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "time-macros 0.2.17",
+              "id": "time-macros 0.2.18",
               "target": "time_macros"
             }
           ],
           "selects": {}
         },
-        "version": "0.3.34"
+        "version": "0.3.36"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -23544,14 +23494,14 @@
       ],
       "license_file": "LICENSE-Apache"
     },
-    "time-macros 0.2.17": {
+    "time-macros 0.2.18": {
       "name": "time-macros",
-      "version": "0.2.17",
+      "version": "0.2.18",
       "package_url": "https://github.com/time-rs/time",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/time-macros/0.2.17/download",
-          "sha256": "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
+          "url": "https://static.crates.io/crates/time-macros/0.2.18/download",
+          "sha256": "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
         }
       },
       "targets": [
@@ -23595,7 +23545,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.17"
+        "version": "0.2.18"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -29606,7 +29556,7 @@
         "deps": {
           "common": [
             {
-              "id": "curve25519-dalek 4.1.1",
+              "id": "curve25519-dalek 4.1.3",
               "target": "curve25519_dalek"
             },
             {
@@ -30622,7 +30572,7 @@
     "coset 0.3.7",
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
-    "curve25519-dalek 4.1.1",
+    "curve25519-dalek 4.1.3",
     "derive_builder 0.20.0",
     "ecdsa 0.16.9",
     "elf 0.7.4",
@@ -30701,7 +30651,7 @@
     "temp-env 0.3.6",
     "tempfile 3.10.1",
     "tikv-jemallocator 0.5.4",
-    "time 0.3.34",
+    "time 0.3.36",
     "tokio 1.37.0",
     "tokio-stream 0.1.15",
     "tokio-util 0.7.11",

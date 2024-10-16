@@ -59,9 +59,10 @@ const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
 /// See <https://wiki.osdev.org/Serial_Ports#Line_status_register>.
 const OUTPUT_EMPTY: u8 = 1 << 5;
 
-/// Basic implementation that allows for writing to a serial port using the
-/// SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based IO,
-/// depending on which IO port factory is used in the wrapper enum.
+/// Basic implementation that allows for writing to a serial port.
+///
+/// Uses the SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based
+/// IO, depending on which IO port factory is used in the wrapper enum.
 ///
 /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more
 /// information on the GHCB IOIO protocol.

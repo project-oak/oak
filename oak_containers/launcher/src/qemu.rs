@@ -148,7 +148,7 @@ impl Qemu {
         cmd.args(["-cpu", "host"]);
         // Set memory size if given.
         if let Some(ref memory_size) = params.memory_size {
-            cmd.args(["-m", &memory_size]);
+            cmd.args(["-m", memory_size]);
         };
         // Number of CPUs to give to the VM.
         cmd.args(["-smp", format!("{}", params.num_cpus).as_str()]);
@@ -234,9 +234,7 @@ impl Qemu {
             "user".to_string(),
             "id=netdev".to_string(),
             format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
-            format!(
-                "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
-            ),
+            format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
         ];
         if let Some(host_proxy_port) = host_proxy_port {
             let vm_port = crate::VM_LOCAL_PORT;

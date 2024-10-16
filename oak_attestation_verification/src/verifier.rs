@@ -252,9 +252,11 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
     extract_evidence(evidence)
 }
 
-/// Extracts measurements, public keys and other attestation-related values from
-/// the evidence without verifying it. For most usecases, this function should
-/// not be used. Instead use the [`verify`] function, which verifies the
+/// Extracts attestation-related values without verificaiton.
+///
+/// Extracts measurements, public keys, and other attestation-related values
+/// from the evidence without verifying it. For most usecases, this function
+/// should not be used. Instead use the [`verify`] function, which verifies the
 /// attestation and only returns evidence upon successful verification. Hence
 /// marked as dangerous.
 pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {

@@ -58,8 +58,9 @@ impl TryFrom<SessionKeys> for OrderedChannelEncryptor {
     }
 }
 
-/// Modified implementation of the `OrderedChannelEncryptor` that explicitly
-/// ignores message ordering but protects against replayed messages. This
+/// `OrderedChannelEncryptor` that explicitly ignores message ordering.
+///
+/// It ignores message ordering but protects against replayed messages. This
 /// implementation ratchets messages upto a given `window_size` i.e. very old
 /// messages outside the given window will fail decryption. Messages within the
 /// allowed window will be decrypted in any order. Applications using this

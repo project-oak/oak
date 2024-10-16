@@ -104,6 +104,7 @@ fn aes_gcm_256_encrypt(
         return Err(Error::DataTooLarge(padded_size));
     }
     padded_size += 1; // padding-length byte
+
     // This is standard low-level bit manipulation to round up to the nearest
     // multiple of PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a
     // power of 2, so we compute the mask with !(PADDING_GRANULARITY - 1).
@@ -148,6 +149,7 @@ pub struct OrderedCrypter {
 }
 
 /// Utility for encrypting and decrypting traffic between the Noise endpoints.
+///
 /// This implementation guarantees message ordering.
 /// It is created by |respond| and configured with a key for each traffic
 /// direction.
@@ -193,13 +195,15 @@ impl TryFrom<SessionKeys> for OrderedCrypter {
     }
 }
 
-/// Modified implementation of the `OrderedCrypter` that explicitly ignores
-/// message ordering but protects against replayed messages. This implementation
-/// ratchets messages upto a given `window_size` i.e. very old messages outside
-/// the given window will fail decryption. Messages within the allowed window
-/// will be decrypted in any order. Applications using this implementation must
-/// ensure they can handle re-ordered and dropped messages. This implementation
-/// is primarily meant for unreliable transport protocols such as UDP.
+/// Modified impl of `OrderedCrypter` that explicitly ignores ordering.
+///
+/// It explicitly ignores message ordering but protects against replayed
+/// messages. This implementation ratchets messages upto a given `window_size`
+/// i.e. very old messages outside the given window will fail decryption.
+/// Messages within the allowed window will be decrypted in any order.
+/// Applications using this implementation must ensure they can handle
+/// re-ordered and dropped messages. This implementation is primarily meant for
+/// unreliable transport protocols such as UDP.
 pub struct UnorderedCrypter {
     read_key: [u8; SYMMETRIC_KEY_LEN],
     write_key: [u8; SYMMETRIC_KEY_LEN],

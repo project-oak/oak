@@ -100,17 +100,15 @@ fn attestation_verification_succeeds() {
 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
-    assert!(
-        server_attestation_provider.put_incoming_message(&attest_request.unwrap().unwrap()).is_ok()
-    );
+    assert!(server_attestation_provider
+        .put_incoming_message(&attest_request.unwrap().unwrap())
+        .is_ok());
 
     let attest_response = server_attestation_provider.get_outgoing_message();
     assert!(attest_response.is_ok());
-    assert!(
-        client_attestation_provider
-            .put_incoming_message(&attest_response.unwrap().unwrap(),)
-            .is_ok()
-    );
+    assert!(client_attestation_provider
+        .put_incoming_message(&attest_response.unwrap().unwrap(),)
+        .is_ok());
 
     client_attestation_provider.take_attestation_result().unwrap().unwrap();
     server_attestation_provider.take_attestation_result().unwrap().unwrap();
@@ -161,17 +159,15 @@ fn attestation_verification_fails() {
 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
-    assert!(
-        server_attestation_provider.put_incoming_message(&attest_request.unwrap().unwrap()).is_ok()
-    );
+    assert!(server_attestation_provider
+        .put_incoming_message(&attest_request.unwrap().unwrap())
+        .is_ok());
 
     let attest_response = server_attestation_provider.get_outgoing_message();
     assert!(attest_response.is_ok());
-    assert!(
-        client_attestation_provider
-            .put_incoming_message(&attest_response.unwrap().unwrap(),)
-            .is_ok()
-    );
+    assert!(client_attestation_provider
+        .put_incoming_message(&attest_response.unwrap().unwrap(),)
+        .is_ok());
 
     let client_attestation_result = client_attestation_provider.take_attestation_result().unwrap();
     assert!(client_attestation_result.is_err());

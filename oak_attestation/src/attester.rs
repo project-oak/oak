@@ -28,6 +28,7 @@ pub trait Attester {
 }
 
 /// Trait for passing incomplete evidence between layers of software components.
+///
 /// For example, in DICE it is used to pass the DiceData containing the
 /// certificate authority private key, and for TDX it is used to pass an
 /// unfinished EventLog.

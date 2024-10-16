@@ -47,7 +47,8 @@ const AMD_SEV_SNP_TITLE: &str = "AMD SEV-SNP";
 const INTEL_TDX_TITLE: &str = "Intel TDX";
 const INSECURE_TEE_TITLE: &str = "FAKE INSECURE";
 
-const ATTESTATIONS_INTRO: &str = "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
+const ATTESTATIONS_INTRO: &str =
+    "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
 const REFERENCE_VALUES_INTRO: &str =
     "The reference values describing this layer are printed below.\n";
 
@@ -122,13 +123,11 @@ impl HumanReadableExplanation for ReferenceValues {
         match self {
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(
-                        OakRestrictedKernelReferenceValues {
-                            root_layer: Some(root_layer),
-                            kernel_layer: Some(kernel_layer),
-                            application_layer: Some(application_layer),
-                        },
-                    )),
+                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(OakRestrictedKernelReferenceValues {
+                        root_layer: Some(root_layer),
+                        kernel_layer: Some(kernel_layer),
+                        application_layer: Some(application_layer),
+                    })),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -140,14 +139,12 @@ impl HumanReadableExplanation for ReferenceValues {
             )),
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakContainers(
-                        OakContainersReferenceValues {
-                            root_layer: Some(root_layer),
-                            kernel_layer: Some(kernel_layer),
-                            system_layer: Some(system_layer),
-                            container_layer: Some(container_layer),
-                        },
-                    )),
+                    Some(attestation::v1::reference_values::Type::OakContainers(OakContainersReferenceValues {
+                        root_layer: Some(root_layer),
+                        kernel_layer: Some(kernel_layer),
+                        system_layer: Some(system_layer),
+                        container_layer: Some(container_layer),
+                    })),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -307,9 +304,7 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
                 format!("The attestation must be rooted in an {INTEL_TDX_TITLE} TEE.")
             }
             RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: Some(_), insecure: None } => {
-                format!(
-                    "The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE."
-                )
+                format!("The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE.")
             }
             RootLayerReferenceValues { insecure: Some(_), .. } => {
                 "The root of the attestation is not being verified.".to_owned()
@@ -755,6 +750,7 @@ trait OakDigestDisplay {
     /// String of the hash in the following format: [alg]:[hash]. The algorithm
     /// descripter follows fieldnames of the proto-message: oak.RawDigest
     /// struct.
+    #[allow(dead_code)]
     fn display_hash(&self) -> String;
 
     fn provenance_link(&self) -> String;

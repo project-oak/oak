@@ -17,15 +17,18 @@
 use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_containers_sdk::OrchestratorInterface;
-use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, endorsements,
-    kernel_binary_reference_value, reference_values, text_reference_value,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-    Endorsements, Event, InsecureReferenceValues, KernelBinaryReferenceValue,
-    KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-    RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
-    TextReferenceValue,
+use oak_proto_rust::oak::attestation::{
+    self,
+    v1::{
+        attestation_results::Status, binary_reference_value, endorsements,
+        kernel_binary_reference_value, reference_values, text_reference_value,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
+        Endorsements, Event, InsecureReferenceValues, KernelBinaryReferenceValue,
+        KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
+        RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
+        TextReferenceValue,
+    },
 };
 use oak_restricted_kernel_sdk::Attester;
 use prost::Message;
@@ -42,13 +45,15 @@ fn verify_mock_dice_chain() {
     let result = verify_dice_chain(&mock_evidence);
 
     assert!(result.is_ok());
-    let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
+    let evidence_values: attestation::v1::extracted_evidence::EvidenceValues =
         result.unwrap().evidence_values.unwrap();
-    assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
+    assert!(matches!(
+        evidence_values,
+        attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel { .. }
+    ))
 }
 
-fn get_restricted_kernel_evidence_proto_with_eventlog()
--> oak_proto_rust::oak::attestation::v1::Evidence {
+fn get_restricted_kernel_evidence_proto_with_eventlog() -> attestation::v1::Evidence {
     let mock_attester = oak_restricted_kernel_sdk::testing::MockAttester::create()
         .expect("failed to create mock attester");
     mock_attester.quote().expect("couldn't get evidence")
@@ -59,9 +64,12 @@ fn verify_mock_dice_chain_with_valid_event_log() {
     let result = verify_dice_chain(&get_restricted_kernel_evidence_proto_with_eventlog());
 
     assert!(result.is_ok());
-    let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
+    let evidence_values: attestation::v1::extracted_evidence::EvidenceValues =
         result.unwrap().evidence_values.unwrap();
-    assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
+    assert!(matches!(
+        evidence_values,
+        attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel { .. }
+    ))
 }
 
 #[test]

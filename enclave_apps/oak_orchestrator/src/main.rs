@@ -124,9 +124,7 @@ fn entrypoint() {
     log::info!("Finished setup, handing off executing to the app and going to sleep.");
     let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
         .expect("failed to create app process");
-    log::warn!(
-        "Orchestrator has been awoken! This only happens if the enclave app uses unstable syscalls."
-    );
+    log::warn!("Orchestrator has been awoken! This only happens if the enclave app uses unstable syscalls.");
     for _ in 0..1 {
         log::info!("Zzz... (Hitting snooze, resuming the app)");
         let _ = syscall::unstable_switch_proccess(pid);

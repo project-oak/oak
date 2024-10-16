@@ -39,6 +39,7 @@ pub enum Syscall {
     ///   - arg0 (c_ssize_t): file descriptor number
     ///   - arg1 (*mut c_void): pointer to the buffer to be filled
     ///   - arg2 (c_size_t): size of the buffer
+    ///
     /// Returns:
     ///   a value of <errno::Errno> on failure; otherwise, the number of bytes
     /// read.
@@ -51,6 +52,7 @@ pub enum Syscall {
     ///   - arg1 (*const c_void): pointer to the buffer containing data to be
     ///     written
     ///   - arg2 (c_size_t): size of the buffer
+    ///
     /// Returns:
     ///   a value of <errno::Errno> on failure; otherwise, the number of bytes
     /// written.
@@ -69,6 +71,7 @@ pub enum Syscall {
     ///     mappings. Should be set to -1 by caller.
     ///   - arg5 (c_int): offset. Ignored, as we only support anonymous
     ///     mappings. Should be set to 0 by caller.
+    ///
     /// Oak Restricted Kernel considerations:
     ///   - our mmap will work on 2 MiB chunks; even if size is 1 byte, we will
     ///     reserve a 2 MiB chunk of memory. Thus, size should be kept as a
@@ -83,6 +86,7 @@ pub enum Syscall {
     /// Terminates he calling process.
     /// Arguments:
     ///   - arg0 (c_int): error code
+    ///
     /// Oak Restricted Kernel considerations:
     ///   We don't expect the user process to terminate, so this triggers a
     /// kernel panic, no matter the error code.
@@ -92,6 +96,7 @@ pub enum Syscall {
     /// Arguments:
     ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as
     ///     we don't support multiple file descriptors.
+    ///
     /// Returns:
     ///   a value of <errno::Errno> on failure; 0, otherwise.
     Fsync = 74,
@@ -101,6 +106,7 @@ pub enum Syscall {
     /// Arguments:
     ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
     ///   - arg1 (c_size_t): size of the buffer
+    ///
     /// Returns:
     ///   a value of <errno::Errno> on failure.
     UnstableCreateProcess = UNSTABLE_SYSCALL_SPACE,
@@ -110,6 +116,7 @@ pub enum Syscall {
     ///
     /// Arguments:
     ///   - arg0 (c_size_t): PID of the process.
+    ///
     /// Returns:
     ///   a value of <errno::Errno> on failure; Otherwise the pid of previously
     /// active process, once execution returns to the calling process.

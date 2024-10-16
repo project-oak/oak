@@ -394,7 +394,11 @@ impl oak_stage0::Platform for Tdx {
             curr_ptr = unsafe { curr_ptr.byte_offset(curr_hdr.hob_length as isize) };
             curr_hdr = unsafe { *curr_ptr };
         }
-        if index == 0 { Err("no valid TD HoB found") } else { Ok(index) }
+        if index == 0 {
+            Err("no valid TD HoB found")
+        } else {
+            Ok(index)
+        }
     }
 
     fn initialize_platform(e820_table: &[oak_linux_boot_params::BootE820Entry]) {

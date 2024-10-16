@@ -60,10 +60,11 @@ pub const CERTIFICATE_SIZE: usize = 1024;
 /// physical address of the Stage 0 DICE data struct.
 pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
 
-/// The name of the kernel command-line parameter that is used to send the
-/// length of the dice data that needs to be zeroed to delete the layer1
-/// certificate authority from memory, starting from the physical address of the
-/// Stage 0 DICE data struct.
+/// The name of the kernel command-line parameter containing dice data length.
+///
+/// This gives the length of the dice data that needs to be zeroed to delete the
+/// layer1 certificate authority from memory, starting from the physical address
+/// of the Stage 0 DICE data struct.
 pub const DICE_DATA_LENGTH_CMDLINE_PARAM: &str = "oak-dice-length";
 
 /// physical address of the Stage 0 event log.

@@ -266,7 +266,9 @@ pub fn init_idt_early() {
     // Volume 2 for more details.
     let mut idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); // vector 0
+
     // skipping vector 1 (debug)
+
     idt.non_maskable_interrupt.set_handler_fn(nmi_handler); // vector 2
     idt.breakpoint.set_handler_fn(breakpoint_handler); // vector 3
     idt.overflow.set_handler_fn(overflow_handler); // vector 4
@@ -274,17 +276,22 @@ pub fn init_idt_early() {
     idt.invalid_opcode.set_handler_fn(invalid_opcode_handler); // vector 6
     idt.device_not_available.set_handler_fn(device_not_available_handler); // vector 7
     idt.double_fault.set_handler_fn(double_fault_handler); // vector 8
+
     // vector 9 is reserved
+
     idt.invalid_tss.set_handler_fn(invalid_tss_handler); // vector 10
     idt.segment_not_present.set_handler_fn(segment_not_present_handler); // vector 11
     idt.stack_segment_fault.set_handler_fn(stack_exception_handler); // vector 12
     idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); // vector 13
     idt.page_fault.set_handler_fn(page_fault_handler); // vector 14
+
     // there is no vector 15
+
     idt.x87_floating_point.set_handler_fn(x87_floating_point_handler); // vector 16
     idt.alignment_check.set_handler_fn(alignment_check_handler); // vector 17
     idt.machine_check.set_handler_fn(machine_check_handler); // vector 18
     idt.simd_floating_point.set_handler_fn(simd_fp_handler); // vector 19
+
     // there is no vector 20
 
     let vc_handler_address = VirtAddr::new(vmm_communication_exception_handler as usize as u64);

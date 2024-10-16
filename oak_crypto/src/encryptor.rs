@@ -15,6 +15,7 @@
 //
 
 //! Implementation of the Bidirectional Hybrid Public Key Encryption (HPKE)
+//!
 //! scheme from RFC9180. <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
@@ -85,10 +86,12 @@ pub trait Encryptor: Send {
     fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload>;
 }
 
-/// Encryptor object for encrypting client requests that will be sent to the
-/// server and decrypting server responses that are received by the client. Each
-/// Encryptor object corresponds to a single crypto session between the client
-/// and the server.
+/// Encryptor object for encrypting requests/decrypting responses.
+///
+/// Provides an encryptor for encrypting requests sent to the server and
+/// decrypting server responses that are received by the client. Each Encryptor
+/// object corresponds to a single crypto session between the client and the
+/// server.
 ///
 /// Sequence numbers for requests and responses are incremented separately,
 /// meaning that there could be multiple responses per request and multiple
@@ -161,6 +164,8 @@ impl ClientEncryptor {
     }
 }
 
+/// Encryptor object for encrypting responses/decrypting requests.
+///
 /// Encryptor object for decrypting client requests that are received by the
 /// server and encrypting server responses that will be sent back to the client.
 /// Each Encryptor object corresponds to a single crypto session between the

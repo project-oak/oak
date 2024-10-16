@@ -51,11 +51,12 @@ rust_library(
 
 rust_library(
     name = "compiler_builtins",
+    # There are multiple versions available in the nightly tarball, we choose the newest.
     srcs = glob([
-        "vendor/compiler_builtins/src/**/*.rs",
-        "vendor/compiler_builtins/libm/**/*.rs",
+        "vendor/compiler_builtins-0.1.123/src/**/*.rs",
+        "vendor/compiler_builtins-0.1.123/libm/**/*.rs",
     ]),
-    compile_data = glob(["vendor/compiler_builtins/src/**/*.md"]),
+    compile_data = glob(["vendor/compiler_builtins-0.1.123/src/**/*.md"]),
     crate_features = [
         "compiler-builtins",
         "force-soft-floats",
@@ -109,10 +110,12 @@ rust_library(
     ],
 )
 
+
 rust_library(
     name = "cfg_if",
-    srcs = glob(["vendor/cfg-if/src/**/*.rs"]),
-    compile_data = glob(["vendor/cfg-if/src/**/*.md"]),
+    # There are multiple versions available in the nightly tarball, we choose the newest.
+    srcs = glob(["vendor/cfg-if-1.0.0/src/**/*.rs"]),
+    compile_data = glob(["vendor/cfg-if-1.0.0/src/**/*.md"]),
     crate_features = [
         "compiler_builtins",
         "core",
@@ -161,8 +164,9 @@ rust_library(
 
 rust_library(
     name = "libc",
-    srcs = glob(["vendor/libc/src/**/*.rs"]),
-    compile_data = glob(["vendor/libc/src/**/*.md"]),
+    # There are multiple versions available in the nightly tarball, we choose the newest.
+    srcs = glob(["vendor/libc-0.2.158/src/**/*.rs"]),
+    compile_data = glob(["vendor/libc-0.2.158/src/**/*.md"]),
     crate_features = [
         "align",
     ],
@@ -213,15 +217,14 @@ rust_library(
 
 rust_library(
     name = "rustc_demangle",
-    srcs = glob(["vendor/rustc-demangle/src/**/*.rs"]),
-    compile_data = glob(["vendor/rustc-demangle/src/**/*.md"]),
+    srcs = glob(["vendor/rustc-demangle-0.1.24/src/**/*.rs"]),
+    compile_data = glob(["vendor/rustc-demangle-0.1.24/src/**/*.md"]),
     crate_features = [
         "core",
         "compiler_builtins",
         "no_std",
     ],
     crate_name = "rustc_demangle",
-    crate_root = "vendor/rustc-demangle/src/lib.rs",
     rustc_env = {
         "RUSTC_BOOTSTRAP": "1",
     },

@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-//! This is a key/value hash table optimized for large numbers of small k/v
-//! pairs.  We assume we bust out of on-chip cache, so speed is limited by cache
+//! A key/value hash table optimized for large numbers of small k/v pairs.
+//!
+//! We assume we bust out of on-chip cache, so speed is limited by cache
 //! misses, not the actual operations such as hashing and bit manipulation.
 //!
 //! The k/v pairs are loaded before any are read, and once they are loaded

@@ -74,7 +74,8 @@
               includeSystemImages = false;
             }).androidsdk;
           rustToolchain =
-            pkgs.rust-bin.nightly."2024-02-01".default.override {
+            # This should be kept in sync with the value in bazel/rust/defs.bzl
+            pkgs.rust-bin.nightly."2024-09-05".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"

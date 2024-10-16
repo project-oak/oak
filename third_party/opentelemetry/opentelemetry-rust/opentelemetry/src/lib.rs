@@ -186,7 +186,6 @@
     html_logo_url = "https://raw.githubusercontent.com/open-telemetry/opentelemetry-rust/main/assets/logo.svg"
 )]
 #![cfg_attr(test, deny(warnings))]
-#![feature(error_in_core)]
 #![cfg_attr(all(not(feature = "testing")), no_std)]
 
 extern crate alloc;

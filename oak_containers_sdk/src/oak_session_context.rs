@@ -32,11 +32,11 @@ pub trait ApplicationHandler: Send + Sync {
     async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-/// The state heeded to handle an Oak crypto session inside of a streaming
-/// server handler. This structure contains the
-/// server-implementation-independent functionality for encryption, and holds
-/// the instance of the class that actually implements the application
-/// logic.
+/// The state needed to handle one streaming Oak crypto session.
+///
+/// This structure contains the server-implementation-independent functionality
+/// for encryption, and holds the instance of the class that actually implements
+/// the application logic.
 pub struct OakSessionContext {
     encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     endorsed_evidence: EndorsedEvidence,

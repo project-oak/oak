@@ -65,6 +65,7 @@ pub static PAGE_TABLE_REFS: OnceCell<Spinlock<PageTableRefs>> = OnceCell::new();
 
 /// Thin wrapper around x86::PageTable that uses our PageTableEntry type.
 #[repr(transparent)]
+#[derive(Default)]
 pub struct PageTable(BasePageTable);
 
 impl PageTable {

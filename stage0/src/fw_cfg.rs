@@ -191,7 +191,11 @@ impl<P: crate::Platform> FwCfg<P> {
             fwcfg.dma_enabled = true;
         }
 
-        if signature == SIGNATURE { Ok(fwcfg) } else { Err("QEMU fw_cfg device not available") }
+        if signature == SIGNATURE {
+            Ok(fwcfg)
+        } else {
+            Err("QEMU fw_cfg device not available")
+        }
     }
 
     /// Returns an iterator over the files in the fw_cfg system.
@@ -371,7 +375,11 @@ impl<P: crate::Platform> FwCfg<P> {
     /// Returns `None` if the kernel size is 0.
     pub fn get_setup_file(&mut self) -> Option<DirEntry> {
         let size = self.read_setup_size().expect("couldn't read setup size");
-        if size == 0 { None } else { Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData)) }
+        if size == 0 {
+            None
+        } else {
+            Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
+        }
     }
 
     fn write_selector(&mut self, selector: u16) -> Result<(), &'static str> {

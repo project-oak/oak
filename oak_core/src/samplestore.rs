@@ -16,8 +16,9 @@
 
 //! Probabilistic sample store to compute percentiles over some measurement.
 
-/// Basic Probabilistic sample store to compute percentiles over some
-/// measurement. N is the number of elements kept in memory; it must be larger
+/// Basic Probabilistic sample store to compute percentiles
+///
+/// N is the number of elements kept in memory; it must be larger
 /// than 0. The array is allocated statically; SampleStore does not use heap
 /// allocation.
 #[derive(Debug, PartialEq)]
@@ -33,15 +34,20 @@ pub trait SampleStore {
     /// one of the existing entries based on reservoir sampling.
     fn record(&mut self, value: u64);
 
-    /// Gets the n-th percentile. n needs to be between 0 and 100, otherwise
-    /// None is returned; also, the store must have at least one recorded
-    /// data point.
+    /// Gets the n-th percentile.
+    ///
+    /// n needs to be between 0 and 100, otherwise None is returned; also,
+    /// the store must have at least one recorded data point.
     fn percentile(&self, n: f64) -> Option<u64>;
 }
 
 impl<const N: usize> StaticSampleStore<N> {
     pub fn new() -> Option<Self> {
-        if N == 0 { None } else { Some(Self { data: [0; N], samples: 0 }) }
+        if N == 0 {
+            None
+        } else {
+            Some(Self { data: [0; N], samples: 0 })
+        }
     }
 }
 

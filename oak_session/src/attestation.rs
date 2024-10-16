@@ -115,7 +115,7 @@ pub trait AttestationProvider: Send {
     // Consume the attestation results when they're ready. Returns None if the
     // attestation still is still pending the incoming peer's data.
     fn take_attestation_result(&mut self)
-    -> Option<Result<AttestationSuccess, AttestationFailure>>;
+        -> Option<Result<AttestationSuccess, AttestationFailure>>;
 }
 
 // Aggregates the attestation result from multiple verifiers. Implementations of

@@ -238,19 +238,18 @@ impl LogsService for LauncherServerImplementation {
         for resource_log in &request.resource_logs {
             for scope_log in &resource_log.scope_logs {
                 for log_record in &scope_log.log_records {
-                    let unit =
-                        log_record
-                            .attributes
-                            .iter()
-                            .find_map(|x| {
-                                if x.key == "_SYSTEMD_UNIT" { x.value.as_ref() } else { None }
-                            })
-                            .and_then(|value| value.value.as_ref())
-                            .and_then(|value| match value {
-                                Value::StringValue(x) => Some(x.as_str()),
-                                _ => None,
-                            })
-                            .unwrap_or_default();
+                    let unit = log_record
+                        .attributes
+                        .iter()
+                        .find_map(
+                            |x| if x.key == "_SYSTEMD_UNIT" { x.value.as_ref() } else { None },
+                        )
+                        .and_then(|value| value.value.as_ref())
+                        .and_then(|value| match value {
+                            Value::StringValue(x) => Some(x.as_str()),
+                            _ => None,
+                        })
+                        .unwrap_or_default();
                     let body = log_record
                         .body
                         .as_ref()

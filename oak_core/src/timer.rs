@@ -41,9 +41,10 @@ pub fn rdtsc() -> u64 {
     edx << 32 | eax
 }
 
-/// Measures the number of clock cycles between `new()` and `elapsed()`. This
-/// measurement only makes sense if the process is running on the same CPU, as
-/// different CPUs will have different tick counter values.
+/// Measures the number of clock cycles between `new()` and `elapsed()`.
+///
+/// This measurement only makes sense if the process is running on the same CPU,
+/// as different CPUs will have different tick counter values.
 #[derive(Debug)]
 pub struct Timer {
     start: u64,

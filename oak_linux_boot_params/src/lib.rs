@@ -28,6 +28,7 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
 /// E820 address range types according to Chapter 15 of the ACPI Specification,
+///
 /// Version 6.4. See <https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html> for more details.
 pub enum E820EntryType {
     /// Uninitialized entry in the table. Don't trust the address or size.

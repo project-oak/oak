@@ -73,7 +73,9 @@ pub fn convert_raw_to_verifying_key(
         .map_err(|e| anyhow::anyhow!("couldn't convert der to verifying key: {e}"))
 }
 
-/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the
+/// Compares two ECDSA public keys.
+///
+/// Instead of comparing the bytes, we parse the
 /// bytes and compare p256 keys. Keys are considered equal if they are the same
 /// on the elliptic curve. This means that the keys could have different bytes,
 /// but still be the same key.
@@ -189,9 +191,17 @@ pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
 
     #[allow(clippy::collapsible_else_if)]
     if same > 0 {
-        if different > 0 { MatchResult::Contradictory } else { MatchResult::Same }
+        if different > 0 {
+            MatchResult::Contradictory
+        } else {
+            MatchResult::Same
+        }
     } else {
-        if different > 0 { MatchResult::Different } else { MatchResult::Undecidable }
+        if different > 0 {
+            MatchResult::Different
+        } else {
+            MatchResult::Undecidable
+        }
     }
 }
 
@@ -275,9 +285,9 @@ pub fn reference_values_from_evidence(evidence: ExtractedEvidence) -> ReferenceV
                 application_layer: Some(ApplicationLayerReferenceValues {
                     binary: Some(BinaryReferenceValue {
                         r#type: Some(binary_reference_value::Type::Digests(Digests {
-                            digests: vec![
-                                application.binary.expect("no application binary digest"),
-                            ],
+                            digests: vec![application
+                                .binary
+                                .expect("no application binary digest")],
                         })),
                     }),
                     // We don't currently specify configuration values for Oak Containers
@@ -374,9 +384,9 @@ fn kernel_layer_reference_values_from_evidence(
                     digests: vec![kernel_layer.kernel_image.expect("no kernel image digest")],
                 }),
                 setup_data: Some(Digests {
-                    digests: vec![
-                        kernel_layer.kernel_setup_data.expect("no kernel setup data digest"),
-                    ],
+                    digests: vec![kernel_layer
+                        .kernel_setup_data
+                        .expect("no kernel setup data digest")],
                 }),
             })),
         }),
@@ -457,7 +467,7 @@ pub fn decode_protobuf_any<M: Message + Default>(
 }
 
 /// Return a milliseconds-since-the-epoch timestamp value.
-/// ///
+///
 /// Endorsement validity structures in our JSON-based endorsements use
 /// milliseconds resolution, but [`OffsetDateTime`] provides only seconds or
 /// nanoseconds since the epoch.

@@ -50,7 +50,11 @@ const STAGE0_TAG: &str = "Stage0";
 // TODO: b/331252282 - Remove temporary workaround for cmd line length.
 fn shorten_cmdline(cmdline: &str) -> String {
     let max_length: usize = 256;
-    if cmdline.len() > max_length { cmdline[..max_length].to_string() } else { cmdline.to_string() }
+    if cmdline.len() > max_length {
+        cmdline[..max_length].to_string()
+    } else {
+        cmdline.to_string()
+    }
 }
 
 pub fn dice_data_proto_to_stage0_dice_data(

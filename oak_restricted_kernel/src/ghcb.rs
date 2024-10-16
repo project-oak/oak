@@ -149,8 +149,8 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
 /// This must only be used during early boot when the identity-mapped page
 /// tables created by the stage 0 firmware is still active, and only if SEV,
 /// SEV-ES or SEV-SNP is active.
-fn get_identity_mapped_encrypted_page_table<'a>()
--> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
+fn get_identity_mapped_encrypted_page_table<'a>(
+) -> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
     // We assume an identity mapping, so the offset is zero.
     let offset = VirtAddr::new(0);
     // We assume that this will only be used if memory encryption is enabled.

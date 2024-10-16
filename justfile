@@ -319,8 +319,8 @@ bazel-ci: test-workspace-ci std-crates-ci bare-metal-crates-ci
 
 std-crates-ci:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
-    bazel build --config=unsafe-fast-presubmit -- //...:all
-    bazel test --config=unsafe-fast-presubmit --test_output=errors -- //...:all
+    bazel build --keep_going --config=unsafe-fast-presubmit -- //...:all
+    bazel test --keep_going --config=unsafe-fast-presubmit --test_output=errors -- //...:all
 
 test-workspace-ci:
     # Test Oak as a dependency in the test workspace
@@ -331,7 +331,9 @@ bare-metal-crates-ci:
     #!/bin/bash
     set -o pipefail
     # Some crates also need to be built for x86_64-unknown-none and for wasm32-unknown-unknown.
+    echo "Building bare metal crates": $(bazel query "{{bare_metal_crates_query}}")
     bazel query "{{bare_metal_crates_query}}" | xargs bazel build --config=unsafe-fast-presubmit --platforms=//:x86_64-unknown-none
+    echo "Building wasm crates": $(bazel query "{{wasm_crates_query}}")
     bazel query "{{wasm_crates_query}}" | xargs bazel build --config=unsafe-fast-presubmit --platforms=//:wasm32-unknown-unknown
 
 list-bare-metal-crates:
@@ -345,6 +347,12 @@ bazel-clippy-ci:
 
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+
+# Examples:
+# just bazel-update-crate curve25519-dalek
+# just bazel-update-crate curve25519-dalek@4.1.3
+bazel-update-crate crate:
+    env CARGO_BAZEL_REPIN={{crate}} bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 bazel-fmt:
     buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.

@@ -63,11 +63,9 @@ def _common_crates(std):
             default_features = False,
             version = "0.3.7",
         ),
-        # Pin to 4.1.1 see issue #4952
-        # TODO: #4952 - Remove this pinning.
         "curve25519-dalek": crate.spec(
             default_features = False,
-            version = "=4.1.1",
+            version = "*",
         ),
         "derive_builder": crate.spec(
             default_features = False,
@@ -236,7 +234,7 @@ def _common_crates(std):
                 "serde",
                 "parsing",
             ],
-            version = "0.3.28",
+            version = "0.3.36",
         ),
         "uart_16550": crate.spec(version = "0.3.0"),
         "wasmi": crate.spec(

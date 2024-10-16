@@ -150,8 +150,9 @@ pub async fn create_oak_containers_standalone_endorsed_evidence_with_matching_re
     (endorsed_evidence, reference_values)
 }
 
-/// Get the JSON representation of the endorsed evidence using the
-/// Protobuf/JSON mappings. This can be required in order to navigate the
+/// Get the JSON representation of the endorsed evidence.
+///
+/// Use Protobuf/JSON mappings. This can be required in order to navigate the
 /// data as a tree, which prost does not allow. This functionality is needed to
 /// be able to effectively check for equality between proto messages while also
 /// permitting exceptions.
@@ -162,8 +163,9 @@ pub async fn endorsed_evidence_as_json(
     convert_binpb_to_json(input, "oak.session.v1.EndorsedEvidence").await
 }
 
-/// Get the JSON representation of the reference values using the
-/// Protobuf/JSON mappings. This can be required in order to navigate the
+/// Get the JSON representation of the reference values.
+///
+/// Use Protobuf/JSON mappings. This can be required in order to navigate the
 /// data as a tree, which prost does not allow. This functionality is needed to
 /// be able to effectively check for equality between proto messages while also
 /// permitting exceptions.
@@ -176,7 +178,7 @@ pub async fn reference_values_as_json(
 
 /// Helper function to convert binary encoded protobuf messages to JSON using
 /// the protobuf mappings.
-// Prost does not support this functionality, hence a CLI util is used.
+/// Prost does not support this functionality, hence a CLI util is used.
 async fn convert_binpb_to_json(
     input: Vec<u8>,
     type_name: &str,

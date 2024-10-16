@@ -25,9 +25,12 @@ impl Verifier for p256::ecdsa::VerifyingKey {
         let parsed_signature = p256::ecdsa::Signature::from_slice(signature)
             .map_err(anyhow::Error::msg)
             .context("could not parse signature")?;
-        <p256::ecdsa::VerifyingKey as p256::ecdsa::signature::Verifier<
-            p256::ecdsa::Signature,
-        >>::verify(self, message, &parsed_signature).map_err(anyhow::Error::msg)
+        <p256::ecdsa::VerifyingKey as p256::ecdsa::signature::Verifier<p256::ecdsa::Signature>>::verify(
+            self,
+            message,
+            &parsed_signature,
+        )
+        .map_err(anyhow::Error::msg)
     }
 }
 

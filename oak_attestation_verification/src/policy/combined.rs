@@ -27,10 +27,12 @@ use oak_proto_rust::oak::attestation::v1::{
 
 use crate::policy::{EventPolicy, Policy};
 
-/// Represents a combination of Event Policies as a list where each element
-/// corresponds to an `Event` in the `EventLog` and `EventEndorsements` in the
-/// `EventEndorsementsLog` with the same index. This means that mapping between
-/// Policies and Events is done via ordering.
+/// Represents a combination of Event Policies.
+///
+/// They are represented as a list where each element corresponds to an `Event`
+/// in the `EventLog` and `EventEndorsements` in the `EventEndorsementsLog` with
+/// the same index. This means that mapping between Policies and Events is done
+/// via ordering.
 pub struct CombinedPolicy {
     policies: Vec<Box<dyn EventPolicy>>,
 }

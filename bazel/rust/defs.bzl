@@ -3,7 +3,9 @@
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains", "rust_repository_set")
 load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
 
-RUST_NIGHTLY_DATE = "2024-02-01"
+# This should be kept in sync with the value in flake.nix
+# Chosen to match the current internal Rust nightly (go/current-rust-nightly)
+RUST_NIGHTLY_DATE = "2024-09-05"
 
 RUST_NIGHTLY_VERSION = "nightly/" + RUST_NIGHTLY_DATE
 
@@ -11,15 +13,20 @@ RUST_VERSIONS = [
     RUST_NIGHTLY_VERSION,
 ]
 
+# Note: I was tempted to use the RUST_NIGHTLY_DATE symbol here, but this
+# dictionary literal gets printed out when you build, so it's easier to just
+# paste it as-is.
 RUST_SHA256S = {
-    RUST_NIGHTLY_DATE + "/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "7247ca497c7d9194c9e7bb9b6a51f8ccddc452bbce2977d608cabdbc1a0f332f",
-    RUST_NIGHTLY_DATE + "/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "1271eaa89d50bd7f63b338616c36f41fe1e733b5d6c4cc2c95eaa6b3c8faba62",
-    RUST_NIGHTLY_DATE + "/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "1d859549b5f3d2dd146b84aa13dfec24a05913653af2116b39a919cab69de850",
-    RUST_NIGHTLY_DATE + "/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "b227753189981d9a115527ba0e95b365388fb0fe7f1a1ff93116c4448c854197",
-    RUST_NIGHTLY_DATE + "/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "b1a444f8e8f33d813c4d532c12717743edd9b34f685ff5293b6375fc75c2421e",
-    RUST_NIGHTLY_DATE + "/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "7d80f21ff1e365241beae5dc070badea25a96466e974caa80d781bf5ce4965ee",
-    RUST_NIGHTLY_DATE + "/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "b872973f978fb261b52c7fdddfb913b3d916e6427cb3ba34912a58cd19480927",
+    "2024-09-05/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "cca47094fbd0b5e677adc8f68f4b7b5b74b13028d9ed05244049de3896ef4be2",
+    "2024-09-05/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "d16362b2cdcad8f90e40598bcb39c303f979cb6981ad7f334b630917ad4b2596",
+    "2024-09-05/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "bfb8064dec80ba5988620e23fbb5730753f35662a70e6d52e7c80a675ec05e3b",
+    "2024-09-05/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "cd045f86c0d4e3b3647000096d46aabcb55c408915578f593dfa65a3d8453c10",
+    "2024-09-05/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "1be4c36649cd2ec214e8c43ca63fb38d09dd2d5a76eefc8e33cee8025286a09d",
+    "2024-09-05/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "c4433dae8219c9e619adaeaa903f27c233cd1a84a75a1b7112445bbe3e12a35c",
+    "2024-09-05/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "0295fce4801daef5a569dfb38b403f5b1d185b64c0bace4c9869b9631957dcec",
 }
+
+STDLIBS_SHA256 = "894cfc1fb6316acef5c4095aab8713f56bd57f90db5dfb75788b8ab995f86657"
 
 RUST_EDITION = "2021"
 

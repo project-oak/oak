@@ -90,8 +90,7 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
     }
 }
 
-/// [`Attester`] implementation that exposes the instance's evidence that
-/// exposes the ability to read the Attestation Evidence.
+/// Exposes the ability to read the Attestation Evidence.
 ///
 /// Note: Applications should only use the evidence to initially send it to the
 /// host application once, which then sends it to the clients. It is discouraged

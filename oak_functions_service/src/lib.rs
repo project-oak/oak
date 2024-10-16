@@ -16,7 +16,7 @@
 
 #![no_std]
 #![feature(never_type)]
-#![feature(new_uninit)]
+#![feature(new_zeroed_alloc)]
 #![feature(unwrap_infallible)]
 // Required for enabling benchmark tests.
 #![feature(test)]

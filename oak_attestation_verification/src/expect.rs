@@ -84,9 +84,7 @@ pub fn get_expected_values(
         (None, _) => anyhow::bail!("Endorsements are empty"),
         (_, None) => anyhow::bail!("Reference values are empty"),
         (Some(_), Some(_)) => {
-            anyhow::bail!(
-                "Getting expected values: mismatch between evidence, endorsements and reference values"
-            )
+            anyhow::bail!("Getting expected values: mismatch between evidence, endorsements and reference values")
         }
     }
 }
