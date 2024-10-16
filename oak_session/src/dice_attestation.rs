@@ -17,7 +17,7 @@
 //! This module provides an implementation of the Attestation Verifier bases on
 //! verifying the DICE chain.
 
-use alloc::{boxed::Box, string::ToString};
+use alloc::{string::ToString, sync::Arc};
 
 use oak_attestation_verification::verifier::verify;
 use oak_proto_rust::oak::attestation::v1::{
@@ -28,12 +28,12 @@ use crate::{attestation::AttestationVerifier, clock::Clock};
 
 struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
-    clock: Box<dyn Clock>,
+    clock: Arc<dyn Clock>,
 }
 
 #[allow(dead_code)]
 impl DiceAttestationVerifier {
-    pub fn create(ref_values: ReferenceValues, clock: Box<dyn Clock>) -> Self {
+    pub fn create(ref_values: ReferenceValues, clock: Arc<dyn Clock>) -> Self {
         DiceAttestationVerifier { ref_values, clock }
     }
 }

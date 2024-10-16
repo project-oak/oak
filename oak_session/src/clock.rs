@@ -16,6 +16,6 @@
 
 //! Trait for the time related functionality.
 
-pub trait Clock: Send {
+pub trait Clock: Sync + Send {
     fn get_current_time_ms(&self) -> i64;
 }
