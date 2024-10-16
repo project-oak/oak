@@ -42,7 +42,6 @@ rust_library(
         "//oak_crypto",
         "//oak_functions_test_utils",
         "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:bytes",

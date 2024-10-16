@@ -2416,7 +2416,6 @@ dependencies = [
  "oak_containers_launcher",
  "oak_crypto",
  "oak_functions_test_utils",
- "oak_grpc",
  "oak_grpc_utils",
  "oak_hello_world_proto",
  "oak_proto_rust",

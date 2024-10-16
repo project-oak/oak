@@ -17,8 +17,8 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
 use futures::{channel::mpsc, Stream, StreamExt};
-use oak_grpc::oak::session::v1::streaming_session_server::{
-    StreamingSession, StreamingSessionServer,
+use oak_hello_world_proto::oak::containers::example::untrusted_application_server::{
+    UntrustedApplication, UntrustedApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio::{net::TcpListener, sync::Mutex};
@@ -27,11 +27,11 @@ use tokio_stream::wrappers::TcpListenerStream;
 use crate::app_client::TrustedApplicationClient;
 
 /// The sample application's implementation of Oak's streaming service protocol.
-struct StreamingSessionImpl {
+struct UntrustedApplicationImpl {
     trusted_app: Arc<Mutex<TrustedApplicationClient>>,
 }
 
-impl StreamingSessionImpl {
+impl UntrustedApplicationImpl {
     pub fn new(trusted_app: TrustedApplicationClient) -> Self {
         Self { trusted_app: Arc::new(Mutex::new(trusted_app)) }
     }
@@ -85,14 +85,14 @@ where
 }
 
 #[tonic::async_trait]
-impl StreamingSession for StreamingSessionImpl {
-    type StreamStream =
+impl UntrustedApplication for UntrustedApplicationImpl {
+    type SessionStream =
         Pin<Box<dyn Stream<Item = Result<ResponseWrapper, tonic::Status>> + Send + 'static>>;
 
-    async fn stream(
+    async fn session(
         &self,
         request: tonic::Request<tonic::Streaming<RequestWrapper>>,
-    ) -> Result<tonic::Response<Self::StreamStream>, tonic::Status> {
+    ) -> Result<tonic::Response<Self::SessionStream>, tonic::Status> {
         let request_stream = request.into_inner();
 
         let trusted_app = self.trusted_app.clone();
@@ -105,7 +105,7 @@ impl StreamingSession for StreamingSessionImpl {
         })
         .await?;
 
-        Ok(tonic::Response::new(Box::pin(response_stream) as Self::StreamStream))
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::SessionStream))
     }
 }
 
@@ -124,7 +124,7 @@ pub async fn create(
         .await
         .map_err(|error| anyhow!("Failed to create trusted application client: {error:?}"))?;
     tonic::transport::Server::builder()
-        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(app_client)))
+        .add_service(UntrustedApplicationServer::new(UntrustedApplicationImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

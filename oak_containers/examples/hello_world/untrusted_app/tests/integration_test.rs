@@ -31,7 +31,7 @@ use oak_client::{
 use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_containers_hello_world_untrusted_app::demo_transport::{self, DemoTransport};
 use oak_containers_launcher::Args;
-use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
+use oak_hello_world_proto::oak::containers::example::untrusted_application_client::UntrustedApplicationClient;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
@@ -90,9 +90,9 @@ impl TransportCreator<GrpcStreamingTransport> for GrpcStreamingTransportCreator 
             .await
             .expect("couldn't connect via gRPC channel");
 
-        let mut client = StreamingSessionClient::new(channel);
+        let mut client = UntrustedApplicationClient::new(channel);
 
-        GrpcStreamingTransport::new(|rx| client.stream(rx))
+        GrpcStreamingTransport::new(|rx| client.session(rx))
             .await
             .expect("couldn't create GRPC streaming transport")
     }

@@ -24,3 +24,8 @@ service TrustedApplication {
   rpc Session(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
 }
+
+service UntrustedApplication {
+  rpc Session(stream oak.session.v1.RequestWrapper)
+      returns (stream oak.session.v1.ResponseWrapper) {}
+}
