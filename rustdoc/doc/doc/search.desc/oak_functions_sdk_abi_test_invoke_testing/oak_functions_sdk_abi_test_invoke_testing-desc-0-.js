@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_functions_sdk_abi_test_invoke_testing", 0, "Oak Functions ABI test for Testing Extension.")

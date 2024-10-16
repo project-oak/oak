@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_containers_hello_world_untrusted_app", 0, "A very rough http-based transport for demo purposes. It …\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCreate a new [DemoHttpTransport] for the provided <code>addr</code>. …\nStart a demo HTTP server that will conform to the demo …")

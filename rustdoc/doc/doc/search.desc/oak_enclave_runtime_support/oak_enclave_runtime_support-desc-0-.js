@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_enclave_runtime_support", 0, "no_std compatible allocators.\nHeap implementation that asks Restricted Kernel for more …\nThread-safe version of GrowableHeap, above, usable as a …\nSafety\nReturns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")

@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_kernel_measurement", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nParses a bzImage kernel file and extracts the kernel image …\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nLoads the bzImage-format kernel from the supplied path/")
