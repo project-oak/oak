@@ -35,7 +35,7 @@ async fn handle_request(
     // This is not how we should actually use the streaming interface, but it
     // works for HPKE, as long as all requests go to the same machine.
     let mut response_stream =
-        trusted_app.lock().await.session(tokio_stream::iter(vec![request])).await.map_err(
+        trusted_app.lock().await.legacy_session(tokio_stream::iter(vec![request])).await.map_err(
             |err| tonic::Status::internal(format!("starting streaming session failed: {err:?}")),
         )?;
 

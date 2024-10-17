@@ -38,6 +38,7 @@ rust_library(
         "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
+        "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:prost",
@@ -51,6 +52,7 @@ rust_library(
 rust_test(
     name = "standalone_test",
     srcs = ["tests/standalone_test.rs"],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         ":lib",
         "//oak_client",
@@ -60,7 +62,10 @@ rust_test(
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_session",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],

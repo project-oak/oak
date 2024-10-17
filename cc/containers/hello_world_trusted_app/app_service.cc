@@ -35,7 +35,7 @@ namespace oak::oak_containers_hello_world_trusted_app {
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 
-grpc::Status TrustedApplicationImpl::Session(
+grpc::Status TrustedApplicationImpl::LegacySession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>* stream) {
   absl::string_view application_config = application_config_;

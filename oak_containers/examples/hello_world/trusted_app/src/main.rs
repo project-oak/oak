@@ -51,9 +51,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Box::new(encryption_key_handle),
             endorsed_evidence,
             Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
-                application_config,
+                application_config: application_config.clone(),
             }),
         ),
+        Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
+            application_config,
+        }),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     join_handle.await??;

@@ -99,7 +99,7 @@ impl UntrustedApplication for UntrustedApplicationImpl {
 
         let response_stream = forward_stream(request_stream, |rx| async move {
             let mut app = trusted_app.lock().await;
-            app.session(rx).await.map_err(|err| {
+            app.legacy_session(rx).await.map_err(|err| {
                 tonic::Status::internal(format!("Failed to start trusted app stream: {err:?}"))
             })
         })

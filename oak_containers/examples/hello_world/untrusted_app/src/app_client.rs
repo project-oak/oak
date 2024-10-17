@@ -38,14 +38,14 @@ impl TrustedApplicationClient {
         Ok(Self { inner })
     }
 
-    pub async fn session(
+    pub async fn legacy_session(
         &mut self,
         request: impl tonic::IntoStreamingRequest<Message = RequestWrapper>,
     ) -> anyhow::Result<tonic::Streaming<ResponseWrapper>> {
         Ok(self
             .inner
             // How to safely map this request stream?
-            .session(request)
+            .legacy_session(request)
             .await
             .context("couldn't send hello request")?
             .into_inner())

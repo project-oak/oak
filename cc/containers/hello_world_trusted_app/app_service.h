@@ -40,7 +40,7 @@ class TrustedApplicationImpl
       : oak_session_context_(std::move(oak_session_context)),
         application_config_(application_config) {}
 
-  grpc::Status Session(
+  grpc::Status LegacySession(
       grpc::ServerContext* context,
       grpc::ServerReaderWriter<oak::session::v1::ResponseWrapper,
                                oak::session::v1::RequestWrapper>* stream)

@@ -19,10 +19,14 @@ syntax = "proto3";
 package oak.containers.example;
 
 import "proto/session/service_streaming.proto";
+import "proto/session/session.proto";
 
 service TrustedApplication {
-  rpc Session(stream oak.session.v1.RequestWrapper)
+  rpc LegacySession(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
+
+  rpc OakSession(stream oak.session.v1.SessionRequest)
+      returns (stream oak.session.v1.SessionResponse) {}
 }
 
 service UntrustedApplication {

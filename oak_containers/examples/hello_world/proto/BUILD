@@ -30,6 +30,7 @@ proto_library(
     srcs = ["hello_world.proto"],
     deps = [
         "//proto/session:service_streaming_proto",
+        "//proto/session:session_proto",
     ],
 )
 
