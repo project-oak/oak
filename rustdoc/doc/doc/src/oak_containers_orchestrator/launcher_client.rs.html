@@ -133,32 +133,6 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -175,6 +149,7 @@
 // limitations under the License.
 
 </span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_containers_channel::create_channel;
 <span class="kw">use </span>oak_grpc::oak::containers::{
     launcher_client::LauncherClient <span class="kw">as </span>GrpcLauncherClient,
     v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
@@ -185,9 +160,7 @@
     key_provisioning::v1::GroupKeys,
 };
 <span class="kw">use </span>opentelemetry_otlp::TonicExporterBuilder;
-<span class="kw">use </span>tokio_vsock::{VsockAddr, VsockStream};
 <span class="kw">use </span>tonic::transport::Channel;
-<span class="kw">use </span>tower::service_fn;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>LauncherClient {
@@ -198,32 +171,7 @@
 
 <span class="kw">impl </span>LauncherClient {
     <span class="kw">pub async fn </span>create(addr: tonic::transport::Uri) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-        <span class="kw">let </span>channel = <span class="kw">if </span>addr.scheme_str() == <span class="prelude-val">Some</span>(<span class="string">"vsock"</span>) {
-            <span class="kw">let </span>vsock_addr = VsockAddr::new(
-                addr.host()
-                    .unwrap_or(<span class="macro">format!</span>(<span class="string">"{}"</span>, tokio_vsock::VMADDR_CID_HOST).as_str())
-                    .parse()
-                    .context(<span class="string">"invalid vsock CID"</span>)<span class="question-mark">?</span>,
-                addr.authority()
-                    .context(<span class="string">"failed to extract authority from vsock address"</span>)<span class="question-mark">?
-                    </span>.as_str()
-                    .split(<span class="string">':'</span>)
-                    .last()
-                    .context(<span class="string">"failed to extract port from vsock address"</span>)<span class="question-mark">?
-                    </span>.parse::&lt;u32&gt;()
-                    .context(<span class="string">"invalid vsock port"</span>)<span class="question-mark">?</span>,
-            );
-
-            <span class="comment">// The C++ gRPC implementations are more particular about the URI scheme; in
-            // particular, they may get confused by the "vsock" scheme. Therfore, create a
-            // fake URI with the "http" scheme to placate the libraries; the actual
-            // connection is made in `connect_with_connector` and that uses the correct URI.
-            </span>Channel::builder(tonic::transport::Uri::from_static(<span class="string">"http://0:0"</span>))
-                .connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| VsockStream::connect(vsock_addr)))
-                .<span class="kw">await</span><span class="question-mark">?
-        </span>} <span class="kw">else </span>{
-            Channel::builder(addr.clone()).connect().<span class="kw">await</span><span class="question-mark">?
-        </span>};
+        <span class="kw">let </span>channel = create_channel(addr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>inner = GrpcLauncherClient::new(channel.clone());
         <span class="kw">let </span>hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel.clone());
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ channel, inner, hostlib_key_provisioning_client })
