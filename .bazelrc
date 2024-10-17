@@ -62,7 +62,13 @@ build:ci --curses=no
 # Inline CI failures, since log files are hard to access in this enviroment
 build:ci --verbose_failures
 
-build:ci --reuse_sandbox_directories
+# Prevents repeated setup-teardown of sandboxes for targets that are frequently
+# reused. This speeds up builds significantly in some cases, like when using a
+# toolchain with a hermetic sysroot, like we do.
+# See: https://github.com/bazelbuild/bazel/issues/16138
+# For a good summary of potential issues, ask Gemini a question like:
+# "Is there any reason I shouldn't enable --reuse_sandbox_directories" by default?
+build --reuse_sandbox_directories
 
 
 # Always show test errors in CI
