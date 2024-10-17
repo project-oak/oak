@@ -20,8 +20,7 @@
 //! that newer versions of the verification library continue to be able to
 //! verify older versions of these artifacts.
 
-use oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values;
-use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
+use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
 
 // Constants that define the measurements for evidence.
 const SETUP_DATA_DIGEST: &[u8] = &[1u8; 32];
@@ -45,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
             acpi_digest: ACPI_DIGEST.to_vec(),
             kernel_cmdline: KERNEL_CMDLINE.to_string(),
         };
-        create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
+        create::oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
             stage0_digests,
             STAGE1_SYSTEM_IMAGE,
             APPLICATION_IMAGE,

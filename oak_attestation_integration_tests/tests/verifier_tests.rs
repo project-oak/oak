@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_attestation_integration_tests::{Snapshot, SnapshotPath};
+use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
 use oak_containers_sdk::OrchestratorInterface;
 use oak_proto_rust::oak::attestation::{
@@ -252,7 +252,7 @@ async fn verify_mock_oak_containers_evidence_with_custom_evidence() {
     let application_config = vec![8u8; 32];
 
     let (endorsed_evidence, reference_values) =
-        oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
+        create::oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
             stage0_digests,
             &stage1_system_image,
             &application_image,
@@ -316,7 +316,7 @@ async fn verify_mock_oak_containers_evidence_with_fuzzed_measurements() {
         let application_config = random_bytes();
 
         let (endorsed_evidence, reference_values) =
-            oak_attestation_integration_test_utils::create_oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
+            create::oak_containers_standalone_endorsed_evidence_with_matching_reference_values(
                 stage0_digests,
                 &stage1_system_image,
                 &application_image,

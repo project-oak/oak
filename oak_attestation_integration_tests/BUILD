@@ -28,15 +28,22 @@ filegroup(
 
 rust_library(
     name = "lib",
-    srcs = glob(["src/**"]),
+    srcs = [
+        "src/converters.rs",
+        "src/create.rs",
+        "src/lib.rs",
+        "src/mutation.rs",
+    ],
     crate_name = "oak_attestation_integration_tests",
     deps = [
-        "//oak_attestation_integration_test_utils",
+        "//oak_containers_sdk",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:assert-json-diff",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
     ],
 )
@@ -62,9 +69,9 @@ rust_binary(
     ],
     deps = [
         ":lib",
-        "//oak_attestation_integration_test_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
     ],
 )
@@ -91,7 +98,6 @@ rust_test_suite(
     deps = [
         ":lib",
         "//oak_attestation",
-        "//oak_attestation_integration_test_utils",
         "//oak_attestation_verification",
         "//oak_containers_sdk",
         "//oak_dice",

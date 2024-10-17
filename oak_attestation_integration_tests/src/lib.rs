@@ -14,6 +14,10 @@
 // limitations under the License.
 //
 
+mod converters;
+pub mod create;
+mod mutation;
+
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -169,34 +173,25 @@ impl Snapshot {
             previous_reference_values_json,
         ) = tokio::try_join!(
             async {
-                let mut json = oak_attestation_integration_test_utils::endorsed_evidence_as_json(
-                    &self.endorsed_evidence,
-                )
-                .await?;
+                let mut json =
+                    converters::endorsed_evidence_as_json(&self.endorsed_evidence).await?;
                 remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
                 Ok::<_, anyhow::Error>(json)
             },
             async {
-                let mut json = oak_attestation_integration_test_utils::endorsed_evidence_as_json(
-                    &previous.endorsed_evidence,
-                )
-                .await?;
+                let mut json =
+                    converters::endorsed_evidence_as_json(&previous.endorsed_evidence).await?;
                 remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
                 Ok::<_, anyhow::Error>(json)
             },
             async {
-                let mut json = oak_attestation_integration_test_utils::reference_values_as_json(
-                    &self.reference_values,
-                )
-                .await?;
+                let mut json = converters::reference_values_as_json(&self.reference_values).await?;
                 remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
                 Ok::<_, anyhow::Error>(json)
             },
             async {
-                let mut json = oak_attestation_integration_test_utils::reference_values_as_json(
-                    &previous.reference_values,
-                )
-                .await?;
+                let mut json =
+                    converters::reference_values_as_json(&previous.reference_values).await?;
                 remove_skipped_properties(&mut json, SKIPPED_DYNAMIC_PROPERTIES);
                 Ok::<_, anyhow::Error>(json)
             }
@@ -209,11 +204,7 @@ impl Snapshot {
             mut current: serde_json::Value,
             previous: &serde_json::Value,
         ) -> anyhow::Result<Vec<String>> {
-            let new_properties = oak_attestation_integration_test_utils::remove_new_properties(
-                &mut current,
-                previous,
-                "",
-            );
+            let new_properties = mutation::remove_new_properties(&mut current, previous, "");
 
             let config = assert_json_diff::Config::new(assert_json_diff::CompareMode::Inclusive);
             assert_json_diff::assert_json_matches_no_panic(&current, previous, config)
