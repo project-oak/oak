@@ -70,3 +70,28 @@ objcopy = rule(
     },
     toolchains = ["@bazel_tools//tools/cpp:toolchain_type"],
 )
+
+# Given an ELF file, derives a new one by setting the interpreter to the given value.
+#
+# Example:
+# ```
+# cc_binary(name = "unpatched", ...)
+#
+# patchelf_set_interpreter(
+#   name = "patched",
+#   src = ":unpatched".
+#   interpreter = "/path/to/my/interpreter",  # Optional, defaults to /lib64/ld-linux-x86-64.so.2 .
+# )
+# ```
+#
+# Note: you can check which interpreter is set in an ELF file with:
+# ```
+# readelf -a path_to_elf | grep interpreter
+# ```
+def patchelf_set_interpreter(name, src, interpreter = "/lib64/ld-linux-x86-64.so.2"):
+    return native.genrule(
+        name = "_" + name + "_genrule",
+        srcs = [src],
+        outs = [name],
+        cmd = 'patchelf --set-interpreter %s --set-rpath "" --output $(OUTS) $(SRCS)' % interpreter,
+    )
