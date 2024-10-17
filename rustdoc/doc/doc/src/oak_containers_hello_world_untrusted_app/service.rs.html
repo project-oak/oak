@@ -148,8 +148,8 @@
 
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{channel::mpsc, Stream, StreamExt};
-<span class="kw">use </span>oak_grpc::oak::session::v1::streaming_session_server::{
-    StreamingSession, StreamingSessionServer,
+<span class="kw">use </span>oak_hello_world_proto::oak::containers::example::untrusted_application_server::{
+    UntrustedApplication, UntrustedApplicationServer,
 };
 <span class="kw">use </span>oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 <span class="kw">use </span>tokio::{net::TcpListener, sync::Mutex};
@@ -158,11 +158,11 @@
 <span class="kw">use </span><span class="kw">crate</span>::app_client::TrustedApplicationClient;
 
 <span class="doccomment">/// The sample application's implementation of Oak's streaming service protocol.
-</span><span class="kw">struct </span>StreamingSessionImpl {
+</span><span class="kw">struct </span>UntrustedApplicationImpl {
     trusted_app: Arc&lt;Mutex&lt;TrustedApplicationClient&gt;&gt;,
 }
 
-<span class="kw">impl </span>StreamingSessionImpl {
+<span class="kw">impl </span>UntrustedApplicationImpl {
     <span class="kw">pub fn </span>new(trusted_app: TrustedApplicationClient) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ trusted_app: Arc::new(Mutex::new(trusted_app)) }
     }
@@ -216,14 +216,14 @@
 }
 
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl </span>StreamingSession <span class="kw">for </span>StreamingSessionImpl {
-    <span class="kw">type </span>StreamStream =
+</span><span class="kw">impl </span>UntrustedApplication <span class="kw">for </span>UntrustedApplicationImpl {
+    <span class="kw">type </span>SessionStream =
         Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;ResponseWrapper, tonic::Status&gt;&gt; + Send + <span class="lifetime">'static</span>&gt;&gt;;
 
-    <span class="kw">async fn </span>stream(
+    <span class="kw">async fn </span>session(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;tonic::Streaming&lt;RequestWrapper&gt;&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamStream&gt;, tonic::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::SessionStream&gt;, tonic::Status&gt; {
         <span class="kw">let </span>request_stream = request.into_inner();
 
         <span class="kw">let </span>trusted_app = <span class="self">self</span>.trusted_app.clone();
@@ -236,7 +236,7 @@
         })
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(tonic::Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::StreamStream))
+        <span class="prelude-val">Ok</span>(tonic::Response::new(Box::pin(response_stream) <span class="kw">as </span><span class="self">Self</span>::SessionStream))
     }
 }
 
@@ -255,7 +255,7 @@
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"Failed to create trusted application client: {error:?}"</span>))<span class="question-mark">?</span>;
     tonic::transport::Server::builder()
-        .add_service(StreamingSessionServer::new(StreamingSessionImpl::new(app_client)))
+        .add_service(UntrustedApplicationServer::new(UntrustedApplicationImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"server error: {:?}"</span>, error))
