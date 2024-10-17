@@ -17,7 +17,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
@@ -29,7 +29,7 @@ rust_binary(
     tags = ["noci"],
     target_compatible_with = ["@platforms//:incompatible"],
     deps = [
-        "//oak_containers_orchestrator:lib",
+        "//oak_containers/orchestrator:lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:clap",

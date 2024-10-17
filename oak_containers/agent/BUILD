@@ -50,6 +50,7 @@ rust_binary(
     name = "oak_containers_agent",
     srcs = ["src/main.rs"],
     compile_data = [":README.md"],
+    visibility = ["//:default_visibility"],
     deps = [
         ":lib",
         "@oak_crates_index//:anyhow",
