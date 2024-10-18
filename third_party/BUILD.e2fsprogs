@@ -21,25 +21,17 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# This rule is currently broken.
-#
-# We need to build mke2fs statically, but setting the CFLAGS in
-# `configure_options` breaks the build (probably because the current toolchain
-# doesn't have `libc.a` and friends that are needed for static linking).
-#
-# If you remove the `CFLAGS="static"`, you do successfully get a binary, but
-# that'll be dynamically linked, which won't work for us. Hence, I've left the
-# CFLAGS in there so that people wouldn't accidentally think this works. Maybe
-# if we fiddle around with the toolchain a bit this rule will magically start
-# working and we can delete this comment.
 configure_make(
     name = "mke2fs",
     lib_source = ":all_files",
     out_bin_dir = "sbin",
     out_binaries = ["mke2fs"],
     out_include_dir = None,
-    configure_options = ["CFLAGS=\"-static\"", "--with-crond-dir=no"],
-    targets = ["install-strip-progs-recursive"],
+    configure_options = ["--with-crond-dir=no", "--disable-uuidd"],
+    targets = ["all-static"],
+    # There is no `make install` equivalent that installs (or strips) the static
+    # binaries, so we do it by hand.
+    postfix_script = "cp $BUILD_TMPDIR/misc/mke2fs.static $INSTALLDIR/sbin/mke2fs && strip $INSTALLDIR/sbin/mke2fs",
     # Skip building e2scrub altogether, as that insists on touching /etc.
     args = ["E2SCRUB_DIR=\"\""],
 )

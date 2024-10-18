@@ -15,10 +15,5 @@ all: ../../target/stage1.cpio
 	strip ../../target/x86_64-unknown-linux-musl/release/oak_containers_stage1
 
 ../../target/mke2fs:
-	mkdir -p target
-	curl -O -L --output-dir target https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz
-	tar -C target -Jxf target/e2fsprogs-1.47.0.tar.xz
-	cd target/e2fsprogs-1.47.0 && ./configure LDFLAGS="-static"
-	$(MAKE) -C target/e2fsprogs-1.47.0 -j `nproc`
-	strip target/e2fsprogs-1.47.0/misc/mke2fs
-	cp target/e2fsprogs-1.47.0/misc/mke2fs ../../target/mke2fs
+	bazel build @e2fsprogs//:mke2fs -c opt
+	cp ../../bazel-bin/external/e2fsprogs/mke2fs/sbin/mke2fs ../../target/mke2fs
