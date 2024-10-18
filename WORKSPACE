@@ -308,7 +308,7 @@ oak_toolchain_repositories()
 http_archive(
     name = "oak_cc_toolchain_sysroot",
     build_file = "//:toolchain/sysroot.BUILD",
-    sha256 = "99577f5f525c6816c9f3f0c5c8756c9fb13a23517b55f376393375f6ad630316",
+    sha256 = "770f449151c0871d67ed793e996e225973b94cec6438fd56666cef8fc4ee5dd4",
     url = "https://storage.googleapis.com/oak-bins/sysroot/sysroot.tar.xz",
 )
 
