@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["create"],"struct":["CryptoService","ServiceImplementation"]};
+window.SIDEBAR_ITEMS = {"fn":["create","create_services"],"struct":["CryptoService","ServiceImplementation"]};
