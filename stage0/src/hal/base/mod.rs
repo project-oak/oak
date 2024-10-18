@@ -16,14 +16,12 @@
 
 pub mod mmio;
 
-use alloc::vec::Vec;
 use core::arch::x86_64::{CpuidResult, __cpuid};
 
 pub use mmio::*;
-use oak_attestation::attester::{Attester, Serializable};
+use oak_attestation::dice::DiceAttester;
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
-use oak_proto_rust::oak::attestation::v1::Evidence;
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
     registers::model_specific::Msr,
@@ -39,31 +37,9 @@ use crate::{paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
 
-/// An attester implementation that does nothing.
-pub struct NoOpAttester;
-
-impl Attester for NoOpAttester {
-    fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn quote(&self) -> anyhow::Result<Evidence> {
-        anyhow::bail!("quoting is not supported")
-    }
-}
-
-impl Serializable for NoOpAttester {
-    fn deserialize(_bytes: &[u8]) -> anyhow::Result<Self> {
-        Ok(NoOpAttester)
-    }
-    fn serialize(self) -> Vec<u8> {
-        Vec::default()
-    }
-}
-
 impl crate::Platform for Base {
     type Mmio<S: PageSize> = mmio::Mmio<S>;
-    type Attester = NoOpAttester;
+    type Attester = DiceAttester;
 
     fn cpuid(leaf: u32) -> CpuidResult {
         // Safety: all CPUs we care about are modern enough to support CPUID.
@@ -109,7 +85,12 @@ impl crate::Platform for Base {
     fn populate_zero_page(_zero_page: &mut ZeroPage) {}
 
     fn get_attester() -> Result<Self::Attester, &'static str> {
-        Ok(NoOpAttester {})
+        oak_stage0_dice::generate_initial_dice_data(
+            oak_stage0_dice::mock_attestation_report,
+            Self::tee_platform(),
+        )?
+        .try_into()
+        .map_err(|_| "couldn't convert initial DICE evidence to an attester")
     }
 
     fn get_derived_key() -> Result<DerivedKey, &'static str> {

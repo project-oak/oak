@@ -42,6 +42,7 @@ rust_binary(
     ],
     tags = ["no-clippy"],
     deps = [
+        "//oak_attestation",
         "//oak_dice",
         "//oak_linux_boot_params",
         "//oak_sev_snp_attestation_report",

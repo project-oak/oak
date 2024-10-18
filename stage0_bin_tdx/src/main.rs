@@ -286,7 +286,7 @@ struct Tdx {}
 
 impl oak_stage0::Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
-    type Attester = oak_stage0::hal::base::NoOpAttester;
+    type Attester = oak_attestation::dice::DiceAttester;
 
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
         call_cpuid(leaf, 0).unwrap()
