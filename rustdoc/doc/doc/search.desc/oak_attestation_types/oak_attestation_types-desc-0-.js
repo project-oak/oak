@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_attestation_types", 0, "Trait that provides the ability to build an attestation …\nAdd a new event to the evidence.\nGenerate a signed evidence containing all events …\nTrait that provides the ability to read attestation …\nGenerate an endorsement.\nTrait for passing incomplete evidence between layers of …")
