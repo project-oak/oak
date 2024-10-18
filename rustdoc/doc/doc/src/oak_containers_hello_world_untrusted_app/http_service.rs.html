@@ -134,7 +134,7 @@
     <span class="comment">// This is not how we should actually use the streaming interface, but it
     // works for HPKE, as long as all requests go to the same machine.
     </span><span class="kw">let </span><span class="kw-2">mut </span>response_stream =
-        trusted_app.lock().<span class="kw">await</span>.session(tokio_stream::iter(<span class="macro">vec!</span>[request])).<span class="kw">await</span>.map_err(
+        trusted_app.lock().<span class="kw">await</span>.legacy_session(tokio_stream::iter(<span class="macro">vec!</span>[request])).<span class="kw">await</span>.map_err(
             |err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"starting streaming session failed: {err:?}"</span>)),
         )<span class="question-mark">?</span>;
 

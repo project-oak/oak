@@ -91,14 +91,14 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 
-    <span class="kw">pub async fn </span>session(
+    <span class="kw">pub async fn </span>legacy_session(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw">impl </span>tonic::IntoStreamingRequest&lt;Message = RequestWrapper&gt;,
     ) -&gt; anyhow::Result&lt;tonic::Streaming&lt;ResponseWrapper&gt;&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">self
             </span>.inner
             <span class="comment">// How to safely map this request stream?
-            </span>.session(request)
+            </span>.legacy_session(request)
             .<span class="kw">await
             </span>.context(<span class="string">"couldn't send hello request"</span>)<span class="question-mark">?
             </span>.into_inner())

@@ -230,7 +230,7 @@
 
         <span class="kw">let </span>response_stream = forward_stream(request_stream, |rx| <span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>app = trusted_app.lock().<span class="kw">await</span>;
-            app.session(rx).<span class="kw">await</span>.map_err(|err| {
+            app.legacy_session(rx).<span class="kw">await</span>.map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">"Failed to start trusted app stream: {err:?}"</span>))
             })
         })
