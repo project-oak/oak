@@ -31,7 +31,7 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         extracted_evidence::EvidenceValues, root_layer_data::Report, AmdAttestationReport,
         ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
-        Evidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
         Stage0Measurements, Stage1Measurements, SystemLayerData, TcbVersion, TeePlatform,
     },
@@ -45,6 +45,25 @@ use zerocopy::FromBytes;
 pub(crate) struct ApplicationKeyValues {
     pub(crate) encryption_public_key: Vec<u8>,
     pub(crate) signing_public_key: Vec<u8>,
+}
+
+/// Extracts attestation-related values without verificaiton.
+///
+/// Extracts measurements, public keys, and other attestation-related values
+/// from the evidence without verifying it. For most usecases, this function
+/// should not be used. Instead use the [`verify`] function, which verifies the
+/// attestation and only returns evidence upon successful verification. Hence
+/// marked as dangerous.
+pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
+    let evidence_values =
+        Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
+    let ApplicationKeyValues { encryption_public_key, signing_public_key } =
+        extract_application_key_values(
+            evidence.application_keys.as_ref().context("no application keys")?,
+        )
+        .context("couldn't extract application key values")?;
+
+    Ok(ExtractedEvidence { evidence_values, encryption_public_key, signing_public_key })
 }
 
 /// Extracts the measurements and other attestation-related values from the

@@ -20,9 +20,11 @@
 extern crate alloc;
 
 pub(crate) mod amd;
+pub(crate) mod compare;
 pub(crate) mod endorsement;
 pub mod expect;
-pub(crate) mod extract;
+pub mod extract;
+pub(crate) mod platform;
 pub mod policy;
 pub(crate) mod rekor;
 pub(crate) mod util;

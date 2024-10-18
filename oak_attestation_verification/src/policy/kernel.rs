@@ -21,9 +21,9 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 
 use crate::{
+    compare::compare_kernel_layer_measurement_digests,
     expect::get_kernel_layer_expected_values,
     util::{decode_event_endorsement_proto, decode_event_proto},
-    verifier::compare_kernel_layer_measurement_digests,
 };
 
 pub struct KernelPolicy {

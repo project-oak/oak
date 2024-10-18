@@ -23,7 +23,7 @@ pub fn explain(bytes: &[u8]) -> String {
     let extracted_evidence = {
         // TODO: b/334900893 - Generate extracted evidence programatically.
         let evidence = Evidence::decode(bytes).expect("could not decode evidence");
-        oak_attestation_verification::verifier::extract_evidence(&evidence)
+        oak_attestation_verification::extract::extract_evidence(&evidence)
             .expect("could not extract evidence")
     };
     extracted_evidence.description().unwrap()

@@ -21,8 +21,8 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 
 use crate::{
-    expect::get_event_expected_values, util::decode_event_proto,
-    verifier::compare_event_measurement_digests,
+    compare::compare_event_measurement_digests, expect::get_event_expected_values,
+    util::decode_event_proto,
 };
 
 pub struct BinaryPolicy {
