@@ -218,9 +218,10 @@ impl<T, A: Allocator, P: Platform> AsMut<T> for Shared<T, A, P> {
 }
 
 pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
-    // Create the heap between 2MiB and 3MiB.
-    let start = VirtAddr::new(0x200000);
-    let size = 0x100000usize;
+    // Create the heap after the Mailbox
+    let start = VirtAddr::new(0x103000);
+    // stage0 stays below 2MiB. The heap size is 1MiB - 3 pages
+    let size = (0x10_0000 - 0x3000) as usize;
     let end = start + size as u64;
 
     // Check that this range is backed by physical memory.
