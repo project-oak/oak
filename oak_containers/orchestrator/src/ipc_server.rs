@@ -164,15 +164,14 @@ pub async fn create<P>(
 where
     P: AsRef<std::path::Path> + Clone,
 {
-    let service_instance = ServiceImplementation {
-        // TODO(#4442): Remove once apps use the new crypto service.
-        application_config,
-        launcher_client,
+    let (service_instance, crypto_service_instance) = create_services(
         evidence,
         endorsements,
-    };
-    let crypto_service_instance = CryptoService::new(instance_keys, group_keys);
-
+        instance_keys,
+        group_keys,
+        application_config,
+        launcher_client,
+    );
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
@@ -182,10 +181,32 @@ where
     set_permissions(socket_address, Permissions::from_mode(0o666)).await?;
 
     Server::builder()
-        .add_service(OrchestratorServer::new(service_instance))
-        .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
+        .add_service(service_instance)
+        .add_service(crypto_service_instance)
         .serve_with_incoming_shutdown(uds_stream, cancellation_token.cancelled())
         .await?;
 
     Ok(())
+}
+
+pub fn create_services(
+    evidence: Evidence,
+    endorsements: Endorsements,
+    instance_keys: InstanceKeys,
+    group_keys: Arc<GroupKeys>,
+    application_config: Vec<u8>,
+    launcher_client: Arc<LauncherClient>,
+) -> (OrchestratorServer<ServiceImplementation>, OrchestratorCryptoServer<CryptoService>) {
+    let service_instance = ServiceImplementation {
+        // TODO(#4442): Remove once apps use the new crypto service.
+        application_config,
+        launcher_client,
+        evidence,
+        endorsements,
+    };
+    let crypto_service_instance = CryptoService::new(instance_keys, group_keys);
+    (
+        OrchestratorServer::new(service_instance),
+        OrchestratorCryptoServer::new(crypto_service_instance),
+    )
 }
