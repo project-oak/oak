@@ -362,15 +362,18 @@ gcc_register_toolchain(
         "%sysroot%/usr/include",
     ],
     # sha256 of the compiler package
-    sha256 = "ed68f8d487f52beb95e5ff80da01b959222f53e089728b63ce38b99f80b597ca",
+    sha256 = "5d515f6e4b311d7636a3cf600cd02fde7d0beb0a2f143df4921ff5a61cbaebcb",
     # what prefix to strip from the compiler package
-    strip_prefix = "x86-64-v4--glibc--stable-2024.02-1",
+    strip_prefix = "x86-64-v3--glibc--stable-2024.02-1",
     # Use the sysroot which is effectively our system image for consistency.
     sysroot = "@oak_cc_toolchain_sysroot//:sysroot",
     # target_compatible_with defaults to os:linux.
     target_arch = ARCHS.x86_64,
     # Which compiler to use: this is GCC 12, just as in Debian.
-    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64-v4/tarballs/x86-64-v4--glibc--stable-2024.02-1.tar.bz2",
+    # Note: v4 compiler requires AVX512. But recent AMD workstation processor
+    # e.g. 5995WX does not support AVX512. We have to use v3 which is more
+    # friendly to AMD users.
+    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64-v3/tarballs/x86-64-v3--glibc--stable-2024.02-1.tar.bz2",
 )
 
 gcc_register_toolchain(
