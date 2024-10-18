@@ -2308,6 +2308,7 @@ dependencies = [
  "getrandom",
  "hex",
  "itertools 0.10.5",
+ "oak_attestation_verification_types",
  "oak_dice",
  "oak_file_utils",
  "oak_proto_rust",

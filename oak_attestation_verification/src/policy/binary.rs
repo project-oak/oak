@@ -15,12 +15,13 @@
 //
 
 use anyhow::Context;
+use oak_attestation_verification_types::policy::EventPolicy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, EventData, EventReferenceValues,
 };
 
 use crate::{
-    expect::get_event_expected_values, policy::EventPolicy, util::decode_event_proto,
+    expect::get_event_expected_values, util::decode_event_proto,
     verifier::compare_event_measurement_digests,
 };
 

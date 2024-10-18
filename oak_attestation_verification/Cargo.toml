@@ -20,6 +20,7 @@ getrandom = { version = "*", default-features = false, features = [
 ] }
 hex = { version = "*", default-features = false }
 itertools = { version = "*", default-features = false }
+oak_attestation_verification_types = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_sev_snp_attestation_report = { workspace = true }

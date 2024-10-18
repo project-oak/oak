@@ -15,6 +15,7 @@
 //
 
 use anyhow::Context;
+use oak_attestation_verification_types::policy::EventPolicy;
 use oak_proto_rust::oak::attestation::v1::{
     ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
     EventAttestationResults,
@@ -22,7 +23,6 @@ use oak_proto_rust::oak::attestation::v1::{
 
 use crate::{
     expect::get_application_layer_expected_values,
-    policy::EventPolicy,
     util::{decode_event_endorsement_proto, decode_event_proto},
     verifier::compare_application_layer_measurement_digests,
 };

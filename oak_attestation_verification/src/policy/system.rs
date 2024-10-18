@@ -15,13 +15,13 @@
 //
 
 use anyhow::Context;
+use oak_attestation_verification_types::policy::EventPolicy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues,
 };
 
 use crate::{
     expect::get_system_layer_expected_values,
-    policy::EventPolicy,
     util::{decode_event_endorsement_proto, decode_event_proto},
     verifier::compare_system_layer_measurement_digests,
 };

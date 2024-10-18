@@ -831,6 +831,7 @@ dependencies = [
  "getrandom",
  "hex",
  "itertools",
+ "oak_attestation_verification_types",
  "oak_dice",
  "oak_proto_rust",
  "oak_sev_snp_attestation_report",
@@ -845,6 +846,14 @@ dependencies = [
  "time",
  "x509-cert",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_attestation_verification_types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_proto_rust",
 ]
 
 [[package]]

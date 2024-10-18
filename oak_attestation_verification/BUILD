@@ -32,6 +32,7 @@ rust_library(
         "//:x86_64-none-setting",
     ]),
     deps = [
+        "//oak_attestation_verification_types",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
@@ -102,6 +103,7 @@ rust_library(
     compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
     crate_features = ["regex"],
     deps = [
+        "//oak_attestation_verification_types",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
