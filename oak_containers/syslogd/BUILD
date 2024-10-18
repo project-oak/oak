@@ -25,9 +25,6 @@ rust_binary(
     name = "oak_containers_syslogd",
     srcs = glob(["src/**"]),
     crate_features = ["bazel"],
-    # TODO: b/335717840 - Fix systemd linker issue and remove this tag.
-    tags = ["noci"],
-    target_compatible_with = ["@platforms//:incompatible"],
     deps = [
         "//oak_containers/orchestrator:lib",
         "@oak_crates_index//:anyhow",
@@ -41,6 +38,5 @@ rust_binary(
         "@oak_crates_index//:signal-hook-tokio",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
-        "@systemd",
     ],
 )

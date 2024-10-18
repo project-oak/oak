@@ -398,12 +398,6 @@ load("//bazel/rust:stdlibs.bzl", "setup_rebuilt_rust_stdlibs")
 
 setup_rebuilt_rust_stdlibs()
 
-new_local_repository(
-    name = "systemd",
-    build_file = "systemd.BUILD",
-    path = "/",
-)
-
 load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
 create_oak_crate_repositories()
