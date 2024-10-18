@@ -27,7 +27,7 @@ COPY target/minimal.config /tmp
 
 RUN tar --directory=/tmp --extract --file /tmp/linux-${LINUX_KERNEL_VERSION}.tar.xz \
     && cp /tmp/minimal.config /tmp/linux-${LINUX_KERNEL_VERSION}/.config \
-    && make --directory=/tmp/linux-${LINUX_KERNEL_VERSION} bindeb-pkg \
+    && make --directory=/tmp/linux-${LINUX_KERNEL_VERSION} -j"$(nproc)" bindeb-pkg \
     && dpkg --install /tmp/linux-headers-${LINUX_KERNEL_VERSION}_${LINUX_KERNEL_VERSION}-1_amd64.deb \
     && rm -rf /tmp/linux-${LINUX_KERNEL_VERSION} /tmp/linux-${LINUX_KERNEL_VERSION}.tar.xz /tmp/minimal.config
 
