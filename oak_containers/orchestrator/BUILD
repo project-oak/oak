@@ -17,7 +17,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
