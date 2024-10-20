@@ -52,6 +52,7 @@ impl Policy for CombinedPolicy {
         &self,
         event_log: &EventLog,
         event_endorsements: &EventEndorsements,
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<AttestationResults> {
         if event_log.encoded_events.len() != event_endorsements.encoded_event_endorsements.len() {
             anyhow::bail!(
@@ -75,7 +76,7 @@ impl Policy for CombinedPolicy {
         );
         let event_attestation_results = verification_iterator
             .map(|(event_policy, event, event_endorsements)| {
-                event_policy.verify(event, event_endorsements).unwrap_or(
+                event_policy.verify(event, event_endorsements, milliseconds_since_epoch).unwrap_or(
                     // TODO: b/366186091 - Use Rust error types for failed attestation.
                     EventAttestationResults {},
                 )

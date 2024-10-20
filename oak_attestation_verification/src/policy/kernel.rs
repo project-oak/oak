@@ -41,6 +41,7 @@ impl EventPolicy for KernelPolicy {
         &self,
         encoded_event: &[u8],
         encoded_event_endorsement: &[u8],
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<KernelLayerData>(
             "type.googleapis.com/oak.attestation.v1.KernelLayerData",
@@ -52,8 +53,7 @@ impl EventPolicy for KernelPolicy {
         )?;
 
         let expected_values = get_kernel_layer_expected_values(
-            // TODO: b/369821273 - Add clocks to policies.
-            0i64,
+            milliseconds_since_epoch,
             Some(&event_endorsements),
             &self.reference_values,
         )

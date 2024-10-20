@@ -17,5 +17,5 @@
 /// Trait for the time related functionality.
 pub trait Clock: Send + Sync {
     /// Return time in milliseconds since epoch.
-    fn get_current_time_ms(&self) -> i64;
+    fn get_milliseconds_since_epoch(&self) -> i64;
 }

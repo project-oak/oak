@@ -15,7 +15,9 @@
 //
 
 use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
-use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
+use oak_attestation_verification::verifier::{
+    to_attestation_results, verify, verify_dice_chain_and_extract_evidence,
+};
 use oak_proto_rust::oak::attestation::{
     self,
     v1::{
@@ -41,7 +43,7 @@ fn verify_mock_dice_chain() {
         .expect("failed to create mock attester");
     let mock_evidence = mock_attester.quote().expect("couldn't get evidence");
 
-    let result = verify_dice_chain(&mock_evidence);
+    let result = verify_dice_chain_and_extract_evidence(&mock_evidence);
 
     assert!(result.is_ok());
     let evidence_values: attestation::v1::extracted_evidence::EvidenceValues =
@@ -60,7 +62,9 @@ fn get_restricted_kernel_evidence_proto_with_eventlog() -> attestation::v1::Evid
 
 #[test]
 fn verify_mock_dice_chain_with_valid_event_log() {
-    let result = verify_dice_chain(&get_restricted_kernel_evidence_proto_with_eventlog());
+    let result = verify_dice_chain_and_extract_evidence(
+        &get_restricted_kernel_evidence_proto_with_eventlog(),
+    );
 
     assert!(result.is_ok());
     let evidence_values: attestation::v1::extracted_evidence::EvidenceValues =
@@ -98,7 +102,7 @@ fn verify_mock_dice_chain_with_invalid_event_log() {
     stage0.kernel_cmdline = format!("evil modification {}", stage0.kernel_cmdline);
     *encoded_stage0_event = stage0.encode_to_vec();
 
-    let result = verify_dice_chain(&evidence);
+    let result = verify_dice_chain_and_extract_evidence(&evidence);
 
     assert!(result.is_err());
 }

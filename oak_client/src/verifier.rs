@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification::verifier::verify_dice_chain;
+use oak_attestation_verification::verifier::verify_dice_chain_and_extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ExtractedEvidence};
 
 pub trait AttestationVerifier {
@@ -33,12 +33,12 @@ pub struct InsecureAttestationVerifier;
 
 impl AttestationVerifier for InsecureAttestationVerifier {
     fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<ExtractedEvidence> {
-        verify_dice_chain(evidence).context("couldn't verify the DICE chain")
+        verify_dice_chain_and_extract_evidence(evidence).context("couldn't verify the DICE chain")
     }
 }
 
 pub fn extract_encryption_public_key(evidence: &Evidence) -> anyhow::Result<Vec<u8>> {
-    let attestation_results =
-        verify_dice_chain(evidence).context("couldn't verify the DICE chain")?;
+    let attestation_results = verify_dice_chain_and_extract_evidence(evidence)
+        .context("couldn't verify the DICE chain")?;
     Ok(attestation_results.encryption_public_key)
 }

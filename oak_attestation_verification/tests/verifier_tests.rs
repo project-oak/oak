@@ -19,7 +19,10 @@ use std::fs;
 use oak_attestation_verification::{
     expect::get_expected_values,
     reference_values_from_evidence,
-    verifier::{to_attestation_results, verify, verify_dice_chain, verify_with_expected_values},
+    verifier::{
+        to_attestation_results, verify, verify_dice_chain_and_extract_evidence,
+        verify_with_expected_values,
+    },
 };
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
@@ -346,7 +349,8 @@ fn verify_containers_succeeds() {
 fn verify_containers_explicit_reference_values() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
@@ -395,7 +399,8 @@ fn verify_rk_succeeds() {
 fn verify_rk_explicit_reference_values() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
@@ -437,7 +442,8 @@ fn verify_fake_evidence() {
 fn verify_fake_evidence_explicit_reference_values() {
     let evidence = create_fake_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
@@ -454,7 +460,8 @@ fn verify_fake_evidence_explicit_reference_values() {
 fn verify_fake_evidence_split_verify_calls() {
     let evidence = create_fake_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
     let computed_expected_values =
@@ -480,7 +487,8 @@ fn verify_fake_evidence_split_verify_calls() {
 fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     let evidence = create_fake_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let reference_values = reference_values_from_evidence(extracted_evidence);
 
     let computed_expected_values =
@@ -543,7 +551,10 @@ fn verify_fails_with_unsupported_tcb_version() {
 fn verify_succeeds_with_right_initial_measurement() {
     let evidence = create_oc_evidence();
     let actual = if let Some(EvidenceValues::OakContainers(values)) =
-        verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
+        verify_dice_chain_and_extract_evidence(&evidence)
+            .expect("invalid DICE chain")
+            .evidence_values
+            .as_ref()
     {
         if let Some(Report::SevSnp(report)) =
             values.root_layer.as_ref().expect("no root layer").report.as_ref()
@@ -595,7 +606,10 @@ fn verify_succeeds_with_right_initial_measurement() {
 fn verify_fails_with_wrong_initial_measurement() {
     let evidence = create_oc_evidence();
     let mut wrong = if let Some(EvidenceValues::OakContainers(values)) =
-        verify_dice_chain(&evidence).expect("invalid DICE chain").evidence_values.as_ref()
+        verify_dice_chain_and_extract_evidence(&evidence)
+            .expect("invalid DICE chain")
+            .evidence_values
+            .as_ref()
     {
         if let Some(Report::SevSnp(report)) =
             values.root_layer.as_ref().expect("no root layer").report.as_ref()
@@ -785,7 +799,8 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
 fn containers_invalid_boot_loader_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -811,7 +826,8 @@ fn containers_invalid_boot_loader_fails() {
 fn containers_invalid_microcode_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -837,7 +853,8 @@ fn containers_invalid_microcode_fails() {
 fn containers_invalid_tcb_snp_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -863,7 +880,8 @@ fn containers_invalid_tcb_snp_fails() {
 fn containers_invalid_tcb_tee_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -889,7 +907,8 @@ fn containers_invalid_tcb_tee_fails() {
 fn containers_invalid_stage0_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -928,7 +947,8 @@ fn containers_invalid_stage0_fails() {
 fn containers_invalid_acpi_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -964,7 +984,8 @@ fn containers_invalid_acpi_fails() {
 fn containers_invalid_init_ram_fs_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1000,7 +1021,8 @@ fn containers_invalid_init_ram_fs_fails() {
 fn containers_invalid_kernel_cmd_line_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1031,7 +1053,8 @@ fn containers_invalid_kernel_cmd_line_fails() {
 fn containers_invalid_kernel_image_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1069,7 +1092,8 @@ fn containers_invalid_kernel_image_fails() {
 fn containers_invalid_kernel_setup_data_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1107,7 +1131,8 @@ fn containers_invalid_kernel_setup_data_fails() {
 fn containers_invalid_system_image_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1143,7 +1168,8 @@ fn containers_invalid_system_image_fails() {
 fn containers_invalid_container_bundle_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1179,7 +1205,8 @@ fn containers_invalid_container_bundle_fails() {
 fn containers_invalid_container_config_fails() {
     let evidence = create_oc_evidence();
     let endorsements = create_oc_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1215,7 +1242,8 @@ fn containers_invalid_container_config_fails() {
 fn restricted_kernel_invalid_boot_loader_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1241,7 +1269,8 @@ fn restricted_kernel_invalid_boot_loader_fails() {
 fn restricted_kernel_invalid_microcode_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1267,7 +1296,8 @@ fn restricted_kernel_invalid_microcode_fails() {
 fn restricted_kernel_invalid_tcb_snp_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1293,7 +1323,8 @@ fn restricted_kernel_invalid_tcb_snp_fails() {
 fn restricted_kernel_invalid_tcb_tee_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1319,7 +1350,8 @@ fn restricted_kernel_invalid_tcb_tee_fails() {
 fn restricted_kernel_invalid_stage0_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1358,7 +1390,8 @@ fn restricted_kernel_invalid_stage0_fails() {
 fn restricted_kernel_invalid_acpi_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1394,7 +1427,8 @@ fn restricted_kernel_invalid_acpi_fails() {
 fn restricted_kernel_invalid_init_ram_fs_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1430,7 +1464,8 @@ fn restricted_kernel_invalid_init_ram_fs_fails() {
 fn restricted_kernel_invalid_kernel_cmd_line_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1461,7 +1496,8 @@ fn restricted_kernel_invalid_kernel_cmd_line_fails() {
 fn restricted_kernel_invalid_kernel_image_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1499,7 +1535,8 @@ fn restricted_kernel_invalid_kernel_image_fails() {
 fn restricted_kernel_invalid_kernel_setup_data_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1537,7 +1574,8 @@ fn restricted_kernel_invalid_kernel_setup_data_fails() {
 fn restricted_kernel_invalid_application_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1573,7 +1611,8 @@ fn restricted_kernel_invalid_application_fails() {
 fn restricted_kernel_application_config_fails() {
     let evidence = create_rk_evidence();
     let endorsements = create_rk_endorsements();
-    let extracted_evidence = verify_dice_chain(&evidence).expect("invalid DICE evidence");
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
     let mut reference_values = reference_values_from_evidence(extracted_evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {

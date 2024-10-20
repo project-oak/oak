@@ -15,7 +15,7 @@
 
 use std::sync::Arc;
 
-use oak_attestation_verification::verifier::verify_dice_chain;
+use oak_attestation_verification::verifier::verify_dice_chain_and_extract_evidence;
 use oak_containers_attestation::GroupKeys;
 use oak_grpc::oak::key_provisioning::v1::key_provisioning_server::{
     KeyProvisioning, KeyProvisioningServer,
@@ -56,9 +56,10 @@ impl KeyProvisioning for KeyProvisioningService {
         ))?;
         // TODO(#4442): Provide reference values by the hostlib and use `verify`
         // function.
-        let attestation_results = verify_dice_chain(&evidence).map_err(|err| {
-            tonic::Status::invalid_argument(format!("couldn't verify endorsed evidence: {err}"))
-        })?;
+        let attestation_results =
+            verify_dice_chain_and_extract_evidence(&evidence).map_err(|err| {
+                tonic::Status::invalid_argument(format!("couldn't verify endorsed evidence: {err}"))
+            })?;
 
         // Encrypt group keys.
         let encrypted_encryption_private_key = self

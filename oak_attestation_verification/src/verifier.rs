@@ -16,16 +16,20 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::format;
+use alloc::{boxed::Box, format};
 
 use anyhow::Context;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
+use oak_attestation_verification_types::{
+    policy::Policy, util::Clock, verifier::AttestationVerifier,
+};
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, endorsements, AttestationResults, Endorsements, EventLog,
     Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
 };
+use p256::ecdsa::VerifyingKey;
 
 use crate::{
     compare::compare_expected_values,
@@ -54,6 +58,39 @@ pub fn to_attestation_results(
             reason: format!("{:#?}", err),
             ..Default::default()
         },
+    }
+}
+
+pub struct AmdSevSnpDiceAttestationVerifier {
+    policy: Box<dyn Policy>,
+    clock: Box<dyn Clock>,
+}
+
+impl AmdSevSnpDiceAttestationVerifier {
+    pub fn new(policy: Box<dyn Policy>, clock: Box<dyn Clock>) -> Self {
+        Self { policy, clock }
+    }
+}
+
+impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        // Last layer's certificate authority key is not used to sign anything.
+        let _ = verify_dice_chain(evidence).context("couldn't verify DICE chain")?;
+
+        // Verify event log and event endorsements with corresponding policy.
+        let event_log = &evidence
+            .event_log
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
+        let event_endorsements = &endorsements
+            .event_endorsements
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("event endorsements were not provided"))?;
+        self.policy.verify(event_log, event_endorsements, self.clock.get_milliseconds_since_epoch())
     }
 }
 
@@ -114,7 +151,8 @@ pub fn verify_with_expected_values(
 
     // Ensure the DICE chain signatures are valid and extract the measurements,
     // public keys and other attestation-related data from the DICE chain.
-    let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
+    let extracted_evidence =
+        verify_dice_chain_and_extract_evidence(evidence).context("invalid DICE chain")?;
 
     compare_expected_values(&extracted_evidence, expected_values)
         .context("comparing expected values to evidence")?;
@@ -122,9 +160,66 @@ pub fn verify_with_expected_values(
     Ok(extracted_evidence)
 }
 
+/// Verifies signatures of the certificates in the DICE chain and returns last
+/// layer's Certificate Authority key if the verification is successful.
+pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<VerifyingKey> {
+    let root_layer_verifying_key = {
+        let cose_key = {
+            let root_layer = evidence
+                .root_layer
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
+            CoseKey::from_slice(&root_layer.eca_public_key).map_err(|_cose_err| {
+                anyhow::anyhow!("couldn't deserialize root layer public key")
+            })?
+        };
+        cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?
+    };
+
+    // Sequentially verify the layers, eventually retrieving the verifying key of
+    // the last layer.
+    let last_layer_verifying_key = evidence
+        .layers
+        .iter()
+        .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
+            let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
+                .map_err(|_cose_err| anyhow::anyhow!("couldn't parse certificate"))?;
+            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                let sig = Signature::from_slice(signature)?;
+                previous_layer_verifying_key.verify(contents, &sig)
+            })
+            .map_err(|error| anyhow::anyhow!(error))?;
+            let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
+            let claims = ClaimsSet::from_slice(&payload)
+                .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
+            let cose_key = get_public_key_from_claims_set(&claims)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("couldn't get a public key from claims")?;
+            cose_key_to_verifying_key(&cose_key)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("couldn't convert cose key")
+        })
+        .context("couldn't verify DICE chain")?;
+
+    // Verify the event log claim for this layer if it exists. This is done for all
+    // layers here, since the event log is tied uniquely closely to the DICE chain.
+    if let Some(event_log) = &evidence.event_log {
+        validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
+            .context("events in log do not match the digests in the dice chain")?
+    } else {
+        anyhow::bail!("event log is not present in the evidence");
+    }
+
+    Ok(last_layer_verifying_key)
+}
+
 /// Verifies signatures of the certificates in the DICE chain and extracts the
 /// evidence values from the certificates if the verification is successful.
-pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
+// TODO: b/356631464 - Remove this function once all clients use verification
+// policies.
+pub fn verify_dice_chain_and_extract_evidence(
+    evidence: &Evidence,
+) -> anyhow::Result<ExtractedEvidence> {
     let root_layer_verifying_key = {
         let cose_key = {
             let root_layer = evidence
@@ -163,8 +258,7 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
         })
         .context("getting last layer key")?;
 
-    // Finally, use the last layer's verification key to verify the application
-    // keys.
+    // Use the last layer's verification key to verify the application keys.
     {
         let appl_keys = evidence
             .application_keys

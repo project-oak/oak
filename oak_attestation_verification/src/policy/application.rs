@@ -42,6 +42,7 @@ impl EventPolicy for ApplicationPolicy {
         &self,
         encoded_event: &[u8],
         encoded_event_endorsement: &[u8],
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ApplicationLayerData>(
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
@@ -53,8 +54,7 @@ impl EventPolicy for ApplicationPolicy {
         )?;
 
         let expected_values = get_application_layer_expected_values(
-            // TODO: b/369821273 - Add clocks to policies.
-            0i64,
+            milliseconds_since_epoch,
             Some(&event_endorsements),
             &self.reference_values,
         )

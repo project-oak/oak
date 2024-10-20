@@ -29,6 +29,7 @@ pub trait Policy: Send + Sync {
         &self,
         event_log: &EventLog,
         event_endorsements: &EventEndorsements,
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<AttestationResults>;
 }
 
@@ -39,5 +40,6 @@ pub trait EventPolicy: Send + Sync {
         &self,
         encoded_event: &[u8],
         encoded_event_endorsement: &[u8],
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults>;
 }

@@ -67,8 +67,5 @@ fn dice_attester_generates_correct_dice_chain() {
 
     let test_evidence = dice_attester.quote().expect("couldn't generate the evidence");
     let result = verify_dice_chain(&test_evidence);
-    // TODO: b/368030563 - Make the test check for `Ok` once keys are being stored
-    // in the Event. Since currently `verify_dice_chain` returns `Err("no
-    // application keys in evidence")`.
-    assert!(result.is_err());
+    assert!(result.is_ok());
 }

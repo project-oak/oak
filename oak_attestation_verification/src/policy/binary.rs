@@ -40,15 +40,16 @@ impl EventPolicy for BinaryPolicy {
         &self,
         encoded_event: &[u8],
         _encoded_event_endorsement: &[u8],
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<EventData>(
             "type.googleapis.com/oak.attestation.v1.EventData",
             encoded_event,
         )?;
 
-        // TODO: b/369821273 - Add clocks to policies.
-        let expected_values = get_event_expected_values(0i64, &self.reference_values)
-            .context("couldn't verify event endosements")?;
+        let expected_values =
+            get_event_expected_values(milliseconds_since_epoch, &self.reference_values)
+                .context("couldn't verify event endosements")?;
         compare_event_measurement_digests(&event, &expected_values)
             .context("couldn't verify generic event")?;
 
