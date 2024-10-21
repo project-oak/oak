@@ -304,7 +304,7 @@
                     <span class="string">"the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
                 </span>);
             })
-            .unwrap_or_else(|| core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;());
+            .unwrap_or_else(core::mem::size_of::&lt;oak_dice::evidence::Stage0DiceData&gt;);
 
         <span class="comment">// Linux presents an inclusive end address.
         </span><span class="kw">let </span>end = start + (sensitive_memory_length <span class="kw">as </span>u64 - <span class="number">1</span>);
@@ -363,7 +363,7 @@
                 )
             }
         };
-        oak_dice::evidence::Stage0DiceData::read_from(<span class="kw-2">&amp;</span>struct_slice)
+        oak_dice::evidence::Stage0DiceData::read_from(struct_slice)
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"size mismatch while reading DICE data"</span>))
             .and_then(|result| {
                 <span class="kw">if </span>result.magic != STAGE0_MAGIC {
