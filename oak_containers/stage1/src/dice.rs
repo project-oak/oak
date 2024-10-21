@@ -82,7 +82,7 @@ impl SensitiveDiceDataMemory {
                     "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
                 );
             })
-            .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
+            .unwrap_or_else(core::mem::size_of::<oak_dice::evidence::Stage0DiceData>);
 
         // Linux presents an inclusive end address.
         let end = start + (sensitive_memory_length as u64 - 1);
@@ -141,7 +141,7 @@ impl SensitiveDiceDataMemory {
                 )
             }
         };
-        oak_dice::evidence::Stage0DiceData::read_from(&struct_slice)
+        oak_dice::evidence::Stage0DiceData::read_from(struct_slice)
             .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))
             .and_then(|result| {
                 if result.magic != STAGE0_MAGIC {

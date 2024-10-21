@@ -367,6 +367,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "nix": crate.spec(
         features = [
             "fs",
+            "mman",
             "mount",
             "process",
             "signal",
