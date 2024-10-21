@@ -26,7 +26,7 @@ use oak_proto_rust::oak::attestation::v1::{
 
 use crate::{attestation::AttestationVerifier, clock::Clock};
 
-struct DiceAttestationVerifier {
+pub struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
     clock: Arc<dyn Clock>,
 }
