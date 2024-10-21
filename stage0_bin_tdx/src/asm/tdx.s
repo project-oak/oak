@@ -130,21 +130,23 @@ _tdx_64bit_start:
     jmp rust64_start
 
 _park_ap_64bit:
-    leaq (AP_IN_64BIT_COUNT), %rcx
-    lock incq (%rcx)
+    leaq (AP_IN_64BIT_COUNT), %rcx       # Load address of AP_IN_64BIT_COUNT onto rcx
+    lock incq (%rcx)                     # Atomically increment AP_IN_64BIT_COUNT
 
-    # %esi stores the VCPU_INDEX
-    movl %esi, %ebp # save the VCPU_INDEX
+    movl %esi, %ebp                      # esi has the VCPU_INDEX, save it in ebp
 
-    movq $1, %rax # TDCALL_TDINFO
-    tdcall
-
-    # R8  [31:0]  NUM_VCPUS
-    #     [63:32] MAX_VCPUS
-    # R9  [31:0]  VCPU_INDEX
-
-_inner_loop:
-    # On entering the inner loop, APs are using the hard-coded page
+# APs poll the firmware mailbox, where the BSP will set the address
+# of the OS mailbox. The firmware mailbox is located at symbol TD_MAILBOX_START
+# (see layout.ld). On startup, that address (and its entire page) is all zeros.
+# We use the following simple structure for the firmware mailbox:
+#
+#  Field                Length(bytes)     Description
+#  -----------------------------------------------
+#  IsAddressSet         8                 0 if OS mailbox address is unset, any other value otherwise. Aligning to 8 bytes.
+#  OsMailboxAddress     8                 Physical address of OS mailbox.
+#
+_ap_firmware_mailbox_poll:
+    # On entering the this loop, APs are using the hard-coded page
     # tables from ROM. Before wake up the aps we need to reload cr3
     # for APs.
 
@@ -155,7 +157,25 @@ _inner_loop:
     # movq $r9, $rdi
     # call ap_wakeup_vector
 
-    pause
+    pause                          # Allow power saving while waiting
+    movq TD_MAILBOX_START, %rax    # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
+    testq %rax, %rax               # If IsAddressSet
+    jz _ap_firmware_mailbox_poll   # equals 0, then loop.
 
-    jmp _inner_loop
+    # At this point, IsAddressSet != 0, so then next 8 bytes contain the OS MailBox address.
+    jmp *(TD_MAILBOX_START + 8)
 
+# NOTE: If we need to recover the VCPU index, we can do it in this way:
+# TDCALL with "leaf number" 1 is a TDG.VP.TDINFO request. This gives us the
+# number of CPUs and which is the current one (VCPU_INDEX). References:
+#   - TDX Firmware Design Guide section 2.3.2
+#   - TDShim https://github.com/confidential-containers/td-shim/blob/093d187c63ba91be81dee1fc8ef12fb169c08b7a/tdx-tdcall/src/lib.rs#L37
+#   - TDShim https://github.com/confidential-containers/td-shim/blob/093d187c63ba91be81dee1fc8ef12fb169c08b7a/doc/tdshim_spec.md?plain=1#L101
+#
+# movq $1, %rax                        # Store value 1 in rax for TDCALL_TDINFO
+# tdcall
+
+# The results will be returned as (see Table 5.353 of Intel® TDX ABI Reference):
+# R8  [31:0]  NUM_VCPUS
+#     [63:32] MAX_VCPUS
+# R9  [31:0]  VCPU_INDEX
