@@ -291,6 +291,10 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_co
     oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
     oak_client_android_app
 
+
+kokoro_verify_buildconfigs:
+    ./scripts/test_buildconfigs buildconfigs/*.sh
+
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
