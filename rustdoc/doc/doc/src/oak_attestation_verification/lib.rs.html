@@ -63,6 +63,8 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -85,9 +87,11 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>amd;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>compare;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>endorsement;
 <span class="kw">pub mod </span>expect;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>extract;
+<span class="kw">pub mod </span>extract;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>platform;
 <span class="kw">pub mod </span>policy;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>rekor;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>util;

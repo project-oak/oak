@@ -642,6 +642,25 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -675,7 +694,7 @@
     attestation::v1::{
         extracted_evidence::EvidenceValues, root_layer_data::Report, AmdAttestationReport,
         ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
-        Evidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
         Stage0Measurements, Stage1Measurements, SystemLayerData, TcbVersion, TeePlatform,
     },
@@ -689,6 +708,25 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApplicationKeyValues {
     <span class="kw">pub</span>(<span class="kw">crate</span>) encryption_public_key: Vec&lt;u8&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) signing_public_key: Vec&lt;u8&gt;,
+}
+
+<span class="doccomment">/// Extracts attestation-related values without verificaiton.
+///
+/// Extracts measurements, public keys, and other attestation-related values
+/// from the evidence without verifying it. For most usecases, this function
+/// should not be used. Instead use the [`verify`] function, which verifies the
+/// attestation and only returns evidence upon successful verification. Hence
+/// marked as dangerous.
+</span><span class="kw">pub fn </span>extract_evidence(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
+    <span class="kw">let </span>evidence_values =
+        <span class="prelude-val">Some</span>(extract_evidence_values(evidence).context(<span class="string">"couldn't extract evidence values"</span>)<span class="question-mark">?</span>);
+    <span class="kw">let </span>ApplicationKeyValues { encryption_public_key, signing_public_key } =
+        extract_application_key_values(
+            evidence.application_keys.as_ref().context(<span class="string">"no application keys"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"couldn't extract application key values"</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(ExtractedEvidence { evidence_values, encryption_public_key, signing_public_key })
 }
 
 <span class="doccomment">/// Extracts the measurements and other attestation-related values from the

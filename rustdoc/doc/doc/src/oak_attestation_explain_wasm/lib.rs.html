@@ -53,7 +53,7 @@
     <span class="kw">let </span>extracted_evidence = {
         <span class="comment">// TODO: b/334900893 - Generate extracted evidence programatically.
         </span><span class="kw">let </span>evidence = Evidence::decode(bytes).expect(<span class="string">"could not decode evidence"</span>);
-        oak_attestation_verification::verifier::extract_evidence(<span class="kw-2">&amp;</span>evidence)
+        oak_attestation_verification::extract::extract_evidence(<span class="kw-2">&amp;</span>evidence)
             .expect(<span class="string">"could not extract evidence"</span>)
     };
     extracted_evidence.description().unwrap()
