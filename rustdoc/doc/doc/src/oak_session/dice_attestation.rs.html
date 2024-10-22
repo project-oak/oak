@@ -86,7 +86,7 @@
 
 <span class="kw">use crate</span>::{attestation::AttestationVerifier, clock::Clock};
 
-<span class="kw">struct </span>DiceAttestationVerifier {
+<span class="kw">pub struct </span>DiceAttestationVerifier {
     ref_values: ReferenceValues,
     clock: Arc&lt;<span class="kw">dyn </span>Clock&gt;,
 }
