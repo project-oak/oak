@@ -22,11 +22,10 @@ package(
 )
 
 rust_library(
-    name = "stage1_dice",
+    name = "oak_containers_stage1_dice",
     srcs = glob(
         ["src/**"],
     ),
-    crate_name = "oak_containers_stage1_dice",
     deps = [
         "//oak_attestation",
         "//oak_dice",
@@ -37,4 +36,9 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
     ],
+)
+
+alias(
+    name = "stage1_dice",
+    actual = ":oak_containers_stage1_dice",
 )

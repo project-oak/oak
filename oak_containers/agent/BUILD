@@ -24,13 +24,12 @@ package(
 exports_files(["README.md"])
 
 rust_library(
-    name = "lib",
+    name = "oak_containers_agent",
     srcs = glob(
         ["src/**"],
         exclude = ["src/main.rs"],
     ),
     compile_data = [":README.md"],
-    crate_name = "oak_containers_agent",
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:http",
@@ -47,12 +46,12 @@ rust_library(
 )
 
 rust_binary(
-    name = "oak_containers_agent",
+    name = "bin",
     srcs = ["src/main.rs"],
     compile_data = [":README.md"],
     visibility = ["//:default_visibility"],
     deps = [
-        ":lib",
+        ":oak_containers_agent",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:http",
@@ -64,4 +63,9 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tower",
     ],
+)
+
+alias(
+    name = "agent",
+    actual = ":oak_containers_agent",
 )

@@ -26,8 +26,8 @@ exports_files(["README.md"])
 LIB_DEPS = [
     "//micro_rpc",
     "//oak_attestation",
-    "//oak_containers/agent:lib",
-    "//oak_containers/orchestrator:oak_containers_orchestrator",
+    "//oak_containers/agent",
+    "//oak_containers/orchestrator",
     "//oak_containers_sdk",
     "//oak_crypto",
     "//oak_debug_service",
@@ -82,8 +82,8 @@ rust_library(
 )
 
 APP_DEPS = [
-    "//oak_containers/agent:lib",
-    "//oak_containers/orchestrator:lib",
+    "//oak_containers/agent",
+    "//oak_containers/orchestrator",
     "//oak_containers_sdk",
     "//oak_crypto",
     "//oak_proto_rust",
@@ -145,7 +145,7 @@ rust_test(
         ":lib",
         "//micro_rpc",
         "//oak_client",
-        "//oak_containers/agent:lib",
+        "//oak_containers/agent",
         "//oak_crypto",
         "//oak_functions_client:lib",
         "//oak_functions_service:lib_unrestricted",

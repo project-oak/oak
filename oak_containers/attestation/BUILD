@@ -39,3 +39,8 @@ rust_library(
         "@oak_crates_index//:prost-types",
     ],
 )
+
+alias(
+    name = "attestation",
+    actual = ":oak_containers_attestation",
+)

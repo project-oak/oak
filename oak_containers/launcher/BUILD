@@ -62,3 +62,8 @@ rust_binary(
         "@oak_crates_index//:tokio",
     ],
 )
+
+alias(
+    name = "launcher",
+    actual = ":oak_containers_launcher",
+)

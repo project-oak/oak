@@ -26,7 +26,7 @@ rust_binary(
     srcs = glob(["src/**"]),
     crate_features = ["bazel"],
     deps = [
-        "//oak_containers/orchestrator:lib",
+        "//oak_containers/orchestrator",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:clap",
@@ -39,4 +39,9 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
     ],
+)
+
+alias(
+    name = "syslogd",
+    actual = ":oak_containers_syslogd",
 )

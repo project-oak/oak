@@ -24,9 +24,8 @@ package(
 # Stage1 binary.
 # TODO(b/374722613) Not yet used because we need to build this for MUSL (see Makefile).
 rust_binary(
-    name = "stage1",
+    name = "oak_containers_stage1",
     srcs = glob(["src/**"]),
-    crate_name = "oak_containers_stage1",
     features = ["no_libstdcxx"],
     deps = [
         "//oak_attestation",
@@ -49,4 +48,9 @@ rust_binary(
         "@oak_crates_index//:zerocopy",
         "@oak_crates_index//:zeroize",
     ],
+)
+
+alias(
+    name = "stage1",
+    actual = ":oak_containers_stage1",
 )

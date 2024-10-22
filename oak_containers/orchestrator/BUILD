@@ -22,7 +22,7 @@ package(
 )
 
 rust_library(
-    name = "lib",
+    name = "oak_containers_orchestrator",
     srcs = [
         "src/cdi.rs",
         "src/container_runtime.rs",
@@ -34,7 +34,6 @@ rust_library(
         "src/logging.rs",
     ],
     crate_features = ["bazel"],
-    crate_name = "oak_containers_orchestrator",
     deps = [
         "//oak_attestation",
         "//oak_attestation_verification",
@@ -73,8 +72,8 @@ rust_library(
 )
 
 rust_test(
-    name = "lib_test",
-    crate = ":lib",
+    name = "oak_containers_orchestrator_test",
+    crate = ":oak_containers_orchestrator",
     crate_features = ["bazel"],
     data = [
         "//oak_containers/orchestrator/testdata:cdi.json",
@@ -85,11 +84,11 @@ rust_test(
 )
 
 rust_binary(
-    name = "oak_containers_orchestrator",
+    name = "bin",
     srcs = ["src/main.rs"],
     deps = [
-        ":lib",
-        "//oak_containers/agent:lib",
+        ":oak_containers_orchestrator",
+        "//oak_containers/agent",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
@@ -100,4 +99,9 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-util",
     ],
+)
+
+alias(
+    name = "orchestrator",
+    actual = ":oak_containers_orchestrator",
 )

@@ -6,11 +6,10 @@ package(
 )
 
 rust_library(
-    name = "channel",
+    name = "oak_containers_channel",
     srcs = [
         "src/lib.rs",
     ],
-    crate_name = "oak_containers_channel",
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio-vsock",
@@ -30,4 +29,9 @@ rust_test(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
     ],
+)
+
+alias(
+    name = "channel",
+    actual = ":oak_containers_channel",
 )
