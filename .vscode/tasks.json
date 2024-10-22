@@ -4,6 +4,8 @@
     "tasks": [
         {
             "label": "Generate rust-project.json",
+            // Run this task in a shell instead of a subprocess so it inherits the direnv / nix environment.
+            "type": "shell",
             "command": "bazel",
             "args": [
                 "run",
@@ -20,7 +22,7 @@
             },
             "runOptions": {
                 "runOn": "folderOpen"
-            }
+            },
         },
     ]
 }
