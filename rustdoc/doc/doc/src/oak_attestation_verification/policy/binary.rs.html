@@ -55,6 +55,7 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -72,12 +73,13 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation_verification_types::policy::EventPolicy;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, EventData, EventReferenceValues,
 };
 
 <span class="kw">use crate</span>::{
-    expect::get_event_expected_values, policy::EventPolicy, util::decode_event_proto,
+    expect::get_event_expected_values, util::decode_event_proto,
     verifier::compare_event_measurement_digests,
 };
 

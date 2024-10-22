@@ -83,6 +83,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation_verification_types::policy::EventPolicy;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
     EventAttestationResults,
@@ -90,7 +91,6 @@
 
 <span class="kw">use crate</span>::{
     expect::get_application_layer_expected_values,
-    policy::EventPolicy,
     util::{decode_event_endorsement_proto, decode_event_proto},
     verifier::compare_application_layer_measurement_digests,
 };
