@@ -230,10 +230,11 @@
                 libelf
               ];
             };
-            # Shell for container stage 1 image provenance workflow.
-            stage1Provenance = with pkgs; mkShell {
+            # Shell for oak_containers_stage1.
+            stage1Shell = with pkgs; mkShell {
               inputsFrom = [
                 rust
+                bazelShell
               ];
               packages = [
                 cpio

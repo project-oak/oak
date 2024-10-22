@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_containers_stage1
 export BUILD_COMMAND=(
   nix
   develop
-  .#stage1Provenance
+  .#stage1Shell
   --command
   env
   --chdir=oak_containers/stage1
