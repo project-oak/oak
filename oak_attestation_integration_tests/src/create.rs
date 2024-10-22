@@ -135,13 +135,13 @@ pub async fn oak_containers_standalone_endorsed_evidence_with_matching_reference
         &application_config,
     );
     let endorsed_evidence = {
-        let mut orchestrator = StandaloneOrchestrator::create_with_custom_config_and_measurements(
-            stage0_measurements,
-            stage1_system_image,
-            application_image,
-            application_config,
-        )
-        .expect("failed to create StandaloneOrchestrator");
+        let mut orchestrator = StandaloneOrchestrator::builder()
+            .stage0_measurements(stage0_measurements)
+            .stage1_system_image(stage1_system_image)
+            .application_image(application_image)
+            .application_config(application_config)
+            .build()
+            .expect("failed to create StandaloneOrchestrator");
 
         orchestrator.get_endorsed_evidence().await.expect("failed to get endorsed evidence")
     };

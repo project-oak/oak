@@ -22,15 +22,16 @@
 //!
 //! It does not currently support any sort of attestation flow.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use oak_attestation::{attester::Attester, dice::DiceAttester};
+use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 use oak_crypto::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence},
+    attestation::v1::{endorsements, Endorsements, Evidence, Stage0Measurements},
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
@@ -50,32 +51,78 @@ pub struct StandaloneOrchestrator {
     application_config: Vec<u8>,
 }
 
+pub struct KeyPair {
+    pub private: InstanceKeys,
+    pub public: InstancePublicKeys,
+}
+
+pub struct StandaloneOrchestratorBuilder<'a> {
+    stage0_measurements: Stage0Measurements,
+    stage1_system_image: &'a [u8],
+    application_image: &'a [u8],
+    application_config: Vec<u8>,
+    instance_keys: Option<KeyPair>,
+}
+
+macro_rules! builder_param {
+    ($name:ident: $type:ty) => {
+        pub fn $name(mut self, value: $type) -> StandaloneOrchestratorBuilder<'a> {
+            self.$name = value;
+            self
+        }
+    };
+}
+
+impl<'a> StandaloneOrchestratorBuilder<'a> {
+    pub fn build(self) -> Result<StandaloneOrchestrator> {
+        let instance_keys = match self.instance_keys {
+            Some(keys) => keys,
+            None => {
+                let (private, public) = oak_containers_attestation::generate_instance_keys();
+                KeyPair { private, public }
+            }
+        };
+
+        StandaloneOrchestrator::create(
+            self.stage0_measurements,
+            self.stage1_system_image,
+            self.application_image,
+            self.application_config,
+            instance_keys,
+        )
+    }
+
+    builder_param!(stage0_measurements: Stage0Measurements);
+    builder_param!(stage1_system_image: &'a [u8]);
+    builder_param!(application_image: &'a [u8]);
+    builder_param!(application_config: Vec<u8>);
+    builder_param!(instance_keys: Option<KeyPair>);
+}
+
 impl Default for StandaloneOrchestrator {
     fn default() -> Self {
-        Self::create_with_custom_config_and_measurements(
-            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
-            DEFAULT_STAGE1_SYSTEM_IMAGE,
-            DEFAULT_APPLICATION_IMAGE,
-            DEFAULT_APPLICATION_CONFIG.to_vec(),
-        )
-        .expect("Failed to create default StandaloneOrchestrator")
+        Self::builder().build().expect("Failed to create default StandaloneOrchestrator")
     }
 }
 
 impl StandaloneOrchestrator {
-    pub fn create_with_custom_config(application_config: Vec<u8>) -> Result<Self> {
-        Self::create_with_custom_config_and_measurements(
-            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
-            DEFAULT_STAGE1_SYSTEM_IMAGE,
-            DEFAULT_APPLICATION_IMAGE,
-            application_config,
-        )
+    pub fn builder<'a>() -> StandaloneOrchestratorBuilder<'a> {
+        StandaloneOrchestratorBuilder {
+            stage0_measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(
+            ),
+            stage1_system_image: DEFAULT_STAGE1_SYSTEM_IMAGE,
+            application_image: DEFAULT_APPLICATION_IMAGE,
+            application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
+            instance_keys: None,
+        }
     }
-    pub fn create_with_custom_config_and_measurements(
+
+    pub fn create(
         root_layer_event: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
         stage1_system_image: &[u8],
         application_image: &[u8],
         application_config: Vec<u8>,
+        instance_keys: KeyPair,
     ) -> Result<Self> {
         // Generate the root layer (Stage0) event
         let encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
@@ -89,11 +136,11 @@ impl StandaloneOrchestrator {
             oak_stage0_dice::mock_attestation_report,
             oak_dice::evidence::TeePlatform::None,
         )
-        .expect("couldn't create initial DICE data")
+        .map_err(|e| anyhow::anyhow!("couldn't create initial DICE data: {e}"))?
         .try_into()
-        .expect("couldn't convert dice data to an attester");
+        .context("couldn't convert dice data to an attester")?;
 
-        attester.extend(&encoded_stage0_event).expect("couldn't extend attester evidence");
+        attester.extend(&encoded_stage0_event).context("couldn't extend attester evidence")?;
 
         // Add Stage1 layer data
         let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
@@ -105,20 +152,16 @@ impl StandaloneOrchestrator {
             &application_config,
         );
 
-        // Generate instance keys
-        let (instance_private_keys, instance_public_keys) =
-            oak_containers_attestation::generate_instance_keys();
-
         // Add application keys and generate the final evidence
         let evidence = attester.add_application_keys(
             orchestrator_layer_data,
-            &instance_public_keys.encryption_public_key,
-            &instance_public_keys.signing_public_key,
+            &instance_keys.public.encryption_public_key,
+            &instance_keys.public.signing_public_key,
             None,
             None,
         )?;
 
-        Ok(Self { instance_private_keys, evidence, application_config })
+        Ok(Self { instance_private_keys: instance_keys.private, evidence, application_config })
     }
 
     pub fn get_instance_encryption_key_handle(&self) -> StandaloneInstanceEncryptionKeyHandle {

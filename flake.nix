@@ -254,6 +254,13 @@
             };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {
+             shellHook = ''
+                export LINUX_KERNEL="${linux_kernel}"
+                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
+                export LINUX_KERNEL_VERSION="${linux_kernel_version}"
+                export LINUX_KERNEL_SOURCE="${linux_kernel_src}"
+                export LINUX_KERNEL_CONFIG="${linux_kernel_config}"
+              '';
               inputsFrom = [
                 rust
                 bazelShell
