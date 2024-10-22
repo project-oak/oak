@@ -33,9 +33,14 @@ use x86_64::{
 
 use crate::{hal::PageAssignment, BootAllocator, Platform, BOOT_ALLOC};
 
+/// The root page-map level 4 table coverting virtual memory ranges 0..128TiB
+/// and (16EiB-128TiB)..16EiB.
 pub static mut PML4: PageTable = PageTable::new();
+/// The page-directory pointer table covering virtual memory range 0..512GiB.
 pub static mut PDPT: PageTable = PageTable::new();
+/// The page directory covering virtual memory range 0..1GiB.
 pub static mut PD_0: PageTable = PageTable::new();
+/// The page directory covering virtual memory range 3..4GiB.
 pub static mut PD_3: PageTable = PageTable::new();
 
 /// Wrapper for the page table references so that we can access them via a mutex
@@ -181,15 +186,19 @@ pub fn init_page_table_refs<P: Platform>() {
     // Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
-    let pml4 = unsafe { &mut *addr_of_mut!(PML4) };
-    let pdpt = unsafe { &mut *addr_of_mut!(PDPT) };
-    let pd_0 = unsafe { &mut *addr_of_mut!(PD_0) };
-    let pd_3 = unsafe { &mut *addr_of_mut!(PD_3) };
+    let pml4: &mut PageTable = unsafe { &mut *addr_of_mut!(PML4) };
+    let pdpt: &mut PageTable = unsafe { &mut *addr_of_mut!(PDPT) };
+    let pd_0: &mut PageTable = unsafe { &mut *addr_of_mut!(PD_0) };
+    let pd_3: &mut PageTable = unsafe { &mut *addr_of_mut!(PD_3) };
 
-    // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we
-    // can share individual 4KiB pages with the hypervisor as needed. We are
-    // using an identity mapping between virtual and physical addresses.
+    // Set up a new page table that maps the first 2MiB as 4KiB pages (except for
+    // the lower 4KiB), so that we can share individual 4KiB pages with the
+    // hypervisor as needed. We are using an identity mapping between virtual
+    // and physical addresses.
     let mut pt_0 = Box::new_in(PageTable::new(), &BOOT_ALLOC);
+    // Let entry 1 map to 4KiB, entry 2 to 8KiB, ... , entry 511 to 2MiB-4KiB:
+    // We leave [0,4K) unmapped to make sure null pointer dereferences crash
+    // with a page fault.
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
         entry.set_address::<P>(
             PhysAddr::new((i as u64) * Size4KiB::SIZE),
@@ -197,6 +206,7 @@ pub fn init_page_table_refs<P: Platform>() {
             PageEncryption::Encrypted,
         );
     });
+    // Let the first entry of PD_0 point to pt_0:
     pd_0[0].set_address::<P>(
         PhysAddr::new(pt_0.as_ref() as *const _ as usize as u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,

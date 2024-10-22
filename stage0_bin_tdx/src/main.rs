@@ -80,6 +80,9 @@ const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;
 const EFI_HOB_TYPE_RESOURCE_DESCRIPTOR: u16 = 0x0003;
 const EFI_HOB_TYPE_END_OF_HOB_LIST: u16 = 0xFFFF;
 
+/// UEFI Standard HoB Header.
+/// See UEFI Platform Initialization Specification, section 5.2.
+/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Header {
@@ -88,6 +91,9 @@ pub struct Header {
     pub reserved: u32,
 }
 
+/// UEFI Standard Handoff Info Table (PHIT HOB).
+/// See UEFI Platform Initialization Specification, section 5.3.
+/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct HandoffInfoTable {
@@ -101,6 +107,9 @@ pub struct HandoffInfoTable {
     end_of_hob_list: u64,
 }
 
+/// UEFI Standard Resource Descriptor (HoB)
+/// See UEFI Platform Initialization Specification, section 5.5.
+/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ResourceDescription {
