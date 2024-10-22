@@ -291,8 +291,8 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
             .put_incoming_message(&followup)
             .expect("Failed to process the follow up from the client");
     }
-    let session_keys_client = client_handshaker.take_handshake_result().unwrap().session_keys;
-    let session_keys_server = server_handshaker.take_handshake_result().unwrap().session_keys;
+    let session_keys_client = client_handshaker.take_session_keys().unwrap();
+    let session_keys_server = server_handshaker.take_session_keys().unwrap();
     assert_eq!(session_keys_client.request_key, session_keys_server.response_key);
     assert_eq!(session_keys_server.request_key, session_keys_client.response_key);
 

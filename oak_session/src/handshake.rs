@@ -43,16 +43,60 @@ pub enum HandshakeType {
     NoiseNN,
 }
 
+/// Struct that represents the data extracted from a successfully executed Noise
+/// handshake.
 pub struct HandshakeResult {
+    /// Keys to use with the established encrypted channel.
     pub session_keys: SessionKeys,
+    /// The hash of the data exchanged in the handshake.
     pub handshake_hash: Vec<u8>,
+    /// Bindings fo
     pub session_bindings: BTreeMap<String, SessionBinding>,
 }
 
+/// Trait that allows building a handshaker without passing any more data to it.
+/// It encapsulates any parameters necessary to create a handshaker object
+/// (i.e., the configuration)
+pub trait HandshakerBuilder<T: Handshaker>: Send {
+    fn build(self: Box<Self>) -> Result<T, Error>;
+}
+
+pub struct ClientHandshakerBuilder {
+    pub config: HandshakerConfig,
+}
+
+impl HandshakerBuilder<ClientHandshaker> for ClientHandshakerBuilder {
+    fn build(self: Box<Self>) -> Result<ClientHandshaker, Error> {
+        ClientHandshaker::create(self.config)
+    }
+}
+pub struct ServerHandshakerBuilder {
+    pub config: HandshakerConfig,
+    pub client_binding_expected: bool,
+}
+
+impl HandshakerBuilder<ServerHandshaker> for ServerHandshakerBuilder {
+    fn build(self: Box<Self>) -> Result<ServerHandshaker, Error> {
+        Ok(ServerHandshaker::new(self.config, self.client_binding_expected))
+    }
+}
+
+/// Trait that performs a Noise handshake between the parties following the
+/// pattern specified in the configuration.
 pub trait Handshaker: Send {
-    // Consume the handshake result when it's ready. Returns None if the handshake
-    // is still in progress or its results have already been consumed.
-    fn take_handshake_result(&mut self) -> Option<HandshakeResult>;
+    /// Consume the session keys produced by the handshake. Returns error if the
+    /// keys are not ready. Can only be called once.
+    fn take_session_keys(self) -> Result<SessionKeys, Error>;
+
+    /// Gets the hash of the completed handshake without consuming the stored
+    /// handshake results. This allows using the hash for binding independently
+    /// from creating the encrypted channel. Returns an error if the
+    /// handshake is not yet complete.
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error>;
+
+    // Allows checking whether the handshake is complete without consuming the
+    // produced results.
+    fn is_handshake_complete(&self) -> bool;
 }
 
 /// Client-side Handshaker that initiates the crypto handshake with the server.
@@ -118,8 +162,21 @@ impl ClientHandshaker {
 }
 
 impl Handshaker for ClientHandshaker {
-    fn take_handshake_result(&mut self) -> Option<HandshakeResult> {
-        self.handshake_result.take()
+    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
+    }
+
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
+        Ok(self
+            .handshake_result
+            .as_ref()
+            .ok_or(anyhow!("handshake is not complete"))?
+            .handshake_hash
+            .clone())
+    }
+
+    fn is_handshake_complete(&self) -> bool {
+        self.handshake_result.is_some() && self.followup_message.is_none()
     }
 }
 
@@ -208,8 +265,21 @@ impl ServerHandshaker {
 }
 
 impl Handshaker for ServerHandshaker {
-    fn take_handshake_result(&mut self) -> Option<HandshakeResult> {
-        self.handshake_result.take()
+    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
+    }
+
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
+        Ok(self
+            .handshake_result
+            .as_ref()
+            .ok_or(anyhow!("handshake is not complete"))?
+            .handshake_hash
+            .clone())
+    }
+
+    fn is_handshake_complete(&self) -> bool {
+        self.handshake_result.is_some()
     }
 }
 

@@ -68,6 +68,12 @@ impl From<Error> for AttestationFailure {
     }
 }
 
+impl From<AttestationFailure> for Error {
+    fn from(value: AttestationFailure) -> Self {
+        anyhow!(value.to_string())
+    }
+}
+
 // TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
 // logic has been moved to a separate crate.
 #[cfg_attr(test, automock)]
@@ -84,7 +90,7 @@ pub trait Endorser: Send {
 }
 
 #[cfg_attr(test, automock)]
-// Verifier for the particular type of the attestation.
+/// Verifier for the particular type of the attestation.
 pub trait AttestationVerifier: Send {
     fn verify(
         &self,
@@ -110,17 +116,19 @@ pub enum AttestationType {
     Unattested,
 }
 
-// Provider for the particular type of the attestation.
+/// Provider for the particular type of the attestation.
 pub trait AttestationProvider: Send {
     // Consume the attestation results when they're ready. Returns None if the
-    // attestation still is still pending the incoming peer's data.
+    // attestation still is still pending the incoming peer's data. The result is
+    // taken rather than copied since the results returned might be heavy and
+    // contain cryptographic material.
     fn take_attestation_result(&mut self)
         -> Option<Result<AttestationSuccess, AttestationFailure>>;
 }
 
-// Aggregates the attestation result from multiple verifiers. Implementations of
-// this trait define the logic of when the overall attestation step succeeds or
-// fails.
+/// Aggregates the attestation result from multiple verifiers. Implementations
+/// of this trait define the logic of when the overall attestation step succeeds
+/// or fails.
 pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
@@ -234,7 +242,10 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional => None,
+            AttestationType::SelfUnidirectional => Some(
+                Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
+                    .map_err(AttestationFailure::from),
+            ),
             AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
         };
         Ok(Some(()))
@@ -276,10 +287,7 @@ impl ServerAttestationProvider {
                             .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                     })
                 }
-                AttestationType::PeerUnidirectional => {
-                    Some(AttestResponse { endorsed_evidence: BTreeMap::new() })
-                }
-                AttestationType::Unattested => None,
+                AttestationType::PeerUnidirectional | AttestationType::Unattested => None,
             },
             config,
             attestation_result: None,
@@ -317,7 +325,10 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional => None,
+            AttestationType::SelfUnidirectional => Some(
+                Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
+                    .map_err(AttestationFailure::from),
+            ),
             AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
         };
         Ok(Some(()))
