@@ -10,6 +10,9 @@
 # project.
 import? "justfile.local"
 
+# Same, but for a user-wide local Oak justfile (works with Git worktrees).
+import? "~/.oak_justfile.local"
+
 export BAZEL_CONFIG_FLAG := if env_var_or_default('CI', '') == "" { "" } else { "--config=ci" }
 
 # Quick-and-dirty Cargo.toml workspace finder for cargo commands.
