@@ -164,6 +164,8 @@ fn create_oc_endorsements() -> Endorsements {
     };
     Endorsements {
         r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+        // TODO: b/375137648 - Populate `event_endorsements` proto field.
+        event_endorsements: None,
     }
 }
 
@@ -193,6 +195,8 @@ fn create_rk_endorsements() -> Endorsements {
         r#type: Some(
             oak_proto_rust::oak::attestation::v1::endorsements::Type::OakRestrictedKernel(ends),
         ),
+        // TODO: b/375137648 - Populate `event_endorsements` proto field.
+        event_endorsements: None,
     }
 }
 
@@ -219,6 +223,8 @@ fn create_genoa_oc_endorsements() -> Endorsements {
     };
     oak_proto_rust::oak::attestation::v1::Endorsements {
         r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+        // TODO: b/375137648 - Populate `event_endorsements` proto field.
+        event_endorsements: None,
     }
 }
 

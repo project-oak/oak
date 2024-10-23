@@ -155,6 +155,8 @@ impl OrchestratorInterface for StandaloneOrchestrator {
                         ..Default::default()
                     },
                 )),
+                // TODO: b/375137648 - Populate `event_endorsements` proto field.
+                event_endorsements: None,
             }),
         })
     }

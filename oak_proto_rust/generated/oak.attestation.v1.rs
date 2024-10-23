@@ -974,6 +974,8 @@ pub struct ContainerEndorsement {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsements {
+    #[prost(message, optional, tag = "4")]
+    pub event_endorsements: ::core::option::Option<EventEndorsements>,
     #[prost(oneof = "endorsements::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<endorsements::Type>,
 }

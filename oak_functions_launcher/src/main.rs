@@ -73,6 +73,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let endorsements = Endorsements {
         r#type: Some(endorsements::Type::OakRestrictedKernel(oak_restricted_kernel_endorsements)),
+        // TODO: b/375137648 - Populate `event_endorsements` proto field.
+        event_endorsements: None,
     };
 
     let server_future = oak_functions_launcher::server::new(

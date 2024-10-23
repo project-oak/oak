@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "proto/attestation/eventlog.proto";
+
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
@@ -199,4 +201,6 @@ message Endorsements {
     OakContainersEndorsements oak_containers = 2;
     CBEndorsements cb = 3;
   }
+
+  EventEndorsements event_endorsements = 4;
 };

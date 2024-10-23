@@ -133,6 +133,7 @@ impl Endorser for InstanceEndorser {
     fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
         // TODO: b/365975893 - Pass Endorsements from Hostlib to the Restricted
         // Kernel application.
-        Ok(Endorsements { r#type: None })
+        // TODO: b/375137648 - Populate `event_endorsements` proto field.
+        Ok(Endorsements { r#type: None, event_endorsements: None })
     }
 }
