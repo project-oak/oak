@@ -187,6 +187,49 @@
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -211,15 +254,16 @@
 //!
 //! It does not currently support any sort of attestation flow.
 
-</span><span class="kw">use </span>anyhow::Result;
+</span><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>oak_attestation::{attester::Attester, dice::DiceAttester};
+<span class="kw">use </span>oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence},
+    attestation::v1::{endorsements, Endorsements, Evidence, Stage0Measurements},
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
@@ -239,32 +283,78 @@
     application_config: Vec&lt;u8&gt;,
 }
 
+<span class="kw">pub struct </span>KeyPair {
+    <span class="kw">pub </span>private: InstanceKeys,
+    <span class="kw">pub </span>public: InstancePublicKeys,
+}
+
+<span class="kw">pub struct </span>StandaloneOrchestratorBuilder&lt;<span class="lifetime">'a</span>&gt; {
+    stage0_measurements: Stage0Measurements,
+    stage1_system_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
+    application_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
+    application_config: Vec&lt;u8&gt;,
+    instance_keys: <span class="prelude-ty">Option</span>&lt;KeyPair&gt;,
+}
+
+<span class="macro">macro_rules!</span> builder_param {
+    (<span class="macro-nonterminal">$name</span>:ident: <span class="macro-nonterminal">$</span><span class="kw">type</span>:<span class="macro-nonterminal">ty</span>) =&gt; {
+        <span class="kw">pub fn </span><span class="macro-nonterminal">$name</span>(<span class="kw-2">mut </span><span class="self">self</span>, value: <span class="macro-nonterminal">$</span><span class="kw">type</span>) -&gt; <span class="macro-nonterminal">StandaloneOrchestratorBuilder</span>&lt;<span class="lifetime">'a</span>&gt; {
+            <span class="self">self</span>.<span class="macro-nonterminal">$name </span>= value;
+            <span class="self">self
+        </span>}
+    };
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; StandaloneOrchestratorBuilder&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;StandaloneOrchestrator&gt; {
+        <span class="kw">let </span>instance_keys = <span class="kw">match </span><span class="self">self</span>.instance_keys {
+            <span class="prelude-val">Some</span>(keys) =&gt; keys,
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>(private, public) = oak_containers_attestation::generate_instance_keys();
+                KeyPair { private, public }
+            }
+        };
+
+        StandaloneOrchestrator::create(
+            <span class="self">self</span>.stage0_measurements,
+            <span class="self">self</span>.stage1_system_image,
+            <span class="self">self</span>.application_image,
+            <span class="self">self</span>.application_config,
+            instance_keys,
+        )
+    }
+
+    <span class="macro">builder_param!</span>(stage0_measurements: Stage0Measurements);
+    <span class="macro">builder_param!</span>(stage1_system_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
+    <span class="macro">builder_param!</span>(application_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
+    <span class="macro">builder_param!</span>(application_config: Vec&lt;u8&gt;);
+    <span class="macro">builder_param!</span>(instance_keys: <span class="prelude-ty">Option</span>&lt;KeyPair&gt;);
+}
+
 <span class="kw">impl </span>Default <span class="kw">for </span>StandaloneOrchestrator {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::create_with_custom_config_and_measurements(
-            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
-            DEFAULT_STAGE1_SYSTEM_IMAGE,
-            DEFAULT_APPLICATION_IMAGE,
-            DEFAULT_APPLICATION_CONFIG.to_vec(),
-        )
-        .expect(<span class="string">"Failed to create default StandaloneOrchestrator"</span>)
+        <span class="self">Self</span>::builder().build().expect(<span class="string">"Failed to create default StandaloneOrchestrator"</span>)
     }
 }
 
 <span class="kw">impl </span>StandaloneOrchestrator {
-    <span class="kw">pub fn </span>create_with_custom_config(application_config: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="self">Self</span>::create_with_custom_config_and_measurements(
-            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
-            DEFAULT_STAGE1_SYSTEM_IMAGE,
-            DEFAULT_APPLICATION_IMAGE,
-            application_config,
-        )
+    <span class="kw">pub fn </span>builder&lt;<span class="lifetime">'a</span>&gt;() -&gt; StandaloneOrchestratorBuilder&lt;<span class="lifetime">'a</span>&gt; {
+        StandaloneOrchestratorBuilder {
+            stage0_measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(
+            ),
+            stage1_system_image: DEFAULT_STAGE1_SYSTEM_IMAGE,
+            application_image: DEFAULT_APPLICATION_IMAGE,
+            application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
+            instance_keys: <span class="prelude-val">None</span>,
+        }
     }
-    <span class="kw">pub fn </span>create_with_custom_config_and_measurements(
+
+    <span class="kw">pub fn </span>create(
         root_layer_event: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
         stage1_system_image: <span class="kw-2">&amp;</span>[u8],
         application_image: <span class="kw-2">&amp;</span>[u8],
         application_config: Vec&lt;u8&gt;,
+        instance_keys: KeyPair,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// Generate the root layer (Stage0) event
         </span><span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
@@ -278,11 +368,11 @@
             oak_stage0_dice::mock_attestation_report,
             oak_dice::evidence::TeePlatform::None,
         )
-        .expect(<span class="string">"couldn't create initial DICE data"</span>)
-        .try_into()
-        .expect(<span class="string">"couldn't convert dice data to an attester"</span>);
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't create initial DICE data: {e}"</span>))<span class="question-mark">?
+        </span>.try_into()
+        .context(<span class="string">"couldn't convert dice data to an attester"</span>)<span class="question-mark">?</span>;
 
-        attester.extend(<span class="kw-2">&amp;</span>encoded_stage0_event).expect(<span class="string">"couldn't extend attester evidence"</span>);
+        attester.extend(<span class="kw-2">&amp;</span>encoded_stage0_event).context(<span class="string">"couldn't extend attester evidence"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Add Stage1 layer data
         </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
@@ -294,20 +384,16 @@
             <span class="kw-2">&amp;</span>application_config,
         );
 
-        <span class="comment">// Generate instance keys
-        </span><span class="kw">let </span>(instance_private_keys, instance_public_keys) =
-            oak_containers_attestation::generate_instance_keys();
-
         <span class="comment">// Add application keys and generate the final evidence
         </span><span class="kw">let </span>evidence = attester.add_application_keys(
             orchestrator_layer_data,
-            <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
-            <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
+            <span class="kw-2">&amp;</span>instance_keys.public.encryption_public_key,
+            <span class="kw-2">&amp;</span>instance_keys.public.signing_public_key,
             <span class="prelude-val">None</span>,
             <span class="prelude-val">None</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys, evidence, application_config })
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys: instance_keys.private, evidence, application_config })
     }
 
     <span class="kw">pub fn </span>get_instance_encryption_key_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StandaloneInstanceEncryptionKeyHandle {
