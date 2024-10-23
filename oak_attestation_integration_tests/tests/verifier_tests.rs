@@ -16,7 +16,6 @@
 
 use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
 use oak_attestation_verification::verifier::{to_attestation_results, verify, verify_dice_chain};
-use oak_containers_sdk::OrchestratorInterface;
 use oak_proto_rust::oak::attestation::{
     self,
     v1::{
@@ -217,9 +216,8 @@ fn oak_containers_skip_all_reference_values() -> ReferenceValues {
 #[tokio::test]
 async fn verify_mock_oak_containers_evidence() {
     // Create a mock orchestrator and get endorsed evidence
-    let mut orchestrator = oak_containers_sdk::standalone::StandaloneOrchestrator::default();
-    let endorsed_evidence =
-        orchestrator.get_endorsed_evidence().await.expect("Failed to get endorsed evidence");
+    let orchestrator = oak_containers_sdk::standalone::StandaloneOrchestrator::default();
+    let endorsed_evidence = orchestrator.get_endorsed_evidence();
 
     let evidence = endorsed_evidence.evidence.as_ref().expect("No evidence found");
     let endorsements = endorsed_evidence.endorsements.as_ref().expect("No endorsements found");

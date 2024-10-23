@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_static_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -61,4 +61,16 @@ rust_library(
 rust_test(
     name = "oak_containers_sdk_test",
     crate = ":oak_containers_sdk",
+)
+
+rust_static_library(
+    name = "ffi",
+    srcs = [
+        "src/ffi/standalone_c.rs",
+    ],
+    deps = [
+        ":oak_containers_sdk",
+        "//oak_proto_rust",
+        "@oak_crates_index//:prost",
+    ],
 )

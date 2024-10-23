@@ -173,6 +173,24 @@ impl StandaloneOrchestrator {
     pub fn get_instance_signer(&self) -> StandaloneInstanceSigner {
         StandaloneInstanceSigner { signing_key: self.instance_private_keys.signing_key.clone() }
     }
+
+    pub fn get_endorsed_evidence(&self) -> EndorsedEvidence {
+        EndorsedEvidence {
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(Endorsements {
+                r#type: Some(endorsements::Type::OakContainers(
+                    oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
+                        root_layer: Some(
+                            oak_proto_rust::oak::attestation::v1::RootLayerEndorsements::default(),
+                        ),
+                        ..Default::default()
+                    },
+                )),
+                // TODO: b/375137648 - Populate `event_endorsements` proto field.
+                event_endorsements: None,
+            }),
+        }
+    }
 }
 
 #[async_trait]
@@ -187,21 +205,7 @@ impl OrchestratorInterface for StandaloneOrchestrator {
     }
 
     async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
-        Ok(EndorsedEvidence {
-            evidence: Some(self.evidence.clone()),
-            endorsements: Some(Endorsements {
-                r#type: Some(endorsements::Type::OakContainers(
-                    oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
-                        root_layer: Some(
-                            oak_proto_rust::oak::attestation::v1::RootLayerEndorsements::default(),
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                // TODO: b/375137648 - Populate `event_endorsements` proto field.
-                event_endorsements: None,
-            }),
-        })
+        Ok(StandaloneOrchestrator::get_endorsed_evidence(self))
     }
 }
 

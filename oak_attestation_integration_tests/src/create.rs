@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_containers_sdk::{standalone::StandaloneOrchestrator, OrchestratorInterface};
+use oak_containers_sdk::standalone::StandaloneOrchestrator;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, kernel_binary_reference_value, reference_values,
@@ -135,7 +135,7 @@ pub async fn oak_containers_standalone_endorsed_evidence_with_matching_reference
         &application_config,
     );
     let endorsed_evidence = {
-        let mut orchestrator = StandaloneOrchestrator::builder()
+        let orchestrator = StandaloneOrchestrator::builder()
             .stage0_measurements(stage0_measurements)
             .stage1_system_image(stage1_system_image)
             .application_image(application_image)
@@ -143,7 +143,7 @@ pub async fn oak_containers_standalone_endorsed_evidence_with_matching_reference
             .build()
             .expect("failed to create StandaloneOrchestrator");
 
-        orchestrator.get_endorsed_evidence().await.expect("failed to get endorsed evidence")
+        orchestrator.get_endorsed_evidence()
     };
 
     (endorsed_evidence, reference_values)

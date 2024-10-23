@@ -39,7 +39,7 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
     let mut orchestrator = StandaloneOrchestrator::default();
     let encryption_key_handle = orchestrator.get_instance_encryption_key_handle();
 
-    let endorsed_evidence = orchestrator.get_endorsed_evidence().await?;
+    let endorsed_evidence = orchestrator.get_endorsed_evidence();
     let application_config = orchestrator.get_application_config().await?;
 
     Ok((
