@@ -185,6 +185,8 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -342,6 +344,8 @@
                         ..Default::default()
                     },
                 )),
+                <span class="comment">// TODO: b/375137648 - Populate `event_endorsements` proto field.
+                </span>event_endorsements: <span class="prelude-val">None</span>,
             }),
         })
     }

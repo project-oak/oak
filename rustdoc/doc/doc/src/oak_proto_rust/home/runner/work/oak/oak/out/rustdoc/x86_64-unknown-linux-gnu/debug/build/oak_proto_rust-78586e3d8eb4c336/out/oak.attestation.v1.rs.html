@@ -1542,6 +1542,8 @@
 <a href="#1542" id="1542">1542</a>
 <a href="#1543" id="1543">1543</a>
 <a href="#1544" id="1544">1544</a>
+<a href="#1545" id="1545">1545</a>
+<a href="#1546" id="1546">1546</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with
 /// &lt;https://github.com/project-oak/oak/snp_measurement.&gt;
@@ -2518,6 +2520,8 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Endorsements {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>event_endorsements: ::core::option::Option&lt;EventEndorsements&gt;,
     <span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
     </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;endorsements::Type&gt;,
 }
