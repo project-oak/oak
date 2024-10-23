@@ -58,6 +58,7 @@ pub mod hal;
 mod initramfs;
 mod kernel;
 mod logging;
+pub mod mailbox;
 pub mod msr;
 pub mod paging;
 mod pic;
@@ -99,6 +100,7 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 ///   tables.
 pub fn rust64_start<P: hal::Platform>() -> ! {
     paging::init_page_table_refs::<P>();
+
     P::early_initialize_platform();
     logging::init_logging::<P>();
     log::info!("starting...");

@@ -16,7 +16,11 @@
 
 #![no_std]
 #![no_main]
+#![feature(allocator_api)]
 
+extern crate alloc;
+
+use alloc::boxed::Box;
 use core::{
     mem::{size_of, MaybeUninit},
     ops::{Index, IndexMut},
@@ -26,7 +30,11 @@ use core::{
 
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_stage0::paging::{self, PageEncryption};
+use oak_stage0::{
+    mailbox::OsMailbox,
+    paging::{self, PageEncryption},
+    BOOT_ALLOC,
+};
 use oak_tdx_guest::{
     tdcall::get_td_info,
     vmcall::{
@@ -65,6 +73,16 @@ mod counters {
 #[no_mangle]
 static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit();
 
+/// Firmware Mailbox.
+///
+/// This structure is part of the firmware, it's declared in layout.ld .
+/// This mailbox is used for communication between BSP and APs (CPUs) while
+/// still running firmware (stage0) code. The OS will not have access to it.
+/// In order to hand APs off to the OS, the BSP needs to create a second
+/// mailbox (OS mailbox). It uses the firmware mailbox to tell APs where the
+/// OS mailbox is.
+// TODO: b/375160572 - Change type (this is not a u32) and have BSP send address
+// to APs.
 #[no_mangle]
 static mut TD_MAILBOX_START: MaybeUninit<u32> = MaybeUninit::uninit();
 
@@ -414,6 +432,11 @@ impl oak_stage0::Platform for Tdx {
         // logger is initialized starting from here
         info!("initialize platform");
         info!("{:?}", e820_table);
+
+        info!("Creating OS Mailbox");
+        let os_mailbox = Box::new_in(OsMailbox::default(), &BOOT_ALLOC);
+        Box::leak(os_mailbox); // Let the allocator forget about it so it never deallocates it.
+
         info!("starting TDX memory acceptance");
         let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let accept_pd_pt = PageTable::new();

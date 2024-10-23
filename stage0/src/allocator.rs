@@ -62,6 +62,8 @@ impl<const N: usize> Inner<N> {
 /// allocator to allocate data structures we expect to outlive stage0 and (b) we
 /// allocate only a small number of data structures from it, so the padding
 /// overhead is minimal.
+///
+/// N is the capacity in bytes.
 pub struct BumpAllocator<const N: usize> {
     inner: Spinlock<Inner<N>>,
 }

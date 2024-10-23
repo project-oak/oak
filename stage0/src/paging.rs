@@ -222,8 +222,8 @@ pub fn init_page_table_refs<P: Platform>() {
     flush_all();
 }
 
-/// Maps the first 1GiB of memory using 2MiB hugepages, except for the first
-/// 2MiB that was already mapped as 512 4KiB pages.
+/// Identity maps the first 1GiB of memory using 2MiB hugepages, except for the
+/// first 2MiB that was already mapped as 512 4KiB pages.
 pub fn map_additional_memory<P: Platform>() {
     {
         let mut page_tables = PAGE_TABLE_REFS.get().expect("page tables not initiallized").lock();
