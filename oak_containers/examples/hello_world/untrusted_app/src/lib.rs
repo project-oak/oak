@@ -16,4 +16,5 @@
 mod app_client;
 pub mod demo_transport;
 pub mod http_service;
+pub mod launcher_args;
 pub mod service;

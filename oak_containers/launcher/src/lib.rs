@@ -29,7 +29,7 @@ use oak_proto_rust::oak::{
     key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     session::v1::EndorsedEvidence,
 };
-pub use qemu::Params as QemuParams;
+pub use qemu::{Params as QemuParams, VmType as QemuVmType};
 use tokio::{
     net::TcpListener,
     sync::{oneshot, watch},
@@ -38,8 +38,6 @@ use tokio::{
 };
 use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
 use tonic::transport::Channel as TonicChannel;
-
-pub use crate::qemu::VmType;
 
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
@@ -82,19 +80,6 @@ pub struct Args {
     // Method of communication with the trusted application in the enclave.
     #[arg(long, value_enum, default_value_t = ChannelType::default())]
     pub communication_channel: ChannelType,
-}
-
-impl Args {
-    pub fn default_for_root(root: &str) -> Self {
-        let system_image = format!("{root}oak_containers/system_image/target/image.tar.xz",).into();
-        Self {
-            system_image,
-            container_bundle: "".into(),
-            application_config: Vec::new(),
-            qemu_params: qemu::Params::default_for_root(root),
-            communication_channel: ChannelType::default(),
-        }
-    }
 }
 
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {

@@ -27,10 +27,12 @@ rust_library(
         "src/app_client.rs",
         "src/demo_transport.rs",
         "src/http_service.rs",
+        "src/launcher_args.rs",
         "src/lib.rs",
         "src/service.rs",
         "tests/integration_test.rs",
     ],
+    crate_features = ["bazel"],
     crate_name = "oak_containers_hello_world_untrusted_app",
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
@@ -53,12 +55,14 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:which",
     ],
 )
 
 rust_binary(
     name = "oak_containers_hello_world_untrusted_app",
     srcs = ["src/main.rs"],
+    crate_features = ["bazel"],
     deps = [
         ":lib",
         "//oak_client",

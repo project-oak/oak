@@ -29,7 +29,10 @@ use oak_client::{
     verifier::InsecureAttestationVerifier,
 };
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_hello_world_untrusted_app::demo_transport::{self, DemoTransport};
+use oak_containers_hello_world_untrusted_app::{
+    demo_transport::{self, DemoTransport},
+    launcher_args::launcher_args,
+};
 use oak_containers_launcher::Args;
 use oak_hello_world_proto::oak::containers::example::untrusted_application_client::UntrustedApplicationClient;
 use tokio::net::TcpListener;
@@ -56,7 +59,7 @@ async fn run_hello_world_test<TC: TransportCreator<T>, T: Transport + EvidencePr
         return;
     }
 
-    let args = Args { container_bundle, ..Args::default_for_root(env!("WORKSPACE_ROOT")) };
+    let args = launcher_args(container_bundle);
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await.expect("couldn't bind listener");

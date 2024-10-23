@@ -16,6 +16,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use clap::Parser;
+use oak_containers_hello_world_untrusted_app::launcher_args::launcher_args;
 use tokio::net::TcpListener;
 
 #[derive(clap::ValueEnum, clap::Parser, Clone, Debug, Default)]
@@ -41,10 +42,7 @@ async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
 
     let args = {
-        let mut args = Args {
-            server_type: ServerType::Grpc,
-            launcher_args: oak_containers_launcher::Args::default_for_root("./"),
-        };
+        let mut args = Args { server_type: ServerType::Grpc, launcher_args: launcher_args("") };
         args.update_from(std::env::args_os());
         args
     };

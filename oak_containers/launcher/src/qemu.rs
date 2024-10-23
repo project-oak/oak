@@ -94,28 +94,6 @@ pub struct Params {
     pub vm_type: VmType,
 }
 
-impl Params {
-    pub fn default_for_root(root: &str) -> Self {
-        let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
-        let stage0_binary = format!("{root}generated/stage0_bin",).into();
-        let kernel = format!("{root}oak_containers/kernel/target/bzImage",).into();
-        let initrd = format!("{root}/target/stage1.cpio").into();
-        Self {
-            vmm_binary,
-            stage0_binary,
-            kernel,
-            initrd,
-            memory_size: Some("8G".to_owned()),
-            num_cpus: 2,
-            ramdrive_size: 3_000_000,
-            telnet_console: None,
-            virtio_guest_cid: None,
-            pci_passthrough: None,
-            vm_type: VmType::Default,
-        }
-    }
-}
-
 pub struct Qemu {
     instance: tokio::process::Child,
     guest_cid: Option<u32>,

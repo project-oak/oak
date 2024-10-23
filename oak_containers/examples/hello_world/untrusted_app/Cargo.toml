@@ -5,6 +5,9 @@ authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+bazel = []
+
 [build-dependencies]
 oak_grpc_utils = { workspace = true }
 
@@ -36,6 +39,7 @@ tokio = { version = "*", features = [
 tokio-stream = { version = "*" }
 tonic = "*"
 tower = "*"
+which = "*"
 
 [dev-dependencies]
 once_cell = "*"
