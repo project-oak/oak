@@ -230,6 +230,10 @@
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -405,6 +409,24 @@
     <span class="kw">pub fn </span>get_instance_signer(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StandaloneInstanceSigner {
         StandaloneInstanceSigner { signing_key: <span class="self">self</span>.instance_private_keys.signing_key.clone() }
     }
+
+    <span class="kw">pub fn </span>get_endorsed_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EndorsedEvidence {
+        EndorsedEvidence {
+            evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
+            endorsements: <span class="prelude-val">Some</span>(Endorsements {
+                r#type: <span class="prelude-val">Some</span>(endorsements::Type::OakContainers(
+                    oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
+                        root_layer: <span class="prelude-val">Some</span>(
+                            oak_proto_rust::oak::attestation::v1::RootLayerEndorsements::default(),
+                        ),
+                        ..Default::default()
+                    },
+                )),
+                <span class="comment">// TODO: b/375137648 - Populate `event_endorsements` proto field.
+                </span>event_endorsements: <span class="prelude-val">None</span>,
+            }),
+        }
+    }
 }
 
 <span class="attr">#[async_trait]
@@ -419,21 +441,7 @@
     }
 
     <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EndorsedEvidence&gt; {
-        <span class="prelude-val">Ok</span>(EndorsedEvidence {
-            evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
-            endorsements: <span class="prelude-val">Some</span>(Endorsements {
-                r#type: <span class="prelude-val">Some</span>(endorsements::Type::OakContainers(
-                    oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
-                        root_layer: <span class="prelude-val">Some</span>(
-                            oak_proto_rust::oak::attestation::v1::RootLayerEndorsements::default(),
-                        ),
-                        ..Default::default()
-                    },
-                )),
-                <span class="comment">// TODO: b/375137648 - Populate `event_endorsements` proto field.
-                </span>event_endorsements: <span class="prelude-val">None</span>,
-            }),
-        })
+        <span class="prelude-val">Ok</span>(StandaloneOrchestrator::get_endorsed_evidence(<span class="self">self</span>))
     }
 }
 
