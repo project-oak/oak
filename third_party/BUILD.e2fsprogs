@@ -23,11 +23,22 @@ filegroup(
 
 configure_make(
     name = "mke2fs",
+    copts = [
+        # Replace the build root so that the sandbox directory doesn't leak
+        # into the binary.
+        "-ffile-prefix-map=$$EXT_BUILD_ROOT$$=",
+    ],
     lib_source = ":all_files",
     out_bin_dir = "sbin",
     out_binaries = ["mke2fs"],
     out_include_dir = None,
-    configure_options = ["--with-crond-dir=no", "--disable-uuidd"],
+    configure_options = [
+        "--with-crond-dir=no",
+        "--disable-uuidd",
+        # Specify an empty prefix so that the build temp directory doesn't leak
+        # into the binary.
+        "--prefix="
+    ],
     targets = ["all-static"],
     # There is no `make install` equivalent that installs (or strips) the static
     # binaries, so we do it by hand.
