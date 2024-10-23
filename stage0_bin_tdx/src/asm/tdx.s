@@ -146,16 +146,8 @@ _park_ap_64bit:
 #  OsMailboxAddress     8                 Physical address of OS mailbox.
 #
 _ap_firmware_mailbox_poll:
-    # On entering the this loop, APs are using the hard-coded page
-    # tables from ROM. Before wake up the aps we need to reload cr3
-    # for APs.
-
-    # Finally we will need to call ap_wakeup_vector with
-    # VCPU_INDEX as the first argument like
-    # fn ap_wakeup_vector(vcpu_index: u64);
-
-    # movq $r9, $rdi
-    # call ap_wakeup_vector
+    # By the time APs reach this loop, they are using the hard-coded page
+    # tables from ROM (BIOS area, [4GiB - 2MiB, 4Gib), i.e. the top 2MiB of the memory).
 
     pause                          # Allow power saving while waiting
     movq TD_MAILBOX_START, %rax    # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
