@@ -145,17 +145,34 @@ _park_ap_64bit:
 #  IsAddressSet         8                 0 if OS mailbox address is unset, any other value otherwise. Aligning to 8 bytes.
 #  OsMailboxAddress     8                 Physical address of OS mailbox.
 #
-_ap_firmware_mailbox_poll:
+_ap_poll_firmware_mailbox:
     # By the time APs reach this loop, they are using the hard-coded page
     # tables from ROM (BIOS area, [4GiB - 2MiB, 4Gib), i.e. the top 2MiB of the memory).
 
-    pause                          # Allow power saving while waiting
-    movq TD_MAILBOX_START, %rax    # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
-    testq %rax, %rax               # If IsAddressSet
-    jz _ap_firmware_mailbox_poll   # equals 0, then loop.
+    movq TD_MAILBOX_START, %rax      # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
+    testq %rax, %rax                 # If IsAddressSet
+    jnz _ap_poll_os_mailbox          # not equals 0, it means OsMailboxAddress is set, go poll OS mailbox.
 
-    # At this point, IsAddressSet != 0, so then next 8 bytes contain the OS MailBox address.
-    jmp *(TD_MAILBOX_START + 8)
+    pause                            # Otherwise, allow power saving while waiting,
+    jp _ap_poll_firmware_mailbox     # and loop.
+
+# APs poll the OS mailbox, where the OS will send them commands.
+# The structure is defined in stage0/src/mailbox.rs
+# At this point, OsMailboxAddress, located at (TD_MAILBOX_START + 8),
+# is expected to be set.
+_ap_poll_os_mailbox:
+    movq (TD_MAILBOX_START + 8), %rdx   # Save OsMailboxAddress value in rdx
+    xorq %rax, %rax                     # Clear rax register.
+    pause                               # Allow power saving while waiting.
+
+    movw (%rdx), %ax                    # First 2 bytes of OS mailbox contain the field `command`. Save to rax.
+    testw %ax, %ax                      # If command
+    jz _ap_poll_os_mailbox              # equals 0, then loop.
+
+    # For now, command will always equal 0 because we haven't told the OS
+    # where this mailbox is yet, so the OS won't issue commands.
+    # TODO: b/375184207 - Implement response to commands.
+
 
 # NOTE: If we need to recover the VCPU index, we can do it in this way:
 # TDCALL with "leaf number" 1 is a TDG.VP.TDINFO request. This gives us the
