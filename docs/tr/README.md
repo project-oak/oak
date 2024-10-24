@@ -32,7 +32,8 @@ trusted builder and contains all information needed in order to retry the build.
 A binary is reproducibly buildable whenever the subsequent build attempts (not
 necessarily by the trusted builder) yields bitwise the same binary. Even to a
 third party, reproducing the exact same binary using the same source code and
-builder is possible. Reproducible builds are highly desirable.
+builder is possible. Reproducible builds are highly desirable. Oak's own
+critical binaries are [reproducibly buildable](reproducible.md).
 
 ## During release
 
