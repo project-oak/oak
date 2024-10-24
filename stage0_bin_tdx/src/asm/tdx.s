@@ -138,7 +138,7 @@ _park_ap_64bit:
 # APs poll the firmware mailbox, where the BSP will set the address
 # of the OS mailbox. The firmware mailbox is located at symbol TD_MAILBOX_START
 # (see layout.ld). On startup, that address (and its entire page) is all zeros.
-# We use the following simple structure for the firmware mailbox:
+# We use the same FirmwareMailbox defined in stage0/src/mailbox.rs:
 #
 #  Field                Length(bytes)     Description
 #  -----------------------------------------------

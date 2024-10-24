@@ -14,6 +14,64 @@
 // limitations under the License.
 //
 
+use core::sync::atomic::{fence, AtomicBool, AtomicU64, Ordering};
+
+use x86_64::structures::paging::{PageSize, Size4KiB};
+
+/// Firmware Mailbox - structure used by the firmware for inter-cpu comms.
+///
+/// In TDX, this is also called a "TD Mailbox" (TD_MAILBOX).
+/// We don't need to 4K-align it (at least for now) as this is usually part
+/// of the BIOS, lives in the ROM area, and thus its exact memory address
+/// can be defined by a linker script. In TDX, this is declared in its
+/// layout.ld file. We 8-byte align it so that os_mailbox_address fits nicely
+/// into a single memory read.
+///
+/// Write-only: This structure is only for comms from BSP running Rust code to
+/// AP running assembly code.
+#[repr(C)]
+pub struct FirmwareMailbox {
+    is_address_set: AtomicBool, // Atomic: prevent compiler omitting writes.
+
+    // For performance, add 7 bytes padding so os_mailbox_address fits in one 8-byte block.
+    // And to match the structure declared in tdx.s.
+    reserved_1: [u8; 7],
+
+    /// OS Mailbox Address. Only valid when is_address_set is true.
+    os_mailbox_address: AtomicU64,
+
+    // Fill the rest with 0s and make sure we take all of the page.
+    // E.g. in tdx layout.ld, we request 4K exactly (TD_MAILBOX_SIZE).
+    reserved_2: [u8; 4080],
+}
+
+// A FirmwareMailbox must take exactly one page.
+static_assertions::assert_eq_size!(FirmwareMailbox, [u8; Size4KiB::SIZE as usize]);
+
+impl FirmwareMailbox {
+    pub const fn new() -> Self {
+        Self {
+            is_address_set: AtomicBool::new(false),
+            reserved_1: [0; 7],
+            os_mailbox_address: AtomicU64::new(0u64),
+            reserved_2: [0; 4080],
+        }
+    }
+
+    pub fn set_os_mailbox_address(&mut self, val: u64) {
+        assert!(val >= Size4KiB::SIZE, "First page is unmapped, can't contain an OS Mailbox");
+        self.os_mailbox_address.store(val, Ordering::SeqCst);
+        fence(Ordering::SeqCst); // Prevent compiler or CPU reordering writes.
+        self.is_address_set.store(true, Ordering::SeqCst);
+    }
+}
+
+impl Default for FirmwareMailbox {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// OS Mailbox - structure used by the OS for inter-cpu comms
 ///
 /// Through this
@@ -46,7 +104,7 @@ pub struct OsMailbox {
 // OS Mailbox must be exactly fit one 4KiB page. If it's smaller, other things
 // could be stored in its memory page. If it's larger, parts of it will spill
 // onto the next page.
-static_assertions::assert_eq_size!(OsMailbox, [u8; 4096usize]);
+static_assertions::assert_eq_size!(OsMailbox, [u8; Size4KiB::SIZE as usize]);
 
 impl Default for OsMailbox {
     fn default() -> Self {

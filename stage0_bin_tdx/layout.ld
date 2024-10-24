@@ -16,7 +16,7 @@
 
 HIDDEN(TOP = 4096M);
 HIDDEN(TD_HOB_SIZE = 8K);
-HIDDEN(TD_HOB_START = 0x100000);
+HIDDEN(TD_HOB_START = 0x100000);                        /* Keep name in sync with src/main.rs . */
 HIDDEN(TD_MAILBOX_START = TD_HOB_START + TD_HOB_SIZE);
 HIDDEN(TD_MAILBOX_SIZE = 4K);
 HIDDEN(BFV_SIZE = BIOS_SIZE);
@@ -106,16 +106,19 @@ SECTIONS {
         . += TD_HOB_SIZE; /* 8KB */
     } > td_hob : td_hob
 
-    /* TD MailBox .
-     * After boot, APs loop poll the mailbox. The OS will send the them
-     * wakeup commands using the Mailbox and instruct them where to jump next.
+    /* TD Firmware MailBox .
+     * After boot, APs loop poll the mailbox. The firware (stage0) will use it
+     * to send them the location of the OS Mailbox.
      * See TDX Firmware Development Guide section 4.3 for AP wakeup protocol.
      * Mailbox structure defined here:
      * https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#multiprocessor-wakeup-mailbox-structure
+     * NOTE that we assume the mailbox memory to have been zeroed by when stage0 starts.
      */
      .tdx.td_mailbox ALIGN(TD_MAILBOX_START, 4K) (NOLOAD) : {
-        . += TD_MAILBOX_SIZE;
+        *(.tdx.td_mailbox)
+        *(.tdx.td_mailbox*)
      } > td_mailbox
+     ASSERT((. == ADDR(.tdx.td_mailbox) + TD_MAILBOX_SIZE), "Expected exactly 4K of data in mailbox section.")
 
     /* Create a BFV header + Ffs File header + File section header
      * All area starting here will be measured by TDX module because
@@ -448,11 +451,14 @@ SECTIONS {
         LONG(2)                      /* Type = TDX_METADATA_SECTION_TYPE_TD_HOB */
         LONG(0)                      /* Attributes */
 
-        /* TDVF_SECTION: Mailbox.
+        /* TDVF_SECTION: Firmware Mailbox.
          * See TDX Firmware Development Guide section 4.3 for AP wakeup protocol.
          * Read also MailBox definition in this file. From here:
          * https://github.com/confidential-containers/td-shim/blob/66f0aaf96582905a705f212f0cc2db63f4679082/td-shim-tools/src/metadata.rs#L173
          * the mailbox is declared as a Temp Mem TDVF section.
+         * NOTE that we assume the mailbox memory to have been zeroed by when stage0 starts.
+         * This is because in TDX all CPUs start at the same reser vector - we don't know what might happen first:
+         * the BSP initializing the mailbox or the APs reading from it.
          */
         LONG(0)                      /* DataOffset */
         LONG(0)                      /* RawDataSize */

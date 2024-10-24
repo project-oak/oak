@@ -25,13 +25,14 @@ use core::{
     mem::{size_of, MaybeUninit},
     ops::{Index, IndexMut},
     panic::PanicInfo,
+    ptr::addr_of,
     sync::atomic::Ordering,
 };
 
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
-    mailbox::OsMailbox,
+    mailbox::{FirmwareMailbox, OsMailbox},
     paging::{self, PageEncryption},
     BOOT_ALLOC,
 };
@@ -71,7 +72,7 @@ mod counters {
 }
 
 #[no_mangle]
-static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit();
+static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit(); // Keep named as in layout.ld
 
 /// Firmware Mailbox.
 ///
@@ -81,10 +82,9 @@ static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit();
 /// In order to hand APs off to the OS, the BSP needs to create a second
 /// mailbox (OS mailbox). It uses the firmware mailbox to tell APs where the
 /// OS mailbox is.
-// TODO: b/375160572 - Change type (this is not a u32) and have BSP send address
-// to APs.
-#[no_mangle]
-static mut TD_MAILBOX_START: MaybeUninit<u32> = MaybeUninit::uninit();
+#[link_section = ".tdx.td_mailbox"]
+static mut TD_MAILBOX: FirmwareMailbox = FirmwareMailbox::new();
+const TD_MAILBOX_LOCATION: u64 = 0x102000; // Keep in sync with layout.ld.
 
 #[no_mangle]
 static mut GPAW: u32 = 0;
@@ -290,6 +290,26 @@ fn debug_u64_variable(s: &str, val: u64) {
     write_u64(val);
 }
 
+/// Prints debug messages of the raw contents of the memory where
+/// TD_MAILBOX_START is.
+///
+/// Given the firmware mailbox is processed from assembly code (tdx.s,
+/// _ap_poll_firmware_mailbox), we are interested in seeing the exact raw
+/// contents, not what Rust might interpret of them.
+fn debug_print_td_mailbox() {
+    debug_u64_variable(stringify!(ADDR_OF_TD_MAILBOX), addr_of!(TD_MAILBOX) as u64);
+    // Safety: TD_MAILBOX_START points to valid TEMPMEM memory as defined
+    // in layout.ld. The VMM allocates this temporary memory for us.
+    // Safe because we are only reading the first 16 bytes out of TD_MAILBOX_SIZE
+    // (4k).
+    debug_u64_variable(stringify!(FIRST_QUAD_OF_MAILBOX), unsafe {
+        *(addr_of!(TD_MAILBOX) as *const u64)
+    });
+    debug_u64_variable(stringify!(SECOND_QUAD_OF_MAILBOX), unsafe {
+        *(addr_of!(TD_MAILBOX).byte_add(8) as *const u64)
+    });
+}
+
 fn init_tdx_serial_port() {
     io_write_u8(0x3f8 + 0x1, 0x0).unwrap(); // Disable interrupts
     io_write_u8(0x3f8 + 0x2, 0x0).unwrap(); // Disable FIFO
@@ -389,21 +409,20 @@ impl oak_stage0::Platform for Tdx {
                     dest.as_bytes_mut().as_mut_ptr().byte_add(index) as *mut BootE820Entry
                 };
 
-                let entry_type = if curr_src.physical_start
-                    == unsafe { TD_HOB_START.as_ptr() as u64 }
-                {
-                    E820EntryType::NVS // is this correct?
-                } else if curr_src.physical_start == unsafe { TD_MAILBOX_START.as_ptr() as u64 } {
-                    E820EntryType::NVS // ditto
-                } else if curr_src.physical_start == 0 {
-                    // [0x0, 512KB) is usable
-                    E820EntryType::RAM
-                } else if curr_src.resource_type == 0 {
-                    // [0xF_0000, 0x10_0000)
-                    E820EntryType::RESERVED
-                } else {
-                    E820EntryType::RAM
-                };
+                let entry_type =
+                    if curr_src.physical_start == unsafe { TD_HOB_START.as_ptr() as u64 } {
+                        E820EntryType::NVS // is this correct?
+                    } else if curr_src.physical_start == (addr_of!(TD_MAILBOX) as u64) {
+                        E820EntryType::NVS // ditto
+                    } else if curr_src.physical_start == 0 {
+                        // [0x0, 512KB) is usable
+                        E820EntryType::RAM
+                    } else if curr_src.resource_type == 0 {
+                        // [0xF_0000, 0x10_0000)
+                        E820EntryType::RESERVED
+                    } else {
+                        E820EntryType::RAM
+                    };
 
                 unsafe {
                     *new_entry_ptr = BootE820Entry::new(
@@ -433,9 +452,17 @@ impl oak_stage0::Platform for Tdx {
         info!("initialize platform");
         info!("{:?}", e820_table);
 
+        assert!(addr_of!(TD_MAILBOX) as u64 == TD_MAILBOX_LOCATION, "TD Mailbox is misplaced");
         info!("Creating OS Mailbox");
         let os_mailbox = Box::new_in(OsMailbox::default(), &BOOT_ALLOC);
-        Box::leak(os_mailbox); // Let the allocator forget about it so it never deallocates it.
+        let os_mailbox_ptr = Box::leak(os_mailbox) as *const OsMailbox; // Let the allocator forget about it so it never deallocates it.
+
+        // Use the firmware mailbox to tell APs where the OS mailbox is.
+        // Safety: this is the only access to the structure at TD_MAILBOX_START.
+        unsafe { TD_MAILBOX.set_os_mailbox_address(os_mailbox_ptr as u64) };
+
+        info!("OS Mailbox created and its address passed to APs via TD Mailbox");
+        debug_print_td_mailbox();
 
         info!("starting TDX memory acceptance");
         let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
@@ -652,7 +679,7 @@ pub extern "C" fn rust64_start() -> ! {
     debug_u32_variable(stringify!(td_info.max_vcpus), td_info.max_vcpus);
     debug_u32_variable(stringify!(td_info.num_vcpus), td_info.num_vcpus);
     debug_u32_variable(stringify!(AP_IN_64BIT_COUNT), unsafe { AP_IN_64BIT_COUNT });
-    debug_u32_variable(stringify!(FIRST_DWORD_OF_MAILBOX), unsafe { *TD_MAILBOX_START.as_ptr() });
+    debug_print_td_mailbox();
 
     oak_stage0::rust64_start::<Tdx>()
 }
