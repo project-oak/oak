@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Channel","ChannelType","TrustedApplicationAddress","VmType"],"fn":["path_exists"],"struct":["Args","Launcher","QemuParams"]};
+window.SIDEBAR_ITEMS = {"enum":["Channel","ChannelType","QemuVmType","TrustedApplicationAddress"],"fn":["path_exists"],"struct":["Args","Launcher","QemuParams"]};

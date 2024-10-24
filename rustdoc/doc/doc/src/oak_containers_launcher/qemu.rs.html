@@ -294,28 +294,6 @@
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -410,28 +388,6 @@
     /// SevSnp, or Tdx (TDX is unimplemented yet)
     </span><span class="attr">#[arg(long, required = <span class="bool-val">false</span>, value_enum, default_value_t = VmType::Default)]
     </span><span class="kw">pub </span>vm_type: VmType,
-}
-
-<span class="kw">impl </span>Params {
-    <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>vmm_binary = which::which(<span class="string">"qemu-system-x86_64"</span>).expect(<span class="string">"could not find qemu path"</span>);
-        <span class="kw">let </span>stage0_binary = <span class="macro">format!</span>(<span class="string">"{root}generated/stage0_bin"</span>,).into();
-        <span class="kw">let </span>kernel = <span class="macro">format!</span>(<span class="string">"{root}oak_containers/kernel/target/bzImage"</span>,).into();
-        <span class="kw">let </span>initrd = <span class="macro">format!</span>(<span class="string">"{root}/target/stage1.cpio"</span>).into();
-        <span class="self">Self </span>{
-            vmm_binary,
-            stage0_binary,
-            kernel,
-            initrd,
-            memory_size: <span class="prelude-val">Some</span>(<span class="string">"8G"</span>.to_owned()),
-            num_cpus: <span class="number">2</span>,
-            ramdrive_size: <span class="number">3_000_000</span>,
-            telnet_console: <span class="prelude-val">None</span>,
-            virtio_guest_cid: <span class="prelude-val">None</span>,
-            pci_passthrough: <span class="prelude-val">None</span>,
-            vm_type: VmType::Default,
-        }
-    }
 }
 
 <span class="kw">pub struct </span>Qemu {
