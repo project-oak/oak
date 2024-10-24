@@ -136,20 +136,26 @@ async fn main() -> anyhow::Result<()> {
         .await
         .map_err(|e| anyhow!("coudln't get endorsements from launcher: {e:?}"))?;
 
-    // Start application and gRPC servers.
-    let user = nix::unistd::User::from_name(&args.runtime_user)
-        .context(format!("error resolving user {}", args.runtime_user))?
-        .context(format!("user `{}` not found", args.runtime_user))?;
-    let cancellation_token = CancellationToken::new();
-    tokio::try_join!(
-        oak_containers_orchestrator::ipc_server::create(
-            &args.ipc_socket_path,
+    let (orchestrator_server, crypto_server) =
+        oak_containers_orchestrator::ipc_server::create_services(
             evidence,
             endorsements,
             instance_keys,
             group_keys.clone().context("group keys were not provisioned")?,
             application_config,
             launcher_client,
+        );
+
+    // Start application and gRPC servers.
+    let user = nix::unistd::User::from_name(&args.runtime_user)
+        .context(format!("error resolving user {}", args.runtime_user))?
+        .context(format!("user `{}` not found", args.runtime_user))?;
+    let cancellation_token = CancellationToken::new();
+    tokio::try_join!(
+        oak_containers_orchestrator::ipc_server::server(
+            &args.ipc_socket_path,
+            orchestrator_server,
+            crypto_server,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::key_provisioning::create(

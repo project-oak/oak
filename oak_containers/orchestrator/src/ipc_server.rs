@@ -150,28 +150,15 @@ impl Orchestrator for ServiceImplementation {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub async fn create<P>(
+pub async fn server<P>(
     socket_address: P,
-    evidence: Evidence,
-    endorsements: Endorsements,
-    instance_keys: InstanceKeys,
-    group_keys: Arc<GroupKeys>,
-    application_config: Vec<u8>,
-    launcher_client: Arc<LauncherClient>,
+    orchestrator_server: OrchestratorServer<ServiceImplementation>,
+    crypto_server: OrchestratorCryptoServer<CryptoService>,
     cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error>
 where
     P: AsRef<std::path::Path> + Clone,
 {
-    let (service_instance, crypto_service_instance) = create_services(
-        evidence,
-        endorsements,
-        instance_keys,
-        group_keys,
-        application_config,
-        launcher_client,
-    );
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
@@ -181,8 +168,8 @@ where
     set_permissions(socket_address, Permissions::from_mode(0o666)).await?;
 
     Server::builder()
-        .add_service(service_instance)
-        .add_service(crypto_service_instance)
+        .add_service(orchestrator_server)
+        .add_service(crypto_server)
         .serve_with_incoming_shutdown(uds_stream, cancellation_token.cancelled())
         .await?;
 
