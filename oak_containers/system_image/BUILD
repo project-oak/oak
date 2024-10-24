@@ -29,8 +29,9 @@ filegroup(
         "target/image_binaries/oak_containers_orchestrator",
         "target/image_binaries/oak_containers_syslogd",
     ],
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
 )
 
 pkg_tar(
@@ -38,23 +39,26 @@ pkg_tar(
     srcs = [":rust_bins"],
     package_dir = "/usr/bin",
     strip_prefix = "/oak_containers/system_image/target/image_binaries",
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
 )
 
 oci_image(
     name = "oak_containers_system_image_oci_image",
     base = "@oak_containers_sysimage_base",
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
     tars = [":rust_bins_tar"],
 )
 
 oci_image(
     name = "oak_containers_nvidia_system_image_oci_image",
     base = "@oak_containers_nvidia_sysimage_base",
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
     tars = [":rust_bins_tar"],
 )
 
@@ -62,16 +66,18 @@ oci_runtime_bundle(
     name = "oak_containers_system_image",
     image = ":oak_containers_system_image_oci_image",
     rootfs_only = True,
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
 )
 
 oci_runtime_bundle(
     name = "oak_containers_nvidia_system_image",
     image = ":oak_containers_nvidia_system_image_oci_image",
     rootfs_only = True,
-    # This rule will fail unless build-bazel.sh has been run.
-    tags = ["noci"],
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
 )
 
 ### Base Image Update Targets
@@ -83,8 +89,9 @@ filegroup(
     srcs = [
         "target/base-image.tar",
     ],
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
 )
 
 filegroup(
@@ -92,8 +99,9 @@ filegroup(
     srcs = [
         "target/nvidia-base-image.tar",
     ],
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
 )
 
 # Defines labels added to :oak_containers_sysimage_base. When built with
@@ -118,8 +126,9 @@ oci_image(
     architecture = "amd64",
     labels = ":oak_containers_sysimage_base_labels",
     os = "linux",
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
     tars = [":base_image_tar"],
 )
 
@@ -128,8 +137,9 @@ oci_image(
     architecture = "amd64",
     labels = ":oak_containers_sysimage_base_labels",
     os = "linux",
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
     tars = [":nvidia_base_image_tar"],
 )
 
@@ -149,8 +159,9 @@ oci_push(
     image = ":oak_containers_sysimage_base",
     remote_tags = ["latest"],
     repository = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
 )
 
 oci_push(
@@ -158,6 +169,7 @@ oci_push(
     image = ":oak_containers_nvidia_sysimage_base",
     remote_tags = ["latest"],
     repository = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
-    # This rule will fail until build-base.sh has been run
-    tags = ["noci"],
+    # This rule will fail unless you run: ./oak_containers/system_image/build-base.sh first
+    # These rules are only used when we need to push a new base image.
+    tags = ["manual"],
 )

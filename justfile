@@ -182,7 +182,9 @@ oak_containers_kernel:
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'
 
-oak_containers_system_image: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
+oak_containers_system_image_binaries: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
+
+oak_containers_system_image: oak_containers_system_image_binaries
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
     mkdir --parents oak_containers/system_image/target/image_binaries
@@ -196,14 +198,14 @@ oak_containers_system_image: oak_containers_agent oak_containers_orchestrator oa
         oak_containers/agent/target/oak_containers_agent_patched \
         oak_containers/system_image/target/image_binaries/oak_containers_agent
     # Build and compress.
-    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_system_image --build_tag_filters=+noci
+    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_system_image
     cp --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_system_image.tar \
         oak_containers/system_image/target/image.tar
     xz --force oak_containers/system_image/target/image.tar
 
 oak_containers_nvidia_system_image: oak_containers_system_image
-    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_nvidia_system_image --build_tag_filters=+noci
+    bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_nvidia_system_image
     cp --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar \
         oak_containers/system_image/target/nvidia_image.tar
