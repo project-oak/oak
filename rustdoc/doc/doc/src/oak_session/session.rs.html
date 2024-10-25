@@ -399,6 +399,89 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -423,6 +506,7 @@
     collections::{BTreeMap, VecDeque},
     string::String,
 };
+<span class="kw">use </span>core::mem;
 
 <span class="kw">use </span>anyhow::{anyhow, Context, Error, <span class="prelude-val">Ok</span>};
 <span class="kw">use </span>oak_crypto::encryptor::Encryptor;
@@ -433,11 +517,14 @@
 
 <span class="kw">use crate</span>::{
     attestation::{
-        AttestationFailure, AttestationProvider, AttestationSuccess, AttestationType,
-        ClientAttestationProvider, ServerAttestationProvider,
+        AttestationProvider, AttestationSuccess, AttestationType, ClientAttestationProvider,
+        ServerAttestationProvider,
     },
-    config::{EncryptorConfig, SessionConfig},
-    handshake::{ClientHandshaker, Handshaker, ServerHandshaker},
+    config::{EncryptorProvider, SessionConfig},
+    handshake::{
+        ClientHandshaker, ClientHandshakerBuilder, Handshaker, HandshakerBuilder, ServerHandshaker,
+        ServerHandshakerBuilder,
+    },
     key_extractor::KeyExtractor,
     session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder},
     ProtocolEngine,
@@ -459,7 +546,7 @@
     ///
     /// This function can be called multiple times in a row, which will result
     /// in multiple outgoing protocol messages being created.
-    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt;;
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Reads an encrypted message from the peer and decrypt it.
     ///
@@ -470,18 +557,58 @@
     /// - `Ok(None)`: Nothing to read
     /// - `Ok(Some(Vec&lt;u8&gt;))`: Successfully read plaintext bytes
     /// - `Err`: Protocol error
-    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt;;
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;, Error&gt;;
 }
 
-<span class="comment">// Client-side secure attested session entrypoint.
+<span class="doccomment">/// Represents all data that is used for a particular session protocol step and
+/// for transition to the next one. It is parametrized by the type of
+/// attestation provider and handshaker (either the client or server version).
+</span><span class="kw">enum </span>Step&lt;AP: AttestationProvider, H: Handshaker&gt; {
+    <span class="doccomment">/// Protocol step where communicating parties exchange and verify the
+    /// attested evidence. May be skipped if no attestation is required.
+    </span>Attestation {
+        attester: AP,
+        handshaker_provider: Box&lt;<span class="kw">dyn </span>HandshakerBuilder&lt;H&gt;&gt;,
+        encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt;,
+    },
+    <span class="doccomment">/// Protocol step for performing the Noise handshake.
+    </span>Handshake { handshaker: H, encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt; },
+    <span class="doccomment">/// Session is open and allows encrypted communication.
+    </span>Open(Box&lt;<span class="kw">dyn </span>Encryptor&gt;),
+    <span class="doccomment">/// Invalid state. The session is only temporarily put into this state if
+    /// the transition between steps cannot be performed atomically.
+    </span>Invalid,
+}
+
+<span class="kw">impl</span>&lt;AP: AttestationProvider, H: Handshaker&gt; Step&lt;AP, H&gt; {
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="comment">// We can't transition between states without using this temp variable while
+        // ensuring the memory safety because of the objects' lifetime.
+        </span><span class="kw">let </span>old_state = mem::replace(<span class="self">self</span>, Step::Invalid);
+        <span class="kw">match </span>old_state {
+            Step::Attestation { attester: <span class="kw">_</span>, handshaker_provider, encryptor_provider } =&gt; {
+                <span class="kw-2">*</span><span class="self">self </span>= Step::Handshake {
+                    encryptor_provider,
+                    handshaker: handshaker_provider.build()<span class="question-mark">?</span>,
+                };
+            }
+            Step::Handshake { handshaker, encryptor_provider } =&gt; {
+                <span class="kw-2">*</span><span class="self">self </span>= Step::Open(
+                    encryptor_provider.provide_encryptor(handshaker.take_session_keys()<span class="question-mark">?</span>)<span class="question-mark">?</span>,
+                );
+            }
+            Step::Open(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"there is no next step when the session is open"</span>)),
+            Step::Invalid =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session is currently in an invalid state"</span>)),
+        };
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="doccomment">/// Client-side secure attested session entrypoint.
 </span><span class="kw">pub struct </span>ClientSession {
-    attester: ClientAttestationProvider,
-    handshaker: ClientHandshaker,
+    step: Step&lt;ClientAttestationProvider, ClientHandshaker&gt;,
     binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
-    <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
-    </span>encryptor_config: EncryptorConfig,
-    attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
-    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    attestation_result: <span class="prelude-ty">Option</span>&lt;AttestationSuccess&gt;,
     outgoing_requests: VecDeque&lt;SessionRequest&gt;,
     incoming_responses: VecDeque&lt;SessionResponse&gt;,
 }
@@ -489,13 +616,25 @@
 <span class="kw">impl </span>ClientSession {
     <span class="kw">pub fn </span>create(config: SessionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            attester: ClientAttestationProvider::create(config.attestation_provider_config)<span class="question-mark">?</span>,
-            handshaker: ClientHandshaker::create(config.handshaker_config)
-                .context(<span class="string">"couldn't create the client handshaker"</span>)<span class="question-mark">?</span>,
+            step: <span class="kw">match </span>config.attestation_provider_config.attestation_type {
+                AttestationType::Bidirectional
+                | AttestationType::SelfUnidirectional
+                | AttestationType::PeerUnidirectional =&gt; Step::Attestation {
+                    attester: ClientAttestationProvider::create(
+                        config.attestation_provider_config,
+                    )<span class="question-mark">?</span>,
+                    handshaker_provider: Box::new(ClientHandshakerBuilder {
+                        config: config.handshaker_config,
+                    }),
+                    encryptor_provider: config.encryptor_config.encryptor_provider,
+                },
+                AttestationType::Unattested =&gt; Step::Handshake {
+                    handshaker: ClientHandshaker::create(config.handshaker_config)<span class="question-mark">?</span>,
+                    encryptor_provider: config.encryptor_config.encryptor_provider,
+                },
+            },
             binding_key_extractor: config.binding_key_extractor,
-            encryptor_config: config.encryptor_config,
             attestation_result: <span class="prelude-val">None</span>,
-            encryptor: <span class="prelude-val">None</span>,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
         })
@@ -504,27 +643,33 @@
 
 <span class="kw">impl </span>Session <span class="kw">for </span>ClientSession {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.encryptor.is_some()
+        <span class="macro">matches!</span>(<span class="self">self</span>.step, Step::Open(<span class="kw">_</span>))
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
-            <span class="kw">let </span>encrypted_message: EncryptedMessage = encryptor
-                .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
-                .map(From::from)
-                .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.outgoing_requests.push_back(SessionRequest {
-                request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message)),
-            });
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid =&gt; {
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            }
+            Step::Open(encryptor) =&gt; {
+                <span class="kw">let </span>encrypted_message: EncryptedMessage = encryptor
+                    .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
+                    .map(From::from)
+                    .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.outgoing_requests.push_back(SessionRequest {
+                    request: <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message)),
+                });
+                <span class="prelude-val">Ok</span>(())
+            }
         }
     }
 
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
-            <span class="kw">match </span><span class="self">self</span>.incoming_responses.pop_front() {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;, Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid =&gt; {
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            }
+            Step::Open(encryptor) =&gt; <span class="kw">match </span><span class="self">self</span>.incoming_responses.pop_front() {
                 <span class="prelude-val">Some</span>(response) =&gt; {
                     <span class="kw">let </span>encrypted_message = <span class="kw">match </span>response.response {
                         <span class="prelude-val">Some</span>(Response::EncryptedMessage(encrypted_message)) =&gt; encrypted_message,
@@ -542,113 +687,131 @@
                     ))
                 }
                 <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-            }
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            },
         }
     }
 }
 
 <span class="kw">impl </span>ProtocolEngine&lt;SessionResponse, SessionRequest&gt; <span class="kw">for </span>ClientSession {
-    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionRequest&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(attest_message) = <span class="self">self</span>.attester.get_outgoing_message()<span class="question-mark">? </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionRequest {
-                request: <span class="prelude-val">Some</span>(Request::AttestRequest(attest_message)),
-            }));
+    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SessionRequest&gt;, Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { attester, .. } =&gt; {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attest_message) = attester.get_outgoing_message()<span class="question-mark">? </span>{
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionRequest {
+                        request: <span class="prelude-val">Some</span>(Request::AttestRequest(attest_message)),
+                    }));
+                } <span class="kw">else </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+                        <span class="string">"attestation not yet complete but there are no outgoing messages"
+                    </span>));
+                }
+            }
+            Step::Handshake { handshaker, .. } =&gt; {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_message) = handshaker.get_outgoing_message()<span class="question-mark">? </span>{
+                    <span class="kw">if </span>handshaker.is_handshake_complete() {
+                        <span class="self">self</span>.step.next()<span class="question-mark">?</span>;
+                    }
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionRequest {
+                        request: <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)),
+                    }));
+                }
+            }
+            Step::Open(<span class="kw">_</span>) =&gt; {}
+            Step::Invalid =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session is in an invalid state"</span>)),
         }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_message) = <span class="self">self</span>.handshaker.get_outgoing_message()<span class="question-mark">? </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionRequest {
-                request: <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)),
-            }));
-        }
-        <span class="kw">if </span><span class="self">self</span>.is_open() {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop_front());
-        };
-        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session in unexpected state"</span>))
+
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_requests.pop_front())
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         incoming_message: <span class="kw-2">&amp;</span>SessionResponse,
-    ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
-        <span class="kw">match </span>incoming_message.response.as_ref() {
-            <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)) =&gt; {
-                <span class="self">self</span>.attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;()&gt;, Error&gt; {
+        <span class="kw">match </span>(incoming_message.response.as_ref(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.step) {
+            (
+                <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)),
+                Step::Attestation { attester, .. },
+            ) =&gt; {
+                attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
                      any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="self">self</span>.attester.take_attestation_result() {
-                    <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result);
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = attester.take_attestation_result() {
+                    <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result<span class="question-mark">?</span>);
+                    <span class="self">self</span>.step.next()<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)) =&gt; {
-                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+            (
+                <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)),
+                Step::Handshake { handshaker, .. },
+            ) =&gt; {
+                handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
-                        verify_session_binding(
-                            <span class="self">self</span>.binding_key_extractor.as_ref(),
-                            attestation_result,
-                            <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
-                            handshake_result.handshake_hash.as_slice(),
-                        )<span class="question-mark">?</span>;
-                    }
-                    <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        <span class="self">self</span>.encryptor_config
-                            .encryptor_provider
-                            .provide_encryptor(handshake_result.session_keys)
-                            .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
-                    )
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
+                    verify_session_binding(
+                        <span class="self">self</span>.binding_key_extractor.as_ref(),
+                        attestation_result,
+                        <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
+                        handshaker.get_handshake_hash()<span class="question-mark">?</span>.as_slice(),
+                    )<span class="question-mark">?</span>;
+                }
+                <span class="kw">if </span>handshaker.is_handshake_complete() {
+                    <span class="self">self</span>.step.next()<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="prelude-val">Some</span>(Response::EncryptedMessage(<span class="kw">_</span>)) =&gt; {
-                <span class="kw">if </span><span class="self">self</span>.is_open() {
-                    <span class="self">self</span>.incoming_responses.push_back(incoming_message.clone());
-                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">"invalid session state: incoming encrypted message received but session is not open"
-                    </span>))
-                }
+            (<span class="prelude-val">Some</span>(Response::EncryptedMessage(<span class="kw">_</span>)), Step::Open(<span class="kw">_</span>)) =&gt; {
+                <span class="self">self</span>.incoming_responses.push_back(incoming_message.clone());
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
+            (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
         }
     }
 }
 
 <span class="comment">// Server-side secure attested session entrypoint.
 </span><span class="kw">pub struct </span>ServerSession {
-    attester: ServerAttestationProvider,
-    handshaker: ServerHandshaker,
+    step: Step&lt;ServerAttestationProvider, ServerHandshaker&gt;,
     binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
-    </span>encryptor_config: EncryptorConfig,
-    attestation_result: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;&gt;,
-    encryptor: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Encryptor&gt;&gt;,
+    </span>attestation_result: <span class="prelude-ty">Option</span>&lt;AttestationSuccess&gt;,
     outgoing_responses: VecDeque&lt;SessionResponse&gt;,
     incoming_requests: VecDeque&lt;SessionRequest&gt;,
 }
 
 <span class="kw">impl </span>ServerSession {
     <span class="kw">pub fn </span>create(config: SessionConfig) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
-        <span class="kw">let </span>attestation_type = config.attestation_provider_config.attestation_type;
+        <span class="kw">let </span>client_binding_expected = <span class="macro">matches!</span>(
+            config.attestation_provider_config.attestation_type,
+            AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+        );
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            attester: ServerAttestationProvider::create(config.attestation_provider_config)<span class="question-mark">?</span>,
-            handshaker: ServerHandshaker::new(
-                config.handshaker_config,
-                <span class="macro">matches!</span>(
-                    attestation_type,
-                    AttestationType::Bidirectional | AttestationType::PeerUnidirectional
-                ),
-            ),
+            step: <span class="kw">match </span>config.attestation_provider_config.attestation_type {
+                AttestationType::Bidirectional
+                | AttestationType::SelfUnidirectional
+                | AttestationType::PeerUnidirectional =&gt; Step::Attestation {
+                    attester: ServerAttestationProvider::create(
+                        config.attestation_provider_config,
+                    )<span class="question-mark">?</span>,
+                    handshaker_provider: Box::new(ServerHandshakerBuilder {
+                        config: config.handshaker_config,
+                        client_binding_expected,
+                    }),
+                    encryptor_provider: config.encryptor_config.encryptor_provider,
+                },
+                AttestationType::Unattested =&gt; Step::Handshake {
+                    handshaker: ServerHandshaker::new(
+                        config.handshaker_config,
+                        client_binding_expected,
+                    ),
+                    encryptor_provider: config.encryptor_config.encryptor_provider,
+                },
+            },
             binding_key_extractor: config.binding_key_extractor,
-            encryptor_config: config.encryptor_config,
             attestation_result: <span class="prelude-val">None</span>,
-            encryptor: <span class="prelude-val">None</span>,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
         })
@@ -657,33 +820,39 @@
 
 <span class="kw">impl </span>Session <span class="kw">for </span>ServerSession {
     <span class="kw">fn </span>is_open(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.encryptor.is_some()
+        <span class="macro">matches!</span>(<span class="self">self</span>.step, Step::Open(<span class="kw">_</span>))
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
-            <span class="kw">let </span>encrypted_message = encryptor
-                .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
-                .map(From::from)
-                .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.outgoing_responses.push_back(SessionResponse {
-                response: <span class="prelude-val">Some</span>(Response::EncryptedMessage(encrypted_message)),
-            });
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>PlaintextMessage) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid =&gt; {
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            }
+            Step::Open(encryptor) =&gt; {
+                <span class="kw">let </span>encrypted_message: EncryptedMessage = encryptor
+                    .encrypt(<span class="kw-2">&amp;</span>plaintext.clone().into())
+                    .map(From::from)
+                    .context(<span class="string">"couldn't encrypt the supplied plaintext"</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.outgoing_responses.push_back(SessionResponse {
+                    response: <span class="prelude-val">Some</span>(Response::EncryptedMessage(encrypted_message)),
+                });
+                <span class="prelude-val">Ok</span>(())
+            }
         }
     }
 
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(encryptor) = <span class="self">self</span>.encryptor.as_mut() {
-            <span class="kw">match </span><span class="self">self</span>.incoming_requests.pop_front() {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;PlaintextMessage&gt;, Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid =&gt; {
+                <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            }
+            Step::Open(encryptor) =&gt; <span class="kw">match </span><span class="self">self</span>.incoming_requests.pop_front() {
                 <span class="prelude-val">Some</span>(request) =&gt; {
                     <span class="kw">let </span>encrypted_message = <span class="kw">match </span>request.request {
                         <span class="prelude-val">Some</span>(Request::EncryptedMessage(encrypted_message)) =&gt; encrypted_message,
                         <span class="kw">_ </span>=&gt; {
                             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                                <span class="string">"unexpected content of SessionRequest: no ciphertext set"
+                                <span class="string">"unexpected content of SessionRequest: no encrypted message set"
                             </span>));
                         }
                     };
@@ -695,95 +864,92 @@
                     ))
                 }
                 <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-            }
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"the session is not open"</span>))
+            },
         }
     }
 }
 
 <span class="kw">impl </span>ProtocolEngine&lt;SessionRequest, SessionResponse&gt; <span class="kw">for </span>ServerSession {
-    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;SessionResponse&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(attest_message) = <span class="self">self</span>.attester.get_outgoing_message()<span class="question-mark">? </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
-                response: <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)),
-            }));
-        }
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_message) = <span class="self">self</span>.handshaker.get_outgoing_message()<span class="question-mark">? </span>{
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
-                response: <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)),
-            }))
-        } <span class="kw">else if </span><span class="self">self</span>.is_open() {
-            <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front())
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session in unexpected state"</span>))
+    <span class="kw">fn </span>get_outgoing_message(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SessionResponse&gt;, Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.step {
+            Step::Attestation { attester, .. } =&gt; {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(attest_message) = attester.get_outgoing_message()<span class="question-mark">? </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = attester.take_attestation_result() {
+                        <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result<span class="question-mark">?</span>);
+                        <span class="self">self</span>.step.next()<span class="question-mark">?</span>;
+                    }
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
+                        response: <span class="prelude-val">Some</span>(Response::AttestResponse(attest_message)),
+                    }))
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"attestation not yet completed but there are no outgoing messages"</span>))
+                }
+            }
+            Step::Handshake { handshaker, .. } =&gt; {
+                <span class="kw">let </span>response = handshaker.get_outgoing_message()<span class="question-mark">?</span>;
+                <span class="kw">if </span>handshaker.is_handshake_complete() {
+                    <span class="self">self</span>.step.next()<span class="question-mark">?</span>;
+                }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_message) = response {
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(SessionResponse {
+                        response: <span class="prelude-val">Some</span>(Response::HandshakeResponse(handshake_message)),
+                    }))
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+                }
+            }
+            Step::Open(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.outgoing_responses.pop_front()),
+            Step::Invalid =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"session is in an invalid state"</span>)),
         }
     }
 
     <span class="kw">fn </span>put_incoming_message(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         incoming_message: <span class="kw-2">&amp;</span>SessionRequest,
-    ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;()&gt;&gt; {
-        <span class="kw">match </span>incoming_message.request.as_ref() {
-            <span class="prelude-val">Some</span>(Request::AttestRequest(attest_message)) =&gt; {
-                <span class="self">self</span>.attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;()&gt;, Error&gt; {
+        <span class="kw">match </span>(incoming_message.request.as_ref(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.step) {
+            (<span class="prelude-val">Some</span>(Request::AttestRequest(attest_message)), Step::Attestation { attester, .. }) =&gt; {
+                attester.put_incoming_message(attest_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: attest message received but attester doesn't expect
-                 any"
+                     any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="self">self</span>.attester.take_attestation_result() {
-                    <span class="self">self</span>.attestation_result = <span class="prelude-val">Some</span>(attestation_result);
-                }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)) =&gt; {
-                <span class="self">self</span>.handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
+            (
+                <span class="prelude-val">Some</span>(Request::HandshakeRequest(handshake_message)),
+                Step::Handshake { handshaker, .. },
+            ) =&gt; {
+                handshaker.put_incoming_message(handshake_message)<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(
                     <span class="string">"invalid session state: handshake message received but handshaker doesn't
-                 expect any"
+                     expect any"
                 </span>))<span class="question-mark">?</span>;
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(handshake_result) = <span class="self">self</span>.handshaker.take_handshake_result() {
+                <span class="kw">if </span>handshaker.is_handshake_complete() {
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(attestation_result) = <span class="kw-2">&amp;</span><span class="self">self</span>.attestation_result {
                         verify_session_binding(
                             <span class="self">self</span>.binding_key_extractor.as_ref(),
                             attestation_result,
                             <span class="kw-2">&amp;</span>handshake_message.attestation_bindings,
-                            handshake_result.handshake_hash.as_slice(),
+                            handshaker.get_handshake_hash()<span class="question-mark">?</span>.as_slice(),
                         )<span class="question-mark">?</span>;
                     }
-                    <span class="self">self</span>.encryptor = <span class="prelude-val">Some</span>(
-                        <span class="self">self</span>.encryptor_config
-                            .encryptor_provider
-                            .provide_encryptor(handshake_result.session_keys)
-                            .context(<span class="string">"couldn't create an encryptor from the session key"</span>)<span class="question-mark">?</span>,
-                    )
                 }
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="prelude-val">Some</span>(Request::EncryptedMessage(<span class="kw">_</span>)) =&gt; {
-                <span class="kw">if </span><span class="self">self</span>.is_open() {
-                    <span class="self">self</span>.incoming_requests.push_back(incoming_message.clone());
-                    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                        <span class="string">"invalid session state: incoming encrypted message received but session is not open"
-                    </span>))
-                }
+            (<span class="prelude-val">Some</span>(Request::EncryptedMessage(<span class="kw">_</span>)), Step::Open(<span class="kw">_</span>)) =&gt; {
+                <span class="self">self</span>.incoming_requests.push_back(incoming_message.clone());
+                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(()))
             }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
+            (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unexpected content of session response"</span>)),
         }
     }
 }
 
 <span class="kw">fn </span>verify_session_binding(
     binding_key_extractor: <span class="kw-2">&amp;</span><span class="kw">dyn </span>KeyExtractor,
-    attestation_result: <span class="kw-2">&amp;</span><span class="prelude-ty">Result</span>&lt;AttestationSuccess, AttestationFailure&gt;,
+    attestation: <span class="kw-2">&amp;</span>AttestationSuccess,
     bindings: <span class="kw-2">&amp;</span>BTreeMap&lt;String, SessionBinding&gt;,
     handshake_hash: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-    <span class="kw">let </span>attestation = attestation_result
-        .as_ref()
-        .map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"attempt to verify attestation binding to a failed attestation"</span>))<span class="question-mark">?</span>;
-
     <span class="kw">for </span>(verifier_id, results) <span class="kw">in </span><span class="kw-2">&amp;</span>attestation.attestation_results {
         <span class="kw">let </span>binding_verifier = SignatureBindingVerifierBuilder::default()
             .verifier(binding_key_extractor.extract_verifying_key(results)<span class="question-mark">?</span>)
