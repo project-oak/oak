@@ -422,9 +422,9 @@ containers_placer_artifacts:
     cp --force --preserve=timestamps ./bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
 
 # The following _for_provenance targets are used by buildconfigs.
-bazel_build_for_provenance package target: (bazel_build_opt "{{package}}:{{target}}")
+bazel_build_for_provenance package target: (bazel_build_opt package+":"+target)
     cp --force --preserve=timestamps "./bazel-bin/{{package}}/{{target}}" artifacts
 
-oak_containers_agent_for_provenance: (bazel_build_for_provenance "oak_containers/agent" "oak_containers_agent")
-oak_containers_orchestrator_for_provenance: (bazel_build_for_provenance "oak_containers/orchestrator" "oak_containers_orchestrator")
+oak_containers_agent_for_provenance: (bazel_build_for_provenance "oak_containers/agent" "bin/oak_containers_agent")
+oak_containers_orchestrator_for_provenance: (bazel_build_for_provenance "oak_containers/orchestrator" "bin/oak_containers_orchestrator")
 oak_containers_syslogd_for_provenance: (bazel_build_for_provenance "oak_containers/syslogd" "oak_containers_syslogd")
