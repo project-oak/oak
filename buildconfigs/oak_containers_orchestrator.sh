@@ -10,9 +10,9 @@ export BUILD_COMMAND=(
   .#systemImageProvenance
   --command
   just
-  oak_containers_orchestrator
+  oak_containers_orchestrator_for_provenance
 )
 
 export SUBJECT_PATHS=(
-  oak_containers/orchestrator/target/oak_containers_orchestrator
+  artifacts/oak_containers_orchestrator
 )

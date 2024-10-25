@@ -42,7 +42,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --stage0-binary=generated/stage0_bin \
         --kernel=oak_containers/kernel/target/bzImage \
         --initrd=target/stage1.cpio \
-        --system-image=oak_containers/system_image/target/image.tar.xz \
+        --system-image=artifacts/containers_system_image.tar.xz \
         --container-bundle=oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar \
         --ramdrive-size=1000000 \
         --memory-size=2G \
@@ -182,59 +182,23 @@ oak_containers_kernel:
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'
 
+oak_containers_agent: (bazel_build_opt "oak_containers/agent")
+oak_containers_orchestrator: (bazel_build_opt "oak_containers/orchestrator")
+oak_containers_syslogd: (bazel_build_opt "oak_containers/syslogd")
+
 oak_containers_system_image_binaries: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
 
 oak_containers_system_image: oak_containers_system_image_binaries
-    echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
-    # Copy dependencies into bazel build.
-    mkdir --parents oak_containers/system_image/target/image_binaries
-    cp --force --preserve=timestamps \
-        oak_containers/orchestrator/target/oak_containers_orchestrator \
-        oak_containers/system_image/target/image_binaries/oak_containers_orchestrator
-    cp --force --preserve=timestamps \
-        oak_containers/syslogd/target/oak_containers_syslogd_patched \
-        oak_containers/system_image/target/image_binaries/oak_containers_syslogd
-    cp --force --preserve=timestamps \
-        oak_containers/agent/target/oak_containers_agent_patched \
-        oak_containers/system_image/target/image_binaries/oak_containers_agent
-    # Build and compress.
     bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
-        oak_containers/system_image/target/image.tar.xz
+        artifacts/containers_system_image.tar.xz
 
 oak_containers_nvidia_system_image: oak_containers_system_image
     bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_nvidia_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
-        oak_containers/system_image/target/nvidia_image.tar.xz
-
-oak_containers_orchestrator:
-    env --chdir=oak_containers/orchestrator \
-        cargo build --profile=release-lto --target=x86_64-unknown-linux-musl \
-        -Z unstable-options --out-dir=target
-
-oak_containers_syslogd:
-    env --chdir=oak_containers/syslogd \
-        cargo build --release -Z unstable-options --out-dir=target
-    # We can't patch the binary in-place, as that would confuse cargo.
-    # Therefore we copy it to a new location and patch there.
-    cp --force --preserve=timestamps \
-        oak_containers/syslogd/target/oak_containers_syslogd \
-        oak_containers/syslogd/target/oak_containers_syslogd_patched
-    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-        oak_containers/syslogd/target/oak_containers_syslogd_patched
-
-oak_containers_agent:
-    env --chdir=oak_containers/agent \
-        cargo build --release -Z unstable-options --out-dir=target
-    # We can't patch the binary in-place, as that would confuse cargo.
-    # Therefore we copy it to a new location and patch there.
-    cp --force --preserve=timestamps \
-        oak_containers/agent/target/oak_containers_agent \
-        oak_containers/agent/target/oak_containers_agent_patched
-    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
-        oak_containers/agent/target/oak_containers_agent_patched
+        artifacts/containers_nvidia_system_image.tar.xz
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
@@ -298,7 +262,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_co
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
-kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
+kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar containers_placer_artifacts
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
 # This list should contain all crates that either a) have tests and are not bazelified yet or b) have bench tests (not supported on Bazel yet).
@@ -443,3 +407,24 @@ run-java-functions-client addr:
 
 run-cc-functions-client addr request:
     bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}
+
+bazel_build_opt target:
+    bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt "{{target}}"
+
+containers_placer_artifacts:
+    bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt \
+        oak_containers/agent:bin/oak_containers_agent \
+        oak_containers/orchestrator:bin/oak_containers_orchestrator \
+        oak_containers/syslogd
+    # We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
+    cp --force --preserve=timestamps ./bazel-bin/oak_containers/agent/bin/oak_containers_agent artifacts
+    cp --force --preserve=timestamps ./bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
+    cp --force --preserve=timestamps ./bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
+
+# The following _for_provenance targets are used by buildconfigs.
+bazel_build_for_provenance package target: (bazel_build_opt "{{package}}:{{target}}")
+    cp --force --preserve=timestamps "./bazel-bin/{{package}}/{{target}}" artifacts
+
+oak_containers_agent_for_provenance: (bazel_build_for_provenance "oak_containers/agent" "oak_containers_agent")
+oak_containers_orchestrator_for_provenance: (bazel_build_for_provenance "oak_containers/orchestrator" "oak_containers_orchestrator")
+oak_containers_syslogd_for_provenance: (bazel_build_for_provenance "oak_containers/syslogd" "oak_containers_syslogd")

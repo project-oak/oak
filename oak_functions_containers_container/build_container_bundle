@@ -5,8 +5,8 @@
 # development. Down the line we probably want to replace this.
 
 set -o errexit
-set -o nounset 
-set -o xtrace 
+set -o nounset
+set -o xtrace
 set -o pipefail
 
 readonly OCI_IMAGE_FILE="./target/oak_functions_container_oci_image.tar"

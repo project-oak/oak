@@ -10,9 +10,9 @@ export BUILD_COMMAND=(
   .#systemImageProvenance
   --command
   just
-  oak_containers_agent
+  oak_containers_agent_for_provenance
 )
 
 export SUBJECT_PATHS=(
-  oak_containers/agent/target/oak_containers_agent_patched
+  artifacts/oak_containers_agent
 )

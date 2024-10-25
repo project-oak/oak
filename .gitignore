@@ -60,6 +60,12 @@ rust-project.json
 # Binary or other files generated during build, see `justfile`.
 /generated/
 
+# Artifact holding location for CI tasks
+/artifacts
+
+# Artfiact holding location for Provenance tasks
+/artifacts
+
 # Ignore generated binary files.
 **/bin/
 # Except if it is source code in a vendored crate.

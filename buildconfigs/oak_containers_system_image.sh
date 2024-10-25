@@ -14,5 +14,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  oak_containers/system_image/target/image.tar.xz
+  artifacts/containers_system_image.tar.xz
 )
