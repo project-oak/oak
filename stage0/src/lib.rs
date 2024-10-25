@@ -219,22 +219,25 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     attester.extend(&stage0_event[..]).expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 
-    let mut attestation_data_struct = {
-        let attestation_data = DiceData::decode_length_delimited(&serialized_attestation_data[..])
-            .expect("couldn't decode attestation data");
+    let attestation_data = DiceData::decode_length_delimited(&serialized_attestation_data[..])
+        .expect("couldn't decode attestation data");
+    // Zero out the serialized proto since it contains a copy of the private key.
+    serialized_attestation_data.zeroize();
 
-        let result = oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
+    let mut attestation_data_struct =
+        oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
             .expect("couldn't create attestation data struct");
 
-        // Zero out the copy of the private key in the proto that we just created.
-        attestation_data
-            .certificate_authority
-            .expect("no certificate authority")
-            .eca_private_key
-            .zeroize();
+    // Re-serialize the proto, but without the length-prefix since CB Stage1 doesn't
+    // currently expect the prefix.
+    serialized_attestation_data = attestation_data.encode_to_vec();
 
-        result
-    };
+    // Zero out the copy of the private key in the proto that we just created.
+    attestation_data
+        .certificate_authority
+        .expect("no certificate authority")
+        .eca_private_key
+        .zeroize();
 
     attestation_data_struct.layer_1_cdi.cdi[..].copy_from_slice(&cdi[..]);
     // Zero out the copy of the sealing CDIs.
@@ -280,7 +283,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     encoded_attestation_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
     encoded_attestation_proto
         .extend_from_slice(serialized_attestation_data.len().to_le_bytes().as_slice());
-    encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_bytes());
+    encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_ref());
     // Zero out the serialized proto since it contains a copy of the private key.
     serialized_attestation_data.zeroize();
 
