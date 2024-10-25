@@ -9,6 +9,7 @@ filegroup(
 # https://github.com/tikv/jemallocator/blob/8b886be1677d1693834b158e76780a793eb3b8db/jemalloc-sys/build.rs
 configure_make(
     name = "jemalloc",
+    args = ["-j$(nproc)"],
     autogen = True,
     configure_in_place = True,
     configure_options = [

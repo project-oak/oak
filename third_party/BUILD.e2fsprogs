@@ -44,5 +44,5 @@ configure_make(
     # binaries, so we do it by hand.
     postfix_script = "cp $BUILD_TMPDIR/misc/mke2fs.static $INSTALLDIR/sbin/mke2fs && strip $INSTALLDIR/sbin/mke2fs",
     # Skip building e2scrub altogether, as that insists on touching /etc.
-    args = ["E2SCRUB_DIR=\"\""],
+    args = ["E2SCRUB_DIR=\"\"", "-j$(nproc)"],
 )
