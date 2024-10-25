@@ -84,7 +84,7 @@ rust_test(
 )
 
 rust_binary(
-    name = "bin",
+    name = "bin/oak_containers_orchestrator",
     srcs = ["src/main.rs"],
     deps = [
         ":oak_containers_orchestrator",

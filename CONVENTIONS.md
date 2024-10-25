@@ -117,8 +117,10 @@ For crates that have a single `rust_binary` target, use the naming convention
 discussed above.
 
 If your package exposes a library along with a crate, prefer to use the crate
-name as the name of the library target. The `rust_binary` target can simply be
-called `bin`.
+name as the name of the library target. The primary `rust_binary` target can
+simply be called `bin/crate_name` - the generated output will be a a `bin`
+subdirectory, but using the crate name.
 
 Unless there's a very good reason, stick with using the library as the package
-default target alias, and refer to the binary rule usin the `:bin` target.
+default target alias, and refer to the binary rule usin the `:bin/crate_name`
+target.

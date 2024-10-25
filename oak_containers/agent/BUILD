@@ -46,7 +46,7 @@ rust_library(
 )
 
 rust_binary(
-    name = "bin",
+    name = "bin/oak_containers_agent",
     srcs = ["src/main.rs"],
     compile_data = [":README.md"],
     visibility = ["//:default_visibility"],
