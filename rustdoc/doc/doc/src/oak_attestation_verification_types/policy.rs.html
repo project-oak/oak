@@ -41,6 +41,8 @@
 <a href="#41" id="41">41</a>
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -72,6 +74,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         event_log: <span class="kw-2">&amp;</span>EventLog,
         event_endorsements: <span class="kw-2">&amp;</span>EventEndorsements,
+        milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;AttestationResults&gt;;
 }
 
@@ -82,6 +85,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
         encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
+        milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt;;
 }
 </code></pre></div></section></main></body></html>

@@ -56,6 +56,7 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -98,15 +99,16 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
         _encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
+        milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>event = decode_event_proto::&lt;EventData&gt;(
             <span class="string">"type.googleapis.com/oak.attestation.v1.EventData"</span>,
             encoded_event,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// TODO: b/369821273 - Add clocks to policies.
-        </span><span class="kw">let </span>expected_values = get_event_expected_values(<span class="number">0i64</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values)
-            .context(<span class="string">"couldn't verify event endosements"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>expected_values =
+            get_event_expected_values(milliseconds_since_epoch, <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values)
+                .context(<span class="string">"couldn't verify event endosements"</span>)<span class="question-mark">?</span>;
         compare_event_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify generic event"</span>)<span class="question-mark">?</span>;
 

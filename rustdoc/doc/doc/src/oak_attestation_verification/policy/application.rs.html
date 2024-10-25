@@ -110,6 +110,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
         encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
+        milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>event = decode_event_proto::&lt;ApplicationLayerData&gt;(
             <span class="string">"type.googleapis.com/oak.attestation.v1.ApplicationLayerData"</span>,
@@ -121,8 +122,7 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">let </span>expected_values = get_application_layer_expected_values(
-            <span class="comment">// TODO: b/369821273 - Add clocks to policies.
-            </span><span class="number">0i64</span>,
+            milliseconds_since_epoch,
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>event_endorsements),
             <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values,
         )

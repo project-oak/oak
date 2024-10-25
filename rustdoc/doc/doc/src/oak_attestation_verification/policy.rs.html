@@ -94,6 +94,7 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -148,6 +149,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         event_log: <span class="kw-2">&amp;</span>EventLog,
         event_endorsements: <span class="kw-2">&amp;</span>EventEndorsements,
+        milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;AttestationResults&gt; {
         <span class="kw">if </span>event_log.encoded_events.len() != event_endorsements.encoded_event_endorsements.len() {
             <span class="macro">anyhow::bail!</span>(
@@ -171,7 +173,7 @@
         );
         <span class="kw">let </span>event_attestation_results = verification_iterator
             .map(|(event_policy, event, event_endorsements)| {
-                event_policy.verify(event, event_endorsements).unwrap_or(
+                event_policy.verify(event, event_endorsements, milliseconds_since_epoch).unwrap_or(
                     <span class="comment">// TODO: b/366186091 - Use Rust error types for failed attestation.
                     </span>EventAttestationResults {},
                 )

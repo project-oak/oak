@@ -59,7 +59,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification::verifier::verify_dice_chain;
+<span class="kw">use </span>oak_attestation_verification::verifier::verify_dice_chain_and_extract_evidence;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ExtractedEvidence};
 
 <span class="kw">pub trait </span>AttestationVerifier {
@@ -77,13 +77,13 @@
 
 <span class="kw">impl </span>AttestationVerifier <span class="kw">for </span>InsecureAttestationVerifier {
     <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, evidence: <span class="kw-2">&amp;</span>Evidence, <span class="kw">_</span>: <span class="kw-2">&amp;</span>Endorsements) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
-        verify_dice_chain(evidence).context(<span class="string">"couldn't verify the DICE chain"</span>)
+        verify_dice_chain_and_extract_evidence(evidence).context(<span class="string">"couldn't verify the DICE chain"</span>)
     }
 }
 
 <span class="kw">pub fn </span>extract_encryption_public_key(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span>attestation_results =
-        verify_dice_chain(evidence).context(<span class="string">"couldn't verify the DICE chain"</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>attestation_results = verify_dice_chain_and_extract_evidence(evidence)
+        .context(<span class="string">"couldn't verify the DICE chain"</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(attestation_results.encryption_public_key)
 }
 </code></pre></div></section></main></body></html>

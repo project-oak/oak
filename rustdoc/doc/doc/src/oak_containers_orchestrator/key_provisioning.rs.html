@@ -94,6 +94,7 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -111,7 +112,7 @@
 
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>oak_attestation_verification::verifier::verify_dice_chain;
+<span class="kw">use </span>oak_attestation_verification::verifier::verify_dice_chain_and_extract_evidence;
 <span class="kw">use </span>oak_containers_attestation::GroupKeys;
 <span class="kw">use </span>oak_grpc::oak::key_provisioning::v1::key_provisioning_server::{
     KeyProvisioning, KeyProvisioningServer,
@@ -152,9 +153,10 @@
         ))<span class="question-mark">?</span>;
         <span class="comment">// TODO(#4442): Provide reference values by the hostlib and use `verify`
         // function.
-        </span><span class="kw">let </span>attestation_results = verify_dice_chain(<span class="kw-2">&amp;</span>evidence).map_err(|err| {
-            tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">"couldn't verify endorsed evidence: {err}"</span>))
-        })<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>attestation_results =
+            verify_dice_chain_and_extract_evidence(<span class="kw-2">&amp;</span>evidence).map_err(|err| {
+                tonic::Status::invalid_argument(<span class="macro">format!</span>(<span class="string">"couldn't verify endorsed evidence: {err}"</span>))
+            })<span class="question-mark">?</span>;
 
         <span class="comment">// Encrypt group keys.
         </span><span class="kw">let </span>encrypted_encryption_private_key = <span class="self">self
