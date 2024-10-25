@@ -71,7 +71,7 @@
 <span class="kw">pub fn </span>launcher_args(
     container_bundle: <span class="kw">impl </span>Into&lt;std::path::PathBuf&gt;,
 ) -&gt; oak_containers_launcher::Args {
-    <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">"{ROOT}oak_containers/system_image/target/image.tar.xz"</span>,);
+    <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">"{ROOT}/artifacts/containers_system_image.tar.xz"</span>,);
     <span class="kw">let </span>vmm_binary = which::which(<span class="string">"qemu-system-x86_64"</span>).expect(<span class="string">"could not find qemu path"</span>);
     <span class="kw">let </span>stage0_binary = <span class="macro">format!</span>(<span class="string">"{ROOT}generated/stage0_bin"</span>).into();
     <span class="kw">let </span>kernel_dir = std::env::var(<span class="string">"LINUX_KERNEL"</span>)
