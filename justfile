@@ -87,12 +87,12 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
         --compilation_mode opt
 
     mkdir --parents generated
-    cp --preserve=timestamps --no-preserve=mode \
+    cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}* \
         generated
 
     # Place things where they were built in the cargo world for compatiblity.
-    cp bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
+    cp --force --preserve=timestamps bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
@@ -129,7 +129,7 @@ oak_client_android_app:
     # Copy out to a directory which does not change with bazel config and does
     # not interfere with cargo. It should be reused for other targets as well.
     mkdir --parents generated
-    cp --preserve=timestamps --no-preserve=mode \
+    cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
         generated
 
@@ -147,7 +147,7 @@ stage0_bin:
         --compilation_mode opt
 
     mkdir --parents generated
-    cp --preserve=timestamps --no-preserve=mode \
+    cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin/stage0_bin \
         generated
 
@@ -157,7 +157,7 @@ stage0_bin_tdx:
         --compilation_mode opt
 
     mkdir --parents generated
-    cp --preserve=timestamps --no-preserve=mode \
+    cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
         generated
 
@@ -188,28 +188,26 @@ oak_containers_system_image: oak_containers_system_image_binaries
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     # Copy dependencies into bazel build.
     mkdir --parents oak_containers/system_image/target/image_binaries
-    cp --preserve=timestamps \
+    cp --force --preserve=timestamps \
         oak_containers/orchestrator/target/oak_containers_orchestrator \
         oak_containers/system_image/target/image_binaries/oak_containers_orchestrator
-    cp --preserve=timestamps \
+    cp --force --preserve=timestamps \
         oak_containers/syslogd/target/oak_containers_syslogd_patched \
         oak_containers/system_image/target/image_binaries/oak_containers_syslogd
-    cp --preserve=timestamps \
+    cp --force --preserve=timestamps \
         oak_containers/agent/target/oak_containers_agent_patched \
         oak_containers/system_image/target/image_binaries/oak_containers_agent
     # Build and compress.
     bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_system_image
-    cp --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar \
-        oak_containers/system_image/target/image.tar
-    xz --force oak_containers/system_image/target/image.tar
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
+        oak_containers/system_image/target/image.tar.xz
 
 oak_containers_nvidia_system_image: oak_containers_system_image
     bazel build $BAZEL_CONFIG_FLAG oak_containers/system_image:oak_containers_nvidia_system_image
-    cp --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar \
-        oak_containers/system_image/target/nvidia_image.tar
-    xz --force oak_containers/system_image/target/nvidia_image.tar
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
+        oak_containers/system_image/target/nvidia_image.tar.xz
 
 oak_containers_orchestrator:
     env --chdir=oak_containers/orchestrator \
@@ -221,7 +219,7 @@ oak_containers_syslogd:
         cargo build --release -Z unstable-options --out-dir=target
     # We can't patch the binary in-place, as that would confuse cargo.
     # Therefore we copy it to a new location and patch there.
-    cp \
+    cp --force --preserve=timestamps \
         oak_containers/syslogd/target/oak_containers_syslogd \
         oak_containers/syslogd/target/oak_containers_syslogd_patched
     patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
@@ -232,7 +230,7 @@ oak_containers_agent:
         cargo build --release -Z unstable-options --out-dir=target
     # We can't patch the binary in-place, as that would confuse cargo.
     # Therefore we copy it to a new location and patch there.
-    cp \
+    cp --force --preserve=timestamps \
         oak_containers/agent/target/oak_containers_agent \
         oak_containers/agent/target/oak_containers_agent_patched
     patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --set-rpath "" \
@@ -254,7 +252,7 @@ oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"
     env bazel build $BAZEL_CONFIG_FLAG --compilation_mode opt //oak_containers/examples/hello_world/trusted_app:bundle.tar
     # bazel-bin symlink doesn't exist outside of the docker container, this makes the file available to the kokoro script.
-    cp -f bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
+    cp --force --preserve=timestamps bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
     echo "Using bazel config flag: $BAZEL_CONFIG_FLAG"

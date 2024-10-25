@@ -17,8 +17,10 @@ load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("//bazel/tools/xz:xz.bzl", "xz_compress")
 
 package(
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
@@ -63,7 +65,7 @@ oci_image(
 )
 
 oci_runtime_bundle(
-    name = "oak_containers_system_image",
+    name = "oak_containers_system_image_tar",
     image = ":oak_containers_system_image_oci_image",
     rootfs_only = True,
     # This rule will fail unless you run: just oak_containers_sytem_image_binaries
@@ -71,13 +73,31 @@ oci_runtime_bundle(
     tags = ["manual"],
 )
 
+xz_compress(
+    name = "oak_containers_system_image",
+    out = "oak_containers_system_image.tar.xz",
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
+    target = ":oak_containers_system_image_tar",
+)
+
 oci_runtime_bundle(
-    name = "oak_containers_nvidia_system_image",
+    name = "oak_containers_nvidia_system_image_tar",
     image = ":oak_containers_nvidia_system_image_oci_image",
     rootfs_only = True,
     # This rule will fail unless you run: just oak_containers_sytem_image_binaries
     # This restriction will be removed once everything is bazelified.
     tags = ["manual"],
+)
+
+xz_compress(
+    name = "oak_containers_nvidia_system_image",
+    out = "oak_containers_nvidia_system_image.tar.xz",
+    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This restriction will be removed once everything is bazelified.
+    tags = ["manual"],
+    target = ":oak_containers_nvidia_system_image_tar",
 )
 
 ### Base Image Update Targets
