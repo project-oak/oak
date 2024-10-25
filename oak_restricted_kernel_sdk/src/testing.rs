@@ -20,10 +20,8 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use oak_attestation::{
-    attester::{Attester, Serializable},
-    dice::{evidence_and_event_log_to_proto, DiceAttester},
-};
+use oak_attestation::dice::{evidence_and_event_log_to_proto, DiceAttester};
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
@@ -34,7 +32,6 @@ use oak_proto_rust::oak::{
     attestation::v1::{ApplicationLayerData, DiceData, EventLog, Evidence},
     RawDigest,
 };
-use oak_session::attestation::Attester as SessionAttester;
 use p256::ecdsa::SigningKey;
 use prost::Message;
 
@@ -178,7 +175,7 @@ impl MockAttester {
     }
 }
 
-impl SessionAttester for MockAttester {
+impl Attester for MockAttester {
     fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
         anyhow::bail!("mock attester doesn't support extending the evidence");
     }

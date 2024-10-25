@@ -27,10 +27,9 @@ use core::fmt::Display;
 
 use anyhow::{anyhow, Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
-#[cfg(test)]
-use mockall::automock;
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{attestation_results, AttestationResults},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
@@ -72,31 +71,6 @@ impl From<AttestationFailure> for Error {
     fn from(value: AttestationFailure) -> Self {
         anyhow!(value.to_string())
     }
-}
-
-// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
-// logic has been moved to a separate crate.
-#[cfg_attr(test, automock)]
-pub trait Attester: Send {
-    fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;
-    fn quote(&self) -> anyhow::Result<Evidence>;
-}
-
-// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
-// logic has been moved to a separate crate.
-#[cfg_attr(test, automock)]
-pub trait Endorser: Send {
-    fn endorse<'a>(&'a self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
-}
-
-#[cfg_attr(test, automock)]
-/// Verifier for the particular type of the attestation.
-pub trait AttestationVerifier: Send {
-    fn verify(
-        &self,
-        evidence: &Evidence,
-        endorsements: &Endorsements,
-    ) -> anyhow::Result<AttestationResults>;
 }
 
 /// Configuration of the attestation behavior that the AttestationProvider will

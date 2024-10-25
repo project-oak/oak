@@ -19,7 +19,7 @@ pub mod base;
 use core::arch::x86_64::CpuidResult;
 
 pub use base::Base;
-use oak_attestation::attester::{Attester, Serializable};
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};

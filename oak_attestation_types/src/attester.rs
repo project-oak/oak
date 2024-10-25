@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
+#[cfg(test)]
+use mockall::automock;
 use oak_proto_rust::oak::attestation::v1::Evidence;
 
 /// Trait that provides the ability to build an attestation evidence.
 ///
 /// <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
+#[cfg_attr(test, automock)]
 pub trait Attester: Send + Sync {
     /// Add a new event to the evidence.
     fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;

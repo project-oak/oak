@@ -17,14 +17,13 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
 use anyhow::Error;
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 use crate::{
-    attestation::{
-        AttestationAggregator, AttestationType, AttestationVerifier, Attester,
-        DefaultAttestationAggregator, Endorser,
-    },
+    attestation::{AttestationAggregator, AttestationType, DefaultAttestationAggregator},
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},

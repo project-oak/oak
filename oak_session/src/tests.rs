@@ -14,6 +14,9 @@
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 
+use mockall::mock;
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
     identity_key::{IdentityKey, IdentityKeyHandle},
@@ -31,9 +34,8 @@ use rand_core::OsRng;
 use crate::{
     alloc::string::ToString,
     attestation::{
-        AttestationProvider, AttestationType, AttestationVerifier, Attester,
-        ClientAttestationProvider, DefaultAttestationAggregator, Endorser, MockAttestationVerifier,
-        MockAttester, MockEndorser, ServerAttestationProvider,
+        AttestationProvider, AttestationType, ClientAttestationProvider,
+        DefaultAttestationAggregator, ServerAttestationProvider,
     },
     config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
@@ -54,6 +56,32 @@ const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
 const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
 const UNMATCHED_ATTESTER_ID: &str = "UNMATCHED_ATTESTER_ID";
 const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
+
+mock! {
+    TestAttester {}
+    impl Attester for TestAttester {
+        fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;
+        fn quote(&self) -> anyhow::Result<Evidence>;
+    }
+}
+
+mock! {
+    TestEndorser {}
+    impl Endorser for TestEndorser {
+        fn endorse<'a>(&self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
+    }
+}
+
+mock! {
+    TestAttestationVerifier {}
+    impl AttestationVerifier for TestAttestationVerifier {
+        fn verify(
+            &self,
+            evidence: &Evidence,
+            endorsements: &Endorsements,
+        ) -> anyhow::Result<AttestationResults>;
+    }
+}
 
 #[test]
 fn attestation_verification_succeeds() {
@@ -176,19 +204,19 @@ fn attestation_verification_fails() {
 }
 
 fn create_mock_attester() -> Box<dyn Attester> {
-    let mut attester = MockAttester::new();
+    let mut attester = MockTestAttester::new();
     attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     Box::new(attester)
 }
 
 fn create_mock_endorser() -> Box<dyn Endorser> {
-    let mut endorser = MockEndorser::new();
+    let mut endorser = MockTestEndorser::new();
     endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
     Box::new(endorser)
 }
 
 fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
-    let mut verifier = MockAttestationVerifier::new();
+    let mut verifier = MockTestAttestationVerifier::new();
     verifier.expect_verify().returning(|_, _| {
         Ok(AttestationResults {
             status: attestation_results::Status::Success.into(),
@@ -199,7 +227,7 @@ fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
 }
 
 fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
-    let mut verifier = MockAttestationVerifier::new();
+    let mut verifier = MockTestAttestationVerifier::new();
     verifier.expect_verify().returning(|_, _| {
         Ok(AttestationResults {
             status: attestation_results::Status::GenericFailure.into(),
@@ -321,9 +349,9 @@ fn session_succeeds_with_bidirectional_attestation() {
     let binding_key_server = SigningKey::random(&mut OsRng);
     let verifying_key_server_vec: Vec<u8> =
         binding_key_server.verifying_key().to_sec1_bytes().to_vec();
-    let mut client_attester = MockAttester::new();
-    let mut client_endorser = MockEndorser::new();
-    let mut client_verifier = MockAttestationVerifier::new();
+    let mut client_attester = MockTestAttester::new();
+    let mut client_endorser = MockTestEndorser::new();
+    let mut client_verifier = MockTestAttestationVerifier::new();
     client_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     client_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
     client_verifier.expect_verify().returning(move |_, _| {
@@ -336,9 +364,9 @@ fn session_succeeds_with_bidirectional_attestation() {
             ..Default::default()
         })
     });
-    let mut server_attester = MockAttester::new();
-    let mut server_endorser = MockEndorser::new();
-    let mut server_verifier = MockAttestationVerifier::new();
+    let mut server_attester = MockTestAttester::new();
+    let mut server_endorser = MockTestEndorser::new();
+    let mut server_verifier = MockTestAttestationVerifier::new();
     server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
     server_verifier.expect_verify().returning(move |_, _| {
@@ -397,7 +425,7 @@ fn session_succeeds_with_unidirectional_attestation() {
     let binding_key_server = SigningKey::random(&mut OsRng);
     let verifying_key_server_vec: Vec<u8> =
         binding_key_server.verifying_key().to_sec1_bytes().to_vec();
-    let mut client_verifier = MockAttestationVerifier::new();
+    let mut client_verifier = MockTestAttestationVerifier::new();
     client_verifier.expect_verify().returning(move |_, _| {
         Ok(AttestationResults {
             status: attestation_results::Status::Success.into(),
@@ -408,8 +436,8 @@ fn session_succeeds_with_unidirectional_attestation() {
             ..Default::default()
         })
     });
-    let mut server_attester = MockAttester::new();
-    let mut server_endorser = MockEndorser::new();
+    let mut server_attester = MockTestAttester::new();
+    let mut server_endorser = MockTestEndorser::new();
     server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
     let client_config =
@@ -446,7 +474,7 @@ fn session_fails_with_attestation_binding_fail() {
     let binding_key_server = SigningKey::random(&mut OsRng);
     let mismatched_verifying_key_server_vec: Vec<u8> =
         SigningKey::random(&mut OsRng).verifying_key().to_sec1_bytes().to_vec();
-    let mut client_verifier = MockAttestationVerifier::new();
+    let mut client_verifier = MockTestAttestationVerifier::new();
     client_verifier.expect_verify().returning(move |_, _| {
         Ok(AttestationResults {
             status: attestation_results::Status::Success.into(),
@@ -457,8 +485,8 @@ fn session_fails_with_attestation_binding_fail() {
             ..Default::default()
         })
     });
-    let mut server_attester = MockAttester::new();
-    let mut server_endorser = MockEndorser::new();
+    let mut server_attester = MockTestAttester::new();
+    let mut server_endorser = MockTestEndorser::new();
     server_attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
     server_endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
     let client_config =

@@ -27,6 +27,7 @@ rust_binary(
     srcs = glob(["src/**"]),
     deps = [
         "//oak_attestation",
+        "//oak_attestation_types",
         "//oak_containers/channel",
         "//oak_containers/stage1_dice",
         "//oak_dice",

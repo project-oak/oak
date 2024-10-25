@@ -25,7 +25,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
-use oak_attestation::attester::{Attester, Serializable};
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_dice::evidence::{
     DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
     STAGE0_DICE_PROTO_MAGIC,

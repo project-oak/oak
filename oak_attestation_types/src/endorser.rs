@@ -19,6 +19,7 @@ use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 /// Trait that provides the ability to read attestation endorsements.
 ///
 /// <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
+#[cfg_attr(test, automock)]
 pub trait Endorser: Send + Sync {
     /// Generate an endorsement.
     ///

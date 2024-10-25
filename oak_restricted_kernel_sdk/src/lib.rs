@@ -30,6 +30,7 @@ pub mod handler;
 pub mod testing;
 pub mod utils;
 
+pub use oak_attestation_types::{attester::Attester, endorser::Endorser};
 /// Expose oak_attestation_verification to users of the restricted kernel SDK.
 pub use oak_attestation_verification;
 pub use oak_crypto::{encryption_key::EncryptionKeyHandle, signer::Signer};
@@ -64,4 +65,3 @@ pub use oak_crypto::{encryption_key::EncryptionKeyHandle, signer::Signer};
 /// }
 /// ```
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
-pub use oak_session::attestation::{Attester, Endorser};

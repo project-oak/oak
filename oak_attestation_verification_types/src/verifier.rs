@@ -20,6 +20,7 @@ use oak_proto_rust::oak::attestation::v1::{AttestationResults, Endorsements, Evi
 /// evidence and endorsements and producing attestation results.
 ///
 /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+#[cfg_attr(test, automock)]
 pub trait AttestationVerifier: Send + Sync {
     fn verify(
         &self,

@@ -19,6 +19,7 @@ use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use ciborium::Value;
 use coset::{cwt::ClaimName, CborSerializable, CoseKey};
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_dice::{
     cert::{
         cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
@@ -38,8 +39,6 @@ use p256::ecdsa::{SigningKey, VerifyingKey};
 use prost::Message;
 use sha2::Digest;
 use zeroize::Zeroize;
-
-use crate::attester::{Attester, Serializable};
 
 pub trait MeasureDigest {
     fn measure_digest(&self) -> RawDigest;

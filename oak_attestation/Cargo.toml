@@ -9,6 +9,7 @@ anyhow = { version = "*", default-features = false }
 ciborium = { version = "*", default-features = false }
 coset = { version = "*", default-features = false }
 hex = { version = "*", default-features = false }
+oak_attestation_types = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 prost = { workspace = true }

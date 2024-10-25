@@ -811,6 +811,7 @@ dependencies = [
  "coset",
  "hex",
  "micro_rpc_build",
+ "oak_attestation_types",
  "oak_dice",
  "oak_proto_rust",
  "p256",
@@ -818,6 +819,14 @@ dependencies = [
  "rand_core",
  "sha2",
  "zeroize",
+]
+
+[[package]]
+name = "oak_attestation_types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_proto_rust",
 ]
 
 [[package]]
@@ -1106,6 +1115,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_attestation",
+ "oak_attestation_types",
  "oak_attestation_verification",
  "oak_channel",
  "oak_core",
@@ -1138,7 +1148,9 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "itertools",
+ "oak_attestation_types",
  "oak_attestation_verification",
+ "oak_attestation_verification_types",
  "oak_crypto",
  "oak_proto_rust",
  "p256",

@@ -38,7 +38,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_attestation::attester::Serializable;
+use oak_attestation_types::util::Serializable;
 use tokio::process::Command;
 use tonic::transport::Uri;
 use x86_64::PhysAddr;

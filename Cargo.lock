@@ -2163,6 +2163,7 @@ dependencies = [
  "coset",
  "hex",
  "micro_rpc_build",
+ "oak_attestation_types",
  "oak_dice",
  "oak_proto_rust",
  "p256",
@@ -2205,6 +2206,7 @@ name = "oak_attestation_types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "mockall",
  "oak_proto_rust",
 ]
 
@@ -2243,6 +2245,7 @@ name = "oak_attestation_verification_types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "mockall",
  "oak_proto_rust",
 ]
 
@@ -2431,6 +2434,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "oak_attestation",
+ "oak_attestation_types",
  "oak_containers_attestation",
  "oak_containers_stage1_dice",
  "oak_crypto",
@@ -2458,6 +2462,7 @@ dependencies = [
  "futures-util",
  "nix 0.27.1",
  "oak_attestation",
+ "oak_attestation_types",
  "oak_containers_channel",
  "oak_containers_stage1_dice",
  "oak_crypto",
@@ -2996,6 +3001,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_attestation",
+ "oak_attestation_types",
  "oak_attestation_verification",
  "oak_channel",
  "oak_core",
@@ -3032,7 +3038,9 @@ dependencies = [
  "derive_builder",
  "itertools 0.12.1",
  "mockall",
+ "oak_attestation_types",
  "oak_attestation_verification",
+ "oak_attestation_verification_types",
  "oak_crypto",
  "oak_proto_rust",
  "p256",

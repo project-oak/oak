@@ -98,6 +98,7 @@ rust_test_suite(
     deps = [
         ":lib",
         "//oak_attestation",
+        "//oak_attestation_types",
         "//oak_attestation_verification",
         "//oak_containers_sdk",
         "//oak_dice",

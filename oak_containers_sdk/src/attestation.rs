@@ -15,12 +15,12 @@
 //
 
 use anyhow::Context;
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_grpc::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
     session::v1::EndorsedEvidence,
 };
-use oak_session::attestation::{Attester, Endorser};
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 

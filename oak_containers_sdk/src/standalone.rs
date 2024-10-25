@@ -24,7 +24,8 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use oak_attestation::{attester::Attester, dice::DiceAttester};
+use oak_attestation::dice::DiceAttester;
+use oak_attestation_types::attester::Attester;
 use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 use oak_crypto::{
     encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},

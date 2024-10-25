@@ -33,6 +33,7 @@ rust_library(
     ]),
     deps = [
         "//oak_attestation",
+        "//oak_attestation_types",
         "//oak_core",
         "//oak_dice",
         "//oak_linux_boot_params",

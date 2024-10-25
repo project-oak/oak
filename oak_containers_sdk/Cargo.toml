@@ -12,6 +12,7 @@ oak_grpc_utils = { workspace = true }
 anyhow = "*"
 async-trait = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
+oak_attestation_types = { workspace = true }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
 oak_grpc = { workspace = true }

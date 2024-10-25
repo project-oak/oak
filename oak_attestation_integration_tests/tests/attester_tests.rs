@@ -14,10 +14,8 @@
 // limitations under the License.
 //
 
-use oak_attestation::{
-    attester::{Attester, Serializable},
-    dice::DiceAttester,
-};
+use oak_attestation::dice::DiceAttester;
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_attestation_verification::verifier::verify_dice_chain;
 use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{attestation::v1::ApplicationLayerData, RawDigest};

@@ -20,11 +20,10 @@
 use alloc::{string::ToString, sync::Arc};
 
 use oak_attestation_verification::verifier::verify;
+use oak_attestation_verification_types::{util::Clock, verifier::AttestationVerifier};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
-
-use crate::{attestation::AttestationVerifier, clock::Clock};
 
 pub struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
@@ -44,7 +43,12 @@ impl AttestationVerifier for DiceAttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
-        match verify(self.clock.get_current_time_ms(), evidence, endorsements, &self.ref_values) {
+        match verify(
+            self.clock.get_milliseconds_since_epoch(),
+            evidence,
+            endorsements,
+            &self.ref_values,
+        ) {
             Ok(extracted_evidence) => Ok(AttestationResults {
                 status: attestation_results::Status::Success.into(),
                 extracted_evidence: Some(extracted_evidence),

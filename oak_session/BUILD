@@ -28,7 +28,9 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
+        "//oak_attestation_types",
         "//oak_attestation_verification",
+        "//oak_attestation_verification_types",
         "//oak_crypto",
         "//oak_proto_rust",
         "@oak_crates_index//:aead",
