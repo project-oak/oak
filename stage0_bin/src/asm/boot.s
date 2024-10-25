@@ -199,13 +199,10 @@ _protected_mode_start:
     movl $0, (ENCRYPTED)      # ... and store it in the ENCRYPTED variable as well
     mov %esi, (ENCRYPTED+4)   # (lower half zeroed out as we expect it to be > 32, as above)
 
-    # We set the encrypted bit for each of the page table entries that we previously created.
+    # We set the encrypted bit for each of the leaf page table entries that we previously created.
+    # For non-leaf entries, we don't bother setting the C-bit, as it's "don't care" (page walks are
+    # always encrypted).
     # The encrypted bit is in the second half of each 8-byte entry, so we add an extra offset of 4 bytes.
-    mov ${pml4}, %eax
-    mov %esi, 4(%eax)         # set second half of PML4[0]
-    mov ${pdpt}, %eax
-    mov %esi, 4(%eax)         # set second half of PDPT[0]
-    mov %esi, 28(%eax)        # set second half of PDPT[3], each entry is 8 bytes
     mov ${pd_0}, %eax
     mov %esi, 4(%eax)         # set second half of PD_0[0]
     mov ${pd_3}, %eax

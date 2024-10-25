@@ -285,6 +285,7 @@ impl Platform for Sev {
     fn page_table_mask(encryption_state: PageEncryption) -> u64 {
         if sev_status().contains(SevStatus::SEV_ENABLED) {
             match encryption_state {
+                PageEncryption::Unset => 0,
                 PageEncryption::Encrypted => encrypted(),
                 PageEncryption::Unencrypted => 0,
             }

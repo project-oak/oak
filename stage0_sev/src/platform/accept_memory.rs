@@ -271,7 +271,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     page_tables.pdpt[1].set_address::<Sev>(
         PhysAddr::new(&validation_pd.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
-        PageEncryption::Encrypted,
+        PageEncryption::Unset,
     );
 
     // Page table, for validation with 4 KiB pages.
@@ -285,7 +285,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     page_tables.pd_0[1].set_address::<Sev>(
         PhysAddr::new(&validation_pt.page_table as *const _ as u64),
         PageTableFlags::PRESENT,
-        PageEncryption::Encrypted,
+        PageEncryption::Unset,
     );
 
     // We already pvalidated the memory in the first 640KiB of RAM in the boot

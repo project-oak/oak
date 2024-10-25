@@ -176,8 +176,33 @@ impl From<&mut BasePageTableEntry> for &mut PageTableEntry {
 }
 
 /// Encryption state of a page in the page table.
+///
+/// Setting the encrypted bit makes only sense for a leaf page table.
+///
+/// For AMD SEV, see Section 15.34.5, SEV Encryption Behavior:
+/// > When a guest is executed with SEV enabled, the guest page tables are used
+/// > to determine the C-bit for a memory page and hence the encryption status
+/// > of that memory page. This allows a guest to determine which pages are
+/// > private or shared, but this control is available only for data pages.
+/// > Memory accesses on behalf of instruction fetches and guest page table
+/// > walks are always treated as private, regardless of the software value of
+/// > the C-bit.
+///
+/// As the memory accesses for page table walks are always treated as private,
+/// it doesn't matter whether we set the C-bit on non-leaf entries.
+///
+/// For Intel TDX, the `Encrypted` == `Unset``, so it's safe to use `Unset` for
+/// TDX page tables as well.
 pub enum PageEncryption {
+    /// Always defaults to "don't set the encrypted bit", no matter its
+    /// semantics. This should be the default for non-leaf page table
+    /// entries.
+    Unset,
+
+    /// Ensures that the encrypted bit is enabled.
     Encrypted,
+
+    /// Ensures that the encrypted bit is disabled.
     Unencrypted,
 }
 
@@ -210,7 +235,7 @@ pub fn init_page_table_refs<P: Platform>() {
     pd_0[0].set_address::<P>(
         PhysAddr::new(pt_0.as_ref() as *const _ as usize as u64),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        PageEncryption::Encrypted,
+        PageEncryption::Unset,
     );
 
     let page_tables = PageTableRefs { pml4, pdpt, pd_0, pd_3, pt_0 };

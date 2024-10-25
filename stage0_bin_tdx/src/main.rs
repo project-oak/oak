@@ -447,7 +447,7 @@ impl oak_stage0::Platform for Tdx {
         page_tables.pdpt[1].set_address::<Tdx>(
             PhysAddr::new(&accept_pd_pt as *const _ as u64),
             PageTableFlags::PRESENT,
-            PageEncryption::Encrypted,
+            PageEncryption::Unset,
         );
         info!("added pdpt[1]");
 
@@ -459,7 +459,7 @@ impl oak_stage0::Platform for Tdx {
         page_tables.pd_0[1].set_address::<Tdx>(
             PhysAddr::new(&accept_pt_pt as *const _ as u64),
             PageTableFlags::PRESENT,
-            PageEncryption::Encrypted,
+            PageEncryption::Unset,
         );
         info!("added pd_0[1]");
 
@@ -614,6 +614,7 @@ impl oak_stage0::Platform for Tdx {
         // b. When 5-level EPT is active, the SHARED bit position would
         // be bit 47 if GPAW is 0. Otherwise, else it would be bit 51.
         match enc {
+            oak_stage0::paging::PageEncryption::Unset => 0,
             oak_stage0::paging::PageEncryption::Encrypted => 0,
             oak_stage0::paging::PageEncryption::Unencrypted => 1 << get_tdx_shared_bit(),
         }
