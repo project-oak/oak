@@ -14,6 +14,11 @@ Oak Containers.
 The Linux kernel is built using Nix to help with reproducibility. The kernel
 version is specified in `flake.nix` in the root.
 
+You may need to update the symlinks if the nix store absolute path has changed.
+
+You'll also need to update the checksums, so that the checksum verification test
+continues to pass.
+
 If the Linux configuration options have changed significantly between versions
 the config file must be updated. This can be done by manually building the
 kernel using the existing config file and the new version's source code. Choose

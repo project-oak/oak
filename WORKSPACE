@@ -413,3 +413,12 @@ http_archive(
     strip_prefix = "e2fsprogs-1.47.0",
     urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
 )
+
+load("//bazel/nix:kernel.bzl", "nix_kernel_repo")
+
+# Get the nix-built Kernels into our Bazel workspace, and verify the sha256
+nix_kernel_repo(
+    name = "nix_kernels",
+    bzImage_sha256 = "2f007b90ed57aff8d6c8c3207c538047c4c7364c0177f3cdd6c15bce4aa4b400",
+    bzImage_vanilla_sha256 = "e87135a4fc4c22c48fad23c52d8c43c548faa2963a0f2a0a091243b9a54bc1c2",
+)

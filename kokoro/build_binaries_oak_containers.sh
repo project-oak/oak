@@ -27,7 +27,7 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # verification (i.e., do Kokoro and GitHub produce identical results).
 readonly generated_binaries=(
     ./target/stage1.cpio
-    ./oak_containers/kernel/target/bzImage
+    ./artifacts/oak_containers_kernel
     ./artifacts/oak_containers_orchestrator
     ./artifacts/oak_containers_syslogd
     ./artifacts/oak_containers_agent

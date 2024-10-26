@@ -40,7 +40,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
     target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
         --stage0-binary=generated/stage0_bin \
-        --kernel=oak_containers/kernel/target/bzImage \
+        --kernel=bazel-bin/oak_containers/kernel/bzImage \
         --initrd=target/stage1.cpio \
         --system-image=artifacts/containers_system_image.tar.xz \
         --container-bundle=oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar \
@@ -173,10 +173,15 @@ stage1_cpio:
     env --chdir=oak_containers/stage1 make
 
 oak_containers_kernel:
-    env --chdir=oak_containers/kernel make
+    bazel build //oak_containers/kernel/...
+
+    cp --force --preserve=timestamps \
+        ./bazel-bin/oak_containers/kernel/bzImage \
+        artifacts/oak_containers_kernel
+
     just bzimage_provenance_subjects \
         oak_containers_kernel \
-        oak_containers/kernel/target/bzImage \
+        ./bazel-bin/oak_containers/kernel/bzImage \
         oak_containers/kernel/bin/subjects
 
 oak_containers_launcher:
@@ -263,7 +268,7 @@ kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar containers_placer_artifacts
-    OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
+    OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --nocapture --package='oak_containers_hello_world_untrusted_app'
 
 # This list should contain all crates that either a) have tests and are not bazelified yet or b) have bench tests (not supported on Bazel yet).
 # TODO: b/349587489 - Bazelify oak_functions_containers_launcher
