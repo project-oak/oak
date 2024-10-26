@@ -5,7 +5,25 @@ set -o nounset
 set -o xtrace
 set -o pipefail
 
-export CI=kokoro
+
+# Detect the kokoro job type, so our scripts can make configuration decisions
+# based on whether we are running in presubmit or continous mode.
+#
+# The Kokoro-specific variable is translated into a a more generic version, so
+# that we don't leak Kokoro details outside of this directory.
+#
+# Information on Kokoro Job variables:
+# https://g3doc.corp.google.com/devtools/kokoro/g3doc/platforms/configs/containers/win2019-java_config.md#dynamic-variables
+readonly KOKORO_JOB_TYPE="${KOKORO_ROOT_JOB_TYPE:-}"
+
+if [ "$KOKORO_JOB_TYPE" == "PRESUBMIT_GERRIT_ON_BORG" ]; then
+  export CI_JOB_TYPE="PRESUBMIT"
+elif [ "$KOKORO_JOB_TYPE" == "CONTINUOUS_INTEGRATION" ]; then
+  export CI_JOB_TYPE="CONTINUOUS"
+else
+  export CI_JOB_TYPE="LOCAL"
+fi
+
 export RUST_BACKTRACE=1
 export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run

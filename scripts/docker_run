@@ -20,6 +20,7 @@ docker_run_flags=(
   '--rm'
   '--tty'
   '--env=CI'
+  '--env=CI_JOB_TYPE'
   '--env=KOKORO_ARTIFACTS_DIR'
   '--env=TERM=xterm-256color'
   '--env=OAK_KVM_TESTS'
