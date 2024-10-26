@@ -220,6 +220,7 @@
               '';
               inputsFrom = [
                 rust
+                bazelShell
               ];
               packages = [
                 bc
