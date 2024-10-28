@@ -149,29 +149,38 @@ _ap_poll_firmware_mailbox:
     # By the time APs reach this loop, they are using the hard-coded page
     # tables from ROM (BIOS area, [4GiB - 2MiB, 4Gib), i.e. the top 2MiB of the memory).
 
-    movq TD_MAILBOX_START, %rax      # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
-    testq %rax, %rax                 # If IsAddressSet
-    jnz _ap_poll_os_mailbox          # not equals 0, it means OsMailboxAddress is set, go poll OS mailbox.
+    pause                               # Allow power saving while waiting,
 
-    pause                            # Otherwise, allow power saving while waiting,
-    jp _ap_poll_firmware_mailbox     # and loop.
+    movq TD_MAILBOX_START, %rax         # Copy value at TD_MAILBOX_START (field IsAddressSet) into rax.
+    testq %rax, %rax                    # If IsAddressSet
+    jz _ap_poll_firmware_mailbox        # equals 0, it means OsMailboxAddress not set, loop.
+
+    movq (TD_MAILBOX_START + 8), %rdx   # Otherwise, save OsMailboxAddress value in rdx
+    # Proceed to _ap_poll_os_mailbox
+
+
+.equ WakeupCommand,  0x0001
 
 # APs poll the OS mailbox, where the OS will send them commands.
 # The structure is defined in stage0/src/mailbox.rs
-# At this point, OsMailboxAddress, located at (TD_MAILBOX_START + 8),
-# is expected to be set.
+# INPUTS expected:
+#   - OsMailboxAddress in rdx register.
+#   - CPU_ID of current AP in ebp register.
 _ap_poll_os_mailbox:
-    movq (TD_MAILBOX_START + 8), %rdx   # Save OsMailboxAddress value in rdx
-    xorq %rax, %rax                     # Clear rax register.
     pause                               # Allow power saving while waiting.
 
-    movw (%rdx), %ax                    # First 2 bytes of OS mailbox contain the field `command`. Save to rax.
-    testw %ax, %ax                      # If command
-    jz _ap_poll_os_mailbox              # equals 0, then loop.
+    # The apic_id field (4 bytes at offset 4) is ID of the CPU for which this command is for.
+    cmpl 4(%rdx), %ebp                  # If apic_id not equals my CPU_ID (ebp),
+    jne _ap_poll_os_mailbox             # then loop.
 
-    # For now, command will always equal 0 because we haven't told the OS
-    # where this mailbox is yet, so the OS won't issue commands.
-    # TODO: b/375184207 - Implement response to commands.
+    # First 2 bytes of OS mailbox contain the field `command`. We only recognise WakeupCommand.
+    cmpw $WakeupCommand, (%rdx)         # If command not equals WakeupCommand,
+    jne _ap_poll_os_mailbox             # then loop.
+
+    # Wakeup, go to OS-provided address at field wakeup_vector (8 bytes at offset 8)
+    movq 8(%rdx), %rax                  # Save value of wakeup_vector to rax.
+    movw $0, (%rdx)                     # Write 0 to command field to acknowledge command received.
+    jmp *%rax                           # Jump to the address given by wakeup_vector.
 
 
 # NOTE: If we need to recover the VCPU index, we can do it in this way:
