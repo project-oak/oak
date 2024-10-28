@@ -335,4 +335,8 @@ impl Platform for Sev {
             Base::write_msr(msr_id, val)
         }
     }
+
+    fn wbvind() {
+        Base::wbvind()
+    }
 }

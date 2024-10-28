@@ -120,4 +120,15 @@ impl crate::Platform for Base {
     unsafe fn write_msr(msr: u32, value: u64) {
         Msr::new(msr).write(value)
     }
+
+    fn wbvind() {
+        // Safety: this shouldn't have any (visible) effects that affect Rust safety.
+        unsafe {
+            core::arch::asm! {
+                "wbinvd",
+                 options(preserves_flags, nostack)
+
+            }
+        }
+    }
 }

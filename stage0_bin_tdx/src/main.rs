@@ -39,7 +39,7 @@ use oak_tdx_guest::{
     tdcall::get_td_info,
     vmcall::{
         call_cpuid, io_read_u16, io_read_u32, io_read_u8, io_write_u16, io_write_u32, io_write_u8,
-        mmio_read_u32, mmio_write_u32, msr_read, msr_write,
+        mmio_read_u32, mmio_write_u32, msr_read, msr_write, tdvmcall_wbinvd,
     },
 };
 use x86_64::{
@@ -631,6 +631,10 @@ impl oak_stage0::Platform for Tdx {
     }
     unsafe fn write_msr(msr: u32, value: u64) {
         msr_write(msr, value).unwrap()
+    }
+
+    fn wbvind() {
+        tdvmcall_wbinvd().unwrap()
     }
 }
 

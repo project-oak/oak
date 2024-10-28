@@ -175,6 +175,12 @@ pub trait Platform {
     ///
     /// The caller must guarantee that the MSR is valid.
     unsafe fn write_msr(msr: u32, value: u64);
+
+    /// Write Back and Invalidate Cache
+    ///
+    /// Writes back all modified cache lines in the processor’s internal cache
+    /// to main memory and invalidates (flushes) the internal caches.
+    fn wbvind();
 }
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending
