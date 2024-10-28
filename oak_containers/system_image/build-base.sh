@@ -98,17 +98,5 @@ then
   build_sysroot
 fi
 
-set +o xtrace
-printf "\n\nIf you want to push this newly created base, run:\n"
-printf "\nbazel run oak_containers/system_image:push_base\n"
-printf "(and/or) bazel run oak_containers/system_image:push_nvidia_base\n\n"
-printf "If you want to use the newly created base, update the hash for\n"
-printf "the oak_containers_sysimage_base oci_pull target (or the nvidia flavour\n"
-printf "if needed) in WORKSPACE\n\n"
-printf "If you haven't done a push before, you'll need to set up gcloud auth:\n"
-printf "Install gcloud if needed: https://cloud.google.com/sdk/docs/downloads-interactive\n"
-printf "And then:\n\n"
-printf "  gcloud auth login\n"
-printf "  gcloud config set project oak-ci\n"
-printf "  gcloud auth configure-docker\n"
-printf "  gcloud auth configure-docker europe-west2-docker.pkg.dev\n"
+echo "To upload:"
+echo "  ./oak_containers/system_image/push-base.sh <flavor>"

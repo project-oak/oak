@@ -1,4 +1,4 @@
-# System Image for Oak Containers. Contains base Debian plus binaries and 
+# System Image for Oak Containers. Contains base Debian plus binaries and
 # configs to run Oak. This MUST be based on a stable Debian image.
 # debian:stable-20240612 - https://hub.docker.com/_/debian/tags
 ARG debian_snapshot=sha256:26878d0d3aa5e1980d6f8060b4af32fc48b8edeb1fc4d2d074a13a04b17c95f2
@@ -36,7 +36,7 @@ RUN apt-get --yes update \
 #  * /var/cache/ldconfig/aux-cache can be removed; this is safe for all files
 #    in /var/cache
 RUN (LAST_DAY="$(awk -F: '$1=="root"{print $3}' /etc/shadow)"; \
-     chage -d "$LAST_DAY" messagebus && chage -d "$LAST_DAY" systemd-network) \
+    chage -d "$LAST_DAY" messagebus && chage -d "$LAST_DAY" systemd-network) \
     && rm -f /etc/{passwd,shadow}- \
     && ln -sf /etc/machine-id /var/lib/dbus/machine-id \
     && find /etc/machine-id /var/log -type f -execdir truncate -s 0 '{}' '+' \

@@ -15,7 +15,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
-    libc6-dev libstdc++-12-dev \
+    libc6-dev libstdc++-12-dev libsystemd-dev \
     flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
     kmod \
     # Cleanup

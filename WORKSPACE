@@ -17,7 +17,7 @@
 workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 # The `name` argument in all `http_archive` rules should be equal to the
 # WORKSPACE name of the corresponding library.
@@ -270,24 +270,6 @@ oci_pull(
     platforms = ["linux/amd64"],
 )
 
-# System image for Oak Containers
-# We build these (see oak_containers/system_image) and push them to the repo below before
-# this snippet can pull them.
-# This image is based on debian:stable-20240612
-oci_pull(
-    name = "oak_containers_sysimage_base",
-    digest = "sha256:4844b899dcb44420d368bfe24dca856d01a8483d6976fbee292227f601d69940",
-    image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-sysimage-base",
-)
-
-# Same as previous, for Nvidia GPU support (see
-# oak_containers/system_image/README.md). Based on debian:stable-20240612 .
-oci_pull(
-    name = "oak_containers_nvidia_sysimage_base",
-    digest = "sha256:9e69576783ad3c0a420bcb978dec53da5de6fd1a304b9b0f9d6c6bc6f188e894",
-    image = "europe-west2-docker.pkg.dev/oak-ci/oak-containers-sysimage-base/oak-containers-nvidia-sysimage-base",
-)
-
 load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
 
 register_expand_template_toolchains()
@@ -296,20 +278,41 @@ load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()
 
+# Expected hashes for our base image tarballs
+SYSROOT_SHA256 = "4c13529ab388e5e8570fb7164757b8255a284bc845b713906b968eb71c4f748e"
+
+BASE_IMAGE_SHA256 = "b826bc141a91ae385f9c45a43eb800f691eca92dc537f0dc5d743c51df459ecb"
+
+NVIDIA_BASE_IMAGE_SHA256 = "ba7f59ebfc71c54c90a54e508dc2acb58d1bd55606d57aa7c771d1cf67dc61f2"
+
 # Experimental sysroot for the build toolchain, based on Oak Containers sysimage.
 #
 # Rebuild it using:
 # $ oak_containers/system_image/build-base.sh sysroot
-# (See oak_containers/system_image/README.md for more details.)
 #
 # Upload it using:
-# $ xz oak_containers/system_image/target/sysroot.tar
-# $ gsutil cp oak_containers/system_image/target/sysroot.tar.xz gs://oak-bins/sysroot/sysroot.tar.xz
+# $ oak_containers/system_image/push-base.sh sysroot
+#
+# (See oak_containers/system_image/README.md for more details.)
 http_archive(
     name = "oak_cc_toolchain_sysroot",
     build_file = "//:toolchain/sysroot.BUILD",
-    sha256 = "770f449151c0871d67ed793e996e225973b94cec6438fd56666cef8fc4ee5dd4",
-    url = "https://storage.googleapis.com/oak-bins/sysroot/sysroot.tar.xz",
+    sha256 = SYSROOT_SHA256,
+    url = "https://storage.googleapis.com/oak-bins/sysroot/" + SYSROOT_SHA256 + ".tar.xz",
+)
+
+http_file(
+    name = "oak_containers_system_image_base",
+    downloaded_file_path = "base-image.tar.xz",
+    sha256 = BASE_IMAGE_SHA256,
+    url = "https://storage.googleapis.com/oak-bins/base-image/" + BASE_IMAGE_SHA256 + ".tar.xz",
+)
+
+http_file(
+    name = "oak_containers_nvidia_system_image_base",
+    downloaded_file_path = "nvidia-base-image.tar.xz",
+    sha256 = NVIDIA_BASE_IMAGE_SHA256,
+    url = "https://storage.googleapis.com/oak-bins/nvidia-base-image/" + NVIDIA_BASE_IMAGE_SHA256 + ".tar.xz",
 )
 
 # Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by

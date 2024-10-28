@@ -26,8 +26,6 @@ def _oci_runtime_bundle_impl(ctx):
     # unpack the container image and then re-pack it into a tar file.
     executable = ctx.actions.declare_file("{}.tar.sh".format(ctx.label.name))
 
-    rootfs_only = "true" if ctx.attr.rootfs_only else "false"
-
     ctx.actions.expand_template(
         template = ctx.file._tpl,
         output = executable,
@@ -35,7 +33,6 @@ def _oci_runtime_bundle_impl(ctx):
         substitutions = {
             "{{umoci}}": umoci.path,
             "{{yq}}": yq.path,
-            "{{rootfs_only}}": rootfs_only,
         },
     )
 
@@ -54,7 +51,6 @@ _oci_runtime_bundle = rule(
     attrs = {
         "image": attr.label(allow_single_file = True),
         "bundle": attr.output(),
-        "rootfs_only": attr.bool(),
         "_tpl": attr.label(
             allow_single_file = True,
             default = ":oci_runtime_bundle.sh.tpl",
@@ -67,20 +63,18 @@ _oci_runtime_bundle = rule(
     ],
 )
 
-def oci_runtime_bundle(name, image, rootfs_only = False, **kwargs):
+def oci_runtime_bundle(name, image, **kwargs):
     """Converts an oci_image to a OCI runtime bundle tar.
 
     Args:
         name: the target name to produce. Building this target will generate a
           "{name}.tar" output file.
         image: the oci_image target to convert.
-        rootfs_only: Only the files under the root fs will be in the final tar.
         **kwargs: additional arguments passed to the rule (e.g., visibility).
     """
     _oci_runtime_bundle(
         name = name,
         bundle = "{}.tar".format(name),
-        rootfs_only = rootfs_only,
         image = image,
         **kwargs
     )
