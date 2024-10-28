@@ -234,6 +234,17 @@
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -263,15 +274,16 @@
 <span class="kw">use </span>oak_attestation::{attester::Attester, dice::DiceAttester};
 <span class="kw">use </span>oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 <span class="kw">use </span>oak_crypto::{
-    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
+    encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
 };
+<span class="kw">use </span>oak_dice::cert::generate_ecdsa_key_pair;
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{endorsements, Endorsements, Evidence, Stage0Measurements},
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
-<span class="kw">use </span>p256::ecdsa::signature::Signer;
+<span class="kw">use </span>p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
 
 <span class="kw">use </span><span class="kw">crate</span>::OrchestratorInterface;
 
@@ -297,7 +309,8 @@
     stage1_system_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
     application_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
     application_config: Vec&lt;u8&gt;,
-    instance_keys: <span class="prelude-ty">Option</span>&lt;KeyPair&gt;,
+    encryption_key_pair: <span class="prelude-ty">Option</span>&lt;(EncryptionKey, Vec&lt;u8&gt;)&gt;,
+    signing_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;,
 }
 
 <span class="macro">macro_rules!</span> builder_param {
@@ -311,12 +324,14 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; StandaloneOrchestratorBuilder&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;StandaloneOrchestrator&gt; {
-        <span class="kw">let </span>instance_keys = <span class="kw">match </span><span class="self">self</span>.instance_keys {
-            <span class="prelude-val">Some</span>(keys) =&gt; keys,
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>(private, public) = oak_containers_attestation::generate_instance_keys();
-                KeyPair { private, public }
-            }
+        <span class="kw">let </span>encryption_key_pair = <span class="kw">match </span><span class="self">self</span>.encryption_key_pair {
+            <span class="prelude-val">Some</span>((public, private)) =&gt; (public, private),
+            <span class="prelude-val">None </span>=&gt; generate_encryption_key_pair(),
+        };
+
+        <span class="kw">let </span>signing_key_pair = <span class="kw">match </span><span class="self">self</span>.signing_key_pair {
+            <span class="prelude-val">Some</span>((public, private)) =&gt; (public, private),
+            <span class="prelude-val">None </span>=&gt; generate_ecdsa_key_pair(),
         };
 
         StandaloneOrchestrator::create(
@@ -324,7 +339,8 @@
             <span class="self">self</span>.stage1_system_image,
             <span class="self">self</span>.application_image,
             <span class="self">self</span>.application_config,
-            instance_keys,
+            encryption_key_pair,
+            signing_key_pair,
         )
     }
 
@@ -332,7 +348,8 @@
     <span class="macro">builder_param!</span>(stage1_system_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
     <span class="macro">builder_param!</span>(application_image: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8]);
     <span class="macro">builder_param!</span>(application_config: Vec&lt;u8&gt;);
-    <span class="macro">builder_param!</span>(instance_keys: <span class="prelude-ty">Option</span>&lt;KeyPair&gt;);
+    <span class="macro">builder_param!</span>(encryption_key_pair: <span class="prelude-ty">Option</span>&lt;(EncryptionKey, Vec&lt;u8&gt;)&gt;);
+    <span class="macro">builder_param!</span>(signing_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;);
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>StandaloneOrchestrator {
@@ -349,7 +366,8 @@
             stage1_system_image: DEFAULT_STAGE1_SYSTEM_IMAGE,
             application_image: DEFAULT_APPLICATION_IMAGE,
             application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
-            instance_keys: <span class="prelude-val">None</span>,
+            encryption_key_pair: <span class="prelude-val">None</span>,
+            signing_key_pair: <span class="prelude-val">None</span>,
         }
     }
 
@@ -358,7 +376,8 @@
         stage1_system_image: <span class="kw-2">&amp;</span>[u8],
         application_image: <span class="kw-2">&amp;</span>[u8],
         application_config: Vec&lt;u8&gt;,
-        instance_keys: KeyPair,
+        encryption_key_pair: (EncryptionKey, Vec&lt;u8&gt;),
+        signing_key_pair: (SigningKey, VerifyingKey),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// Generate the root layer (Stage0) event
         </span><span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
@@ -391,13 +410,16 @@
         <span class="comment">// Add application keys and generate the final evidence
         </span><span class="kw">let </span>evidence = attester.add_application_keys(
             orchestrator_layer_data,
-            <span class="kw-2">&amp;</span>instance_keys.public.encryption_public_key,
-            <span class="kw-2">&amp;</span>instance_keys.public.signing_public_key,
+            <span class="kw-2">&amp;</span>encryption_key_pair.<span class="number">1</span>,
+            <span class="kw-2">&amp;</span>signing_key_pair.<span class="number">1</span>,
             <span class="prelude-val">None</span>,
             <span class="prelude-val">None</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys: instance_keys.private, evidence, application_config })
+        <span class="kw">let </span>instance_private_keys =
+            InstanceKeys { encryption_key: encryption_key_pair.<span class="number">0</span>, signing_key: signing_key_pair.<span class="number">0 </span>};
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys, evidence, application_config })
     }
 
     <span class="kw">pub fn </span>get_instance_encryption_key_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; StandaloneInstanceEncryptionKeyHandle {
