@@ -15,6 +15,7 @@
  */
 
 #include "absl/status/statusor.h"
+#include "cc/crypto/hpke/recipient_context.h"
 #include "proto/session/messages.pb.h"
 
 #ifndef CC_CONTAINERS_SDK_STANDALONE_OAK_STANDALONE_H_
@@ -24,7 +25,11 @@ namespace oak::containers::sdk::standalone {
 
 /// Get an instance of EndorsedEvidence that's valid to use in an Oak Standalone
 /// application.
-absl::StatusOr<session::v1::EndorsedEvidence> GetEndorsedEvidence();
+///
+/// The resulting EndorsedEvidence will contain the public keys from the
+/// provided KeyPair.
+absl::StatusOr<session::v1::EndorsedEvidence> GetEndorsedEvidence(
+    const oak::crypto::KeyPair& key_pair);
 
 }  // namespace oak::containers::sdk::standalone
 

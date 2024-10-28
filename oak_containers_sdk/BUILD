@@ -65,12 +65,15 @@ rust_test(
 
 rust_static_library(
     name = "ffi",
+    testonly = True,
     srcs = [
         "src/ffi/standalone_c.rs",
     ],
     deps = [
         ":oak_containers_sdk",
+        "//oak_crypto",
         "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
     ],
 )

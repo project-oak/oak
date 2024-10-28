@@ -27,15 +27,16 @@ use async_trait::async_trait;
 use oak_attestation::{attester::Attester, dice::DiceAttester};
 use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 use oak_crypto::{
-    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKey},
+    encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},
     hpke::RecipientContext,
 };
+use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_proto_rust::oak::{
     attestation::v1::{endorsements, Endorsements, Evidence, Stage0Measurements},
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
 };
-use p256::ecdsa::signature::Signer;
+use p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
 
 use crate::OrchestratorInterface;
 
@@ -61,7 +62,8 @@ pub struct StandaloneOrchestratorBuilder<'a> {
     stage1_system_image: &'a [u8],
     application_image: &'a [u8],
     application_config: Vec<u8>,
-    instance_keys: Option<KeyPair>,
+    encryption_key_pair: Option<(EncryptionKey, Vec<u8>)>,
+    signing_key_pair: Option<(SigningKey, VerifyingKey)>,
 }
 
 macro_rules! builder_param {
@@ -75,12 +77,14 @@ macro_rules! builder_param {
 
 impl<'a> StandaloneOrchestratorBuilder<'a> {
     pub fn build(self) -> Result<StandaloneOrchestrator> {
-        let instance_keys = match self.instance_keys {
-            Some(keys) => keys,
-            None => {
-                let (private, public) = oak_containers_attestation::generate_instance_keys();
-                KeyPair { private, public }
-            }
+        let encryption_key_pair = match self.encryption_key_pair {
+            Some((public, private)) => (public, private),
+            None => generate_encryption_key_pair(),
+        };
+
+        let signing_key_pair = match self.signing_key_pair {
+            Some((public, private)) => (public, private),
+            None => generate_ecdsa_key_pair(),
         };
 
         StandaloneOrchestrator::create(
@@ -88,7 +92,8 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
             self.stage1_system_image,
             self.application_image,
             self.application_config,
-            instance_keys,
+            encryption_key_pair,
+            signing_key_pair,
         )
     }
 
@@ -96,7 +101,8 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
     builder_param!(stage1_system_image: &'a [u8]);
     builder_param!(application_image: &'a [u8]);
     builder_param!(application_config: Vec<u8>);
-    builder_param!(instance_keys: Option<KeyPair>);
+    builder_param!(encryption_key_pair: Option<(EncryptionKey, Vec<u8>)>);
+    builder_param!(signing_key_pair: Option<(SigningKey, VerifyingKey)>);
 }
 
 impl Default for StandaloneOrchestrator {
@@ -113,7 +119,8 @@ impl StandaloneOrchestrator {
             stage1_system_image: DEFAULT_STAGE1_SYSTEM_IMAGE,
             application_image: DEFAULT_APPLICATION_IMAGE,
             application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
-            instance_keys: None,
+            encryption_key_pair: None,
+            signing_key_pair: None,
         }
     }
 
@@ -122,7 +129,8 @@ impl StandaloneOrchestrator {
         stage1_system_image: &[u8],
         application_image: &[u8],
         application_config: Vec<u8>,
-        instance_keys: KeyPair,
+        encryption_key_pair: (EncryptionKey, Vec<u8>),
+        signing_key_pair: (SigningKey, VerifyingKey),
     ) -> Result<Self> {
         // Generate the root layer (Stage0) event
         let encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
@@ -155,13 +163,16 @@ impl StandaloneOrchestrator {
         // Add application keys and generate the final evidence
         let evidence = attester.add_application_keys(
             orchestrator_layer_data,
-            &instance_keys.public.encryption_public_key,
-            &instance_keys.public.signing_public_key,
+            &encryption_key_pair.1,
+            &signing_key_pair.1,
             None,
             None,
         )?;
 
-        Ok(Self { instance_private_keys: instance_keys.private, evidence, application_config })
+        let instance_private_keys =
+            InstanceKeys { encryption_key: encryption_key_pair.0, signing_key: signing_key_pair.0 };
+
+        Ok(Self { instance_private_keys, evidence, application_config })
     }
 
     pub fn get_instance_encryption_key_handle(&self) -> StandaloneInstanceEncryptionKeyHandle {

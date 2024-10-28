@@ -21,9 +21,14 @@ package(
 
 cc_library(
     name = "oak_standalone",
+    testonly = True,
     srcs = ["oak_standalone.cc"],
     hdrs = ["oak_standalone.h"],
     deps = [
+        "//cc/crypto:client_encryptor",
+        "//cc/crypto:encryption_key",
+        "//cc/crypto:server_encryptor",
+        "//cc/crypto/hpke:recipient_context",
         "//oak_containers_sdk:ffi",
         "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/log",
@@ -36,9 +41,13 @@ cc_test(
     srcs = ["oak_standalone_test.cc"],
     deps = [
         ":oak_standalone",
+        "//cc/attestation/verification:attestation_verifier",
+        "//cc/attestation/verification:insecure_attestation_verifier",
         "//oak_containers_sdk:ffi",
+        "//proto/attestation:verification_cc_proto",
         "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status:status_matchers",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],

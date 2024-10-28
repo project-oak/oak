@@ -18,35 +18,51 @@
 
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
+#include "cc/crypto/hpke/recipient_context.h"
 #include "proto/session/messages.pb.h"
 
+/// Bytes passed to Rust or received from Rust.
+struct Bytes {
+  const char* data;
+  uint64_t len;
+};
+
 extern "C" {
-extern bool standalone_endorsed_evidence(void*,
-                                         bool (*f)(void*, char*, uint32_t));
+extern bool standalone_endorsed_evidence(void*, Bytes*, Bytes*,
+                                         bool (*f)(void*, const Bytes*));
 }
 
 namespace oak::containers::sdk::standalone {
 
+using oak::crypto::KeyPair;
 using oak::session::v1::EndorsedEvidence;
 
 namespace {
-
 /// This is the callback that we pass to the Rust code.
 ///
 /// During the scope of this callback invocation, we can process the data
 /// however we need, but anything we want to hold onto needs to be copied.
 ///
 /// The context object is a pointer to the EndorsedEvidence to populate.
-bool DeserializeEndorsedEvidence(void* evidence, char* data, uint32_t size) {
-  LOG(INFO) << "trying to interpret proto data of size " << size;
-  return (static_cast<EndorsedEvidence*>(evidence))->ParseFromArray(data, size);
+bool DeserializeEndorsedEvidence(void* evidence, const Bytes* data) {
+  LOG(INFO) << "trying to interpret proto data of size " << data->len;
+  bool result = (static_cast<EndorsedEvidence*>(evidence))
+                    ->ParseFromArray(data->data, data->len);
+  LOG(INFO) << "Conversion successful?" << result;
+  return result;
 }
 
 }  // namespace
 
-absl::StatusOr<EndorsedEvidence> GetEndorsedEvidence() {
+absl::StatusOr<EndorsedEvidence> GetEndorsedEvidence(const KeyPair& key_pair) {
   EndorsedEvidence evidence;
-  if (!standalone_endorsed_evidence(&evidence, DeserializeEndorsedEvidence)) {
+  Bytes private_key = {.data = key_pair.private_key.data(),
+                       .len = key_pair.private_key.size()};
+  Bytes public_key = {.data = key_pair.public_key.data(),
+                      .len = key_pair.public_key.size()};
+
+  if (!standalone_endorsed_evidence(&evidence, &private_key, &public_key,
+                                    DeserializeEndorsedEvidence)) {
     return absl::InternalError("Failed to get endorsed evidence");
   }
   return evidence;

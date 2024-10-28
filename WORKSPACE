@@ -26,11 +26,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 # https://github.com/abseil/abseil-cpp
 http_archive(
     name = "com_google_absl",
-    sha256 = "3c743204df78366ad2eaf236d6631d83f6bc928d1705dd0000b872e53b73dc6a",
-    strip_prefix = "abseil-cpp-20240116.1",
+    sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
+    strip_prefix = "abseil-cpp-20240722.0",
     urls = [
         # Abseil LTS 20240116.1
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240116.1.tar.gz",
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.tar.gz",
     ],
 )
 
@@ -53,11 +53,11 @@ http_archive(
 # https://github.com/google/googletest
 http_archive(
     name = "com_google_googletest",
-    sha256 = "983a7f2f4cc2a4d75d94ee06300c46a657291fba965e355d11ab3b6965a7b0e5",
-    strip_prefix = "googletest-b796f7d44681514f58a683a3a71ff17c94edb0c1",
+    sha256 = "8c0ceafa3ea24bf78e3519b7846d99e76c45899aa4dac4d64e7dd62e495de9fd",
+    strip_prefix = "googletest-b514bdc898e2951020cbdca1304b75f5950d1f59",
     urls = [
         # Latest commit for version 1.13.0. This requires at least C++14.
-        "https://github.com/google/googletest/archive/b796f7d44681514f58a683a3a71ff17c94edb0c1.zip",
+        "https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip",
     ],
 )
 

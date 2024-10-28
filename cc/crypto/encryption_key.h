@@ -38,6 +38,7 @@ class EncryptionKeyHandle {
 
 class EncryptionKeyProvider : public EncryptionKeyHandle {
  public:
+  explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
   static absl::StatusOr<EncryptionKeyProvider> Create();
 
   absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
@@ -47,8 +48,6 @@ class EncryptionKeyProvider : public EncryptionKeyHandle {
 
  private:
   KeyPair key_pair_;
-
-  explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
 };
 
 }  // namespace oak::crypto
