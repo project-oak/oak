@@ -300,24 +300,30 @@ clang-tidy:
 bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)"
 wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
-bazel: test-workspace std-crates bare-metal-crates
+bazel: test-workspace std-crates bare-metal-crates wasm-crates
 
 std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
-    bazel build {{BAZEL_CONFIG_FLAG}} -- //...:all
-    bazel test {{BAZEL_CONFIG_FLAG}} --test_output=errors -- //...:all
+    # bazel test will build all targets as well unless --build_tests_only is specified.
+    # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
+    bazel test {{BAZEL_CONFIG_FLAG}} //...:all
 
 test-workspace:
     # Test Oak as a dependency in the test workspace
     # Some dependencies aren't properly exposed yet, so just testing a subset of targets
-    cd bazel/test_workspace && ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build {{BAZEL_CONFIG_FLAG}} @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
+    cd bazel/test_workspace && \
+        ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build \
+            {{BAZEL_CONFIG_FLAG}} @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
 bare-metal-crates:
     #!/bin/bash
     set -o pipefail
-    # Some crates also need to be built for x86_64-unknown-none and for wasm32-unknown-unknown.
     echo "Building bare metal crates": $(bazel query "{{bare_metal_crates_query}}")
     bazel query "{{bare_metal_crates_query}}" | xargs bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-unknown-none
+
+wasm-crates:
+    #!/bin/bash
+    set -o pipefail
     echo "Building wasm crates": $(bazel query "{{wasm_crates_query}}")
     bazel query "{{wasm_crates_query}}" | xargs bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:wasm32-unknown-unknown
 
