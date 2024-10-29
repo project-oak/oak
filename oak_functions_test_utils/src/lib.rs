@@ -370,3 +370,31 @@ pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process:
 pub fn skip_test() -> bool {
     std::env::var("OAK_KVM_TESTS").unwrap_or_default().to_lowercase() == "skip"
 }
+
+/// Periodically try to create an OakFunctionsClient until it works.
+///
+/// It will give up completely after `connection_timeout`
+pub async fn create_client(
+    port: u16,
+    connection_timeout: std::time::Duration,
+) -> OakFunctionsClient {
+    let interval = std::time::Duration::from_secs(5);
+    let attempts = connection_timeout.div_duration_f32(interval) as u32;
+    for _ in 1..attempts {
+        let client_result = OakFunctionsClient::new(
+            &format!("http://localhost:{port}"),
+            &InsecureAttestationVerifier {},
+        )
+        .await;
+
+        match client_result {
+            Ok(client) => return client,
+            Err(e) => {
+                println!("Client not yet ready: {e:?}");
+                // Wait for the server to start up.
+                tokio::time::sleep(interval).await;
+            }
+        };
+    }
+    panic!("Failed to create client");
+}

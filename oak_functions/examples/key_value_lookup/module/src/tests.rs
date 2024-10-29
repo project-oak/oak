@@ -19,11 +19,9 @@
 
 extern crate test;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use maplit::hashmap;
-use oak_client::verifier::InsecureAttestationVerifier;
-use oak_functions_client::OakFunctionsClient;
 use oak_functions_test_utils::make_request;
 use test::Bencher;
 
@@ -100,26 +98,10 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         lookup_data_file.path().to_str().unwrap(),
     );
 
-    let uri = format!("http://localhost:{server_port}/");
-
-    // Try to connect while waiting for the server to start up.
-    let timeout = Duration::from_secs(180);
-    let start = Instant::now();
-
-    let mut client = loop {
-        log::debug!("Waiting for server at {}...", uri);
-        let maybe_client =
-            runtime.block_on(OakFunctionsClient::new(&uri, &InsecureAttestationVerifier));
-        if maybe_client.is_ok() {
-            log::debug!("Connected!");
-            break maybe_client.unwrap();
-        } else {
-            if (Instant::now() - start) > timeout {
-                panic!("couldn't create client");
-            }
-            std::thread::sleep(Duration::from_secs(5));
-        }
-    };
+    let mut client = runtime.block_on(oak_functions_test_utils::create_client(
+        server_port,
+        std::time::Duration::from_secs(120),
+    ));
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {

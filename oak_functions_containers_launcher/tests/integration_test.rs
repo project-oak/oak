@@ -31,14 +31,8 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
         );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(120)).await;
-
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
+    let mut client =
+        oak_functions_test_utils::create_client(port, std::time::Duration::from_secs(120)).await;
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -83,14 +77,8 @@ async fn test_launcher_echo() {
         );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(210)).await;
-
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
+    let mut client =
+        oak_functions_test_utils::create_client(port, std::time::Duration::from_secs(120)).await;
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");

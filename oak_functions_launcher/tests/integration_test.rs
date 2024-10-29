@@ -17,8 +17,6 @@
 
 use std::{io::Write, time::Duration};
 
-use oak_client::verifier::InsecureAttestationVerifier;
-use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
 use oak_launcher_utils::launcher;
 use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
@@ -40,14 +38,7 @@ async fn test_launcher_key_value_lookup() {
     );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(20)).await;
-
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
+    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -69,14 +60,7 @@ async fn test_launcher_echo() {
     );
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(60)).await;
-
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
+    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
