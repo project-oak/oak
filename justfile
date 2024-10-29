@@ -48,7 +48,7 @@ oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
-    target/x86_64-unknown-linux-gnu/release/oak_functions_containers_launcher \
+    artifacts/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
         --stage0-binary=generated/stage0_bin \
         --kernel=bazel-bin/oak_containers/kernel/bzImage \
@@ -64,7 +64,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --communication-channel={{communication_channel}}
 
 run_oak_functions_launcher wasm_path port lookup_data_path:
-    target/x86_64-unknown-linux-gnu/release/oak_functions_launcher \
+    artifacts/oak_functions_launcher \
         --bios-binary=generated/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
@@ -253,10 +253,16 @@ oak_functions_containers_app_bundle_tar:
         artifacts/oak_functions_containers_app_bundle_insecure.tar
 
 oak_functions_containers_launcher:
-    env cargo build --release --package='oak_functions_containers_launcher'
+    bazel build {{BAZEL_CONFIG_FLAG}} -c opt oak_functions_containers_launcher
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_containers_launcher/oak_functions_containers_launcher \
+        artifacts/oak_functions_containers_launcher
 
 oak_functions_launcher:
-    env cargo build --release --package='oak_functions_launcher'
+    bazel build {{BAZEL_CONFIG_FLAG}} -c opt oak_functions_launcher
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_launcher/oak_functions_launcher \
+        artifacts/oak_functions_launcher
 
 all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_functions_containers_launcher oak_functions_launcher
 
