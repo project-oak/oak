@@ -54,7 +54,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --kernel=bazel-bin/oak_containers/kernel/bzImage \
         --initrd=target/stage1.cpio \
         --system-image=artifacts/containers_system_image.tar.xz \
-        --container-bundle=oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar \
+        --container-bundle=bazel-bin/oak_functions_containers_app/bundle.tar \
         --ramdrive-size=1000000 \
         --memory-size=2G \
         --wasm={{wasm_path}} \
@@ -243,8 +243,14 @@ all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_co
 
 # Oak Functions Containers entry point.
 
-oak_functions_containers_container_bundle_tar:
-    env --chdir=oak_functions_containers_container DOCKER_BUILDKIT=0 bash build_container_bundle
+oak_functions_containers_app_bundle_tar:
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_app:bundle oak_functions_containers_app:bundle_insecure
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_containers_app/bundle.tar \
+        artifacts/oak_functions_containers_app_bundle.tar
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_containers_app/bundle_insecure.tar \
+        artifacts/oak_functions_containers_app_bundle_insecure.tar
 
 oak_functions_containers_launcher:
     env cargo build --release --package='oak_functions_containers_launcher'
@@ -252,7 +258,7 @@ oak_functions_containers_launcher:
 oak_functions_launcher:
     env cargo build --release --package='oak_functions_launcher'
 
-all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher oak_functions_launcher
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_functions_containers_launcher oak_functions_launcher
 
 ensure_no_std package:
     RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
@@ -276,7 +282,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_co
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
-kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar containers_placer_artifacts
+kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_app_bundle_tar containers_placer_artifacts
     OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --nocapture --package='oak_containers_hello_world_untrusted_app'
 
 # This list should contain all crates that either a) have tests and are not bazelified yet or b) have bench tests (not supported on Bazel yet).

@@ -34,8 +34,8 @@ readonly generated_binaries=(
     ./artifacts/containers_system_image.tar.xz
     ./artifacts/containers_nvidia_system_image.tar.xz
     ./target/rust_hello_world_trusted_bundle.tar
-    ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar
-    ./oak_functions_containers_container/target/oak_functions_insecure_container_oci_filesystem_bundle.tar
+    ./artifacts/oak_functions_containers_app_bundle.tar
+    ./artifacts/oak_functions_containers_app_bundle_insecure.tar
 )
 readonly binary_names=(
     oak_containers_stage1
