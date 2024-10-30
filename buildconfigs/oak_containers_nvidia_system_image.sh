@@ -14,5 +14,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  artifacts/containers_nvidia_system_image.tar.xz
+  artifacts/oak_containers_nvidia_system_image.tar.xz
 )

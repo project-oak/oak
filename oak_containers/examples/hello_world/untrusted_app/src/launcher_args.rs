@@ -21,7 +21,7 @@ const ROOT: &str = env!("WORKSPACE_ROOT");
 pub fn launcher_args(
     container_bundle: impl Into<std::path::PathBuf>,
 ) -> oak_containers_launcher::Args {
-    let system_image = format!("{ROOT}/artifacts/containers_system_image.tar.xz",);
+    let system_image = format!("{ROOT}/artifacts/oak_containers_system_image.tar.xz",);
     let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
     let stage0_binary = format!("{ROOT}generated/stage0_bin").into();
     let kernel_dir = std::env::var("LINUX_KERNEL")

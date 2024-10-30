@@ -53,7 +53,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --stage0-binary=generated/stage0_bin \
         --kernel=bazel-bin/oak_containers/kernel/bzImage \
         --initrd=target/stage1.cpio \
-        --system-image=artifacts/containers_system_image.tar.xz \
+        --system-image=artifacts/oak_containers_system_image.tar.xz \
         --container-bundle=bazel-bin/oak_functions_containers_app/bundle.tar \
         --ramdrive-size=1000000 \
         --memory-size=2G \
@@ -208,13 +208,13 @@ oak_containers_system_image: oak_containers_system_image_binaries
     bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
-        artifacts/containers_system_image.tar.xz
+        artifacts/oak_containers_system_image.tar.xz
 
 oak_containers_nvidia_system_image: oak_containers_system_image
     bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_nvidia_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
-        artifacts/containers_nvidia_system_image.tar.xz
+        artifacts/oak_containers_nvidia_system_image.tar.xz
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
