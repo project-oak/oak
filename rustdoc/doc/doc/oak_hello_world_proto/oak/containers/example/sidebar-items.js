@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["trusted_application_client","trusted_application_server","untrusted_application_client","untrusted_application_server"]};

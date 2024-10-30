@@ -454,7 +454,7 @@
 });
 
 <span class="attr">#[cfg(not(feature = <span class="string">"bazel"</span>))]
-</span><span class="kw">pub static </span>STAGE0: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"generated"</span>, <span class="string">"stage0_bin"</span>]));
+</span><span class="kw">pub static </span>STAGE0: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">"artifacts"</span>, <span class="string">"stage0_bin"</span>]));
 
 <span class="kw">use </span>std::{
     collections::HashMap, env, future::Future, io::Write, path::PathBuf, pin::Pin, process::Stdio,
