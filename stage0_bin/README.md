@@ -46,7 +46,7 @@ The easiest way to create the BIOS blob is to use the `just` command:
 just stage0_bin
 ```
 
-The resulting file (`generated/stage0_bin`) should be exactly `BIOS_SIZE`
+The resulting file (`artifacts/stage0_bin`) should be exactly `BIOS_SIZE`
 (defined in `layout.ld`) in size. The size of the BIOS image should not exceed 2
 MiB.
 
@@ -55,7 +55,7 @@ To use the binary, pass it to `qemu -bios`; for example:
 ```shell
 qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm,acpi=on" -m 1G \
   -nographic -nodefaults -no-reboot -serial stdio \
-  -bios "generated/stage0_bin"
+  -bios "artifacts/stage0_bin"
 ```
 
 ## Loading a kernel

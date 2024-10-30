@@ -22,7 +22,7 @@ package(
 )
 
 copy_file(
-    name = "bzImage",
+    name = "kernel",
     src = "@nix_kernels//:bzImage",
     out = "bzImage",
 )

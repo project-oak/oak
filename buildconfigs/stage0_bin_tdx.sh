@@ -13,5 +13,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  generated/stage0_bin_tdx
+  artifacts/stage0_bin_tdx
 )

@@ -42,7 +42,10 @@ async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
 
     let args = {
-        let mut args = Args { server_type: ServerType::Grpc, launcher_args: launcher_args("") };
+        let mut args = Args {
+            server_type: ServerType::Grpc,
+            launcher_args: launcher_args("").expect("failed to create launcher args"),
+        };
         args.update_from(std::env::args_os());
         args
     };

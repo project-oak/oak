@@ -13,24 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "bazel")]
-const ROOT: &str = "";
-#[cfg(not(feature = "bazel"))]
-const ROOT: &str = env!("WORKSPACE_ROOT");
+use oak_file_utils::data_path;
 
 pub fn launcher_args(
     container_bundle: impl Into<std::path::PathBuf>,
-) -> oak_containers_launcher::Args {
-    let system_image = format!("{ROOT}/artifacts/oak_containers_system_image.tar.xz",);
+) -> anyhow::Result<oak_containers_launcher::Args> {
+    let container_bundle = container_bundle.into();
     let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
-    let stage0_binary = format!("{ROOT}generated/stage0_bin").into();
-    let kernel_dir = std::env::var("LINUX_KERNEL")
-        .expect("LINUX_KERNEL environment variable should point to the nix-built linux kernel");
-    let kernel = format!("{kernel_dir}/bzImage").into();
-    let initrd = format!("{ROOT}/target/stage1.cpio").into();
-    oak_containers_launcher::Args {
-        system_image: system_image.into(),
-        container_bundle: container_bundle.into(),
+    let system_image = data_path("oak_containers/system_image/oak_containers_system_image.tar.xz");
+    anyhow::ensure!(system_image.exists(), "System image not found at {system_image:?}");
+    let stage0_binary = data_path("stage0_bin/stage0_bin");
+    anyhow::ensure!(stage0_binary.exists(), "Stage0 not found at {stage0_binary:?}");
+    let kernel = data_path("oak_containers/kernel/bzImage");
+    anyhow::ensure!(kernel.exists(), "Kernel not found at {kernel:?}");
+    let initrd = data_path("target/stage1.cpio");
+    anyhow::ensure!(
+        initrd.exists(),
+        "\n\nStage1 not found at {initrd:?}\n\nDid you run `just stage1_cpio`?\n"
+    );
+    Ok(oak_containers_launcher::Args {
+        system_image,
+        container_bundle,
         application_config: Vec::new(),
         qemu_params: oak_containers_launcher::QemuParams {
             vmm_binary,
@@ -46,5 +49,5 @@ pub fn launcher_args(
             vm_type: oak_containers_launcher::QemuVmType::Default,
         },
         communication_channel: oak_containers_launcher::ChannelType::default(),
-    }
+    })
 }

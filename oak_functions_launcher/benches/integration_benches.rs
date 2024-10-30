@@ -55,7 +55,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: ["..", "generated", "stage0_bin"].iter().collect(),
+        bios_binary: ["..", "artifacts", "stage0_bin"].iter().collect(),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),

@@ -167,3 +167,11 @@ filegroup(
     visibility =
         ["//:internal"],
 )
+
+# This gives us access to the cargo `target` dir for targets that are still not
+# bazelified, so we can pull stage1.cpio out of it, or provide a useful error
+# message if it's not there. See usage sites for relevant bugs.
+filegroup(
+    name = "cargo-generated",
+    srcs = glob(["target/**"]),
+)

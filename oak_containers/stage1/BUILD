@@ -27,6 +27,7 @@ rust_binary(
     name = "oak_containers_stage1",
     srcs = glob(["src/**"]),
     features = ["no_libstdcxx"],
+    target_compatible_with = ["@platforms//:incompatible"],
     deps = [
         "//oak_attestation",
         "//oak_containers/channel",

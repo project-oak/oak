@@ -207,12 +207,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atomic-waker"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,8 +224,8 @@ dependencies = [
  "bytes",
  "futures-util",
  "http 0.2.11",
- "http-body 0.4.6",
- "hyper 0.14.28",
+ "http-body",
+ "hyper",
  "itoa",
  "matchit",
  "memchr",
@@ -256,7 +250,7 @@ dependencies = [
  "bytes",
  "futures-util",
  "http 0.2.11",
- "http-body 0.4.6",
+ "http-body",
  "mime",
  "rustversion",
  "tower-layer",
@@ -1373,25 +1367,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h2"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa82e28a107a8cc405f0839610bdc9b15f1e25ec7d696aa5cf173edbcb1486ab"
-dependencies = [
- "atomic-waker",
- "bytes",
- "fnv",
- "futures-core",
- "futures-sink",
- "http 1.1.0",
- "indexmap 2.1.0",
- "slab",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "half"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1539,29 +1514,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-body"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
-dependencies = [
- "bytes",
- "http 1.1.0",
-]
-
-[[package]]
-name = "http-body-util"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793429d76616a256bcb62c2a2ec2bed781c8307e797e2598c50010f2bee2544f"
-dependencies = [
- "bytes",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.1",
- "pin-project-lite",
-]
-
-[[package]]
 name = "http-range-header"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1595,9 +1547,9 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.3.26",
+ "h2",
  "http 0.2.11",
- "http-body 0.4.6",
+ "http-body",
  "httparse",
  "httpdate",
  "itoa",
@@ -1606,27 +1558,6 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
- "want",
-]
-
-[[package]]
-name = "hyper"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50dfd22e0e76d0f662d429a5f80fcaf3855009297eab6a0a9f8543834744ba05"
-dependencies = [
- "bytes",
- "futures-channel",
- "futures-util",
- "h2 0.4.5",
- "http 1.1.0",
- "http-body 1.0.1",
- "httparse",
- "httpdate",
- "itoa",
- "pin-project-lite",
- "smallvec",
- "tokio",
  "want",
 ]
 
@@ -1636,30 +1567,10 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbb958482e8c7be4bc3cf272a766a2b0bf1a6755e7a6ae777f017a31d11b13b1"
 dependencies = [
- "hyper 0.14.28",
+ "hyper",
  "pin-project-lite",
  "tokio",
  "tokio-io-timeout",
-]
-
-[[package]]
-name = "hyper-util"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cde7055719c54e36e95e8719f95883f22072a48ede39db7fc17a4e1d5281e9b9"
-dependencies = [
- "bytes",
- "futures-channel",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.1",
- "hyper 1.4.1",
- "pin-project-lite",
- "socket2",
- "tokio",
- "tower",
- "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -2430,38 +2341,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_containers_hello_world_untrusted_app"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "bytes",
- "clap",
- "env_logger",
- "futures",
- "http-body-util",
- "hyper 1.4.1",
- "hyper-util",
- "log",
- "oak_client",
- "oak_client_tonic",
- "oak_containers_launcher",
- "oak_crypto",
- "oak_functions_test_utils",
- "oak_grpc_utils",
- "oak_hello_world_proto",
- "oak_proto_rust",
- "once_cell",
- "prost",
- "tokio",
- "tokio-stream",
- "tonic",
- "tower",
- "which 4.4.2",
-]
-
-[[package]]
 name = "oak_containers_hello_world_web_client"
 version = "0.1.0"
 dependencies = [
@@ -2961,7 +2840,7 @@ dependencies = [
  "anyhow",
  "command-group",
  "http 0.2.11",
- "hyper 0.14.28",
+ "hyper",
  "log",
  "nix 0.28.0",
  "oak_client",
@@ -2996,17 +2875,6 @@ dependencies = [
  "prost",
  "tempfile",
  "tonic-build",
-]
-
-[[package]]
-name = "oak_hello_world_proto"
-version = "0.1.0"
-dependencies = [
- "oak_grpc_utils",
- "oak_proto_rust",
- "prost",
- "prost-types",
- "tonic",
 ]
 
 [[package]]
@@ -4831,10 +4699,10 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "flate2",
- "h2 0.3.26",
+ "h2",
  "http 0.2.11",
- "http-body 0.4.6",
- "hyper 0.14.28",
+ "http-body",
+ "hyper",
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
@@ -4873,8 +4741,8 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "http 0.2.11",
- "http-body 0.4.6",
- "hyper 0.14.28",
+ "http-body",
+ "hyper",
  "pin-project",
  "tokio-stream",
  "tonic",
@@ -4915,7 +4783,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "http 0.2.11",
- "http-body 0.4.6",
+ "http-body",
  "http-range-header",
  "pin-project-lite",
  "tower-layer",

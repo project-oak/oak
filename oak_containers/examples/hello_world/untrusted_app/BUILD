@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//:internal"],
@@ -22,7 +22,7 @@ package(
 )
 
 rust_library(
-    name = "lib",
+    name = "oak_containers_hello_world_untrusted_app",
     srcs = [
         "src/app_client.rs",
         "src/demo_transport.rs",
@@ -32,7 +32,6 @@ rust_library(
         "src/service.rs",
         "tests/integration_test.rs",
     ],
-    crate_features = ["bazel"],
     crate_name = "oak_containers_hello_world_untrusted_app",
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
@@ -42,6 +41,7 @@ rust_library(
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers/launcher:lib",
         "//oak_crypto",
+        "//oak_file_utils",
         "//oak_functions_test_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
@@ -60,11 +60,21 @@ rust_library(
 )
 
 rust_binary(
-    name = "oak_containers_hello_world_untrusted_app",
+    name = "bin/oak_containers_hello_world_untrusted_app",
     srcs = ["src/main.rs"],
-    crate_features = ["bazel"],
+    data = [
+        # This gives us access to the cargo `target` dir, so we can pull stage1.cpio out of
+        # it, or provide a useful error message if it's not there.
+        # We can replace this with a stage1 bazel dependency after b/350019075 is fixed.
+        "//:cargo-generated",
+        "//cc/containers/hello_world_trusted_app:bundle",
+        "//oak_containers/examples/hello_world/trusted_app:bundle",
+        "//oak_containers/kernel",
+        "//oak_containers/system_image:oak_containers_system_image",
+        "//stage0_bin",
+    ],
     deps = [
-        ":lib",
+        ":oak_containers_hello_world_untrusted_app",
         "//oak_client",
         "//oak_containers/launcher:lib",
         "//oak_crypto",
@@ -73,5 +83,36 @@ rust_binary(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+rust_test_suite(
+    name = "oak_containers_hello_world_untrusted_app_tests",
+    srcs = ["tests/integration_test.rs"],
+    data = [
+        # This gives us access to the cargo `target` dir, so we can pull stage1.cpio out of
+        # it, or provide a useful error message if it's not there.
+        # We can replace this with a stage1 bazel dependency after b/350019075 is fixed.
+        "//:cargo-generated",
+        "//cc/containers/hello_world_trusted_app:bundle",
+        "//oak_containers/examples/hello_world/trusted_app:bundle",
+        "//oak_containers/kernel",
+        "//oak_containers/system_image:oak_containers_system_image",
+        "//stage0_bin",
+    ],
+    # In order to build this, you need to first run:
+    # just stage1_cpio
+    tags = ["manual"],
+    deps = [
+        ":oak_containers_hello_world_untrusted_app",
+        "//oak_client",
+        "//oak_client/tonic:oak_client_tonic",
+        "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
+        "//oak_containers/launcher:lib",
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )

@@ -55,7 +55,7 @@ oak_functions_insecure_enclave_app:
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
     artifacts/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
-        --stage0-binary=generated/stage0_bin \
+        --stage0-binary=artifacts/stage0_bin \
         --kernel=bazel-bin/oak_containers/kernel/bzImage \
         --initrd=target/stage1.cpio \
         --system-image=artifacts/oak_containers_system_image.tar.xz \
@@ -70,7 +70,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
 
 run_oak_functions_launcher wasm_path port lookup_data_path:
     artifacts/oak_functions_launcher \
-        --bios-binary=generated/stage0_bin \
+        --bios-binary=artifacts/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
         --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app \
@@ -165,7 +165,7 @@ stage0_bin:
     mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin/stage0_bin \
-        generated
+        artifacts/stage0_bin
 
 stage0_bin_tdx:
     bazel build {{BAZEL_CONFIG_FLAG}} //stage0_bin_tdx:stage0_bin_tdx \
@@ -175,25 +175,24 @@ stage0_bin_tdx:
     mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
-        generated
+        artifacts/stage0_bin_tdx
 
 stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
     rm --recursive --force {{output_dir}}
     mkdir --parents {{output_dir}}
     cargo run --package=snp_measurement --quiet -- \
         --vcpu-count=1,2,4,8,16,32,64 \
-        --stage0-rom=generated/stage0_bin \
+        --stage0-rom=bazel-bin/stage0_bin/stage0_bin \
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
     env --chdir=oak_containers/stage1 make
+    cp --force --preserve=timestamps --no-preserve=mode \
+        target/stage1.cpio \
+        artifacts/stage1.cpio
 
 oak_containers_kernel:
-    bazel build //oak_containers/kernel/...
-
-    cp --force --preserve=timestamps \
-        ./bazel-bin/oak_containers/kernel/bzImage \
-        artifacts/oak_containers_kernel
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/kernel/...
 
     just bzimage_provenance_subjects \
         oak_containers_kernel \
@@ -236,7 +235,7 @@ bazel_wasm name:
 oak_containers_hello_world_container_bundle_tar:
     env bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt //oak_containers/examples/hello_world/trusted_app:bundle.tar
     # bazel-bin symlink doesn't exist outside of the docker container, this makes the file available to the kokoro script.
-    cp --force --preserve=timestamps bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar target/rust_hello_world_trusted_bundle.tar
+    cp --force --preserve=timestamps bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar artifacts/rust_hello_world_trusted_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
     env bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt //cc/containers/hello_world_trusted_app:bundle.tar
@@ -244,18 +243,10 @@ cc_oak_containers_hello_world_container_bundle_tar:
 oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
 
-all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_nvidia_system_image oak_containers_hello_world_container_bundle_tar cc_oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
-
 # Oak Functions Containers entry point.
 
 oak_functions_containers_app_bundle_tar:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_app:bundle oak_functions_containers_app:bundle_insecure
-    cp --preserve=timestamps --force \
-        bazel-bin/oak_functions_containers_app/bundle.tar \
-        artifacts/oak_functions_containers_app_bundle.tar
-    cp --preserve=timestamps --force \
-        bazel-bin/oak_functions_containers_app/bundle_insecure.tar \
-        artifacts/oak_functions_containers_app_bundle_insecure.tar
 
 oak_functions_containers_launcher:
     bazel build {{BAZEL_CONFIG_FLAG}} -c opt oak_functions_containers_launcher
@@ -293,8 +284,10 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_co
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
-kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_app_bundle_tar containers_placer_artifacts
-    OAK_CONTAINERS_BINARIES_ALREADY_BUILT=1 RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --nocapture --package='oak_containers_hello_world_untrusted_app'
+oak_containers_tests:
+    bazel test {{BAZEL_CONFIG_FLAG}} //oak_containers/... //oak_containers/examples/hello_world/untrusted_app:oak_containers_hello_world_untrusted_app_tests
+
+kokoro_oak_containers: stage1_cpio oak_functions_containers_app_bundle_tar oak_containers_tests containers_placer_artifacts
 
 # This list should contain all crates that either a) have tests and are not bazelified yet or b) have bench tests (not supported on Bazel yet).
 # TODO: b/349587489 - Bazelify oak_functions_containers_launcher
@@ -302,7 +295,7 @@ kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_app_
 # TODO: b/349572480 - Enable benchmarks in Bazel and remove oak_functions_service and oak_functions_launcher (after integration tests bazelified) from this list.
 cargo_test_packages_arg := "-p key_value_lookup -p oak_functions_containers_launcher -p oak_functions_launcher -p oak_functions_service -p oak_echo_service -p oak_session_wasm"
 
-kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel oak_orchestrator stage0_bin oak_functions_enclave_app all_wasm_test_crates build-clients
+kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel oak_orchestrator oak_functions_enclave_app all_wasm_test_crates build-clients
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
 
 clang-tidy:
@@ -451,14 +444,31 @@ bazel_build_opt target:
     bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt "{{target}}"
 
 containers_placer_artifacts:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-        oak_containers/agent:bin/oak_containers_agent \
-        oak_containers/orchestrator:bin/oak_containers_orchestrator \
-        oak_containers/syslogd
     # We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
-    cp --force --preserve=timestamps ./bazel-bin/oak_containers/agent/bin/oak_containers_agent artifacts
-    cp --force --preserve=timestamps ./bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
-    cp --force --preserve=timestamps ./bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
+    # TODO: b/376322165 - Remove the need for this
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
+        artifacts/oak_containers_system_image.tar.xz
+
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
+        artifacts/oak_containers_nvidia_system_image.tar.xz
+
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar \
+        artifacts/rust_hello_world_trusted_bundle.tar
+
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_containers_app/bundle.tar \
+        artifacts/oak_functions_containers_app_bundle.tar
+    cp --preserve=timestamps --force \
+        bazel-bin/oak_functions_containers_app/bundle_insecure.tar \
+        artifacts/oak_functions_containers_app_bundle_insecure.tar
+
+    cp --force --preserve=timestamps bazel-bin/oak_containers/kernel/bzImage artifacts/oak_containers_kernel
+    cp --force --preserve=timestamps bazel-bin/oak_containers/agent/bin/oak_containers_agent artifacts
+    cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
+    cp --force --preserve=timestamps bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
 
 # The following _for_provenance targets are used by buildconfigs.
 bazel_build_for_provenance package target: (bazel_build_opt package+":"+target)

@@ -16,7 +16,6 @@ members = [
   "oak_client",
   "oak_client/tonic",
   "oak_containers/agent",
-  "oak_containers/examples/hello_world/untrusted_app",
   "oak_containers/examples/hello_world/web_client",
   "oak_containers/channel",
   "oak_containers/launcher",

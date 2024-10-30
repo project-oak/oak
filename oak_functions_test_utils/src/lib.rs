@@ -54,7 +54,7 @@ pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 #[cfg(not(feature = "bazel"))]
-pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["generated", "stage0_bin"]));
+pub static STAGE0: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["artifacts", "stage0_bin"]));
 
 use std::{
     collections::HashMap, env, future::Future, io::Write, path::PathBuf, pin::Pin, process::Stdio,

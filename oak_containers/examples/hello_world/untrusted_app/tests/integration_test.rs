@@ -16,7 +16,6 @@
 //! Integration test that launches the trusted app and invokes it.
 
 use std::{
-    env,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::PathBuf,
     sync::Once,
@@ -59,7 +58,8 @@ async fn run_hello_world_test<TC: TransportCreator<T>, T: Transport + EvidencePr
         return;
     }
 
-    let args = launcher_args(container_bundle);
+    assert!(container_bundle.exists(), "Couldn't find container bundle at {container_bundle:?}");
+    let args = launcher_args(container_bundle).expect("failed to create launcher args");
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await.expect("couldn't bind listener");
@@ -114,16 +114,11 @@ impl TransportCreator<DemoTransport> for DemoTransportCreator {
 }
 
 fn rust_hello_world_bundle() -> PathBuf {
-    format!(
-        "{}bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar",
-        env!("WORKSPACE_ROOT")
-    )
-    .into()
+    "oak_containers/examples/hello_world/trusted_app/bundle.tar".into()
 }
 
 fn cc_hello_world_bundle() -> PathBuf {
-    format!("{}bazel-bin/cc/containers/hello_world_trusted_app/bundle.tar", env!("WORKSPACE_ROOT"))
-        .into()
+    "cc/containers/hello_world_trusted_app/bundle.tar".into()
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

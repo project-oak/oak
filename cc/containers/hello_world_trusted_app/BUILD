@@ -60,9 +60,7 @@ pkg_tar(
     name = "tar",
     srcs = [":main"],
     package_dir = "/usr/local/bin",
-    visibility = [
-        "//oak_containers/exmamples/hello_world/untrusted_app:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 oci_image(
@@ -75,4 +73,5 @@ oci_image(
 oci_runtime_bundle(
     name = "bundle",
     image = ":image",
+    visibility = ["//visibility:public"],
 )
