@@ -21,7 +21,7 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # Copy the generated binaries to Placer. The timestamps are used to convey
 # the creation time.
 readonly generated_binaries=(
-    enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app
+    artifacts/enclave_apps/key_xor_test_app
     generated/client_app.apk
     enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
     enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app

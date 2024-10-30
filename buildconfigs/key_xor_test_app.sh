@@ -17,5 +17,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app
+  artifacts/enclave_apps/key_xor_test_app
 )

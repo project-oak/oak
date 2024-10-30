@@ -31,18 +31,23 @@ show-bazel-flag:
 export CARGO_WORKSPACE_LIST_CMD := 'grep -l "\[workspace" **/Cargo.toml --exclude="third_party/*"'
 export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
 
-key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
 oak_multi_process_test: (build_enclave_app "oak_multi_process_test")
 oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
 oak_orchestrator: (build_enclave_app "oak_orchestrator")
 
-all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app oak_orchestrator
+all_enclave_apps: build_key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app oak_orchestrator
 
 # Build a single enclave app, given its name.
 build_enclave_app name:
     env --chdir=enclave_apps/{{name}} cargo build --release
+
+build_key_xor_test_app:
+    bazel build //enclave_apps/key_xor_test_app
+    mkdir --parents artifacts/enclave_apps/
+    cp -f bazel-bin/enclave_apps/key_xor_test_app/key_xor_test_app artifacts/enclave_apps/
+
 
 oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
