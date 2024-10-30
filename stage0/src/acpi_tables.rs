@@ -17,7 +17,12 @@
 /// Defines ACPI structures based on ACPI specification.
 /// You can find this specification here:
 /// https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html
-use core::{marker::PhantomData, mem::size_of, ops::Deref, slice};
+use core::{
+    marker::PhantomData,
+    mem::size_of,
+    ops::{Deref, Range},
+    slice,
+};
 
 use bitflags::bitflags;
 use x86_64::VirtAddr;
@@ -30,7 +35,7 @@ use crate::acpi::{EBDA, EBDA_SIZE};
 /// Used to locate either the RSDT or XSDT in memory.
 ///
 /// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-#[derive(FromZeroes, FromBytes, AsBytes)]
+#[derive(FromZeroes, FromBytes, AsBytes, Debug)]
 #[repr(C, packed)]
 pub struct Rsdp {
     /// Signature: "RSD PTR " (note the trailing space).
@@ -174,14 +179,17 @@ impl DescriptionHeader {
             .expect("invalid ACPI table signature; not valid UTF-8")
     }
 
+    /// Returns the address range where this table is located.
+    pub fn addr_range(&self) -> Range<usize> {
+        let base = self as *const _ as usize;
+        base..base + self.length as usize
+    }
+
     fn validate(&self) -> Result<(), &'static str> {
         // Safety: we're never dereferencing this pointer.
         let ebda_base = unsafe { EBDA.as_ptr() } as usize;
         let ebda = ebda_base..ebda_base + EBDA_SIZE;
-        let table = {
-            let base = self as *const _ as usize;
-            base..base + self.length as usize
-        };
+        let table = self.addr_range();
 
         if !ebda.contains(&table.start) || !ebda.contains(&table.end) {
             return Err("ACPI table falls outside EBDA");
@@ -201,6 +209,7 @@ impl DescriptionHeader {
 /// Root System Description Table.
 ///
 /// See Section 5.2.7 in the ACPI specification for more details.
+#[derive(Debug)]
 #[repr(C, packed)]
 pub struct Rsdt {
     header: DescriptionHeader,
@@ -240,7 +249,7 @@ impl Rsdt {
         Ok(())
     }
 
-    fn entries(&self) -> &[u32] {
+    pub fn entries(&self) -> &[u32] {
         let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
         // Safety: we've validated that the address and length makes sense in
         // `validate()`.
@@ -254,15 +263,18 @@ impl Rsdt {
 
     /// Finds a table based on the signature, if it is present.
     pub fn get(&self, table: &[u8; 4]) -> Option<&'static DescriptionHeader> {
-        self.entries().iter().find_map(|&entry| {
-            let ptr = entry as usize;
-            let entry: &'static DescriptionHeader = unsafe { &*(ptr as *const DescriptionHeader) };
-            if entry.signature == *table {
-                Some(entry)
-            } else {
-                None
-            }
-        })
+        self.entry_headers().find(|&header| header.signature == *table)
+    }
+
+    pub fn entry_headers(&self) -> impl Iterator<Item = &'static DescriptionHeader> + use<'_> {
+        self.entries().iter().map(|&entry| Self::get_entry_header(entry))
+    }
+
+    /// Given one of the pointers from the RSDT pointer array (32 bits each),
+    /// returns a reference to the DescriptionHeader pointed at.
+    fn get_entry_header(entry: u32) -> &'static DescriptionHeader {
+        let ptr = entry as usize;
+        unsafe { &*(ptr as *const DescriptionHeader) }
     }
 }
 
@@ -296,6 +308,7 @@ impl<'a> Deref for XsdtEntryPtr<'a> {
 /// Extended System Description Table.
 ///
 /// See Section 5.2.8 in the ACPI specification for more details.
+#[derive(Debug)]
 #[repr(C, packed)]
 pub struct Xsdt {
     header: DescriptionHeader,

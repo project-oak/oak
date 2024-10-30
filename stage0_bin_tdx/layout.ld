@@ -321,6 +321,7 @@ SECTIONS {
 
     /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
      * the first KiB of the EBDA.
+     * See https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp .
      */
     .ebda 0x80000 (NOLOAD) : {
         /* Ensure RSDP is always first in the EBDA. */

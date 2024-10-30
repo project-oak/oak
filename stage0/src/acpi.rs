@@ -21,6 +21,7 @@ use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, size_of_val, zeroed, MaybeUninit},
+    ops::Deref,
 };
 
 use sha2::{Digest, Sha256};
@@ -31,6 +32,7 @@ use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 
 // RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The
 // full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
+// See https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp.
 pub const EBDA_SIZE: usize = 127 * 1024;
 #[link_section = ".ebda.rsdp"]
 static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
@@ -564,5 +566,38 @@ pub fn build_acpi_tables<P: crate::Platform>(
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
     let rsdp = unsafe { RSDP.assume_init_ref() };
     rsdp.validate()?;
+    debug_print_acpi_tables(rsdp);
     Ok(rsdp)
+}
+
+/// Prints ACPI metadata including RSDP, RSDT and XSDT (if present).
+pub fn debug_print_acpi_tables(rsdp: &Rsdp) {
+    log::info!("RSDP location: {:#018x}", rsdp as *const _ as u64);
+    log::info!("RSDP: {:?}", rsdp);
+
+    if let Some(rsdt) = rsdp.rsdt().expect("Error getting RSDT") {
+        log::info!("RSDT: {:?}", rsdt);
+        log::info!("RSDT entry count: {}", rsdt.entries().len());
+        for rsdt_header in rsdt.entry_headers() {
+            log::info!("RSDT entry {}: {:?}", rsdt_header.signature(), rsdt_header);
+        }
+    } else {
+        log::info!("No RSDT present");
+    }
+
+    if let Some(xsdt) = rsdp.xsdt().expect("Error getting XSDT") {
+        log::info!("XSDT: {:?}", xsdt);
+        log::info!("XSDT entry count: {}", xsdt.entries().len());
+        for xsdt_header_ptr in xsdt.entries() {
+            log::info!(
+                "XSDT entry {} ({:#x}-{:#x}): {:?}",
+                xsdt_header_ptr.signature(),
+                xsdt_header_ptr.addr_range().start,
+                xsdt_header_ptr.addr_range().end,
+                xsdt_header_ptr.deref()
+            )
+        }
+    } else {
+        log::info!("No XSDT present");
+    }
 }
