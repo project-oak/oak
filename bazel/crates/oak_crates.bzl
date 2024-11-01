@@ -312,6 +312,19 @@ OAK_STD_ANNOTATIONS = {
     "tokio": [crate.annotation(
         rustc_flags = ["--cfg=tokio_unstable"],
     )],
+    # Statically link the LZMA library.
+    #
+    # The build script of lzma-sys emits a problematic link search path if it
+    # finds liblzma already installed on the system. We can avoid that by
+    # forcing lzma-sys to statically link liblzma, which in turn forces a
+    # rebuild and avoids the bad search path being emitted.
+    #
+    # See https://github.com/alexcrichton/xz2-rs/blob/1a82c40d6d80171b7df328aea43b7054acd10c44/lzma-sys/build.rs#L12
+    "lzma-sys": [crate.annotation(
+        build_script_env = {
+            "LZMA_API_STATIC": "true",
+        },
+    )],
 }
 
 # Crates for the std crates index. Crates that are used in all

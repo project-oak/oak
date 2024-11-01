@@ -1,5 +1,5 @@
 {
-  "checksum": "8e36d4fcab4982ee1560c94a8d9dd7a6ebde73bb39dec7f37abf0ab788615a48",
+  "checksum": "2a7994d281e331aaaf8f4d0a07bd5f4a19caab3919a44ce375b075b0ceb3dd4c",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -12937,6 +12937,12 @@
               "target": "pkg_config"
             }
           ],
+          "selects": {}
+        },
+        "build_script_env": {
+          "common": {
+            "LZMA_API_STATIC": "true"
+          },
           "selects": {}
         },
         "links": "lzma"

@@ -354,7 +354,6 @@ gcc_register_toolchain(
         "-L%sysroot%/lib64/x86_64-linux-gnu",
         "-L%sysroot%/usr/lib/x86_64-linux-gnu",
         "-L%sysroot%/lib/gcc/x86_64-linux-gnu/12",
-        "-L%sysroot%/usr/lib/x86_64-linux-gnu",
     ],
     includes = [
         # Order matters here! Don't let it get sorted.
