@@ -33,3 +33,17 @@ rust_binary(
         "//oak_restricted_kernel_sdk",
     ],
 )
+
+rust_binary(
+    name = "oak_functions_insecure_enclave_app",
+    srcs = ["src/main.rs"],
+    crate_features = ["allow_sensitive_logging"],
+    platform = "//:x86_64-unknown-none",
+    deps = [
+        "//micro_rpc",
+        "//oak_functions_enclave_service:lib_insecure",
+        "//oak_functions_service:lib_insecure",
+        "//oak_proto_rust/micro_rpc",
+        "//oak_restricted_kernel_sdk",
+    ],
+)

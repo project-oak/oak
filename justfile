@@ -31,27 +31,33 @@ show-bazel-flag:
 export CARGO_WORKSPACE_LIST_CMD := 'grep -l "\[workspace" **/Cargo.toml --exclude="third_party/*"'
 export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
 
-oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
-oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
-oak_multi_process_test: (build_enclave_app "oak_multi_process_test")
-oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
-oak_orchestrator: (build_enclave_app "oak_orchestrator")
+# -- BUILD ENCLAVE APPS --
 
-all_enclave_apps: build_key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app oak_orchestrator
+build_all_enclave_apps: build_key_xor_test_app build_oak_echo_enclave_app build_oak_echo_raw_enclave_app build_oak_functions_enclave_app build_oak_orchestrator build_oak_functions_insecure_enclave_app
+
+build_key_xor_test_app: (build_enclave_app "key_xor_test_app")
+build_oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
+build_oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
+build_oak_multi_process_test: (build_enclave_app "oak_multi_process_test")
+build_oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
+build_oak_orchestrator: (build_enclave_app "oak_orchestrator")
 
 # Build a single enclave app, given its name.
 build_enclave_app name:
-    env --chdir=enclave_apps/{{name}} cargo build --release
-
-build_key_xor_test_app:
-    bazel build {{BAZEL_CONFIG_FLAG}} //enclave_apps/key_xor_test_app
+    bazel build {{BAZEL_CONFIG_FLAG}} //enclave_apps/{{name}}
     mkdir --parents artifacts/enclave_apps/
     cp --force --preserve=timestamps \
-        bazel-bin/enclave_apps/key_xor_test_app/key_xor_test_app \
+        bazel-bin/enclave_apps/{{name}}/{{name}} \
         artifacts/enclave_apps/
 
-oak_functions_insecure_enclave_app:
-    env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
+build_oak_functions_insecure_enclave_app:
+    bazel build {{BAZEL_CONFIG_FLAG}} //enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app
+    mkdir --parents artifacts/enclave_apps/
+    cp --force --preserve=timestamps \
+        bazel-bin/enclave_apps/oak_functions_enclave_app/oak_functions_insecure_enclave_app \
+        artifacts/enclave_apps/
+
+# -- END Build Enclave Apps --
 
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
     artifacts/oak_functions_containers_launcher \
@@ -74,15 +80,15 @@ run_oak_functions_launcher wasm_path port lookup_data_path:
         --bios-binary=artifacts/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
-        --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app \
-        --initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
+        --app-binary=artifacts/enclave_apps/oak_functions_enclave_app \
+        --initrd=artifacts/enclave_apps/oak_orchestrator \
         --memory-size=256M \
         --wasm={{wasm_path}} \
         --port={{port}} \
         --lookup-data={{lookup_data_path}}
 
 # Run an integration test for Oak Functions making sure all the dependencies are built.
-run_oak_functions_test: oak_orchestrator oak_functions_launcher oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper_virtio_console_channel
+run_oak_functions_test: build_oak_orchestrator oak_functions_launcher build_oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper_virtio_console_channel
     cargo test --package=key_value_lookup test_server
 
 # Builds a variant of the restricted kernel and creates a bzImage of it.
@@ -260,7 +266,7 @@ oak_attestation_explain_wasm:
 
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
+kokoro_build_binaries_rust: build_all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
     oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
     oak_client_android_app
 
@@ -284,7 +290,7 @@ oak_containers_tdx_testing: stage0_bin_tdx oak_containers_tests oak_containers_k
 # TODO: b/349572480 - Enable benchmarks in Bazel and remove oak_functions_launcher (after integration tests bazelified) from this list.
 cargo_test_packages_arg := "-p key_value_lookup -p oak_functions_launcher -p oak_echo_service -p oak_session_wasm"
 
-kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel oak_orchestrator oak_functions_enclave_app all_wasm_test_crates build-clients
+kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel build_oak_orchestrator build_oak_functions_enclave_app all_wasm_test_crates build-clients
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
 
 clang-tidy:

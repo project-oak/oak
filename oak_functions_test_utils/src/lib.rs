@@ -190,10 +190,7 @@ pub fn rust_crate_enclave_out_path(crate_name: &str) -> String {
 
 #[cfg(not(feature = "bazel"))]
 pub fn rust_crate_enclave_out_path(crate_name: &str) -> String {
-    format!(
-        "{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}",
-        env!("WORKSPACE_ROOT"),
-    )
+    format!("{}artifacts/enclave_apps/{crate_name}", env!("WORKSPACE_ROOT"),)
 }
 
 /// A wrapper around a termination signal [`oneshot::Receiver`].

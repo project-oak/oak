@@ -21,7 +21,10 @@ must be built.
 just \
   stage0_bin \
   oak_restricted_kernel_wrapper_virtio_console_channel \
-  oak_orchestrator oak_multi_process_test && \
+  build_oak_orchestrator build_oak_multi_process_test && \
+
+# Build an enclave app like so:
+just build_enclave_app build_oak_multi_process_test && \
 
 # After building dependencies, an enclave app may be run like so:
 RUST_LOG=DEBUG \
@@ -30,6 +33,6 @@ cargo run --package=oak_restricted_kernel_launcher -- \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=8G \
 --bios-binary=artifacts/stage0_bin \
---initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
---app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_multi_process_test
+--initrd=artifacts/enclave_apps/oak_orchestrator \
+--app-binary=artifacts/enclave_apps/oak_multi_process_test
 ```

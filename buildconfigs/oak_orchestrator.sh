@@ -9,13 +9,11 @@ export BUILD_COMMAND=(
   develop
   .#rust
   --command
-  env
-  --chdir=enclave_apps/oak_orchestrator
-  cargo
-  build
-  --release
+  just
+  build_enclave_app
+  oak_orchestrator
 )
 
 export SUBJECT_PATHS=(
-  enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
+  artifacts/enclave_apps/oak_orchestrator
 )

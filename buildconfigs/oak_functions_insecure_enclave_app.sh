@@ -9,15 +9,10 @@ export BUILD_COMMAND=(
   develop
   .#rust
   --command
-  env
-  --chdir=enclave_apps/oak_functions_enclave_app
-  cargo
-  build
-  --release
-  --no-default-features
-  --features=allow_sensitive_logging
+  just
+  build_oak_functions_insecure_enclave_app
 )
 
 export SUBJECT_PATHS=(
-  enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
+  artifacts/enclave_apps/oak_functions_insecure_enclave_app
 )
