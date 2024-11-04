@@ -53,3 +53,18 @@ alias(
     name = "stage1",
     actual = ":oak_containers_stage1",
 )
+
+# Copies the shared libraries needed by Stage 1 from the CC toolchain sysroot.
+genrule(
+    name = "copy_shared_libraries",
+    srcs = [
+        "@oak_cc_toolchain_sysroot//:shared_libraries",
+    ],
+    outs = [
+        "shared_libraries/ld-linux-x86-64.so.2",
+        "shared_libraries/libgcc_s.so.1",
+        "shared_libraries/libm.so.6",
+        "shared_libraries/libc.so.6",
+    ],
+    cmd = "cp -f $(SRCS) $(RULEDIR)/shared_libraries",
+)
