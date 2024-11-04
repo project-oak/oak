@@ -32,17 +32,16 @@ use core::{
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
+    hal::PortFactory,
     mailbox::{FirmwareMailbox, OsMailbox},
     paging::{self, PageEncryption},
     BOOT_ALLOC,
 };
 use oak_tdx_guest::{
     tdcall::get_td_info,
-    vmcall::{
-        call_cpuid, io_read_u16, io_read_u32, io_read_u8, io_write_u16, io_write_u32, io_write_u8,
-        mmio_read_u32, mmio_write_u32, msr_read, msr_write, tdvmcall_wbinvd,
-    },
+    vmcall::{call_cpuid, mmio_read_u32, mmio_write_u32, msr_read, msr_write, tdvmcall_wbinvd},
 };
+use serial::Debug;
 use x86_64::{
     instructions::tlb,
     registers::control::Cr3,
@@ -54,6 +53,8 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
+
+mod serial;
 
 mod asm;
 
@@ -224,100 +225,25 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
     }
 }
 
-fn write_u8_to_serial(c: u8) {
-    // wait_for_empty_output
-    loop {
-        if (io_read_u8(0x3f8 + 0x5).unwrap() & (1 << 5)) != 0 {
-            break;
-        }
-    }
-    io_write_u8(0x3f8, c).unwrap();
-}
-
-fn write_single_hex(c: u8) {
-    if c < 0xa {
-        write_u8_to_serial(c + (b'0'));
-    } else {
-        write_u8_to_serial(c - 10 + (b'a'));
-    }
-}
-
-fn write_byte_hex(c: u8) {
-    let char1 = (c >> 4) & 0xF;
-    let char2 = c & 0xF;
-    write_single_hex(char1);
-    write_single_hex(char2);
-}
-
-fn write_u32(n: u32) {
-    let b = n.to_le_bytes();
-    for c in b.iter().rev() {
-        write_byte_hex(*c);
-    }
-    write_u8_to_serial(b'\n');
-}
-
-fn write_u64(n: u64) {
-    let b = n.to_le_bytes();
-    for c in b.iter().rev() {
-        write_byte_hex(*c);
-    }
-    write_u8_to_serial(b'\n');
-}
-
-fn write_str(s: &str) {
-    for c in s.bytes() {
-        write_u8_to_serial(c);
-    }
-    write_u8_to_serial(b'\n');
-}
-
-fn debug_u32_variable(s: &str, val: u32) {
-    for c in s.bytes() {
-        write_u8_to_serial(c);
-    }
-    write_u8_to_serial(b':');
-    write_u8_to_serial(b' ');
-    write_u32(val);
-}
-
-fn debug_u64_variable(s: &str, val: u64) {
-    for c in s.bytes() {
-        write_u8_to_serial(c);
-    }
-    write_u8_to_serial(b':');
-    write_u8_to_serial(b' ');
-    write_u64(val);
-}
-
 /// Prints debug messages of the raw contents of the memory where
-/// TD_MAILBOX_START is.
+/// TD_MAILBOX_START is. (See: [`stage0::mailbox::FirmwareMailbox`])
 ///
 /// Given the firmware mailbox is processed from assembly code (tdx.s,
 /// _ap_poll_firmware_mailbox), we are interested in seeing the exact raw
 /// contents, not what Rust might interpret of them.
 fn debug_print_td_mailbox() {
-    debug_u64_variable(stringify!(ADDR_OF_TD_MAILBOX), addr_of!(TD_MAILBOX) as u64);
+    serial::debug!("ADDR_OF_TD_MAILBOX: ", addr_of!(TD_MAILBOX) as u64);
     // Safety: TD_MAILBOX_START points to valid TEMPMEM memory as defined
     // in layout.ld. The VMM allocates this temporary memory for us.
     // Safe because we are only reading the first 16 bytes out of TD_MAILBOX_SIZE
     // (4k).
-    debug_u64_variable(stringify!(FIRST_QUAD_OF_MAILBOX), unsafe {
+    serial::debug!("TD_MAILBOX FIRST QUAD (is_address_set): ", unsafe {
         *(addr_of!(TD_MAILBOX) as *const u64)
     });
-    debug_u64_variable(stringify!(SECOND_QUAD_OF_MAILBOX), unsafe {
+    serial::debug!("TD_MAILBOX SECOND QUAD (os_mailbox_address): ", unsafe {
         *(addr_of!(TD_MAILBOX).byte_add(8) as *const u64)
     });
 }
-
-fn init_tdx_serial_port() {
-    io_write_u8(0x3f8 + 0x1, 0x0).unwrap(); // Disable interrupts
-    io_write_u8(0x3f8 + 0x2, 0x0).unwrap(); // Disable FIFO
-    io_write_u8(0x3f8 + 0x3, 0x3).unwrap(); // LINE_CONTROL_8N1
-    io_write_u8(0x3f8 + 0x4, 0x3).unwrap(); // DATA_TERMINAL_READY_AND_REQUEST_TO_SEND
-}
-
-use oak_stage0::hal::PortFactory;
 
 struct Mmio {}
 impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for Mmio {
@@ -347,34 +273,27 @@ impl oak_stage0::Platform for Tdx {
     }
 
     fn port_factory() -> PortFactory {
-        PortFactory {
-            read_u8: |port| io_read_u8(port as u32),
-            read_u16: |port| io_read_u16(port as u32),
-            read_u32: |port| io_read_u32(port as u32),
-            write_u8: |port, val| io_write_u8(port as u32, val),
-            write_u16: |port, val| io_write_u16(port as u32, val),
-            write_u32: |port, val| io_write_u32(port as u32, val),
-        }
+        serial::port_factory()
     }
 
     fn early_initialize_platform() {
-        write_str("early_initialize_platform");
-        write_str("early_initialize_platform completed");
+        serial::debug!("early_initialize_platform");
+        serial::debug!("early_initialize_platform completed");
     }
 
     fn prefill_e820_table<T: AsBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
-        write_str("Prefill e820 table from TDHOB");
+        serial::debug!("Prefill e820 table from TDHOB");
 
         let hit = unsafe { TD_HOB_START.assume_init() };
-        debug_u32_variable("HOB TYPE", hit.header.hob_type as u32);
-        debug_u32_variable("HOB LENGTH", hit.header.hob_length as u32);
-        debug_u32_variable("HOB VERSION", hit.version);
-        debug_u32_variable("HOB BOOT MODE", hit.boot_mode);
-        debug_u64_variable("HOB MEMORY TOP", hit.memory_top);
-        debug_u64_variable("HOB MEMORY BOTTOM", hit.memory_bottom);
-        debug_u64_variable("HOB FREE MEMORY TOP", hit.free_memory_top);
-        debug_u64_variable("HOB FREE MEMORY BOTTOM", hit.free_memory_bottom);
-        debug_u64_variable("HOB END OF HOB LIST", hit.end_of_hob_list);
+        serial::debug!("HOB TYPE: ", hit.header.hob_type as u32);
+        serial::debug!("HOB LENGTH: ", hit.header.hob_length as u32);
+        serial::debug!("HOB VERSION: ", hit.version);
+        serial::debug!("HOB BOOT MODE: ", hit.boot_mode);
+        serial::debug!("HOB MEMORY TOP: ", hit.memory_top);
+        serial::debug!("HOB MEMORY BOTTOM: ", hit.memory_bottom);
+        serial::debug!("HOB FREE MEMORY TOP: ", hit.free_memory_top);
+        serial::debug!("HOB FREE MEMORY BOTTOM: ", hit.free_memory_bottom);
+        serial::debug!("HOB END OF HOB LIST: ", hit.end_of_hob_list);
 
         if hit.header.hob_length as usize != size_of::<HandoffInfoTable>()
             || hit.header.hob_type != EFI_HOB_TYPE_HANDOFF
@@ -390,19 +309,19 @@ impl oak_stage0::Platform for Tdx {
 
         while (curr_ptr as u64) < hit.end_of_hob_list {
             // Every HoB entry starts with a Header struct
-            write_str("==================");
-            debug_u32_variable("HOB PTR", curr_ptr as u32);
-            debug_u32_variable("HOB TYPE", curr_hdr.hob_type as u32);
-            debug_u32_variable("HOB LENGTH", curr_hdr.hob_length as u32);
+            serial::debug!("==================");
+            serial::debug!("HOB PTR: ", curr_ptr as u32);
+            serial::debug!("HOB TYPE: ", curr_hdr.hob_type as u32);
+            serial::debug!("HOB LENGTH: ", curr_hdr.hob_length as u32);
 
             // We only care the resource descriptor entries
             if curr_hdr.hob_type == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR && curr_hdr.hob_length == 0x30
             {
                 let curr_src = unsafe { *(curr_ptr as *const ResourceDescription) };
-                debug_u32_variable("Resource type", curr_src.resource_type);
-                debug_u32_variable("Resource attribute", curr_src.resource_attribute);
-                debug_u64_variable("Physical start", curr_src.physical_start);
-                debug_u64_variable("Resource length", curr_src.resource_length);
+                serial::debug!("Resource type: ", curr_src.resource_type);
+                serial::debug!("Resource attribute: ", curr_src.resource_attribute);
+                serial::debug!("Physical start: ", curr_src.physical_start);
+                serial::debug!("Resource length: ", curr_src.resource_length);
 
                 // Figure out the location of the next E820 entry
                 let new_entry_ptr: *mut BootE820Entry = unsafe {
@@ -668,17 +587,18 @@ impl oak_stage0::Platform for Tdx {
 /// Entry point for the Rust code in the stage0 BIOS.
 #[no_mangle]
 pub extern "C" fn rust64_start() -> ! {
-    init_tdx_serial_port();
-    write_str(HELLO_OAK);
-    debug_u32_variable(stringify!(GPAW), unsafe { GPAW });
+    serial::init_tdx_serial_port();
+    serial::debug!(HELLO_OAK);
+    serial::debug!("GPAW: ", unsafe { GPAW });
     assert!(unsafe { GPAW == 48 || GPAW == 52 });
 
     let td_info = get_td_info();
-    debug_u64_variable(stringify!(td_info.gpa_width), td_info.gpa_width as u64);
-    debug_u64_variable(stringify!(td_info.attributes), td_info.attributes.bits() as u64);
-    debug_u32_variable(stringify!(td_info.max_vcpus), td_info.max_vcpus);
-    debug_u32_variable(stringify!(td_info.num_vcpus), td_info.num_vcpus);
-    debug_u32_variable(stringify!(AP_IN_64BIT_COUNT), unsafe { AP_IN_64BIT_COUNT });
+    serial::debug!("td_info.gpa_width: ", td_info.gpa_width as u64);
+    serial::debug!("td_info.gpa_width: ", td_info.gpa_width as u64);
+    serial::debug!("td_info.attributes: ", td_info.attributes.bits() as u64);
+    serial::debug!("td_info.max_vcpus: ", td_info.max_vcpus);
+    serial::debug!("td_info.num_vcpus: ", td_info.num_vcpus);
+    serial::debug!("AP_IN_64BIT_COUNT: ", unsafe { AP_IN_64BIT_COUNT });
     debug_print_td_mailbox();
 
     oak_stage0::rust64_start::<Tdx>()
