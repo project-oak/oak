@@ -46,8 +46,9 @@ build_enclave_app name:
 build_key_xor_test_app:
     bazel build //enclave_apps/key_xor_test_app
     mkdir --parents artifacts/enclave_apps/
-    cp -f bazel-bin/enclave_apps/key_xor_test_app/key_xor_test_app artifacts/enclave_apps/
-
+    cp --force --preserve=timestamps \
+        bazel-bin/enclave_apps/key_xor_test_app/key_xor_test_app \
+        artifacts/enclave_apps/
 
 oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
@@ -193,11 +194,13 @@ stage1_cpio:
 
 oak_containers_kernel:
     bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/kernel/...
-
     just bzimage_provenance_subjects \
         oak_containers_kernel \
         ./bazel-bin/oak_containers/kernel/bzImage \
         oak_containers/kernel/bin/subjects
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/kernel/bzImage \
+        artifacts/oak_containers_kernel
 
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'

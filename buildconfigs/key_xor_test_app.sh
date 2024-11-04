@@ -7,13 +7,10 @@ export PACKAGE_NAME=key_xor_test_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#rust
+  .#bazelRustShell
   --command
-  env
-  --chdir=enclave_apps/key_xor_test_app
-  cargo
-  build
-  --release
+  just
+  build_key_xor_test_app
 )
 
 export SUBJECT_PATHS=(

@@ -173,6 +173,13 @@
                 bazel-buildtools
               ];
             };
+            # Generic shell to build Rust binaries with bazel.
+            bazelRustShell = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+                bazelShell
+              ];
+            };
             # Shell for building Oak Containers kernel and system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
@@ -212,8 +219,8 @@
                 umoci
               ];
             };
-            # Shell for container kernel image provenance workflow.
-            bzImageProvenance = with pkgs; mkShell {
+            # Shell for oak_containers_kernel.
+            linuxKernelShell = with pkgs; mkShell {
               shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
                 export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
