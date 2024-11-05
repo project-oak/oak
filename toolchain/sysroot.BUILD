@@ -33,11 +33,19 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# Provides only the shared libraries needed by Oak Conatiners Stage 1.
+# Provides the dynamic linker library.
 filegroup(
-    name = "shared_libraries",
+    name = "linker_library",
     srcs = [
         "usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Provides only the shared libraries needed by Oak Conatiners Stage 1.
+filegroup(
+    name = "stage1_shared_libraries",
+    srcs = [
         "usr/lib/x86_64-linux-gnu/libc.so.6",
         "usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
         "usr/lib/x86_64-linux-gnu/libm.so.6",

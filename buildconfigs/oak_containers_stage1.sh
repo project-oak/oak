@@ -9,11 +9,10 @@ export BUILD_COMMAND=(
   develop
   .#stage1Shell
   --command
-  env
-  --chdir=oak_containers/stage1
-  make
+  just
+  stage1_cpio
 )
 
 export SUBJECT_PATHS=(
-  target/stage1.cpio
+  artifacts/stage1.cpio
 )

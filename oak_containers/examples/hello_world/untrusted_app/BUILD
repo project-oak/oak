@@ -63,13 +63,10 @@ rust_binary(
     name = "bin/oak_containers_hello_world_untrusted_app",
     srcs = ["src/main.rs"],
     data = [
-        # This gives us access to the cargo `target` dir, so we can pull stage1.cpio out of
-        # it, or provide a useful error message if it's not there.
-        # We can replace this with a stage1 bazel dependency after b/350019075 is fixed.
-        "//:cargo-generated",
         "//cc/containers/hello_world_trusted_app:bundle",
         "//oak_containers/examples/hello_world/trusted_app:bundle",
         "//oak_containers/kernel",
+        "//oak_containers/stage1:stage1_cpio",
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
@@ -90,18 +87,13 @@ rust_test_suite(
     name = "oak_containers_hello_world_untrusted_app_tests",
     srcs = ["tests/integration_test.rs"],
     data = [
-        # This gives us access to the cargo `target` dir, so we can pull stage1.cpio out of
-        # it, or provide a useful error message if it's not there.
-        # We can replace this with a stage1 bazel dependency after b/350019075 is fixed.
-        "//:cargo-generated",
         "//cc/containers/hello_world_trusted_app:bundle",
         "//oak_containers/examples/hello_world/trusted_app:bundle",
         "//oak_containers/kernel",
+        "//oak_containers/stage1:stage1_cpio",
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
-    # In order to build this, you need to first run:
-    # just stage1_cpio
     tags = ["manual"],
     deps = [
         ":oak_containers_hello_world_untrusted_app",

@@ -58,7 +58,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --vmm-binary=$(which qemu-system-x86_64) \
         --stage0-binary=artifacts/stage0_bin \
         --kernel=bazel-bin/oak_containers/kernel/bzImage \
-        --initrd=target/stage1.cpio \
+        --initrd=artifacts/stage1.cpio \
         --system-image=artifacts/oak_containers_system_image.tar.xz \
         --container-bundle=bazel-bin/oak_functions_containers_app/bundle.tar \
         --ramdrive-size=1000000 \
@@ -187,9 +187,10 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
-    env --chdir=oak_containers/stage1 make
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1:stage1_cpio \
+        --compilation_mode=opt
     cp --force --preserve=timestamps --no-preserve=mode \
-        target/stage1.cpio \
+        bazel-bin/oak_containers/stage1/stage1.cpio \
         artifacts/stage1.cpio
 
 oak_containers_kernel:
