@@ -7,10 +7,10 @@ export PACKAGE_NAME=oak_containers_syslogd
 export BUILD_COMMAND=(
   nix
   develop
-  .#systemImageProvenance
+  .#systemImageShell
   --command
   just
-  oak_containers_syslogd_for_provenance
+  oak_containers_syslogd
 )
 
 export SUBJECT_PATHS=(

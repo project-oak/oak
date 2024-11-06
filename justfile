@@ -206,24 +206,6 @@ oak_containers_kernel:
 oak_containers_launcher:
     env cargo build --release --package='oak_containers_launcher'
 
-oak_containers_agent: (bazel_build_opt "oak_containers/agent")
-oak_containers_orchestrator: (bazel_build_opt "oak_containers/orchestrator")
-oak_containers_syslogd: (bazel_build_opt "oak_containers/syslogd")
-
-oak_containers_system_image_binaries: oak_containers_agent oak_containers_orchestrator oak_containers_syslogd
-
-oak_containers_system_image: oak_containers_system_image_binaries
-    bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_system_image
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
-        artifacts/oak_containers_system_image.tar.xz
-
-oak_containers_nvidia_system_image: oak_containers_system_image
-    bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_nvidia_system_image
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
-        artifacts/oak_containers_nvidia_system_image.tar.xz
-
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
     # If it fails with SIGSEGV, try running again.
@@ -283,7 +265,6 @@ oak_attestation_explain_wasm:
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
     oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
     oak_client_android_app
-
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
@@ -448,9 +429,6 @@ run-java-functions-client addr:
 run-cc-functions-client addr request:
     bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}
 
-bazel_build_opt target:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt --strip always "{{target}}"
-
 containers_placer_artifacts:
     # We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
     # TODO: b/376322165 - Remove the need for this
@@ -478,10 +456,22 @@ containers_placer_artifacts:
     cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
     cp --force --preserve=timestamps bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
 
-# The following _for_provenance targets are used by buildconfigs.
-bazel_build_for_provenance package target: (bazel_build_opt package+":"+target)
+bazel_build_opt target:
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt --linkopt=-Wl,--strip-all "{{target}}"
+
+bazel_build_copy package target: (bazel_build_opt package+":"+target)
     cp --force --preserve=timestamps "./bazel-bin/{{package}}/{{target}}" artifacts
 
-oak_containers_agent_for_provenance: (bazel_build_for_provenance "oak_containers/agent" "bin/oak_containers_agent")
-oak_containers_orchestrator_for_provenance: (bazel_build_for_provenance "oak_containers/orchestrator" "bin/oak_containers_orchestrator")
-oak_containers_syslogd_for_provenance: (bazel_build_for_provenance "oak_containers/syslogd" "oak_containers_syslogd")
+oak_containers_agent: (bazel_build_copy "oak_containers/agent" "bin/oak_containers_agent")
+oak_containers_orchestrator: (bazel_build_copy "oak_containers/orchestrator" "bin/oak_containers_orchestrator")
+oak_containers_syslogd: (bazel_build_copy "oak_containers/syslogd" "oak_containers_syslogd")
+
+oak_containers_system_image: (bazel_build_opt "oak_containers/system_image:oak_containers_system_image")
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
+        artifacts
+
+oak_containers_nvidia_system_image: (bazel_build_opt "oak_containers/system_image:oak_containers_nvidia_system_image")
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
+        artifacts

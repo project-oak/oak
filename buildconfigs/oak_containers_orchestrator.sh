@@ -7,10 +7,10 @@ export PACKAGE_NAME=oak_containers_orchestrator
 export BUILD_COMMAND=(
   nix
   develop
-  .#systemImageProvenance
+  .#systemImageShell
   --command
   just
-  oak_containers_orchestrator_for_provenance
+  oak_containers_orchestrator
 )
 
 export SUBJECT_PATHS=(

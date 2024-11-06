@@ -251,7 +251,8 @@
                 strip-nondeterminism
               ];
             };
-            systemImageProvenance = with pkgs; mkShell {
+            # Shell for Oak Containers system images.
+            systemImageShell = with pkgs; mkShell {
               inputsFrom = [
                 rust
                 bazelShell
@@ -260,7 +261,7 @@
                 elfutils
               ];
             };
-            # Shell for most CI steps (i.e. without contaniners support).
+            # Shell for most CI steps (i.e. without containers support).
             ci = pkgs.mkShell {
              shellHook = ''
                 export LINUX_KERNEL="${linux_kernel}"
