@@ -449,7 +449,7 @@ run-cc-functions-client addr request:
     bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}
 
 bazel_build_opt target:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt "{{target}}"
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt --strip always "{{target}}"
 
 containers_placer_artifacts:
     # We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
