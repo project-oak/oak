@@ -21,21 +21,21 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
         expected_values, kernel_binary_reference_value, reference_values, text_expected_value,
-        text_reference_value, AmdSevExpectedValues, ApplicationLayerEndorsements,
-        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, BinaryReferenceValue,
-        CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerEndorsements,
-        ContainerLayerExpectedValues, ContainerLayerReferenceValues, Endorsement,
-        EndorsementReferenceValue, Endorsements, EventExpectedValues, EventReferenceValues,
-        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, FirmwareAttachment,
-        InsecureExpectedValues, IntelTdxExpectedValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerEndorsements,
-        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersEndorsements,
-        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
-        Signature, SignedEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
-        SystemLayerReferenceValues, TextExpectedValue, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped,
+        text_reference_value, AmdSevExpectedValues, AmdSevReferenceValues,
+        ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerExpectedValues,
+        ContainerLayerReferenceValues, Endorsement, EndorsementReferenceValue, Endorsements,
+        EventExpectedValues, EventReferenceValues, ExpectedDigests, ExpectedRegex,
+        ExpectedStringLiterals, ExpectedValues, FirmwareAttachment, InsecureExpectedValues,
+        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
+        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
+        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
+        RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -221,7 +221,6 @@ pub(crate) fn get_root_layer_expected_values(
 ) -> anyhow::Result<RootLayerExpectedValues> {
     // Propagate each of the existing reference value for a TEE platform to the
     // corresponding expected value.
-
     let amd_sev = if let Some(amd_sev_values) = reference_values.amd_sev.as_ref() {
         let stage0_expected = get_stage0_expected_values(
             now_utc_millis,
@@ -242,6 +241,18 @@ pub(crate) fn get_root_layer_expected_values(
     let insecure = reference_values.insecure.as_ref().map(|_| InsecureExpectedValues {});
 
     Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
+}
+
+pub(crate) fn get_amd_sev_snp_expected_values(
+    reference_values: &AmdSevReferenceValues,
+) -> anyhow::Result<AmdSevExpectedValues> {
+    Ok(AmdSevExpectedValues {
+        // TODO: b/376513946 - Remove Stage0 from AMD SEV-SNP expected values
+        // since it will be verified by the firmware policy.
+        stage0_expected: None,
+        min_tcb_version: reference_values.min_tcb_version.clone(),
+        allow_debug: reference_values.allow_debug,
+    })
 }
 
 pub(crate) fn get_kernel_layer_expected_values(

@@ -21,7 +21,7 @@ use alloc::format;
 use anyhow::Context;
 use oak_proto_rust::oak::attestation::v1::{
     AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues, IntelTdxAttestationReport,
-    IntelTdxExpectedValues, RootLayerEvidence, TeePlatform,
+    IntelTdxExpectedValues, RootLayerEvidence, TcbVersion, TeePlatform,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use x509_cert::{
@@ -48,35 +48,23 @@ pub fn verify_root_attestation_signature(
     match root_layer.platform() {
         TeePlatform::Unspecified => anyhow::bail!("unspecified TEE platform"),
         TeePlatform::AmdSevSnp => {
-            // We demand that product-specific ASK signs the VCEK.
-            let vcek = Certificate::from_der(serialized_certificate)
-                .map_err(|_err| anyhow::anyhow!("could not parse VCEK cert"))?;
+            let attestation_report =
+                AttestationReport::ref_from(&root_layer.remote_attestation_report)
+                    .context("invalid AMD SEV-SNP attestation report")?;
 
-            let ask = if product_name(&vcek)?.contains("Milan") {
-                Certificate::from_pem(ASK_MILAN_CERT_PEM)
-                    .map_err(|_err| anyhow::anyhow!("could not parse Milan ASK cert"))?
-            } else if product_name(&vcek)?.contains("Genoa") {
-                Certificate::from_pem(ASK_GENOA_CERT_PEM)
-                    .map_err(|_err| anyhow::anyhow!("could not parse Genoa ASK cert"))?
-            } else {
-                anyhow::bail!("unsupported AMD product");
-            };
-
-            // TODO(#4747): user current date as part of VCEK verification.
-            verify_cert_signature(&ask, &vcek).context("verifying vcek cert")?;
-
-            let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
-                .context("invalid AMD SEV-SNP attestation report")?;
-            report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
-
-            // Ensure that the attestation report is signed by the VCEK public key.
-            verify_attestation_report_signature(&vcek, report)
-                .context("verifying attestation report signature")?;
+            // Ensure the Attestation report is properly signed by the platform and the
+            // corresponding certificate is signed by AMD.
+            verify_amd_sev_snp_attestation_report_validity(
+                attestation_report,
+                serialized_certificate,
+                _now_utc_millis,
+            )
+            .context("couldn't verify AMD SEV-SNP attestation report validity")?;
 
             // Check that the root ECA public key for the DICE chain is bound to the
             // attestation report to ensure that the entire chain is valid.
             let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
-            let actual = report.data.report_data;
+            let actual = attestation_report.data.report_data;
 
             anyhow::ensure!(
                 // The report data contains 64 bytes by default, but we only use the first 32 bytes
@@ -92,8 +80,40 @@ pub fn verify_root_attestation_signature(
     }
 }
 
-/// Verifies the AMD SEV attestation report.
-pub fn verify_amd_sev_attestation_report(
+pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
+    attestation_report: &AttestationReport,
+    serialized_certificate: &[u8],
+    _milliseconds_since_epoch: i64,
+) -> anyhow::Result<()> {
+    // We demand that product-specific ASK signs the VCEK.
+    let vcek = Certificate::from_der(serialized_certificate)
+        .map_err(|_err| anyhow::anyhow!("couldn't parse VCEK certificate"))?;
+
+    let ask = if product_name(&vcek)?.contains("Milan") {
+        Certificate::from_pem(ASK_MILAN_CERT_PEM)
+            .map_err(|_err| anyhow::anyhow!("couldn't parse Milan ASK certificate"))?
+    } else if product_name(&vcek)?.contains("Genoa") {
+        Certificate::from_pem(ASK_GENOA_CERT_PEM)
+            .map_err(|_err| anyhow::anyhow!("couldn't parse Genoa ASK certificate"))?
+    } else {
+        anyhow::bail!("unsupported AMD product");
+    };
+
+    // TODO(#4747): user current date as part of VCEK verification.
+    verify_cert_signature(&ask, &vcek).context("couldn't verify VCEK certificate")?;
+
+    // Validate attestation report signature format.
+    attestation_report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
+
+    // Ensure that the attestation report is signed by the VCEK public key.
+    verify_attestation_report_signature(&vcek, attestation_report)
+        .context("couldn't verify attestation report signature")?;
+
+    Ok(())
+}
+
+/// Verifies the AMD SEV attestation report flag values.
+pub fn verify_amd_sev_attestation_report_values(
     attestation_report_values: &AmdAttestationReport,
     expected_values: &AmdSevExpectedValues,
 ) -> anyhow::Result<()> {
@@ -148,6 +168,38 @@ pub fn verify_amd_sev_attestation_report(
     }
 
     Ok(())
+}
+
+pub fn convert_amd_sev_snp_attestation_report(
+    report: &AttestationReport,
+) -> anyhow::Result<AmdAttestationReport> {
+    let current_tcb = Some(TcbVersion {
+        boot_loader: report.data.current_tcb.boot_loader.into(),
+        tee: report.data.current_tcb.tee.into(),
+        snp: report.data.current_tcb.snp.into(),
+        microcode: report.data.current_tcb.microcode.into(),
+    });
+    let reported_tcb = Some(TcbVersion {
+        boot_loader: report.data.reported_tcb.boot_loader.into(),
+        tee: report.data.reported_tcb.tee.into(),
+        snp: report.data.reported_tcb.snp.into(),
+        microcode: report.data.reported_tcb.microcode.into(),
+    });
+    let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
+    let hardware_id = report.data.chip_id.as_ref().to_vec();
+    let initial_measurement = report.data.measurement.as_ref().to_vec();
+    let report_data = report.data.report_data.as_ref().to_vec();
+    let vmpl = report.data.vmpl;
+
+    Ok(AmdAttestationReport {
+        current_tcb,
+        reported_tcb,
+        debug,
+        initial_measurement,
+        hardware_id,
+        report_data,
+        vmpl,
+    })
 }
 
 /// Verifies the Intel TDX attestation report.

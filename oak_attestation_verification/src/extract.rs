@@ -28,11 +28,11 @@ use oak_dice::cert::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
-        extracted_evidence::EvidenceValues, root_layer_data::Report, AmdAttestationReport,
-        ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
-        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        extracted_evidence::EvidenceValues, root_layer_data::Report, ApplicationKeys,
+        ApplicationLayerData, CbData, ContainerLayerData, Event, EventData, Evidence,
+        ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
-        Stage0Measurements, Stage1Measurements, SystemLayerData, TcbVersion, TeePlatform,
+        Stage0Measurements, Stage1Measurements, SystemLayerData, TeePlatform,
     },
     RawDigest,
 };
@@ -40,6 +40,8 @@ use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
 use sha2::Digest;
 use zerocopy::FromBytes;
+
+use crate::platform::convert_amd_sev_snp_attestation_report;
 
 pub(crate) struct ApplicationKeyValues {
     pub(crate) encryption_public_key: Vec<u8>,
@@ -351,38 +353,10 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
         TeePlatform::AmdSevSnp => {
             let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
                 .context("invalid AMD SEV-SNP attestation report")?;
-
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
-            let current_tcb = Some(TcbVersion {
-                boot_loader: report.data.current_tcb.boot_loader.into(),
-                tee: report.data.current_tcb.tee.into(),
-                snp: report.data.current_tcb.snp.into(),
-                microcode: report.data.current_tcb.microcode.into(),
-            });
-            let reported_tcb = Some(TcbVersion {
-                boot_loader: report.data.reported_tcb.boot_loader.into(),
-                tee: report.data.reported_tcb.tee.into(),
-                snp: report.data.reported_tcb.snp.into(),
-                microcode: report.data.reported_tcb.microcode.into(),
-            });
-            let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
-            let hardware_id = report.data.chip_id.as_ref().to_vec();
-            let initial_measurement = report.data.measurement.as_ref().to_vec();
-            let report_data = report.data.report_data.as_ref().to_vec();
-            let vmpl = report.data.vmpl;
-
-            Ok(RootLayerData {
-                report: Some(Report::SevSnp(AmdAttestationReport {
-                    current_tcb,
-                    reported_tcb,
-                    debug,
-                    initial_measurement,
-                    hardware_id,
-                    report_data,
-                    vmpl,
-                })),
-            })
+            let converted_attestation_report = convert_amd_sev_snp_attestation_report(report)?;
+            Ok(RootLayerData { report: Some(Report::SevSnp(converted_attestation_report)) })
         }
         TeePlatform::IntelTdx => Err(anyhow::anyhow!("not supported")),
         TeePlatform::None => {
@@ -390,7 +364,6 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             // when not running in a TEE.
             let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
                 .context("invalid fake attestation report")?;
-
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             let report_data = report.data.report_data.as_ref().to_vec();

@@ -37,7 +37,8 @@ use regex_lite::Regex;
 
 use crate::{
     platform::{
-        verify_amd_sev_attestation_report, verify_insecure, verify_intel_tdx_attestation_report,
+        verify_amd_sev_attestation_report_values, verify_insecure,
+        verify_intel_tdx_attestation_report,
     },
     util::is_raw_digest_match,
 };
@@ -177,7 +178,7 @@ fn compare_root_layer_measurement_digests(
                     .context("no stage0 expected value provided")?,
             )
             .context("stage0 measurement values failed verification")?;
-            verify_amd_sev_attestation_report(report_values, amd_sev_values)
+            verify_amd_sev_attestation_report_values(report_values, amd_sev_values)
         }
         (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
             verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
