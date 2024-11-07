@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
@@ -135,5 +135,33 @@ rust_test(
         "//oak_functions_test_utils",
         "@oak_crates_index//:bytes",
         "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test_suite(
+    name = "benches",
+    srcs = ["benches/wasm_benchmark.rs"],
+    data = [
+        "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions_test_module",
+    ],
+    proc_macro_deps = [
+        "@oak_crates_index//:criterion-macro",
+    ],
+    shared_srcs = ["benches/perf.rs"],
+    deps = [
+        ":lib_unrestricted",
+        "//micro_rpc",
+        "//oak_file_utils",
+        "//oak_functions_abi",
+        "//oak_functions_test_utils",
+        "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
+        "@oak_crates_index//:criterion",
+        "@oak_crates_index//:hashbrown",
+        "@oak_crates_index//:pprof",
+        "@oak_crates_index//:wasmi",
+        "@oak_crates_index//:wasmtime",
     ],
 )

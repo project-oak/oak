@@ -38,9 +38,13 @@ use oak_proto_rust::oak::functions::testing::{
     lookup_request::Mode, LookupRequest, LookupResponse,
 };
 
+const TEST_MODULE_PATH: &str = "oak_functions_test_module/oak_functions_test_module.wasm";
+const ECHO_MODULE_PATH: &str = "oak_functions/examples/echo/echo.wasm";
+const KEY_VALUE_LOOKUP_MODULE_PATH: &str =
+    "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 #[criterion]
 fn bench_invoke_echo(c: &mut Criterion) {
-    let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("echo");
+    let test_state = create_test_state_with_wasm_module_name::<WasmHandler>(ECHO_MODULE_PATH);
 
     // Measure throughput for different data sizes.
     let mut group = c.benchmark_group("echo wasm");
@@ -60,7 +64,8 @@ fn bench_invoke_echo(c: &mut Criterion) {
 
 #[criterion]
 fn bench_invoke_lookup(c: &mut Criterion) {
-    let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("key_value_lookup");
+    let test_state =
+        create_test_state_with_wasm_module_name::<WasmHandler>(KEY_VALUE_LOOKUP_MODULE_PATH);
 
     const MAX_DATA_SIZE: i32 = 1000;
     const KEY_INDEX: i32 = 100;
@@ -105,9 +110,9 @@ impl<'a, H: Handler> micro_rpc::Transport for Transport<'a, H> {
 #[criterion]
 fn bench_invoke_lookup_multi(c: &mut Criterion) {
     let mut test_state_wasmi =
-        create_test_state_with_wasm_module_name::<WasmHandler>("oak_functions_test_module");
+        create_test_state_with_wasm_module_name::<WasmHandler>(TEST_MODULE_PATH);
     let mut test_state_wasmtime =
-        create_test_state_with_wasm_module_name::<WasmtimeHandler>("oak_functions_test_module");
+        create_test_state_with_wasm_module_name::<WasmtimeHandler>(TEST_MODULE_PATH);
 
     const MAX_DATA_SIZE: i32 = 1_000_000;
     const START_KEY_INDEX: i32 = 100;
@@ -172,7 +177,7 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
 #[criterion(perf::flamegraph())]
 fn flamegraph(c: &mut Criterion) {
     let mut test_state =
-        create_test_state_with_wasm_module_name::<WasmtimeHandler>("oak_functions_test_module");
+        create_test_state_with_wasm_module_name::<WasmtimeHandler>(TEST_MODULE_PATH);
 
     const MAX_DATA_SIZE: i32 = 1_000_000;
     const START_KEY_INDEX: i32 = 100;
@@ -227,10 +232,10 @@ struct TestState<H: Handler> {
     lookup_data_manager: Arc<LookupDataManager<16>>,
 }
 
-fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -> TestState<H> {
+fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_path: &str) -> TestState<H> {
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(Vec::new(), logger.clone()));
-    let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path(wasm_module_name);
+    let wasm_module_path = oak_file_utils::data_path(wasm_module_path);
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
     let wasm_handler = H::new_handler(

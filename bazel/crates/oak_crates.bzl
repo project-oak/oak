@@ -432,8 +432,10 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "portpicker": crate.spec(version = "0.1.1"),
     "pprof": crate.spec(
         features = [
+            "flamegraph",
             "frame-pointer",
             "prost-codec",
+            "criterion",
         ],
         version = "0.13.0",
     ),
