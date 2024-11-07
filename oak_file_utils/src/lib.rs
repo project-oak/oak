@@ -50,12 +50,13 @@ impl CompatRlocation for Option<PathBuf> {
 #[cfg(feature = "bazel")]
 pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     const DATA_PATH_PREFIX: &str = "oak";
+    let mut pb: PathBuf = DATA_PATH_PREFIX.into();
+    pb.push(path);
+
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
-    let p = runfiles::rlocation!(r, format!("{DATA_PATH_PREFIX}/{}", path.as_ref().display()))
-        .compat_wrap()
-        .expect("Couldn't get runfile path");
+    let p = runfiles::rlocation!(r, &pb).compat_wrap().expect("Couldn't get runfile path");
     if !p.exists() {
-        panic!("Data dependency not found: {}", path.as_ref().display());
+        panic!("Data dependency not found: {}", pb.display());
     }
     p
 }
