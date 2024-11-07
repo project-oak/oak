@@ -17,6 +17,7 @@
 load("@rules_java//java:defs.bzl", "java_binary")
 
 package(
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
@@ -24,10 +25,6 @@ java_binary(
     name = "oak_functions_client",
     srcs = ["Main.java"],
     main_class = "com.google.oak.client.oak_functions_client.Main",
-    visibility = [
-        # For integration test.
-        "//oak_functions_launcher:__subpackages__",
-    ],
     deps = [
         "//java/src/main/java/com/google/oak/client",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",

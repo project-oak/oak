@@ -21,6 +21,10 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(
+    srcs = ["mock_lookup_data"],
+)
+
 rust_library(
     name = "lib",
     srcs = glob(

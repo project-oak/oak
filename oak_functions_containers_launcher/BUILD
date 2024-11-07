@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
 
 package(
     default_visibility = ["//:internal"],
@@ -66,5 +66,32 @@ rust_binary(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:ubyte",
+    ],
+)
+
+rust_test_suite(
+    name = "oak_functions_containers_launcher_test",
+    srcs = ["tests/integration_test.rs"],
+    data = [
+        ":oak_functions_containers_launcher",
+        "//cc/client:cli",
+        "//java/src/main/java/com/google/oak/client/oak_functions_client",
+        "//oak_containers/kernel",
+        "//oak_containers/stage1",
+        "//oak_containers/system_image:oak_containers_system_image",
+        "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions_containers_app:bundle",
+        "//oak_functions_launcher:mock_lookup_data",
+        "//stage0_bin",
+    ],
+    deps = [
+        "//oak_client",
+        "//oak_file_utils",
+        "//oak_functions_client:lib",
+        "//oak_functions_test_utils",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
     ],
 )

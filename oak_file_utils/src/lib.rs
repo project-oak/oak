@@ -51,7 +51,11 @@ impl CompatRlocation for Option<PathBuf> {
 pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     const DATA_PATH_PREFIX: &str = "oak";
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
-    runfiles::rlocation!(r, format!("{DATA_PATH_PREFIX}/{}", path.as_ref().display()))
+    let p = runfiles::rlocation!(r, format!("{DATA_PATH_PREFIX}/{}", path.as_ref().display()))
         .compat_wrap()
-        .expect("Couldn't get runfile path")
+        .expect("Couldn't get runfile path");
+    if !p.exists() {
+        panic!("Data dependency not found: {}", path.as_ref().display());
+    }
+    p
 }

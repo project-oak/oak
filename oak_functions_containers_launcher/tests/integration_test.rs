@@ -15,17 +15,14 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use std::time::Duration;
-
-use oak_client::verifier::InsecureAttestationVerifier;
-use oak_functions_client::OakFunctionsClient;
+use oak_file_utils::data_path;
 
 async fn run_key_value_lookup_test(communication_channel: &str) {
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = data_path("oak_functions/examples/key_value_lookup/key_value_lookup.wasm");
 
     let (mut _output, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path,
+            &wasm_path.display().to_string(),
             oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
             communication_channel,
         );
@@ -67,11 +64,11 @@ async fn test_launcher_echo() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
+    let wasm_path = data_path("oak_functions/examples/echo/echo.wasm");
 
     let (_background, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path,
+            &wasm_path.display().to_string(),
             oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
             "network",
         );

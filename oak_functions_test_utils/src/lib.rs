@@ -252,14 +252,14 @@ pub fn run_oak_functions_containers_example_in_background(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
-    let launch_bin = data_path("artifacts/oak_functions_containers_launcher");
+    let launch_bin =
+        data_path("oak_functions_containers_launcher/oak_functions_containers_launcher");
     let qemu = which::which("qemu-system-x86_64").unwrap();
-    let stage0_bin = data_path("artifacts/stage0_bin");
-    let kernel = data_path("bazel-out/k8-fastbuild/bin/oak_containers/kernel/bzImage");
-    let initrd = data_path("artifacts/stage1.cpio");
-    let system_image = data_path("artifacts/oak_containers_system_image.tar.xz");
-    let container_bundle =
-        data_path("bazel-out/k8-fastbuild/bin/oak_functions_containers_app/bundle.tar");
+    let stage0_bin = data_path("stage0_bin/stage0_bin");
+    let kernel = data_path("oak_containers/kernel/bzImage");
+    let initrd = data_path("oak_containers/stage1/stage1.cpio");
+    let system_image = data_path("oak_containers/system_image/oak_containers_system_image.tar.xz");
+    let container_bundle = data_path("oak_functions_containers_app/bundle.tar");
     let ramdrive_size = 1000000;
     let memory_size = "2G";
     let virtio_guest_cid = nix::unistd::gettid();
