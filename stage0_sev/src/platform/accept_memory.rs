@@ -20,7 +20,10 @@ use oak_sev_guest::{
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
 };
-use oak_stage0::paging::{PageEncryption, PageTable};
+use oak_stage0::paging::{
+    page_table_level::{Leaf, PD, PT},
+    PageEncryption, PageTable,
+};
 use x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -67,12 +70,12 @@ impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
 
 /// Container for a page of virtual memory, and the page table that controls the
 /// mappings for that page.
-struct MappedPage<S: PageSize> {
-    pub page: Page<S>,
-    pub page_table: PageTable,
+struct MappedPage<L: Leaf> {
+    pub page: Page<L::Size>,
+    pub page_table: PageTable<L>,
 }
 
-impl<S: PageSize> MappedPage<S> {
+impl<L: Leaf> MappedPage<L> {
     pub fn new(vaddr: VirtAddr) -> Result<Self, AddressNotAligned> {
         let mapped_page =
             Self { page: Page::from_start_address(vaddr)?, page_table: PageTable::new() };
@@ -80,9 +83,9 @@ impl<S: PageSize> MappedPage<S> {
     }
 }
 
-fn pvalidate_range<S: NotGiantPageSize + ValidatablePageSize, T: PageSize, F>(
+fn pvalidate_range<S: NotGiantPageSize + ValidatablePageSize, L: Leaf, F>(
     range: &PhysFrameRange<S>,
-    memory: &mut MappedPage<T>,
+    memory: &mut MappedPage<L>,
     flags: PageTableFlags,
     success_counter: &AtomicUsize,
     mut f: F,
@@ -165,11 +168,11 @@ trait Validatable4KiB {
     /// Args:
     ///   pt: pointer to the page table we can mutate to map 4 KiB pages to
     ///       memory
-    fn pvalidate(&self, pt: &mut MappedPage<Size2MiB>) -> Result<(), InstructionError>;
+    fn pvalidate(&self, pt: &mut MappedPage<PT>) -> Result<(), InstructionError>;
 }
 
 impl Validatable4KiB for PhysFrameRange<Size4KiB> {
-    fn pvalidate(&self, pt: &mut MappedPage<Size2MiB>) -> Result<(), InstructionError> {
+    fn pvalidate(&self, pt: &mut MappedPage<PT>) -> Result<(), InstructionError> {
         pvalidate_range(self, pt, PageTableFlags::empty(), &counters::VALIDATED_4K, |_addr, err| {
             match err {
                 InstructionError::ValidationStatusNotUpdated => {
@@ -196,16 +199,16 @@ trait Validatable2MiB {
     /// table
     fn pvalidate(
         &self,
-        pd: &mut MappedPage<Size1GiB>,
-        pt: &mut MappedPage<Size2MiB>,
+        pd: &mut MappedPage<PD>,
+        pt: &mut MappedPage<PT>,
     ) -> Result<(), InstructionError>;
 }
 
 impl Validatable2MiB for PhysFrameRange<Size2MiB> {
     fn pvalidate(
         &self,
-        pd: &mut MappedPage<Size1GiB>,
-        pt: &mut MappedPage<Size2MiB>,
+        pd: &mut MappedPage<PD>,
+        pt: &mut MappedPage<PT>,
     ) -> Result<(), InstructionError> {
         pvalidate_range(
             self,
@@ -268,11 +271,8 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PDPT[1] is in use");
     }
-    page_tables.pdpt[1].set_address::<Sev>(
-        PhysAddr::new(&validation_pd.page_table as *const _ as u64),
-        PageTableFlags::PRESENT,
-        PageEncryption::Unset,
-    );
+    page_tables.pdpt[1]
+        .set_lower_level_table::<Sev>(&validation_pd.page_table, PageTableFlags::PRESENT);
 
     // Page table, for validation with 4 KiB pages.
     let mut validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
@@ -282,11 +282,8 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
     if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
         panic!("PD_0[1] is in use");
     }
-    page_tables.pd_0[1].set_address::<Sev>(
-        PhysAddr::new(&validation_pt.page_table as *const _ as u64),
-        PageTableFlags::PRESENT,
-        PageEncryption::Unset,
-    );
+    page_tables.pd_0[1]
+        .set_lower_level_table::<Sev>(&validation_pt.page_table, PageTableFlags::PRESENT);
 
     // We already pvalidated the memory in the first 640KiB of RAM in the boot
     // assembly code. We avoid redoing this as calling pvalidate again on these

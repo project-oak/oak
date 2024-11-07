@@ -34,8 +34,7 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     hal::PortFactory,
     mailbox::{FirmwareMailbox, OsMailbox},
-    paging::{self, PageEncryption},
-    BOOT_ALLOC,
+    paging, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
     tdcall::get_td_info,
@@ -385,28 +384,20 @@ impl oak_stage0::Platform for Tdx {
 
         info!("starting TDX memory acceptance");
         let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
-        let accept_pd_pt = PageTable::new();
+        let accept_pd_pt = oak_stage0::paging::PageTable::new();
         if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
             panic!("PDPT[1] is in use");
         }
 
-        page_tables.pdpt[1].set_address::<Tdx>(
-            PhysAddr::new(&accept_pd_pt as *const _ as u64),
-            PageTableFlags::PRESENT,
-            PageEncryption::Unset,
-        );
+        page_tables.pdpt[1].set_lower_level_table::<Tdx>(&accept_pd_pt, PageTableFlags::PRESENT);
         info!("added pdpt[1]");
 
         info!("adding pd_0[1]");
-        let accept_pt_pt = PageTable::new();
+        let accept_pt_pt = oak_stage0::paging::PageTable::new();
         if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
             panic!("PD_0[1] is in use");
         }
-        page_tables.pd_0[1].set_address::<Tdx>(
-            PhysAddr::new(&accept_pt_pt as *const _ as u64),
-            PageTableFlags::PRESENT,
-            PageEncryption::Unset,
-        );
+        page_tables.pd_0[1].set_lower_level_table::<Tdx>(&accept_pt_pt, PageTableFlags::PRESENT);
         info!("added pd_0[1]");
 
         let min_addr = 0xA0000;

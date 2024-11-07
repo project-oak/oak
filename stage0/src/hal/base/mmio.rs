@@ -24,13 +24,13 @@ use x86_64::{
 };
 
 use super::Base;
-use crate::paging::{PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
+use crate::paging::{page_table_level::PT, PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
 
 pub struct Mmio<S: PageSize> {
     pub base_address: PhysAddr,
     layout: Layout,
     mmio_memory: VirtAddr,
-    old_pte: PageTableEntry,
+    old_pte: PageTableEntry<PT>,
     phantom: core::marker::PhantomData<S>,
 }
 
