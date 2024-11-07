@@ -398,6 +398,27 @@
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -416,7 +437,9 @@
 
 </span><span class="doccomment">//! Test utilities to help with unit testing of Oak Functions code.
 
-</span><span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
+</span><span class="kw">use </span>oak_file_utils::data_path;
+
+<span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
 </span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
     PathBuf::from(env::var(<span class="string">"TEST_SRCDIR"</span>).unwrap())
         .join(env::var(<span class="string">"TEST_WORKSPACE"</span>).unwrap())
@@ -650,14 +673,33 @@
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
     <span class="macro">eprintln!</span>(<span class="string">"using port {}"</span>, port);
 
-    <span class="kw">let </span>child = std::process::Command::new(<span class="string">"just"</span>)
+    <span class="kw">let </span>launch_bin = data_path(<span class="string">"artifacts/oak_functions_containers_launcher"</span>);
+    <span class="kw">let </span>qemu = which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap();
+    <span class="kw">let </span>stage0_bin = data_path(<span class="string">"artifacts/stage0_bin"</span>);
+    <span class="kw">let </span>kernel = data_path(<span class="string">"bazel-out/k8-fastbuild/bin/oak_containers/kernel/bzImage"</span>);
+    <span class="kw">let </span>initrd = data_path(<span class="string">"artifacts/stage1.cpio"</span>);
+    <span class="kw">let </span>system_image = data_path(<span class="string">"artifacts/oak_containers_system_image.tar.xz"</span>);
+    <span class="kw">let </span>container_bundle =
+        data_path(<span class="string">"bazel-out/k8-fastbuild/bin/oak_functions_containers_app/bundle.tar"</span>);
+    <span class="kw">let </span>ramdrive_size = <span class="number">1000000</span>;
+    <span class="kw">let </span>memory_size = <span class="string">"2G"</span>;
+    <span class="kw">let </span>virtio_guest_cid = nix::unistd::gettid();
+
+    <span class="kw">let </span>child = std::process::Command::new(launch_bin)
         .args(<span class="macro">vec!</span>[
-            <span class="string">"run_oak_functions_containers_launcher"</span>,
-            wasm_path,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, port),
-            lookup_data_path,
-            communication_channel,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, nix::unistd::gettid()),
+            <span class="macro">format!</span>(<span class="string">"--vmm-binary={}"</span>, qemu.display()),
+            <span class="macro">format!</span>(<span class="string">"--stage0-binary={}"</span>, stage0_bin.display()),
+            <span class="macro">format!</span>(<span class="string">"--kernel={}"</span>, kernel.display()),
+            <span class="macro">format!</span>(<span class="string">"--initrd={}"</span>, initrd.display()),
+            <span class="macro">format!</span>(<span class="string">"--system-image={}"</span>, system_image.display()),
+            <span class="macro">format!</span>(<span class="string">"--container-bundle={}"</span>, container_bundle.display()),
+            <span class="macro">format!</span>(<span class="string">"--ramdrive-size={ramdrive_size}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--memory-size={memory_size}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--wasm={wasm_path}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--port={port}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--lookup-data={lookup_data_path}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--virtio-guest-cid={virtio_guest_cid}"</span>),
+            <span class="macro">format!</span>(<span class="string">"--communication-channel={communication_channel}"</span>),
         ])
         .group_spawn()
         .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
@@ -716,7 +758,7 @@
             ])
             .group_spawn()
     }
-    .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
+    .expect(<span class="string">"didn't start oak functions launcher"</span>);
 
     (BackgroundHandle(child), port)
 }
