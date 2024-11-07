@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_containers_nvidia_system_image
 export BUILD_COMMAND=(
   nix
   develop
-  .#systemImageProvenance
+  .#systemImageShell
   --command
   just
   oak_containers_nvidia_system_image
