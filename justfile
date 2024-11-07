@@ -44,7 +44,7 @@ build_enclave_app name:
     env --chdir=enclave_apps/{{name}} cargo build --release
 
 build_key_xor_test_app:
-    bazel build //enclave_apps/key_xor_test_app
+    bazel build {{BAZEL_CONFIG_FLAG}} //enclave_apps/key_xor_test_app
     mkdir --parents artifacts/enclave_apps/
     cp --force --preserve=timestamps \
         bazel-bin/enclave_apps/key_xor_test_app/key_xor_test_app \
@@ -125,17 +125,17 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
 oak_restricted_kernel_bin_virtio_console_channel:
     # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
-        --platforms=//:x86_64-unknown-none \
-        --compilation_mode opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
+    //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
+        --platforms=//:x86_64-unknown-none
 
 oak_restricted_kernel_wrapper_virtio_console_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
 
 oak_restricted_kernel_bin_simple_io_channel:
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
-        --platforms=//:x86_64-unknown-none \
-        --compilation_mode=opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
+        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
+        --platforms=//:x86_64-unknown-none
 
 oak_restricted_kernel_wrapper_simple_io_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
@@ -159,9 +159,9 @@ wasm_release_crate name:
 all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
 
 stage0_bin:
-    bazel build {{BAZEL_CONFIG_FLAG}} //stage0_bin:stage0_bin \
-        --platforms=//:x86_64-firmware \
-        --compilation_mode opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
+        //stage0_bin:stage0_bin \
+        --platforms=//:x86_64-firmware
 
     mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
@@ -169,9 +169,9 @@ stage0_bin:
         artifacts/stage0_bin
 
 stage0_bin_tdx:
-    bazel build {{BAZEL_CONFIG_FLAG}} //stage0_bin_tdx:stage0_bin_tdx \
-        --platforms=//:x86_64-firmware \
-        --compilation_mode opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
+        //stage0_bin_tdx:stage0_bin_tdx \
+        --platforms=//:x86_64-firmware
 
     mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
@@ -187,8 +187,8 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1:stage1_cpio \
-        --compilation_mode=opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
+        //oak_containers/stage1:stage1_cpio
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/oak_containers/stage1/stage1.cpio \
         artifacts/stage1.cpio
