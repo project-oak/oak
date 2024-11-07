@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::sync::atomic::{AtomicUsize, Ordering};
+use alloc::boxed::Box;
+use core::{
+    pin::Pin,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{
@@ -72,13 +76,13 @@ impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
 /// mappings for that page.
 struct MappedPage<L: Leaf> {
     pub page: Page<L::Size>,
-    pub page_table: PageTable<L>,
+    pub page_table: Pin<Box<PageTable<L>>>,
 }
 
 impl<L: Leaf> MappedPage<L> {
     pub fn new(vaddr: VirtAddr) -> Result<Self, AddressNotAligned> {
         let mapped_page =
-            Self { page: Page::from_start_address(vaddr)?, page_table: PageTable::new() };
+            Self { page: Page::from_start_address(vaddr)?, page_table: Box::pin(PageTable::new()) };
         Ok(mapped_page)
     }
 }
@@ -107,9 +111,11 @@ where
     // directory itself, and for each entry, fetch the next entry in the range.
     // If we've covered everything, `range.next()` will return `None`, and
     // the count will be zero once we've covered everything.
-    memory.page_table.zero();
-    while memory
-        .page_table
+    memory.page_table.set(PageTable::new());
+
+    // Safety: the call to `get_unchecked_mut` is safe as we will _not_ move the
+    // value out of `Pin`.
+    while unsafe { memory.page_table.as_mut().get_unchecked_mut() }
         .iter_mut()
         .filter_map(|entry| range.next().map(|frame| (entry, frame)))
         .map(|(entry, frame)| {
@@ -139,7 +145,7 @@ where
         }
 
         // Clear out the page table, ready for the next iteration.
-        memory.page_table.zero();
+        memory.page_table.set(PageTable::new());
     }
 
     Ok(())
@@ -272,7 +278,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
         panic!("PDPT[1] is in use");
     }
     page_tables.pdpt[1]
-        .set_lower_level_table::<Sev>(&validation_pd.page_table, PageTableFlags::PRESENT);
+        .set_lower_level_table::<Sev>(validation_pd.page_table.as_ref(), PageTableFlags::PRESENT);
 
     // Page table, for validation with 4 KiB pages.
     let mut validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
@@ -283,7 +289,7 @@ pub fn validate_memory(e820_table: &[BootE820Entry]) {
         panic!("PD_0[1] is in use");
     }
     page_tables.pd_0[1]
-        .set_lower_level_table::<Sev>(&validation_pt.page_table, PageTableFlags::PRESENT);
+        .set_lower_level_table::<Sev>(validation_pt.page_table.as_ref(), PageTableFlags::PRESENT);
 
     // We already pvalidated the memory in the first 640KiB of RAM in the boot
     // assembly code. We avoid redoing this as calling pvalidate again on these

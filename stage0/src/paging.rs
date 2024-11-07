@@ -18,6 +18,7 @@ use alloc::boxed::Box;
 use core::{
     marker::PhantomData,
     ops::{Index, IndexMut},
+    pin::Pin,
     ptr::addr_of_mut,
 };
 
@@ -49,21 +50,21 @@ pub static mut PD_3: PageTable<page_table_level::PD> = PageTable::new();
 pub struct PageTableRefs {
     /// The root page-map level 4 table coverting virtual memory ranges
     /// 0..128TiB and (16EiB-128TiB)..16EiB.
-    pub pml4: &'static mut PageTable<page_table_level::PML4>,
+    pub pml4: Pin<&'static mut PageTable<page_table_level::PML4>>,
 
     /// The page-directory pointer table covering virtual memory range
     /// 0..512GiB.
-    pub pdpt: &'static mut PageTable<page_table_level::PDPT>,
+    pub pdpt: Pin<&'static mut PageTable<page_table_level::PDPT>>,
 
     /// The page directory covering virtual memory range 0..1GiB.
-    pub pd_0: &'static mut PageTable<page_table_level::PD>,
+    pub pd_0: Pin<&'static mut PageTable<page_table_level::PD>>,
 
     /// The page directory covering virtual memory range 3..4GiB.
-    pub pd_3: &'static mut PageTable<page_table_level::PD>,
+    pub pd_3: Pin<&'static mut PageTable<page_table_level::PD>>,
 
     /// The page table covering virtual memory range 0..2MiB where we want 4KiB
     /// pages.
-    pub pt_0: Box<PageTable<page_table_level::PT>, &'static BootAllocator>,
+    pub pt_0: Pin<Box<PageTable<page_table_level::PT>, &'static BootAllocator>>,
 }
 
 /// References to all the pages tables we care about.
@@ -206,10 +207,10 @@ where
     /// TDX.
     pub fn set_lower_level_table<P: Platform>(
         &mut self,
-        pdpt: &PageTable<Ln>,
+        pt: Pin<&PageTable<Ln>>,
         flags: PageTableFlags,
     ) {
-        self.inner.set_addr(PhysAddr::new(pdpt as *const PageTable<Ln> as u64), flags)
+        self.inner.set_addr(PhysAddr::new(pt.get_ref() as *const _ as u64), flags)
     }
 }
 
@@ -306,16 +307,16 @@ pub fn init_page_table_refs<P: Platform>() {
     // Safety: accessing the mutable statics here is safe since we only do it once
     // and protect the mutable references with a mutex. This function can only
     // be called once, since updating `PAGE_TABLE_REFS` twice will panic.
-    let pml4: &mut PageTable<page_table_level::PML4> = unsafe { &mut *addr_of_mut!(PML4) };
-    let pdpt: &mut PageTable<page_table_level::PDPT> = unsafe { &mut *addr_of_mut!(PDPT) };
-    let pd_0: &mut PageTable<page_table_level::PD> = unsafe { &mut *addr_of_mut!(PD_0) };
-    let pd_3: &mut PageTable<page_table_level::PD> = unsafe { &mut *addr_of_mut!(PD_3) };
+    let pml4 = Pin::static_mut(unsafe { &mut *addr_of_mut!(PML4) });
+    let pdpt = Pin::static_mut(unsafe { &mut *addr_of_mut!(PDPT) });
+    let mut pd_0 = Pin::static_mut(unsafe { &mut *addr_of_mut!(PD_0) });
+    let pd_3 = Pin::static_mut(unsafe { &mut *addr_of_mut!(PD_3) });
 
     // Set up a new page table that maps the first 2MiB as 4KiB pages (except for
     // the lower 4KiB), so that we can share individual 4KiB pages with the
     // hypervisor as needed. We are using an identity mapping between virtual
     // and physical addresses.
-    let mut pt_0 = Box::new_in(PageTable::new(), &BOOT_ALLOC);
+    let mut pt_0 = Box::pin_in(PageTable::new(), &BOOT_ALLOC);
     // Let entry 1 map to 4KiB, entry 2 to 8KiB, ... , entry 511 to 2MiB-4KiB:
     // We leave [0,4K) unmapped to make sure null pointer dereferences crash
     // with a page fault.

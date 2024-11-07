@@ -25,6 +25,7 @@ use core::{
     mem::{size_of, MaybeUninit},
     ops::{Index, IndexMut},
     panic::PanicInfo,
+    pin::pin,
     ptr::addr_of,
     sync::atomic::Ordering,
 };
@@ -384,20 +385,22 @@ impl oak_stage0::Platform for Tdx {
 
         info!("starting TDX memory acceptance");
         let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
-        let accept_pd_pt = oak_stage0::paging::PageTable::new();
+        let accept_pd_pt = pin!(oak_stage0::paging::PageTable::new());
         if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
             panic!("PDPT[1] is in use");
         }
 
-        page_tables.pdpt[1].set_lower_level_table::<Tdx>(&accept_pd_pt, PageTableFlags::PRESENT);
+        page_tables.pdpt[1]
+            .set_lower_level_table::<Tdx>(accept_pd_pt.as_ref(), PageTableFlags::PRESENT);
         info!("added pdpt[1]");
 
         info!("adding pd_0[1]");
-        let accept_pt_pt = oak_stage0::paging::PageTable::new();
+        let accept_pt_pt = pin!(oak_stage0::paging::PageTable::new());
         if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
             panic!("PD_0[1] is in use");
         }
-        page_tables.pd_0[1].set_lower_level_table::<Tdx>(&accept_pt_pt, PageTableFlags::PRESENT);
+        page_tables.pd_0[1]
+            .set_lower_level_table::<Tdx>(accept_pt_pt.as_ref(), PageTableFlags::PRESENT);
         info!("added pd_0[1]");
 
         let min_addr = 0xA0000;
