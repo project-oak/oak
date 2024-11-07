@@ -31,6 +31,7 @@ rust_library(
     },
     deps = [
         "//oak_client",
+        "//oak_file_utils",
         "//oak_functions_abi",
         "//oak_functions_client:lib",
         "//oak_proto_rust",

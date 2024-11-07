@@ -5,6 +5,9 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+bazel = []
+
 [dependencies]
 anyhow = "*"
 command-group = "*"
@@ -13,6 +16,7 @@ http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 nix = { version = "*", features = ["process", "signal"] }
 oak_client = { workspace = true }
+oak_file_utils = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_client = { workspace = true }
 oak_proto_rust = { workspace = true }

@@ -16,6 +16,8 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
+use oak_file_utils::data_path;
+
 #[cfg(feature = "bazel")]
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> = Lazy::new(|| {
     PathBuf::from(env::var("TEST_SRCDIR").unwrap())
@@ -250,14 +252,33 @@ pub fn run_oak_functions_containers_example_in_background(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
-    let child = std::process::Command::new("just")
+    let launch_bin = data_path("artifacts/oak_functions_containers_launcher");
+    let qemu = which::which("qemu-system-x86_64").unwrap();
+    let stage0_bin = data_path("artifacts/stage0_bin");
+    let kernel = data_path("bazel-out/k8-fastbuild/bin/oak_containers/kernel/bzImage");
+    let initrd = data_path("artifacts/stage1.cpio");
+    let system_image = data_path("artifacts/oak_containers_system_image.tar.xz");
+    let container_bundle =
+        data_path("bazel-out/k8-fastbuild/bin/oak_functions_containers_app/bundle.tar");
+    let ramdrive_size = 1000000;
+    let memory_size = "2G";
+    let virtio_guest_cid = nix::unistd::gettid();
+
+    let child = std::process::Command::new(launch_bin)
         .args(vec![
-            "run_oak_functions_containers_launcher",
-            wasm_path,
-            &format!("{}", port),
-            lookup_data_path,
-            communication_channel,
-            &format!("{}", nix::unistd::gettid()),
+            format!("--vmm-binary={}", qemu.display()),
+            format!("--stage0-binary={}", stage0_bin.display()),
+            format!("--kernel={}", kernel.display()),
+            format!("--initrd={}", initrd.display()),
+            format!("--system-image={}", system_image.display()),
+            format!("--container-bundle={}", container_bundle.display()),
+            format!("--ramdrive-size={ramdrive_size}"),
+            format!("--memory-size={memory_size}"),
+            format!("--wasm={wasm_path}"),
+            format!("--port={port}"),
+            format!("--lookup-data={lookup_data_path}"),
+            format!("--virtio-guest-cid={virtio_guest_cid}"),
+            format!("--communication-channel={communication_channel}"),
         ])
         .group_spawn()
         .expect("didn't start oak functions containers launcher");
@@ -316,7 +337,7 @@ pub fn run_oak_functions_example_in_background(
             ])
             .group_spawn()
     }
-    .expect("didn't start oak functions containers launcher");
+    .expect("didn't start oak functions launcher");
 
     (BackgroundHandle(child), port)
 }
