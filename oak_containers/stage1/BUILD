@@ -17,7 +17,7 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
@@ -81,7 +81,9 @@ genrule(
         strip $(location :oak_containers_stage1) -o $(RULEDIR)/root/init
 
         # Create the compressed CPIO archive.
-        (cd $(RULEDIR)/root && find .) | cpio --create --owner=root:root --format=newc --verbose --reproducible --directory $(RULEDIR)/root > $(RULEDIR)/stage1.cpio.tmp
+        (cd $(RULEDIR)/root && find .) | sort | \
+            cpio --create --owner=root:root --format=newc --verbose --reproducible \
+            --directory $(RULEDIR)/root > $(RULEDIR)/stage1.cpio.tmp
         strip-nondeterminism --type cpio --timestamp 0 $(RULEDIR)/stage1.cpio.tmp
         gzip --best --no-name $(RULEDIR)/stage1.cpio.tmp
         mv $(RULEDIR)/stage1.cpio.tmp.gz $(RULEDIR)/stage1.cpio
