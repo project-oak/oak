@@ -7,6 +7,13 @@
 #     scripts/test_buildconfigs buildconfigs/*.sh
 set -e
 
+export CI_JOB_TYPE=CONTINUOUS
+export RUST_BACKTRACE=1
+export RUST_LOG=debug
+export XDG_RUNTIME_DIR=/var/run
+export JUST_TIMESTAMP=true
+export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
+
 check_buildconfig () {
   buildconfig="$1"
 

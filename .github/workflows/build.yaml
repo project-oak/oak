@@ -113,9 +113,12 @@ jobs:
           set -o nounset
           set -o pipefail
           source ${{ matrix.buildconfig }}
+          export CI_JOB_TYPE=CONTINUOUS
           export RUST_BACKTRACE=1
           export RUST_LOG=debug
           export XDG_RUNTIME_DIR=/var/run
+          export JUST_TIMESTAMP=true
+          export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
           scripts/docker_pull
           scripts/docker_run "${BUILD_COMMAND[@]}"
 

@@ -13,7 +13,7 @@ import? "justfile.local"
 # Same, but for a user-wide local Oak justfile (works with Git worktrees).
 import? "~/.oak_justfile.local"
 
-# Detect the CI job environemnt so that we can configure bazel commands accordingly.
+# Detect the CI job environment so that we can configure bazel commands accordingly.
 CI_JOB_TYPE:=env_var_or_default('CI_JOB_TYPE', 'LOCAL')
 BAZEL_CONFIG_FLAG := if CI_JOB_TYPE == "PRESUBMIT" {
     "--config=unsafe-fast-presubmit"
@@ -91,17 +91,16 @@ run_oak_functions_test: oak_orchestrator oak_functions_launcher oak_functions_en
 restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
     mkdir --parents oak_restricted_kernel_wrapper/bin
 
-    # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
+    # Building in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
-        --platforms=//:x86_64-unknown-none \
-        --compilation_mode opt
+    bazel build {{BAZEL_CONFIG_FLAG}} \
+        --compilation_mode opt --platforms=//:x86_64-unknown-none \
+        //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin
 
     # Create provenance subjects for a kernel bzImage, by extracting the setup data
     # and image to the output directory.
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement \
-        --platforms=//:x86_64-unknown-none \
-        --compilation_mode opt
+    bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-unknown-none \
+        //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement
 
     mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
@@ -109,7 +108,8 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
         generated
 
     # Place things where they were built in the cargo world for compatiblity.
-    cp --force --preserve=timestamps bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
         oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
@@ -123,25 +123,24 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
         --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
 
 oak_restricted_kernel_bin_virtio_console_channel:
-    # Buidling in "opt" mode is required so that Rust won't try to prevent underflows.
+    # Building in "opt" mode is required so that Rust won't try to prevent underflows.
     # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-    //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel \
-        --platforms=//:x86_64-unknown-none
+    bazel build {{BAZEL_CONFIG_FLAG}} \
+         --compilation_mode opt --platforms=//:x86_64-unknown-none \
+        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel
 
 oak_restricted_kernel_wrapper_virtio_console_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
 
 oak_restricted_kernel_bin_simple_io_channel:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel \
-        --platforms=//:x86_64-unknown-none
+    bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-unknown-none \
+        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel
 
 oak_restricted_kernel_wrapper_simple_io_channel:
     just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
 
 oak_client_android_app:
-    bazel build {{BAZEL_CONFIG_FLAG}} --noexperimental_check_desugar_deps --compilation_mode opt \
+    bazel build {{BAZEL_CONFIG_FLAG}} \
         //java/src/main/java/com/google/oak/client/android:client_app
     # Copy out to a directory which does not change with bazel config and does
     # not interfere with cargo. It should be reused for other targets as well.
@@ -159,21 +158,15 @@ wasm_release_crate name:
 all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
 
 stage0_bin:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-        //stage0_bin:stage0_bin \
-        --platforms=//:x86_64-firmware
-
-    mkdir --parents generated
+    bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-firmware \
+        //stage0_bin:stage0_bin
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin/stage0_bin \
         artifacts/stage0_bin
 
 stage0_bin_tdx:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-        //stage0_bin_tdx:stage0_bin_tdx \
-        --platforms=//:x86_64-firmware
-
-    mkdir --parents generated
+    bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-firmware \
+        //stage0_bin_tdx:stage0_bin_tdx
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
         artifacts/stage0_bin_tdx
@@ -187,8 +180,7 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
         --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt \
-        //oak_containers/stage1:stage1_cpio
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1:stage1_cpio
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/oak_containers/stage1/stage1.cpio \
         artifacts/stage1.cpio
@@ -204,7 +196,7 @@ oak_containers_kernel:
         artifacts/oak_containers_kernel
 
 oak_containers_launcher:
-    env cargo build --release --package='oak_containers_launcher'
+    cargo build --release --package=oak_containers_launcher
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
@@ -219,15 +211,18 @@ bazel_wasm name:
 # Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:
-    env bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt //oak_containers/examples/hello_world/trusted_app:bundle.tar
-    # bazel-bin symlink doesn't exist outside of the docker container, this makes the file available to the kokoro script.
-    cp --force --preserve=timestamps bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar artifacts/rust_hello_world_trusted_bundle.tar
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/examples/hello_world/trusted_app:bundle.tar
+    # bazel-bin symlink doesn't exist outside of the docker container, this
+    # makes the file available to the kokoro script.
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar \
+        artifacts/rust_hello_world_trusted_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
-    env bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt //cc/containers/hello_world_trusted_app:bundle.tar
+    bazel build {{BAZEL_CONFIG_FLAG}} //cc/containers/hello_world_trusted_app:bundle.tar
 
 oak_containers_hello_world_untrusted_app:
-    env cargo build --release --package='oak_containers_hello_world_untrusted_app'
+    cargo build --release --package=oak_containers_hello_world_untrusted_app
 
 # Oak Functions Containers entry point.
 
@@ -235,18 +230,21 @@ oak_functions_containers_app_bundle_tar:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_app:bundle oak_functions_containers_app:bundle_insecure
 
 oak_functions_containers_launcher:
-    bazel build {{BAZEL_CONFIG_FLAG}} -c opt oak_functions_containers_launcher
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_launcher
     cp --preserve=timestamps --force \
         bazel-bin/oak_functions_containers_launcher/oak_functions_containers_launcher \
         artifacts/oak_functions_containers_launcher
 
 oak_functions_launcher:
-    bazel build {{BAZEL_CONFIG_FLAG}} -c opt oak_functions_launcher
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_launcher
     cp --preserve=timestamps --force \
         bazel-bin/oak_functions_launcher/oak_functions_launcher \
         artifacts/oak_functions_launcher
 
-all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_functions_containers_launcher oak_functions_launcher
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio \
+    oak_containers_kernel oak_containers_system_image \
+    oak_functions_containers_app_bundle_tar oak_functions_containers_launcher \
+    oak_functions_launcher
 
 ensure_no_std package:
     RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
@@ -269,8 +267,11 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin_virtio_co
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
+# Builds and tests all Oak Container binaries.
 oak_containers_tests:
-    bazel test {{BAZEL_CONFIG_FLAG}} //oak_containers/... //oak_containers/examples/hello_world/untrusted_app:oak_containers_hello_world_untrusted_app_tests
+    bazel test {{BAZEL_CONFIG_FLAG}} \
+        //oak_containers/... \
+        //oak_containers/examples/hello_world/untrusted_app:oak_containers_hello_world_untrusted_app_tests
 
 kokoro_oak_containers: stage1_cpio oak_functions_containers_app_bundle_tar oak_containers_tests containers_placer_artifacts
 
@@ -360,7 +361,6 @@ cargo-clippy:
         env --chdir=$(dirname "$workspace") cargo clippy --all-features --all-targets --no-deps -- --deny=warnings
     done
 
-
 cargo-lockfiles:
     #!/bin/sh
     echo $CARGO_LOCKFILES_LIST_CMD
@@ -390,7 +390,6 @@ cargo-udeps:
     do
         env --chdir=$(dirname "$workspace") cargo udeps --all-targets --backend=depinfo --workspace
     done
-
 
 check-format:
     bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --verbose
@@ -455,22 +454,22 @@ containers_placer_artifacts:
     cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
     cp --force --preserve=timestamps bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
 
-bazel_build_opt target:
-    bazel build {{BAZEL_CONFIG_FLAG}} --compilation_mode opt --linkopt=-Wl,--strip-all "{{target}}"
-
-bazel_build_copy package target: (bazel_build_opt package+":"+target)
-    cp --force --preserve=timestamps "./bazel-bin/{{package}}/{{target}}" artifacts
+bazel_build_copy package target:
+    bazel build {{BAZEL_CONFIG_FLAG}} "{{package}}:{{target}}"
+    cp --force --preserve=timestamps "bazel-bin/{{package}}/{{target}}" artifacts
 
 oak_containers_agent: (bazel_build_copy "oak_containers/agent" "bin/oak_containers_agent")
 oak_containers_orchestrator: (bazel_build_copy "oak_containers/orchestrator" "bin/oak_containers_orchestrator")
 oak_containers_syslogd: (bazel_build_copy "oak_containers/syslogd" "oak_containers_syslogd")
 
-oak_containers_system_image: (bazel_build_opt "oak_containers/system_image:oak_containers_system_image")
+oak_containers_system_image:
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
         artifacts
 
-oak_containers_nvidia_system_image: (bazel_build_opt "oak_containers/system_image:oak_containers_nvidia_system_image")
+oak_containers_nvidia_system_image:
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_nvidia_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
         artifacts
