@@ -83,8 +83,8 @@ genrule(
         # Create the compressed CPIO archive.
         (cd $(RULEDIR)/root && find .) | sort | \
             cpio --create --owner=root:root --format=newc --verbose --reproducible \
-            --directory $(RULEDIR)/root > $(RULEDIR)/stage1.cpio.tmp
-        strip-nondeterminism --type cpio --timestamp 0 $(RULEDIR)/stage1.cpio.tmp
+            --directory=$(RULEDIR)/root > $(RULEDIR)/stage1.cpio.tmp
+        strip-nondeterminism --type=cpio --timestamp=0 $(RULEDIR)/stage1.cpio.tmp
         gzip --best --no-name $(RULEDIR)/stage1.cpio.tmp
         mv $(RULEDIR)/stage1.cpio.tmp.gz $(RULEDIR)/stage1.cpio
     """,
