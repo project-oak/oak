@@ -76,13 +76,15 @@ impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
 /// mappings for that page.
 struct MappedPage<L: Leaf> {
     pub page: Page<L::Size>,
-    pub page_table: Pin<Box<PageTable<L>>>,
+    pub page_table: Pin<Box<PageTable<L>, &'static oak_stage0::BootAllocator>>,
 }
 
 impl<L: Leaf> MappedPage<L> {
     pub fn new(vaddr: VirtAddr) -> Result<Self, AddressNotAligned> {
-        let mapped_page =
-            Self { page: Page::from_start_address(vaddr)?, page_table: Box::pin(PageTable::new()) };
+        let mapped_page = Self {
+            page: Page::from_start_address(vaddr)?,
+            page_table: Box::pin_in(PageTable::new(), &oak_stage0::BOOT_ALLOC),
+        };
         Ok(mapped_page)
     }
 }
