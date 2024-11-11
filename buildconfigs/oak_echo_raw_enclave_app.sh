@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_echo_raw_enclave_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#rust
+  .#bazelRustShell
   --command
   just
   build_enclave_app
