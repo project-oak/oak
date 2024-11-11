@@ -22,6 +22,8 @@
   [oak_restricted_kernel_cmd_line](https://github.com/project-oak/oak/blob/main/docs/tr/claim/47346.md)
 - `66738`
   [stage0](https://github.com/project-oak/oak/blob/main/docs/tr/claim/66738.md)
+- `20352`
+  [stage0_tdx](https://github.com/project-oak/oak/blob/main/docs/tr/claim/20352.md)
 
 ## Other
 

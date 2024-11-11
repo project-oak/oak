@@ -52,26 +52,31 @@ Here is a full example:
 
 ```jsonc
 {
-  "\_type": "https://in-toto.io/Statement/v1",
+  "_type": "https://in-toto.io/Statement/v1",
   "predicateType": "https://project-oak.github.io/oak/tr/endorsement/v1",
-  "subject": \[{
-    "name": "oak_functions_container",
-    "digest": {
-      "sha256": "5f0c567cb98ad3cf2c486a304c1fcf7e414348752cf7dc427ef154a5842f0be9"
-    }
-  }\],
+  "subject": [
+    {
+      "name": "oak_functions_container",
+      "digest": {
+        "sha256": "5f0c567cb98ad3cf2c486a304c1fcf7e414348752cf7dc427ef154a5842f0be9",
+      },
+    },
+  ],
   "predicate": {
     "issuedOn": "2024-10-18T10:45:36.376000Z",
     "validity": {
       "notBefore": "2024-10-18T10:45:36.376000Z",
-      "notAfter": "2025-10-18T10:45:36.376000Z"
+      "notAfter": "2025-10-18T10:45:36.376000Z",
     },
-    "claims": \[{
-      "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/18136.md"
-    }, {
-      "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/75606.md"
-    }\]
-  }
+    "claims": [
+      {
+        "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/18136.md",
+      },
+      {
+        "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/75606.md",
+      },
+    ],
+  },
 }
 ```
 
@@ -176,14 +181,14 @@ SignedEndorsement, as follows:
 
 ```proto
 endorsement {
-  format: ENDORSEMENT\_FORMAT\_JSON\_INTOTO
-  serialized: "\<contents of endorsement.json\>"
+  format: ENDORSEMENT_FORMAT_JSON_INTOTO
+  serialized: "<contents of endorsement.json>"
 }
 signature {
-  key\_id: 1
-  raw:  "\<contents of endorsement.json.sig\>"
+  key_id: 1
+  raw:  "<contents of endorsement.json.sig>"
 }
-rekor\_log\_entry: "\<contents of logentry.json\>"
+rekor_log_entry: "<contents of logentry.json>"
 ```
 
 #### EndorsementReferenceValue
@@ -197,18 +202,18 @@ is not versioned.
 ```proto
 endorser {
   keys {
-    type: KEY\_TYPE\_ECDSA\_P256\_SHA256
-    key\_id: 1
-    raw: "\<contents of public\_key.pem converted to raw\>"
+    type: KEY_TYPE_ECDSA_P256_SHA256
+    key_id: 1
+    raw: "<contents of public_key.pem converted to raw>"
   }
 }
-required\_claims: "\<required claim 1\>"
-required\_claims: "\<required claim 2\>"
+required_claims: "<required claim 1>"
+required_claims: "<required claim 2>"
 rekor {
   verify {
     keys {
-      type: KEY\_TYPE\_ECDSA\_P256\_SHA256
-      raw: "\<contents of rekor\_public\_key.pem converted to raw\>"
+      type: KEY_TYPE_ECDSA_P256_SHA256
+      raw: "<contents of rekor_public_key.pem converted to raw>"
     }
   }
 }
