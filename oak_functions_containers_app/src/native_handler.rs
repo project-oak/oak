@@ -27,10 +27,35 @@ use oak_functions_service::{
 use ouroboros::self_referencing;
 use tempfile::{tempdir, TempDir};
 
+// Traits so that we could keep LookupData(Manager) around without knowing the
+// exact number of shards.
+trait LookupDataNativeInterface {
+    fn get(&self, key: &[u8]) -> Option<&[u8]>;
+    fn log_debug(&self, message: &str);
+}
+impl<const S: usize> LookupDataNativeInterface for LookupData<S> {
+    fn get(&self, key: &[u8]) -> Option<&[u8]> {
+        self.get(key)
+    }
+
+    fn log_debug(&self, message: &str) {
+        self.log_debug(message)
+    }
+}
+
+trait LookupDataManagerNativeInterface {
+    fn create_lookup_data(&self) -> Box<dyn LookupDataNativeInterface>;
+}
+impl<const S: usize> LookupDataManagerNativeInterface for LookupDataManager<S> {
+    fn create_lookup_data(&self) -> Box<dyn LookupDataNativeInterface> {
+        Box::new(self.create_lookup_data())
+    }
+}
+
 struct RequestContext {
     request: Vec<u8>,
     response: Vec<u8>,
-    lookup_data: LookupData<16>,
+    lookup_data: Box<dyn LookupDataNativeInterface>,
 }
 
 thread_local! {
@@ -129,7 +154,7 @@ struct SharedLibrary {
 /// Variant of a Handler that dynamically loads a `.so` file and invokes native
 /// code to handle requests from there.
 pub struct NativeHandler {
-    lookup_data_manager: Arc<LookupDataManager<16>>,
+    lookup_data_manager: Arc<dyn LookupDataManagerNativeInterface + Send + Sync>,
 
     #[allow(dead_code)]
     observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -195,10 +220,10 @@ impl Handler for NativeHandler {
     /// Safety: It's up to the caller to guarantee that said shared object
     /// adheres to the semantics we require. This method should really be
     /// marked `unsafe` because of that.
-    fn new_handler(
+    fn new_handler<const S: usize>(
         _config: (),
         module_bytes: &[u8],
-        lookup_data_manager: Arc<LookupDataManager<16>>,
+        lookup_data_manager: Arc<LookupDataManager<S>>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<NativeHandler> {
         let directory = tempdir().context("could not create temporary directory")?;

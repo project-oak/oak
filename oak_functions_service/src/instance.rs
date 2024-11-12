@@ -29,7 +29,7 @@ use prost::Message;
 use crate::{logger::StandaloneLogger, lookup::LookupDataManager, Handler, Observer};
 
 pub struct OakFunctionsInstance<H: Handler> {
-    lookup_data_manager: Arc<LookupDataManager<16>>,
+    lookup_data_manager: Arc<LookupDataManager<128>>,
     wasm_handler: H::HandlerType,
 }
 

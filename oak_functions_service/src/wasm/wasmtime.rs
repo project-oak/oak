@@ -481,10 +481,10 @@ impl Handler for WasmtimeHandler {
     type HandlerType = WasmtimeHandler;
     type HandlerConfig = WasmtimeConfig;
 
-    fn new_handler(
+    fn new_handler<const S: usize>(
         config: WasmtimeConfig,
         wasm_module_bytes: &[u8],
-        lookup_data_manager: Arc<LookupDataManager<16>>,
+        lookup_data_manager: Arc<LookupDataManager<S>>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<WasmtimeHandler> {
         let logger = Box::new(StandaloneLogger);

@@ -440,10 +440,10 @@ impl Handler for WasmHandler {
     type HandlerType = WasmHandler;
     type HandlerConfig = WasmConfig;
 
-    fn new_handler(
+    fn new_handler<const S: usize>(
         _config: WasmConfig,
         wasm_module_bytes: &[u8],
-        lookup_data_manager: Arc<LookupDataManager<16>>,
+        lookup_data_manager: Arc<LookupDataManager<S>>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<WasmHandler> {
         let logger = Arc::new(StandaloneLogger);
