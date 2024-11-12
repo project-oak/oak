@@ -14,14 +14,10 @@
 // limitations under the License.
 //
 
-package com.google.oak.session;
+package com.google.oak.transport
 
-public class OakSessionException extends RuntimeException {
-  public OakSessionException(String message) {
-    super(message);
-  }
+interface SessionTransport {
+  suspend fun write(bytes: ByteArray)
 
-  public OakSessionException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  suspend fun read(): ByteArray
 }

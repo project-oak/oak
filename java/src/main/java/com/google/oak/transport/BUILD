@@ -15,6 +15,7 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -96,5 +97,14 @@ java_library(
     srcs = ["ApiKeyInterceptor.java"],
     deps = [
         "@io_grpc_grpc_java//api",
+    ],
+)
+
+kt_jvm_library(
+    name = "session_transport",
+    srcs = [
+        "SessionTransport.kt",
+    ],
+    deps = [
     ],
 )

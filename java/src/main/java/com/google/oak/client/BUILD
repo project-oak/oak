@@ -15,6 +15,7 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -32,6 +33,33 @@ java_library(
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:verification_java_proto",
+    ],
+)
+
+kt_jvm_library(
+    name = "client_channel",
+    srcs = [
+        "OakClientChannel.kt",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/session:client_session",
+        "//java/src/main/java/com/google/oak/transport:session_transport",
+        "//proto/session:session_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+kt_jvm_library(
+    name = "session_client",
+    srcs = [
+        "OakSessionClient.kt",
+    ],
+    deps = [
+        ":client_channel",
+        "//java/src/main/java/com/google/oak/session:client_session",
+        "//java/src/main/java/com/google/oak/session:exception",
+        "//java/src/main/java/com/google/oak/transport:session_transport",
+        "//proto/session:session_java_proto",
     ],
 )
 
