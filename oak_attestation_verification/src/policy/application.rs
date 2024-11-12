@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::EventPolicy;
+use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
     ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
     EventAttestationResults,
@@ -37,7 +37,10 @@ impl ApplicationPolicy {
     }
 }
 
-impl EventPolicy for ApplicationPolicy {
+// We have to use [`Policy<[u8], [u8]>`] instead of [`EventPolicy`], because
+// Rust doesn't yet support implementing trait aliases.
+// <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
+impl Policy<[u8], [u8]> for ApplicationPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],

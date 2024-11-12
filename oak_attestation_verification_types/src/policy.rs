@@ -14,32 +14,23 @@
 // limitations under the License.
 //
 
-use oak_proto_rust::oak::attestation::v1::{
-    AttestationResults, EventAttestationResults, EventEndorsements, EventLog,
-};
+use oak_proto_rust::oak::attestation::v1::EventAttestationResults;
 
-/// Verification Policy that takes an EventLog and corresponding Event
-/// Endorsements and performs attestation verification.
+/// Verification Policy that takes a generic evidence and endorsement and
+/// performs attestation verification.
 ///
 /// Verification Policy correspond to the "Appraisal Policy for Evidence"
 /// provided by the RATS standard.
 /// <https://datatracker.ietf.org/doc/html/rfc9334#section-8.5>
-pub trait Policy: Send + Sync {
+pub trait Policy<V: ?Sized, N: ?Sized>: Send + Sync {
     fn verify(
         &self,
-        event_log: &EventLog,
-        event_endorsements: &EventEndorsements,
+        evidence: &V,
+        endorsement: &N,
         milliseconds_since_epoch: i64,
-    ) -> anyhow::Result<AttestationResults>;
+    ) -> anyhow::Result<EventAttestationResults>;
 }
 
 /// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
-pub trait EventPolicy: Send + Sync {
-    fn verify(
-        &self,
-        encoded_event: &[u8],
-        encoded_event_endorsement: &[u8],
-        milliseconds_since_epoch: i64,
-    ) -> anyhow::Result<EventAttestationResults>;
-}
+pub trait EventPolicy = Policy<[u8], [u8]>;

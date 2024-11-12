@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::EventPolicy;
+use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, EventData, EventReferenceValues,
 };
@@ -35,7 +35,7 @@ impl BinaryPolicy {
     }
 }
 
-impl EventPolicy for BinaryPolicy {
+impl Policy<[u8], [u8]> for BinaryPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],

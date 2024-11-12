@@ -16,18 +16,20 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::{boxed::Box, format};
+use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 
 use anyhow::Context;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
+use itertools::izip;
 use oak_attestation_verification_types::{
-    policy::Policy, util::Clock, verifier::AttestationVerifier,
+    policy::EventPolicy, util::Clock, verifier::AttestationVerifier,
 };
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, AttestationResults, Endorsements, EventLog,
-    Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
+    attestation_results::Status, endorsements, AttestationResults, Endorsements,
+    EventAttestationResults, EventEndorsements, EventLog, Evidence, ExpectedValues,
+    ExtractedEvidence, LayerEvidence, ReferenceValues,
 };
 use p256::ecdsa::VerifyingKey;
 
@@ -62,13 +64,13 @@ pub fn to_attestation_results(
 }
 
 pub struct AmdSevSnpDiceAttestationVerifier {
-    policy: Box<dyn Policy>,
+    policies: Vec<Box<dyn EventPolicy>>,
     clock: Box<dyn Clock>,
 }
 
 impl AmdSevSnpDiceAttestationVerifier {
-    pub fn new(policy: Box<dyn Policy>, clock: Box<dyn Clock>) -> Self {
-        Self { policy, clock }
+    pub fn new(policies: Vec<Box<dyn EventPolicy>>, clock: Box<dyn Clock>) -> Self {
+        Self { policies, clock }
     }
 }
 
@@ -81,7 +83,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // Last layer's certificate authority key is not used to sign anything.
         let _ = verify_dice_chain(evidence).context("couldn't verify DICE chain")?;
 
-        // Verify event log and event endorsements with corresponding policy.
+        // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence
             .event_log
             .as_ref()
@@ -90,7 +92,24 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .event_endorsements
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("event endorsements were not provided"))?;
-        self.policy.verify(event_log, event_endorsements, self.clock.get_milliseconds_since_epoch())
+        let event_attestation_results = verify_event_log(
+            event_log,
+            event_endorsements,
+            self.policies.as_slice(),
+            self.clock.get_milliseconds_since_epoch(),
+        )
+        .context("couldn't verify event log")?;
+
+        // TODO: b/366419879 - Combine per-event attestation results.
+        #[allow(deprecated)]
+        Ok(AttestationResults {
+            status: Status::Unspecified.into(),
+            reason: "".to_string(),
+            encryption_public_key: vec![],
+            signing_public_key: vec![],
+            extracted_evidence: None,
+            event_attestation_results,
+        })
     }
 }
 
@@ -321,4 +340,47 @@ fn validate_that_event_log_is_captured_in_dice_layers(
             }
         },
     )
+}
+
+/// Verifies an Event Log using a combination of Event Policies.
+///
+/// Event Policies are provided as a list where each element corresponds to an
+/// [`Event`] in the [`EventLog`] and [`EventEndorsement`] in the
+/// [`EventEndorsements`] with the same index. This means that mapping between
+/// Policies and Events is done via ordering.
+fn verify_event_log(
+    event_log: &EventLog,
+    event_endorsements: &EventEndorsements,
+    policies: &[Box<dyn EventPolicy>],
+    milliseconds_since_epoch: i64,
+) -> anyhow::Result<Vec<EventAttestationResults>> {
+    if event_log.encoded_events.len() != event_endorsements.encoded_event_endorsements.len() {
+        anyhow::bail!(
+            "event log length ({}) is not equal to the number of endorsements ({})",
+            event_log.encoded_events.len(),
+            event_endorsements.encoded_event_endorsements.len()
+        );
+    }
+    if policies.len() != event_log.encoded_events.len() {
+        anyhow::bail!(
+            "number of policies ({}) is not equal to the event log length ({})",
+            policies.len(),
+            event_log.encoded_events.len()
+        );
+    }
+
+    let verification_iterator = izip!(
+        policies.iter(),
+        event_log.encoded_events.iter(),
+        event_endorsements.encoded_event_endorsements.iter()
+    );
+    let event_attestation_results = verification_iterator
+        .map(|(event_policy, event, event_endorsements)| {
+            event_policy.verify(event, event_endorsements, milliseconds_since_epoch).unwrap_or(
+                // TODO: b/366186091 - Use Rust error types for failed attestation.
+                EventAttestationResults {},
+            )
+        })
+        .collect::<Vec<EventAttestationResults>>();
+    Ok(event_attestation_results)
 }

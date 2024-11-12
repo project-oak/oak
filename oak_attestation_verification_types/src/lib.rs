@@ -15,6 +15,7 @@
 //
 
 #![no_std]
+#![feature(trait_alias)]
 
 extern crate alloc;
 

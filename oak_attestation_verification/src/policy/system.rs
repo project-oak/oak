@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::EventPolicy;
+use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues,
 };
@@ -36,7 +36,7 @@ impl SystemPolicy {
     }
 }
 
-impl EventPolicy for SystemPolicy {
+impl Policy<[u8], [u8]> for SystemPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
