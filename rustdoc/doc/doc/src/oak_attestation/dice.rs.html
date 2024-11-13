@@ -431,7 +431,6 @@
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -453,6 +452,7 @@
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable, CoseKey};
+<span class="kw">use </span>oak_attestation_types::{attester::Attester, util::Serializable};
 <span class="kw">use </span>oak_dice::{
     cert::{
         cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
@@ -472,8 +472,6 @@
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zeroize::Zeroize;
-
-<span class="kw">use </span><span class="kw">crate</span>::attester::{Attester, Serializable};
 
 <span class="kw">pub trait </span>MeasureDigest {
     <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest;

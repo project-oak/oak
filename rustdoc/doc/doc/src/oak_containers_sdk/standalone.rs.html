@@ -245,6 +245,7 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -271,7 +272,8 @@
 
 </span><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>oak_attestation::{attester::Attester, dice::DiceAttester};
+<span class="kw">use </span>oak_attestation::dice::DiceAttester;
+<span class="kw">use </span>oak_attestation_types::attester::Attester;
 <span class="kw">use </span>oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},

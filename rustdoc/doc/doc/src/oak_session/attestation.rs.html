@@ -337,32 +337,6 @@
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -392,10 +366,9 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context, Error, <span class="prelude-val">Ok</span>};
 <span class="kw">use </span>itertools::{EitherOrBoth, Itertools};
-<span class="attr">#[cfg(test)]
-</span><span class="kw">use </span>mockall::automock;
+<span class="kw">use </span>oak_attestation_verification_types::verifier::AttestationVerifier;
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{attestation_results, AttestationResults},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
@@ -437,31 +410,6 @@
     <span class="kw">fn </span>from(value: AttestationFailure) -&gt; <span class="self">Self </span>{
         <span class="macro">anyhow!</span>(value.to_string())
     }
-}
-
-<span class="comment">// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
-// logic has been moved to a separate crate.
-</span><span class="attr">#[cfg_attr(test, automock)]
-</span><span class="kw">pub trait </span>Attester: Send {
-    <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
-    <span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Evidence&gt;;
-}
-
-<span class="comment">// TODO: b/371139436 - Use definition from `oak_attestation` crate, once DICE
-// logic has been moved to a separate crate.
-</span><span class="attr">#[cfg_attr(test, automock)]
-</span><span class="kw">pub trait </span>Endorser: Send {
-    <span class="kw">fn </span>endorse&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, evidence: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Evidence&gt;) -&gt; anyhow::Result&lt;Endorsements&gt;;
-}
-
-<span class="attr">#[cfg_attr(test, automock)]
-</span><span class="doccomment">/// Verifier for the particular type of the attestation.
-</span><span class="kw">pub trait </span>AttestationVerifier: Send {
-    <span class="kw">fn </span>verify(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        evidence: <span class="kw-2">&amp;</span>Evidence,
-        endorsements: <span class="kw-2">&amp;</span>Endorsements,
-    ) -&gt; anyhow::Result&lt;AttestationResults&gt;;
 }
 
 <span class="doccomment">/// Configuration of the attestation behavior that the AttestationProvider will

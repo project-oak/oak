@@ -26,6 +26,7 @@
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -47,6 +48,7 @@
 <span class="doccomment">/// Trait that provides the ability to read attestation endorsements.
 ///
 /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr&gt;
+</span><span class="attr">#[cfg_attr(test, automock)]
 </span><span class="kw">pub trait </span>Endorser: Send + Sync {
     <span class="doccomment">/// Generate an endorsement.
     ///

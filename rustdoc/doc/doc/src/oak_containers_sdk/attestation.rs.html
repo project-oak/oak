@@ -126,12 +126,12 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation_types::{attester::Attester, endorser::Endorser};
 <span class="kw">use </span>oak_grpc::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
     session::v1::EndorsedEvidence,
 };
-<span class="kw">use </span>oak_session::attestation::{Attester, Endorser};
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 

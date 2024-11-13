@@ -31,6 +31,9 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -47,11 +50,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_proto_rust::oak::attestation::v1::Evidence;
+</span><span class="attr">#[cfg(test)]
+</span><span class="kw">use </span>mockall::automock;
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::Evidence;
 
 <span class="doccomment">/// Trait that provides the ability to build an attestation evidence.
 ///
 /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-attester&gt;
+</span><span class="attr">#[cfg_attr(test, automock)]
 </span><span class="kw">pub trait </span>Attester: Send + Sync {
     <span class="doccomment">/// Add a new event to the evidence.
     </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;

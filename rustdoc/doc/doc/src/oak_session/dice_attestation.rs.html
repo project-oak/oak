@@ -58,6 +58,10 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -80,11 +84,10 @@
 </span><span class="kw">use </span>alloc::{string::ToString, sync::Arc};
 
 <span class="kw">use </span>oak_attestation_verification::verifier::verify;
+<span class="kw">use </span>oak_attestation_verification_types::{util::Clock, verifier::AttestationVerifier};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
-
-<span class="kw">use crate</span>::{attestation::AttestationVerifier, clock::Clock};
 
 <span class="kw">pub struct </span>DiceAttestationVerifier {
     ref_values: ReferenceValues,
@@ -104,7 +107,12 @@
         evidence: <span class="kw-2">&amp;</span>Evidence,
         endorsements: <span class="kw-2">&amp;</span>Endorsements,
     ) -&gt; anyhow::Result&lt;AttestationResults&gt; {
-        <span class="kw">match </span>verify(<span class="self">self</span>.clock.get_current_time_ms(), evidence, endorsements, <span class="kw-2">&amp;</span><span class="self">self</span>.ref_values) {
+        <span class="kw">match </span>verify(
+            <span class="self">self</span>.clock.get_milliseconds_since_epoch(),
+            evidence,
+            endorsements,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.ref_values,
+        ) {
             <span class="prelude-val">Ok</span>(extracted_evidence) =&gt; <span class="prelude-val">Ok</span>(AttestationResults {
                 status: attestation_results::Status::Success.into(),
                 extracted_evidence: <span class="prelude-val">Some</span>(extracted_evidence),

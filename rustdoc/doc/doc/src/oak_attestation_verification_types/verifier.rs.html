@@ -27,6 +27,7 @@
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -49,6 +50,7 @@
 /// evidence and endorsements and producing attestation results.
 ///
 /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-verifier&gt;
+</span><span class="attr">#[cfg_attr(test, automock)]
 </span><span class="kw">pub trait </span>AttestationVerifier: Send + Sync {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
