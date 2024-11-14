@@ -82,7 +82,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification_types::policy::EventPolicy;
+<span class="kw">use </span>oak_attestation_verification_types::policy::Policy;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, KernelLayerData, KernelLayerEndorsements, KernelLayerReferenceValues,
 };
@@ -103,7 +103,7 @@
     }
 }
 
-<span class="kw">impl </span>EventPolicy <span class="kw">for </span>KernelPolicy {
+<span class="kw">impl </span>Policy&lt;[u8], [u8]&gt; <span class="kw">for </span>KernelPolicy {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],

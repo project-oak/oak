@@ -34,15 +34,6 @@
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-<a href="#41" id="41">41</a>
-<a href="#42" id="42">42</a>
-<a href="#43" id="43">43</a>
-<a href="#44" id="44">44</a>
-<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -59,33 +50,24 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    AttestationResults, EventAttestationResults, EventEndorsements, EventLog,
-};
+</span><span class="kw">use </span>oak_proto_rust::oak::attestation::v1::EventAttestationResults;
 
-<span class="doccomment">/// Verification Policy that takes an EventLog and corresponding Event
-/// Endorsements and performs attestation verification.
+<span class="doccomment">/// Verification Policy that takes a generic evidence and endorsement and
+/// performs attestation verification.
 ///
 /// Verification Policy correspond to the "Appraisal Policy for Evidence"
 /// provided by the RATS standard.
 /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#section-8.5&gt;
-</span><span class="kw">pub trait </span>Policy: Send + Sync {
+</span><span class="kw">pub trait </span>Policy&lt;V: <span class="question-mark">?</span>Sized, N: <span class="question-mark">?</span>Sized&gt;: Send + Sync {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        event_log: <span class="kw-2">&amp;</span>EventLog,
-        event_endorsements: <span class="kw-2">&amp;</span>EventEndorsements,
+        evidence: <span class="kw-2">&amp;</span>V,
+        endorsement: <span class="kw-2">&amp;</span>N,
         milliseconds_since_epoch: i64,
-    ) -&gt; anyhow::Result&lt;AttestationResults&gt;;
+    ) -&gt; anyhow::Result&lt;EventAttestationResults&gt;;
 }
 
 <span class="doccomment">/// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
-</span><span class="kw">pub trait </span>EventPolicy: Send + Sync {
-    <span class="kw">fn </span>verify(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        encoded_event: <span class="kw-2">&amp;</span>[u8],
-        encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
-        milliseconds_since_epoch: i64,
-    ) -&gt; anyhow::Result&lt;EventAttestationResults&gt;;
-}
+</span><span class="kw">pub trait </span>EventPolicy = Policy&lt;[u8], [u8]&gt;;
 </code></pre></div></section></main></body></html>

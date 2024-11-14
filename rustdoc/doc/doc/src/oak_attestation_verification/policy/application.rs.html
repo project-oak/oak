@@ -66,6 +66,9 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -83,7 +86,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification_types::policy::EventPolicy;
+<span class="kw">use </span>oak_attestation_verification_types::policy::Policy;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
     EventAttestationResults,
@@ -105,7 +108,10 @@
     }
 }
 
-<span class="kw">impl </span>EventPolicy <span class="kw">for </span>ApplicationPolicy {
+<span class="comment">// We have to use [`Policy&lt;[u8], [u8]&gt;`] instead of [`EventPolicy`], because
+// Rust doesn't yet support implementing trait aliases.
+// &lt;https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md&gt;
+</span><span class="kw">impl </span>Policy&lt;[u8], [u8]&gt; <span class="kw">for </span>ApplicationPolicy {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],

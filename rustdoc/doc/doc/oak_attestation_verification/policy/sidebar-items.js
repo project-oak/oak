@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["application","binary","kernel","system"],"struct":["CombinedPolicy"]};
+window.SIDEBAR_ITEMS = {"mod":["application","binary","kernel","system"]};

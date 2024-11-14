@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":["EventPolicy","Policy"]};
+window.SIDEBAR_ITEMS = {"trait":["Policy"],"traitalias":["EventPolicy"]};
