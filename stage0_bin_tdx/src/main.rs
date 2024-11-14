@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::{
     mem::{size_of, MaybeUninit},
-    ops::{Index, IndexMut},
+    ops::{DerefMut, Index, IndexMut},
     panic::PanicInfo,
     pin::pin,
     ptr::addr_of,
@@ -35,7 +35,7 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     hal::PortFactory,
     mailbox::{FirmwareMailbox, OsMailbox},
-    paging, BOOT_ALLOC,
+    paging, Madt, Rsdp, RsdtEntryPairMut, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
     tdcall::{extend_rtmr, get_td_info, ExtensionBuffer, RtmrIndex},
@@ -520,6 +520,62 @@ impl oak_stage0::Platform for Tdx {
         );
 
         info!("initialize platform completed");
+    }
+
+    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
+        // In TDX, we need add a MultiprocessorWakeupStructure (ACPI specification table
+        // 5.43) entry with the OS Mailbox Address to the MADT table. If
+        // the MADT is not the last structure, then we need to move it down so
+        // that it is the last one, where it has space to grow.
+
+        // We assume that TD_MAILBOX has been initialized by `initialize_platform`.
+        // Safety: Only BSP writes to mailbox and uses atomics.
+        let os_mailbox_address = unsafe {
+            TD_MAILBOX
+                .get_os_mailbox_address()
+                .expect("Expected TD_MAILBOX to contain OS Mailbox address")
+        };
+
+        // # Safety: only one ref to RSDT is created.
+        if let Some(rsdt) = unsafe { rsdp.rsdt_mut() } {
+            let rsdt = rsdt?;
+            info!("Finalize ACPI: Found an RSDT, checking for MADT.");
+            let maybe_madt_entry: Option<RsdtEntryPairMut> =
+                rsdt.get_entry_pair_mut(Madt::SIGNATURE)?;
+
+            if let Some((madt_entry_addr, madt_header)) = maybe_madt_entry {
+                info!("Finalize ACPI: Found a MADT in RSDT.");
+                let madt: &mut Madt = Madt::from_header_mut(madt_header)?;
+                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
+                let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
+
+                *madt_entry_addr = new_madt as *const _ as u32;
+                rsdt.update_checksum();
+
+                return Ok(());
+            } // else: there is an RSDT but it has no MADT.
+        } // else: there is no RSDT.
+
+        // # Safety: only one ref to XSDT is created.
+        if let Some(xsdt) = unsafe { rsdp.xsdt_mut() } {
+            let xsdt = xsdt?;
+            info!("Finalize ACPI: Found an XSDT, checking for MADT.");
+            let maybe_madt_entry = xsdt.get_entry_mut(Madt::SIGNATURE)?;
+
+            if let Some(madt_entry) = maybe_madt_entry {
+                info!("Finalize ACPI: Found a MADT in XSDT.");
+                let madt: &mut Madt = Madt::from_header_mut(madt_entry.deref_mut())?;
+                info!("Finalize ACPI: Found a MADT at {:?}", madt.as_byte_slice()?.as_ptr_range());
+                let new_madt = madt.set_or_append_mp_wakeup(os_mailbox_address)?;
+                madt_entry.set_addr(new_madt as *const _ as u64);
+                //xsdt.entries_mut()[1].set_addr(new_madt as *const _ as u64);
+                xsdt.update_checksum();
+
+                return Ok(());
+            } // else: there is an XSDT but it has no MADT.
+        } // else: there is no XSDT.
+
+        Err("Could not find a MADT where to update or add a Multiprocessor Wakeup structure.")
     }
 
     fn deinit_platform() {

@@ -14,13 +14,57 @@
 // limitations under the License.
 //
 
-/// Defines ACPI structures based on ACPI specification.
-/// You can find this specification here:
-/// https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html
+//! Defines ACPI structures based on ACPI specification.
+//! You can find this specification here:
+//! https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html
+//!
+//! ACPI tables are located in the first 1KB of the EBDA (Extended Bios Data
+//! Area) or in the BIOS read-only memory space between 0E0000h and 0FFFFFh. The
+//! basic structure of ACPI tables is as follows:
+//!
+//! - RSDP (Root System Descriptor Pointer) is a structure (not a pointer)
+//!   described in ACPI Spec section 5.2.5. It's location is hardcoded by the
+//!   firmware, and it's in the first 1KB of the EBDA. In our case we provide
+//!   the location using the linker section ".ebda.rsdp" (see layout.ld files).
+//!   The RSDP contains optional pointers to an RSDT and an XSDT. Version 1 RSDP
+//!   uses an RSDT while v2 may use an XSDT.
+//!   - RSDT (Root System Description Table) - ACPI Spec section 5.2.7 contains
+//!     a header (our type: `DescriptionHeader`) and a variable number of 4-byte
+//!     pointers to the headers (also `DescriptionHeader`) of substructures
+//!     described below.
+//!   - XSDT (Extended System Description Table) - ACPI Spec section 5.2.8
+//!     contains a header (also `DescriptionHeader`) and a variable number of
+//!     8-byte pointers to the headers (also `DescriptionHeader`) of
+//!     substrucutres described below.
+//!
+//!     - RSDT and XSDT entry pointers point to a number of possible
+//!       substructures, each with a 4-byte signature, listed in tables 5.5 and
+//!       5.6 of ACPI Spec.
+//!     - One such substracture is a MADT (Multiple APIC Description Table),
+//!       with signature "APIC", described in ACPI Spec section 5.2.12. A MADT
+//!       (our type: `Madt`) contains a header (also a `DescriptionHeader`), a
+//!       coupld more fields, plus a variable number of variable length
+//!       "Interrupt Controller Structures". These ICSs can't be represented in
+//!       Rust, so they're parsed dynamically (remember that the initial content
+//!       of ACPI tables is given to use by the VMM).
+//!
+//!       - In its "Interrupt Controller Structure" entries (our type:
+//!         `ControllerHeader`), a MADT can contain multiple substructures, the
+//!         type of each identified by a 1-byte integer (as opposed to a 4-byte
+//!         signature)
+//!       - We are only interested in a subset of such substructures, like
+//!         LocalApic (type=0, section 5.2.12.2), LocalX2Apic(type=9, section
+//!         5.2.12.12), and MultiprocessorWakeupStructure (type=0x10, section
+//!         5.2.12.19). This last one is used to hand over APs to the OS.
+//!
+//! Collectively, these structures are referred to as "the ACPI tables".
+
 use core::{
+    any::type_name,
+    fmt::Display,
     marker::PhantomData,
     mem::size_of,
-    ops::{Deref, Range},
+    ops::{Deref, DerefMut, Range},
     slice,
 };
 
@@ -28,7 +72,9 @@ use bitflags::bitflags;
 use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::acpi::{EBDA, EBDA_SIZE};
+use crate::{acpi::Ebda, Platform};
+
+type ResultStaticErr<T> = Result<T, &'static str>;
 
 /// ACPI Root System Description Pointer.
 ///
@@ -53,14 +99,14 @@ pub struct Rsdp {
     revision: u8,
 
     /// 32-bit physical address of the RSDT.
-    rsdt_address: u32,
+    pub rsdt_address: u32,
 
     // ACPI 2.0 fields.
     /// Length of the table, including the header.
     length: u32,
 
     /// 64-bit physical address of the XSDT.
-    xsdt_address: u64,
+    pub xsdt_address: u64,
 
     /// Checksum of the entire table, including both checksum fields.
     extended_checksum: u8,
@@ -71,7 +117,7 @@ pub struct Rsdp {
 static_assertions::assert_eq_size!(Rsdp, [u8; 36usize]);
 
 impl Rsdp {
-    pub fn validate(&self) -> Result<(), &'static str> {
+    pub fn validate<P: Platform>(&self) -> ResultStaticErr<()> {
         if &self.signature != b"RSD PTR " {
             return Err("Invalid RSDP signature");
         }
@@ -95,39 +141,50 @@ impl Rsdp {
             }
         }
 
-        // Check the pointer addresses; if they are valid, they should point within the
-        // EBDA. Safety: we will never dereference the pointer, we just need to
-        // know where it points to.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        if self.rsdt_address > 0
-            && ((self.rsdt_address as usize) < ebda_base
-                || (self.rsdt_address as usize) >= ebda_base + EBDA_SIZE)
-        {
+        // Check the pointer addresses; if present, they should point within the EBDA.
+        if self.rsdt_address > 0 && !Ebda::instance().contains_addr(self.rsdt_address as usize) {
             return Err("Invalid RSDT address: does not point to within EBDA");
         }
-        if self.xsdt_address > 0
-            && ((self.xsdt_address as usize) < ebda_base
-                || (self.xsdt_address as usize) >= ebda_base + EBDA_SIZE)
-        {
+        if self.xsdt_address > 0 && !Ebda::instance().contains_addr(self.xsdt_address as usize) {
             return Err("Invalid XSDT address: does not point to within EBDA");
         }
 
         Ok(())
     }
 
-    pub fn rsdt(&self) -> Result<Option<&Rsdt>, &'static str> {
+    pub fn rsdt(&self) -> Option<ResultStaticErr<&Rsdt>> {
         if self.rsdt_address == 0 {
-            Ok(None)
+            None
         } else {
-            Rsdt::new(VirtAddr::new(self.rsdt_address as u64)).map(Some)
+            Some(Rsdt::new(VirtAddr::new(self.rsdt_address as u64)))
         }
     }
 
-    pub fn xsdt(&self) -> Result<Option<&Xsdt>, &'static str> {
-        if self.xsdt_address == 0 {
-            Ok(None)
+    /// # Safety
+    /// Caller must ensure only one mut ref exists at a time.
+    pub unsafe fn rsdt_mut(&mut self) -> Option<ResultStaticErr<&mut Rsdt>> {
+        if self.rsdt_address == 0 {
+            None
         } else {
-            Xsdt::new(VirtAddr::new(self.xsdt_address)).map(Some)
+            Some(Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)))
+        }
+    }
+
+    pub fn xsdt(&self) -> Option<ResultStaticErr<&Xsdt>> {
+        if self.xsdt_address == 0 {
+            None
+        } else {
+            Some(Xsdt::new(VirtAddr::new(self.xsdt_address)))
+        }
+    }
+
+    /// # Safety
+    /// Caller must ensure only one mut ref exists at a time.
+    pub unsafe fn xsdt_mut(&mut self) -> Option<ResultStaticErr<&mut Xsdt>> {
+        if self.xsdt_address == 0 {
+            None
+        } else {
+            Some(Xsdt::new_mut(VirtAddr::new(self.xsdt_address)))
         }
     }
 }
@@ -140,10 +197,10 @@ impl Rsdp {
 #[repr(C, packed)]
 pub struct DescriptionHeader {
     /// ASCII string representation of the table identifer.
-    signature: [u8; 4],
+    pub signature: [u8; 4],
 
     /// Length of the table, in bytes, including the header.
-    length: u32,
+    pub length: u32,
 
     /// Revision of the struture corresponding to the signature field for this
     /// table.
@@ -173,7 +230,7 @@ pub struct DescriptionHeader {
 
 impl DescriptionHeader {
     #[allow(dead_code)]
-    pub fn signature(&self) -> &str {
+    pub fn signature_as_str(&self) -> &str {
         // Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
         core::str::from_utf8(&self.signature)
             .expect("invalid ACPI table signature; not valid UTF-8")
@@ -185,24 +242,45 @@ impl DescriptionHeader {
         base..base + self.length as usize
     }
 
-    fn validate(&self) -> Result<(), &'static str> {
-        // Safety: we're never dereferencing this pointer.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        let ebda = ebda_base..ebda_base + EBDA_SIZE;
-        let table = self.addr_range();
+    /// Sets checksum field so that checksum validates.
+    /// To be called after modifying any of this structures's data.
+    pub fn update_checksum(&mut self) {
+        log::info!("Checksum before update: {}, {}", self.checksum, self.compute_checksum());
+        self.checksum = self.checksum.wrapping_sub(self.compute_checksum());
+        log::info!("Checksum after: {}, {}", self.checksum, self.compute_checksum());
+    }
 
-        if !ebda.contains(&table.start) || !ebda.contains(&table.end) {
+    fn validate(&self) -> ResultStaticErr<()> {
+        if !Ebda::instance().contains_addr_range(&self.addr_range()) {
             return Err("ACPI table falls outside EBDA");
         }
 
-        // Safety: we've ensured that the table is within EBDA.
-        let data = unsafe { slice::from_raw_parts(table.start as *const u8, self.length as usize) };
-        let checksum = data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
-        if checksum != 0 {
+        if self.compute_checksum() != 0 {
             return Err("ACPI table checksum invalid");
         }
 
         Ok(())
+    }
+
+    /// Computes the checksum across all data in this structure.
+    fn compute_checksum(&self) -> u8 {
+        // Safety: we've ensured that the table is within EBDA.
+        let data = unsafe {
+            slice::from_raw_parts(self.addr_range().start as *const u8, self.length as usize)
+        };
+        data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
+    }
+}
+
+impl Display for DescriptionHeader {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!(
+            "Entry {} ({:#x}-{:#x}): {:?}",
+            self.signature_as_str(),
+            self.addr_range().start,
+            self.addr_range().end,
+            self
+        ))
     }
 }
 
@@ -212,22 +290,132 @@ impl DescriptionHeader {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Rsdt {
-    header: DescriptionHeader,
+    pub header: DescriptionHeader,
     // The RSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust.
 }
 
+pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader);
+
 impl Rsdt {
     const SIGNATURE: &'static [u8; 4] = b"RSDT";
 
-    pub fn new(addr: VirtAddr) -> Result<&'static Rsdt, &'static str> {
-        // Safety: we're checking that it's a valid XSDT in `validate()`.
+    pub fn new(addr: VirtAddr) -> ResultStaticErr<&'static Rsdt> {
+        // Safety: we're checking that it's a valid RSDT in `validate()`.
         let rsdt = unsafe { &*addr.as_ptr::<Rsdt>() };
         rsdt.validate()?;
         Ok(rsdt)
     }
 
-    fn validate(&self) -> Result<(), &'static str> {
+    /// # Safety
+    /// Caller must ensure only one mut ref exists at a time.
+    pub unsafe fn new_mut(addr: VirtAddr) -> ResultStaticErr<&'static mut Rsdt> {
+        // # Safety: we're checking that it's a valid RSDT in `validate()`.
+        let rsdt = unsafe { &mut *addr.as_mut_ptr::<Rsdt>() };
+        rsdt.validate()?;
+        Ok(rsdt)
+    }
+
+    /// Finds a validated header pointed at by this RSDT, by its
+    /// signature, if present. All headers seen on the way are validated too
+    /// and errors propagated. Returns:
+    ///   - Ok(None) -> Search went without errors, entry not found.
+    ///   - Ok(Some(&DescriptionHeader)) -> No errors, entry found.
+    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
+    pub fn get(&self, signature: &[u8; 4]) -> ResultStaticErr<Option<&DescriptionHeader>> {
+        self.validate()?;
+        let maybe_found = self.entry_headers().find(|hdr_or_err| match hdr_or_err {
+            Err(_) => true, // Found an error, stop search and propagate.
+            Ok(header) => header.signature == *signature,
+        });
+        match maybe_found {
+            None => Ok(None),
+            Some(Err(e)) => Err(e),
+            Some(Ok(header)) => Ok(Some(header)),
+        }
+    }
+
+    /// Returns an iterator over the headers pointed at by this RSDT, validated.
+    pub fn entry_headers(&self) -> impl Iterator<Item = ResultStaticErr<&DescriptionHeader>> {
+        self.entries_arr().iter().map(|&entry| {
+            let ptr: *const DescriptionHeader = entry as usize as *const DescriptionHeader;
+            check_ptr_aligned(ptr);
+            // Safety: we are validating the header.
+            let header = unsafe { &*ptr };
+            header.validate()?;
+            Ok(header)
+        })
+    }
+
+    /// Mutable finds a validated header pointed at by this RSDT, by its
+    /// signature, if present. All headers seen on the way are validated too
+    /// and errors propagated. Returns:
+    ///   - Ok(None) -> Search went without errors, entry not found.
+    ///   - Ok(Some(EntryPairMut)) -> Search went without errors, entry found.
+    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
+    pub fn get_entry_pair_mut(
+        &mut self,
+        signature: &[u8; 4],
+    ) -> ResultStaticErr<Option<RsdtEntryPairMut>> {
+        self.validate()?;
+        let maybe_found: Option<Result<RsdtEntryPairMut, &str>> =
+            self.entry_headers_mut().find(|hdr_or_err| match hdr_or_err {
+                Err(_) => true, // Found an error, stop search and propoagate.
+                Ok((_addr, header)) => header.signature == *signature,
+            });
+        match maybe_found {
+            None => Ok(None),
+            Some(Err(e)) => Err(e),
+            Some(Ok(result)) => Ok(Some(result)),
+        }
+    }
+
+    /// Sets checksum field so that checksum validates.
+    /// To be called after modifying any of this structures's data.
+    pub fn update_checksum(&mut self) {
+        self.header.update_checksum();
+    }
+
+    fn entry_headers_mut(&mut self) -> impl Iterator<Item = ResultStaticErr<RsdtEntryPairMut>> {
+        self.entries_arr_mut().iter_mut().map(|addr| {
+            let header_ptr = *addr as usize as *mut DescriptionHeader;
+            check_ptr_aligned(header_ptr);
+            // # Safety we are validating the header.
+            let header = unsafe { header_ptr.as_mut().ok_or("Address 0x0 in RSDT")? };
+            header.validate()?;
+            Ok((addr, header))
+        })
+    }
+
+    fn entries_arr(&self) -> &[u32] {
+        let entries_base_ptr =
+            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *const u32;
+        check_ptr_aligned(entries_base_ptr);
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`.
+        unsafe {
+            slice::from_raw_parts(
+                entries_base_ptr,
+                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
+            )
+        }
+    }
+
+    fn entries_arr_mut(&mut self) -> &mut [u32] {
+        let entries_base_ptr =
+            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *mut u32;
+        check_ptr_aligned(entries_base_ptr);
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`.
+        unsafe {
+            slice::from_raw_parts_mut(
+                entries_base_ptr,
+                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
+            )
+        }
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
         self.header.validate()?;
 
         if self.header.signature != *Self::SIGNATURE {
@@ -238,43 +426,12 @@ impl Rsdt {
             return Err("RSDT invalid: entries size not a multiple of pointer size");
         }
 
-        // Safety: we're never dereferencing the pointer.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        for &entry in self.entries() {
-            let ptr: usize = entry as usize;
-            if !(ebda_base..ebda_base + EBDA_SIZE).contains(&ptr) {
+        for &entry in self.entries_arr() {
+            if !Ebda::instance().contains_addr(entry as usize) {
                 return Err("RSDT invalid: entry points outside EBDA");
             }
         }
         Ok(())
-    }
-
-    pub fn entries(&self) -> &[u32] {
-        let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
-        // Safety: we've validated that the address and length makes sense in
-        // `validate()`.
-        unsafe {
-            slice::from_raw_parts(
-                entries_base as *const u32,
-                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
-            )
-        }
-    }
-
-    /// Finds a table based on the signature, if it is present.
-    pub fn get(&self, table: &[u8; 4]) -> Option<&'static DescriptionHeader> {
-        self.entry_headers().find(|&header| header.signature == *table)
-    }
-
-    pub fn entry_headers(&self) -> impl Iterator<Item = &'static DescriptionHeader> + use<'_> {
-        self.entries().iter().map(|&entry| Self::get_entry_header(entry))
-    }
-
-    /// Given one of the pointers from the RSDT pointer array (32 bits each),
-    /// returns a reference to the DescriptionHeader pointed at.
-    fn get_entry_header(entry: u32) -> &'static DescriptionHeader {
-        let ptr = entry as usize;
-        unsafe { &*(ptr as *const DescriptionHeader) }
     }
 }
 
@@ -294,14 +451,30 @@ impl<'a> XsdtEntryPtr<'a> {
         // Address is little endian.
         u64::from_le_bytes(self.addr)
     }
+
+    pub fn set_addr(&mut self, value: u64) {
+        value.to_le_bytes().write_to(self.addr[..].as_mut());
+        self.validate().expect("XsdtEntryPtr validate failed on set_addr");
+    }
 }
 
 impl<'a> Deref for XsdtEntryPtr<'a> {
     type Target = DescriptionHeader;
 
     fn deref(&self) -> &DescriptionHeader {
+        let ptr = self.raw_val() as *const DescriptionHeader;
+        check_ptr_aligned(ptr);
         // Safety: the address has been validated in Xsdt::validate().
-        unsafe { &*(self.raw_val() as *const DescriptionHeader) }
+        unsafe { &*ptr }
+    }
+}
+
+impl<'a> DerefMut for XsdtEntryPtr<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        let ptr = self.raw_val() as *mut DescriptionHeader;
+        check_ptr_aligned(ptr);
+        // Safety: the address has been validated in Xsdt::validate().
+        unsafe { &mut *ptr }
     }
 }
 
@@ -311,7 +484,7 @@ impl<'a> Deref for XsdtEntryPtr<'a> {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Xsdt {
-    header: DescriptionHeader,
+    pub header: DescriptionHeader,
     // The XSDT contains an array of pointers to other tables, but unfortunately this can't be
     // expressed in Rust.
 }
@@ -319,14 +492,123 @@ pub struct Xsdt {
 impl Xsdt {
     const SIGNATURE: &'static [u8; 4] = b"XSDT";
 
-    pub fn new(addr: VirtAddr) -> Result<&'static Xsdt, &'static str> {
+    pub fn new(addr: VirtAddr) -> ResultStaticErr<&'static Xsdt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
         let xsdt = unsafe { &*addr.as_ptr::<Xsdt>() };
         xsdt.validate()?;
         Ok(xsdt)
     }
 
-    fn validate(&self) -> Result<(), &'static str> {
+    // # Safety: caller must ensure only one mut ref exists at a time.
+    pub fn new_mut(addr: VirtAddr) -> ResultStaticErr<&'static mut Xsdt> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let xsdt = unsafe { &mut *addr.as_mut_ptr::<Xsdt>() };
+        xsdt.validate()?;
+        Ok(xsdt)
+    }
+
+    /// Returns the address range where this table is located.
+    pub fn addr_range(&self) -> Range<usize> {
+        let base = self as *const _ as usize;
+        base..base + self.header.length as usize
+    }
+
+    /// Sets checksum field so that checksum validates.
+    /// To be called after modifying any of this structures's data.
+    pub fn update_checksum(&mut self) {
+        self.header.update_checksum();
+    }
+
+    /// Finds a table based on the signature, if it is present.
+    /// Finds a validated XSDT pointer in this RSDT, by its signature, if
+    /// present. All `XsdtEntryPtr`s seen on the way are validated
+    /// too and errors propagated. Returns:
+    ///   - Ok(None) -> Search went without errors, entry not found.
+    ///   - Ok(Some(&XsdtEntryPtr)) -> No errors, entry found.
+    ///   - Err(e) -> An XsdtEntryPtr seen during search failed validation.
+    pub fn get(&self, signature: &[u8; 4]) -> ResultStaticErr<Option<&DescriptionHeader>> {
+        self.validate()?;
+        let maybe_found = self.entry_ptrs().find(|ptr_or_err| match ptr_or_err {
+            Err(_) => true, // Found an error, stop search and propagate.
+            Ok(entry_ptr) => entry_ptr.signature == *signature,
+        });
+        match maybe_found {
+            None => Ok(None),
+            Some(Err(e)) => Err(e),
+            Some(Ok(entry_ptr)) => Ok(Some(entry_ptr)),
+        }
+    }
+
+    /// Returns an iterator over the entry pointers in this XSDT, validated.
+    pub fn entry_ptrs(&self) -> impl Iterator<Item = ResultStaticErr<&XsdtEntryPtr>> {
+        self.entries_arr().iter().map(|xsdt_ptr| {
+            xsdt_ptr.validate()?;
+            Ok(xsdt_ptr)
+        })
+    }
+
+    /// Mutable finds a validated header based on the signature on the RSDT, if
+    /// present. All headers seen on the way are validated too and errors
+    /// propagated. Returns:
+    ///   - Ok(None) -> Search went without errors, entry not found.
+    ///   - Ok(Some(EntryPairMut)) -> Search went without errors, entry found
+    ///     and returned.
+    ///   - Err(e) -> A DescriptionHeader seen during search failed validation.
+    pub fn get_entry_mut(
+        &mut self,
+        signature: &[u8; 4],
+    ) -> ResultStaticErr<Option<&mut XsdtEntryPtr>> {
+        self.validate()?;
+        let maybe_found = self.entries_arr_mut().iter_mut().find_map(|xsdt_entry_ptr| {
+            match xsdt_entry_ptr.validate() {
+                Err(e) => Some(Err(e)), // Found an error, stop search and propoagate.
+                Ok(()) => {
+                    if xsdt_entry_ptr.signature == *signature {
+                        Some(Ok(xsdt_entry_ptr))
+                    } else {
+                        None
+                    }
+                }
+            }
+        });
+        match maybe_found {
+            None => Ok(None),
+            Some(Err(e)) => Err(e),
+            Some(Ok(entry)) => Ok(Some(entry)),
+        }
+    }
+
+    fn entries_arr(&self) -> &[XsdtEntryPtr] {
+        let entries_base_ptr =
+            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *const XsdtEntryPtr;
+        check_ptr_aligned(entries_base_ptr);
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`. XsdtEntryPtr is 1-byte aligned.
+        unsafe {
+            slice::from_raw_parts(
+                entries_base_ptr,
+                (self.header.length as usize - size_of::<DescriptionHeader>())
+                    / size_of::<XsdtEntryPtr>(),
+            )
+        }
+    }
+
+    fn entries_arr_mut(&mut self) -> &mut [XsdtEntryPtr] {
+        let entries_base_ptr =
+            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *mut XsdtEntryPtr;
+        check_ptr_aligned(entries_base_ptr);
+        // Safety: we've validated that the address and length makes sense in
+        // `validate()`. XsdtEntryPtr is 1-byte aligned.
+        unsafe {
+            slice::from_raw_parts_mut(
+                entries_base_ptr,
+                (self.header.length as usize - size_of::<DescriptionHeader>())
+                    / size_of::<XsdtEntryPtr>(),
+            )
+        }
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
         self.header.validate()?;
 
         if self.header.signature != *Self::SIGNATURE {
@@ -338,33 +620,12 @@ impl Xsdt {
             return Err("XSDT invalid: entries size not a multiple of pointer size");
         }
 
-        // Safety: we're never dereferencing the pointer.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        for entry in self.entries() {
-            let ptr = entry.raw_val() as usize;
-            if !(ebda_base..ebda_base + EBDA_SIZE).contains(&ptr) {
+        for entry in self.entries_arr() {
+            if !Ebda::instance().contains_addr(entry.raw_val() as usize) {
                 return Err("XSDT invalid: entry points outside EBDA");
             }
         }
         Ok(())
-    }
-
-    pub fn entries(&self) -> &[XsdtEntryPtr] {
-        let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
-        // Safety: we've validated that the address and length makes sense in
-        // `validate()`. XsdtEntryPtr is 1-byte aligned.
-        unsafe {
-            slice::from_raw_parts(
-                entries_base as *const XsdtEntryPtr,
-                (self.header.length as usize - size_of::<DescriptionHeader>())
-                    / size_of::<XsdtEntryPtr>(),
-            )
-        }
-    }
-
-    /// Finds a table based on the signature, if it is present.
-    pub fn get(&self, table: &[u8; 4]) -> Option<&DescriptionHeader> {
-        self.entries().iter().find(|entry| entry.signature == *table).map(|p| &**p)
     }
 }
 
@@ -396,7 +657,7 @@ bitflags! {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Madt {
-    header: DescriptionHeader,
+    pub header: DescriptionHeader,
 
     /// Physical address of the local APIC for each CPU.
     local_apic_address: u32,
@@ -417,9 +678,9 @@ pub struct Madt {
 /// table structure, and it will only `validate` if an instance of this type is
 /// in the expected memory region (EBDA). Not meant to be built and passed
 /// around.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, AsBytes)]
 #[repr(C, packed)]
-pub(crate) struct ControllerHeader {
+pub struct ControllerHeader {
     // There's only 17 possible types, the rest of the range is reserved. We need
     // to use u8 (not enum) as we use this structure to parse existing memory.
     pub structure_type: u8,
@@ -427,16 +688,13 @@ pub(crate) struct ControllerHeader {
 }
 
 impl ControllerHeader {
-    fn validate(&self) -> Result<(), &'static str> {
-        // Safety: we're never dereferencing this pointer.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        let ebda = ebda_base..ebda_base + EBDA_SIZE;
+    fn validate(&self) -> ResultStaticErr<()> {
         let structure = {
             let base = self as *const _ as usize;
             base..base + self.len as usize
         };
 
-        if !ebda.contains(&structure.start) || !ebda.contains(&structure.end) {
+        if !Ebda::instance().contains_addr_range(&structure) {
             return Err("ACPI interrupt data structure falls outside EBDA");
         }
 
@@ -462,10 +720,13 @@ pub struct ProcessorLocalApic {
     pub flags: LocalApicFlags,
 }
 
+// Because we cast pointers from *const ControllHeader:
+static_assertions::assert_eq_align!(ProcessorLocalApic, ControllerHeader);
+
 impl ProcessorLocalApic {
     pub const STRUCTURE_TYPE: u8 = 0;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
+    pub fn new(header: &ControllerHeader) -> ResultStaticErr<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local APIC Structure");
         }
@@ -500,10 +761,13 @@ pub struct ProcessorLocalX2Apic {
     processor_uid: u32,
 }
 
+// Because we cast pointers from *const ControllHeader:
+static_assertions::assert_eq_align!(ProcessorLocalX2Apic, ControllerHeader);
+
 impl ProcessorLocalX2Apic {
     pub const STRUCTURE_TYPE: u8 = 9;
 
-    pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
+    pub fn new(header: &ControllerHeader) -> ResultStaticErr<&Self> {
         if header.structure_type != Self::STRUCTURE_TYPE {
             return Err("structure is not Processor Local X2APIC Structure");
         }
@@ -517,7 +781,7 @@ impl ProcessorLocalX2Apic {
 /// Multiprocessor Wakeup structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.19 of APIC Specification.
-#[derive(Debug)]
+#[derive(Debug, AsBytes)]
 #[repr(C, packed)]
 pub struct MultiprocessorWakeup {
     /// Interrupt structure common header.
@@ -533,8 +797,11 @@ pub struct MultiprocessorWakeup {
     /// Physical address of the mailbox. It must be in ACPINvs. It must also be
     /// 4K bytes aligned. Memory declared in stage0_bin/layout.ld. Mailbox
     /// structure defined in table 5.44 of ACPI Spec.
-    pub mailbox_address: u8,
+    pub mailbox_address: u64,
 }
+
+// Because we cast pointers from *const ControllHeader:
+static_assertions::assert_eq_align!(MultiprocessorWakeup, ControllerHeader);
 
 impl MultiprocessorWakeup {
     pub const STRUCTURE_TYPE: u8 = 0x10;
@@ -543,33 +810,97 @@ impl MultiprocessorWakeup {
     /// Gets a reference to a MultiprocessorWakeup given a reference to its
     /// first field (header). This assumes that the memory that immediately
     /// follows header is actually a MultiprocessorWakeup.
-    pub fn from_header_cast(header: &ControllerHeader) -> Result<&Self, &'static str> {
-        if header.structure_type != Self::STRUCTURE_TYPE {
-            return Err("structure is not MultiprocessorWakeup");
-        }
-        if header.len != Self::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH {
-            return Err("MultiprocessorWakeup structure length must be 16");
-        }
-        header.validate()?;
+    pub fn from_header_cast(header: &ControllerHeader) -> ResultStaticErr<&Self> {
+        Self::check_header(header)?;
 
         let header_raw_pointer = header as *const _ as *const Self;
         // Deref to get a &Self. Safety: we're verified correct structure type.
         // There's no guarantee the actual structure comforms to that type.
         Ok(unsafe { &*(header_raw_pointer) })
     }
+
+    pub fn from_header_mut(header: &mut ControllerHeader) -> ResultStaticErr<&mut Self> {
+        Self::check_header(header)?;
+
+        // # Safety: we have validated the structure.
+        Ok(unsafe { (header as *mut _ as *mut Self).as_mut().unwrap() })
+    }
+
+    fn check_header(header: &ControllerHeader) -> ResultStaticErr<()> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not MultiprocessorWakeup");
+        }
+        if header.len != Self::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH {
+            return Err("MultiprocessorWakeup structure length must be 16");
+        }
+        header.validate()
+    }
+}
+
+impl Default for MultiprocessorWakeup {
+    fn default() -> Self {
+        MultiprocessorWakeup {
+            header: ControllerHeader {
+                structure_type: MultiprocessorWakeup::STRUCTURE_TYPE,
+                len: MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH,
+            },
+            mailbox_version: 0,
+            _reserved: [0; 4],
+            mailbox_address: 0,
+        }
+    }
 }
 
 impl Madt {
     pub const SIGNATURE: &'static [u8; 4] = b"APIC";
 
-    pub fn new(hdr: &DescriptionHeader) -> Result<&'static Madt, &'static str> {
+    pub fn new(hdr: &DescriptionHeader) -> ResultStaticErr<&'static Madt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
         let madt = unsafe { &*(hdr as *const _ as usize as *const Madt) };
         madt.validate()?;
         Ok(madt)
     }
 
-    fn validate(&self) -> Result<(), &'static str> {
+    /// Interprets buf as a Madt, validates it, then sets the length
+    /// of the resulting Madt to match that of the given buffer.
+    pub fn from_buf_mut(buf: &mut [u8]) -> ResultStaticErr<&mut Madt> {
+        if buf.len() < size_of::<Madt>() {
+            return Err("Buffer too small for MADT");
+        }
+        let madt_ptr = buf.as_mut_ptr() as *mut Self;
+        check_ptr_aligned(madt_ptr);
+        // # Safety: we have checked for overrun and we're checking it's a valid MADT
+        // with `validate()`.
+        let madt = unsafe { &mut *madt_ptr };
+
+        madt.validate()?;
+
+        // Set header length to buf length for consistency. Caller can adjust.
+        madt.header.length = buf.len() as u32;
+        madt.header.update_checksum();
+
+        Ok(madt)
+    }
+
+    pub fn from_header_mut(hdr: &mut DescriptionHeader) -> ResultStaticErr<&'static mut Madt> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let madt =
+            unsafe {
+                (hdr as *mut _ as *mut Madt).as_mut().unwrap() // Pointer obtained from a ref can't be null.
+            };
+        madt.validate()?;
+        Ok(madt)
+    }
+
+    pub fn as_byte_slice(&self) -> ResultStaticErr<&'static [u8]> {
+        self.validate()?;
+        // Safety: we have just checked that the MADT is entirely in the EBDA.
+        Ok(unsafe {
+            slice::from_raw_parts(self as *const _ as *const u8, self.header.length as usize)
+        })
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
         self.header.validate()?;
 
         if self.header.signature != *Self::SIGNATURE {
@@ -581,12 +912,77 @@ impl Madt {
 
     /// Create an iterator over entries of field Interrupt Controller Structure
     /// that returns references to the entries' headers.
-    pub fn controller_struct_headers(&self) -> MadtIterator<'_> {
+    pub(crate) fn controller_struct_headers(&self) -> MadtIterator<'_> {
         // The Madt struct does not itself contain the interrupt controller
         // entries (see struct Madt above) but these entries are expected to
         // exist right after the Madt struct. Therefore, we set the offset to
         // point to one byte after, which is size_of Madt.
         MadtIterator { madt: self, offset: size_of::<Madt>() }
+    }
+
+    /// If a MultiprocessorWakeupStructure exsists in this MADT, updates its
+    /// mailbox_address. Otherwise, relocates this MADT to somewhere free in
+    /// EBDA and appends to it a new MultiprocessorWakeupStructure with the
+    /// given os_mailbox_address. Returns a ref to the maybe relocated MADT.
+    pub fn set_or_append_mp_wakeup(
+        &mut self,
+        os_mailbox_address: u64,
+    ) -> ResultStaticErr<&mut Self> {
+        if let Some(prexisting_mpw_header) =
+            self.get_controller_structure_mut(MultiprocessorWakeup::STRUCTURE_TYPE)
+        {
+            log::info!("A MultiprocessorWakeup structure already exists in MADT, updating.");
+            // # Safety: We are not using `prexisting_mpw_header` after this call.
+            let prexisting_mpw = MultiprocessorWakeup::from_header_mut(prexisting_mpw_header)?;
+            prexisting_mpw.mailbox_address = os_mailbox_address;
+            self.header.update_checksum();
+            return Ok(self);
+        }
+
+        log::info!("Relocating MADT and appending a new MultiprocessorWakeup to it.");
+
+        let old_madt_len = self.header.length as usize;
+        let new_madt_len =
+            old_madt_len + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as usize;
+
+        // New contents = old contents + MPW. Allocate new length, copy old contents.
+        let new_madt_buf: &mut [u8] = Ebda::instance().allocate(new_madt_len)?;
+        new_madt_buf[0..old_madt_len].copy_from_slice(self.as_byte_slice()?);
+        log::info!("MADT contents copied to {:?}", new_madt_buf.as_ptr_range());
+
+        // Make an MPW somwhere then copy over its bytes after old MADT contents.
+        let temp_mpw: MultiprocessorWakeup =
+            MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() };
+        new_madt_buf[old_madt_len..new_madt_len].copy_from_slice(temp_mpw.as_bytes());
+        log::info!(
+            "Written Multiprocessor Wakeup Structure to: {:?}",
+            new_madt_buf[old_madt_len..new_madt_len].as_ptr_range()
+        );
+
+        let new_madt = Madt::from_buf_mut(new_madt_buf)
+            .map_err(|_| "MADT no longer valid after adding MultiprocessorWakeup")?;
+        log::info!("New MADT loaded, at {:#x}", new_madt as *const _ as usize);
+        Ok(new_madt)
+    }
+
+    fn get_controller_structure_mut(
+        &mut self,
+        structure_type: u8,
+    ) -> Option<&mut ControllerHeader> {
+        self.get_controller_structure(structure_type).map(
+            // Safety: we hold a mut ref to self, only one mut ref to a header can be held at time.
+            // We have already checked control_header is a valid reference.
+            |maybe_found| unsafe {
+                (maybe_found as *const _ as *mut ControllerHeader).as_mut().unwrap()
+            },
+        )
+    }
+
+    /// Seeks a structure with the given type in this MADT's Interrupt Controlle
+    /// Structure fields and returns a reference to its header if found.
+    fn get_controller_structure(&self, structure_type: u8) -> Option<&ControllerHeader> {
+        self.controller_struct_headers()
+            .find(|control_header| control_header.structure_type == structure_type)
     }
 }
 
@@ -611,14 +1007,30 @@ impl<'a> Iterator for MadtIterator<'a> {
         // Safety: now we know that at least reading the header won't overflow the data
         // structure.
         let header = unsafe {
-            &*((self.madt as *const _ as *const u8).add(self.offset) as *const ControllerHeader)
+            let header_ptr =
+                (self.madt as *const _ as *const u8).add(self.offset) as *const ControllerHeader;
+            check_ptr_aligned(header_ptr);
+            &*header_ptr
         };
         if self.offset + header.len as usize > self.madt.header.length as usize {
             // returning this header would overflow MADT
             return None;
         }
 
+        // If the MADT has some zeroed space at the end, then we'll land somewhere that
+        // reports a 0-length header. The following clause prevents falling in
+        // an infinite loop in that case.
+        if header.len == 0 {
+            return None; // Prevent infinite interation.
+        }
+
         self.offset += header.len as usize;
         Some(header)
+    }
+}
+
+fn check_ptr_aligned<T>(ptr: *const T) {
+    if !ptr.is_aligned() {
+        panic!("Incorrect pointer alignmnt for type {}", type_name::<T>());
     }
 }

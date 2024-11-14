@@ -1,0 +1,4 @@
+- Add documentation to acpi_tables about ACPI table structure.
+- Move code to find last byte of system tables to acpi_tables.
+- Move code that handles ACPI table modifications to smp.rs.
+- Refactor the printing of ranges - just print the range, no need to unpack

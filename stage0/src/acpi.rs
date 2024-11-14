@@ -14,30 +14,48 @@
 // limitations under the License.
 //
 
+//! This module provides functions to build ACPI tables content from commands
+//! received from the VMM.
+
 // These data structures (and constants) are derived from
 // qemu/hw/acpi/bios-linker-loader.c that defines the interface.
-
 use core::{
+    cell::OnceCell,
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, size_of_val, zeroed, MaybeUninit},
-    ops::Deref,
+    ops::{Deref, Range},
 };
 
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use zerocopy::AsBytes;
 
-use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
+use crate::{
+    acpi_tables::{
+        DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
+    },
+    fw_cfg::{DirEntry, FwCfg},
+    Madt,
+};
 
-// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The
-// full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
-// See https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp.
-pub const EBDA_SIZE: usize = 127 * 1024;
+/// Root System Descriptor Pointer.
+/// Not really a pointer but a structure (see https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp).#
+/// It's located in the first 1KiB of the EBDA.
 #[link_section = ".ebda.rsdp"]
 static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
+
+/// EBDA (Extended Bios Data Area) size. Its size is 128KiB but we
+/// reserve the first 1KiB for the RSDP which we treat separately.
+pub const EBDA_SIZE: usize = 127 * 1024;
+
+type EbdaMemT = [u8; EBDA_SIZE];
+
+/// EBDA (Extended Bios Data Area) raw memory.
 #[link_section = ".ebda"]
-pub static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
+static mut EBDA_MEM: MaybeUninit<EbdaMemT> = MaybeUninit::uninit();
+
+static mut EBDA_INSTANCE: OnceCell<Ebda> = OnceCell::new();
 
 // Safety: we include a nul byte at the end of the string, and that is the only
 // nul byte.
@@ -51,6 +69,9 @@ const ROMFILE_LOADER_FILESZ: usize = 56;
 type RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
 fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
+    // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
+    // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
+
     // Safety: we do not have concurrent threads so accessing the static is safe,
     // and even if Allocate has not been called yet, all values are valid for an
     // [u8].
@@ -58,9 +79,92 @@ fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
     if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
         Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
     } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-        Ok(unsafe { EBDA.assume_init_mut() })
+        Ok(unsafe { EBDA_MEM.assume_init_mut() })
     } else {
         Err("Unsupported file in table-loader")
+    }
+}
+
+/// A wrapper around EBDA memory with helpers to manage it.
+// TODO: b/380246359 - let Ebda wrap around both RSDP and the rest of EBDA.
+#[derive(Debug)]
+pub struct Ebda {
+    ebda_buf: &'static mut [u8],
+    /// Count of bytes actually used within ebda_buf.
+    len_bytes: usize,
+}
+
+impl Ebda {
+    pub fn instance() -> &'static mut Ebda {
+        // Safety: EBDA_INSTANCE accessed for write only from a single thread (BSP).
+        // Read-only access from APs (assembly code).
+        unsafe {
+            match EBDA_INSTANCE.get_mut() {
+                Some(ebda) => ebda,
+                None => {
+                    // Safety: EBDA_MEM accessed for write only from single thread BSP. This block
+                    // executes exactly once. Always a valid &[u8].
+                    let ebda = Self { ebda_buf: EBDA_MEM.assume_init_mut(), len_bytes: 0 };
+                    EBDA_INSTANCE.set(ebda).unwrap();
+                    EBDA_INSTANCE.get_mut().unwrap()
+                }
+            }
+        }
+    }
+
+    /// Clears EBDA buffer then reads a file from fwcfg into it.
+    pub fn read_fwcfg<P: crate::Platform>(
+        &mut self,
+        fwcfg: &mut FwCfg<P>,
+        file: DirEntry,
+    ) -> Result<(), &'static str> {
+        self.clear();
+        let bytes_read: usize = fwcfg.read_file(&file, self.ebda_buf)?;
+        self.len_bytes = bytes_read;
+        Ok(())
+    }
+
+    /// Allocates byte_count of memory on the EBDA and returns a slice to it.
+    pub fn allocate(&mut self, byte_count: usize) -> Result<&mut [u8], &'static str> {
+        let dest_base_ix = self.len_bytes;
+        let dest_top_ix = dest_base_ix + byte_count;
+
+        self.len_bytes += byte_count;
+        Ok(self.ebda_buf[dest_base_ix..dest_top_ix].as_mut())
+    }
+
+    pub fn check_alignment(&self, required_alignment: u32) -> Result<(), &'static str> {
+        let start = self.ebda_buf.as_ptr_range().start as u64;
+        if start % required_alignment as u64 != 0 {
+            log::error!(
+                "ACPI tables address: {:#018x}, required alignment: {}",
+                start,
+                required_alignment
+            );
+            return Err("ACPI tables address not aligned properly");
+        }
+        Ok(())
+    }
+
+    pub fn get_buf(&self) -> &[u8] {
+        self.ebda_buf
+    }
+
+    /// Returns true if addr is within EBDA address range.
+    /// Convenience method for validations.
+    pub fn contains_addr(&self, addr: usize) -> bool {
+        self.ebda_buf.as_ptr_range().contains(&(addr as *const u8))
+    }
+
+    pub fn contains_addr_range(&self, range: &Range<usize>) -> bool {
+        self.contains_addr(range.start) && self.contains_addr(range.end)
+    }
+
+    fn clear(&mut self) {
+        for elem in self.ebda_buf.iter_mut() {
+            *elem = 0;
+        }
+        self.len_bytes = 0;
     }
 }
 
@@ -146,15 +250,10 @@ impl Allocate {
             acpi_digest.update(buf.as_bytes());
             Ok(())
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            // Safety: we do not have concurrent threads so accessing the static is safe.
-            let buf = unsafe { EBDA.write(zeroed()) };
-
-            if (buf.as_ptr() as *const _ as u64) % self.align as u64 != 0 {
-                log::error!("ACPI tables address: {:p}, required alignment: {}", buf, self.align);
-                return Err("ACPI tables address not aligned properly");
-            }
-            fwcfg.read_file(&file, buf)?;
-            acpi_digest.update(buf);
+            let ebda = Ebda::instance();
+            ebda.check_alignment(self.align)?;
+            ebda.read_fwcfg(fwcfg, file)?;
+            acpi_digest.update(ebda.get_buf());
             Ok(())
         } else {
             Err("Unsupported file in table-loader")
@@ -564,40 +663,89 @@ pub fn build_acpi_tables<P: crate::Platform>(
     }
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
-    let rsdp = unsafe { RSDP.assume_init_ref() };
-    rsdp.validate()?;
-    debug_print_acpi_tables(rsdp);
+    let rsdp = unsafe { RSDP.assume_init_mut() };
+    rsdp.validate::<P>()?;
+    log::info!("ACPI tables before finalizing:");
+    debug_print_acpi_tables(rsdp)?;
+
+    log::info!("Finalizing RSDP");
+    P::finalize_acpi_tables(rsdp)?;
+    rsdp.validate::<P>()?;
+    log::info!("ACPI tables after finalizing:");
+    debug_print_acpi_tables(rsdp)?;
+
     Ok(rsdp)
 }
 
 /// Prints ACPI metadata including RSDP, RSDT and XSDT (if present).
-pub fn debug_print_acpi_tables(rsdp: &Rsdp) {
+fn debug_print_acpi_tables(rsdp: &Rsdp) -> Result<(), &'static str> {
     log::info!("RSDP location: {:#018x}", rsdp as *const _ as u64);
     log::info!("RSDP: {:?}", rsdp);
 
-    if let Some(rsdt) = rsdp.rsdt().expect("Error getting RSDT") {
+    if let Some(rsdt) = rsdp.rsdt() {
+        let rsdt = rsdt?;
         log::info!("RSDT: {:?}", rsdt);
-        log::info!("RSDT entry count: {}", rsdt.entries().len());
-        for rsdt_header in rsdt.entry_headers() {
-            log::info!("RSDT entry {}: {:?}", rsdt_header.signature(), rsdt_header);
-        }
+        log::info!("RSDT entry count: {}", rsdt.entry_headers().count());
+        print_system_data_table_entries(rsdt.entry_headers())?;
     } else {
         log::info!("No RSDT present");
     }
 
-    if let Some(xsdt) = rsdp.xsdt().expect("Error getting XSDT") {
-        log::info!("XSDT: {:?}", xsdt);
-        log::info!("XSDT entry count: {}", xsdt.entries().len());
-        for xsdt_header_ptr in xsdt.entries() {
-            log::info!(
-                "XSDT entry {} ({:#x}-{:#x}): {:?}",
-                xsdt_header_ptr.signature(),
-                xsdt_header_ptr.addr_range().start,
-                xsdt_header_ptr.addr_range().end,
-                xsdt_header_ptr.deref()
-            )
-        }
+    if let Some(xsdt) = rsdp.xsdt() {
+        let xsdt = xsdt?;
+        log::info!(
+            "XSDT ({:#x}-{:#x}): {:?}",
+            xsdt.addr_range().start,
+            xsdt.addr_range().end,
+            xsdt
+        );
+        log::info!("XSDT entry count: {}", xsdt.entry_ptrs().count());
+        print_system_data_table_entries(
+            xsdt.entry_ptrs()
+                .map(|entry_ptr_or_err| entry_ptr_or_err.map(|entry_ptr| entry_ptr.deref())),
+        )?;
     } else {
         log::info!("No XSDT present");
     }
+    Ok(())
+}
+
+/// Prints RSDT or XSDT entries. Prints extra detail for MADT entry.
+fn print_system_data_table_entries<'a>(
+    entries: impl Iterator<Item = Result<&'a DescriptionHeader, &'static str>>,
+) -> Result<(), &'static str> {
+    for header in entries {
+        let header = header?;
+        log::info!("{}", header);
+        if header.signature == *Madt::SIGNATURE {
+            log::info!("    Entry APIC - It is a MADT, Interrupt Controller Structures:");
+            let madt = Madt::new(header)?;
+            for madt_entry in madt.controller_struct_headers() {
+                match madt_entry.structure_type {
+                    ProcessorLocalApic::STRUCTURE_TYPE => {
+                        log::info!("    -> Local APIC: {:?}", ProcessorLocalApic::new(madt_entry)?);
+                    }
+                    ProcessorLocalX2Apic::STRUCTURE_TYPE => {
+                        log::info!(
+                            "    -> Local X2APIC: {:?}",
+                            ProcessorLocalX2Apic::new(madt_entry)?
+                        );
+                    }
+                    MultiprocessorWakeup::STRUCTURE_TYPE => {
+                        log::info!(
+                            "    -> MultiprocessorWakeup: {:?}",
+                            MultiprocessorWakeup::from_header_cast(madt_entry)?
+                        );
+                    }
+                    _ => {
+                        log::info!(
+                            "    -> Unknown structure, type = {}",
+                            madt_entry.structure_type
+                        );
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }

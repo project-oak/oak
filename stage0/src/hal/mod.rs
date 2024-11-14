@@ -33,7 +33,7 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::{paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
 /// Abstraction around MMIO (memory-mapped I/O) read/write access.
 ///
@@ -115,6 +115,10 @@ pub trait Platform {
     /// This does mean you do not have access to the heap allocator
     /// (BOOT_ALLOCATOR will still work).
     fn initialize_platform(e820_table: &[BootE820Entry]);
+
+    /// Platform-specific modifications and validations of ACPI tables, starting
+    /// from RSDP, including RSDT, XSDT, APIC aka MADT.
+    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str>;
 
     /// Platform-specific cleanups just before stage0 jumps to the kernel.
     ///

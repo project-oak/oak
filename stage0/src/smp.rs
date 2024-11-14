@@ -23,9 +23,7 @@ use core::{
 use x86_64::{structures::paging::Size4KiB, PhysAddr};
 
 use crate::{
-    acpi_tables::{
-        LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
-    },
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
     apic::Lapic,
     pic::disable_pic8259,
     Platform,
@@ -84,11 +82,11 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see
     // if we can use the old RSDT. (If we have neither XSDT or RSDT, the ACPI
     // tables are broken.)
-    let madt = if let Ok(Some(xsdt)) = rsdp.xsdt() {
-        xsdt.get(Madt::SIGNATURE).ok_or("MADT table not found in XSDT")?
+    let madt = if let Some(xsdt) = rsdp.xsdt() {
+        xsdt?.get(Madt::SIGNATURE)?.ok_or("MADT table not found in XSDT")?
     } else {
-        let rsdt = rsdp.rsdt()?.ok_or("RSDT not found")?;
-        rsdt.get(Madt::SIGNATURE).ok_or("MADT table not found in RSDT")?
+        let rsdt = rsdp.rsdt().ok_or("RSDT not found")??;
+        rsdt.get(Madt::SIGNATURE)?.ok_or("MADT table not found in RSDT")?
     };
     let madt = Madt::new(madt).expect("invalid MADT");
 
@@ -110,26 +108,16 @@ pub fn bootstrap_aps<P: Platform>(rsdp: &Rsdp) -> Result<(), &'static str> {
         let (remote_lapic_id, flags) = match controller_header.structure_type {
             ProcessorLocalApic::STRUCTURE_TYPE => {
                 let remote_lapic = ProcessorLocalApic::new(controller_header)?;
-                log::debug!("Local APIC: {:?}", remote_lapic);
+                log::debug!("smp::boostrap_aps: Local APIC: {:?}", remote_lapic);
                 (remote_lapic.apic_id as u32, remote_lapic.flags)
             }
             ProcessorLocalX2Apic::STRUCTURE_TYPE => {
                 let remote_lapic = ProcessorLocalX2Apic::new(controller_header)?;
-                log::debug!("Local X2APIC: {:?}", remote_lapic);
+                log::debug!("smp::boostrap_aps: Local X2APIC: {:?}", remote_lapic);
                 (remote_lapic.x2apic_id, remote_lapic.flags)
             }
-            MultiprocessorWakeup::STRUCTURE_TYPE => {
-                let multiprocessor_wakeup =
-                    MultiprocessorWakeup::from_header_cast(controller_header)?;
-                log::debug!(
-                    "Found a MultiprocessorWakeup :D MailBox address: {:?}",
-                    multiprocessor_wakeup.mailbox_address
-                );
-                continue;
-            }
-            // We don't care about other interrupt controller structure types.
+            // We don't care about other interrupt controller structure types here.
             _ => {
-                log::debug!("uninteresting structure: {:?}", controller_header.structure_type);
                 continue;
             }
         };

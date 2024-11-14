@@ -32,7 +32,7 @@ use oak_stage0::{
     allocator::Shared,
     hal::{Base, PageAssignment, Platform, PortFactory},
     paging::PageEncryption,
-    BootAllocator, ZeroPage, BOOT_ALLOC,
+    BootAllocator, Rsdp, ZeroPage, BOOT_ALLOC,
 };
 use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
 use x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
@@ -244,6 +244,10 @@ impl Platform for Sev {
                 }
             }
         }
+    }
+
+    fn finalize_acpi_tables(_rsdp: &mut Rsdp) -> Result<(), &'static str> {
+        Ok(())
     }
 
     fn populate_zero_page(zero_page: &mut ZeroPage) {

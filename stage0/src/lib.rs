@@ -65,6 +65,10 @@ mod pic;
 mod smp;
 mod zero_page;
 
+pub use acpi::Ebda;
+pub use acpi_tables::{
+    DescriptionHeader, Madt, MultiprocessorWakeup, Rsdp, Rsdt, RsdtEntryPairMut, Xsdt,
+};
 pub use hal::Platform;
 pub use zero_page::ZeroPage;
 
@@ -162,6 +166,8 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let mut acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
 
+    // TODO: b/379079124 - Stop calling this for TDX and create a common abstraction
+    // for waking up APs.
     if let Err(err) = smp::bootstrap_aps::<P>(rsdp) {
         log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
     }

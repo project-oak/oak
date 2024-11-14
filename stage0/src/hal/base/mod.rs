@@ -33,7 +33,7 @@ use x86_64::{
 use zerocopy::{AsBytes, FromBytes};
 
 use super::{PageAssignment, PortFactory};
-use crate::{paging::PageEncryption, zero_page::ZeroPage};
+use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
 pub struct Base {}
 
@@ -79,6 +79,10 @@ impl crate::Platform for Base {
     }
 
     fn initialize_platform(_e820_table: &[BootE820Entry]) {}
+
+    fn finalize_acpi_tables(_rsdp: &mut Rsdp) -> Result<(), &'static str> {
+        Ok(())
+    }
 
     fn deinit_platform() {}
 
