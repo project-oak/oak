@@ -57,6 +57,10 @@ const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
 const UNMATCHED_ATTESTER_ID: &str = "UNMATCHED_ATTESTER_ID";
 const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
 
+// Since [`Attester`], [`Endorser`] and [`AttestationVerifier`] are external
+// traits, we have to use `mock!` instead of `[automock]` and define a test
+// struct that implements those traits.
+// <https://docs.rs/mockall/latest/mockall/#external-traits>
 mock! {
     TestAttester {}
     impl Attester for TestAttester {
