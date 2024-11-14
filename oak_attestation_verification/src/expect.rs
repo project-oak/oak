@@ -16,25 +16,26 @@
 
 use alloc::{string::String, vec::Vec};
 
-use anyhow::Context;
+use anyhow::{Context, Error};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, endorsements, expected_digests, expected_values,
-        kernel_binary_reference_value, reference_values, text_expected_value, text_reference_value,
-        AmdSevExpectedValues, ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
-        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerExpectedValues,
-        ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements,
-        EventExpectedValues, EventReferenceValues, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExpectedValues, FirmwareAttachment, InsecureExpectedValues,
-        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
-        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
-        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TextExpectedValue,
-        TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        binary_reference_value, endorsement::Format, endorsements, expected_digests,
+        expected_values, kernel_binary_reference_value, reference_values, text_expected_value,
+        text_reference_value, AmdSevExpectedValues, ApplicationLayerEndorsements,
+        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, BinaryReferenceValue,
+        CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerEndorsements,
+        ContainerLayerExpectedValues, ContainerLayerReferenceValues, Endorsement,
+        EndorsementReferenceValue, Endorsements, EventExpectedValues, EventReferenceValues,
+        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, FirmwareAttachment,
+        InsecureExpectedValues, IntelTdxExpectedValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerEndorsements,
+        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersEndorsements,
+        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
+        Signature, SignedEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
+        SystemLayerReferenceValues, TextExpectedValue, TextReferenceValue,
+        TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -43,7 +44,7 @@ use prost::Message;
 use crate::{
     endorsement::{
         self, get_digest, is_firmware_type, is_kernel_type, parse_statement,
-        verify_binary_endorsement,
+        verify_binary_endorsement, verify_endorsement,
     },
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
@@ -227,7 +228,7 @@ pub(crate) fn get_root_layer_expected_values(
             endorsements.and_then(|value| value.stage0.as_ref()),
             amd_sev_values.stage0.as_ref().context("stage0 binary reference values not found")?,
         )
-        .context("getting stage0 expected values")?;
+        .context("getting stage0 values")?;
         Some(AmdSevExpectedValues {
             stage0_expected: Some(stage0_expected),
             min_tcb_version: amd_sev_values.min_tcb_version.clone(),
@@ -255,7 +256,7 @@ pub(crate) fn get_kernel_layer_expected_values(
                 endorsements.and_then(|value| value.kernel.as_ref()),
                 reference_values.kernel.as_ref().context("no kernel reference value")?,
             )
-            .context("failed to get kernel expected values")?,
+            .context("getting kernel values")?,
         ),
 
         // TODO: b/331252282 - Remove temporary workaround for cmd line.
@@ -268,7 +269,7 @@ pub(crate) fn get_kernel_layer_expected_values(
                     .context("no kernel command line text reference values")?,
                 endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
             )
-            .context("failed to get kernel cmd line expected value")?,
+            .context("getting kernel command line values")?,
         ),
 
         init_ram_fs: Some(
@@ -280,7 +281,7 @@ pub(crate) fn get_kernel_layer_expected_values(
                     .as_ref()
                     .context("no initial RAM disk reference value")?,
             )
-            .context("failed to get initramfs expected value")?,
+            .context("getting initramfs values")?,
         ),
 
         memory_map: Some(
@@ -289,7 +290,7 @@ pub(crate) fn get_kernel_layer_expected_values(
                 endorsements.and_then(|value| value.memory_map.as_ref()),
                 reference_values.memory_map.as_ref().context("no memory map reference value")?,
             )
-            .context("failed to get memory map expected value")?,
+            .context("getting memory map values")?,
         ),
 
         acpi: Some(
@@ -298,7 +299,7 @@ pub(crate) fn get_kernel_layer_expected_values(
                 endorsements.and_then(|value| value.acpi.as_ref()),
                 reference_values.acpi.as_ref().context("no ACPI reference value")?,
             )
-            .context("failed to get ACPI table expected value")?,
+            .context("getting acpi values")?,
         ),
     })
 }
@@ -320,11 +321,14 @@ pub(crate) fn get_system_layer_expected_values(
     endorsements: Option<&SystemLayerEndorsements>,
     reference_values: &SystemLayerReferenceValues,
 ) -> anyhow::Result<SystemLayerExpectedValues> {
-    let system_image = Some(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context("system image reference value")?,
-    )?);
+    let system_image = Some(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.system_image.as_ref()),
+            reference_values.system_image.as_ref().context("system image reference value")?,
+        )
+        .context("getting system image values")?,
+    );
     Ok(SystemLayerExpectedValues { system_image })
 }
 
@@ -333,16 +337,22 @@ pub(crate) fn get_application_layer_expected_values(
     endorsements: Option<&ApplicationLayerEndorsements>,
     reference_values: &ApplicationLayerReferenceValues,
 ) -> anyhow::Result<ApplicationLayerExpectedValues> {
-    let binary = Some(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("container binary reference value")?,
-    )?);
-    let configuration = Some(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context("container config reference value")?,
-    )?);
+    let binary = Some(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.binary.as_ref().context("container binary reference value")?,
+        )
+        .context("getting application binary values")?,
+    );
+    let configuration = Some(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.configuration.as_ref()),
+            reference_values.configuration.as_ref().context("container config reference value")?,
+        )
+        .context("getting application config values")?,
+    );
     Ok(ApplicationLayerExpectedValues { binary, configuration })
 }
 
@@ -351,16 +361,22 @@ pub(crate) fn get_container_layer_expected_values(
     endorsements: Option<&ContainerLayerEndorsements>,
     reference_values: &ContainerLayerReferenceValues,
 ) -> anyhow::Result<ContainerLayerExpectedValues> {
-    let bundle = Some(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("container binary reference value")?,
-    )?);
-    let config = Some(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.configuration.as_ref().context("container config reference value")?,
-    )?);
+    let bundle = Some(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.binary.as_ref().context("container binary reference value")?,
+        )
+        .context("getting container binary values")?,
+    );
+    let config = Some(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.configuration.as_ref().context("container config reference value")?,
+        )
+        .context("getting container config values")?,
+    );
     Ok(ContainerLayerExpectedValues { bundle, config })
 }
 
@@ -376,16 +392,15 @@ pub(crate) fn get_expected_measurement_digest(
         Some(binary_reference_value::Type::Skip(_)) => Ok(ExpectedDigests {
             r#type: Some(expected_digests::Type::Skipped(VerificationSkipped {})),
         }),
-        Some(binary_reference_value::Type::Endorsement(public_keys)) => {
+        Some(binary_reference_value::Type::Endorsement(ref_value)) => {
             let endorsement =
                 endorsement.context("matching endorsement not found for reference value")?;
-            verify_binary_endorsement(
+            verify_endorsement_wrapper(
                 now_utc_millis,
                 &endorsement.endorsement,
                 &endorsement.endorsement_signature,
                 &endorsement.rekor_log_entry,
-                &public_keys.endorser_public_key,
-                &public_keys.rekor_public_key,
+                ref_value,
             )
             .context("verifying generic endorsement")?;
             let endorsement_statement = parse_statement(&endorsement.endorsement)
@@ -407,15 +422,14 @@ pub(crate) fn get_expected_measurement_digest(
 fn get_verified_stage0_attachment(
     now_utc_millis: i64,
     endorsement: &TransparentReleaseEndorsement,
-    public_keys: &EndorsementReferenceValue,
+    ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<FirmwareAttachment> {
-    verify_binary_endorsement(
+    verify_endorsement_wrapper(
         now_utc_millis,
         &endorsement.endorsement,
         &endorsement.endorsement_signature,
         &endorsement.rekor_log_entry,
-        &public_keys.endorser_public_key,
-        &public_keys.rekor_public_key,
+        ref_value,
     )
     .context("verifying firmware endorsement")?;
     // Parse endorsement statement and verify attachment digest.
@@ -480,15 +494,14 @@ fn get_stage0_expected_values(
 fn get_verified_kernel_attachment(
     now_utc_millis: i64,
     endorsement: &TransparentReleaseEndorsement,
-    public_keys: &EndorsementReferenceValue,
+    ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<KernelAttachment> {
-    verify_binary_endorsement(
+    verify_endorsement_wrapper(
         now_utc_millis,
         &endorsement.endorsement,
         &endorsement.endorsement_signature,
         &endorsement.rekor_log_entry,
-        &public_keys.endorser_public_key,
-        &public_keys.rekor_public_key,
+        ref_value,
     )
     .context("verifying kernel endorsement")?;
     // Parse endorsement statement and verify attachment digest.
@@ -586,16 +599,15 @@ pub(crate) fn get_text_expected_values(
         Some(text_reference_value::Type::Skip(_)) => Ok(TextExpectedValue {
             r#type: Some(text_expected_value::Type::Skipped(VerificationSkipped {})),
         }),
-        Some(text_reference_value::Type::Endorsement(public_keys)) => {
+        Some(text_reference_value::Type::Endorsement(ref_value)) => {
             let endorsement =
                 endorsement.context("matching endorsement not found for text reference value")?;
-            verify_binary_endorsement(
+            verify_endorsement_wrapper(
                 now_utc_millis,
                 &endorsement.endorsement,
                 &endorsement.endorsement_signature,
                 &endorsement.rekor_log_entry,
-                &public_keys.endorser_public_key,
-                &public_keys.rekor_public_key,
+                ref_value,
             )
             .context("verifying text endorsement")?;
             // Compare the actual command line against the one inlined in the endorsement.
@@ -631,6 +643,70 @@ fn to_expected_digests(
             validity: claim_validity.map(|cv| cv.into()),
         })),
     }
+}
+
+// Adapts the old-style endorsement verification to the new one: the
+// reference values are used to determine the style.
+//
+// Old-style means that deprecated fields `endorser_public_key` and
+// `rekor_public_key` are populated in EndorsementReferenceValue.
+// New-style means that the other fields (`endorser`, `required_claims`
+// and `rekor`) are populated. In that case, the deprecated fields
+// related to the old style are ignored.
+fn verify_endorsement_wrapper(
+    now_utc_millis: i64,
+    endorsement: &[u8],
+    signature: &[u8],
+    log_entry: &[u8],
+    ref_value: &EndorsementReferenceValue,
+) -> anyhow::Result<()> {
+    // Use the new-style `endorser` field to determine if the reference value
+    // has the new fields populated. If not, fall back to the deprecated code
+    // branch.
+    //
+    // TODO: b/379253152 - Remove this early out block, along with entire
+    //     verify_binary_endorsement function once all clients verify via the
+    //     new-style fields in EndorsementReferenceValue.
+    if ref_value.endorser.is_none() {
+        return verify_binary_endorsement(
+            now_utc_millis,
+            endorsement,
+            signature,
+            log_entry,
+            &ref_value.endorser_public_key,
+            &ref_value.rekor_public_key,
+        );
+    }
+
+    // Suboptimal but OK to make the new-style reference values work with the
+    // non-policy-based attestation verification: The `endorser` key set may
+    // contain several verification keys. Under the deprecated notation, we
+    // don't have any key ID for the signature, so we have to try all the keys.
+    // In practice, reference values will almost always contain a single
+    // public key, so the for loop consists of exactly one iteration.
+    let mut err = Error::msg("no endorser keys");
+    for key in &ref_value.endorser.as_ref().unwrap().keys {
+        // Eventually the signed endorsement will come directly from the host,
+        // assembling it here from the deprecated TransparentReleaseEndorsement
+        // is temporary.
+        let signed_endorsement = SignedEndorsement {
+            endorsement: Some(Endorsement {
+                format: Format::EndorsementFormatJsonIntoto.into(),
+                serialized: endorsement.to_vec(),
+                subject: Vec::new(),
+            }),
+            signature: Some(Signature { key_id: key.key_id, raw: signature.to_vec() }),
+            rekor_log_entry: log_entry.to_vec(),
+        };
+
+        let result = verify_endorsement(now_utc_millis, &signed_endorsement, ref_value);
+        if result.is_ok() {
+            return Ok(());
+        }
+        err = result.err().unwrap();
+    }
+
+    anyhow::bail!(err);
 }
 
 #[cfg(test)]

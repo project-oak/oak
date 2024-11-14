@@ -162,17 +162,13 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
 /// `signed_endorsement`: The endorsement along with signature and (optional)
 ///     Rekor log entry.
 /// `ref_value`: A reference value containing e.g. the public keys needed
-///     for the verification.
+///     for the verification. The deprecated fields `endorser_public_key` and
+///     `rekor_public_key` will be ignored.
 pub fn verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<DefaultStatement> {
-    // Reject ref_value instances using the potentially deprecated fields.
-    if !ref_value.endorser_public_key.is_empty() || !ref_value.rekor_public_key.is_empty() {
-        anyhow::bail!("verify_endorsement does not support the deprecated fields");
-    }
-
     let endorsement =
         signed_endorsement.endorsement.as_ref().context("no endorsement in signed endorsement")?;
     let signature =
