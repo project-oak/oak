@@ -256,6 +256,31 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -285,10 +310,35 @@
 <span class="kw">use </span>ouroboros::self_referencing;
 <span class="kw">use </span>tempfile::{tempdir, TempDir};
 
+<span class="comment">// Traits so that we could keep LookupData(Manager) around without knowing the
+// exact number of shards.
+</span><span class="kw">trait </span>LookupDataNativeInterface {
+    <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;;
+    <span class="kw">fn </span>log_debug(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str);
+}
+<span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; LookupDataNativeInterface <span class="kw">for </span>LookupData&lt;S&gt; {
+    <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
+        <span class="self">self</span>.get(key)
+    }
+
+    <span class="kw">fn </span>log_debug(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
+        <span class="self">self</span>.log_debug(message)
+    }
+}
+
+<span class="kw">trait </span>LookupDataManagerNativeInterface {
+    <span class="kw">fn </span>create_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>LookupDataNativeInterface&gt;;
+}
+<span class="kw">impl</span>&lt;<span class="kw">const </span>S: usize&gt; LookupDataManagerNativeInterface <span class="kw">for </span>LookupDataManager&lt;S&gt; {
+    <span class="kw">fn </span>create_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>LookupDataNativeInterface&gt; {
+        Box::new(<span class="self">self</span>.create_lookup_data())
+    }
+}
+
 <span class="kw">struct </span>RequestContext {
     request: Vec&lt;u8&gt;,
     response: Vec&lt;u8&gt;,
-    lookup_data: LookupData&lt;<span class="number">16</span>&gt;,
+    lookup_data: Box&lt;<span class="kw">dyn </span>LookupDataNativeInterface&gt;,
 }
 
 <span class="macro">thread_local!</span> {
@@ -387,7 +437,7 @@
 <span class="doccomment">/// Variant of a Handler that dynamically loads a `.so` file and invokes native
 /// code to handle requests from there.
 </span><span class="kw">pub struct </span>NativeHandler {
-    lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
+    lookup_data_manager: Arc&lt;<span class="kw">dyn </span>LookupDataManagerNativeInterface + Send + Sync&gt;,
 
     <span class="attr">#[allow(dead_code)]
     </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -453,10 +503,10 @@
     /// Safety: It's up to the caller to guarantee that said shared object
     /// adheres to the semantics we require. This method should really be
     /// marked `unsafe` because of that.
-    </span><span class="kw">fn </span>new_handler(
+    </span><span class="kw">fn </span>new_handler&lt;<span class="kw">const </span>S: usize&gt;(
         _config: (),
         module_bytes: <span class="kw-2">&amp;</span>[u8],
-        lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
+        lookup_data_manager: Arc&lt;LookupDataManager&lt;S&gt;&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;NativeHandler&gt; {
         <span class="kw">let </span>directory = tempdir().context(<span class="string">"could not create temporary directory"</span>)<span class="question-mark">?</span>;

@@ -1042,10 +1042,10 @@
     <span class="kw">type </span>HandlerType = WasmtimeHandler;
     <span class="kw">type </span>HandlerConfig = WasmtimeConfig;
 
-    <span class="kw">fn </span>new_handler(
+    <span class="kw">fn </span>new_handler&lt;<span class="kw">const </span>S: usize&gt;(
         config: WasmtimeConfig,
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-        lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
+        lookup_data_manager: Arc&lt;LookupDataManager&lt;S&gt;&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;WasmtimeHandler&gt; {
         <span class="kw">let </span>logger = Box::new(StandaloneLogger);

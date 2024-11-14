@@ -230,7 +230,7 @@
 <span class="kw">use crate</span>::{logger::StandaloneLogger, lookup::LookupDataManager, Handler, Observer};
 
 <span class="kw">pub struct </span>OakFunctionsInstance&lt;H: Handler&gt; {
-    lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">16</span>&gt;&gt;,
+    lookup_data_manager: Arc&lt;LookupDataManager&lt;<span class="number">128</span>&gt;&gt;,
     wasm_handler: H::HandlerType,
 }
 
