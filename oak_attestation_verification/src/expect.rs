@@ -462,7 +462,7 @@ fn get_verified_stage0_attachment(
 // The subject itself will be verified, and then the expected digests (each
 // corresponding to a number of vCPU, any of them a valid match for the digest
 // in the evidence).
-fn get_stage0_expected_values(
+pub(crate) fn get_stage0_expected_values(
     now_utc_millis: i64,
     endorsement: Option<&TransparentReleaseEndorsement>,
     reference_value: &BinaryReferenceValue,

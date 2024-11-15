@@ -16,6 +16,7 @@
 
 pub mod application;
 pub mod binary;
+pub mod firmware;
 pub mod kernel;
 pub mod platform;
 pub mod system;

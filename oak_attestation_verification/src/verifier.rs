@@ -23,7 +23,9 @@ use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
 use itertools::izip;
 use oak_attestation_verification_types::{
-    policy::EventPolicy, util::Clock, verifier::AttestationVerifier,
+    policy::{EventPolicy, Policy},
+    util::Clock,
+    verifier::AttestationVerifier,
 };
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
@@ -31,14 +33,18 @@ use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
     ReferenceValues,
 };
+use oak_sev_snp_attestation_report::AttestationReport;
 use p256::ecdsa::VerifyingKey;
 use prost_types::Any;
+use zerocopy::FromBytes;
 
 use crate::{
     compare::compare_expected_values,
     expect::get_expected_values,
     extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
+    policy::{firmware::FirmwarePolicy, platform::AmdSevSnpPolicy},
+    util::hash_sha2_256,
 };
 
 // We don't use additional authenticated data.
@@ -65,13 +71,20 @@ pub fn to_attestation_results(
 }
 
 pub struct AmdSevSnpDiceAttestationVerifier {
-    policies: Vec<Box<dyn EventPolicy>>,
+    platform_policy: AmdSevSnpPolicy,
+    firmware_policy: FirmwarePolicy,
+    event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Box<dyn Clock>,
 }
 
 impl AmdSevSnpDiceAttestationVerifier {
-    pub fn new(policies: Vec<Box<dyn EventPolicy>>, clock: Box<dyn Clock>) -> Self {
-        Self { policies, clock }
+    pub fn new(
+        platform_policy: AmdSevSnpPolicy,
+        firmware_policy: FirmwarePolicy,
+        event_policies: Vec<Box<dyn EventPolicy>>,
+        clock: Box<dyn Clock>,
+    ) -> Self {
+        Self { platform_policy, firmware_policy, event_policies, clock }
     }
 }
 
@@ -81,8 +94,48 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
-        // Last layer's certificate authority key is not used to sign anything.
+        // Get current time.
+        let milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+
+        // Get DICE root layer evidence.
+        let root_layer = &evidence
+            .root_layer
+            .as_ref()
+            .context("root DICE layer wasn't provided in the evidence")?;
+
+        // Parse AMD SEV-SNP attestation report.
+        let attestation_report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
+            .context("invalid AMD SEV-SNP attestation report")?;
+        let firmware_measurement = &attestation_report.data.measurement;
+
+        // Verify AMD SEV-SNP platform authenticity and configuration.
+        if let Some(endorsements::Platform::AmdSevSnp(platform_endorsement)) =
+            endorsements.platform.as_ref()
+        {
+            self.platform_policy
+                .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
+                .context("couldn't verify AMD SEV-SNP platform")?;
+        } else {
+            anyhow::bail!("AMD SEV-SNP endorsement wasn't provided in endorsements")
+        }
+
+        // Verify that the DICE root ECA key is bound to the attestation report.
+        verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
+            .context("couldn't verify DICE root ECA key")?;
+
+        // Verify DICE chain integrity.
+        // The output argument is ommited because last layer's certificate authority key
+        // is not used to sign anything.
         let _ = verify_dice_chain(evidence).context("couldn't verify DICE chain")?;
+
+        // Verify firmware measurement.
+        let firmware_endorsement = &endorsements
+            .firmware
+            .as_ref()
+            .context("firmware endorsement wasn't provided in endorsements")?;
+        self.firmware_policy
+            .verify(firmware_measurement, firmware_endorsement, milliseconds_since_epoch)
+            .context("couldn't verify firmware")?;
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence
@@ -93,8 +146,8 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         let event_attestation_results = verify_event_log(
             event_log,
             event_endorsements,
-            self.policies.as_slice(),
-            self.clock.get_milliseconds_since_epoch(),
+            self.event_policies.as_slice(),
+            milliseconds_since_epoch,
         )
         .context("couldn't verify event log")?;
 
@@ -175,6 +228,23 @@ pub fn verify_with_expected_values(
         .context("comparing expected values to evidence")?;
 
     Ok(extracted_evidence)
+}
+
+/// Verifies that the root ECA public key of the DICE chain is bound to the
+/// attestation report to ensure that the entire DICE chain is valid.
+fn verify_dice_root_eca_key(
+    attestation_report: &AttestationReport,
+    eca_public_key: &[u8],
+) -> anyhow::Result<()> {
+    let expected = &hash_sha2_256(eca_public_key)[..];
+    let actual = attestation_report.data.report_data;
+    anyhow::ensure!(
+        // The report data contains 64 bytes by default, but we only use the first 32 bytes
+        // at the moment.
+        expected.len() < actual.len() && expected == &actual[..expected.len()],
+        "the root ECA public key is not bound to the AMD SEV-SNP attestation report"
+    );
+    Ok(())
 }
 
 /// Verifies signatures of the certificates in the DICE chain and returns last

@@ -87,10 +87,10 @@ pub struct EventLog {
     #[deprecated]
     #[prost(message, repeated, tag = "1")]
     pub events: ::prost::alloc::vec::Vec<Event>,
-    /// Holds serialized instances of the the Event message. The serialized form
-    /// is used instead of `repeated Event events` as proto serialization is non-
-    /// deterministic and attestation evidence contains signatures over the digest
-    /// of serialized events.
+    /// Holds serialized instances of the the \[`Event`\] message. The serialized
+    /// form is used instead of `repeated Event events` as proto serialization is
+    /// non-deterministic and attestation evidence contains signatures over the
+    /// digest of serialized events.
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub encoded_events: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }

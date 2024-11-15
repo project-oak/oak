@@ -38,7 +38,7 @@ impl ApplicationPolicy {
     }
 }
 
-// We have to use [`Policy<[u8], [u8]>`] instead of [`EventPolicy`], because
+// We have to use [`Policy<[u8], Any>`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
 impl Policy<[u8], Any> for ApplicationPolicy {

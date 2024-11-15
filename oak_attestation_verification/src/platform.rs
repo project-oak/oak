@@ -19,9 +19,13 @@
 use alloc::format;
 
 use anyhow::Context;
-use oak_proto_rust::oak::attestation::v1::{
-    AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues, IntelTdxAttestationReport,
-    IntelTdxExpectedValues, RootLayerEvidence, TcbVersion, TeePlatform,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, RootLayerEvidence, TcbVersion,
+        TeePlatform,
+    },
+    RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use x509_cert::{
@@ -200,6 +204,10 @@ pub fn convert_amd_sev_snp_attestation_report(
         report_data,
         vmpl,
     })
+}
+
+pub fn convert_amd_sev_snp_initial_measurement(initial_measurement: &[u8]) -> RawDigest {
+    RawDigest { sha2_384: initial_measurement.to_vec(), ..Default::default() }
 }
 
 /// Verifies the Intel TDX attestation report.

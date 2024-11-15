@@ -76,9 +76,9 @@ message EventLog {
   // TODO: b/333748757 - Remove 'events' once 'encoded_events' is in google3.
   // Deprecated: Use encoded_events instead.
   repeated Event events = 1 [deprecated = true];
-  // Holds serialized instances of the the Event message. The serialized form
-  // is used instead of `repeated Event events` as proto serialization is non-
-  // deterministic and attestation evidence contains signatures over the digest
-  // of serialized events.
+  // Holds serialized instances of the the [`Event`] message. The serialized
+  // form is used instead of `repeated Event events` as proto serialization is
+  // non-deterministic and attestation evidence contains signatures over the
+  // digest of serialized events.
   repeated bytes encoded_events = 2;
 }

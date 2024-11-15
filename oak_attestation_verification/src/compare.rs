@@ -37,8 +37,8 @@ use regex_lite::Regex;
 
 use crate::{
     platform::{
-        verify_amd_sev_attestation_report_values, verify_insecure,
-        verify_intel_tdx_attestation_report,
+        convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
+        verify_insecure, verify_intel_tdx_attestation_report,
     },
     util::is_raw_digest_match,
 };
@@ -166,10 +166,8 @@ fn compare_root_layer_measurement_digests(
         expected_values.insecure.as_ref(),
     ) {
         (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
-            let measurement = RawDigest {
-                sha2_384: report_values.initial_measurement.to_vec(),
-                ..Default::default()
-            };
+            let measurement =
+                convert_amd_sev_snp_initial_measurement(&report_values.initial_measurement);
             compare_measurement_digest(
                 &measurement,
                 amd_sev_values
@@ -310,7 +308,7 @@ pub(crate) fn compare_container_layer_measurement_digests(
 
 /// Verifies the measurement digest value against a reference value and
 /// the expected digests calculated from endorsements and reference values.
-fn compare_measurement_digest(
+pub(crate) fn compare_measurement_digest(
     measurement: &RawDigest,
     expected: &ExpectedDigests,
 ) -> anyhow::Result<()> {
