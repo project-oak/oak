@@ -20,11 +20,12 @@ use oak_proto_rust::oak::attestation::v1::{
     ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
     EventAttestationResults,
 };
+use prost_types::Any;
 
 use crate::{
     compare::compare_application_layer_measurement_digests,
     expect::get_application_layer_expected_values,
-    util::{decode_event_endorsement_proto, decode_event_proto},
+    util::{decode_endorsement_proto, decode_event_proto},
 };
 
 pub struct ApplicationPolicy {
@@ -40,25 +41,25 @@ impl ApplicationPolicy {
 // We have to use [`Policy<[u8], [u8]>`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
-impl Policy<[u8], [u8]> for ApplicationPolicy {
+impl Policy<[u8], Any> for ApplicationPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &[u8],
+        encoded_event_endorsement: &Any,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ApplicationLayerData>(
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
             encoded_event,
         )?;
-        let event_endorsements = decode_event_endorsement_proto::<ApplicationLayerEndorsements>(
+        let event_endorsement = decode_endorsement_proto::<ApplicationLayerEndorsements>(
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerEndorsements",
             encoded_event_endorsement,
         )?;
 
         let expected_values = get_application_layer_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsements),
+            Some(&event_endorsement),
             &self.reference_values,
         )
         .context("couldn't verify application endosements")?;

@@ -59,7 +59,7 @@ java_proto_library(
 proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
-    deps = [":eventlog_proto"],
+    deps = ["@com_google_protobuf//:any_proto"],
 )
 
 cc_proto_library(

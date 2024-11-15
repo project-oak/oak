@@ -28,10 +28,11 @@ use oak_attestation_verification_types::{
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, endorsements, AttestationResults, Endorsements,
-    EventAttestationResults, EventEndorsements, EventLog, Evidence, ExpectedValues,
-    ExtractedEvidence, LayerEvidence, ReferenceValues,
+    EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
+    ReferenceValues,
 };
 use p256::ecdsa::VerifyingKey;
+use prost_types::Any;
 
 use crate::{
     compare::compare_expected_values,
@@ -88,10 +89,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .event_log
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
-        let event_endorsements = &endorsements
-            .event_endorsements
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("event endorsements were not provided"))?;
+        let event_endorsements = &endorsements.events;
         let event_attestation_results = verify_event_log(
             event_log,
             event_endorsements,
@@ -350,15 +348,15 @@ fn validate_that_event_log_is_captured_in_dice_layers(
 /// Policies and Events is done via ordering.
 fn verify_event_log(
     event_log: &EventLog,
-    event_endorsements: &EventEndorsements,
+    event_endorsements: &[Any],
     policies: &[Box<dyn EventPolicy>],
     milliseconds_since_epoch: i64,
 ) -> anyhow::Result<Vec<EventAttestationResults>> {
-    if event_log.encoded_events.len() != event_endorsements.encoded_event_endorsements.len() {
+    if event_log.encoded_events.len() != event_endorsements.len() {
         anyhow::bail!(
             "event log length ({}) is not equal to the number of endorsements ({})",
             event_log.encoded_events.len(),
-            event_endorsements.encoded_event_endorsements.len()
+            event_endorsements.len()
         );
     }
     if policies.len() != event_log.encoded_events.len() {
@@ -369,14 +367,11 @@ fn verify_event_log(
         );
     }
 
-    let verification_iterator = izip!(
-        policies.iter(),
-        event_log.encoded_events.iter(),
-        event_endorsements.encoded_event_endorsements.iter()
-    );
+    let verification_iterator =
+        izip!(policies.iter(), event_log.encoded_events.iter(), event_endorsements.iter());
     let event_attestation_results = verification_iterator
-        .map(|(event_policy, event, event_endorsements)| {
-            event_policy.verify(event, event_endorsements, milliseconds_since_epoch).unwrap_or(
+        .map(|(event_policy, event, event_endorsement)| {
+            event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
                 // TODO: b/366186091 - Use Rust error types for failed attestation.
                 EventAttestationResults {},
             )

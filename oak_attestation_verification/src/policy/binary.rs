@@ -19,6 +19,7 @@ use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, EventData, EventReferenceValues,
 };
+use prost_types::Any;
 
 use crate::{
     compare::compare_event_measurement_digests, expect::get_event_expected_values,
@@ -35,11 +36,11 @@ impl BinaryPolicy {
     }
 }
 
-impl Policy<[u8], [u8]> for BinaryPolicy {
+impl Policy<[u8], Any> for BinaryPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        _encoded_event_endorsement: &[u8],
+        _encoded_event_endorsement: &Any,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<EventData>(

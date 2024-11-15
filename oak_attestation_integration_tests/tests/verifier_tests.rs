@@ -118,8 +118,8 @@ fn verify_mock_restricted_kernel_evidence() {
             root_layer: Some(RootLayerEndorsements::default()),
             ..Default::default()
         })),
-        // TODO: b/375137648 - Populate `event_endorsements` proto field.
-        event_endorsements: None,
+        // TODO: b/375137648 - Populate `events` proto field.
+        ..Default::default()
     };
 
     // reference values that skip everything.

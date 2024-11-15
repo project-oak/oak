@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
-import "proto/attestation/eventlog.proto";
+import "google/protobuf/any.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -184,18 +184,30 @@ message ContainerEndorsement {
   SignedEndorsement configuration = 2;
 }
 
-// Endorsement contains statements that some entity (e.g. a hardware provider)
+// This message contains statements that some entity (e.g. a hardware provider)
 // vouches for the integrity of claims about the TEE or the software running
 // on it.
 //
 // The name is chosen to match the RATS terminology:
 // https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements
 message Endorsements {
+  // TODO: b/380407219 - Remove this field once Oak clients switch to policies.
   oneof type {
     OakRestrictedKernelEndorsements oak_restricted_kernel = 1;
     OakContainersEndorsements oak_containers = 2;
     CBEndorsements cb = 3;
   }
 
-  EventEndorsements event_endorsements = 4;
+  oneof platform {
+    AmdSevSnpEndorsement amd_sev_snp = 5;
+  }
+
+  // Endorsement corresponding to the initial TEE measurement done by the
+  // platform.
+  // Firmware endorsement is not included in the event log, because
+  // events can only be generated after the TEE starts up.
+  FirmwareEndorsement firmware = 6;
+
+  // Endorsements corresponding to the event log.
+  repeated google.protobuf.Any events = 7;
 };

@@ -198,8 +198,8 @@ impl StandaloneOrchestrator {
                         ..Default::default()
                     },
                 )),
-                // TODO: b/375137648 - Populate `event_endorsements` proto field.
-                event_endorsements: None,
+                // TODO: b/375137648 - Populate `events` proto field.
+                ..Default::default()
             }),
         }
     }

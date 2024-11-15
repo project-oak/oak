@@ -19,11 +19,12 @@ use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
     EventAttestationResults, KernelLayerData, KernelLayerEndorsements, KernelLayerReferenceValues,
 };
+use prost_types::Any;
 
 use crate::{
     compare::compare_kernel_layer_measurement_digests,
     expect::get_kernel_layer_expected_values,
-    util::{decode_event_endorsement_proto, decode_event_proto},
+    util::{decode_endorsement_proto, decode_event_proto},
 };
 
 pub struct KernelPolicy {
@@ -36,18 +37,18 @@ impl KernelPolicy {
     }
 }
 
-impl Policy<[u8], [u8]> for KernelPolicy {
+impl Policy<[u8], Any> for KernelPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &[u8],
+        encoded_event_endorsement: &Any,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<KernelLayerData>(
             "type.googleapis.com/oak.attestation.v1.KernelLayerData",
             encoded_event,
         )?;
-        let event_endorsements = decode_event_endorsement_proto::<KernelLayerEndorsements>(
+        let event_endorsements = decode_endorsement_proto::<KernelLayerEndorsements>(
             "type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements",
             encoded_event_endorsement,
         )?;

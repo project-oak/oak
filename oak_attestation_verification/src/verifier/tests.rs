@@ -186,8 +186,8 @@ fn create_oc_endorsements_reference_values(
                     }),
                 },
             )),
-            // TODO: b/375137648 - Populate `event_endorsements` proto field.
-            event_endorsements: None,
+            // TODO: b/375137648 - Populate `events` proto field.
+            ..Default::default()
         },
         ReferenceValues {
             r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
@@ -275,8 +275,8 @@ fn create_rk_endorsements_reference_values(
                     },
                 ),
             ),
-            // TODO: b/375137648 - Populate `event_endorsements` proto field.
-            event_endorsements: None,
+            // TODO: b/375137648 - Populate `events` proto field.
+            ..Default::default()
         },
         ReferenceValues {
             r#type: Some(reference_values::Type::OakRestrictedKernel(

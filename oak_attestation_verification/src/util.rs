@@ -24,9 +24,9 @@ use oak_proto_rust::oak::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, Event, EventEndorsement, ExtractedEvidence, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerReferenceValues,
-        KeyType, OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Digests, Event, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
+        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
+        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
     },
@@ -422,29 +422,22 @@ pub fn decode_event_proto<M: Message + Default>(
         .map_err(|error| anyhow::anyhow!("failed to decode event: {}", error))?;
     decode_protobuf_any::<M>(
         expected_type_url,
-        event_proto.event.context("no event found in the `event` field")?,
+        event_proto.event.as_ref().context("no event found in the `event` field")?,
     )
 }
 
-/// Decodes serialized event endorsements into a specified [`Message`].
-pub fn decode_event_endorsement_proto<M: Message + Default>(
+/// Decodes serialized endorsement into a specified [`Message`].
+pub fn decode_endorsement_proto<M: Message + Default>(
     expected_type_url: &str,
-    encoded_event_endorsement: &[u8],
+    endorsement_proto: &Any,
 ) -> anyhow::Result<M> {
-    let event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement)
-        .map_err(|error| anyhow::anyhow!("failed to decode event endorsement: {}", error))?;
-    decode_protobuf_any::<M>(
-        expected_type_url,
-        event_endorsement_proto
-            .event_endorsement
-            .context("no event endorsement found in the `event_endorsement` field")?,
-    )
+    decode_protobuf_any::<M>(expected_type_url, endorsement_proto)
 }
 
 /// Decodes [`Any`] message into a specified [`Message`].
 pub fn decode_protobuf_any<M: Message + Default>(
     expected_type_url: &str,
-    message: Any,
+    message: &Any,
 ) -> anyhow::Result<M> {
     if message.type_url.as_str() != expected_type_url {
         anyhow::bail!(

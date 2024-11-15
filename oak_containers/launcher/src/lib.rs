@@ -323,7 +323,7 @@ fn get_endorsements() -> Endorsements {
             system_layer: None,
             container_layer: None,
         })),
-        // TODO: b/375137648 - Populate `event_endorsements` proto field.
-        event_endorsements: None,
+        // TODO: b/375137648 - Populate `events` proto field.
+        ..Default::default()
     }
 }
