@@ -1,3 +1,6 @@
+# OAK_CARGO_DEPRECATED
+# Please use Oak via Bazel. Cargo support is deprecated.
+
 [package]
 name = "oak_attestation"
 version = "0.1.0"

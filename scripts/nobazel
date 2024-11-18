@@ -8,4 +8,4 @@ do
     then
         echo "$cargo_dir needs bazelification"
     fi
-done < <(find . -name "Cargo.toml" -exec dirname {} \;)
+done < <(find . -name "Cargo.toml" -not -path "./third_party/*" -exec dirname {} \;)

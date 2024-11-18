@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo "Directories pending removal of Cargo support:" >&2
+
+while read -r cargo_file_path
+do
+    grep "OAK_CARGO_DEPRECATED" "${cargo_file_path}" >/dev/null
+    if [ $? -eq "1" ] 
+    then
+        echo "${cargo_file_path}"
+    fi
+done < <(find . -name "Cargo.toml" -not -path "./third_party/*")
+
+allowlisted_count=$(find . -name "Cargo.toml" -exec grep "OAK_CARGO_DEPRECATED" {} \; | wc -l)
+echo "Additionally, ${allowlisted_count} Cargo.toml files are allowlisted - consider reviewing them." >&2
