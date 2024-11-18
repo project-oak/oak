@@ -384,3 +384,6 @@ fn verify_event_log(
         .collect::<Vec<EventAttestationResults>>();
     Ok(event_attestation_results)
 }
+
+#[cfg(test)]
+mod tests;

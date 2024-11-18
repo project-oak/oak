@@ -387,7 +387,7 @@ pub(crate) fn get_expected_measurement_digest(
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
             )
-            .context("verifying binary endorsement")?;
+            .context("verifying generic endorsement")?;
             let endorsement_statement = parse_statement(&endorsement.endorsement)
                 .context("parsing endorsement statement")?;
             Ok(to_expected_digests(
@@ -417,7 +417,7 @@ fn get_verified_stage0_attachment(
         &public_keys.endorser_public_key,
         &public_keys.rekor_public_key,
     )
-    .context("verifying binary endorsement")?;
+    .context("verifying firmware endorsement")?;
     // Parse endorsement statement and verify attachment digest.
     let parsed_statement =
         parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
@@ -490,7 +490,7 @@ fn get_verified_kernel_attachment(
         &public_keys.endorser_public_key,
         &public_keys.rekor_public_key,
     )
-    .context("verifying binary endorsement")?;
+    .context("verifying kernel endorsement")?;
     // Parse endorsement statement and verify attachment digest.
     let parsed_statement =
         parse_statement(&endorsement.endorsement).context("parsing endorsement statement")?;
@@ -597,7 +597,7 @@ pub(crate) fn get_text_expected_values(
                 &public_keys.endorser_public_key,
                 &public_keys.rekor_public_key,
             )
-            .context("verifying binary endorsement")?;
+            .context("verifying text endorsement")?;
             // Compare the actual command line against the one inlined in the endorsement.
             let regex = String::from_utf8(endorsement.subject.clone())
                 .expect("endorsement subject is not utf8");
