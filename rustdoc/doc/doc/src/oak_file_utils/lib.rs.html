@@ -59,6 +59,7 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -111,12 +112,13 @@
 <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
 </span><span class="kw">pub fn </span>data_path(path: <span class="kw">impl </span>AsRef&lt;Path&gt;) -&gt; PathBuf {
     <span class="kw">const </span>DATA_PATH_PREFIX: <span class="kw-2">&amp;</span>str = <span class="string">"oak"</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>pb: PathBuf = DATA_PATH_PREFIX.into();
+    pb.push(path);
+
     <span class="kw">let </span>r = runfiles::Runfiles::create().expect(<span class="string">"Couldn't initialize runfiles"</span>);
-    <span class="kw">let </span>p = <span class="macro">runfiles::rlocation!</span>(r, <span class="macro">format!</span>(<span class="string">"{DATA_PATH_PREFIX}/{}"</span>, path.as_ref().display()))
-        .compat_wrap()
-        .expect(<span class="string">"Couldn't get runfile path"</span>);
+    <span class="kw">let </span>p = <span class="macro">runfiles::rlocation!</span>(r, <span class="kw-2">&amp;</span>pb).compat_wrap().expect(<span class="string">"Couldn't get runfile path"</span>);
     <span class="kw">if </span>!p.exists() {
-        <span class="macro">panic!</span>(<span class="string">"Data dependency not found: {}"</span>, path.as_ref().display());
+        <span class="macro">panic!</span>(<span class="string">"Data dependency not found: {}"</span>, pb.display());
     }
     p
 }
