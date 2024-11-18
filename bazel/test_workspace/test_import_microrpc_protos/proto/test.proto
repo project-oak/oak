@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-import "stubs.proto";
+import "test_import_microrpc_protos/proto/stubs.proto";
 
 package oak.test;
 

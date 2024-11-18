@@ -1,2 +1,0 @@
-[env]
-WORKSPACE_ROOT = { value = "_INVALID_WORKSPACE_ROOT_" }

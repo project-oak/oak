@@ -14,17 +14,17 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-rust_library(
-    name = "oak_grpc_utils",
-    srcs = glob(["src/**"]),
-    deps = [
-        "@oak_crates_index//:tonic-build",
+proto_library(
+    name = "test_protos",
+    srcs = [
+        "stubs.proto",
+        "test.proto",
     ],
 )
