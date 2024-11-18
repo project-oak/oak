@@ -17,6 +17,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use clap::Parser;
 use oak_containers_hello_world_untrusted_app::launcher_args::launcher_args;
+use oak_file_utils::data_path;
 use tokio::net::TcpListener;
 
 #[derive(clap::ValueEnum, clap::Parser, Clone, Debug, Default)]
@@ -44,7 +45,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let args = {
         let mut args = Args {
             server_type: ServerType::Grpc,
-            launcher_args: launcher_args("").expect("failed to create launcher args"),
+            launcher_args: launcher_args(data_path(
+                "oak_containers/examples/hello_world/trusted_app/bundle.tar",
+            ))
+            .expect("failed to create launcher args"),
         };
         args.update_from(std::env::args_os());
         args

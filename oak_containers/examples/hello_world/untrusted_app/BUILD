@@ -75,6 +75,7 @@ rust_binary(
         "//oak_client",
         "//oak_containers/launcher:lib",
         "//oak_crypto",
+        "//oak_file_utils",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
