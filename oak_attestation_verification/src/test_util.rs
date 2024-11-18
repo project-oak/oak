@@ -26,39 +26,24 @@ use oak_proto_rust::oak::{
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
 use time::macros::datetime;
 
-use crate::endorsement::{self, DefaultPredicate, DefaultStatement, Statement, Subject};
+use crate::endorsement::{self, Claim, DefaultPredicate, DefaultStatement, Statement, Subject};
 
-pub enum Usage {
-    None,
-    Firmware,
-    Kernel,
-}
-
-impl std::fmt::Display for Usage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        match self {
-            Self::None => write!(f, ""),
-            Self::Firmware => write!(f, "firmware"),
-            Self::Kernel => write!(f, "kernel"),
-        }
-    }
-}
 /// A simple fake endorsement for basic generic testing purposes.
-pub fn fake_endorsement(digests: &RawDigest, usage: Usage) -> DefaultStatement {
-    let map_digests = raw_digest_to_map(digests);
+pub fn fake_endorsement(digest: &RawDigest, claim_types: Vec<&str>) -> DefaultStatement {
+    let map_digest = raw_digest_to_map(digest);
 
     DefaultStatement {
         _type: endorsement::STATEMENT_TYPE.to_owned(),
         predicate_type: endorsement::PREDICATE_TYPE_V3.to_owned(),
-        subject: vec![Subject { name: "Fake Subject".to_string(), digest: map_digests }],
+        subject: vec![Subject { name: "fake_subject_name".to_string(), digest: map_digest }],
         predicate: DefaultPredicate {
-            usage: usage.to_string(),
+            usage: "".to_owned(), // Ignored with predicate V3, do not use.
             issued_on: datetime!(2024-10-01 12:08 UTC),
             validity: Some(endorsement::Validity {
                 not_before: datetime!(2024-09-01 12:00 UTC),
                 not_after: datetime!(2024-12-01 12:00 UTC),
             }),
-            claims: vec![],
+            claims: claim_types.iter().map(|x| Claim { r#type: x.to_string() }).collect(),
         },
     }
 }

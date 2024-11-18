@@ -27,6 +27,7 @@ use prost::Message;
 use time::ext::NumericalDuration;
 
 use crate::{
+    endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE},
     test_util::{self, GetValidity},
     util::{self, UnixTimestampMillis},
 };
@@ -36,7 +37,7 @@ fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
     let measured_content = b"Just some abitrary content";
     let content_digests = util::raw_digest_from_contents(measured_content);
-    let endorsement = test_util::fake_endorsement(&content_digests, test_util::Usage::None);
+    let endorsement = test_util::fake_endorsement(&content_digests, vec![]);
     let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
 
     // Now create the TR endorsement.
@@ -94,7 +95,7 @@ fn test_get_stage0_expected_values_validity() {
     // hash is the hash of the serialized firmware attachment.
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
-    let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Firmware);
+    let endorsement = test_util::fake_endorsement(&subject_digests, vec![FIRMWARE_CLAIM_TYPE]);
     let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
@@ -146,7 +147,7 @@ fn test_get_kernel_expected_values_validity() {
     // hash is the hash of the serialized kernel attachment.
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
-    let endorsement = test_util::fake_endorsement(&subject_digests, test_util::Usage::Kernel);
+    let endorsement = test_util::fake_endorsement(&subject_digests, vec![KERNEL_CLAIM_TYPE]);
     let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
