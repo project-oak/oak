@@ -13,17 +13,11 @@ Hello World example application.
 
 To run the server:
 
-1. Build the Oak Containers binaries:
+```sh
+bazel run //oak_containers/examples/hello_world/untrusted_app:bin/oak_containers_hello_world_untrusted_app
 
-   ```sh
-   just all_oak_containers_binaries
-   ```
-
-2. Start the server:
-
-   ```sh
-   cargo run --manifest-path oak_containers/examples/hello_world/untrusted_app/Cargo.toml -- rest --container-bundle bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar
-   ```
+cargo run --manifest-path oak_containers/examples/hello_world/untrusted_app/Cargo.toml -- rest --container-bundle bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar
+```
 
 To access the web client:
 

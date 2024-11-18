@@ -227,9 +227,6 @@ oak_containers_hello_world_container_bundle_tar:
 cc_oak_containers_hello_world_container_bundle_tar:
     bazel build {{BAZEL_CONFIG_FLAG}} //cc/containers/hello_world_trusted_app:bundle.tar
 
-oak_containers_hello_world_untrusted_app:
-    cargo build --release --package=oak_containers_hello_world_untrusted_app
-
 # Oak Functions Containers entry point.
 
 oak_functions_containers_app_bundle_tar:
