@@ -31,6 +31,30 @@ show-bazel-flag:
 export CARGO_WORKSPACE_LIST_CMD := 'grep -l "\[workspace" **/Cargo.toml --exclude="third_party/*"'
 export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
 
+# -- DEVELOPER WORKFLOW TOOLS --
+
+# Convenience bundle of tests and checks prior to sending a change for review.
+presubmit: \
+    format \
+    bazel \
+    clippy-ci \
+    cargo-audit \
+    cargo-udeps
+
+presubmit-full: \
+    presubmit \
+    all_ensure_no_std \
+    kokoro_build_binaries_rust \
+    kokoro_verify_buildconfigs \
+    oak_containers_tests \
+    kokoro_oak_containers \
+    kokoro_run_cargo_tests
+
+format:
+    bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --fix
+
+# -- End Developer Workflow Tools --
+
 # -- BUILD ENCLAVE APPS --
 
 build_all_enclave_apps: build_key_xor_test_app build_oak_echo_enclave_app build_oak_echo_raw_enclave_app build_oak_functions_enclave_app build_oak_orchestrator build_oak_functions_insecure_enclave_app
@@ -261,7 +285,10 @@ oak_attestation_explain_wasm:
     --release \
     --no-pack # prevents generating a package.json, we don't need it since we don't use a web bundler
 
-# Entry points for Kokoro CI.
+# --- KOKORO CI Entry Points ---
+
+check-format:
+    bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --verbose
 
 kokoro_build_binaries_rust: build_all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
     oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
@@ -289,6 +316,8 @@ cargo_test_packages_arg := "-p key_value_lookup -p oak_functions_launcher -p oak
 
 kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel build_oak_orchestrator build_oak_functions_enclave_app all_wasm_test_crates build-clients
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
+
+# --- End Kokoro CI Entry Points ---
 
 clang-tidy:
     bazel build {{BAZEL_CONFIG_FLAG}} --config=clang-tidy //cc/...
@@ -347,9 +376,6 @@ bazel-repin:
 bazel-update-crate crate:
     env CARGO_BAZEL_REPIN={{crate}} bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
-bazel-fmt:
-    buildifier -r ${PWD}  # Lints Bazel files - BUILD, WORKSPACE, *.bzl, etc.
-
 bazel-rustfmt:
     bazel build --config=rustfmt {{BAZEL_CONFIG_FLAG}} //...:all -- -third_party/...
 
@@ -394,9 +420,6 @@ cargo-udeps:
         env --chdir=$(dirname "$workspace") cargo udeps --all-targets --backend=depinfo --workspace
     done
 
-check-format:
-    bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --verbose
-
 git-check-diff:
     ./scripts/git_check_diff
 
@@ -417,9 +440,6 @@ bazel-cache-test:
       --execution_log_binary_file=target/bazel_exec_2.log \
       -- \
       //cc/bazel_cache_test:test
-
-format:
-    bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --fix
 
 build-clients:
     bazel build {{BAZEL_CONFIG_FLAG}} //java/src/main/java/com/google/oak/client/oak_functions_client //cc/client:cli
