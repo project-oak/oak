@@ -22,7 +22,6 @@ members = [
   "oak_containers/orchestrator",
   "oak_containers/attestation",
   "oak_containers_sdk",
-  "oak_containers/stage1",
   "oak_containers/stage1_dice",
   "oak_containers/syslogd",
   "oak_core",
@@ -37,9 +36,6 @@ members = [
   "oak_functions/lookup_data_generator",
   "oak_functions_abi",
   "oak_functions_client",
-  "oak_functions_containers_app",
-  "oak_functions_containers_launcher",
-  "oak_functions_launcher",
   "oak_functions_sdk",
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
@@ -47,7 +43,6 @@ members = [
   "oak_functions_enclave_service",
   "oak_functions_test_module",
   "oak_functions_test_utils",
-  "oak_kernel_measurement",
   "oak_launcher_utils",
   "oak_proto_rust",
   "oak_proto_rust/grpc",
@@ -56,7 +51,6 @@ members = [
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
   "oak_restricted_kernel_launcher",
-  "oak_restricted_kernel_orchestrator",
   "oak_session",
   "oak_session_wasm",
   "oak_sev_guest",
@@ -124,7 +118,6 @@ oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support", default-
 oak_file_utils = { path = "./oak_file_utils" }
 oak_functions_abi = { path = "./oak_functions_abi" }
 oak_functions_client = { path = "./oak_functions_client" }
-oak_functions_launcher = { path = "./oak_functions_launcher" }
 oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
@@ -143,7 +136,6 @@ oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
 oak_restricted_kernel_sdk_proc_macro = { path = "./oak_restricted_kernel_sdk_proc_macro" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
-oak_restricted_kernel_orchestrator = { path = "./oak_restricted_kernel_orchestrator" }
 oak_session = { path = "./oak_session" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
