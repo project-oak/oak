@@ -18,8 +18,10 @@ use alloc::collections::btree_map::BTreeMap;
 
 use oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, kernel_binary_reference_value, BinaryReferenceValue,
-        EndorsementReferenceValue, KernelBinaryReferenceValue,
+        binary_reference_value, kernel_binary_reference_value, verifying_key_reference_value,
+        BinaryReferenceValue, ClaimReferenceValue, EndorsementReferenceValue,
+        KernelBinaryReferenceValue, KeyType, SkipVerification, VerifyingKey,
+        VerifyingKeyReferenceValue, VerifyingKeySet,
     },
     RawDigest,
 };
@@ -71,8 +73,7 @@ pub fn new_random_signing_keypair() -> (p256::ecdsa::SigningKey, p256::PublicKey
     (secret_key.into(), public_key)
 }
 
-/// Creates a [`BinaryReferenceValue`]` with the provided `public_key`, and all
-/// other fields unset.
+/// Creates a [`BinaryReferenceValue`] with the provided endorser public key.
 pub fn binary_reference_value_for_endorser_pk(public_key: PublicKey) -> BinaryReferenceValue {
     BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Endorsement(endorsement_reference_value(
@@ -81,6 +82,8 @@ pub fn binary_reference_value_for_endorser_pk(public_key: PublicKey) -> BinaryRe
     }
 }
 
+/// Creates a [`KernelBinaryReferenceValue`] with the provided endorser public
+/// key.
 pub fn kernel_binary_reference_value_for_endorser_pk(
     public_key: PublicKey,
 ) -> KernelBinaryReferenceValue {
@@ -92,12 +95,23 @@ pub fn kernel_binary_reference_value_for_endorser_pk(
 }
 
 fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceValue {
+    let endorser_public_key =
+        public_key.to_public_key_der().expect("Couldn't convert public key to DER").into_vec();
+    let endorser_key = VerifyingKey {
+        r#type: KeyType::EcdsaP256Sha256.into(),
+        // Can use any valid Key ID, it remains unused with legacy attestation
+        // verification.
+        key_id: 1,
+        raw: endorser_public_key.clone(),
+    };
     EndorsementReferenceValue {
-        endorser_public_key: public_key
-            .to_public_key_der()
-            .expect("Couldn't convert public key to DER")
-            .into_vec(),
-        ..Default::default()
+        endorser_public_key,                    // Deprecated, remove.
+        rekor_public_key: "".to_owned().into(), // Deprecated, remove.
+        endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec() }),
+        required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+        rekor: Some(VerifyingKeyReferenceValue {
+            r#type: Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
+        }),
     }
 }
 

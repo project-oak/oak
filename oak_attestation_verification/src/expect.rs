@@ -323,7 +323,7 @@ pub(crate) fn get_system_layer_expected_values(
     let system_image = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context("container bundle reference value")?,
+        reference_values.system_image.as_ref().context("system image reference value")?,
     )?);
     Ok(SystemLayerExpectedValues { system_image })
 }
@@ -336,12 +336,12 @@ pub(crate) fn get_application_layer_expected_values(
     let binary = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("container bundle reference value")?,
+        reference_values.binary.as_ref().context("container binary reference value")?,
     )?);
     let configuration = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context("container bundle reference value")?,
+        reference_values.configuration.as_ref().context("container config reference value")?,
     )?);
     Ok(ApplicationLayerExpectedValues { binary, configuration })
 }
@@ -354,7 +354,7 @@ pub(crate) fn get_container_layer_expected_values(
     let bundle = Some(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context("container bundle reference value")?,
+        reference_values.binary.as_ref().context("container binary reference value")?,
     )?);
     let config = Some(get_expected_measurement_digest(
         now_utc_millis,
