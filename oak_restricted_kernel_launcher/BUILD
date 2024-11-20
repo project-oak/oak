@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -41,5 +41,29 @@ rust_library(
     deps = [
         "//oak_launcher_utils",
         "@oak_crates_index//:log",
+    ],
+)
+
+rust_test(
+    name = "tests",
+    srcs = ["src/tests.rs"],
+    crate_features = ["bazel"],
+    data = [
+        "//enclave_apps/oak_echo_enclave_app",
+        "//enclave_apps/oak_orchestrator",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
+    deps = [
+        ":lib",
+        "//micro_rpc",
+        "//oak_file_utils",
+        "//oak_launcher_utils",
+        "//oak_proto_rust/micro_rpc",
+        "//testing/oak_echo_service",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:ubyte",
+        "@oak_crates_index//:which",
     ],
 )
