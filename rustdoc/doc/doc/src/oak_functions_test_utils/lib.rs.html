@@ -416,6 +416,25 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -434,7 +453,12 @@
 
 </span><span class="doccomment">//! Test utilities to help with unit testing of Oak Functions code.
 
-</span><span class="kw">use </span>oak_file_utils::data_path;
+</span><span class="kw">use </span>std::{
+    ffi::{OsStr, OsString},
+    path::Path,
+};
+
+<span class="kw">use </span>oak_file_utils::data_path;
 
 <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
 </span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
@@ -655,18 +679,29 @@
     )
 }
 
+<span class="macro">macro_rules!</span> arg {
+    ($(<span class="macro-nonterminal">$a</span>:expr),<span class="kw-2">*</span>) =&gt; {
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>result = OsString::new();
+            $(result.push(<span class="macro-nonterminal">$a</span>);)*
+            result
+        }
+    };
+}
+
 <span class="doccomment">/// Runs the specified example as a background task. Returns a reference to the
 /// running server and the port on which the server is listening.
 </span><span class="kw">pub fn </span>run_oak_functions_containers_example_in_background(
-    wasm_path: <span class="kw-2">&amp;</span>str,
-    lookup_data_path: <span class="kw-2">&amp;</span>str,
-    communication_channel: <span class="kw-2">&amp;</span>str,
+    wasm_path: <span class="kw">impl </span>AsRef&lt;Path&gt;,
+    lookup_data_path: <span class="kw">impl </span>AsRef&lt;Path&gt;,
+    communication_channel: <span class="kw">impl </span>AsRef&lt;OsStr&gt;,
 ) -&gt; (BackgroundHandle, u16) {
-    <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {}"</span>, wasm_path);
+    <span class="macro">eprintln!</span>(<span class="string">"using Wasm module {:?}"</span>, wasm_path.as_ref());
 
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
     <span class="macro">eprintln!</span>(<span class="string">"using port {}"</span>, port);
 
+    <span class="kw">let </span>wasm_path = data_path(wasm_path);
     <span class="kw">let </span>launch_bin =
         data_path(<span class="string">"oak_functions_containers_launcher/oak_functions_containers_launcher"</span>);
     <span class="kw">let </span>qemu = which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap();
@@ -675,25 +710,26 @@
     <span class="kw">let </span>initrd = data_path(<span class="string">"oak_containers/stage1/stage1.cpio"</span>);
     <span class="kw">let </span>system_image = data_path(<span class="string">"oak_containers/system_image/oak_containers_system_image.tar.xz"</span>);
     <span class="kw">let </span>container_bundle = data_path(<span class="string">"oak_functions_containers_app/bundle.tar"</span>);
+    <span class="kw">let </span>lookup_data_path = data_path(lookup_data_path);
     <span class="kw">let </span>ramdrive_size = <span class="number">1000000</span>;
     <span class="kw">let </span>memory_size = <span class="string">"2G"</span>;
     <span class="kw">let </span>virtio_guest_cid = nix::unistd::gettid();
 
     <span class="kw">let </span>child = std::process::Command::new(launch_bin)
         .args(<span class="macro">vec!</span>[
-            <span class="macro">format!</span>(<span class="string">"--vmm-binary={}"</span>, qemu.display()),
-            <span class="macro">format!</span>(<span class="string">"--stage0-binary={}"</span>, stage0_bin.display()),
-            <span class="macro">format!</span>(<span class="string">"--kernel={}"</span>, kernel.display()),
-            <span class="macro">format!</span>(<span class="string">"--initrd={}"</span>, initrd.display()),
-            <span class="macro">format!</span>(<span class="string">"--system-image={}"</span>, system_image.display()),
-            <span class="macro">format!</span>(<span class="string">"--container-bundle={}"</span>, container_bundle.display()),
-            <span class="macro">format!</span>(<span class="string">"--ramdrive-size={ramdrive_size}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--memory-size={memory_size}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--wasm={wasm_path}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--port={port}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--lookup-data={lookup_data_path}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--virtio-guest-cid={virtio_guest_cid}"</span>),
-            <span class="macro">format!</span>(<span class="string">"--communication-channel={communication_channel}"</span>),
+            <span class="macro">arg!</span>(<span class="string">"--vmm-binary="</span>, qemu),
+            <span class="macro">arg!</span>(<span class="string">"--stage0-binary="</span>, stage0_bin),
+            <span class="macro">arg!</span>(<span class="string">"--kernel="</span>, kernel),
+            <span class="macro">arg!</span>(<span class="string">"--initrd="</span>, initrd),
+            <span class="macro">arg!</span>(<span class="string">"--system-image="</span>, system_image),
+            <span class="macro">arg!</span>(<span class="string">"--container-bundle="</span>, container_bundle),
+            <span class="macro">arg!</span>(<span class="string">"--ramdrive-size="</span>, ramdrive_size.to_string()),
+            <span class="macro">arg!</span>(<span class="string">"--memory-size="</span>, memory_size),
+            <span class="macro">arg!</span>(<span class="string">"--wasm="</span>, wasm_path),
+            <span class="macro">arg!</span>(<span class="string">"--port="</span>, port.to_string()),
+            <span class="macro">arg!</span>(<span class="string">"--lookup-data="</span>, lookup_data_path),
+            <span class="macro">arg!</span>(<span class="string">"--virtio-guest-cid="</span>, virtio_guest_cid.to_string()),
+            <span class="macro">arg!</span>(<span class="string">"--communication-channel="</span>, communication_channel),
         ])
         .group_spawn()
         .expect(<span class="string">"didn't start oak functions containers launcher"</span>);
@@ -721,24 +757,26 @@
     <span class="kw">let </span>port = portpicker::pick_unused_port().expect(<span class="string">"failed to pick a port"</span>);
     <span class="macro">eprintln!</span>(<span class="string">"using port {}"</span>, port);
 
+    <span class="kw">let </span>stage0_bin = data_path(<span class="string">"stage0_bin/stage0_bin"</span>);
+    <span class="kw">let </span>kernel = data_path(
+        <span class="string">"oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"</span>,
+    );
+
     <span class="kw">let </span>child = <span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">"bazel"</span>) {
         <span class="kw">let </span>test_srcdir = PathBuf::from(std::env::var(<span class="string">"TEST_SRCDIR"</span>).unwrap());
         std::process::Command::new(
             test_srcdir.join(<span class="string">"oak/oak_functions_launcher/oak_functions_launcher"</span>),
         )
         .args(<span class="macro">vec!</span>[
-            <span class="macro">format!</span>(<span class="string">"--bios-binary={}"</span>, STAGE0.to_string_lossy()),
-            <span class="macro">format!</span>(<span class="string">"--kernel={}"</span>, OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_string_lossy()),
-            <span class="macro">format!</span>(
-                <span class="string">"--vmm-binary={}"</span>,
-                which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap().to_str().unwrap()
-            ),
-            <span class="macro">format!</span>(<span class="string">"--app-binary={}"</span>, rust_crate_enclave_out_path(<span class="string">"oak_functions_enclave_app"</span>)),
-            <span class="macro">format!</span>(<span class="string">"--initrd={}"</span>, rust_crate_enclave_out_path(<span class="string">"oak_orchestrator"</span>)),
-            <span class="macro">format!</span>(<span class="string">"--wasm={}"</span>, wasm_path),
-            <span class="macro">format!</span>(<span class="string">"--lookup-data={}"</span>, lookup_data_path),
-            <span class="macro">format!</span>(<span class="string">"--port={}"</span>, port),
-            <span class="string">"--memory-size=256M"</span>.to_string(),
+            <span class="macro">arg!</span>(<span class="string">"--bios-binary="</span>, stage0_bin),
+            <span class="macro">arg!</span>(<span class="string">"--kernel="</span>, kernel),
+            <span class="macro">arg!</span>(<span class="string">"--vmm-binary="</span>, which::which(<span class="string">"qemu-system-x86_64"</span>).unwrap().to_str().unwrap()),
+            <span class="macro">arg!</span>(<span class="string">"--app-binary="</span>, rust_crate_enclave_out_path(<span class="string">"oak_functions_enclave_app"</span>)),
+            <span class="macro">arg!</span>(<span class="string">"--initrd="</span>, rust_crate_enclave_out_path(<span class="string">"oak_orchestrator"</span>)),
+            <span class="macro">arg!</span>(<span class="string">"--wasm="</span>, wasm_path),
+            <span class="macro">arg!</span>(<span class="string">"--lookup-data="</span>, lookup_data_path),
+            <span class="macro">arg!</span>(<span class="string">"--port="</span>, port.to_string()),
+            <span class="macro">arg!</span>(<span class="string">"--memory-size="</span>, <span class="string">"256M"</span>),
         ])
         .stdout(Stdio::piped())
         .group_spawn()
