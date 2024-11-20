@@ -960,7 +960,7 @@
     <span class="kw">let </span>system_image = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context(<span class="string">"container bundle reference value"</span>)<span class="question-mark">?</span>,
+        reference_values.system_image.as_ref().context(<span class="string">"system image reference value"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>);
     <span class="prelude-val">Ok</span>(SystemLayerExpectedValues { system_image })
 }
@@ -973,12 +973,12 @@
     <span class="kw">let </span>binary = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context(<span class="string">"container bundle reference value"</span>)<span class="question-mark">?</span>,
+        reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>);
     <span class="kw">let </span>configuration = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context(<span class="string">"container bundle reference value"</span>)<span class="question-mark">?</span>,
+        reference_values.configuration.as_ref().context(<span class="string">"container config reference value"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>);
     <span class="prelude-val">Ok</span>(ApplicationLayerExpectedValues { binary, configuration })
 }
@@ -991,7 +991,7 @@
     <span class="kw">let </span>bundle = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
         endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context(<span class="string">"container bundle reference value"</span>)<span class="question-mark">?</span>,
+        reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
     )<span class="question-mark">?</span>);
     <span class="kw">let </span>config = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
         now_utc_millis,
