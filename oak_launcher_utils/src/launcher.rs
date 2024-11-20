@@ -94,6 +94,10 @@ pub struct Instance {
 impl Instance {
     /// Starts virtualized instance with given parameters and stream to write
     /// console logs to.
+    ///
+    /// The instance is started with the `kill_on_drop` flag set, so you'll need
+    /// to hold onto the `Instance` for as long as you'd like the task to keep
+    /// running.
     pub fn start(params: Params, guest_console: net::UnixStream) -> Result<Self> {
         let app_bytes = if let Some(app_binary) = params.app_binary {
             let bytes = fs::read(&app_binary).with_context(|| {
@@ -168,6 +172,8 @@ impl Instance {
         }
 
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
+
+        cmd.kill_on_drop(true);
 
         info!("executing: {:?}", cmd);
 
