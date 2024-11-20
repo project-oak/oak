@@ -22,7 +22,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
 
     let (mut _output, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path.display().to_string(),
+            &wasm_path,
             oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
             communication_channel,
         );
@@ -68,7 +68,7 @@ async fn test_launcher_echo() {
 
     let (_background, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path.display().to_string(),
+            &wasm_path,
             oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
             "network",
         );

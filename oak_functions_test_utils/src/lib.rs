@@ -16,6 +16,11 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
+use std::{
+    ffi::{OsStr, OsString},
+    path::Path,
+};
+
 use oak_file_utils::data_path;
 
 #[cfg(feature = "bazel")]
@@ -237,18 +242,29 @@ pub fn assert_response_body(response: Response, expected: &str) {
     )
 }
 
+macro_rules! arg {
+    ($($a:expr),*) => {
+        {
+            let mut result = OsString::new();
+            $(result.push($a);)*
+            result
+        }
+    };
+}
+
 /// Runs the specified example as a background task. Returns a reference to the
 /// running server and the port on which the server is listening.
 pub fn run_oak_functions_containers_example_in_background(
-    wasm_path: &str,
-    lookup_data_path: &str,
-    communication_channel: &str,
+    wasm_path: impl AsRef<Path>,
+    lookup_data_path: impl AsRef<Path>,
+    communication_channel: impl AsRef<OsStr>,
 ) -> (BackgroundHandle, u16) {
-    eprintln!("using Wasm module {}", wasm_path);
+    eprintln!("using Wasm module {:?}", wasm_path.as_ref());
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
+    let wasm_path = data_path(wasm_path);
     let launch_bin =
         data_path("oak_functions_containers_launcher/oak_functions_containers_launcher");
     let qemu = which::which("qemu-system-x86_64").unwrap();
@@ -257,25 +273,26 @@ pub fn run_oak_functions_containers_example_in_background(
     let initrd = data_path("oak_containers/stage1/stage1.cpio");
     let system_image = data_path("oak_containers/system_image/oak_containers_system_image.tar.xz");
     let container_bundle = data_path("oak_functions_containers_app/bundle.tar");
+    let lookup_data_path = data_path(lookup_data_path);
     let ramdrive_size = 1000000;
     let memory_size = "2G";
     let virtio_guest_cid = nix::unistd::gettid();
 
     let child = std::process::Command::new(launch_bin)
         .args(vec![
-            format!("--vmm-binary={}", qemu.display()),
-            format!("--stage0-binary={}", stage0_bin.display()),
-            format!("--kernel={}", kernel.display()),
-            format!("--initrd={}", initrd.display()),
-            format!("--system-image={}", system_image.display()),
-            format!("--container-bundle={}", container_bundle.display()),
-            format!("--ramdrive-size={ramdrive_size}"),
-            format!("--memory-size={memory_size}"),
-            format!("--wasm={wasm_path}"),
-            format!("--port={port}"),
-            format!("--lookup-data={lookup_data_path}"),
-            format!("--virtio-guest-cid={virtio_guest_cid}"),
-            format!("--communication-channel={communication_channel}"),
+            arg!("--vmm-binary=", qemu),
+            arg!("--stage0-binary=", stage0_bin),
+            arg!("--kernel=", kernel),
+            arg!("--initrd=", initrd),
+            arg!("--system-image=", system_image),
+            arg!("--container-bundle=", container_bundle),
+            arg!("--ramdrive-size=", ramdrive_size.to_string()),
+            arg!("--memory-size=", memory_size),
+            arg!("--wasm=", wasm_path),
+            arg!("--port=", port.to_string()),
+            arg!("--lookup-data=", lookup_data_path),
+            arg!("--virtio-guest-cid=", virtio_guest_cid.to_string()),
+            arg!("--communication-channel=", communication_channel),
         ])
         .group_spawn()
         .expect("didn't start oak functions containers launcher");
@@ -303,24 +320,26 @@ pub fn run_oak_functions_example_in_background(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
+    let stage0_bin = data_path("stage0_bin/stage0_bin");
+    let kernel = data_path(
+        "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+    );
+
     let child = if cfg!(feature = "bazel") {
         let test_srcdir = PathBuf::from(std::env::var("TEST_SRCDIR").unwrap());
         std::process::Command::new(
             test_srcdir.join("oak/oak_functions_launcher/oak_functions_launcher"),
         )
         .args(vec![
-            format!("--bios-binary={}", STAGE0.to_string_lossy()),
-            format!("--kernel={}", OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_string_lossy()),
-            format!(
-                "--vmm-binary={}",
-                which::which("qemu-system-x86_64").unwrap().to_str().unwrap()
-            ),
-            format!("--app-binary={}", rust_crate_enclave_out_path("oak_functions_enclave_app")),
-            format!("--initrd={}", rust_crate_enclave_out_path("oak_orchestrator")),
-            format!("--wasm={}", wasm_path),
-            format!("--lookup-data={}", lookup_data_path),
-            format!("--port={}", port),
-            "--memory-size=256M".to_string(),
+            arg!("--bios-binary=", stage0_bin),
+            arg!("--kernel=", kernel),
+            arg!("--vmm-binary=", which::which("qemu-system-x86_64").unwrap().to_str().unwrap()),
+            arg!("--app-binary=", rust_crate_enclave_out_path("oak_functions_enclave_app")),
+            arg!("--initrd=", rust_crate_enclave_out_path("oak_orchestrator")),
+            arg!("--wasm=", wasm_path),
+            arg!("--lookup-data=", lookup_data_path),
+            arg!("--port=", port.to_string()),
+            arg!("--memory-size=", "256M"),
         ])
         .stdout(Stdio::piped())
         .group_spawn()
