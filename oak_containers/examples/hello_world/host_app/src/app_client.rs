@@ -14,26 +14,26 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_hello_world_proto::oak::containers::example::trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient;
+use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient as GrpcEnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
 /// Utility struct used to interface with the launcher
-pub struct TrustedApplicationClient {
-    inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel>,
+pub struct EnclaveApplicationClient {
+    inner: GrpcEnclaveApplicationClient<tonic::transport::channel::Channel>,
 }
 
-impl TrustedApplicationClient {
+impl EnclaveApplicationClient {
     pub async fn create(server_addr: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel> = {
+        let inner: GrpcEnclaveApplicationClient<tonic::transport::channel::Channel> = {
             let channel = Endpoint::from_shared(server_addr)
                 .context("couldn't form channel")?
                 .connect_timeout(Duration::from_secs(120))
                 .connect()
                 .await
-                .context("couldn't connect to trusted app")?;
-            GrpcTrustedApplicationClient::new(channel)
+                .context("couldn't connect to enclave app")?;
+            GrpcEnclaveApplicationClient::new(channel)
         };
         Ok(Self { inner })
     }

@@ -20,16 +20,16 @@
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "app_service.h"
-#include "cc/containers/hello_world_trusted_app/app_service.h"
+#include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/encryption_key_handle.h"
 #include "cc/containers/sdk/orchestrator_client.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
 
+using ::oak::containers::hello_world_enclave_app::EnclaveApplicationImpl;
 using ::oak::containers::sdk::OakSessionContext;
 using ::oak::containers::sdk::OrchestratorClient;
-using ::oak::oak_containers_hello_world_trusted_app::TrustedApplicationImpl;
 
 int main(int argc, char* argv[]) {
   absl::InitializeLog();
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
       client.GetEndorsedEvidence();
   QCHECK_OK(endorsed_evidence);
 
-  TrustedApplicationImpl service(
+  EnclaveApplicationImpl service(
       OakSessionContext(
           std::move(*endorsed_evidence),
           std::make_unique<
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   QCHECK_OK(client.NotifyAppReady());
 
-  std::clog << "Trusted Application is running on port 8080";
+  std::clog << "Enclave Application is running on port 8080";
 
   server->Wait();
   return 0;

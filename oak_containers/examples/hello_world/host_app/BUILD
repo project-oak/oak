@@ -22,7 +22,7 @@ package(
 )
 
 rust_library(
-    name = "oak_containers_hello_world_untrusted_app",
+    name = "oak_containers_examples_hello_world_host_app",
     srcs = [
         "src/app_client.rs",
         "src/demo_transport.rs",
@@ -32,7 +32,6 @@ rust_library(
         "src/service.rs",
         "tests/integration_test.rs",
     ],
-    crate_name = "oak_containers_hello_world_untrusted_app",
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
@@ -60,18 +59,10 @@ rust_library(
 )
 
 rust_binary(
-    name = "bin/oak_containers_hello_world_untrusted_app",
+    name = "bin",
     srcs = ["src/main.rs"],
-    data = [
-        "//cc/containers/hello_world_trusted_app:bundle",
-        "//oak_containers/examples/hello_world/trusted_app:bundle",
-        "//oak_containers/kernel",
-        "//oak_containers/stage1:stage1_cpio",
-        "//oak_containers/system_image:oak_containers_system_image",
-        "//stage0_bin",
-    ],
     deps = [
-        ":oak_containers_hello_world_untrusted_app",
+        ":oak_containers_examples_hello_world_host_app",
         "//oak_client",
         "//oak_containers/launcher:lib",
         "//oak_crypto",
@@ -85,23 +76,23 @@ rust_binary(
 )
 
 rust_test_suite(
-    name = "oak_containers_hello_world_untrusted_app_tests",
+    name = "oak_containers_hello_world_host_app_tests",
     srcs = ["tests/integration_test.rs"],
     data = [
-        "//cc/containers/hello_world_trusted_app:bundle",
-        "//oak_containers/examples/hello_world/trusted_app:bundle",
+        "//cc/containers/hello_world_enclave_app:bundle",
+        "//oak_containers/examples/hello_world/enclave_app:bundle",
         "//oak_containers/kernel",
         "//oak_containers/stage1:stage1_cpio",
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
-    tags = ["manual"],
     deps = [
-        ":oak_containers_hello_world_untrusted_app",
+        ":oak_containers_examples_hello_world_host_app",
         "//oak_client",
         "//oak_client/tonic:oak_client_tonic",
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_containers/launcher:lib",
+        "//oak_file_utils",
         "//oak_functions_test_utils",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",

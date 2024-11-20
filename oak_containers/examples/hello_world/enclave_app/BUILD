@@ -25,13 +25,12 @@ package(
 )
 
 rust_library(
-    name = "lib",
+    name = "oak_containers_examples_hello_world_enclave_app",
     srcs = [
         "src/app.rs",
         "src/app_service.rs",
         "src/lib.rs",
     ],
-    crate_name = "oak_containers_hello_world_trusted_app",
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
@@ -54,7 +53,7 @@ rust_test(
     srcs = ["tests/standalone_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        ":lib",
+        ":oak_containers_examples_hello_world_enclave_app",
         "//oak_client",
         "//oak_client/tonic:oak_client_tonic",
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
@@ -72,10 +71,10 @@ rust_test(
 )
 
 rust_binary(
-    name = "oak_containers_hello_world_trusted_app",
+    name = "bin/oak_containers_examples_hello_world_enclave_app",
     srcs = ["src/main.rs"],
     deps = [
-        ":lib",
+        ":oak_containers_examples_hello_world_enclave_app",
         "//oak_containers_sdk",
         "//oak_session",
         "@oak_crates_index//:anyhow",
@@ -85,14 +84,15 @@ rust_binary(
 
 pkg_tar(
     name = "tar",
-    srcs = [":oak_containers_hello_world_trusted_app"],
+    srcs = [":bin/oak_containers_examples_hello_world_enclave_app"],
     package_dir = "/usr/local/bin",
+    strip_prefix = "/oak_containers/examples/hello_world/enclave_app/bin",
 )
 
 oci_image(
     name = "image",
     base = "@distroless_cc_debian12",
-    entrypoint = ["/usr/local/bin/oak_containers_hello_world_trusted_app"],
+    entrypoint = ["/usr/local/bin/oak_containers_examples_hello_world_enclave_app"],
     tars = [":tar"],
 )
 

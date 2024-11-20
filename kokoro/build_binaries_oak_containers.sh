@@ -34,7 +34,7 @@ readonly generated_binaries=(
     ./artifacts/oak_containers_system_image.tar.xz
     ./artifacts/oak_functions_containers_app_bundle.tar
     ./artifacts/oak_functions_containers_app_bundle_insecure.tar
-    ./artifacts/rust_hello_world_trusted_bundle.tar
+    ./artifacts/rust_hello_world_enclave_bundle.tar
     ./artifacts/stage1.cpio
 )
 readonly binary_names=(

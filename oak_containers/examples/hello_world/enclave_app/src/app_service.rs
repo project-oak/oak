@@ -23,8 +23,8 @@ use std::{pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use oak_containers_sdk::{ApplicationHandler, OakSessionContext};
-use oak_hello_world_proto::oak::containers::example::trusted_application_server::{
-    TrustedApplication, TrustedApplicationServer,
+use oak_hello_world_proto::oak::containers::example::enclave_application_server::{
+    EnclaveApplication, EnclaveApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{
     PlaintextMessage, RequestWrapper, SessionRequest, SessionResponse,
@@ -36,14 +36,14 @@ use oak_session::{
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
-/// The struct that will hold the gRPC TrustedApplication implementation.
-struct TrustedApplicationImplementation {
+/// The struct that will hold the gRPC EnclaveApplication implementation.
+struct EnclaveApplicationImplementation {
     oak_session_context: Arc<OakSessionContext>,
     // Needed while we implement noise inline.
     application_handler: Arc<Box<dyn ApplicationHandler>>,
 }
 
-impl TrustedApplicationImplementation {
+impl EnclaveApplicationImplementation {
     pub fn new(
         oak_session_context: OakSessionContext,
         application_handler: Box<dyn ApplicationHandler>,
@@ -102,7 +102,7 @@ impl ServerSessionHelpers for ServerSession {
 }
 
 #[tonic::async_trait]
-impl TrustedApplication for TrustedApplicationImplementation {
+impl EnclaveApplication for EnclaveApplicationImplementation {
     type LegacySessionStream = oak_containers_sdk::tonic::OakSessionStream;
     type OakSessionStream =
         Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
@@ -153,7 +153,7 @@ pub async fn create(
     application_handler: Box<dyn ApplicationHandler>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
-        .add_service(TrustedApplicationServer::new(TrustedApplicationImplementation::new(
+        .add_service(EnclaveApplicationServer::new(EnclaveApplicationImplementation::new(
             oak_session_context,
             application_handler,
         )))

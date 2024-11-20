@@ -29,12 +29,12 @@
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.pb.h"
 
-namespace oak::oak_containers_hello_world_trusted_app {
+namespace oak::containers::hello_world_enclave_app {
 
-class TrustedApplicationImpl
-    : public containers::example::TrustedApplication::Service {
+class EnclaveApplicationImpl
+    : public oak::containers::example::EnclaveApplication::Service {
  public:
-  TrustedApplicationImpl(
+  EnclaveApplicationImpl(
       oak::containers::sdk::OakSessionContext oak_session_context,
       absl::string_view application_config)
       : oak_session_context_(std::move(oak_session_context)),
@@ -52,6 +52,6 @@ class TrustedApplicationImpl
   const std::string application_config_;
 };
 
-}  // namespace oak::oak_containers_hello_world_trusted_app
+}  // namespace oak::containers::hello_world_enclave_app
 
 #endif  // CC_OAK_CONTAINERS_HELLO_WORLD_TRUSTED_APP_APP_SERVICE_H_

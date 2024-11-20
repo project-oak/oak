@@ -26,16 +26,16 @@ use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use prost::Message;
 use tokio::{net::TcpListener, sync::Mutex};
 
-use crate::app_client::TrustedApplicationClient;
+use crate::app_client::EnclaveApplicationClient;
 
 async fn handle_request(
     request: RequestWrapper,
-    trusted_app: Arc<Mutex<TrustedApplicationClient>>,
+    enclave_app: Arc<Mutex<EnclaveApplicationClient>>,
 ) -> tonic::Result<ResponseWrapper> {
     // This is not how we should actually use the streaming interface, but it
     // works for HPKE, as long as all requests go to the same machine.
     let mut response_stream =
-        trusted_app.lock().await.legacy_session(tokio_stream::iter(vec![request])).await.map_err(
+        enclave_app.lock().await.legacy_session(tokio_stream::iter(vec![request])).await.map_err(
             |err| tonic::Status::internal(format!("starting streaming session failed: {err:?}")),
         )?;
 
@@ -54,13 +54,13 @@ pub async fn serve(
     let mut launcher = oak_containers_launcher::Launcher::create(launcher_args)
         .await
         .map_err(|error| anyhow!("Failed to crate launcher: {error:?}"))?;
-    let trusted_app_address = launcher
+    let enclave_app_address = launcher
         .get_trusted_app_address()
         .await
         .map_err(|error| anyhow!("Failed to get app address: {error:?}"))?;
-    let app_client = TrustedApplicationClient::create(format!("http://{trusted_app_address}"))
+    let app_client = EnclaveApplicationClient::create(format!("http://{enclave_app_address}"))
         .await
-        .map_err(|error| anyhow!("Failed to create trusted application client: {error:?}"))?;
+        .map_err(|error| anyhow!("Failed to create enclave application client: {error:?}"))?;
 
     let app_client = Arc::new(Mutex::new(app_client));
 

@@ -239,15 +239,15 @@ bazel_wasm name:
 # Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:
-    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/examples/hello_world/trusted_app:bundle.tar
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/examples/hello_world/enclave_app:bundle.tar
     # bazel-bin symlink doesn't exist outside of the docker container, this
     # makes the file available to the kokoro script.
     cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar \
-        artifacts/rust_hello_world_trusted_bundle.tar
+        bazel-bin/oak_containers/examples/hello_world/enclave_app/bundle.tar \
+        artifacts/rust_hello_world_enclave_bundle.tar
 
 cc_oak_containers_hello_world_container_bundle_tar:
-    bazel build {{BAZEL_CONFIG_FLAG}} //cc/containers/hello_world_trusted_app:bundle.tar
+    bazel build {{BAZEL_CONFIG_FLAG}} //cc/containers/hello_world_enclave_app:bundle.tar
 
 # Oak Functions Containers entry point.
 
@@ -299,7 +299,7 @@ kokoro_verify_buildconfigs:
 oak_containers_tests:
     bazel test {{BAZEL_CONFIG_FLAG}} \
         //oak_containers/... \
-        //oak_containers/examples/hello_world/untrusted_app:oak_containers_hello_world_untrusted_app_tests
+        //oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests
 
 kokoro_oak_containers: stage1_cpio oak_functions_containers_app_bundle_tar oak_containers_tests containers_placer_artifacts
 
@@ -459,8 +459,8 @@ containers_placer_artifacts:
         artifacts/oak_containers_nvidia_system_image.tar.xz
 
     cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/examples/hello_world/trusted_app/bundle.tar \
-        artifacts/rust_hello_world_trusted_bundle.tar
+        bazel-bin/oak_containers/examples/hello_world/enclave_app/bundle.tar \
+        artifacts/rust_hello_world_enclave_bundle.tar
 
     cp --preserve=timestamps --force \
         bazel-bin/oak_functions_containers_app/bundle.tar \

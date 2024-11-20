@@ -6,5 +6,5 @@
 
 # Hello World Trusted App
 
-Implementation of the trusted part (inside the TEE) of the Oak Containers Hello
+Implementation of the enclave application portion of the Oak Containers Hello
 World example application.

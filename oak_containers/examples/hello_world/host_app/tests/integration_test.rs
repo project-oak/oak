@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Integration test that launches the trusted app and invokes it.
+//! Integration test that launches the enclave app and invokes it.
 
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -28,12 +28,12 @@ use oak_client::{
     verifier::InsecureAttestationVerifier,
 };
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_hello_world_untrusted_app::{
+use oak_containers_examples_hello_world_host_app::{
     demo_transport::{self, DemoTransport},
     launcher_args::launcher_args,
 };
 use oak_containers_launcher::Args;
-use oak_hello_world_proto::oak::containers::example::untrusted_application_client::UntrustedApplicationClient;
+use oak_hello_world_proto::oak::containers::example::host_application_client::HostApplicationClient;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
@@ -76,7 +76,7 @@ async fn run_hello_world_test<TC: TransportCreator<T>, T: Transport + EvidencePr
     let result = client.invoke(b"end to end test xyzzy").await.expect("Invoke failed");
     // Sleep a bit to let logs come through, helps for debugging failures.
     tokio::time::sleep(Duration::from_secs(5)).await;
-    assert_eq!(result, b"Hello from the trusted side, end to end test xyzzy! Btw, the Trusted App has a config with a length of 0 bytes.")
+    assert_eq!(result, b"Hello from the enclave, end to end test xyzzy! Btw, the app has a config with a length of 0 bytes.")
 }
 
 struct GrpcStreamingTransportCreator {}
@@ -84,7 +84,7 @@ struct GrpcStreamingTransportCreator {}
 impl TransportCreator<GrpcStreamingTransport> for GrpcStreamingTransportCreator {
     async fn create(listener: TcpListener, args: Args) -> GrpcStreamingTransport {
         let addr = listener.local_addr().expect("couldn't get server addr");
-        tokio::spawn(oak_containers_hello_world_untrusted_app::service::create(listener, args));
+        tokio::spawn(oak_containers_examples_hello_world_host_app::service::create(listener, args));
         let url = format!("http://{}:{}", addr.ip(), addr.port());
         println!("Connecting to test gRPC server on {}", url);
         let channel = Channel::from_shared(url.to_string())
@@ -93,7 +93,7 @@ impl TransportCreator<GrpcStreamingTransport> for GrpcStreamingTransportCreator 
             .await
             .expect("couldn't connect via gRPC channel");
 
-        let mut client = UntrustedApplicationClient::new(channel);
+        let mut client = HostApplicationClient::new(channel);
 
         GrpcStreamingTransport::new(|rx| client.session(rx))
             .await
@@ -106,7 +106,9 @@ struct DemoTransportCreator {}
 impl TransportCreator<DemoTransport> for DemoTransportCreator {
     async fn create(listener: TcpListener, args: Args) -> DemoTransport {
         let addr = listener.local_addr().expect("couldn't get server addr");
-        tokio::spawn(oak_containers_hello_world_untrusted_app::http_service::serve(listener, args));
+        tokio::spawn(oak_containers_examples_hello_world_host_app::http_service::serve(
+            listener, args,
+        ));
         let url = format!("http://{}:{}", addr.ip(), addr.port());
         println!("Connecting to test REST server on {}", url);
         demo_transport::DemoTransport::new(url)
@@ -114,11 +116,11 @@ impl TransportCreator<DemoTransport> for DemoTransportCreator {
 }
 
 fn rust_hello_world_bundle() -> PathBuf {
-    "oak_containers/examples/hello_world/trusted_app/bundle.tar".into()
+    oak_file_utils::data_path("oak_containers/examples/hello_world/enclave_app/bundle.tar")
 }
 
 fn cc_hello_world_bundle() -> PathBuf {
-    "cc/containers/hello_world_trusted_app/bundle.tar".into()
+    oak_file_utils::data_path("cc/containers/hello_world_enclave_app/bundle.tar")
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

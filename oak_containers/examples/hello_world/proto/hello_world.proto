@@ -21,7 +21,7 @@ package oak.containers.example;
 import "proto/session/service_streaming.proto";
 import "proto/session/session.proto";
 
-service TrustedApplication {
+service EnclaveApplication {
   rpc LegacySession(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
 
@@ -29,7 +29,7 @@ service TrustedApplication {
       returns (stream oak.session.v1.SessionResponse) {}
 }
 
-service UntrustedApplication {
+service HostApplication {
   rpc Session(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
 }

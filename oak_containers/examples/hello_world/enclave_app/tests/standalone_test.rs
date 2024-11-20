@@ -22,7 +22,7 @@ use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_containers_sdk::{
     standalone::StandaloneOrchestrator, OakSessionContext, OrchestratorInterface,
 };
-use oak_hello_world_proto::oak::containers::example::trusted_application_client::TrustedApplicationClient;
+use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
@@ -44,18 +44,18 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
 
     Ok((
         addr,
-        tokio::spawn(oak_containers_hello_world_trusted_app::app_service::create(
+        tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
             OakSessionContext::new(
                 Box::new(encryption_key_handle),
                 endorsed_evidence,
                 Box::new(
-                    oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
+                    oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
                         application_config: application_config.clone(),
                     },
                 ),
             ),
-            Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
+            Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
                 application_config,
             }),
         )),
@@ -79,7 +79,7 @@ async fn test_legacy() {
         .context("couldn't connect via gRPC channel")
         .unwrap();
 
-    let mut client = TrustedApplicationClient::new(channel);
+    let mut client = EnclaveApplicationClient::new(channel);
 
     let transport = GrpcStreamingTransport::new(|rx| client.legacy_session(rx))
         .await
@@ -93,7 +93,7 @@ async fn test_legacy() {
     // Send single request, see the response
     assert_eq!(
         String::from_utf8(oak_client.invoke(b"standalone user").await.unwrap()).unwrap(),
-        "Hello from the trusted side, standalone user! Btw, the Trusted App has a config with a length of 4 bytes."
+        "Hello from the enclave, standalone user! Btw, the app has a config with a length of 4 bytes."
     );
 }
 
@@ -170,7 +170,7 @@ async fn test_noise() {
         .context("couldn't connect via gRPC channel")
         .unwrap();
 
-    let mut client = TrustedApplicationClient::new(channel);
+    let mut client = EnclaveApplicationClient::new(channel);
 
     let (mut tx, rx) = mpsc::channel(10);
 
@@ -202,6 +202,6 @@ async fn test_noise() {
 
     assert_eq!(
         String::from_utf8(decrypted_response).unwrap(),
-        "Hello from the trusted side, standalone user! Btw, the Trusted App has a config with a length of 4 bytes."
+        "Hello from the enclave, standalone user! Btw, the app has a config with a length of 4 bytes."
     );
 }

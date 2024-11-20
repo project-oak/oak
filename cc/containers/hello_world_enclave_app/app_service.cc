@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "cc/containers/hello_world_trusted_app/app_service.h"
+#include "cc/containers/hello_world_enclave_app/app_service.h"
 
 #include <string>
 
@@ -30,12 +30,12 @@
 #include "proto/crypto/crypto.pb.h"
 #include "proto/session/service_streaming.pb.h"
 
-namespace oak::oak_containers_hello_world_trusted_app {
+namespace oak::containers::hello_world_enclave_app {
 
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 
-grpc::Status TrustedApplicationImpl::LegacySession(
+grpc::Status EnclaveApplicationImpl::LegacySession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>* stream) {
   absl::string_view application_config = application_config_;
@@ -43,14 +43,13 @@ grpc::Status TrustedApplicationImpl::LegacySession(
       stream,
       [&application_config](
           absl::string_view request) -> absl::StatusOr<std::string> {
-        return absl::StrCat(
-            "Hello from the trusted side, ", request,
-            "! Btw, the Trusted App has a config with a length of ",
-            application_config.size(), " bytes.");
+        return absl::StrCat("Hello from the enclave, ", request,
+                            "! Btw, the app has a config with a length of ",
+                            application_config.size(), " bytes.");
       });
 
   return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
                       std::string(status.message()));
 }
 
-}  // namespace oak::oak_containers_hello_world_trusted_app
+}  // namespace oak::containers::hello_world_enclave_app

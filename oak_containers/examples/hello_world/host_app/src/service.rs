@@ -17,23 +17,23 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
 use futures::{channel::mpsc, Stream, StreamExt};
-use oak_hello_world_proto::oak::containers::example::untrusted_application_server::{
-    UntrustedApplication, UntrustedApplicationServer,
+use oak_hello_world_proto::oak::containers::example::host_application_server::{
+    HostApplication, HostApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
 
-use crate::app_client::TrustedApplicationClient;
+use crate::app_client::EnclaveApplicationClient;
 
 /// The sample application's implementation of Oak's streaming service protocol.
-struct UntrustedApplicationImpl {
-    trusted_app: Arc<Mutex<TrustedApplicationClient>>,
+struct HostApplicationImpl {
+    enclave_app: Arc<Mutex<EnclaveApplicationClient>>,
 }
 
-impl UntrustedApplicationImpl {
-    pub fn new(trusted_app: TrustedApplicationClient) -> Self {
-        Self { trusted_app: Arc::new(Mutex::new(trusted_app)) }
+impl HostApplicationImpl {
+    pub fn new(enclave_app: EnclaveApplicationClient) -> Self {
+        Self { enclave_app: Arc::new(Mutex::new(enclave_app)) }
     }
 }
 
@@ -85,7 +85,7 @@ where
 }
 
 #[tonic::async_trait]
-impl UntrustedApplication for UntrustedApplicationImpl {
+impl HostApplication for HostApplicationImpl {
     type SessionStream =
         Pin<Box<dyn Stream<Item = Result<ResponseWrapper, tonic::Status>> + Send + 'static>>;
 
@@ -95,12 +95,12 @@ impl UntrustedApplication for UntrustedApplicationImpl {
     ) -> Result<tonic::Response<Self::SessionStream>, tonic::Status> {
         let request_stream = request.into_inner();
 
-        let trusted_app = self.trusted_app.clone();
+        let enclave_app = self.enclave_app.clone();
 
         let response_stream = forward_stream(request_stream, |rx| async move {
-            let mut app = trusted_app.lock().await;
+            let mut app = enclave_app.lock().await;
             app.legacy_session(rx).await.map_err(|err| {
-                tonic::Status::internal(format!("Failed to start trusted app stream: {err:?}"))
+                tonic::Status::internal(format!("Failed to start enclave app stream: {err:?}"))
             })
         })
         .await?;
@@ -116,15 +116,15 @@ pub async fn create(
     let mut launcher = oak_containers_launcher::Launcher::create(launcher_args)
         .await
         .map_err(|error| anyhow!("Failed to crate launcher: {error:?}"))?;
-    let trusted_app_address = launcher
+    let enclave_app_address = launcher
         .get_trusted_app_address()
         .await
         .map_err(|error| anyhow!("Failed to get app address: {error:?}"))?;
-    let app_client = TrustedApplicationClient::create(format!("http://{trusted_app_address}"))
+    let app_client = EnclaveApplicationClient::create(format!("http://{enclave_app_address}"))
         .await
-        .map_err(|error| anyhow!("Failed to create trusted application client: {error:?}"))?;
+        .map_err(|error| anyhow!("Failed to create enclave application client: {error:?}"))?;
     tonic::transport::Server::builder()
-        .add_service(UntrustedApplicationServer::new(UntrustedApplicationImpl::new(app_client)))
+        .add_service(HostApplicationServer::new(HostApplicationImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

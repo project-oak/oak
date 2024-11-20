@@ -19,7 +19,7 @@ use anyhow::Context;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OakSessionContext, OrchestratorClient};
 use tokio::net::TcpListener;
 
-const TRUSTED_APP_PORT: u16 = 8080;
+const ENCLAVE_APP_PORT: u16 = 8080;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,22 +42,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("couldn't create encryption key handle")?;
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
-    let join_handle = tokio::spawn(oak_containers_hello_world_trusted_app::app_service::create(
-        listener,
-        OakSessionContext::new(
-            Box::new(encryption_key_handle),
-            endorsed_evidence,
-            Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
-                application_config: application_config.clone(),
+    let join_handle =
+        tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
+            listener,
+            OakSessionContext::new(
+                Box::new(encryption_key_handle),
+                endorsed_evidence,
+                Box::new(
+                    oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
+                        application_config: application_config.clone(),
+                    },
+                ),
+            ),
+            Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
+                application_config,
             }),
-        ),
-        Box::new(oak_containers_hello_world_trusted_app::app::HelloWorldApplicationHandler {
-            application_config,
-        }),
-    ));
+        ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     println!("Enclave hello world app now serving!");
     join_handle.await??;

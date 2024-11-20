@@ -254,9 +254,9 @@ oci_register_toolchains(
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # This is the base docker image we use to bundle example apps like hello world
-# trusted apps. We don't build these, we pull them from the existing repo.
+# enclave apps. We don't build these, we pull them from the existing repo.
 #
-# E.g.: //oak_containers/examples/hello_world/trusted_app:bundle . You can find
+# E.g.: //oak_containers/examples/hello_world/enclave_app:bundle . You can find
 # these images at: gcr.io/distroless/cc-debian12 . We do not need root access
 # so you can search with ":nonroot" (gcr.io/distroless/cc-debian12:nonroot) or
 # "latest" (gcr.io/distroless/cc-debian12:latest). Note files tagged as ".sig"

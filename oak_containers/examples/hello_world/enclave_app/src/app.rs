@@ -31,7 +31,7 @@ impl ApplicationHandler for HelloWorldApplicationHandler {
         let config_len = self.application_config.len();
         Ok(
             format!(
-                "Hello from the trusted side, {name}! Btw, the Trusted App has a config with a length of {config_len} bytes.",
+                "Hello from the enclave, {name}! Btw, the app has a config with a length of {config_len} bytes.",
             ).into_bytes()
         )
     }
