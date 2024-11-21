@@ -1024,7 +1024,7 @@
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
             )
-            .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">"verifying generic endorsement"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>endorsement_statement = parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
                 .context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(to_expected_digests(
@@ -1054,7 +1054,7 @@
         <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
         <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
     )
-    .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">"verifying firmware endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
     </span><span class="kw">let </span>parsed_statement =
         parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement).context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
@@ -1127,7 +1127,7 @@
         <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
         <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
     )
-    .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">"verifying kernel endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
     </span><span class="kw">let </span>parsed_statement =
         parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement).context(<span class="string">"parsing endorsement statement"</span>)<span class="question-mark">?</span>;
@@ -1234,7 +1234,7 @@
                 <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
                 <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
             )
-            .context(<span class="string">"verifying binary endorsement"</span>)<span class="question-mark">?</span>;
+            .context(<span class="string">"verifying text endorsement"</span>)<span class="question-mark">?</span>;
             <span class="comment">// Compare the actual command line against the one inlined in the endorsement.
             </span><span class="kw">let </span>regex = String::from_utf8(endorsement.subject.clone())
                 .expect(<span class="string">"endorsement subject is not utf8"</span>);
