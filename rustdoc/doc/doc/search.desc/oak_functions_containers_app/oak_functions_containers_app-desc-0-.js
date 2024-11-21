@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_functions_containers_app", 0, "Returns the argument unchanged.\nCalls <code>U::from(self)</code>.\nStarts up and serves an OakFunctionsContainersService …\nVariant of a Handler that dynamically loads a <code>.so</code> file and …\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCreates a new native handler.")

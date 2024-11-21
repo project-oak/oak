@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create","update_lookup_data"],"mod":["server"],"struct":["Args","LookupDataConfig"]};
