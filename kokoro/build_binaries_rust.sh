@@ -22,13 +22,13 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # the creation time.
 readonly generated_binaries=(
     artifacts/enclave_apps/key_xor_test_app
-    generated/client_app.apk
+    artifacts/client_app.apk
     artifacts/enclave_apps/oak_echo_enclave_app
     artifacts/enclave_apps/oak_echo_raw_enclave_app
     artifacts/enclave_apps/oak_functions_enclave_app
     artifacts/enclave_apps/oak_functions_insecure_enclave_app
     artifacts/enclave_apps/oak_orchestrator
-    generated/oak_restricted_kernel_wrapper_simple_io_channel_bin
+    artifacts/oak_restricted_kernel_wrapper_simple_io_channel_bin
     artifacts/stage0_bin
     artifacts/stage0_bin_tdx
 )

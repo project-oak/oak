@@ -132,10 +132,9 @@ restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
     bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-unknown-none \
         //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement
 
-    mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}* \
-        generated
+        artifacts
 
     # Place things where they were built in the cargo world for compatiblity.
     cp --force --preserve=timestamps \
@@ -174,10 +173,9 @@ oak_client_android_app:
         //java/src/main/java/com/google/oak/client/android:client_app
     # Copy out to a directory which does not change with bazel config and does
     # not interfere with cargo. It should be reused for other targets as well.
-    mkdir --parents generated
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
-        generated
+        artifacts
 
 wasm_crate name:
     cargo build --target=wasm32-unknown-unknown -p {{name}}

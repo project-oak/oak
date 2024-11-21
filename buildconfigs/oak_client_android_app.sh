@@ -13,5 +13,5 @@ export BUILD_COMMAND=(
 )
 
 export SUBJECT_PATHS=(
-  generated/client_app.apk
+  artifacts/client_app.apk
 )
