@@ -1051,19 +1051,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_orchestrator"
-version = "0.1.0"
-dependencies = [
- "log",
- "oak_dice",
- "oak_restricted_kernel_interface",
- "oak_restricted_kernel_orchestrator",
- "oak_restricted_kernel_sdk",
- "zerocopy",
- "zeroize",
-]
-
-[[package]]
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
@@ -1073,37 +1060,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_restricted_kernel_dice"
-version = "0.1.0"
-dependencies = [
- "coset",
- "hkdf",
- "oak_crypto",
- "oak_dice",
- "p256",
- "sha2",
-]
-
-[[package]]
 name = "oak_restricted_kernel_interface"
 version = "0.1.0"
 dependencies = [
  "bitflags",
  "strum",
-]
-
-[[package]]
-name = "oak_restricted_kernel_orchestrator"
-version = "0.1.0"
-dependencies = [
- "log",
- "oak_attestation",
- "oak_channel",
- "oak_dice",
- "oak_proto_rust",
- "oak_restricted_kernel_dice",
- "prost",
- "prost-types",
 ]
 
 [[package]]

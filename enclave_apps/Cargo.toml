@@ -6,7 +6,6 @@ members = [
   "oak_functions_enclave_app",
   "oak_echo_raw_enclave_app",
   "oak_multi_process_test",
-  "oak_orchestrator",
 ]
 
 [workspace.dependencies]
