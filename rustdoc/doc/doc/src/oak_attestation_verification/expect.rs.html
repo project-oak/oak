@@ -635,6 +635,82 @@
 <a href="#635" id="635">635</a>
 <a href="#636" id="636">636</a>
 <a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -653,25 +729,26 @@
 
 </span><span class="kw">use </span>alloc::{string::String, vec::Vec};
 
-<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>anyhow::{Context, Error};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, endorsements, expected_digests, expected_values,
-        kernel_binary_reference_value, reference_values, text_expected_value, text_reference_value,
-        AmdSevExpectedValues, ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
-        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerExpectedValues,
-        ContainerLayerReferenceValues, EndorsementReferenceValue, Endorsements,
-        EventExpectedValues, EventReferenceValues, ExpectedDigests, ExpectedRegex,
-        ExpectedStringLiterals, ExpectedValues, FirmwareAttachment, InsecureExpectedValues,
-        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
-        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
-        RootLayerExpectedValues, RootLayerReferenceValues, SystemLayerEndorsements,
-        SystemLayerExpectedValues, SystemLayerReferenceValues, TextExpectedValue,
-        TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        binary_reference_value, endorsement::Format, endorsements, expected_digests,
+        expected_values, kernel_binary_reference_value, reference_values, text_expected_value,
+        text_reference_value, AmdSevExpectedValues, ApplicationLayerEndorsements,
+        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, BinaryReferenceValue,
+        CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerEndorsements,
+        ContainerLayerExpectedValues, ContainerLayerReferenceValues, Endorsement,
+        EndorsementReferenceValue, Endorsements, EventExpectedValues, EventReferenceValues,
+        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, FirmwareAttachment,
+        InsecureExpectedValues, IntelTdxExpectedValues, KernelAttachment,
+        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerEndorsements,
+        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersEndorsements,
+        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
+        Signature, SignedEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
+        SystemLayerReferenceValues, TextExpectedValue, TextReferenceValue,
+        TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -680,7 +757,7 @@
 <span class="kw">use crate</span>::{
     endorsement::{
         <span class="self">self</span>, get_digest, is_firmware_type, is_kernel_type, parse_statement,
-        verify_binary_endorsement,
+        verify_binary_endorsement, verify_endorsement,
     },
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
@@ -864,7 +941,7 @@
             endorsements.and_then(|value| value.stage0.as_ref()),
             amd_sev_values.stage0.as_ref().context(<span class="string">"stage0 binary reference values not found"</span>)<span class="question-mark">?</span>,
         )
-        .context(<span class="string">"getting stage0 expected values"</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">"getting stage0 values"</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Some</span>(AmdSevExpectedValues {
             stage0_expected: <span class="prelude-val">Some</span>(stage0_expected),
             min_tcb_version: amd_sev_values.min_tcb_version.clone(),
@@ -892,7 +969,7 @@
                 endorsements.and_then(|value| value.kernel.as_ref()),
                 reference_values.kernel.as_ref().context(<span class="string">"no kernel reference value"</span>)<span class="question-mark">?</span>,
             )
-            .context(<span class="string">"failed to get kernel expected values"</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">"getting kernel values"</span>)<span class="question-mark">?</span>,
         ),
 
         <span class="comment">// TODO: b/331252282 - Remove temporary workaround for cmd line.
@@ -905,7 +982,7 @@
                     .context(<span class="string">"no kernel command line text reference values"</span>)<span class="question-mark">?</span>,
                 endorsements.and_then(|value| value.kernel_cmd_line.as_ref()),
             )
-            .context(<span class="string">"failed to get kernel cmd line expected value"</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">"getting kernel command line values"</span>)<span class="question-mark">?</span>,
         ),
 
         init_ram_fs: <span class="prelude-val">Some</span>(
@@ -917,7 +994,7 @@
                     .as_ref()
                     .context(<span class="string">"no initial RAM disk reference value"</span>)<span class="question-mark">?</span>,
             )
-            .context(<span class="string">"failed to get initramfs expected value"</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">"getting initramfs values"</span>)<span class="question-mark">?</span>,
         ),
 
         memory_map: <span class="prelude-val">Some</span>(
@@ -926,7 +1003,7 @@
                 endorsements.and_then(|value| value.memory_map.as_ref()),
                 reference_values.memory_map.as_ref().context(<span class="string">"no memory map reference value"</span>)<span class="question-mark">?</span>,
             )
-            .context(<span class="string">"failed to get memory map expected value"</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">"getting memory map values"</span>)<span class="question-mark">?</span>,
         ),
 
         acpi: <span class="prelude-val">Some</span>(
@@ -935,7 +1012,7 @@
                 endorsements.and_then(|value| value.acpi.as_ref()),
                 reference_values.acpi.as_ref().context(<span class="string">"no ACPI reference value"</span>)<span class="question-mark">?</span>,
             )
-            .context(<span class="string">"failed to get ACPI table expected value"</span>)<span class="question-mark">?</span>,
+            .context(<span class="string">"getting acpi values"</span>)<span class="question-mark">?</span>,
         ),
     })
 }
@@ -957,11 +1034,14 @@
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>SystemLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>SystemLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;SystemLayerExpectedValues&gt; {
-    <span class="kw">let </span>system_image = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.system_image.as_ref()),
-        reference_values.system_image.as_ref().context(<span class="string">"system image reference value"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>);
+    <span class="kw">let </span>system_image = <span class="prelude-val">Some</span>(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.system_image.as_ref()),
+            reference_values.system_image.as_ref().context(<span class="string">"system image reference value"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"getting system image values"</span>)<span class="question-mark">?</span>,
+    );
     <span class="prelude-val">Ok</span>(SystemLayerExpectedValues { system_image })
 }
 
@@ -970,16 +1050,22 @@
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ApplicationLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>ApplicationLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;ApplicationLayerExpectedValues&gt; {
-    <span class="kw">let </span>binary = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>);
-    <span class="kw">let </span>configuration = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values.configuration.as_ref().context(<span class="string">"container config reference value"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>);
+    <span class="kw">let </span>binary = <span class="prelude-val">Some</span>(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"getting application binary values"</span>)<span class="question-mark">?</span>,
+    );
+    <span class="kw">let </span>configuration = <span class="prelude-val">Some</span>(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.configuration.as_ref()),
+            reference_values.configuration.as_ref().context(<span class="string">"container config reference value"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"getting application config values"</span>)<span class="question-mark">?</span>,
+    );
     <span class="prelude-val">Ok</span>(ApplicationLayerExpectedValues { binary, configuration })
 }
 
@@ -988,16 +1074,22 @@
     endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>ContainerLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>ContainerLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;ContainerLayerExpectedValues&gt; {
-    <span class="kw">let </span>bundle = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>);
-    <span class="kw">let </span>config = <span class="prelude-val">Some</span>(get_expected_measurement_digest(
-        now_utc_millis,
-        endorsements.and_then(|value| value.binary.as_ref()),
-        reference_values.configuration.as_ref().context(<span class="string">"container config reference value"</span>)<span class="question-mark">?</span>,
-    )<span class="question-mark">?</span>);
+    <span class="kw">let </span>bundle = <span class="prelude-val">Some</span>(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.binary.as_ref().context(<span class="string">"container binary reference value"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"getting container binary values"</span>)<span class="question-mark">?</span>,
+    );
+    <span class="kw">let </span>config = <span class="prelude-val">Some</span>(
+        get_expected_measurement_digest(
+            now_utc_millis,
+            endorsements.and_then(|value| value.binary.as_ref()),
+            reference_values.configuration.as_ref().context(<span class="string">"container config reference value"</span>)<span class="question-mark">?</span>,
+        )
+        .context(<span class="string">"getting container config values"</span>)<span class="question-mark">?</span>,
+    );
     <span class="prelude-val">Ok</span>(ContainerLayerExpectedValues { bundle, config })
 }
 
@@ -1013,16 +1105,15 @@
         <span class="prelude-val">Some</span>(binary_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(ExpectedDigests {
             r#type: <span class="prelude-val">Some</span>(expected_digests::Type::Skipped(VerificationSkipped {})),
         }),
-        <span class="prelude-val">Some</span>(binary_reference_value::Type::Endorsement(public_keys)) =&gt; {
+        <span class="prelude-val">Some</span>(binary_reference_value::Type::Endorsement(ref_value)) =&gt; {
             <span class="kw">let </span>endorsement =
                 endorsement.context(<span class="string">"matching endorsement not found for reference value"</span>)<span class="question-mark">?</span>;
-            verify_binary_endorsement(
+            verify_endorsement_wrapper(
                 now_utc_millis,
                 <span class="kw-2">&amp;</span>endorsement.endorsement,
                 <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
-                <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
-                <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+                ref_value,
             )
             .context(<span class="string">"verifying generic endorsement"</span>)<span class="question-mark">?</span>;
             <span class="kw">let </span>endorsement_statement = parse_statement(<span class="kw-2">&amp;</span>endorsement.endorsement)
@@ -1044,15 +1135,14 @@
 </span><span class="kw">fn </span>get_verified_stage0_attachment(
     now_utc_millis: i64,
     endorsement: <span class="kw-2">&amp;</span>TransparentReleaseEndorsement,
-    public_keys: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
+    ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
 ) -&gt; anyhow::Result&lt;FirmwareAttachment&gt; {
-    verify_binary_endorsement(
+    verify_endorsement_wrapper(
         now_utc_millis,
         <span class="kw-2">&amp;</span>endorsement.endorsement,
         <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
         <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
-        <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
-        <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+        ref_value,
     )
     .context(<span class="string">"verifying firmware endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
@@ -1117,15 +1207,14 @@
 </span><span class="kw">fn </span>get_verified_kernel_attachment(
     now_utc_millis: i64,
     endorsement: <span class="kw-2">&amp;</span>TransparentReleaseEndorsement,
-    public_keys: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
+    ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
 ) -&gt; anyhow::Result&lt;KernelAttachment&gt; {
-    verify_binary_endorsement(
+    verify_endorsement_wrapper(
         now_utc_millis,
         <span class="kw-2">&amp;</span>endorsement.endorsement,
         <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
         <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
-        <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
-        <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+        ref_value,
     )
     .context(<span class="string">"verifying kernel endorsement"</span>)<span class="question-mark">?</span>;
     <span class="comment">// Parse endorsement statement and verify attachment digest.
@@ -1223,16 +1312,15 @@
         <span class="prelude-val">Some</span>(text_reference_value::Type::Skip(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(TextExpectedValue {
             r#type: <span class="prelude-val">Some</span>(text_expected_value::Type::Skipped(VerificationSkipped {})),
         }),
-        <span class="prelude-val">Some</span>(text_reference_value::Type::Endorsement(public_keys)) =&gt; {
+        <span class="prelude-val">Some</span>(text_reference_value::Type::Endorsement(ref_value)) =&gt; {
             <span class="kw">let </span>endorsement =
                 endorsement.context(<span class="string">"matching endorsement not found for text reference value"</span>)<span class="question-mark">?</span>;
-            verify_binary_endorsement(
+            verify_endorsement_wrapper(
                 now_utc_millis,
                 <span class="kw-2">&amp;</span>endorsement.endorsement,
                 <span class="kw-2">&amp;</span>endorsement.endorsement_signature,
                 <span class="kw-2">&amp;</span>endorsement.rekor_log_entry,
-                <span class="kw-2">&amp;</span>public_keys.endorser_public_key,
-                <span class="kw-2">&amp;</span>public_keys.rekor_public_key,
+                ref_value,
             )
             .context(<span class="string">"verifying text endorsement"</span>)<span class="question-mark">?</span>;
             <span class="comment">// Compare the actual command line against the one inlined in the endorsement.
@@ -1268,6 +1356,70 @@
             validity: claim_validity.map(|cv| cv.into()),
         })),
     }
+}
+
+<span class="comment">// Adapts the old-style endorsement verification to the new one: the
+// reference values are used to determine the style.
+//
+// Old-style means that deprecated fields `endorser_public_key` and
+// `rekor_public_key` are populated in EndorsementReferenceValue.
+// New-style means that the other fields (`endorser`, `required_claims`
+// and `rekor`) are populated. In that case, the deprecated fields
+// related to the old style are ignored.
+</span><span class="kw">fn </span>verify_endorsement_wrapper(
+    now_utc_millis: i64,
+    endorsement: <span class="kw-2">&amp;</span>[u8],
+    signature: <span class="kw-2">&amp;</span>[u8],
+    log_entry: <span class="kw-2">&amp;</span>[u8],
+    ref_value: <span class="kw-2">&amp;</span>EndorsementReferenceValue,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="comment">// Use the new-style `endorser` field to determine if the reference value
+    // has the new fields populated. If not, fall back to the deprecated code
+    // branch.
+    //
+    // TODO: b/379253152 - Remove this early out block, along with entire
+    //     verify_binary_endorsement function once all clients verify via the
+    //     new-style fields in EndorsementReferenceValue.
+    </span><span class="kw">if </span>ref_value.endorser.is_none() {
+        <span class="kw">return </span>verify_binary_endorsement(
+            now_utc_millis,
+            endorsement,
+            signature,
+            log_entry,
+            <span class="kw-2">&amp;</span>ref_value.endorser_public_key,
+            <span class="kw-2">&amp;</span>ref_value.rekor_public_key,
+        );
+    }
+
+    <span class="comment">// Suboptimal but OK to make the new-style reference values work with the
+    // non-policy-based attestation verification: The `endorser` key set may
+    // contain several verification keys. Under the deprecated notation, we
+    // don't have any key ID for the signature, so we have to try all the keys.
+    // In practice, reference values will almost always contain a single
+    // public key, so the for loop consists of exactly one iteration.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>err = Error::msg(<span class="string">"no endorser keys"</span>);
+    <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>ref_value.endorser.as_ref().unwrap().keys {
+        <span class="comment">// Eventually the signed endorsement will come directly from the host,
+        // assembling it here from the deprecated TransparentReleaseEndorsement
+        // is temporary.
+        </span><span class="kw">let </span>signed_endorsement = SignedEndorsement {
+            endorsement: <span class="prelude-val">Some</span>(Endorsement {
+                format: Format::EndorsementFormatJsonIntoto.into(),
+                serialized: endorsement.to_vec(),
+                subject: Vec::new(),
+            }),
+            signature: <span class="prelude-val">Some</span>(Signature { key_id: key.key_id, raw: signature.to_vec() }),
+            rekor_log_entry: log_entry.to_vec(),
+        };
+
+        <span class="kw">let </span>result = verify_endorsement(now_utc_millis, <span class="kw-2">&amp;</span>signed_endorsement, ref_value);
+        <span class="kw">if </span>result.is_ok() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+        err = result.err().unwrap();
+    }
+
+    <span class="macro">anyhow::bail!</span>(err);
 }
 
 <span class="attr">#[cfg(test)]
