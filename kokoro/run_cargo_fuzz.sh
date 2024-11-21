@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# shellcheck source=./kokoro/common.sh
-source "$(dirname "$0")/common.sh"
+# shellcheck source=./kokoro/helpers/common.sh
+source "$(dirname "$0")/helpers/common.sh"
 
 # Currently no fuzzer tasks.
