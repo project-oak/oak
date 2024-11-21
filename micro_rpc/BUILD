@@ -52,7 +52,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
-        "//proto/micro_rpc:messages_proto",
+        "//proto/micro_rpc:messages.proto",
     ],
     tools = [
         "@com_google_protobuf//:protoc",

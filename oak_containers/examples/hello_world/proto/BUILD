@@ -57,8 +57,15 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
-        ":hello_world_proto",
-        "//proto/crypto:crypto_proto",
+        ":hello_world.proto",
+        "//proto:digest.proto",
+        "//proto/attestation:endorsement.proto",
+        "//proto/attestation:eventlog.proto",
+        "//proto/attestation:evidence.proto",
+        "//proto/crypto:crypto.proto",
+        "//proto/session:messages.proto",
+        "//proto/session:service_streaming.proto",
+        "//proto/session:session.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
     ],

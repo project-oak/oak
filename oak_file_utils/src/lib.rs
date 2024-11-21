@@ -27,26 +27,6 @@ pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     buf
 }
 
-/// Hack to work around the two different APIs we may encounter for rlocation!
-/// -- one returns PathBuf, one returns Option<PathBuf>.
-/// Once https://github.com/bazelbuild/rules_rust/issues/2868 is resolved, so
-/// that we can update rules_rust, we can remove this.
-trait CompatRlocation {
-    fn compat_wrap(self) -> Option<PathBuf>;
-}
-
-impl CompatRlocation for PathBuf {
-    fn compat_wrap(self) -> Option<PathBuf> {
-        Some(self)
-    }
-}
-
-impl CompatRlocation for Option<PathBuf> {
-    fn compat_wrap(self) -> Option<PathBuf> {
-        self
-    }
-}
-
 #[cfg(feature = "bazel")]
 pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     const DATA_PATH_PREFIX: &str = "oak";
@@ -54,7 +34,7 @@ pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     pb.push(path);
 
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
-    let p = runfiles::rlocation!(r, &pb).compat_wrap().expect("Couldn't get runfile path");
+    let p = runfiles::rlocation!(r, &pb).expect("Couldn't get runfile path");
     if !p.exists() {
         panic!("Data dependency not found: {}", pb.display());
     }

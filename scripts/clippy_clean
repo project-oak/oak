@@ -29,7 +29,7 @@ bazel_args_for_capture=(
     # Do clippy stuff
     --config=clippy
     # Results are captured in bazel-bin/<package>/<target_name>.clippy.out
-    --@rules_rust//:capture_clippy_output=True
+    --@rules_rust//rust/settings:capture_clippy_output=True
 )
 
 
