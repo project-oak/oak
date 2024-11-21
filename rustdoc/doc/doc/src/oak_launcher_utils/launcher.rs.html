@@ -261,6 +261,12 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -357,6 +363,10 @@
 <span class="kw">impl </span>Instance {
     <span class="doccomment">/// Starts virtualized instance with given parameters and stream to write
     /// console logs to.
+    ///
+    /// The instance is started with the `kill_on_drop` flag set, so you'll need
+    /// to hold onto the `Instance` for as long as you'd like the task to keep
+    /// running.
     </span><span class="kw">pub fn </span>start(params: Params, guest_console: net::UnixStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>app_bytes = <span class="kw">if let </span><span class="prelude-val">Some</span>(app_binary) = params.app_binary {
             <span class="kw">let </span>bytes = fs::read(<span class="kw-2">&amp;</span>app_binary).with_context(|| {
@@ -431,6 +441,8 @@
         }
 
         cmd.args([<span class="string">"-initrd"</span>, params.initrd.into_os_string().into_string().unwrap().as_str()]);
+
+        cmd.kill_on_drop(<span class="bool-val">true</span>);
 
         <span class="macro">info!</span>(<span class="string">"executing: {:?}"</span>, cmd);
 
